@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,18 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  Modal,
   Keyboard,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNetInfo } from '@react-native-community/netinfo';
 import { theme } from '../theme';
 import { useCartStore, CartItem } from '../stores/cartStore';
 import { eventLogger } from '../services/eventLogger';
 import { hapticFeedback } from '../utils/haptics';
 import { STORE_NAME } from '../constants/store';
+import { Toast } from '../components/Toast';
 
 type RootStackParamList = {
   Splash: undefined;
@@ -34,25 +36,40 @@ const mockProducts: Record<string, { name: string; price: number }> = {
 export const SellScanScreen = () => {
   const navigation = useNavigation<SellScanNavigationProp>();
   const scanInputRef = useRef<TextInput>(null);
+
+  const netInfo = useNetInfo();
+  const isOnline = netInfo.isConnected === true;
+  const isInternetReachable = netInfo.isInternetReachable !== false;
+  const isWifiConnected = isOnline && netInfo.type === 'wifi';
+  const isCellularConnected = isOnline && netInfo.type === 'cellular';
+  // Scanner + printer status are stubbed for now (wire to real device status later).
+  const isScannerConnected = true;
+  const isPrinterConnected = true;
+  const isSyncOk = isInternetReachable;
   
   const { items, addItem, updateQuantity, removeItem, subtotal } = useCartStore();
   
   const [scanValue, setScanValue] = useState('');
-  const [showProductNotFound, setShowProductNotFound] = useState(false);
-  const [newProductName, setNewProductName] = useState('');
-  const [newProductPrice, setNewProductPrice] = useState('');
-  const [newProductStock, setNewProductStock] = useState('1');
+  const [isKeyboardEnabled, setIsKeyboardEnabled] = useState(false);
+  const [scanFlash, setScanFlash] = useState(false);
+  const [notFoundToastVisible, setNotFoundToastVisible] = useState(false);
 
-  // Auto-focus scan input on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      scanInputRef.current?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
+  // Auto-focus scan input on mount and when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      const timer = setTimeout(() => {
+        scanInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }, [])
+  );
 
   const handleScan = (barcode: string) => {
     if (!barcode.trim()) return;
+
+    // Visual feedback for any scan submit (HID scanner or manual submit)
+    setScanFlash(true);
+    setTimeout(() => setScanFlash(false), 140);
 
     eventLogger.log('USER_ACTION', {
       action: 'SCAN_DETECTED',
@@ -79,9 +96,9 @@ export const SellScanScreen = () => {
         price: product.price,
       });
     } else {
-      // Product not found - show bottom sheet
+      // Product not found
       hapticFeedback.warning();
-      setShowProductNotFound(true);
+      setNotFoundToastVisible(true);
       
       eventLogger.log('USER_ACTION', {
         action: 'PRODUCT_NOT_FOUND',
@@ -96,63 +113,15 @@ export const SellScanScreen = () => {
     }, 100);
   };
 
-  const handleSaveNewProduct = () => {
-    if (!newProductName.trim() || !newProductPrice.trim()) {
-      hapticFeedback.error();
-      return;
-    }
-
-    const price = parseFloat(newProductPrice);
-    if (isNaN(price) || price <= 0) {
-      hapticFeedback.error();
-      return;
-    }
-
-    const barcode = scanValue;
-    
-    // Add to mock database (in real app, save to actual database)
-    mockProducts[barcode] = {
-      name: newProductName.trim(),
-      price,
-    };
-
-    // Add to cart
-    addItem({
-      id: barcode,
-      name: newProductName.trim(),
-      price,
-      barcode,
+  const handleToggleKeyboard = () => {
+    setIsKeyboardEnabled((prev) => {
+      const next = !prev;
+      if (!next) Keyboard.dismiss();
+      // Keep focus so HID scanner input still works
+      setTimeout(() => scanInputRef.current?.focus(), 0);
+      return next;
     });
-
-    hapticFeedback.success();
-    
-    eventLogger.log('USER_ACTION', {
-      action: 'PRODUCT_CREATED',
-      barcode,
-      productName: newProductName.trim(),
-      price,
-    });
-
-    // Reset and close
-    setNewProductName('');
-    setNewProductPrice('');
-    setNewProductStock('1');
-    setShowProductNotFound(false);
-    
-    setTimeout(() => {
-      scanInputRef.current?.focus();
-    }, 100);
-  };
-
-  const handleCancelNewProduct = () => {
-    setNewProductName('');
-    setNewProductPrice('');
-    setNewProductStock('1');
-    setShowProductNotFound(false);
-    
-    setTimeout(() => {
-      scanInputRef.current?.focus();
-    }, 100);
+    hapticFeedback.light();
   };
 
   const handleIncreaseQuantity = (item: CartItem) => {
@@ -246,26 +215,72 @@ export const SellScanScreen = () => {
       <View style={styles.header}>
         <Text style={styles.storeName}>{STORE_NAME}</Text>
         <View style={styles.statusIcons}>
-          <Text style={styles.statusIcon}>📶</Text>
-          <Text style={styles.statusIcon}>🔵</Text>
+          <MaterialCommunityIcons
+            name="signal"
+            size={20}
+            color={isCellularConnected ? theme.colors.success : theme.colors.borderDark}
+            style={[styles.statusIcon, styles.statusIconFirst]}
+          />
+          <MaterialCommunityIcons
+            name="wifi"
+            size={20}
+            color={isWifiConnected ? theme.colors.success : theme.colors.borderDark}
+            style={styles.statusIcon}
+          />
+          <MaterialCommunityIcons
+            name="bluetooth"
+            size={20}
+            color={isScannerConnected ? theme.colors.success : theme.colors.borderDark}
+            style={styles.statusIcon}
+          />
+          <MaterialCommunityIcons
+            name="printer"
+            size={20}
+            color={isPrinterConnected ? theme.colors.success : theme.colors.borderDark}
+            style={styles.statusIcon}
+          />
+          <MaterialCommunityIcons
+            name="cloud-sync-outline"
+            size={20}
+            color={isSyncOk ? theme.colors.success : theme.colors.borderDark}
+            style={styles.statusIcon}
+          />
         </View>
       </View>
 
       {/* Visible Scan Input */}
-      <View style={styles.scanInputContainer}>
-        <Text style={styles.scanIcon}>📷</Text>
+      <View style={[styles.scanInputContainer, scanFlash && styles.scanInputContainerFlash]}>
+        <MaterialCommunityIcons
+          name="barcode-scan"
+          size={22}
+          color={theme.colors.textTertiary}
+          style={styles.scanIcon}
+        />
         <TextInput
           ref={scanInputRef}
           style={styles.scanInput}
           value={scanValue}
           onChangeText={setScanValue}
-          onSubmitEditing={() => handleScan(scanValue)}
+          onSubmitEditing={(e) => handleScan(e.nativeEvent.text)}
           placeholder="Scan product barcode / QR"
           placeholderTextColor={theme.colors.textTertiary}
           returnKeyType="done"
           blurOnSubmit={false}
+          showSoftInputOnFocus={isKeyboardEnabled}
         />
-        <Text style={styles.keyboardIcon}>⌨️</Text>
+        <TouchableOpacity
+          onPress={handleToggleKeyboard}
+          accessibilityRole="button"
+          accessibilityLabel="Toggle keyboard"
+          style={styles.keyboardIconButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <MaterialCommunityIcons
+            name={isKeyboardEnabled ? 'keyboard-outline' : 'keyboard-off-outline'}
+            size={22}
+            color={theme.colors.textTertiary}
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Test Add Item Button (for testing without scanner) */}
@@ -319,74 +334,18 @@ export const SellScanScreen = () => {
           onPress={handlePayPress}
           disabled={items.length === 0}
         >
-          <Text style={styles.payButtonText}>PAY</Text>
+          <Text style={styles.payButtonText}>PAY →</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Product Not Found Bottom Sheet */}
-      <Modal
-        visible={showProductNotFound}
-        transparent
-        animationType="slide"
-        onRequestClose={handleCancelNewProduct}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={handleCancelNewProduct}
-        >
-          <TouchableOpacity
-            style={styles.bottomSheet}
-            activeOpacity={1}
-            onPress={() => {}}
-          >
-            <Text style={styles.bottomSheetTitle}>Product Not Found</Text>
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Product Name"
-              placeholderTextColor={theme.colors.textTertiary}
-              value={newProductName}
-              onChangeText={setNewProductName}
-            />
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Selling Price (₹)"
-              placeholderTextColor={theme.colors.textTertiary}
-              value={newProductPrice}
-              onChangeText={setNewProductPrice}
-              keyboardType="decimal-pad"
-              autoFocus
-            />
-            
-            <TextInput
-              style={styles.input}
-              placeholder="Stock Quantity"
-              placeholderTextColor={theme.colors.textTertiary}
-              value={newProductStock}
-              onChangeText={setNewProductStock}
-              keyboardType="number-pad"
-            />
-            
-            <View style={styles.bottomSheetButtons}>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={handleCancelNewProduct}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={handleSaveNewProduct}
-              >
-                <Text style={styles.saveButtonText}>Save & Add</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+      <Toast
+        message="Item not found"
+        type="warning"
+        visible={notFoundToastVisible}
+        duration={2000}
+        onHide={() => setNotFoundToastVisible(false)}
+      />
+
     </View>
   );
 };
@@ -414,12 +373,13 @@ const styles = StyleSheet.create({
   },
   statusIcons: {
     flexDirection: 'row',
-    gap: 12,
     alignItems: 'center',
   },
   statusIcon: {
-    fontSize: 18,
-    color: theme.colors.primary,
+    marginLeft: 12,
+  },
+  statusIconFirst: {
+    marginLeft: 0,
   },
   scanInputContainer: {
     flexDirection: 'row',
@@ -435,22 +395,21 @@ const styles = StyleSheet.create({
     height: 56,
   },
   scanIcon: {
-    fontSize: 20,
     marginRight: 10,
-    color: theme.colors.textTertiary,
   },
   scanInput: {
     flex: 1,
-    fontSize: 20,
-    lineHeight: 24,
+    fontSize: 18,
+    lineHeight: 22,
     fontWeight: '500',
     color: theme.colors.textPrimary,
     paddingVertical: 0,
   },
-  keyboardIcon: {
-    fontSize: 20,
+  scanInputContainerFlash: {
+    borderColor: theme.colors.success,
+  },
+  keyboardIconButton: {
     marginLeft: 10,
-    color: theme.colors.textTertiary,
   },
   testButtonContainer: {
     display: 'none',
