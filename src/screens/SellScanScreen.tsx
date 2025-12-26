@@ -77,13 +77,13 @@ export default function SellScanScreen() {
             <Text style={styles.name}>{item.name}</Text>
 
             <View style={styles.qtyBox}>
-              <TouchableOpacity onPress={() => dec(item.id)}>
+              <TouchableOpacity onPress={() => navigation.navigate("Payment")}>
                 <Text style={styles.btn}>-</Text>
               </TouchableOpacity>
 
               <Text style={styles.qty}>{item.qty}</Text>
 
-              <TouchableOpacity onPress={() => inc(item.id)}>
+              <TouchableOpacity onPress={() => navigation.navigate("Payment")}>
                 <Text style={styles.btn}>+</Text>
               </TouchableOpacity>
             </View>
@@ -113,7 +113,68 @@ export default function SellScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
+  
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    marginHorizontal: 12,
+    marginVertical: 6,
+    padding: 14,
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2
+  },
+
+  left: {
+    flex: 1,
+    paddingRight: 10
+  },
+
+  name: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#111"
+  },
+
+  subPrice: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 4
+  },
+
+  qtyWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f2f2f2",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    height: 36,
+    marginRight: 12
+  },
+
+  qtyBtn: {
+    fontSize: 18,
+    fontWeight: "700",
+    paddingHorizontal: 8
+  },
+
+  qty: {
+    fontSize: 15,
+    fontWeight: "600",
+    minWidth: 18,
+    textAlign: "center"
+  },
+
+  total: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111",
+    minWidth: 48,
+    textAlign: "right"
+  },header: {
     height: 64,
     paddingHorizontal: 12,
     paddingTop: 14,
@@ -216,6 +277,10 @@ const styles = StyleSheet.create({
   },
   payText: { color: "#fff", fontSize: 16, fontWeight: "700" }
 });
+
+
+
+
 
 
 
