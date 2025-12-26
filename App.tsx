@@ -3,10 +3,14 @@ import { StatusBar, Platform } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { enableScreens } from "react-native-screens";
 
+import SplashScreen from "./src/screens/SplashScreen";
 import SellScanScreen from "./src/screens/SellScanScreen";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import SuccessPrintScreen from "./src/screens/SuccessPrintScreen";
+
+enableScreens(false);
 
 const Stack = createStackNavigator();
 
@@ -18,7 +22,11 @@ export default function App() {
         barStyle={Platform.OS === "android" ? "dark-content" : "default"}
       />
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+          initialRouteName="Splash"
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="SellScan" component={SellScanScreen} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="SuccessPrint" component={SuccessPrintScreen} />
