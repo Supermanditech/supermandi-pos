@@ -26,7 +26,7 @@ type RootStackParamList = {
 type SuccessPrintNavigationProp = StackNavigationProp<RootStackParamList, 'SuccessPrint'>;
 type SuccessPrintRouteProp = RouteProp<RootStackParamList, 'SuccessPrint'>;
 
-export const SuccessPrintScreen = () => {
+const SuccessPrintScreen = () => {
   const navigation = useNavigation<SuccessPrintNavigationProp>();
   const route = useRoute<SuccessPrintRouteProp>();
   
@@ -391,3 +391,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
+
+export default SuccessPrintScreen;

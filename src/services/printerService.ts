@@ -136,3 +136,4 @@ Time: ${new Date().toLocaleString()}
 }
 
 export const printerService = new PrinterService();
+

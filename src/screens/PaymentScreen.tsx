@@ -27,7 +27,7 @@ type PaymentNavigationProp = StackNavigationProp<RootStackParamList, 'Payment'>;
 
 type PaymentMode = 'UPI' | 'CASH' | 'DUE';
 
-export const PaymentScreen = () => {
+const PaymentScreen = () => {
   const navigation = useNavigation<PaymentNavigationProp>();
   const { subtotal, applyDiscount, discount, total } = useCartStore();
   
@@ -551,3 +551,5 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 });
+
+export default PaymentScreen;
