@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type EventType = 
+export type EventType =
   | 'APP_START'
   | 'APP_BACKGROUND'
   | 'APP_FOREGROUND'
@@ -16,6 +16,8 @@ export type EventType =
   | 'PAYMENT_FAILED'
   | 'PRINT_RECEIPT'
   | 'PRINT_FAILED'
+  | 'PRODUCTS_LOADED'
+  | 'PRODUCTS_LOAD_FAILED'
   | 'ERROR'
   | 'USER_ACTION';
 

@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Camera, CameraView, BarcodeScanningResult } from "expo-camera";
 import { useCartStore } from "../stores/cartStore";
+import { useProductsStore } from "../stores/productsStore";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -28,6 +29,7 @@ type SellScanScreenNavigationProp = NativeStackNavigationProp<RootStackParamList
 export default function SellScanScreen() {
   const navigation = useNavigation<SellScanScreenNavigationProp>();
   const { items, addItem, updateQuantity, removeItem, subtotal } = useCartStore();
+  const { getProductByBarcode, products } = useProductsStore();
 
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -36,18 +38,10 @@ export default function SellScanScreen() {
 
   const totalItems = items.length;
 
-  // Mock product lookup (replace with real database later)
-  const mockProducts: Record<string, { name: string; price: number }> = {
-    '1234567890': { name: 'Sample Product A', price: 99.99 },
-    '0987654321': { name: 'Sample Product B', price: 149.50 },
-    'QR_PRODUCT_C': { name: 'QR Product C', price: 79.99 },
-    'BAR_PRODUCT_D': { name: 'Barcode Product D', price: 199.99 },
-  };
-
-  // Test QR codes and barcodes
+  // Test QR codes and barcodes - use first two products from store
   const testCodes = {
-    qr: 'QR_PRODUCT_C',
-    barcode: 'BAR_PRODUCT_D'
+    qr: products[2]?.barcode || 'QR_PRODUCT_C',
+    barcode: products[3]?.barcode || 'BAR_PRODUCT_D'
   };
 
   // Request camera permissions
@@ -97,15 +91,21 @@ export default function SellScanScreen() {
   const handleScan = (barcode: string) => {
     if (!barcode.trim()) return;
 
-    const product = mockProducts[barcode];
+    const product = getProductByBarcode(barcode);
 
     if (product) {
       addItem({
-        id: barcode,
+        id: product.id,
         name: product.name,
         price: product.price,
-        barcode,
+        barcode: product.barcode,
       });
+    } else {
+      Alert.alert(
+        'Product Not Found',
+        `No product found with barcode: ${barcode}`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -268,15 +268,15 @@ export default function SellScanScreen() {
       <View style={styles.testButtons}>
         <TouchableOpacity
           style={styles.testButton}
-          onPress={() => handleScan('1234567890')}
+          onPress={() => handleScan(products[0]?.barcode || '1234567890')}
         >
-          <Text style={styles.testButtonText}>+ Add Test Item A</Text>
+          <Text style={styles.testButtonText}>+ {products[0]?.name || 'Test Item A'}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.testButton}
-          onPress={() => handleScan('0987654321')}
+          onPress={() => handleScan(products[1]?.barcode || '0987654321')}
         >
-          <Text style={styles.testButtonText}>+ Add Test Item B</Text>
+          <Text style={styles.testButtonText}>+ {products[1]?.name || 'Test Item B'}</Text>
         </TouchableOpacity>
       </View>
 

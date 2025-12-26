@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { theme } from "../theme";
 import { eventLogger } from "../services/eventLogger";
 import { printerService } from "../services/printerService";
+import { useProductsStore } from "../stores/productsStore";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -17,18 +18,27 @@ type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 
 
 export default function SplashScreen() {
   const navigation = useNavigation<SplashScreenNavigationProp>();
+  const loadProducts = useProductsStore(state => state.loadProducts);
 
   useEffect(() => {
     const initializeApp = async () => {
       eventLogger.log("APP_START", { screen: "Splash" });
 
-      // Initialize printer service
-      try {
-        await printerService.initialize();
-        console.log("Printer service initialized successfully");
-      } catch (error) {
-        console.error("Failed to initialize printer service:", error);
-      }
+      // Initialize services in parallel
+      const initPromises = [
+        // Initialize printer service
+        printerService.initialize().catch(error => {
+          console.error("Failed to initialize printer service:", error);
+        }),
+
+        // Load products
+        loadProducts().catch(error => {
+          console.error("Failed to load products:", error);
+        })
+      ];
+
+      await Promise.all(initPromises);
+      console.log("App initialization completed");
 
       // Navigate after initialization
       setTimeout(() => {
@@ -43,7 +53,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>SuperMandi POS</Text>
       <ActivityIndicator size="small" color={theme.colors.primary} />
-      <Text style={styles.subtext}>Initializing printer...</Text>
+      <Text style={styles.subtext}>Loading products...</Text>
     </View>
   );
 }
