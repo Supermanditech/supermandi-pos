@@ -108,4 +108,44 @@ The foundation is complete. Next phase will include:
 - **State Management**: Zustand
 - **Storage**: AsyncStorage
 - **Haptics**: expo-haptics
+- **Camera**: expo-camera (QR/Barcode scanning)
 - **Target Platform**: Android (Handheld POS devices)
+
+## Test QR Codes & Barcodes
+
+Use these codes to test the scanning functionality:
+
+### QR Code Test
+**Code**: `QR_PRODUCT_C`
+**Product**: QR Product C - ₹79.99
+
+### Barcode Test
+**Code**: `BAR_PRODUCT_D`
+**Product**: Barcode Product D - ₹199.99
+
+### How to Test
+1. Generate QR codes/barcodes using online tools with the codes above
+2. Use Redmi 13C camera to scan them
+3. Or click the "Test QR Code" / "Test Barcode" buttons in the app
+4. Each scan adds one product to the cart
+
+## UPI Payment Configuration
+
+### For Testing
+- **UPI ID**: `sharmakirana@upi` (fake for testing)
+- **Dynamic QR Codes**: Automatically generated on Payment screen
+- **UPI String Format**: `upi://pay?pa={UPI_ID}&pn=Sharma%20Kirana%20Store&am={amount}&cu=INR&tn=Bill%20{billNumber}`
+
+### For Production Deployment
+1. Open `src/screens/PaymentScreen.tsx`
+2. Change the `RETAILER_UPI_ID` constant to your actual UPI ID:
+   ```typescript
+   const RETAILER_UPI_ID = "youractualupi@bank"; // Replace with real UPI ID
+   ```
+3. QR codes will be automatically generated for all payments
+
+### QR Code Features
+- **Real-time Generation**: QR codes update automatically with cart total
+- **UPI Compatible**: Works with all UPI apps (Google Pay, PhonePe, Paytm, etc.)
+- **Professional Display**: Clean UI with amount and merchant details
+- **Error Handling**: Fallback display if QR generation fails

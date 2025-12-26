@@ -1,27 +1,49 @@
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { theme } from "../theme";
 import { eventLogger } from "../services/eventLogger";
+import { printerService } from "../services/printerService";
+
+type RootStackParamList = {
+  Splash: undefined;
+  SellScan: undefined;
+  Payment: undefined;
+  SuccessPrint: undefined;
+};
+
+type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
 
 export default function SplashScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<SplashScreenNavigationProp>();
 
   useEffect(() => {
-    eventLogger.log("APP_START", { screen: "Splash" });
+    const initializeApp = async () => {
+      eventLogger.log("APP_START", { screen: "Splash" });
 
-    const timer = setTimeout(() => {
-      navigation.replace("SellScan");
-    }, 1500);
+      // Initialize printer service
+      try {
+        await printerService.initialize();
+        console.log("Printer service initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize printer service:", error);
+      }
 
-    return () => clearTimeout(timer);
+      // Navigate after initialization
+      setTimeout(() => {
+        navigation.replace("SellScan");
+      }, 1500);
+    };
+
+    initializeApp();
   }, []);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>SuperMandi POS</Text>
       <ActivityIndicator size="small" color={theme.colors.primary} />
-      <Text style={styles.subtext}>Preparing POS...</Text>
+      <Text style={styles.subtext}>Initializing printer...</Text>
     </View>
   );
 }

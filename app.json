@@ -20,11 +20,13 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.supermandi.pos",
-      "permissions": [],
+      "permissions": [
+        "CAMERA"
+      ],
       "blockedPermissions": [
-        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "newArchEnabled": true
     },
     "plugins": [
       [
