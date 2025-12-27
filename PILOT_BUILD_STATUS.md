@@ -63,12 +63,9 @@ This file is the single “source of truth” summary of what has been implement
 
 ## 3) Pilot Hard Blockers — Fixed
 
-### 3.1 Android HTTP / cleartext networking (DEV/TEST)
-- Enabled `usesCleartextTraffic: true` for dev/test APK to allow HTTP calls: [`app.json`](app.json:1)
-
-### 3.2 LAN reachability
+### 3.1 Backend reachability
 - Backend binds to `0.0.0.0`: [`backend/src/server.ts`](backend/src/server.ts:1)
-- LAN IP detected on this PC: `192.168.31.66`
+- Production backend (Google VM): `http://34.14.150.183:3001`
 
 ### 3.3 Environment safety (no hardcoded URLs)
 - Backend URL is **env-only** and required: [`src/config/api.ts`](src/config/api.ts:1)
@@ -87,11 +84,10 @@ Status:
 - **Resolved** (prebuild completes without Jimp/MIME errors)
 - Verified `assets/icon.png`, `assets/splash.png`, `assets/adaptive-icon.png` are valid PNGs (non-zero size + correct PNG signature + decodable by `jimp-compact`).
 
-Additional Android build reliability fix:
+Note:
 
-- Added a small Expo config plugin that **auto-generates** `android/local.properties` during prebuild so Gradle can always find the Android SDK after `--clean`.
-  - Plugin: [`plugins/withAndroidLocalProperties.js`](plugins/withAndroidLocalProperties.js:1)
-  - Registered in Expo config: [`app.json`](app.json:1)
+- [`app.json`](app.json:1) is intentionally minimal (icon single source of truth). Because of that, we do **not** rely on custom Expo config plugins to generate `android/local.properties`.
+- If you see `SDK location not found ... android/local.properties`, set `ANDROID_HOME` or ensure `android/local.properties` exists (Android Studio usually creates it).
 
 ---
 
@@ -107,7 +103,7 @@ Additional Android build reliability fix:
 
 ### 4.2 Verify backend from phone browser (same Wi‑Fi)
 - Open:
-  - `http://192.168.31.66:3001/health`
+  - `http://34.14.150.183:3001/health`
 
 If this does not load, Windows Firewall is blocking inbound TCP 3001. Allow inbound traffic on port 3001 (admin permission required).
 
@@ -115,7 +111,7 @@ If this does not load, Windows Firewall is blocking inbound TCP 3001. Allow inbo
 Windows cmd.exe:
 
 ```bat
-set EXPO_PUBLIC_API_URL=http://192.168.31.66:3001
+set EXPO_PUBLIC_API_URL=http://34.14.150.183:3001
 npm start
 ```
 
@@ -147,8 +143,7 @@ npx expo run:android
 Notes:
 
 - First run may download/install missing Android components (e.g. NDK) via the Android SDK manager.
-- `android/local.properties` is automatically generated during prebuild by [`withAndroidLocalProperties`](plugins/withAndroidLocalProperties.js:1), so you should not see:
-  - `SDK location not found ... android/local.properties`
+- If you see `SDK location not found ... android/local.properties`, set `ANDROID_HOME` or create `android/local.properties` with a valid `sdk.dir=...`.
 
 ---
 
