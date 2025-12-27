@@ -66,6 +66,123 @@ Location: [`src/services/printerService.ts`](src/services/printerService.ts)
 npm install
 ```
 
+## Backend (Express + Prisma)
+
+Backend lives in [`backend/`](backend/package.json) and provides:
+
+- SQLite-backed persistence via Prisma
+- JWT authentication
+- REST APIs for products and transactions
+
+### Backend setup
+
+```bash
+cd backend
+npm install
+
+# create local db + generate prisma client
+# macOS/Linux
+cp .env.example .env
+
+# Windows (cmd.exe)
+copy .env.example .env
+npx prisma migrate dev
+
+# run the api
+npm run dev
+```
+
+### Backend environment variables
+
+See [`backend/.env.example`](backend/.env.example):
+
+- `PORT` (default `3001`)
+- `DATABASE_URL` (default `file:./dev.db`)
+- `JWT_SECRET` (required)
+
+### Backend API routes
+
+- `GET /health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me` (requires `Authorization: Bearer <token>`)
+- `GET /api/users/me` (requires auth)
+- `GET /api/products?barcode=...` / `GET /api/products?q=...` (requires auth)
+- `POST /api/products` (requires auth)
+- `PATCH /api/products/:id` (requires auth)
+- `DELETE /api/products/:id` (soft delete, requires auth)
+- `GET /api/transactions?take=50` (requires auth)
+- `POST /api/transactions` (requires auth)
+
+Transaction creation (`POST /api/transactions`) expects:
+
+```json
+{
+  "paymentMethod": "CASH",
+  "currency": "AED",
+  "items": [{ "productId": "...", "quantity": 2 }]
+}
+```
+
+## Frontend ↔ Backend integration
+
+### API base URL
+
+Frontend uses [`API_BASE_URL`](src/config/api.ts:1) for the backend base URL.
+
+**No URLs are hardcoded in the app code**: you must set `EXPO_PUBLIC_API_URL` per environment.
+
+Set this when running on a physical device:
+
+```bash
+# example (Windows cmd.exe)
+set EXPO_PUBLIC_API_URL=http://192.168.1.10:3001
+npm start
+```
+
+For this PC on Wi‑Fi, the LAN IPv4 is `192.168.31.66`, so use:
+
+```bash
+set EXPO_PUBLIC_API_URL=http://192.168.31.66:3001
+npm start
+```
+
+You can also copy [`/.env.example`](.env.example:1) to `/.env` for local dev.
+
+### Backend reachability from a real device (LAN)
+
+1) Ensure backend listens on all interfaces (`0.0.0.0`). This is now explicit in [`backend/src/server.ts`](backend/src/server.ts:1).
+
+2) Start backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+3) From the phone/POS device browser (same Wi‑Fi), open:
+
+`http://192.168.31.66:3001/health`
+
+If it doesn’t load, Windows Firewall is blocking inbound traffic on port 3001. You must allow it (Windows requires Administrator privileges to add a rule).
+
+### Android dev/test HTTP networking (cleartext)
+
+For dev/test APKs, HTTP is allowed by setting `usesCleartextTraffic: true` in [`app.json`](app.json:17).
+
+Production builds should disable cleartext and use HTTPS.
+
+### Offline-first behavior (current)
+
+- Products: fetched from backend, cached in AsyncStorage, then loaded from cache if offline.
+- Sales (transactions): on checkout, app tries to POST to backend; if it fails (offline/server down), it queues the sale locally and auto-syncs when connectivity returns.
+
+Implementation:
+
+- API client: [`src/services/api/apiClient.ts`](src/services/api/apiClient.ts)
+- Product caching: [`src/stores/productsStore.ts`](src/stores/productsStore.ts)
+- Offline transaction queue + auto-sync: [`src/services/syncService.ts`](src/services/syncService.ts)
+
 ## Running the App
 
 ```bash

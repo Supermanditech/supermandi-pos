@@ -1,11 +1,16 @@
 import { create } from 'zustand';
 import { eventLogger } from '../services/eventLogger';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as productsApi from '../services/api/productsApi';
+
+const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
 export interface Product {
   id: string;
   name: string;
-  price: number;
-  barcode: string;
+  priceMinor: number;
+  currency: string;
+  barcode?: string;
   category?: string;
   stock?: number;
   description?: string;
@@ -29,9 +34,18 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     set({ loading: true, error: null });
 
     try {
-      // For now, load from a local data source
-      // This can be replaced with API call later
-      const productsData = await loadProductsFromData();
+      // 1) Try backend first
+      const remote = await productsApi.listProducts();
+      const productsData: Product[] = remote.map((p) => ({
+        id: p.id,
+        name: p.name,
+        priceMinor: p.price,
+        currency: p.currency,
+        barcode: p.barcode ?? undefined,
+        stock: p.stock
+      }));
+
+      await AsyncStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(productsData));
 
       set({
         products: productsData,
@@ -41,10 +55,30 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
       await eventLogger.log('PRODUCTS_LOADED', {
         count: productsData.length,
-        source: 'local_data'
+        source: 'backend_api'
       });
 
     } catch (error) {
+      // 2) Fallback to cache
+      const cached = await AsyncStorage.getItem(PRODUCTS_CACHE_KEY);
+      if (cached) {
+        try {
+          const productsData = JSON.parse(cached) as Product[];
+          set({ products: productsData, loading: false, error: null });
+          await eventLogger.log('PRODUCTS_LOADED', {
+            count: productsData.length,
+            source: 'cache'
+          });
+          return;
+        } catch {
+          // ignore and continue
+        }
+      }
+
+      // 3) Final fallback to bundled sample data
+      const productsData = await loadProductsFromData();
+      set({ products: productsData, loading: false, error: null });
+
       const errorMessage = error instanceof Error ? error.message : 'Failed to load products';
       set({
         loading: false,
@@ -69,7 +103,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     const lowercaseQuery = query.toLowerCase();
     return products.filter(product =>
       product.name.toLowerCase().includes(lowercaseQuery) ||
-      product.barcode.toLowerCase().includes(lowercaseQuery) ||
+      (product.barcode ? product.barcode.toLowerCase().includes(lowercaseQuery) : false) ||
       product.category?.toLowerCase().includes(lowercaseQuery)
     );
   }
@@ -84,7 +118,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '1',
       name: 'Sample Product A',
-      price: 99.99,
+      priceMinor: 9999,
+      currency: 'INR',
       barcode: '1234567890',
       category: 'General',
       stock: 50,
@@ -93,7 +128,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '2',
       name: 'Sample Product B',
-      price: 149.50,
+      priceMinor: 14950,
+      currency: 'INR',
       barcode: '0987654321',
       category: 'Electronics',
       stock: 25,
@@ -102,7 +138,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '3',
       name: 'QR Product C',
-      price: 79.99,
+      priceMinor: 7999,
+      currency: 'INR',
       barcode: 'QR_PRODUCT_C',
       category: 'Accessories',
       stock: 100,
@@ -111,7 +148,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '4',
       name: 'Barcode Product D',
-      price: 199.99,
+      priceMinor: 19999,
+      currency: 'INR',
       barcode: 'BAR_PRODUCT_D',
       category: 'Tools',
       stock: 15,
@@ -120,7 +158,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '5',
       name: 'Fresh Milk 1L',
-      price: 65.00,
+      priceMinor: 6500,
+      currency: 'INR',
       barcode: 'MILK_001',
       category: 'Dairy',
       stock: 200,
@@ -129,7 +168,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '6',
       name: 'Bread Loaf',
-      price: 45.00,
+      priceMinor: 4500,
+      currency: 'INR',
       barcode: 'BREAD_001',
       category: 'Bakery',
       stock: 75,
@@ -138,7 +178,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '7',
       name: 'Cooking Oil 1L',
-      price: 180.00,
+      priceMinor: 18000,
+      currency: 'INR',
       barcode: 'OIL_001',
       category: 'Grocery',
       stock: 40,
@@ -147,7 +188,8 @@ const loadProductsFromData = async (): Promise<Product[]> => {
     {
       id: '8',
       name: 'Sugar 1KG',
-      price: 55.00,
+      priceMinor: 5500,
+      currency: 'INR',
       barcode: 'SUGAR_001',
       category: 'Grocery',
       stock: 150,

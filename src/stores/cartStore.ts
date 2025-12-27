@@ -4,7 +4,8 @@ import { eventLogger } from '../services/eventLogger';
 export interface CartItem {
   id: string;
   name: string;
-  price: number;
+  priceMinor: number;
+  currency?: string;
   quantity: number;
   sku?: string;
   barcode?: string;
@@ -39,16 +40,16 @@ interface CartState {
 }
 
 const calculateSubtotal = (items: CartItem[]): number => {
-  return items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  return items.reduce((sum, item) => sum + (item.priceMinor * item.quantity), 0);
 };
 
 const calculateDiscountAmount = (subtotal: number, discount: CartDiscount | null): number => {
   if (!discount) return 0;
   
   if (discount.type === 'percentage') {
-    return subtotal * (discount.value / 100);
+    return Math.round(subtotal * (discount.value / 100));
   } else {
-    return Math.min(discount.value, subtotal);
+    return Math.min(Math.round(discount.value), subtotal);
   }
 };
 
@@ -82,7 +83,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       itemId: item.id,
       itemName: item.name,
       quantity: item.quantity || 1,
-      price: item.price,
+      priceMinor: item.priceMinor,
     });
   },
   

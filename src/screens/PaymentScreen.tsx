@@ -12,6 +12,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCartStore } from "../stores/cartStore";
 import * as Clipboard from 'expo-clipboard';
+import { formatMoney, minorToMajor } from "../utils/money";
+import { createTransaction } from "../services/api/transactionsApi";
+import { enqueueTransaction } from "../services/syncService";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -32,7 +35,7 @@ type PaymentMode = 'UPI' | 'CASH' | 'DUE';
 
 const PaymentScreen = () => {
   const navigation = useNavigation<PaymentScreenNavigationProp>();
-  const { total } = useCartStore();
+  const { total, items } = useCartStore();
   const [selectedMode, setSelectedMode] = useState<PaymentMode>('UPI');
   const [upiString, setUpiString] = useState<string>('');
 
@@ -46,10 +49,10 @@ const PaymentScreen = () => {
   useEffect(() => {
     console.log("PaymentScreen mounted successfully");
     // Generate UPI string when component mounts or total changes
-    const upiStr = generateUPIString(total);
+    const upiStr = generateUPIString(minorToMajor(total));
     setUpiString(upiStr);
     console.log("Generated UPI string:", upiStr);
-    console.log("📱 UPI QR code generated for amount:", total.toFixed(2));
+    console.log("📱 UPI QR code generated for amount:", minorToMajor(total).toFixed(2));
   }, [total]);
 
   const handlePaymentSelect = (mode: PaymentMode) => {
@@ -63,8 +66,25 @@ const PaymentScreen = () => {
     }
   };
 
-  const handleCompletePayment = () => {
+  const handleCompletePayment = async () => {
     console.log(`Completing payment with mode: ${selectedMode}`);
+
+    const paymentMethod = selectedMode === "CASH" ? "CASH" : selectedMode === "UPI" ? "CARD" : "OTHER";
+    const currency = items[0]?.currency ?? "INR";
+
+    // Submit to backend. If offline/unreachable, enqueue for later sync.
+    const payload = {
+      paymentMethod,
+      currency,
+      items: items.map((i) => ({ productId: i.id, quantity: i.quantity }))
+    } as const;
+
+    try {
+      await createTransaction(payload);
+    } catch (e) {
+      await enqueueTransaction(payload);
+    }
+
     navigation.navigate('SuccessPrint', { paymentMode: selectedMode });
   };
 
@@ -114,7 +134,7 @@ const PaymentScreen = () => {
           minimumFontScale={0.5}
           numberOfLines={1}
         >
-          ₹{total.toFixed(2)}
+          {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")}
         </Text>
       </View>
 
@@ -130,12 +150,16 @@ const PaymentScreen = () => {
         {selectedMode === 'UPI' && (
           <View style={styles.paymentDetails}>
             <Text style={styles.detailsTitle}>UPI Payment</Text>
-            <Text style={styles.detailsText}>Scan QR code to pay ₹{total.toFixed(2)}</Text>
+            <Text style={styles.detailsText}>
+              Scan QR code to pay {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")}
+            </Text>
             <View style={styles.upiDetails}>
               <MaterialCommunityIcons name="qrcode" size={60} color="#10B981" />
               <Text style={styles.upiTitle}>UPI Payment Ready</Text>
               <Text style={styles.upiIdDisplay}>{RETAILER_UPI_ID}</Text>
-              <Text style={styles.upiAmount}>₹{total.toFixed(2)}</Text>
+              <Text style={styles.upiAmount}>
+                {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")}
+              </Text>
 
               <TouchableOpacity
                 style={styles.copyButton}
@@ -161,7 +185,7 @@ const PaymentScreen = () => {
               minimumFontScale={0.7}
               numberOfLines={2}
             >
-              Collect ₹{total.toFixed(2)} from customer
+              Collect {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")} from customer
             </Text>
           </View>
         )}
@@ -169,7 +193,9 @@ const PaymentScreen = () => {
         {selectedMode === 'DUE' && (
           <View style={styles.paymentDetails}>
             <Text style={styles.detailsTitle}>Due Payment</Text>
-            <Text style={styles.detailsText}>₹{total.toFixed(2)} will be collected later</Text>
+            <Text style={styles.detailsText}>
+              {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")} will be collected later
+            </Text>
           </View>
         )}
       </ScrollView>

@@ -1,5 +1,10 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
+import { apiRouter } from "./routes";
+import { errorHandler } from "./middleware/errorHandler";
+
+dotenv.config();
 
 const app = express();
 
@@ -13,5 +18,9 @@ app.get("/health", (_req, res) => {
     time: new Date().toISOString()
   });
 });
+
+app.use("/api", apiRouter);
+
+app.use(errorHandler);
 
 export default app;

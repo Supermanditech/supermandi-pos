@@ -1,0 +1,82 @@
+// Prisma schema for SuperMandi POS backend
+// SQLite by default for local development.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String
+  // SQLite doesn't have a native enum type. Store as string.
+  role         String    @default("CASHIER")
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  transactions Transaction[]
+}
+
+model Product {
+  id          String            @id @default(cuid())
+  name        String
+  barcode     String?           @unique
+  sku         String?           @unique
+  price       Int               // stored in minor units (e.g. fils/cents)
+  currency    String            @default("AED")
+  stock       Int               @default(0)
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  items       TransactionItem[]
+
+  @@index([name])
+  @@index([barcode])
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  receiptNo     String            @unique
+  // SQLite doesn't have a native enum type. Store as string.
+  paymentMethod String
+  subtotal      Int
+  total         Int
+  currency      String            @default("AED")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  cashierId     String
+  cashier       User              @relation(fields: [cashierId], references: [id])
+
+  items         TransactionItem[]
+
+  @@index([createdAt])
+  @@index([cashierId])
+}
+
+model TransactionItem {
+  id            String       @id @default(cuid())
+  transactionId String
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id])
+
+  quantity      Int
+  unitPrice     Int
+  lineTotal     Int
+
+  createdAt     DateTime     @default(now())
+
+  @@index([transactionId])
+  @@index([productId])
+}
+

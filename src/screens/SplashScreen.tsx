@@ -6,6 +6,8 @@ import { theme } from "../theme";
 import { eventLogger } from "../services/eventLogger";
 import { printerService } from "../services/printerService";
 import { useProductsStore } from "../stores/productsStore";
+import { ensureSession } from "../services/sessionService";
+import { startAutoSync, syncPendingTransactions } from "../services/syncService";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -31,6 +33,11 @@ export default function SplashScreen() {
           console.error("Failed to initialize printer service:", error);
         }),
 
+        // Ensure backend session (temporary until Login screen exists)
+        ensureSession().catch(error => {
+          console.error("Failed to initialize backend session:", error);
+        }),
+
         // Load products
         loadProducts().catch(error => {
           console.error("Failed to load products:", error);
@@ -38,6 +45,10 @@ export default function SplashScreen() {
       ];
 
       await Promise.all(initPromises);
+
+      // Start background sync for any pending offline sales
+      startAutoSync();
+      await syncPendingTransactions().catch(() => undefined);
       console.log("App initialization completed");
 
       // Navigate after initialization

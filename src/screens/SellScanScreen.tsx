@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Camera, CameraView, BarcodeScanningResult } from "expo-camera";
 import { useCartStore } from "../stores/cartStore";
 import { useProductsStore } from "../stores/productsStore";
+import { formatMoney } from "../utils/money";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -97,7 +98,8 @@ export default function SellScanScreen() {
       addItem({
         id: product.id,
         name: product.name,
-        price: product.price,
+        priceMinor: product.priceMinor,
+        currency: product.currency,
         barcode: product.barcode,
       });
     } else {
@@ -258,7 +260,7 @@ export default function SellScanScreen() {
               minimumFontScale={0.6}
               numberOfLines={1}
             >
-              ₹{(item.price * item.quantity).toFixed(2)}
+              {formatMoney(item.priceMinor * item.quantity, item.currency ?? "INR").replace("INR ", "₹")}
             </Text>
           </View>
         )}
@@ -291,7 +293,7 @@ export default function SellScanScreen() {
           minimumFontScale={0.7}
           numberOfLines={1}
         >
-          ₹{subtotal.toFixed(2)}
+          {formatMoney(subtotal, items[0]?.currency ?? "INR").replace("INR ", "₹")}
         </Text>
 
         <TouchableOpacity

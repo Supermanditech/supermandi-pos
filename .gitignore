@@ -60,3 +60,8 @@ web-build/
 .env
 .env.local
 .env.*.local
+
+# Expo / Prebuild
+android/
+
+

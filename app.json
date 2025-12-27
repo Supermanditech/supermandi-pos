@@ -20,6 +20,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.supermandi.pos",
+      
       "permissions": [
         "CAMERA"
       ],
@@ -33,12 +34,20 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": false
+            "usesCleartextTraffic": true
           }
         }
       ],
+      "./plugins/withAndroidLocalProperties",
       "expo-asset",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "devNote": "DEV/TEST ONLY: usesCleartextTraffic is enabled to allow HTTP calls to local/LAN backend. Disable and use HTTPS for production builds.",
+      "eas": {
+        "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
+      }
+    },
+    "owner": "supermanditech"
   }
 }

@@ -7,7 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import SplashScreen from "./src/screens/SplashScreen";
 import SellScanScreen from "./src/screens/SellScanScreen";
 import PaymentScreen from "./src/screens/PaymentScreen";
-import SuccessPrintScreen from "./src/screens/SuccessPrintScreen";
+import SuccessPrintScreen from "./src/screens/SuccessPrintScreenV2";
 
 const Stack = createNativeStackNavigator();
 
