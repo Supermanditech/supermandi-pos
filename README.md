@@ -132,45 +132,33 @@ Frontend uses [`API_BASE_URL`](src/config/api.ts:1) for the backend base URL.
 
 **No URLs are hardcoded in the app code**: you must set `EXPO_PUBLIC_API_URL` per environment.
 
-Set this when running on a physical device:
+For a production APK that works on any network (Wi‑Fi / mobile data) and does **not** depend on the laptop, set the final backend URL in your env file.
+
+1) Copy [`/.env.example`](.env.example:1) to `/.env`.
+
+2) Set:
 
 ```bash
-# example (Windows cmd.exe)
-set EXPO_PUBLIC_API_URL=http://192.168.1.10:3001
-npm start
+EXPO_PUBLIC_API_URL=http://34.14.150.183:3001
 ```
 
-For this PC on Wi‑Fi, the LAN IPv4 is `192.168.31.66`, so use:
+3) From the phone/POS device browser, verify reachability:
+
+`http://34.14.150.183:3001/health`
+
+### Android build rule (MANDATORY)
+
+To eliminate stale cached icons/resources, **always** run a clean prebuild before any Android build:
 
 ```bash
-set EXPO_PUBLIC_API_URL=http://192.168.31.66:3001
-npm start
+npx expo prebuild -p android --clean
 ```
 
-You can also copy [`/.env.example`](.env.example:1) to `/.env` for local dev.
-
-### Backend reachability from a real device (LAN)
-
-1) Ensure backend listens on all interfaces (`0.0.0.0`). This is now explicit in [`backend/src/server.ts`](backend/src/server.ts:1).
-
-2) Start backend:
+Then build/install:
 
 ```bash
-cd backend
-npm run dev
+npx expo run:android
 ```
-
-3) From the phone/POS device browser (same Wi‑Fi), open:
-
-`http://192.168.31.66:3001/health`
-
-If it doesn’t load, Windows Firewall is blocking inbound traffic on port 3001. You must allow it (Windows requires Administrator privileges to add a rule).
-
-### Android dev/test HTTP networking (cleartext)
-
-For dev/test APKs, HTTP is allowed by setting `usesCleartextTraffic: true` in [`app.json`](app.json:17).
-
-Production builds should disable cleartext and use HTTPS.
 
 ### Offline-first behavior (current)
 

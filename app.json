@@ -2,52 +2,13 @@
   "expo": {
     "name": "SuperMandi POS",
     "slug": "supermandi-pos",
-    "version": "1.0.0",
-    "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0B5ED7"
       },
-      "package": "com.supermandi.pos",
-      
-      "permissions": [
-        "CAMERA"
-      ],
-      "blockedPermissions": [
-        "android.permission.RECORD_AUDIO"
-      ],
-      "newArchEnabled": true
-    },
-    "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "usesCleartextTraffic": true
-          }
-        }
-      ],
-      "./plugins/withAndroidLocalProperties",
-      "expo-asset",
-      "expo-font"
-    ],
-    "extra": {
-      "devNote": "DEV/TEST ONLY: usesCleartextTraffic is enabled to allow HTTP calls to local/LAN backend. Disable and use HTTPS for production builds.",
-      "eas": {
-        "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
-      }
-    },
-    "owner": "supermanditech"
+      "package": "com.supermanditech.supermandipos"
+    }
   }
 }
