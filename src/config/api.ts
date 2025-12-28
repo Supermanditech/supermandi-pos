@@ -1,15 +1,12 @@
-// Configure the backend base URL.
-//
-// ENV-ONLY (no hardcoded URLs): set `EXPO_PUBLIC_API_URL` per environment.
-// - Example format: http(s)://HOST:PORT
+import Constants from "expo-constants";
 
-const value = process.env.EXPO_PUBLIC_API_URL?.trim();
+// Read API URL from app.json -> extra (production-safe)
+const API_URL =
+  Constants.expoConfig?.extra?.API_URL ||
+  Constants.manifest?.extra?.API_URL;
 
-if (!value) {
-  throw new Error(
-    "Missing EXPO_PUBLIC_API_URL. Set it to your backend base URL (example: http(s)://HOST:PORT)."
-  );
+if (!API_URL) {
+  throw new Error("API_URL missing from app config (app.json -> extra.API_URL)");
 }
 
-export const API_BASE_URL = value;
-
+export const API_BASE_URL = API_URL;
