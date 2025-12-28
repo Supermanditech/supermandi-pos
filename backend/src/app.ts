@@ -15,11 +15,8 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (_req, res) => {
-  res.json({
-    status: "OK",
-    service: "SuperMandi Backend",
-    time: new Date().toISOString()
-  });
+  // Cloud health-check contract: must be JSON { status: "ok" }
+  res.json({ status: "ok" });
 });
 
 app.use("/api", apiRouter);

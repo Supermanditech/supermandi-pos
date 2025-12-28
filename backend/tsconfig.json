@@ -10,5 +10,8 @@
     "strict": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": false
-  }
+  },
+  "exclude": [
+    "**/*.prisma_disabled.ts"
+  ]
 }
