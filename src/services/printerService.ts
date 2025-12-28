@@ -1,4 +1,5 @@
 import { eventLogger } from './eventLogger';
+import { logPosEvent } from "./cloudEventLogger";
 
 export interface PrintJob {
   id: string;
@@ -60,6 +61,9 @@ class PrinterService {
       await eventLogger.log('PRINT_FAILED', {
         reason: 'Printer not connected',
       });
+
+      // Cloud event (required)
+      void logPosEvent("PRINTER_ERROR", { reason: "not_connected" });
       throw new Error('Printer not connected');
     }
 
@@ -67,6 +71,9 @@ class PrinterService {
       await eventLogger.log('PRINT_FAILED', {
         reason: 'Paper not available',
       });
+
+      // Cloud event (required)
+      void logPosEvent("PRINTER_ERROR", { reason: "paper_not_available" });
       throw new Error('Paper not available');
     }
 

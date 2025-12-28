@@ -50,6 +50,9 @@ fastlane/test_output
 dist/
 web-build/
 
+# Tooling artifacts (do not commit)
+screenshots/
+
 # @generated expo-cli sync
 /.expo/
 

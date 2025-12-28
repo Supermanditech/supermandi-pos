@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { theme } from "../theme";
 import { eventLogger } from "../services/eventLogger";
+import { logPosEvent, startCloudEventLogger } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
 import { useProductsStore } from "../stores/productsStore";
 import { ensureSession } from "../services/sessionService";
@@ -24,7 +25,12 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const initializeApp = async () => {
+      // Start cloud logger early so offline/online transitions are captured.
+      startCloudEventLogger();
+
+      // Local + cloud events (fire-and-forget; never block UI).
       eventLogger.log("APP_START", { screen: "Splash" });
+      void logPosEvent("APP_START", { screen: "Splash" });
 
       // Initialize services in parallel
       const initPromises = [

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { formatMoney, minorToMajor } from "../utils/money";
 import { createTransaction } from "../services/api/transactionsApi";
 import { enqueueTransaction } from "../services/syncService";
+import { logPaymentEvent } from "../services/cloudEventLogger";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -22,6 +23,8 @@ type RootStackParamList = {
   Payment: undefined;
   SuccessPrint: {
     paymentMode: 'UPI' | 'CASH' | 'DUE';
+    transactionId: string;
+    billId: string;
   };
 };
 
@@ -39,6 +42,28 @@ const PaymentScreen = () => {
   const [selectedMode, setSelectedMode] = useState<PaymentMode>('UPI');
   const [upiString, setUpiString] = useState<string>('');
 
+  // Stable IDs for payment observability (used across all payment lifecycle events)
+  const transactionId = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
+  const billId = useRef(Date.now().toString().slice(-6)).current;
+  const finalized = useRef(false);
+
+  // Payment timeout watchdog (UPI/QR often isn't instant).
+  useEffect(() => {
+    const id = setTimeout(() => {
+      if (!finalized.current) {
+        void logPaymentEvent("PAYMENT_TIMEOUT", {
+          transactionId,
+          billId,
+          paymentMode: selectedMode,
+          amountMinor: total,
+          currency: items[0]?.currency ?? "INR",
+          timeoutMs: 120_000
+        });
+      }
+    }, 120_000);
+    return () => clearTimeout(id);
+  }, [billId, items, selectedMode, total, transactionId]);
+
   // Generate UPI payment string
   const generateUPIString = (amount: number): string => {
     const billNumber = Date.now().toString().slice(-6);
@@ -53,7 +78,53 @@ const PaymentScreen = () => {
     setUpiString(upiStr);
     console.log("Generated UPI string:", upiStr);
     console.log("📱 UPI QR code generated for amount:", minorToMajor(total).toFixed(2));
+
+    // Payment lifecycle events (cloud): init -> (UPI) QR created -> pending
+    void logPaymentEvent("PAYMENT_INIT", {
+      transactionId,
+      billId,
+      paymentMode: selectedMode,
+      amountMinor: total,
+      currency: items[0]?.currency ?? "INR",
+      itemCount: items.length
+    });
+
+    if (selectedMode === "UPI") {
+      void logPaymentEvent("PAYMENT_QR_CREATED", {
+        transactionId,
+        billId,
+        paymentMode: "UPI",
+        retailerUpiId: RETAILER_UPI_ID,
+        upiString: upiStr,
+        amountMinor: total,
+        currency: items[0]?.currency ?? "INR"
+      });
+    }
+
+    void logPaymentEvent("PAYMENT_PENDING", {
+      transactionId,
+      billId,
+      paymentMode: selectedMode,
+      amountMinor: total,
+      currency: items[0]?.currency ?? "INR"
+    });
   }, [total]);
+
+  // If user backs out without finishing, mark as cancelled.
+  useEffect(() => {
+    return () => {
+      if (!finalized.current) {
+        void logPaymentEvent("PAYMENT_CANCELLED", {
+          transactionId,
+          billId,
+          paymentMode: selectedMode,
+          amountMinor: total,
+          currency: items[0]?.currency ?? "INR"
+        });
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePaymentSelect = (mode: PaymentMode) => {
     setSelectedMode(mode);
@@ -69,6 +140,9 @@ const PaymentScreen = () => {
   const handleCompletePayment = async () => {
     console.log(`Completing payment with mode: ${selectedMode}`);
 
+    // Idempotency guard: don't double-log success/failure.
+    if (finalized.current) return;
+
     const paymentMethod = selectedMode === "CASH" ? "CASH" : selectedMode === "UPI" ? "CARD" : "OTHER";
     const currency = items[0]?.currency ?? "INR";
 
@@ -81,11 +155,38 @@ const PaymentScreen = () => {
 
     try {
       await createTransaction(payload);
+
+      // Payment confirmed in POS.
+      finalized.current = true;
+      void logPaymentEvent("PAYMENT_CONFIRMED", {
+        transactionId,
+        billId,
+        paymentMode: selectedMode,
+        amountMinor: total,
+        currency
+      });
+      void logPaymentEvent("PAYMENT_SUCCESS", {
+        transactionId,
+        billId,
+        paymentMode: selectedMode,
+        amountMinor: total,
+        currency
+      });
     } catch (e) {
       await enqueueTransaction(payload);
+
+      // Don't block the sale; record as failed-to-submit.
+      void logPaymentEvent("PAYMENT_FAILED", {
+        transactionId,
+        billId,
+        paymentMode: selectedMode,
+        amountMinor: total,
+        currency,
+        reason: "backend_unreachable_or_error"
+      });
     }
 
-    navigation.navigate('SuccessPrint', { paymentMode: selectedMode });
+    navigation.navigate('SuccessPrint', { paymentMode: selectedMode, transactionId, billId });
   };
 
   const renderPaymentOption = (mode: PaymentMode, title: string, icon: string) => (

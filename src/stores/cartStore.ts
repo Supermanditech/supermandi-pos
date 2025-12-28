@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { eventLogger } from '../services/eventLogger';
+import { logPosEvent } from "../services/cloudEventLogger";
 
 export interface CartItem {
   id: string;
@@ -85,6 +86,16 @@ export const useCartStore = create<CartState>((set, get) => ({
       quantity: item.quantity || 1,
       priceMinor: item.priceMinor,
     });
+
+    // Cloud event (required): ADD_TO_CART
+    void logPosEvent("ADD_TO_CART", {
+      productId: item.id,
+      name: item.name,
+      quantity: item.quantity || 1,
+      priceMinor: item.priceMinor,
+      currency: item.currency ?? undefined,
+      barcode: item.barcode ?? undefined
+    });
   },
   
   removeItem: (itemId) => {
@@ -98,6 +109,16 @@ export const useCartStore = create<CartState>((set, get) => ({
       eventLogger.log('CART_REMOVE_ITEM', {
         itemId: item.id,
         itemName: item.name,
+      });
+
+      // Cloud event (required): REMOVE_FROM_CART
+      void logPosEvent("REMOVE_FROM_CART", {
+        productId: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        priceMinor: item.priceMinor,
+        currency: item.currency ?? undefined,
+        barcode: item.barcode ?? undefined
       });
     }
   },

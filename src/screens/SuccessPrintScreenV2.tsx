@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { theme } from "../theme";
 import { useCartStore } from "../stores/cartStore";
 import { eventLogger } from "../services/eventLogger";
+import { logPaymentEvent, logPosEvent } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
 
@@ -13,7 +14,7 @@ type RootStackParamList = {
   Splash: undefined;
   SellScan: undefined;
   Payment: undefined;
-  SuccessPrint: { paymentMode: "UPI" | "CASH" | "DUE" };
+  SuccessPrint: { paymentMode: "UPI" | "CASH" | "DUE"; transactionId: string; billId: string };
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "SuccessPrint">;
@@ -26,8 +27,11 @@ export default function SuccessPrintScreenV2() {
 
   const currency = items[0]?.currency ?? "INR";
   const paymentMode = route.params?.paymentMode ?? "CASH";
-  const billNumber = useRef(Date.now().toString().slice(-6)).current;
+  const billNumber = route.params?.billId ?? useRef(Date.now().toString().slice(-6)).current;
   const toastOpacity = useRef(new Animated.Value(0)).current;
+
+  // For reconciliation: tie receipt/print outcomes to a bill id.
+  const transactionId = route.params?.transactionId ?? useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
 
   const [printStatus, setPrintStatus] = useState<"printing" | "success" | "failed">("printing");
   const [showToast, setShowToast] = useState(false);
@@ -67,11 +71,24 @@ export default function SuccessPrintScreenV2() {
         itemCount: items.length
       });
 
+      // Cloud events: record payment success at the point the POS considers the sale done.
+      // If upstream payment confirmation is added later, those events will also carry the same transactionId.
+      void logPaymentEvent("PAYMENT_SUCCESS", {
+        transactionId,
+        billId: billNumber,
+        paymentMode,
+        amountMinor: total,
+        currency
+      });
+
       try {
         await printerService.printReceipt(generateReceiptContent());
         setPrintStatus("success");
       } catch {
         setPrintStatus("failed");
+
+        // Cloud event (required)
+        void logPosEvent("PRINTER_ERROR", { billId: billNumber, transactionId, reason: "print_failed" });
       }
 
       setShowToast(true);

@@ -17,6 +17,7 @@ import PosStatusStrip from "../components/PosStatusStrip";
 import { useCartStore } from "../stores/cartStore";
 import { useProductsStore } from "../stores/productsStore";
 import { formatMoney } from "../utils/money";
+import { logPosEvent } from "../services/cloudEventLogger";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -57,6 +58,8 @@ export default function SellScanScreen() {
     setScanned(true);
     setLastScannedCode(data);
 
+    // Fire-and-forget scan event
+    void logPosEvent("SCAN_BARCODE", { barcode: data, source: "camera" });
     handleScan(data);
 
     setTimeout(() => {
@@ -83,6 +86,9 @@ export default function SellScanScreen() {
     (global as any).__POS_SCANNER_PING__?.(); // 🔑 scanner heartbeat
 
     if (!barcode.trim()) return;
+
+    // For test buttons / manual scans
+    void logPosEvent("SCAN_BARCODE", { barcode, source: "manual_or_test" });
 
     const product = getProductByBarcode(barcode);
 
