@@ -2,11 +2,12 @@
   "expo": {
     "name": "SuperMandi POS",
     "slug": "supermandi-pos",
-    "version": "1.0.0",
+
+    "version": "1.0.1",
+
+    "runtimeVersion": "pos-v1",
 
     "icon": "./assets/icon.png",
-
-    "runtimeVersion": "1.0.0",
 
     "updates": {
       "enabled": true,
