@@ -18,10 +18,15 @@ export default function App() {
         backgroundColor="#f6f7f4"
         barStyle={Platform.OS === "android" ? "dark-content" : "default"}
       />
+
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
-          screenOptions={{ headerShown: false }}
+          screenOptions={{
+            headerShown: false,          // 🔒 disables header
+            headerBackVisible: false,    // 🔒 disables back icon
+            headerShadowVisible: false, // 🔒 disables header assets
+          }}
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="SellScan" component={SellScanScreen} />

@@ -17,47 +17,46 @@ type RootStackParamList = {
   SuccessPrint: undefined;
 };
 
-type SplashScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Splash'>;
+type SplashScreenNavigationProp =
+  NativeStackNavigationProp<RootStackParamList, "Splash">;
 
 export default function SplashScreen() {
   const navigation = useNavigation<SplashScreenNavigationProp>();
-  const loadProducts = useProductsStore(state => state.loadProducts);
+  const loadProducts = useProductsStore((state) => state.loadProducts);
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Start cloud logger early so offline/online transitions are captured.
+      // 1️⃣ Start cloud logger early (never blocks UI)
       startCloudEventLogger();
 
-      // Local + cloud events (fire-and-forget; never block UI).
+      // 2️⃣ Log app start (fire-and-forget)
       eventLogger.log("APP_START", { screen: "Splash" });
       void logPosEvent("APP_START", { screen: "Splash" });
 
-      // Initialize services in parallel
+      // 3️⃣ Initialize services safely (POS rule: never crash)
       const initPromises = [
-        // Initialize printer service
-        printerService.initialize().catch(error => {
-          console.error("Failed to initialize printer service:", error);
-        }),
+        printerService.initialize().catch(() => undefined),
 
-        // Ensure backend session (temporary until Login screen exists)
-        ensureSession().catch(error => {
-          console.error("Failed to initialize backend session:", error);
-        }),
+        // Backend session is OPTIONAL at boot
+        ensureSession()
+          .then(() => {
+            console.log("Backend session ready");
+          })
+          .catch(() => {
+            console.warn("Backend not ready (safe to continue)");
+          }),
 
-        // Load products
-        loadProducts().catch(error => {
-          console.error("Failed to load products:", error);
-        })
+        loadProducts().catch(() => undefined),
       ];
 
-      await Promise.all(initPromises);
+      // 4️⃣ NEVER block splash on failures
+      await Promise.allSettled(initPromises);
 
-      // Start background sync for any pending offline sales
+      // 5️⃣ Start background sync (non-blocking)
       startAutoSync();
       await syncPendingTransactions().catch(() => undefined);
-      console.log("App initialization completed");
 
-      // Navigate after initialization
+      // 6️⃣ Always move to Sell screen
       setTimeout(() => {
         navigation.replace("SellScan");
       }, 1500);
@@ -70,13 +69,24 @@ export default function SplashScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>SuperMandi POS</Text>
       <ActivityIndicator size="small" color={theme.colors.primary} />
-      <Text style={styles.subtext}>Loading products...</Text>
+      <Text style={styles.subtext}>Initializing...</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 28, fontWeight: "700", marginBottom: 12 },
-  subtext: { marginTop: 8, fontSize: 16 }
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  subtext: {
+    marginTop: 8,
+    fontSize: 16,
+  },
 });
