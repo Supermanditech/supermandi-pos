@@ -41,7 +41,7 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
     method: "GET",
     headers: {
       Accept: "application/json",
-      ...(token ? { "X-Admin-Token": token } : {})
+      ...(token ? { "x-admin-token": token } : {})
     }
   });
 

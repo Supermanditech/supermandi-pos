@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { ApiError } from "./api/apiClient";
 import { createTransaction, type CreateTransactionInput } from "./api/transactionsApi";
+import { syncOutbox } from "./offline/sync";
 
 const PENDING_TX_KEY = "supermandi.pendingTransactions";
 
@@ -63,6 +64,7 @@ export function startAutoSync(): void {
   unsubscribe = NetInfo.addEventListener((state) => {
     if (state.isConnected) {
       syncPendingTransactions().catch(() => undefined);
+      syncOutbox().catch(() => undefined);
     }
   });
 }

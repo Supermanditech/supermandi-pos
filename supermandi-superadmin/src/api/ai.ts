@@ -14,12 +14,12 @@ export async function askAi(question: string): Promise<{ answer: string }> {
   if (!q) throw new Error("Question is required");
   const token = getAdminToken();
 
-  const res = await fetch(`${base}/api/v1/admin/ai/ask`, {
+  const res = await fetch(`${base}/api/v1/admin/ai`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "X-Admin-Token": token } : {})
+      ...(token ? { "x-admin-token": token } : {})
     },
     body: JSON.stringify({ question: q })
   });
@@ -34,5 +34,25 @@ export async function askAi(question: string): Promise<{ answer: string }> {
   }
 
   return { answer: String((data as any).answer ?? "") };
+}
+
+export async function fetchAiHealth(): Promise<{ configured: boolean }> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+  const res = await fetch(`${base}/api/v1/admin/ai/health`, {
+    headers: {
+      Accept: "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
+    }
+    const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI health failed (${res.status})`);
+    throw new Error(msg);
+  }
+  return { configured: Boolean((data as any).configured) };
 }
 

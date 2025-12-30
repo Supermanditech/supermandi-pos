@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../../config/api";
 import { getAuthToken } from "./storage";
+import { clearDeviceSession, getDeviceToken } from "../deviceSession";
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -16,12 +17,14 @@ type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken();
+  const deviceToken = await getDeviceToken();
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(deviceToken ? { "x-device-token": deviceToken } : {})
     },
     body: body === undefined ? undefined : JSON.stringify(body)
   });
@@ -34,6 +37,9 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
       (parsed && typeof parsed === "object" && parsed !== null && "error" in parsed && typeof (parsed as any).error === "string"
         ? (parsed as any).error
         : `Request failed (${res.status})`);
+    if (message === "device_unauthorized") {
+      await clearDeviceSession();
+    }
     throw new ApiError(res.status, message, parsed);
   }
 

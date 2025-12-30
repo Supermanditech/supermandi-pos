@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet } from "react-native";
+import { theme } from "../theme";
 
 export function Toast({ message }: { message: string }) {
   if (!message) return null;
 
   return (
     <View style={styles.toast}>
-      <Text style={styles.text}> Printer low on paper</Text>
+      <Text style={styles.text}>{message}</Text>
     </View>
   );
 }
@@ -15,13 +16,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 110,
     alignSelf: "center",
-    backgroundColor: "#1f2933",
+    backgroundColor: theme.colors.ink,
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 14
   },
   text: {
-    color: "#ffffff",
+    color: theme.colors.textInverse,
     fontSize: 14
   }
 });

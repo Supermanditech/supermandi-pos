@@ -25,6 +25,20 @@ Notes:
 - Do not hardcode URLs in code; all API calls read from `import.meta.env.VITE_API_BASE_URL`.
 - This must be set in Vercel / Firebase Hosting / Cloud Run env for deployed builds.
 
+## Admin auth (v1)
+
+Superadmin must send the admin token via header:
+
+```
+x-admin-token: <ADMIN_TOKEN>
+```
+
+UPI VPA validation (must match backend):
+
+```
+^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$
+```
+
 ## Run locally
 
 ```bash

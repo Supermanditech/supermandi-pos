@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import Constants from "expo-constants";
 import { API_BASE_URL } from "../config/api";
-import { STORE_ID } from "../constants/store";
+import { getDeviceSession, getDeviceToken } from "./deviceSession";
 
 /**
  * Cloud-first POS event logger.
@@ -39,7 +39,6 @@ type QueuedPosEvent = {
   createdAt: string;
 };
 
-const DEVICE_ID_KEY = "supermandi.deviceId.v1";
 const QUEUE_KEY = "supermandi.queue.posEvents.v1";
 
 let started = false;
@@ -59,15 +58,6 @@ function appVersion(): string {
   // Expo: app.json -> expo.version
   const v = (Constants.expoConfig as any)?.version ?? (Constants.manifest as any)?.version;
   return typeof v === "string" && v.trim() ? v.trim() : "unknown";
-}
-
-async function getOrCreateDeviceId(): Promise<string> {
-  const existing = await AsyncStorage.getItem(DEVICE_ID_KEY);
-  if (existing) return existing;
-
-  const id = `pos-${createId()}`;
-  await AsyncStorage.setItem(DEVICE_ID_KEY, id);
-  return id;
 }
 
 async function loadQueue(): Promise<QueuedPosEvent[]> {
@@ -92,6 +82,8 @@ async function saveQueue(queue: QueuedPosEvent[]): Promise<void> {
 }
 
 async function sendToBackend(ev: QueuedPosEvent): Promise<boolean> {
+  const deviceToken = await getDeviceToken();
+  if (!deviceToken) return false;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 2500);
 
@@ -100,11 +92,10 @@ async function sendToBackend(ev: QueuedPosEvent): Promise<boolean> {
       method: "POST",
       headers: {
         Accept: "application/json",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-device-token": deviceToken
       },
       body: JSON.stringify({
-        deviceId: ev.deviceId,
-        storeId: ev.storeId,
         eventType: ev.eventType,
         payload: {
           ...ev.payload,
@@ -186,11 +177,12 @@ export function startCloudEventLogger(): void {
  */
 export async function logPosEvent(eventType: PosEventType, payload: Record<string, unknown> = {}): Promise<void> {
   try {
-    const deviceId = await getOrCreateDeviceId();
+    const session = await getDeviceSession();
+    if (!session) return;
     const ev: QueuedPosEvent = {
       id: createId(),
-      deviceId,
-      storeId: STORE_ID,
+      deviceId: session.deviceId,
+      storeId: session.storeId,
       eventType,
       payload,
       createdAt: nowIso()

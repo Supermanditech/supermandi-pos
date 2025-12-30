@@ -64,6 +64,10 @@ screenshots/
 .env.local
 .env.*.local
 
+# Spec PDFs (do not commit)
+Supermandi POS App Plan.pdf
+supermandi pos plan1.pdf
+
 # Expo / Prebuild
 android/
 

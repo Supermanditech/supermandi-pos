@@ -1,10 +1,30 @@
 import { Router } from "express";
 import { posEventsRouter } from "./pos/events";
+import { posScanRouter } from "./pos/scan";
+import { posSalesRouter } from "./pos/sales";
+import { posStoreRouter } from "./pos/store";
+import { posSyncRouter } from "./pos/sync";
+import { posEnrollRouter } from "./pos/enroll";
+import { posUiStatusRouter } from "./pos/uiStatus";
 import { adminPosEventsRouter } from "./admin/posEvents";
 import { adminAiRouter } from "./admin/ai";
+import { adminStoresRouter } from "./admin/stores";
+import { adminDevicesRouter } from "./admin/devices";
+import { adminDeviceEnrollmentRouter } from "./admin/deviceEnrollments";
+import { adminAnalyticsRouter } from "./admin/analytics";
 
 export const v1Router = Router();
 
 v1Router.use("/pos", posEventsRouter);
+v1Router.use("/pos", posScanRouter);
+v1Router.use("/pos", posSalesRouter);
+v1Router.use("/pos", posStoreRouter);
+v1Router.use("/pos", posSyncRouter);
+v1Router.use("/pos", posEnrollRouter);
+v1Router.use("/pos", posUiStatusRouter);
 v1Router.use("/admin", adminPosEventsRouter);
 v1Router.use("/admin", adminAiRouter);
+v1Router.use("/admin", adminStoresRouter);
+v1Router.use("/admin", adminDevicesRouter);
+v1Router.use("/admin", adminDeviceEnrollmentRouter);
+v1Router.use("/admin", adminAnalyticsRouter);

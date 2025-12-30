@@ -2,74 +2,57 @@ import React, { useEffect } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 import { theme } from "../theme";
-import { eventLogger } from "../services/eventLogger";
-import { logPosEvent, startCloudEventLogger } from "../services/cloudEventLogger";
+import { startCloudEventLogger } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
-import { useProductsStore } from "../stores/productsStore";
-import { ensureSession } from "../services/sessionService";
-import { startAutoSync, syncPendingTransactions } from "../services/syncService";
+import { startAutoSync } from "../services/syncService";
+import { initOfflineDb } from "../services/offline/localDb";
+import { syncOutbox } from "../services/offline/sync";
+import { getDeviceSession } from "../services/deviceSession";
 
 type RootStackParamList = {
   Splash: undefined;
+  EnrollDevice: undefined;
   SellScan: undefined;
   Payment: undefined;
   SuccessPrint: undefined;
 };
 
-type SplashScreenNavigationProp =
-  NativeStackNavigationProp<RootStackParamList, "Splash">;
+type NavProp = NativeStackNavigationProp<RootStackParamList, "Splash">;
 
 export default function SplashScreen() {
-  const navigation = useNavigation<SplashScreenNavigationProp>();
-  const loadProducts = useProductsStore((state) => state.loadProducts);
+  const navigation = useNavigation<NavProp>();
 
   useEffect(() => {
-    const initializeApp = async () => {
-      // 1️⃣ Start cloud logger early (never blocks UI)
-      startCloudEventLogger();
+    // 🔒 Non-blocking infra boot (POS-safe)
+    startCloudEventLogger();
+    printerService.initialize().catch(() => undefined);
+    initOfflineDb().catch(() => undefined);
+    syncOutbox().catch(() => undefined);
+    startAutoSync();
 
-      // 2️⃣ Log app start (fire-and-forget)
-      eventLogger.log("APP_START", { screen: "Splash" });
-      void logPosEvent("APP_START", { screen: "Splash" });
+    let cancelled = false;
+    // ⏱ Controlled splash time (UX stability)
+    const timer = setTimeout(() => {
+      void (async () => {
+        const session = await getDeviceSession();
+        if (cancelled) return;
+        navigation.replace(session ? "SellScan" : "EnrollDevice");
+      })();
+    }, 1000); // 1 second = best POS balance
 
-      // 3️⃣ Initialize services safely (POS rule: never crash)
-      const initPromises = [
-        printerService.initialize().catch(() => undefined),
-
-        // Backend session is OPTIONAL at boot
-        ensureSession()
-          .then(() => {
-            console.log("Backend session ready");
-          })
-          .catch(() => {
-            console.warn("Backend not ready (safe to continue)");
-          }),
-
-        loadProducts().catch(() => undefined),
-      ];
-
-      // 4️⃣ NEVER block splash on failures
-      await Promise.allSettled(initPromises);
-
-      // 5️⃣ Start background sync (non-blocking)
-      startAutoSync();
-      await syncPendingTransactions().catch(() => undefined);
-
-      // 6️⃣ Always move to Sell screen
-      setTimeout(() => {
-        navigation.replace("SellScan");
-      }, 1500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
     };
-
-    initializeApp();
   }, []);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>SuperMandi POS</Text>
+      <Text style={styles.title}>Supermandi POS</Text>
       <ActivityIndicator size="small" color={theme.colors.primary} />
-      <Text style={styles.subtext}>Initializing...</Text>
+      <Text style={styles.subtext}>Starting...</Text>
     </View>
   );
 }
@@ -79,14 +62,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: theme.colors.background,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: "700",
     marginBottom: 12,
+    color: theme.colors.textPrimary
   },
   subtext: {
-    marginTop: 8,
-    fontSize: 16,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
   },
 });

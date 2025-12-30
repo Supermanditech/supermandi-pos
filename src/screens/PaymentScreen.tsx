@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -10,201 +10,320 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import QRCode from "react-native-qrcode-svg";
+
 import { useCartStore } from "../stores/cartStore";
-import * as Clipboard from 'expo-clipboard';
-import { formatMoney, minorToMajor } from "../utils/money";
-import { createTransaction } from "../services/api/transactionsApi";
-import { enqueueTransaction } from "../services/syncService";
+import { formatMoney } from "../utils/money";
+import {
+  confirmUpiPaymentManual,
+  createSale,
+  initUpiPayment,
+  recordCashPayment,
+  recordDuePayment
+} from "../services/api/posApi";
 import { logPaymentEvent } from "../services/cloudEventLogger";
+import { ApiError } from "../services/api/apiClient";
+import { subscribeNetworkStatus } from "../services/networkStatus";
+import { clearDeviceSession } from "../services/deviceSession";
+import { POS_MESSAGES } from "../utils/uiStatus";
+import { theme } from "../theme";
 
 type RootStackParamList = {
   Splash: undefined;
   SellScan: undefined;
   Payment: undefined;
+  EnrollDevice: undefined;
+  DeviceBlocked: undefined;
   SuccessPrint: {
-    paymentMode: 'UPI' | 'CASH' | 'DUE';
+    paymentMode: "UPI" | "CASH" | "DUE";
     transactionId: string;
     billId: string;
   };
 };
 
-type PaymentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Payment'>;
-
-// 🔧 PRODUCTION CONFIGURATION: Change this to your actual UPI ID when deploying
-// Example: "merchant@paytm", "store@icici", "retailer@axis"
-const RETAILER_UPI_ID = "sharmakirana@upi"; // Currently set for testing
-
-type PaymentMode = 'UPI' | 'CASH' | 'DUE';
+type PaymentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Payment">;
+type PaymentMode = "UPI" | "CASH" | "DUE";
 
 const PaymentScreen = () => {
   const navigation = useNavigation<PaymentScreenNavigationProp>();
   const { total, items } = useCartStore();
-  const [selectedMode, setSelectedMode] = useState<PaymentMode>('UPI');
-  const [upiString, setUpiString] = useState<string>('');
+  const [selectedMode, setSelectedMode] = useState<PaymentMode>("UPI");
+  const [saleId, setSaleId] = useState<string | null>(null);
+  const [billRef, setBillRef] = useState<string | null>(null);
+  const [upiIntent, setUpiIntent] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [loadingSale, setLoadingSale] = useState(false);
+  const [loadingUpi, setLoadingUpi] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
-  // Stable IDs for payment observability (used across all payment lifecycle events)
+  const currency = items[0]?.currency ?? "INR";
   const transactionId = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
-  const billId = useRef(Date.now().toString().slice(-6)).current;
   const finalized = useRef(false);
 
-  // Payment timeout watchdog (UPI/QR often isn't instant).
+  const subtotalMinor = useMemo(
+    () => items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0),
+    [items]
+  );
+  const discountMinor = Math.max(0, subtotalMinor - total);
+
   useEffect(() => {
-    const id = setTimeout(() => {
-      if (!finalized.current) {
-        void logPaymentEvent("PAYMENT_TIMEOUT", {
-          transactionId,
-          billId,
-          paymentMode: selectedMode,
-          amountMinor: total,
-          currency: items[0]?.currency ?? "INR",
-          timeoutMs: 120_000
-        });
+    const unsubscribe = subscribeNetworkStatus((online) => {
+      setIsOnline(online);
+      if (!online && selectedMode === "UPI") {
+        setSelectedMode("CASH");
+        setUpiIntent(null);
+        setPaymentId(null);
       }
-    }, 120_000);
-    return () => clearTimeout(id);
-  }, [billId, items, selectedMode, total, transactionId]);
+    });
 
-  // Generate UPI payment string
-  const generateUPIString = (amount: number): string => {
-    const billNumber = Date.now().toString().slice(-6);
-    const upiString = `upi://pay?pa=${RETAILER_UPI_ID}&pn=Sharma%20Kirana%20Store&am=${amount.toFixed(2)}&cu=INR&tn=Bill%20${billNumber}`;
-    return upiString;
-  };
+    return () => unsubscribe();
+  }, [selectedMode]);
 
   useEffect(() => {
-    console.log("PaymentScreen mounted successfully");
-    // Generate UPI string when component mounts or total changes
-    const upiStr = generateUPIString(minorToMajor(total));
-    setUpiString(upiStr);
-    console.log("Generated UPI string:", upiStr);
-    console.log("📱 UPI QR code generated for amount:", minorToMajor(total).toFixed(2));
+    if (saleId || items.length === 0 || loadingSale) return;
 
-    // Payment lifecycle events (cloud): init -> (UPI) QR created -> pending
-    void logPaymentEvent("PAYMENT_INIT", {
-      transactionId,
-      billId,
-      paymentMode: selectedMode,
-      amountMinor: total,
-      currency: items[0]?.currency ?? "INR",
-      itemCount: items.length
-    });
+    let cancelled = false;
+    setLoadingSale(true);
 
-    if (selectedMode === "UPI") {
-      void logPaymentEvent("PAYMENT_QR_CREATED", {
-        transactionId,
-        billId,
-        paymentMode: "UPI",
-        retailerUpiId: RETAILER_UPI_ID,
-        upiString: upiStr,
-        amountMinor: total,
-        currency: items[0]?.currency ?? "INR"
+    createSale({
+      items: items.map((item) => ({
+        productId: item.id,
+        barcode: item.barcode,
+        name: item.name,
+        quantity: item.quantity,
+        priceMinor: item.priceMinor
+      })),
+      discountMinor
+    })
+      .then((res) => {
+        if (cancelled) return;
+        setSaleId(res.saleId);
+        setBillRef(res.billRef);
+        void logPaymentEvent("PAYMENT_INIT", {
+          transactionId,
+          billId: res.billRef,
+          paymentMode: selectedMode,
+          amountMinor: res.totals.totalMinor,
+          currency,
+          itemCount: items.length
+        });
+      })
+      .catch(async (error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          if (await handleDeviceAuthError(error)) {
+            return;
+          }
+          if (error.message === "store_inactive") {
+            Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
+              { text: "OK", onPress: () => navigation.navigate("SellScan") }
+            ]);
+            return;
+          }
+          if (error.message === "store not found") {
+            Alert.alert("Store Missing", "Store not found. Check Superadmin setup.");
+            return;
+          }
+        }
+        Alert.alert("Sale Error", "Unable to start payment. Please try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSale(false);
       });
-    }
 
-    void logPaymentEvent("PAYMENT_PENDING", {
-      transactionId,
-      billId,
-      paymentMode: selectedMode,
-      amountMinor: total,
-      currency: items[0]?.currency ?? "INR"
-    });
-  }, [total]);
+    return () => {
+      cancelled = true;
+    };
+  }, [discountMinor, items, saleId, selectedMode, transactionId, currency, loadingSale]);
 
-  // If user backs out without finishing, mark as cancelled.
+  useEffect(() => {
+    if (!isOnline || selectedMode !== "UPI" || !saleId || upiIntent || loadingUpi) return;
+
+    let cancelled = false;
+    setLoadingUpi(true);
+
+    initUpiPayment({ saleId })
+      .then((res) => {
+        if (cancelled) return;
+        setUpiIntent(res.upiIntent);
+        setPaymentId(res.paymentId);
+        void logPaymentEvent("PAYMENT_QR_CREATED", {
+          transactionId,
+          billId: res.billRef,
+          paymentMode: "UPI",
+          upiString: res.upiIntent,
+          amountMinor: res.amountMinor,
+          currency
+        });
+        void logPaymentEvent("PAYMENT_PENDING", {
+          transactionId,
+          billId: res.billRef,
+          paymentMode: "UPI",
+          amountMinor: res.amountMinor,
+          currency
+        });
+      })
+      .catch(async (error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          if (await handleDeviceAuthError(error)) {
+            return;
+          }
+          if (error.message === "store_inactive") {
+            Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
+              { text: "OK", onPress: () => navigation.navigate("SellScan") }
+            ]);
+            return;
+          }
+          if (error.message === "upi_offline_blocked") {
+            Alert.alert("UPI Offline", "UPI is unavailable while offline. Use Cash or Due.");
+            return;
+          }
+          if (error.message === "upi_vpa_missing") {
+            Alert.alert("UPI Missing", "UPI VPA is not set for this store.");
+            return;
+          }
+        }
+        Alert.alert("UPI Error", "UPI ID not configured or QR failed.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingUpi(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [saleId, selectedMode, upiIntent, transactionId, currency, loadingUpi, isOnline]);
+
   useEffect(() => {
     return () => {
-      if (!finalized.current) {
+      if (!finalized.current && billRef) {
         void logPaymentEvent("PAYMENT_CANCELLED", {
           transactionId,
-          billId,
+          billId: billRef,
           paymentMode: selectedMode,
           amountMinor: total,
-          currency: items[0]?.currency ?? "INR"
+          currency
         });
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [billRef, currency, selectedMode, total, transactionId]);
+
+  const handleDeviceAuthError = async (error: ApiError): Promise<boolean> => {
+    if (error.message === "device_inactive") {
+      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
+      return true;
+    }
+    if (error.message === "device_unauthorized") {
+      await clearDeviceSession();
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      return true;
+    }
+    if (error.message === "device_not_enrolled") {
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      return true;
+    }
+    return false;
+  };
 
   const handlePaymentSelect = (mode: PaymentMode) => {
     setSelectedMode(mode);
   };
 
-  const handleCopyUPI = async () => {
-    if (upiString) {
-      await Clipboard.setStringAsync(upiString);
-      console.log('UPI string copied to clipboard:', upiString);
-    }
-  };
-
   const handleCompletePayment = async () => {
-    console.log(`Completing payment with mode: ${selectedMode}`);
+    if (!saleId || !billRef) {
+      Alert.alert("Payment Error", "Sale is not ready yet.");
+      return;
+    }
 
-    // Idempotency guard: don't double-log success/failure.
-    if (finalized.current) return;
-
-    const paymentMethod = selectedMode === "CASH" ? "CASH" : selectedMode === "UPI" ? "CARD" : "OTHER";
-    const currency = items[0]?.currency ?? "INR";
-
-    // Submit to backend. If offline/unreachable, enqueue for later sync.
-    const payload = {
-      paymentMethod,
-      currency,
-      items: items.map((i) => ({ productId: i.id, quantity: i.quantity }))
-    } as const;
+    if (finalized.current || submitting) return;
+    setSubmitting(true);
 
     try {
-      await createTransaction(payload);
+      if (selectedMode === "UPI") {
+        if (!isOnline) {
+          Alert.alert("UPI Offline", "UPI is unavailable while offline. Use Cash or Due.");
+          return;
+        }
+        if (!paymentId) {
+          Alert.alert("UPI Error", "UPI payment is not ready yet.");
+          return;
+        }
+        await confirmUpiPaymentManual({ paymentId });
+      } else if (selectedMode === "CASH") {
+        await recordCashPayment({ saleId });
+      } else {
+        await recordDuePayment({ saleId });
+      }
 
-      // Payment confirmed in POS.
-      finalized.current = true;
       void logPaymentEvent("PAYMENT_CONFIRMED", {
         transactionId,
-        billId,
+        billId: billRef,
         paymentMode: selectedMode,
         amountMinor: total,
         currency
       });
+
+      finalized.current = true;
       void logPaymentEvent("PAYMENT_SUCCESS", {
         transactionId,
-        billId,
+        billId: billRef,
         paymentMode: selectedMode,
         amountMinor: total,
         currency
       });
-    } catch (e) {
-      await enqueueTransaction(payload);
 
-      // Don't block the sale; record as failed-to-submit.
+      navigation.navigate("SuccessPrint", {
+        paymentMode: selectedMode,
+        transactionId,
+        billId: billRef
+      });
+    } catch (error) {
       void logPaymentEvent("PAYMENT_FAILED", {
         transactionId,
-        billId,
+        billId: billRef,
         paymentMode: selectedMode,
         amountMinor: total,
         currency,
-        reason: "backend_unreachable_or_error"
+        reason: "backend_error"
       });
+      if (error instanceof ApiError) {
+        if (await handleDeviceAuthError(error)) {
+          return;
+        }
+        if (error.message === "store_inactive") {
+          Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
+            { text: "OK", onPress: () => navigation.navigate("SellScan") }
+          ]);
+          return;
+        }
+      }
+      Alert.alert("Payment Error", "Unable to complete payment. Try again.");
+    } finally {
+      setSubmitting(false);
     }
-
-    navigation.navigate('SuccessPrint', { paymentMode: selectedMode, transactionId, billId });
   };
 
-  const renderPaymentOption = (mode: PaymentMode, title: string, icon: string) => (
+  const renderPaymentOption = (mode: PaymentMode, title: string, icon: string, disabled = false) => (
     <TouchableOpacity
       style={[
         styles.paymentOption,
-        selectedMode === mode && styles.paymentOptionSelected
+        selectedMode === mode && styles.paymentOptionSelected,
+        disabled && styles.paymentOptionDisabled
       ]}
       onPress={() => handlePaymentSelect(mode)}
+      disabled={disabled}
     >
       <MaterialCommunityIcons
         name={icon as any}
         size={24}
-        color={selectedMode === mode ? "#10B981" : "#6B7280"}
+        color={selectedMode === mode ? theme.colors.secondary : theme.colors.textTertiary}
       />
       <Text style={[
         styles.paymentOptionText,
-        selectedMode === mode && styles.paymentOptionTextSelected
+        selectedMode === mode && styles.paymentOptionTextSelected,
+        disabled && styles.paymentOptionTextDisabled
       ]}>
         {title}
       </Text>
@@ -212,21 +331,28 @@ const PaymentScreen = () => {
         <MaterialCommunityIcons
           name="check-circle"
           size={20}
-          color="#10B981"
+          color={theme.colors.secondary}
           style={styles.checkIcon}
         />
       )}
     </TouchableOpacity>
   );
 
+  const canSubmit =
+    Boolean(saleId && billRef) &&
+    !loadingSale &&
+    !submitting &&
+    (selectedMode !== "UPI" || Boolean(paymentId));
+
+  const ctaLabel =
+    selectedMode === "UPI" ? "Payment Received" : selectedMode === "DUE" ? "Mark as Due" : "Complete Payment";
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Select Payment Method</Text>
       </View>
 
-      {/* Amount Display */}
       <View style={styles.amountSection}>
         <Text style={styles.amountLabel}>Total Amount</Text>
         <Text
@@ -235,49 +361,44 @@ const PaymentScreen = () => {
           minimumFontScale={0.5}
           numberOfLines={1}
         >
-          {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")}
+          {formatMoney(total, currency)}
         </Text>
+        {billRef && <Text style={styles.billRef}>Bill #{billRef}</Text>}
       </View>
 
-      {/* Payment Options */}
+      {!isOnline && (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>{POS_MESSAGES.offline}</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.paymentOptions} contentContainerStyle={styles.paymentOptionsContent}>
         <Text style={styles.sectionTitle}>Choose Payment Method</Text>
 
-        {renderPaymentOption('UPI', 'UPI Payment', 'qrcode-scan')}
-        {renderPaymentOption('CASH', 'Cash Payment', 'cash')}
-        {renderPaymentOption('DUE', 'Mark as Due', 'calendar-clock')}
+        {renderPaymentOption("UPI", "UPI Payment", "qrcode-scan", !isOnline)}
+        {renderPaymentOption("CASH", "Cash Payment", "cash")}
+        {renderPaymentOption("DUE", "Mark as Due", "calendar-clock")}
 
-        {/* Payment Details based on selected mode */}
-        {selectedMode === 'UPI' && (
+        {selectedMode === "UPI" && (
           <View style={styles.paymentDetails}>
             <Text style={styles.detailsTitle}>UPI Payment</Text>
             <Text style={styles.detailsText}>
-              Scan QR code to pay {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")}
+              Show this QR code to the customer to pay.
             </Text>
-            <View style={styles.upiDetails}>
-              <MaterialCommunityIcons name="qrcode" size={60} color="#10B981" />
-              <Text style={styles.upiTitle}>UPI Payment Ready</Text>
-              <Text style={styles.upiIdDisplay}>{RETAILER_UPI_ID}</Text>
-              <Text style={styles.upiAmount}>
-                {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")}
-              </Text>
-
-              <TouchableOpacity
-                style={styles.copyButton}
-                onPress={handleCopyUPI}
-              >
-                <MaterialCommunityIcons name="content-copy" size={16} color="#fff" />
-                <Text style={styles.copyButtonText}>Copy UPI String</Text>
-              </TouchableOpacity>
-
-              <Text style={styles.upiInstructions}>
-                Use any QR code generator with the copied UPI string to create a scannable QR code
-              </Text>
-            </View>
+            {!isOnline ? (
+              <Text style={styles.offlineNote}>Offline: UPI is disabled.</Text>
+            ) : upiIntent ? (
+              <QRCode value={upiIntent} size={160} />
+            ) : (
+              <View style={styles.qrPlaceholder}>
+                <Text style={styles.qrText}>{loadingUpi ? "Generating QR..." : "QR not ready"}</Text>
+              </View>
+            )}
+            <Text style={styles.upiAmount}>{formatMoney(total, currency)}</Text>
           </View>
         )}
 
-        {selectedMode === 'CASH' && (
+        {selectedMode === "CASH" && (
           <View style={styles.paymentDetails}>
             <Text style={styles.detailsTitle}>Cash Payment</Text>
             <Text
@@ -286,29 +407,29 @@ const PaymentScreen = () => {
               minimumFontScale={0.7}
               numberOfLines={2}
             >
-              Collect {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")} from customer
+              Collect {formatMoney(total, currency)} from customer
             </Text>
           </View>
         )}
 
-        {selectedMode === 'DUE' && (
+        {selectedMode === "DUE" && (
           <View style={styles.paymentDetails}>
             <Text style={styles.detailsTitle}>Due Payment</Text>
             <Text style={styles.detailsText}>
-              {formatMoney(total, items[0]?.currency ?? "INR").replace("INR ", "₹")} will be collected later
+              {formatMoney(total, currency)} will be collected later
             </Text>
           </View>
         )}
       </ScrollView>
 
-      {/* Complete Payment Button */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={styles.completeButton}
+          style={[styles.completeButton, !canSubmit && styles.completeButtonDisabled]}
           onPress={handleCompletePayment}
+          disabled={!canSubmit}
         >
-          <Text style={styles.completeButtonText}>Complete Payment</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color="#fff" />
+          <Text style={styles.completeButtonText}>{ctaLabel}</Text>
+          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.textInverse} />
         </TouchableOpacity>
       </View>
     </View>
@@ -320,23 +441,23 @@ export default PaymentScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F9FAFB"
+    backgroundColor: theme.colors.background
   },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB"
+    borderBottomColor: theme.colors.border
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#111827",
+    color: theme.colors.textPrimary,
     textAlign: "center"
   },
   amountSection: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     margin: 16,
     padding: 20,
     borderRadius: 12,
@@ -349,13 +470,18 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 16,
-    color: "#6B7280",
+    color: theme.colors.textSecondary,
     marginBottom: 8
   },
   amountValue: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#111827"
+    color: theme.colors.textPrimary
+  },
+  billRef: {
+    marginTop: 6,
+    fontSize: 12,
+    color: theme.colors.textTertiary
   },
   paymentOptions: {
     flex: 1
@@ -366,13 +492,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#374151",
+    color: theme.colors.textSecondary,
     marginBottom: 16
   },
   paymentOption: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -385,24 +511,30 @@ const styles = StyleSheet.create({
     elevation: 1
   },
   paymentOptionSelected: {
-    borderColor: "#10B981",
-    backgroundColor: "#F0FDF4"
+    borderColor: theme.colors.secondary,
+    backgroundColor: theme.colors.accentSoft
+  },
+  paymentOptionDisabled: {
+    opacity: 0.5
   },
   paymentOptionText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#374151",
+    color: theme.colors.textSecondary,
     marginLeft: 12,
     flex: 1
   },
   paymentOptionTextSelected: {
-    color: "#10B981"
+    color: theme.colors.secondary
+  },
+  paymentOptionTextDisabled: {
+    color: theme.colors.textTertiary
   },
   checkIcon: {
     marginLeft: 8
   },
   paymentDetails: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     padding: 20,
     borderRadius: 12,
     marginTop: 16,
@@ -416,115 +548,85 @@ const styles = StyleSheet.create({
   detailsTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
+    color: theme.colors.textPrimary,
     marginBottom: 8
   },
   detailsText: {
     fontSize: 14,
-    color: "#6B7280",
+    color: theme.colors.textSecondary,
     textAlign: "center",
     marginBottom: 16
   },
   qrPlaceholder: {
-    width: 140,
-    height: 180,
-    backgroundColor: "#F3F4F6",
+    width: 160,
+    height: 160,
+    backgroundColor: theme.colors.surfaceAlt,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "#E5E7EB",
+    borderColor: theme.colors.border,
     borderStyle: "dashed",
-    paddingVertical: 8
+    marginBottom: 12
   },
   qrText: {
     fontSize: 12,
-    color: "#9CA3AF",
-    marginTop: 8
-  },
-  upiIdText: {
-    fontSize: 10,
-    color: "#6B7280",
-    marginTop: 4,
+    color: theme.colors.textTertiary,
     textAlign: "center"
   },
-  amountText: {
-    fontSize: 16,
+  offlineNote: {
+    fontSize: 13,
+    color: theme.colors.warning,
+    fontWeight: "600",
+    marginBottom: 12
+  },
+  upiAmount: {
+    marginTop: 12,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#10B981",
-    marginTop: 6,
-    textAlign: "center"
+    color: theme.colors.secondary
   },
   footer: {
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB"
+    borderTopColor: theme.colors.border
+  },
+  banner: {
+    marginHorizontal: 16,
+    marginBottom: 4,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+    backgroundColor: theme.colors.warningSoft
+  },
+  bannerText: {
+    color: theme.colors.warning,
+    fontSize: 13,
+    fontWeight: "700"
   },
   completeButton: {
-    backgroundColor: "#10B981",
+    backgroundColor: theme.colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
     borderRadius: 12,
-    shadowColor: "#10B981",
+    shadowColor: theme.colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4
   },
+  completeButtonDisabled: {
+    backgroundColor: theme.colors.textTertiary,
+    shadowOpacity: 0
+  },
   completeButtonText: {
-    color: "#fff",
+    color: theme.colors.textInverse,
     fontSize: 18,
     fontWeight: "700",
     marginRight: 8
-  },
-  upiDetails: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginBottom: 20,
-  },
-  upiTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 10,
-  },
-  upiIdDisplay: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  upiAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 15,
-  },
-  copyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#10B981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 10,
-  },
-  copyButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  upiInstructions: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 16,
-  },
+  }
 });

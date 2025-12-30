@@ -1,11 +1,40 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap");
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Sora", "Space Grotesk", "DM Sans", sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light;
-  color: #101828;
-  background-color: #f8fafc;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg);
+
+  --color-primary: #1d4ed8;
+  --color-primary-dark: #1e3a8a;
+  --color-primary-soft: #e0e7ff;
+  --color-accent: #14b8a6;
+  --color-accent-soft: #ecfeff;
+  --color-bg: #f3f6fb;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8fafc;
+  --color-border: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-inverse: #ffffff;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-error: #dc2626;
+  --color-success-soft: #ecfdf5;
+  --color-warning-soft: #fff7ed;
+  --color-error-soft: #fef2f2;
+  --color-ink: #0b1220;
+
+  --color-text: var(--color-text-primary);
+  --color-text-muted: var(--color-text-secondary);
+  --color-background: var(--color-bg);
+  --color-secondary: var(--color-accent);
+
+  --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.12);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -14,78 +43,42 @@
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-decoration: none;
 }
 a:hover {
-  color: #535bf2;
+  color: var(--color-primary-dark);
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: radial-gradient(circle at top, #eef2ff 0%, #f8fafc 45%, #eef2f7 100%);
 }
 
 #root {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
 button {
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
+  font-size: 0.95em;
+  font-weight: 600;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--color-primary);
+  color: #fff;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 button:hover {
-  border-color: #646cff;
+  background-color: var(--color-primary-dark);
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    color: #f2f4f7;
-    background-color: #0b1220;
-  }
-
-  .tab {
-    border-color: #344054;
-    background: #101828;
-  }
-
-  .tabActive {
-    border-color: #175cd3;
-    background: #102a56;
-  }
-
-  .card {
-    border-color: #344054;
-    background: #101828;
-  }
-
-  .control input,
-  .control select {
-    border-color: #344054;
-    background: #101828;
-    color: #f2f4f7;
-  }
-
-  .table th {
-    background: #0b1220;
-  }
+  outline: 3px solid rgba(29, 78, 216, 0.25);
+  outline-offset: 2px;
 }

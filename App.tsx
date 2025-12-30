@@ -5,9 +5,13 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import SplashScreen from "./src/screens/SplashScreen";
+import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
 import SellScanScreen from "./src/screens/SellScanScreen";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import SuccessPrintScreen from "./src/screens/SuccessPrintScreenV2";
+import CollectPaymentScreen from "./src/screens/CollectPaymentScreen";
+import DeviceBlockedScreen from "./src/screens/DeviceBlockedScreen";
+import { theme } from "./src/theme";
 
 const Stack = createNativeStackNavigator();
 
@@ -15,7 +19,7 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar
-        backgroundColor="#f6f7f4"
+        backgroundColor={theme.colors.background}
         barStyle={Platform.OS === "android" ? "dark-content" : "default"}
       />
 
@@ -29,7 +33,10 @@ export default function App() {
           }}
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
+          <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
+          <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
           <Stack.Screen name="SellScan" component={SellScanScreen} />
+          <Stack.Screen name="CollectPayment" component={CollectPaymentScreen} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="SuccessPrint" component={SuccessPrintScreen} />
         </Stack.Navigator>

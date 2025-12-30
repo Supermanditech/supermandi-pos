@@ -2,6 +2,7 @@
   "expo": {
     "name": "SuperMandi POS",
     "slug": "supermandi-pos",
+    "scheme": "supermandi",
     "version": "1.0.1",
     "runtimeVersion": "pos-v1",
     "updates": {
@@ -17,6 +18,9 @@
       "eas": {
         "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
       }
-    }
+    },
+    "plugins": [
+      "expo-secure-store"
+    ]
   }
 }

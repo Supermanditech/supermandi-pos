@@ -1,0 +1,141 @@
+import * as SQLite from "expo-sqlite";
+
+const db = SQLite.openDatabase("supermandi_offline.db");
+
+function run(sql: string, params: (string | number | null)[] = []): Promise<void> {
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        sql,
+        params,
+        () => resolve(),
+        (_tx, error) => {
+          reject(error);
+          return false;
+        }
+      );
+    });
+  });
+}
+
+function all<T = any>(sql: string, params: (string | number | null)[] = []): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        sql,
+        params,
+        (_tx, result) => resolve(result.rows._array as T[]),
+        (_tx, error) => {
+          reject(error);
+          return false;
+        }
+      );
+    });
+  });
+}
+
+export async function initOfflineDb(): Promise<void> {
+  await run(
+    `
+    CREATE TABLE IF NOT EXISTS offline_products (
+      barcode TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    `
+  );
+
+  await run(
+    `
+    CREATE TABLE IF NOT EXISTS offline_prices (
+      barcode TEXT PRIMARY KEY,
+      price_minor INTEGER NULL,
+      updated_at TEXT NOT NULL
+    );
+    `
+  );
+
+  await run(
+    `
+    CREATE TABLE IF NOT EXISTS offline_sales (
+      id TEXT PRIMARY KEY,
+      bill_ref TEXT NOT NULL,
+      subtotal_minor INTEGER NOT NULL,
+      discount_minor INTEGER NOT NULL,
+      total_minor INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT '',
+      synced_at TEXT NULL,
+      server_sale_id TEXT NULL
+    );
+    `
+  );
+
+  await run(
+    `
+    CREATE TABLE IF NOT EXISTS offline_sale_items (
+      id TEXT PRIMARY KEY,
+      sale_id TEXT NOT NULL,
+      barcode TEXT NOT NULL,
+      name TEXT NOT NULL,
+      price_minor INTEGER NOT NULL,
+      quantity INTEGER NOT NULL
+    );
+    `
+  );
+
+  await run(
+    `
+    CREATE TABLE IF NOT EXISTS offline_collections (
+      id TEXT PRIMARY KEY,
+      amount_minor INTEGER NOT NULL,
+      mode TEXT NOT NULL,
+      reference TEXT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT '',
+      synced_at TEXT NULL,
+      server_collection_id TEXT NULL
+    );
+    `
+  );
+
+  await run(
+    `
+    CREATE TABLE IF NOT EXISTS offline_outbox (
+      event_id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      payload TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      synced_at TEXT NULL
+    );
+    `
+  );
+
+  // Best-effort migrations for existing local DBs.
+  const alterStatements = [
+    `ALTER TABLE offline_sales ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE offline_sales ADD COLUMN synced_at TEXT NULL`,
+    `ALTER TABLE offline_sales ADD COLUMN server_sale_id TEXT NULL`,
+    `ALTER TABLE offline_collections ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE offline_collections ADD COLUMN synced_at TEXT NULL`,
+    `ALTER TABLE offline_collections ADD COLUMN server_collection_id TEXT NULL`
+  ];
+
+  for (const stmt of alterStatements) {
+    try {
+      await run(stmt);
+    } catch {
+      // Ignore if column already exists.
+    }
+  }
+}
+
+export const offlineDb = {
+  run,
+  all
+};

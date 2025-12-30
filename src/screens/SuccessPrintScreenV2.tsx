@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 16,
     right: 16,
-    backgroundColor: "#0B1220",
+    backgroundColor: theme.colors.ink,
     padding: 14,
     borderRadius: 16
   },
