@@ -243,7 +243,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             `SELECT id, store_id, bill_ref, offline_receipt_ref FROM sales WHERE id = $1`,
             [saleId]
           );
-          if (existingSale.rowCount > 0) {
+          if ((existingSale.rowCount ?? 0) > 0) {
             const existing = existingSale.rows[0];
             if (existing.store_id !== storeId) {
               throw new Error("sale not found");
@@ -374,7 +374,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             `SELECT id FROM payments WHERE sale_id = $1 AND mode = $2 AND status = $3 LIMIT 1`,
             [saleId, mode, status]
           );
-          if (existingPayment.rowCount === 0) {
+          if ((existingPayment.rowCount ?? 0) === 0) {
             await client.query(
               `
               INSERT INTO payments (id, sale_id, mode, status, amount_minor)
@@ -402,7 +402,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }
 
           const existing = await client.query(`SELECT id FROM collections WHERE id = $1`, [collectionId]);
-          if (existing.rowCount === 0) {
+          if ((existing.rowCount ?? 0) === 0) {
             await client.query(
               `
               INSERT INTO collections (id, store_id, device_id, amount_minor, mode, reference, status, created_at)

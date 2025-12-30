@@ -225,7 +225,7 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
   if (!paymentStatus) {
     return res.status(404).json({ error: "payment not found" });
   }
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   if (paymentStatus.store_id !== storeId) {
     return res.status(404).json({ error: "payment not found" });
   }
@@ -266,7 +266,7 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -303,7 +303,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -343,7 +343,7 @@ posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });
@@ -426,7 +426,7 @@ posSalesRouter.post("/collections/cash", requireDeviceToken, async (req, res) =>
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   const store = await getStore(storeId);
   if (!store) {
     return res.status(404).json({ error: "store not found" });

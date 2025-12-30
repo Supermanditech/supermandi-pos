@@ -92,7 +92,7 @@ async function isDuplicateScan(params: { storeId: string; scanValue: string; mod
     `,
     [params.storeId, params.scanValue, params.mode, since]
   );
-  return res.rowCount > 0;
+  return (res.rowCount ?? 0) > 0;
 }
 
 function isDuplicateScanMemory(key: string): boolean {
