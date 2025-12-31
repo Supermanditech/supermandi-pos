@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
@@ -40,6 +40,9 @@ const PRINTING_MODE_LABELS: Record<string, string> = {
   SHARE_TO_PRINTER_APP: "Share to Printer App",
   NONE: "None"
 };
+
+const ADMIN_POLL_MS = 60000;
+const RATE_LIMIT_BACKOFF_MS = 60000;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -114,6 +117,11 @@ export default function App() {
   const [eventsError, setEventsError] = useState<string>("");
   const [healthError, setHealthError] = useState<string>("");
   const [lastRefreshAt, setLastRefreshAt] = useState<string>("");
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
+  const rateLimitedUntilRef = useRef<number | null>(null);
+  const healthInFlightRef = useRef(false);
+  const eventsInFlightRef = useRef(false);
+  const devicesInFlightRef = useRef(false);
 
   // AI panel
   const [aiQuestion, setAiQuestion] = useState<string>("");
@@ -155,6 +163,21 @@ export default function App() {
   const [analyticsConsumerSales, setAnalyticsConsumerSales] = useState<any>(null);
   const [productsGroupBy, setProductsGroupBy] = useState<string>("day");
 
+  const setRateLimit = (until: number | null) => {
+    rateLimitedUntilRef.current = until;
+    setRateLimitedUntil(until);
+  };
+
+  const isRateLimited = (): boolean => {
+    const until = rateLimitedUntilRef.current;
+    return typeof until === "number" && Date.now() < until;
+  };
+
+  const isRateLimitMessage = (message: string): boolean => {
+    const m = message.toLowerCase();
+    return m.includes("rate limit") || m.includes("429");
+  };
+
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
@@ -167,18 +190,31 @@ export default function App() {
   const [page, setPage] = useState<number>(0);
 
   async function refreshHealth() {
+    if (isRateLimited() || healthInFlightRef.current) return;
+    healthInFlightRef.current = true;
     try {
       const data = await fetchHealth();
       const ok = String(data.status).toLowerCase() === "ok";
       setHealth({ ok, statusText: data.status, lastCheckedAt: new Date().toISOString() });
       setHealthError("");
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
     } catch (e: any) {
+      const message = e?.message ? String(e.message) : "Backend unreachable";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
       setHealth({ ok: false, statusText: "down", lastCheckedAt: new Date().toISOString() });
-      setHealthError(e?.message ? String(e.message) : "Backend unreachable");
+      setHealthError(message);
+    } finally {
+      healthInFlightRef.current = false;
     }
   }
 
   async function refreshEvents() {
+    if (isRateLimited() || eventsInFlightRef.current) return;
+    eventsInFlightRef.current = true;
     try {
       // Fetch raw stream (filters are applied client-side in the UI).
       const data = await fetchPosEvents({ limit: clamp(limit, 50, 1000) });
@@ -187,19 +223,39 @@ export default function App() {
       setEvents(data);
       setEventsError("");
       setLastRefreshAt(new Date().toISOString());
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
     } catch (e: any) {
-      setEventsError(e?.message ? String(e.message) : "Failed to fetch events");
+      const message = e?.message ? String(e.message) : "Failed to fetch events";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      setEventsError(message);
       setLastRefreshAt(new Date().toISOString());
+    } finally {
+      eventsInFlightRef.current = false;
     }
   }
 
   async function refreshDevices() {
+    if (isRateLimited() || devicesInFlightRef.current) return;
+    devicesInFlightRef.current = true;
     try {
       const data = await fetchDevices();
       setDeviceRecords(data);
       setDevicesError("");
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
     } catch (e: any) {
-      setDevicesError(e?.message ? String(e.message) : "Failed to fetch devices");
+      const message = e?.message ? String(e.message) : "Failed to fetch devices";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      setDevicesError(message);
+    } finally {
+      devicesInFlightRef.current = false;
     }
   }
 
@@ -243,23 +299,32 @@ export default function App() {
     const existing = getAdminToken();
     setAdminTokenInput(existing ? "********" : "");
 
-    refreshHealth();
-    refreshEvents();
-    refreshDevices();
-    fetchAiHealth()
-      .then((res) => setAiConfigured(res.configured))
-      .catch(() => setAiConfigured(null));
+    const shouldRefreshEvents = tab === "events" || tab === "devices";
+    const shouldRefreshDevices = tab === "devices";
+    const shouldRefreshAi = tab === "ai";
 
-    const id = setInterval(() => {
-      refreshHealth();
-      refreshEvents();
-      refreshDevices();
+    refreshHealth();
+    if (shouldRefreshEvents) refreshEvents();
+    if (shouldRefreshDevices) refreshDevices();
+    if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
         .catch(() => setAiConfigured(null));
-    }, 5000);
+    }
+
+    const id = setInterval(() => {
+      if (isRateLimited()) return;
+      refreshHealth();
+      if (shouldRefreshEvents) refreshEvents();
+      if (shouldRefreshDevices) refreshDevices();
+      if (shouldRefreshAi) {
+        fetchAiHealth()
+          .then((res) => setAiConfigured(res.configured))
+          .catch(() => setAiConfigured(null));
+      }
+    }, ADMIN_POLL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [tab]);
 
   // If user changes limit, refresh immediately.
   useEffect(() => {
@@ -597,13 +662,20 @@ export default function App() {
         <div className="banner" role="alert">
           <strong>Backend warning:</strong>
           <div className="bannerDetails">
+            {rateLimitedUntil && Date.now() < rateLimitedUntil && (
+              <div>
+                Rate limit exceeded. Retrying in {Math.ceil((rateLimitedUntil - Date.now()) / 1000)}s.
+              </div>
+            )}
             {healthError && <div>Health: {healthError}</div>}
             {eventsError && <div>Events: {eventsError}</div>}
-            {devicesError && <div>Devices: {devicesError}</div>}
-          </div>
-          <div className="muted">UI will keep retrying every 5 seconds.</div>
+          {devicesError && <div>Devices: {devicesError}</div>}
         </div>
-      )}
+        <div className="muted">
+          UI will keep retrying every {Math.round(ADMIN_POLL_MS / 1000)} seconds (longer if rate limited).
+        </div>
+      </div>
+    )}
 
       <nav className="tabs">
         <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>
@@ -784,7 +856,7 @@ export default function App() {
           <div className="cardHeader">
             <div>
               <div className="cardTitle">Add Device</div>
-              <div className="muted">Scan this QR from POS -> Enroll Device</div>
+              <div className="muted">Scan this QR from POS {"->"} Enroll Device</div>
             </div>
           </div>
 

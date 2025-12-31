@@ -1,37 +1,13 @@
 import * as SQLite from "expo-sqlite";
 
-const db = SQLite.openDatabase("supermandi_offline.db");
+const db = SQLite.openDatabaseSync("supermandi_offline.db");
 
-function run(sql: string, params: (string | number | null)[] = []): Promise<void> {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        sql,
-        params,
-        () => resolve(),
-        (_tx, error) => {
-          reject(error);
-          return false;
-        }
-      );
-    });
-  });
+async function run(sql: string, params: (string | number | null)[] = []): Promise<void> {
+  await db.runAsync(sql, ...params);
 }
 
-function all<T = any>(sql: string, params: (string | number | null)[] = []): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx) => {
-      tx.executeSql(
-        sql,
-        params,
-        (_tx, result) => resolve(result.rows._array as T[]),
-        (_tx, error) => {
-          reject(error);
-          return false;
-        }
-      );
-    });
-  });
+async function all<T = any>(sql: string, params: (string | number | null)[] = []): Promise<T[]> {
+  return (await db.getAllAsync(sql, ...params)) as T[];
 }
 
 export async function initOfflineDb(): Promise<void> {

@@ -11,11 +11,13 @@ import {
   Modal,
   Platform,
 } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import PosStatusBar from "../components/PosStatusBar";
-import { notifyHidScan } from "../services/hidScannerService";
+import { notifyHidScan, wasHidScannerActive } from "../services/hidScannerService";
 import { useCartStore, type CartItem as StoreCartItem } from "../stores/cartStore";
 import { resolveScan, setProductPrice, type ScanProduct } from "../services/api/scanApi";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -47,6 +49,12 @@ export default function SellScanScreen() {
   const navigation = useNavigation<NavProp>();
   const scanInputRef = useRef<TextInput>(null);
   const lastScanRef = useRef<{ code: string; mode: PosMode; ts: number } | null>(null);
+  const inputMetricsRef = useRef<{ startedAt: number; lastAt: number; length: number }>({
+    startedAt: 0,
+    lastAt: 0,
+    length: 0,
+  });
+  const manualEntryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------- STATE ---------- */
   const [mode, setMode] = useState<PosMode>("SELL");
@@ -62,6 +70,10 @@ export default function SellScanScreen() {
   const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
   const [discountInput, setDiscountInput] = useState("");
   const [discountEditing, setDiscountEditing] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraScanned, setCameraScanned] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [manualEntry, setManualEntry] = useState(false);
 
   const {
     items,
@@ -78,6 +90,7 @@ export default function SellScanScreen() {
   const totalLabel = formatMoney(total, currency);
   const collectDisabled = storeActive === false;
   const payDisabled = items.length === 0 || storeActive === false;
+  const cameraDisabled = storeActive === false || isResolving || priceModal !== null;
 
   /* ---------- ACTIONS ---------- */
 
@@ -107,6 +120,29 @@ export default function SellScanScreen() {
     applyDiscount({ type: "fixed", value: minor });
   };
 
+  const handleScanInputChange = (value: string) => {
+    const now = Date.now();
+    if (!value.trim()) {
+      inputMetricsRef.current = { startedAt: 0, lastAt: 0, length: 0 };
+    } else {
+      const current = inputMetricsRef.current;
+      const startedAt = current.startedAt || now;
+      inputMetricsRef.current = { startedAt, lastAt: now, length: value.length };
+    }
+    setScanInput(value);
+  };
+
+  const enableManualEntry = () => {
+    setManualEntry(true);
+    scanInputRef.current?.focus();
+    if (manualEntryTimerRef.current) {
+      clearTimeout(manualEntryTimerRef.current);
+    }
+    manualEntryTimerRef.current = setTimeout(() => {
+      setManualEntry(false);
+    }, 30000);
+  };
+
   const handleCollectPayment = () => {
     if (storeActive === false) {
       Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
@@ -132,7 +168,7 @@ export default function SellScanScreen() {
     return false;
   };
 
-  const handleScan = async (code: string) => {
+  const handleScan = async (code: string, source: "input" | "camera" = "input") => {
     const trimmed = code.trim();
     if (!trimmed || isResolving || priceModal) return;
 
@@ -148,7 +184,13 @@ export default function SellScanScreen() {
       return;
     }
 
-    notifyHidScan();
+    if (source === "input") {
+      const metrics = inputMetricsRef.current;
+      const elapsed = metrics.startedAt > 0 ? metrics.lastAt - metrics.startedAt : Number.POSITIVE_INFINITY;
+      const isLikelyHid = metrics.length >= 6 && elapsed > 0 && elapsed < 200;
+      notifyHidScan(isLikelyHid);
+    }
+    inputMetricsRef.current = { startedAt: 0, lastAt: 0, length: 0 };
     setIsResolving(true);
 
     try {
@@ -202,6 +244,32 @@ export default function SellScanScreen() {
       setIsResolving(false);
       setScanInput("");
     }
+  };
+
+  const handleOpenCamera = async () => {
+    if (cameraDisabled) return;
+    if (wasHidScannerActive()) {
+      Alert.alert("Scanner Active", "HID scanner detected. Use the scanner to scan.");
+      return;
+    }
+    scanInputRef.current?.blur();
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert("Camera Required", "Allow camera access to scan barcodes.");
+        return;
+      }
+    }
+    setCameraScanned(false);
+    setScannerOpen(true);
+  };
+
+  const handleCameraScan = (value: string) => {
+    if (!value) return;
+    setCameraScanned(true);
+    setScannerOpen(false);
+    setManualEntry(false);
+    void handleScan(value, "camera");
   };
 
   const handlePriceSubmit = async () => {
@@ -306,6 +374,14 @@ export default function SellScanScreen() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (manualEntryTimerRef.current) {
+        clearTimeout(manualEntryTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (discountEditing) return;
     if (discountAmount > 0) {
       setDiscountInput((discountAmount / 100).toFixed(2));
@@ -365,18 +441,47 @@ export default function SellScanScreen() {
       {/* SCAN INPUT (UNIFIED ENTRY POINT) */}
       <View style={styles.scanCard}>
         <Text style={styles.scanLabel}>Scan barcode or type and press Enter</Text>
-        <TextInput
-          style={styles.scanInput}
-          placeholder="Scan barcode"
-          placeholderTextColor={theme.colors.textTertiary}
-          value={scanInput}
-          autoFocus
-          onChangeText={setScanInput}
-          onSubmitEditing={() => handleScan(scanInput)}
-          blurOnSubmit={false}
-          editable={!priceModal && !isResolving}
-          ref={scanInputRef}
-        />
+        <View style={styles.scanInputWrap}>
+          <TextInput
+            style={styles.scanInput}
+            placeholder="Scan barcode"
+            placeholderTextColor={theme.colors.textTertiary}
+            value={scanInput}
+            onChangeText={handleScanInputChange}
+            onBlur={() => {
+              setManualEntry(false);
+            }}
+            onSubmitEditing={() => handleScan(scanInput, "input")}
+            blurOnSubmit={false}
+            editable={!priceModal && !isResolving}
+            showSoftInputOnFocus={manualEntry}
+            inputMode={manualEntry ? "text" : "none"}
+            caretHidden={!manualEntry}
+            ref={scanInputRef}
+          />
+          <Pressable
+            style={styles.scanTapOverlay}
+            onPress={handleOpenCamera}
+            pointerEvents={manualEntry ? "none" : "auto"}
+          />
+        </View>
+        <View style={styles.scanActions}>
+          <Pressable
+            style={[styles.scanButton, cameraDisabled && styles.scanButtonDisabled]}
+            onPress={handleOpenCamera}
+            disabled={cameraDisabled}
+          >
+            <MaterialCommunityIcons name="camera" size={16} color={theme.colors.primary} />
+            <Text style={styles.scanButtonText}>Scan with Camera</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.scanButton, styles.scanButtonSecondary]}
+            onPress={enableManualEntry}
+          >
+            <MaterialCommunityIcons name="keyboard" size={16} color={theme.colors.primary} />
+            <Text style={styles.scanButtonText}>Type Manually</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* CART (SELL ONLY) */}
@@ -454,6 +559,53 @@ export default function SellScanScreen() {
           )}
         </View>
       </View>
+
+      <Modal
+        visible={scannerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setScannerOpen(false)}
+      >
+        <View style={styles.cameraOverlay}>
+          <View style={styles.cameraCard}>
+            {cameraPermission?.granted ? (
+              <CameraView
+                style={styles.cameraView}
+                facing="back"
+                barcodeScannerSettings={{
+                  barcodeTypes: [
+                    "qr",
+                    "ean13",
+                    "ean8",
+                    "code128",
+                    "code39",
+                    "code93",
+                    "upc_a",
+                    "upc_e",
+                    "itf14"
+                  ],
+                }}
+                onBarcodeScanned={cameraScanned ? undefined : (event) => handleCameraScan(event.data)}
+              />
+            ) : (
+              <View style={styles.cameraPermission}>
+                <Text style={styles.cameraPermissionText}>
+                  Camera permission is required to scan barcodes.
+                </Text>
+                <Pressable style={styles.cameraPermissionButton} onPress={() => requestCameraPermission()}>
+                  <Text style={styles.cameraPermissionButtonText}>Allow Camera</Text>
+                </Pressable>
+              </View>
+            )}
+            <View style={styles.cameraActions}>
+              <Text style={styles.cameraHint}>Align the barcode/QR inside the frame.</Text>
+              <Pressable onPress={() => setScannerOpen(false)}>
+                <Text style={styles.cameraClose}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={priceModal !== null}
@@ -569,6 +721,45 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     color: theme.colors.textPrimary,
   },
+  scanInputWrap: {
+    position: "relative",
+  },
+  scanTapOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  scanActions: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  scanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+  },
+  scanButtonSecondary: {
+    borderColor: theme.colors.border,
+  },
+  scanButtonDisabled: {
+    opacity: 0.5,
+  },
+  scanButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
 
   cart: {
     flex: 1,
@@ -679,6 +870,61 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
     fontSize: 16,
     fontWeight: "800",
+  },
+
+  cameraOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayLight,
+    justifyContent: "center",
+    padding: 16,
+  },
+  cameraCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  cameraView: {
+    height: 280,
+    width: "100%",
+  },
+  cameraActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  cameraHint: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: "600",
+  },
+  cameraClose: {
+    fontSize: 12,
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  cameraPermission: {
+    padding: 16,
+    alignItems: "center",
+    gap: 12,
+  },
+  cameraPermissionText: {
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
+  cameraPermissionButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  cameraPermissionButtonText: {
+    color: theme.colors.primary,
+    fontWeight: "700",
   },
 
   priceOverlay: {

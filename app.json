@@ -11,7 +11,8 @@
       "url": "https://u.expo.dev/633923dd-e9cd-4bee-8b7a-f2120c1cce91"
     },
     "android": {
-      "package": "com.supermanditech.supermandipos"
+      "package": "com.supermanditech.supermandipos",
+      "usesCleartextTraffic": true
     },
     "extra": {
       "API_URL": "http://34.14.150.183:3001",
@@ -20,7 +21,8 @@
       }
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sqlite"
     ]
   }
 }

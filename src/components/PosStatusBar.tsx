@@ -191,7 +191,7 @@ export default function PosStatusBar({ storeActive, deviceActive, pendingOutboxC
         </Text>
       </View>
 
-      {pendingOutboxCount && pendingOutboxCount > 0 && (
+      {(pendingOutboxCount ?? 0) > 0 && (
         <View
           style={[
             styles.chip,
