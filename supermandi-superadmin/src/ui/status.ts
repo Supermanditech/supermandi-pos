@@ -6,7 +6,7 @@ export type DeviceStatus = {
 
 export type StatusTone = "success" | "warning" | "error" | "neutral";
 
-const ONLINE_WINDOW_MS = 2 * 60 * 1000;
+const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 export function isDeviceOnline(lastSeenOnline?: string | null): boolean {
   if (!lastSeenOnline) return false;

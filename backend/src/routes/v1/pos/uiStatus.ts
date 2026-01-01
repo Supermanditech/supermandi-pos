@@ -16,6 +16,12 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     [status.deviceId]
   );
   const row = result.rows[0] ?? {};
+  const nowIso = new Date().toISOString();
+
+  await pool.query(
+    `UPDATE pos_devices SET last_seen_online = NOW(), updated_at = NOW() WHERE id = $1`,
+    [status.deviceId]
+  );
 
   const pending =
     typeof row.pending_outbox_count === "number" && Number.isFinite(row.pending_outbox_count)
@@ -29,7 +35,7 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     deviceActive: status.deviceActive,
     pendingOutboxCount: pending,
     lastSyncAt: row.last_sync_at ? new Date(row.last_sync_at).toISOString() : null,
-    lastSeenOnline: row.last_seen_online ? new Date(row.last_seen_online).toISOString() : null,
+    lastSeenOnline: nowIso,
     printerOk: null,
     scannerOk: null
   });
