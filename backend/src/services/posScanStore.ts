@@ -23,6 +23,7 @@ export type ScanResult =
   | { action: Exclude<ScanAction, "IGNORED">; product: PosProduct };
 
 const DUPLICATE_WINDOW_MS = 500;
+const CROSS_DEVICE_WINDOW_MS = 30 * 60 * 1000;
 const recentScans = new Map<string, number>();
 
 function buildProductName(barcode: string): string {
@@ -76,6 +77,19 @@ async function getStoreStatus(storeId: string): Promise<{ exists: boolean; activ
   return { exists: true, active: Boolean(res.rows[0].active) };
 }
 
+async function getLastSaleTime(storeId: string): Promise<Date | null> {
+  const pool = getPool();
+  if (!pool) return null;
+  const res = await pool.query(
+    `SELECT created_at FROM sales WHERE store_id = $1 ORDER BY created_at DESC LIMIT 1`,
+    [storeId]
+  );
+  const raw = res.rows[0]?.created_at;
+  if (!raw) return null;
+  const ts = raw instanceof Date ? raw : new Date(raw);
+  return Number.isFinite(ts.getTime()) ? ts : null;
+}
+
 async function isDuplicateScan(params: { storeId: string; scanValue: string; mode: ScanMode }): Promise<boolean> {
   const pool = getPool();
   if (!pool) return false;
@@ -92,6 +106,39 @@ async function isDuplicateScan(params: { storeId: string; scanValue: string; mod
     `,
     [params.storeId, params.scanValue, params.mode, since]
   );
+  return (res.rowCount ?? 0) > 0;
+}
+
+async function isCrossDeviceDuplicate(params: {
+  storeId: string;
+  scanValue: string;
+  mode: ScanMode;
+  deviceId: string;
+}): Promise<boolean> {
+  const pool = getPool();
+  if (!pool) return false;
+
+  const lastSale = await getLastSaleTime(params.storeId);
+  const windowSince = new Date(Date.now() - CROSS_DEVICE_WINDOW_MS);
+  const since = lastSale && lastSale > windowSince ? lastSale : windowSince;
+
+  const res = await pool.query(
+    `
+      SELECT device_id
+      FROM scan_events
+      WHERE store_id = $1
+        AND scan_value = $2
+        AND mode = $3
+        AND action = 'ADD_TO_CART'
+        AND device_id IS NOT NULL
+        AND device_id <> $4
+        AND created_at >= $5
+      ORDER BY created_at DESC
+      LIMIT 1
+    `,
+    [params.storeId, params.scanValue, params.mode, params.deviceId, since]
+  );
+
   return (res.rowCount ?? 0) > 0;
 }
 
@@ -183,6 +230,7 @@ async function ensureRetailerProduct(
 
 async function recordScanEvent(params: {
   storeId: string;
+  deviceId: string | null;
   scanValue: string;
   mode: ScanMode;
   action: ScanAction;
@@ -193,17 +241,18 @@ async function recordScanEvent(params: {
 
   await pool.query(
     `
-    INSERT INTO scan_events (id, store_id, scan_value, mode, action, product_id)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO scan_events (id, store_id, device_id, scan_value, mode, action, product_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     `,
-    [randomUUID(), params.storeId, params.scanValue, params.mode, params.action, params.productId]
+    [randomUUID(), params.storeId, params.deviceId, params.scanValue, params.mode, params.action, params.productId]
   );
 }
 
 export async function resolveScan(
   scanValue: string,
   mode: ScanMode,
-  storeId: string
+  storeId: string,
+  deviceId: string
 ): Promise<ScanResult> {
   const barcode = scanValue.trim();
   const pool = getPool();
@@ -228,38 +277,50 @@ export async function resolveScan(
     return { action: "IGNORED" };
   }
 
+  if (mode === "SELL" && deviceId) {
+    const crossDevice = await isCrossDeviceDuplicate({
+      storeId,
+      scanValue: barcode,
+      mode,
+      deviceId
+    });
+    if (crossDevice) {
+      return { action: "IGNORED" };
+    }
+  }
+
   const existing = await fetchProductByBarcode(barcode, storeId);
 
   if (mode === "DIGITISE") {
     if (existing) {
       await ensureRetailerProduct(storeId, existing.id);
       const action: ScanAction = "ALREADY_DIGITISED";
-      await recordScanEvent({ storeId, scanValue: barcode, mode, action, productId: existing.id });
+      await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: existing.id });
       return { action, product: existing };
     }
 
     const created = await createProduct(barcode, storeId);
     const action: ScanAction = "DIGITISED";
-    await recordScanEvent({ storeId, scanValue: barcode, mode, action, productId: created.id });
+    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: created.id });
     return { action, product: created };
   }
 
   if (!existing) {
     const created = await createProduct(barcode, storeId);
     const action: ScanAction = "PROMPT_PRICE";
-    await recordScanEvent({ storeId, scanValue: barcode, mode, action, productId: created.id });
+    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: created.id });
     return { action, product: created };
   }
 
   if (existing.priceMinor === null) {
     const action: ScanAction = "PROMPT_PRICE";
     await ensureRetailerProduct(storeId, existing.id);
-    await recordScanEvent({ storeId, scanValue: barcode, mode, action, productId: existing.id });
+    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: existing.id });
     return { action, product: existing };
   }
 
   const action: ScanAction = "ADD_TO_CART";
-  await recordScanEvent({ storeId, scanValue: barcode, mode, action, productId: existing.id });
+  await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: existing.id });
   return { action, product: existing };
 }
 

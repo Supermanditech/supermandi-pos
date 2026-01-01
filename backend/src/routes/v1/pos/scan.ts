@@ -19,10 +19,10 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
     return res.status(400).json({ error: "mode must be SELL or DIGITISE" });
   }
 
-  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
 
   try {
-    const result = await resolveScan(scanValue, mode, storeId);
+    const result = await resolveScan(scanValue, mode, storeId, deviceId);
     return res.json(result);
   } catch (error) {
     return res.status(503).json({ error: "database unavailable" });

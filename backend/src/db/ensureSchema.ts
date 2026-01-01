@@ -52,6 +52,7 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS scan_events (
       id TEXT PRIMARY KEY,
       store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      device_id TEXT NULL,
       scan_value TEXT NOT NULL,
       mode TEXT NOT NULL,
       action TEXT NOT NULL,
@@ -242,6 +243,8 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS retailer_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS enrichment_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT NULL;
+
+    ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
 
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS offline_receipt_ref TEXT NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
