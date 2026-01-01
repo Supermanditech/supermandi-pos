@@ -1,26 +1,33 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import NetInfo from "@react-native-community/netinfo";
 import { printerService } from "../services/printerService";
 import { theme } from "../theme";
-import { composePosMessage, getPrimaryTone } from "../utils/uiStatus";
 
 type PosStatusBarProps = {
   storeActive?: boolean | null;
   deviceActive?: boolean | null;
   pendingOutboxCount?: number | null;
   mode?: "SELL" | "DIGITISE";
+  storeName?: string | null;
+  storeId?: string | null;
 };
 
-export default function PosStatusBar({ storeActive, deviceActive, pendingOutboxCount, mode }: PosStatusBarProps) {
-  const [isOnline, setIsOnline] = useState(true);
+export default function PosStatusBar(_: PosStatusBarProps) {
+  const [networkState, setNetworkState] = useState<{
+    isConnected: boolean | null;
+    isInternetReachable: boolean | null;
+  }>({ isConnected: true, isInternetReachable: true });
   const [scannerActive, setScannerActive] = useState(false);
   const [printerConnected, setPrinterConnected] = useState(false);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      setIsOnline(state.isConnected ?? false);
+      setNetworkState({
+        isConnected: state.isConnected ?? null,
+        isInternetReachable: state.isInternetReachable ?? null
+      });
     });
 
     // Expose global scanner heartbeat function
@@ -46,12 +53,6 @@ export default function PosStatusBar({ storeActive, deviceActive, pendingOutboxC
     return () => clearInterval(interval);
   }, []);
 
-  const storeColor =
-    storeActive === false ? theme.colors.error : storeActive === true ? theme.colors.success : theme.colors.textTertiary;
-  const storeLabel = storeActive === false ? "Store Inactive" : storeActive === true ? "Store Active" : "Store Unknown";
-  const deviceLabel =
-    deviceActive === false ? "Device Disabled" : deviceActive === true ? "Device Active" : "Device Unknown";
-
   const tones = {
     success: {
       bg: theme.colors.successSoft,
@@ -75,174 +76,87 @@ export default function PosStatusBar({ storeActive, deviceActive, pendingOutboxC
     }
   } as const;
 
-  const message = composePosMessage({
-    storeActive: storeActive ?? null,
-    deviceActive: deviceActive ?? null,
-    pendingOutboxCount: pendingOutboxCount ?? 0,
-    printerOk: printerConnected,
-    scannerOk: scannerActive ? true : null,
-    networkOnline: isOnline,
-    mode
-  });
-  const messageTone = getPrimaryTone({
-    storeActive: storeActive ?? null,
-    deviceActive: deviceActive ?? null,
-    pendingOutboxCount: pendingOutboxCount ?? 0,
-    printerOk: printerConnected,
-    scannerOk: scannerActive ? true : null,
-    networkOnline: isOnline,
-    mode
-  });
+  const networkStatus =
+    networkState.isConnected === false
+      ? "disconnected"
+      : networkState.isInternetReachable === false
+      ? "offline"
+      : "online";
+  const networkTone =
+    networkStatus === "online" ? tones.success : networkStatus === "offline" ? tones.warning : tones.error;
+  const networkIcon = networkStatus === "disconnected" ? "wifi-off" : "wifi";
+  const networkLabel =
+    networkStatus === "online" ? "Online" : networkStatus === "offline" ? "Offline" : "Disconnected";
 
-  const messageColor =
-    messageTone === "error"
-      ? theme.colors.error
-      : messageTone === "warning"
-      ? theme.colors.warning
-      : theme.colors.textSecondary;
+  const printerTone = printerConnected ? tones.success : tones.warning;
+  const printerIcon = "printer";
+  const printerLabel = printerConnected ? "Printer connected" : "Printer not connected";
+
+  const scannerTone = scannerActive ? tones.success : tones.neutral;
+  const scannerLabel = scannerActive ? "Scanner active" : "Scanner idle";
 
   return (
     <View style={styles.container}>
-      <View style={styles.chipRow}>
-      <View
-        style={[
-          styles.chip,
-          { backgroundColor: isOnline ? tones.success.bg : tones.error.bg, borderColor: isOnline ? tones.success.border : tones.error.border }
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="wifi"
-          size={14}
-          color={isOnline ? tones.success.text : tones.error.text}
-        />
-        <Text style={[styles.text, { color: isOnline ? tones.success.text : tones.error.text }]}>
-          {isOnline ? "Online" : "Offline"}
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.chip,
-          {
-            backgroundColor: printerConnected ? tones.success.bg : tones.neutral.bg,
-            borderColor: printerConnected ? tones.success.border : tones.neutral.border
-          }
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="printer"
-          size={14}
-          color={printerConnected ? tones.success.text : tones.neutral.text}
-        />
-        <Text style={[styles.text, { color: printerConnected ? tones.success.text : tones.neutral.text }]}>
-          Printer
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.chip,
-          {
-            backgroundColor: scannerActive ? tones.success.bg : tones.neutral.bg,
-            borderColor: scannerActive ? tones.success.border : tones.neutral.border
-          }
-        ]}
-      >
-        <MaterialCommunityIcons
-          name="barcode-scan"
-          size={14}
-          color={scannerActive ? tones.success.text : tones.neutral.text}
-        />
-        <Text style={[styles.text, { color: scannerActive ? tones.success.text : tones.neutral.text }]}>
-          Scanner
-        </Text>
-      </View>
-
-      <View
-        style={[
-          styles.chip,
-          {
-            backgroundColor: storeActive === false ? tones.error.bg : storeActive === true ? tones.success.bg : tones.neutral.bg,
-            borderColor: storeActive === false ? tones.error.border : storeActive === true ? tones.success.border : tones.neutral.border
-          }
-        ]}
-      >
-        <MaterialCommunityIcons name="storefront" size={14} color={storeColor} />
-        <Text style={[styles.text, { color: storeColor }]}>{storeLabel}</Text>
-      </View>
-
-      <View
-        style={[
-          styles.chip,
-          {
-            backgroundColor: deviceActive === false ? tones.error.bg : deviceActive === true ? tones.success.bg : tones.neutral.bg,
-            borderColor: deviceActive === false ? tones.error.border : deviceActive === true ? tones.success.border : tones.neutral.border
-          }
-        ]}
-      >
-        <MaterialCommunityIcons name="cellphone-check" size={14} color={deviceActive === false ? tones.error.text : tones.success.text} />
-        <Text
-          style={[
-            styles.text,
-            { color: deviceActive === false ? tones.error.text : deviceActive === true ? tones.success.text : tones.neutral.text }
-          ]}
-        >
-          {deviceLabel}
-        </Text>
-      </View>
-
-      {(pendingOutboxCount ?? 0) > 0 && (
+      <View style={styles.iconRow}>
         <View
+          accessible
+          accessibilityLabel={`Network ${networkLabel}`}
           style={[
-            styles.chip,
-            { backgroundColor: tones.warning.bg, borderColor: tones.warning.border }
+            styles.iconPill,
+            { backgroundColor: networkTone.bg, borderColor: networkTone.border }
           ]}
         >
-          <MaterialCommunityIcons name="sync-alert" size={14} color={tones.warning.text} />
-          <Text style={[styles.text, { color: tones.warning.text }]}>Sync {pendingOutboxCount}</Text>
+          <MaterialCommunityIcons name={networkIcon} size={16} color={networkTone.text} />
         </View>
-      )}
 
+        <View
+          accessible
+          accessibilityLabel={printerLabel}
+          style={[
+            styles.iconPill,
+            { backgroundColor: printerTone.bg, borderColor: printerTone.border }
+          ]}
+        >
+          <MaterialCommunityIcons name={printerIcon} size={16} color={printerTone.text} />
+        </View>
+
+        <View
+          accessible
+          accessibilityLabel={scannerLabel}
+          style={[
+            styles.iconPill,
+            { backgroundColor: scannerTone.bg, borderColor: scannerTone.border }
+          ]}
+        >
+          <MaterialCommunityIcons name="barcode-scan" size={16} color={scannerTone.text} />
+        </View>
       </View>
-
-      <Text style={[styles.message, { color: messageColor }]}>{message}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 36,
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: 6,
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 4,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  chipRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  chip: {
+  iconRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+  },
+  iconPill: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
-  },
-  text: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  message: {
-    fontSize: 12,
-    fontWeight: "600",
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

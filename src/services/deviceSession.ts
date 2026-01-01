@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 
 const SESSION_KEY = "supermandi.device.session.v1";
@@ -27,9 +28,20 @@ async function secureStoreAvailable(): Promise<boolean> {
 }
 
 export async function getDeviceSession(): Promise<DeviceSession | null> {
-  if (!(await secureStoreAvailable())) return null;
+  const secureAvailable = await secureStoreAvailable();
+  if (secureAvailable) {
+    try {
+      const raw = await SecureStore.getItemAsync(SESSION_KEY);
+      if (raw) {
+        const parsed = normalizeSession(JSON.parse(raw));
+        if (parsed) return parsed;
+      }
+    } catch {
+      // Fall through to AsyncStorage
+    }
+  }
   try {
-    const raw = await SecureStore.getItemAsync(SESSION_KEY);
+    const raw = await AsyncStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     return normalizeSession(JSON.parse(raw));
   } catch {
@@ -38,16 +50,29 @@ export async function getDeviceSession(): Promise<DeviceSession | null> {
 }
 
 export async function saveDeviceSession(session: DeviceSession): Promise<void> {
-  if (!(await secureStoreAvailable())) {
-    throw new Error("secure storage unavailable");
-  }
+  const secureAvailable = await secureStoreAvailable();
   const payload = JSON.stringify(session);
-  await SecureStore.setItemAsync(SESSION_KEY, payload);
+  if (secureAvailable) {
+    try {
+      await SecureStore.setItemAsync(SESSION_KEY, payload);
+      return;
+    } catch {
+      // Fall back to AsyncStorage
+    }
+  }
+  await AsyncStorage.setItem(SESSION_KEY, payload);
 }
 
 export async function clearDeviceSession(): Promise<void> {
-  if (!(await secureStoreAvailable())) return;
-  await SecureStore.deleteItemAsync(SESSION_KEY);
+  const secureAvailable = await secureStoreAvailable();
+  if (secureAvailable) {
+    try {
+      await SecureStore.deleteItemAsync(SESSION_KEY);
+    } catch {
+      // Ignore and still clear AsyncStorage
+    }
+  }
+  await AsyncStorage.removeItem(SESSION_KEY);
 }
 
 export async function getDeviceToken(): Promise<string | null> {

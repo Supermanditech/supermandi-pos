@@ -6,7 +6,7 @@ import { askSuperMandiAI } from "../../../services/ai/askSuperMandiAI";
 export const adminAiRouter = Router();
 
 adminAiRouter.use(requireAdminToken);
-adminAiRouter.use(rateLimitAi({ windowMs: 60_000, max: 6 }));
+const aiRateLimit = rateLimitAi({ windowMs: 60_000, max: 6 });
 
 adminAiRouter.get("/ai/health", async (_req, res) => {
   const configured = Boolean(process.env.OPENAI_API_KEY?.trim());
@@ -29,6 +29,6 @@ async function handleAi(req: any, res: any) {
   }
 }
 
-adminAiRouter.post("/ai", handleAi);
+adminAiRouter.post("/ai", aiRateLimit, handleAi);
 // Backward-compatible endpoint.
-adminAiRouter.post("/ai/ask", handleAi);
+adminAiRouter.post("/ai/ask", aiRateLimit, handleAi);

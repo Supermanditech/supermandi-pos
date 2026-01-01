@@ -7,6 +7,9 @@ export function minorToMajor(minor: number, fractionDigits = 2): number {
 export function formatMoney(minor: number, currency: MoneyCurrency = "INR", fractionDigits = 2): string {
   const major = minorToMajor(minor, fractionDigits);
   // Keep it simple and stable across RN runtimes (Intl can be inconsistent).
+  if (currency === "INR") {
+    return `₹ ${major.toFixed(fractionDigits)}`;
+  }
   return `${currency} ${major.toFixed(fractionDigits)}`;
 }
 

@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  AppState,
   View,
   Text,
   StyleSheet,
@@ -12,11 +13,12 @@ import {
   Platform,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import PosStatusBar from "../components/PosStatusBar";
+import ScanBar from "../components/ScanBar";
+import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
 import { notifyHidScan, wasHidScannerActive } from "../services/hidScannerService";
 import { useCartStore, type CartItem as StoreCartItem } from "../stores/cartStore";
 import { resolveScan, setProductPrice, type ScanProduct } from "../services/api/scanApi";
@@ -47,18 +49,10 @@ type PosMode = "SELL" | "DIGITISE";
 
 export default function SellScanScreen() {
   const navigation = useNavigation<NavProp>();
-  const scanInputRef = useRef<TextInput>(null);
   const lastScanRef = useRef<{ code: string; mode: PosMode; ts: number } | null>(null);
-  const inputMetricsRef = useRef<{ startedAt: number; lastAt: number; length: number }>({
-    startedAt: 0,
-    lastAt: 0,
-    length: 0,
-  });
-  const manualEntryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ---------- STATE ---------- */
   const [mode, setMode] = useState<PosMode>("SELL");
-  const [scanInput, setScanInput] = useState("");
   const [isResolving, setIsResolving] = useState(false);
   const [priceModal, setPriceModal] = useState<{ product: ScanProduct } | null>(
     null
@@ -67,13 +61,14 @@ export default function SellScanScreen() {
   const [priceSubmitting, setPriceSubmitting] = useState(false);
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
+  const [deviceStoreId, setDeviceStoreId] = useState<string | null>(null);
   const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
   const [discountInput, setDiscountInput] = useState("");
   const [discountEditing, setDiscountEditing] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanned, setCameraScanned] = useState(false);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [manualEntry, setManualEntry] = useState(false);
 
   const {
     items,
@@ -88,9 +83,11 @@ export default function SellScanScreen() {
   /* ---------- DERIVED ---------- */
   const currency = items[0]?.currency ?? "INR";
   const totalLabel = formatMoney(total, currency);
+  const hasItems = items.length > 0;
   const collectDisabled = storeActive === false;
-  const payDisabled = items.length === 0 || storeActive === false;
+  const payDisabled = !hasItems || storeActive === false;
   const cameraDisabled = storeActive === false || isResolving || priceModal !== null;
+  const scanBarDisabled = cameraDisabled || scannerOpen;
 
   /* ---------- ACTIONS ---------- */
 
@@ -120,29 +117,6 @@ export default function SellScanScreen() {
     applyDiscount({ type: "fixed", value: minor });
   };
 
-  const handleScanInputChange = (value: string) => {
-    const now = Date.now();
-    if (!value.trim()) {
-      inputMetricsRef.current = { startedAt: 0, lastAt: 0, length: 0 };
-    } else {
-      const current = inputMetricsRef.current;
-      const startedAt = current.startedAt || now;
-      inputMetricsRef.current = { startedAt, lastAt: now, length: value.length };
-    }
-    setScanInput(value);
-  };
-
-  const enableManualEntry = () => {
-    setManualEntry(true);
-    scanInputRef.current?.focus();
-    if (manualEntryTimerRef.current) {
-      clearTimeout(manualEntryTimerRef.current);
-    }
-    manualEntryTimerRef.current = setTimeout(() => {
-      setManualEntry(false);
-    }, 30000);
-  };
-
   const handleCollectPayment = () => {
     if (storeActive === false) {
       Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
@@ -151,7 +125,7 @@ export default function SellScanScreen() {
     navigation.navigate("CollectPayment");
   };
 
-  const handleDeviceAuthError = async (error: ApiError): Promise<boolean> => {
+  const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
     if (error.message === "device_inactive") {
       navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
       return true;
@@ -166,9 +140,9 @@ export default function SellScanScreen() {
       return true;
     }
     return false;
-  };
+  }, [navigation]);
 
-  const handleScan = async (code: string, source: "input" | "camera" = "input") => {
+  const handleScan = async (code: string, source: "HID" | "CAMERA" = "HID") => {
     const trimmed = code.trim();
     if (!trimmed || isResolving || priceModal) return;
 
@@ -184,13 +158,9 @@ export default function SellScanScreen() {
       return;
     }
 
-    if (source === "input") {
-      const metrics = inputMetricsRef.current;
-      const elapsed = metrics.startedAt > 0 ? metrics.lastAt - metrics.startedAt : Number.POSITIVE_INFINITY;
-      const isLikelyHid = metrics.length >= 6 && elapsed > 0 && elapsed < 200;
-      notifyHidScan(isLikelyHid);
+    if (source === "HID") {
+      notifyHidScan(true);
     }
-    inputMetricsRef.current = { startedAt: 0, lastAt: 0, length: 0 };
     setIsResolving(true);
 
     try {
@@ -242,7 +212,6 @@ export default function SellScanScreen() {
       Alert.alert("Scan Failed", "Could not resolve scan. Check connection.");
     } finally {
       setIsResolving(false);
-      setScanInput("");
     }
   };
 
@@ -252,7 +221,6 @@ export default function SellScanScreen() {
       Alert.alert("Scanner Active", "HID scanner detected. Use the scanner to scan.");
       return;
     }
-    scanInputRef.current?.blur();
     if (!cameraPermission?.granted) {
       const result = await requestCameraPermission();
       if (!result.granted) {
@@ -268,8 +236,7 @@ export default function SellScanScreen() {
     if (!value) return;
     setCameraScanned(true);
     setScannerOpen(false);
-    setManualEntry(false);
-    void handleScan(value, "camera");
+    void handleScan(value, "CAMERA");
   };
 
   const handlePriceSubmit = async () => {
@@ -340,8 +307,9 @@ export default function SellScanScreen() {
       try {
         const status = await fetchUiStatus();
         if (cancelled) return;
-        setStoreActive(Boolean(status.storeActive));
-        setDeviceActive(Boolean(status.deviceActive));
+        setStoreActive(status.storeActive ?? null);
+        setDeviceActive(status.deviceActive ?? null);
+        setDeviceStoreId(status.storeId ?? null);
         setPendingOutboxCount(status.pendingOutboxCount ?? 0);
         if (status.deviceActive === false) {
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
@@ -371,15 +339,55 @@ export default function SellScanScreen() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [handleDeviceAuthError, navigation]);
 
   useEffect(() => {
-    return () => {
-      if (manualEntryTimerRef.current) {
-        clearTimeout(manualEntryTimerRef.current);
+    let cancelled = false;
+
+    const applyInfo = (info: { storeId: string | null; storeName: string | null }) => {
+      if (cancelled) return;
+      setDeviceStoreId(info.storeId ?? null);
+      setStoreName(info.storeName ?? null);
+    };
+
+    const loadCached = async () => {
+      const cached = await getCachedDeviceInfo();
+      if (cached) {
+        applyInfo(cached);
       }
     };
-  }, []);
+
+    const refresh = async () => {
+      try {
+        const info = await fetchDeviceInfo();
+        applyInfo(info);
+        await cacheDeviceInfo(info);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          await handleDeviceAuthError(error);
+        }
+      }
+    };
+
+    loadCached();
+    void refresh();
+
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void refresh();
+      }
+    });
+
+    const interval = setInterval(() => {
+      void refresh();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      subscription.remove();
+      clearInterval(interval);
+    };
+  }, [handleDeviceAuthError]);
 
   useEffect(() => {
     if (discountEditing) return;
@@ -397,12 +405,6 @@ export default function SellScanScreen() {
     }
   }, [items.length, removeDiscount]);
 
-  useEffect(() => {
-    if (!priceModal && !isResolving) {
-      scanInputRef.current?.focus();
-    }
-  }, [priceModal, isResolving, mode]);
-
   /* ---------- UI ---------- */
 
   return (
@@ -413,6 +415,8 @@ export default function SellScanScreen() {
         deviceActive={deviceActive}
         pendingOutboxCount={pendingOutboxCount}
         mode={mode}
+        storeName={storeName}
+        storeId={deviceStoreId}
       />
 
       {/* MODE SELECTOR */}
@@ -438,62 +442,21 @@ export default function SellScanScreen() {
         </View>
       </View>
 
-      {/* SCAN INPUT (UNIFIED ENTRY POINT) */}
-      <View style={styles.scanCard}>
-        <Text style={styles.scanLabel}>Scan barcode or type and press Enter</Text>
-        <View style={styles.scanInputWrap}>
-          <TextInput
-            style={styles.scanInput}
-            placeholder="Scan barcode"
-            placeholderTextColor={theme.colors.textTertiary}
-            value={scanInput}
-            onChangeText={handleScanInputChange}
-            onBlur={() => {
-              setManualEntry(false);
-            }}
-            onSubmitEditing={() => handleScan(scanInput, "input")}
-            blurOnSubmit={false}
-            editable={!priceModal && !isResolving}
-            showSoftInputOnFocus={manualEntry}
-            inputMode={manualEntry ? "text" : "none"}
-            caretHidden={!manualEntry}
-            ref={scanInputRef}
-          />
-          <Pressable
-            style={styles.scanTapOverlay}
-            onPress={handleOpenCamera}
-            pointerEvents={manualEntry ? "none" : "auto"}
-          />
-        </View>
-        <View style={styles.scanActions}>
-          <Pressable
-            style={[styles.scanButton, cameraDisabled && styles.scanButtonDisabled]}
-            onPress={handleOpenCamera}
-            disabled={cameraDisabled}
-          >
-            <MaterialCommunityIcons name="camera" size={16} color={theme.colors.primary} />
-            <Text style={styles.scanButtonText}>Scan with Camera</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.scanButton, styles.scanButtonSecondary]}
-            onPress={enableManualEntry}
-          >
-            <MaterialCommunityIcons name="keyboard" size={16} color={theme.colors.primary} />
-            <Text style={styles.scanButtonText}>Type Manually</Text>
-          </Pressable>
-        </View>
+      <View style={styles.scanBarWrap}>
+        <ScanBar
+          disabled={scanBarDisabled}
+          onOpenScanner={handleOpenCamera}
+          onScan={(value) => handleScan(value, "HID")}
+          instruction="Scan Product to Digitise Store/Sale Billing"
+        />
       </View>
 
       {/* CART (SELL ONLY) */}
-      {mode === "SELL" && (
+      {mode === "SELL" && hasItems && (
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
           style={styles.cart}
-          contentContainerStyle={items.length === 0 ? styles.cartEmpty : undefined}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No items yet. Scan a product to start a bill.</Text>
-          }
           renderItem={({ item }: { item: StoreCartItem }) => (
             <View style={styles.cartRow}>
               <Text style={styles.itemName}>
@@ -507,7 +470,7 @@ export default function SellScanScreen() {
         />
       )}
 
-      {mode === "SELL" && (
+      {mode === "SELL" && hasItems && (
         <View style={styles.discountRow}>
           <Text style={styles.discountLabel}>Discount</Text>
           <TextInput
@@ -526,26 +489,24 @@ export default function SellScanScreen() {
       )}
 
       {/* FOOTER */}
-      <View style={styles.footer}>
-        {mode === "SELL" && (
+      {mode === "SELL" && hasItems && (
+        <View style={styles.footer}>
           <Pressable onPress={handleClearCart} style={styles.clearBtn}>
             <Text style={styles.clearText}>Clear Cart</Text>
           </Pressable>
-        )}
 
-        <View style={styles.ctaRow}>
-          <Pressable
-            style={[
-              styles.collectBtn,
-              collectDisabled && styles.ctaDisabled
-            ]}
-            onPress={handleCollectPayment}
-            disabled={collectDisabled}
-          >
-            <Text style={styles.collectText}>COLLECT PAYMENT</Text>
-          </Pressable>
+          <View style={styles.ctaRow}>
+            <Pressable
+              style={[
+                styles.collectBtn,
+                collectDisabled && styles.ctaDisabled
+              ]}
+              onPress={handleCollectPayment}
+              disabled={collectDisabled}
+            >
+              <Text style={styles.collectText}>COLLECT PAYMENT</Text>
+            </Pressable>
 
-          {mode === "SELL" && (
             <Pressable
               style={[
                 styles.payBtn,
@@ -554,11 +515,11 @@ export default function SellScanScreen() {
               disabled={payDisabled}
               onPress={() => navigation.navigate("Payment")}
             >
-              <Text style={styles.payText}>PAY {totalLabel}</Text>
+              <Text style={styles.payText}>TOTAL BILL {totalLabel}</Text>
             </Pressable>
-          )}
+          </View>
         </View>
-      </View>
+      )}
 
       <Modal
         visible={scannerOpen}
@@ -698,67 +659,8 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
   },
 
-  scanCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    padding: 12,
+  scanBarWrap: {
     marginBottom: 12,
-  },
-  scanLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  scanInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    color: theme.colors.textPrimary,
-  },
-  scanInputWrap: {
-    position: "relative",
-  },
-  scanTapOverlay: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  scanActions: {
-    marginTop: 10,
-    flexDirection: "row",
-    justifyContent: "flex-start",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  scanButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surface,
-  },
-  scanButtonSecondary: {
-    borderColor: theme.colors.border,
-  },
-  scanButtonDisabled: {
-    opacity: 0.5,
-  },
-  scanButtonText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primary,
   },
 
   cart: {
@@ -769,14 +671,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     marginTop: 8,
     overflow: "hidden",
-  },
-  cartEmpty: {
-    flexGrow: 1,
-    paddingVertical: 24,
-  },
-  emptyText: {
-    textAlign: "center",
-    color: theme.colors.textTertiary,
   },
 
   cartRow: {

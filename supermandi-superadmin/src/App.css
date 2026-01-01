@@ -175,6 +175,17 @@
   font-weight: 700;
 }
 
+.tableInput {
+  width: 100%;
+  min-width: 160px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
 .json {
   margin: 8px 0 0 0;
   padding: 12px;

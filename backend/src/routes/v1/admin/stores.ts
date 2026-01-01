@@ -16,6 +16,41 @@ const normalizeUpiVpa = (value: unknown): string | null | undefined => {
   return trimmed;
 };
 
+// GET /api/v1/admin/stores
+adminStoresRouter.get("/stores", async (_req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const result = await pool.query(
+    `
+      SELECT id,
+        name,
+        upi_vpa,
+        active,
+        address,
+        contact_name,
+        contact_phone,
+        contact_email,
+        location,
+        pos_device_id,
+        kyc_status,
+        upi_vpa_updated_at,
+        upi_vpa_updated_by,
+        created_at,
+        updated_at
+      FROM stores
+      ORDER BY created_at DESC
+    `
+  );
+
+  const stores = result.rows.map((row) => ({
+    ...row,
+    storeName: row.name
+  }));
+
+  return res.json({ stores });
+});
+
 // GET /api/v1/admin/stores/:storeId
 adminStoresRouter.get("/stores/:storeId", async (req, res) => {
   const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
@@ -54,7 +89,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
     return res.status(404).json({ error: "store not found" });
   }
 
-  return res.json({ store });
+  return res.json({ store: { ...store, storeName: store.name } });
 });
 
 // PATCH /api/v1/admin/stores/:storeId
@@ -66,6 +101,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
 
   const {
     name,
+    storeName,
     upiVpa,
     address,
     contactName,
@@ -84,7 +120,8 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     values.push(value);
   };
 
-  if (name !== undefined) addUpdate("name", typeof name === "string" ? name.trim() : name);
+  if (storeName !== undefined) addUpdate("name", typeof storeName === "string" ? storeName.trim() : storeName);
+  else if (name !== undefined) addUpdate("name", typeof name === "string" ? name.trim() : name);
   if (upiVpa !== undefined) {
     const normalized = normalizeUpiVpa(upiVpa);
     if (normalized === undefined) {
@@ -129,5 +166,5 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     return res.status(404).json({ error: "store not found" });
   }
 
-  return res.json({ store });
+  return res.json({ store: { ...store, storeName: store.name } });
 });

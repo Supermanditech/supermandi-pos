@@ -1,10 +1,10 @@
 import { apiClient } from "./apiClient";
 
 export type UiStatusResponse = {
-  storeId?: string;
-  deviceId?: string;
-  storeActive: boolean;
-  deviceActive: boolean;
+  storeId?: string | null;
+  deviceId?: string | null;
+  storeActive: boolean | null;
+  deviceActive: boolean | null;
   pendingOutboxCount: number;
   lastSyncAt?: string | null;
   lastSeenOnline?: string | null;

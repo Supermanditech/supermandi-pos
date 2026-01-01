@@ -4,6 +4,7 @@ import { getAdminToken } from "./authToken";
 export type StoreRecord = {
   id: string;
   name?: string | null;
+  storeName?: string | null;
   upi_vpa?: string | null;
   active?: boolean;
   address?: string | null;
@@ -54,7 +55,30 @@ export async function fetchStore(storeId: string): Promise<StoreRecord> {
   return (data?.store ?? {}) as StoreRecord;
 }
 
-export async function updateStore(storeId: string, input: { upiVpa?: string }): Promise<StoreRecord> {
+export async function fetchStores(): Promise<StoreRecord[]> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+
+  const res = await fetch(`${base}/api/v1/admin/stores`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.stores) ? (data.stores as StoreRecord[]) : [];
+}
+
+export async function updateStore(
+  storeId: string,
+  input: { upiVpa?: string; storeName?: string }
+): Promise<StoreRecord> {
   const base = requireApiBase();
   const token = getAdminToken();
 

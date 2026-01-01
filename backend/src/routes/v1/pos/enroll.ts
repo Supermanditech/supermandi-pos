@@ -111,10 +111,6 @@ posEnrollRouter.post("/enroll", async (req, res) => {
     );
 
     const existingDevice = existingDeviceRes.rows[0];
-    if (existingDevice?.device_token) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "device_already_enrolled" });
-    }
 
     const deviceId = existingDevice?.id ?? randomUUID();
     let deviceToken = generateDeviceToken();

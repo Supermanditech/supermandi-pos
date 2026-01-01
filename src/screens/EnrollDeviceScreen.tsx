@@ -13,12 +13,14 @@ import Constants from "expo-constants";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as Updates from "expo-updates";
 
 import { enrollDevice } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme } from "../theme";
+import { API_BASE_URL } from "../config/api";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -42,6 +44,19 @@ const PRINTING_MODES: Array<{ value: PrintingMode; label: string }> = [
   { value: "NONE", label: "None" }
 ];
 
+const ENROLL_ERROR_MESSAGES: Record<string, string> = {
+  enrollment_invalid: "Enrollment code is invalid or expired.",
+  device_already_enrolled: "This label is already active. Ask Superadmin to reset the token.",
+  "label is required": "Enter a device label (e.g., Counter-1).",
+  "deviceType is required": "Select a valid device type.",
+  "deviceType invalid": "Select a valid device type.",
+  "printingMode invalid": "Select a valid printing mode.",
+  "code is required": "Enter or scan an enrollment code.",
+  "store not found": "Store not found for this enrollment code.",
+  "database unavailable": "Server database unavailable. Try again in a minute.",
+  enrollment_failed: "Server could not enroll the device. Try again."
+};
+
 function parseEnrollmentCode(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -58,6 +73,18 @@ function parseEnrollmentCode(raw: string): string | null {
 function getAppVersion(): string {
   const v = (Constants.expoConfig as any)?.version ?? (Constants.manifest as any)?.version;
   return typeof v === "string" && v.trim() ? v.trim() : "unknown";
+}
+
+function formatUnknownError(value: unknown): string {
+  if (value instanceof Error) {
+    return value.message || value.name || "unknown error";
+  }
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "unknown error";
+  }
 }
 
 export default function EnrollDeviceScreen() {
@@ -136,24 +163,26 @@ export default function EnrollDeviceScreen() {
       navigation.replace("SellScan");
     } catch (error) {
       if (error instanceof ApiError) {
-        if (error.message === "enrollment_invalid") {
-          Alert.alert("Invalid Code", "Enrollment code is invalid or expired.");
-          return;
-        }
-        if (error.message === "device_already_enrolled") {
-          Alert.alert("Already Enrolled", "This label is already active. Ask Superadmin to reset the token.");
-          return;
-        }
-        if (error.message === "label is required") {
-          Alert.alert("Missing Label", "Enter a device label (e.g., Counter-1).");
-          return;
-        }
-        if (error.message === "deviceType is required" || error.message === "deviceType invalid") {
-          Alert.alert("Missing Device Type", "Select a valid device type.");
-          return;
-        }
+        const raw = error.message || "unknown_error";
+        const friendly = ENROLL_ERROR_MESSAGES[raw];
+        const extra: string[] = [];
+        if (error.status) extra.push(`status: ${error.status}`);
+        extra.push(`code: ${raw}`);
+        extra.push(`api: ${API_BASE_URL}`);
+        if (Updates.channel) extra.push(`channel: ${Updates.channel}`);
+        Alert.alert(
+          "Enrollment Failed",
+          `${friendly ?? "Unable to enroll device. Try again."} (${extra.join(", ")})`
+        );
+        return;
       }
-      Alert.alert("Enrollment Failed", "Unable to enroll device. Try again.");
+      const fallback = formatUnknownError(error) || "Unable to enroll device. Try again.";
+      const details: string[] = [`api: ${API_BASE_URL}`];
+      if (Updates.channel) details.push(`channel: ${Updates.channel}`);
+      Alert.alert(
+        "Enrollment Failed",
+        `${fallback}${details.length ? ` (${details.join(", ")})` : ""}`
+      );
     } finally {
       setLoading(false);
     }

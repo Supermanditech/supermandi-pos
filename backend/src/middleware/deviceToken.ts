@@ -3,14 +3,14 @@ import { getPool } from "../db/client";
 
 export type PosDeviceContext = {
   deviceId: string;
-  storeId: string;
+  storeId: string | null;
 };
 
 export type PosDeviceStatusContext = {
   deviceId: string;
-  storeId: string;
+  storeId: string | null;
   deviceActive: boolean;
-  storeActive: boolean;
+  storeActive: boolean | null;
 };
 
 async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosDeviceStatusContext | null> {
@@ -30,7 +30,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
     `
     SELECT d.id AS device_id, d.store_id, d.active AS device_active, s.active AS store_active
     FROM pos_devices d
-    JOIN stores s ON s.id = d.store_id
+    LEFT JOIN stores s ON s.id = d.store_id
     WHERE d.device_token = $1
     `,
     [token]
@@ -42,11 +42,19 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
     return null;
   }
 
+  const storeId = row.store_id ? String(row.store_id) : null;
+  const storeActive =
+    typeof row.store_active === "boolean"
+      ? Boolean(row.store_active)
+      : row.store_active === null || row.store_active === undefined
+      ? null
+      : Boolean(row.store_active);
+
   return {
     deviceId: String(row.device_id),
-    storeId: String(row.store_id),
+    storeId,
     deviceActive: Boolean(row.device_active),
-    storeActive: Boolean(row.store_active)
+    storeActive
   };
 }
 
@@ -55,11 +63,15 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
   const status = await resolveDeviceFromToken(req, res);
   if (!status) return;
 
+  if (!status.storeId) {
+    res.status(403).json({ error: "device_not_enrolled" });
+    return;
+  }
   if (!status.deviceActive) {
     res.status(403).json({ error: "device_inactive" });
     return;
   }
-  if (!status.storeActive) {
+  if (status.storeActive !== true) {
     res.status(403).json({ error: "store_inactive" });
     return;
   }

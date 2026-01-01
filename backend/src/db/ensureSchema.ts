@@ -114,7 +114,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS pos_devices (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NULL REFERENCES stores(id) ON DELETE CASCADE,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       device_token TEXT NULL,
       label TEXT NULL,
@@ -254,6 +254,7 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS android_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS printing_mode TEXT NULL;
+    ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
   `);
 
   const storeCount = await pool.query("SELECT COUNT(*)::int AS count FROM stores");

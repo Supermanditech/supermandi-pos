@@ -29,24 +29,26 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
 
   const result = await pool.query(
     `
-    SELECT id,
-           store_id,
-           active,
-           label,
-           device_type,
-           manufacturer,
-           model,
-           android_version,
-           app_version,
-           printing_mode,
-           last_seen_online,
-           last_sync_at,
-           pending_outbox_count,
-           created_at,
-           updated_at
-    FROM pos_devices
-    ${where}
-    ORDER BY last_seen_online DESC NULLS LAST
+    SELECT d.id,
+           d.store_id,
+           s.name AS store_name,
+           d.active,
+           d.label,
+           d.device_type,
+           d.manufacturer,
+           d.model,
+           d.android_version,
+           d.app_version,
+           d.printing_mode,
+           d.last_seen_online,
+           d.last_sync_at,
+           d.pending_outbox_count,
+           d.created_at,
+           d.updated_at
+    FROM pos_devices d
+    LEFT JOIN stores s ON s.id = d.store_id
+    ${where ? where.replace("store_id", "d.store_id") : ""}
+    ORDER BY d.last_seen_online DESC NULLS LAST
     `,
     params
   );
@@ -54,6 +56,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
   const devices = result.rows.map((row) => ({
     id: row.id,
     store_id: row.store_id,
+    store_name: row.store_name ?? null,
     active: row.active,
     label: row.label,
     device_type: row.device_type,
@@ -166,10 +169,17 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
     return res.status(404).json({ error: "device not found" });
   }
 
+  let storeName: string | null = null;
+  if (row.store_id) {
+    const storeRes = await pool.query(`SELECT name FROM stores WHERE id = $1`, [row.store_id]);
+    storeName = storeRes.rows[0]?.name ? String(storeRes.rows[0].name) : null;
+  }
+
   return res.json({
     device: {
       id: row.id,
       store_id: row.store_id,
+      store_name: storeName,
       active: row.active,
       label: row.label,
       device_type: row.device_type,

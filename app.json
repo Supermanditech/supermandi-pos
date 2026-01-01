@@ -15,14 +15,15 @@
       "usesCleartextTraffic": true
     },
     "extra": {
-      "API_URL": "http://34.14.150.183:3001",
+      "API_URL": "https://34.14.150.183.nip.io",
       "eas": {
         "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
       }
     },
     "plugins": [
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      "./plugins/withCleartextTraffic"
     ]
   }
 }

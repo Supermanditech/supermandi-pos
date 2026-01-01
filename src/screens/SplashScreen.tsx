@@ -50,9 +50,8 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Supermandi POS</Text>
+      <Text style={styles.title}>Welcome To SuperMandi</Text>
       <ActivityIndicator size="small" color={theme.colors.primary} />
-      <Text style={styles.subtext}>Starting...</Text>
     </View>
   );
 }
@@ -68,10 +67,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 12,
-    color: theme.colors.textPrimary
-  },
-  subtext: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    color: theme.colors.textPrimary,
+    textTransform: "none"
   },
 });

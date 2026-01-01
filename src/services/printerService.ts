@@ -32,8 +32,9 @@ class PrinterService {
     
     // Simulate initialization delay
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    this.status.connected = true;
+
+    // Keep disconnected until a real integration reports a connection.
+    this.status.connected = false;
     
     await eventLogger.log('USER_ACTION', {
       action: 'printer_initialize',

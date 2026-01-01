@@ -3,7 +3,7 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
 import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken } from "./api/authToken";
-import { fetchStore, updateStore, type StoreRecord } from "./api/stores";
+import { fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
 import {
@@ -122,6 +122,7 @@ export default function App() {
   const healthInFlightRef = useRef(false);
   const eventsInFlightRef = useRef(false);
   const devicesInFlightRef = useRef(false);
+  const storesInFlightRef = useRef(false);
 
   // AI panel
   const [aiQuestion, setAiQuestion] = useState<string>("");
@@ -137,6 +138,12 @@ export default function App() {
   const [storeLoading, setStoreLoading] = useState<boolean>(false);
   const [storeError, setStoreError] = useState<string>("");
   const [storeSuccess, setStoreSuccess] = useState<string>("");
+  const [storeDirectory, setStoreDirectory] = useState<StoreRecord[]>([]);
+  const [storeDirectoryLoading, setStoreDirectoryLoading] = useState<boolean>(false);
+  const [storeDirectoryError, setStoreDirectoryError] = useState<string>("");
+  const [storeNameEdits, setStoreNameEdits] = useState<Record<string, string>>({});
+  const [storeNameSaving, setStoreNameSaving] = useState<Record<string, boolean>>({});
+  const [storeNameError, setStoreNameError] = useState<string>("");
 
   const [deviceRecords, setDeviceRecords] = useState<DeviceRecord[]>([]);
   const [devicesError, setDevicesError] = useState<string>("");
@@ -259,6 +266,29 @@ export default function App() {
     }
   }
 
+  async function refreshStores() {
+    if (isRateLimited() || storesInFlightRef.current) return;
+    storesInFlightRef.current = true;
+    setStoreDirectoryLoading(true);
+    try {
+      const data = await fetchStores();
+      setStoreDirectory(data);
+      setStoreDirectoryError("");
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
+    } catch (e: any) {
+      const message = e?.message ? String(e.message) : "Failed to fetch stores";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      setStoreDirectoryError(message);
+    } finally {
+      storesInFlightRef.current = false;
+      setStoreDirectoryLoading(false);
+    }
+  }
+
   async function refreshAnalytics(activeTab: AnalyticsTabKey) {
     setAnalyticsLoading(true);
     setAnalyticsError("");
@@ -301,11 +331,13 @@ export default function App() {
 
     const shouldRefreshEvents = tab === "events" || tab === "devices";
     const shouldRefreshDevices = tab === "devices";
+    const shouldRefreshStores = tab === "stores";
     const shouldRefreshAi = tab === "ai";
 
     refreshHealth();
     if (shouldRefreshEvents) refreshEvents();
     if (shouldRefreshDevices) refreshDevices();
+    if (shouldRefreshStores) refreshStores();
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
@@ -317,6 +349,7 @@ export default function App() {
       refreshHealth();
       if (shouldRefreshEvents) refreshEvents();
       if (shouldRefreshDevices) refreshDevices();
+      if (shouldRefreshStores) refreshStores();
       if (shouldRefreshAi) {
         fetchAiHealth()
           .then((res) => setAiConfigured(res.configured))
@@ -369,6 +402,23 @@ export default function App() {
     });
   }, [deviceRecords]);
 
+  useEffect(() => {
+    setStoreNameEdits((prev) => {
+      const next = { ...prev };
+      for (const store of storeDirectory) {
+        if (!next[store.id]) {
+          next[store.id] = store.name ?? store.storeName ?? "";
+        }
+      }
+      for (const id of Object.keys(next)) {
+        if (!storeDirectory.some((s) => s.id === id)) {
+          delete next[id];
+        }
+      }
+      return next;
+    });
+  }, [storeDirectory]);
+
   const filteredEvents = useMemo(() => {
     const d = deviceIdFilter.trim();
     const s = storeIdFilter.trim();
@@ -386,7 +436,7 @@ export default function App() {
     const s = storeIdFilter.trim();
     return deviceRecords.filter((device) => {
       if (d && !includesInsensitive(device.id, d)) return false;
-      if (s && !includesInsensitive(device.store_id, s)) return false;
+      if (s && !includesInsensitive(device.store_id ?? "", s)) return false;
       return true;
     });
   }, [deviceRecords, deviceIdFilter, storeIdFilter]);
@@ -490,6 +540,29 @@ export default function App() {
       ...prev,
       [deviceId]: { ...(prev[deviceId] ?? { label: "", deviceType: "RETAILER_PHONE", active: true }), ...patch }
     }));
+  }
+
+  function updateStoreNameDraft(storeId: string, name: string) {
+    setStoreNameEdits((prev) => ({ ...prev, [storeId]: name }));
+  }
+
+  async function handleStoreNameSave(storeId: string) {
+    const nextName = (storeNameEdits[storeId] ?? "").trim();
+    if (!nextName) {
+      setStoreNameError("Store name is required.");
+      return;
+    }
+    setStoreNameError("");
+    setStoreNameSaving((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      const updated = await updateStore(storeId, { storeName: nextName });
+      setStoreDirectory((prev) => prev.map((s) => (s.id === storeId ? updated : s)));
+      setStoreNameEdits((prev) => ({ ...prev, [storeId]: updated.name ?? updated.storeName ?? nextName }));
+    } catch (e: any) {
+      setStoreNameError(e?.message ? String(e.message) : "Failed to update store name.");
+    } finally {
+      setStoreNameSaving((prev) => ({ ...prev, [storeId]: false }));
+    }
   }
 
   async function handleDeviceSave(deviceId: string) {
@@ -956,6 +1029,7 @@ export default function App() {
                     ? DEVICE_TYPE_LABELS[d.device_type as DeviceType] ?? d.device_type
                     : "Unknown";
                   const printingLabel = d.printing_mode ? PRINTING_MODE_LABELS[d.printing_mode] ?? d.printing_mode : "None";
+                  const storeLabel = d.store_name ?? (d.store_id ? d.store_id : "Not Activated");
                   const statusMessage = composeDeviceMessage({
                     active: Boolean(d.active),
                     lastSeenOnline: d.last_seen_online,
@@ -986,7 +1060,7 @@ export default function App() {
 
                       <div className="deviceMetaGrid">
                         <div>
-                          <strong>Store:</strong> <span className="mono">{d.store_id}</span>
+                          <strong>Store:</strong> <span className="mono">{storeLabel}</span>
                         </div>
                         <div>
                           <strong>Device:</strong> <span className="mono">{d.id}</span>
@@ -1155,6 +1229,54 @@ export default function App() {
               </div>
             )}
           </div>
+
+          <div className="cardHeader" style={{ paddingTop: 0 }}>
+            <div className="cardTitle">Stores (directory)</div>
+            <div className="muted">Edit store names and status</div>
+          </div>
+
+          {storeDirectoryError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
+          {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
+
+          {storeDirectory.length === 0 ? (
+            <div className="empty">
+              {storeDirectoryLoading ? "Loading stores..." : "No stores found."}
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Store ID</th>
+                    <th>Store Name</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {storeDirectory.map((s) => (
+                    <tr key={s.id}>
+                      <td className="mono">{s.id}</td>
+                      <td>
+                        <input
+                          className="tableInput"
+                          value={storeNameEdits[s.id] ?? s.name ?? s.storeName ?? ""}
+                          onChange={(e) => updateStoreNameDraft(s.id, e.target.value)}
+                          placeholder="Store name"
+                        />
+                      </td>
+                      <td className="mono">{s.active ? "active" : "inactive"}</td>
+                      <td>
+                        <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
+                          {storeNameSaving[s.id] ? "Saving..." : "Save"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           <div className="cardHeader" style={{ paddingTop: 0 }}>
             <div className="cardTitle">Stores (activity)</div>

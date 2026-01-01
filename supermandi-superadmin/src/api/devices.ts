@@ -4,7 +4,8 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
 export type DeviceRecord = {
   id: string;
-  store_id: string;
+  store_id?: string | null;
+  store_name?: string | null;
   active: boolean;
   label?: string | null;
   device_type?: string | null;
