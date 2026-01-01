@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -19,11 +19,13 @@ import {
   recordCollectionCash,
   recordCollectionDue
 } from "../services/api/posApi";
+import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { formatMoney } from "../utils/money";
 import { ApiError } from "../services/api/apiClient";
 import { subscribeNetworkStatus } from "../services/networkStatus";
 import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
+import { buildUpiIntent } from "../utils/upiIntent";
 import { theme } from "../theme";
 
 type RootStackParamList = {
@@ -45,12 +47,37 @@ export default function CollectPaymentScreen() {
   const [collectionId, setCollectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [upiVpa, setUpiVpa] = useState<string | null>(null);
+  const [upiStoreName, setUpiStoreName] = useState<string | null>(null);
+  const [storeActive, setStoreActive] = useState<boolean | null>(null);
+  const [upiStatusLoading, setUpiStatusLoading] = useState(true);
 
   const amountMinor = useMemo(() => {
     const parsed = Number(amountInput);
     if (!Number.isFinite(parsed) || parsed <= 0) return 0;
     return Math.round(parsed * 100);
   }, [amountInput]);
+
+  const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
+    if (error.message === "device_inactive") {
+      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
+      return true;
+    }
+    if (error.message === "device_unauthorized") {
+      await clearDeviceSession();
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      return true;
+    }
+    if (error.message === "device_not_enrolled") {
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      return true;
+    }
+    return false;
+  }, [navigation]);
+
+  const upiDisabled =
+    !isOnline || upiStatusLoading || storeActive === false || !upiVpa;
+  const upiBlocked = storeActive === false || (!upiVpa && !upiStatusLoading);
 
   useEffect(() => {
     const unsubscribe = subscribeNetworkStatus((online) => {
@@ -64,9 +91,70 @@ export default function CollectPaymentScreen() {
     return () => unsubscribe();
   }, [selectedMode]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!isOnline) {
+      setUpiStatusLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setUpiStatusLoading(true);
+
+    fetchUiStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setStoreActive(status.storeActive ?? null);
+        setUpiVpa(status.upiVpa ?? null);
+        setUpiStoreName(status.storeName ?? null);
+        setUpiStatusLoading(false);
+        if (status.storeActive === false || !status.upiVpa) {
+          setSelectedMode("CASH");
+          setUpiIntent(null);
+          setCollectionId(null);
+        }
+      })
+      .catch(async (error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          if (await handleDeviceAuthError(error)) {
+            return;
+          }
+          if (error.message === "store_inactive") {
+            setStoreActive(false);
+            setUpiStatusLoading(false);
+            setSelectedMode("CASH");
+            return;
+          }
+        }
+        setUpiStatusLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleDeviceAuthError, isOnline]);
+
+  useEffect(() => {
+    if (selectedMode !== "UPI") return;
+    if (storeActive === false || !upiVpa) {
+      setSelectedMode("CASH");
+      setUpiIntent(null);
+      setCollectionId(null);
+    }
+  }, [selectedMode, storeActive, upiVpa]);
+
   const handleGenerateUpi = async () => {
     if (!isOnline) {
       Alert.alert("UPI Offline", "UPI is unavailable while offline. Use Cash or Due.");
+      return;
+    }
+    if (upiStatusLoading) {
+      Alert.alert("UPI Loading", "Checking UPI details. Please wait.");
+      return;
+    }
+    if (upiBlocked) {
+      Alert.alert("UPI Unavailable", "UPI VPA is not set for this store.");
       return;
     }
     if (amountMinor <= 0) {
@@ -76,12 +164,26 @@ export default function CollectPaymentScreen() {
 
     setLoading(true);
     try {
+      const nextTransactionId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       const res = await initCollectionUpi({
         amountMinor,
-        reference: referenceInput.trim() || null
+        reference: referenceInput.trim() || null,
+        transactionId: nextTransactionId
       });
-      setUpiIntent(res.upiIntent);
+      const intent = buildUpiIntent({
+        upiVpa: res.upiVpa ?? upiVpa,
+        storeName: res.storeName ?? upiStoreName,
+        amountMinor: res.amountMinor,
+        transactionId: nextTransactionId,
+        note: "Supermandi POS Sale"
+      });
+      if (!intent) {
+        throw new ApiError(0, "upi_vpa_missing");
+      }
+      setUpiIntent(intent);
       setCollectionId(res.collectionId);
+      setUpiVpa(res.upiVpa ?? null);
+      setUpiStoreName(res.storeName ?? null);
     } catch (error) {
       if (error instanceof ApiError) {
         if (await handleDeviceAuthError(error)) {
@@ -89,10 +191,16 @@ export default function CollectPaymentScreen() {
         }
         if (error.message === "store_inactive") {
           Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
+          setSelectedMode("CASH");
+          setUpiIntent(null);
+          setCollectionId(null);
           return;
         }
         if (error.message === "upi_vpa_missing") {
           Alert.alert("UPI Missing", "UPI VPA is not set for this store.");
+          setSelectedMode("CASH");
+          setUpiIntent(null);
+          setCollectionId(null);
           return;
         }
         if (error.message === "upi_offline_blocked") {
@@ -166,23 +274,6 @@ export default function CollectPaymentScreen() {
     }
   };
 
-  const handleDeviceAuthError = async (error: ApiError): Promise<boolean> => {
-    if (error.message === "device_inactive") {
-      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
-      return true;
-    }
-    if (error.message === "device_unauthorized") {
-      await clearDeviceSession();
-      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
-      return true;
-    }
-    if (error.message === "device_not_enrolled") {
-      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
-      return true;
-    }
-    return false;
-  };
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Collect Payment</Text>
@@ -222,16 +313,16 @@ export default function CollectPaymentScreen() {
               style={[
                 styles.modeButton,
                 selectedMode === mode && styles.modeButtonActive,
-                mode === "UPI" && !isOnline && styles.modeButtonDisabled
+                mode === "UPI" && upiDisabled && styles.modeButtonDisabled
               ]}
               onPress={() => setSelectedMode(mode)}
-              disabled={mode === "UPI" && !isOnline}
+              disabled={mode === "UPI" && upiDisabled}
             >
               <Text
                 style={[
                   styles.modeText,
                   selectedMode === mode && styles.modeTextActive,
-                  mode === "UPI" && !isOnline && styles.modeTextDisabled
+                  mode === "UPI" && upiDisabled && styles.modeTextDisabled
                 ]}
               >
                 {mode}
@@ -251,11 +342,21 @@ export default function CollectPaymentScreen() {
               <Text style={styles.generateText}>Generate UPI QR</Text>
             </TouchableOpacity>
 
+            {upiStoreName && (
+              <Text style={styles.upiStoreName}>{upiStoreName}</Text>
+            )}
+
             {upiIntent ? (
               <View style={styles.qrBox}>
                 <QRCode value={upiIntent} size={180} />
                 <Text style={styles.amountText}>{formatMoney(amountMinor, "INR")}</Text>
               </View>
+            ) : upiStatusLoading ? (
+              <Text style={styles.helperText}>Checking UPI details...</Text>
+            ) : upiBlocked ? (
+              <Text style={styles.helperText}>
+                UPI is unavailable until the store is active and UPI VPA is set.
+              </Text>
             ) : (
               <Text style={styles.helperText}>
                 {isOnline ? "Generate QR to collect payment." : "Offline: UPI is disabled."}
@@ -370,6 +471,12 @@ const styles = StyleSheet.create({
   upiSection: {
     marginTop: 8,
     alignItems: "center"
+  },
+  upiStoreName: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary
   },
   generateButton: {
     flexDirection: "row",

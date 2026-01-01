@@ -39,7 +39,7 @@ export default function SuccessPrintScreenV2() {
   const generateReceiptContent = (): string => {
     return [
       "=================================",
-      "       SUPERMANDI POS",
+      "       SuperMandi POS",
       "=================================",
       `Bill #: ${billNumber}`,
       `Date: ${new Date().toLocaleString()}`,

@@ -50,7 +50,9 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome To SuperMandi</Text>
+      <Text style={styles.title}>
+        Welcome To <Text style={styles.brandPill}>SuperMandi</Text>
+      </Text>
       <ActivityIndicator size="small" color={theme.colors.primary} />
     </View>
   );
@@ -69,5 +71,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     color: theme.colors.textPrimary,
     textTransform: "none"
+  },
+  brandPill: {
+    backgroundColor: theme.colors.primary,
+    color: theme.colors.textInverse,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 999,
+    fontWeight: "800",
+    overflow: "hidden"
   },
 });

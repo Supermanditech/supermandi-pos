@@ -175,65 +175,68 @@ export default function ScanBar({
 
   return (
     <View style={styles.wrapper} testID={testID}>
-      <Pressable
-        style={[
-          styles.bar,
-          {
-            height: layout.barHeight,
-            borderRadius: layout.radius,
-            paddingHorizontal: layout.horizontalPadding,
-            gap: layout.contentGap,
-          },
-          disabled && styles.barDisabled,
-        ]}
-        onPress={handlePress}
-        disabled={disabled}
-        accessibilityRole="button"
-        accessibilityLabel={instruction}
-      >
+      <View style={[styles.barShadow, { borderRadius: layout.radius }]}>
         <Pressable
+          style={[
+            styles.bar,
+            {
+              height: layout.barHeight,
+              borderRadius: layout.radius,
+              paddingHorizontal: layout.horizontalPadding,
+            },
+            disabled && styles.barDisabled,
+          ]}
           onPress={handlePress}
           disabled={disabled}
           accessibilityRole="button"
-          style={[
-            styles.leftAction,
-            {
-              height: layout.iconButtonSize,
-              width: layout.iconButtonSize,
-              borderRadius: layout.iconButtonSize / 2,
-            },
-          ]}
+          accessibilityLabel={instruction}
         >
-          <MaterialCommunityIcons name="camera-outline" size={layout.iconSize} color={theme.colors.textInverse} />
-        </Pressable>
+          <Pressable
+            onPress={handlePress}
+            disabled={disabled}
+            accessibilityRole="button"
+            style={[
+              styles.leftAction,
+              {
+                height: layout.iconButtonSize,
+                width: layout.iconButtonSize,
+                borderRadius: layout.iconButtonSize / 2,
+                marginRight: layout.contentGap,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name="camera-outline" size={layout.iconSize} color={theme.colors.textInverse} />
+          </Pressable>
 
-        <Text
-          style={[
-            styles.instruction,
-            { fontSize: layout.textSize, lineHeight: layout.textLineHeight },
-          ]}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {instruction}
-        </Text>
+          <Text
+            style={[
+              styles.instruction,
+              { fontSize: layout.textSize, lineHeight: layout.textLineHeight },
+            ]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {instruction}
+          </Text>
 
-        <View
-          style={[
-            styles.rightIcons,
-            {
-              width: layout.iconButtonSize,
-              height: layout.iconButtonSize,
-              borderRadius: Math.round(layout.iconButtonSize * 0.3),
-            },
-          ]}
-        >
-          <MaterialCommunityIcons name="barcode-scan" size={layout.barcodeSize} color={theme.colors.primaryDark} />
-          <View style={styles.qrBadge}>
-            <MaterialCommunityIcons name="qrcode-scan" size={layout.qrSize} color={theme.colors.primary} />
+          <View
+            style={[
+              styles.rightIcons,
+              {
+                width: layout.iconButtonSize,
+                height: layout.iconButtonSize,
+                borderRadius: Math.round(layout.iconButtonSize * 0.3),
+                marginLeft: layout.contentGap,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name="barcode-scan" size={layout.barcodeSize} color={theme.colors.primaryDark} />
+            <View style={styles.qrBadge}>
+              <MaterialCommunityIcons name="qrcode-scan" size={layout.qrSize} color={theme.colors.primary} />
+            </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+      </View>
 
       <TextInput
         ref={inputRef}
@@ -261,11 +264,16 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   bar: {
+    width: "100%",
     backgroundColor: theme.colors.surface,
     alignItems: "center",
     flexDirection: "row",
     borderWidth: 1,
     borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  barShadow: {
+    width: "100%",
     shadowColor: theme.colors.primaryDark,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -281,11 +289,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderWidth: 1,
     borderColor: theme.colors.primaryDark,
+    flexShrink: 0,
   },
   instruction: {
     flex: 1,
     color: theme.colors.textSecondary,
     fontWeight: "500",
+    minWidth: 0,
   },
   rightIcons: {
     alignItems: "center",
@@ -294,6 +304,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: "hidden",
+    flexShrink: 0,
   },
   qrBadge: {
     position: "absolute",

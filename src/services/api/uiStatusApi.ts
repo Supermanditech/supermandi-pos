@@ -2,12 +2,14 @@ import { apiClient } from "./apiClient";
 
 export type UiStatusResponse = {
   storeId?: string | null;
+  storeName?: string | null;
   deviceId?: string | null;
   storeActive: boolean | null;
   deviceActive: boolean | null;
   pendingOutboxCount: number;
   lastSyncAt?: string | null;
   lastSeenOnline?: string | null;
+  upiVpa?: string | null;
   printerOk?: boolean | null;
   scannerOk?: boolean | null;
 };

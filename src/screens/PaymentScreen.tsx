@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -21,11 +21,13 @@ import {
   recordCashPayment,
   recordDuePayment
 } from "../services/api/posApi";
+import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { logPaymentEvent } from "../services/cloudEventLogger";
 import { ApiError } from "../services/api/apiClient";
 import { subscribeNetworkStatus } from "../services/networkStatus";
 import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
+import { buildUpiIntent } from "../utils/upiIntent";
 import { theme } from "../theme";
 
 type RootStackParamList = {
@@ -56,16 +58,40 @@ const PaymentScreen = () => {
   const [loadingUpi, setLoadingUpi] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [upiVpa, setUpiVpa] = useState<string | null>(null);
+  const [upiStoreName, setUpiStoreName] = useState<string | null>(null);
+  const [storeActive, setStoreActive] = useState<boolean | null>(null);
+  const [upiStatusLoading, setUpiStatusLoading] = useState(true);
 
   const currency = items[0]?.currency ?? "INR";
   const transactionId = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
   const finalized = useRef(false);
+
+  const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
+    if (error.message === "device_inactive") {
+      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
+      return true;
+    }
+    if (error.message === "device_unauthorized") {
+      await clearDeviceSession();
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      return true;
+    }
+    if (error.message === "device_not_enrolled") {
+      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      return true;
+    }
+    return false;
+  }, [navigation]);
 
   const subtotalMinor = useMemo(
     () => items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0),
     [items]
   );
   const discountMinor = Math.max(0, subtotalMinor - total);
+  const upiDisabled =
+    !isOnline || upiStatusLoading || storeActive === false || !upiVpa;
+  const upiBlocked = storeActive === false || (!upiVpa && !upiStatusLoading);
 
   useEffect(() => {
     const unsubscribe = subscribeNetworkStatus((online) => {
@@ -79,6 +105,59 @@ const PaymentScreen = () => {
 
     return () => unsubscribe();
   }, [selectedMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isOnline) {
+      setUpiStatusLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+    setUpiStatusLoading(true);
+
+    fetchUiStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setStoreActive(status.storeActive ?? null);
+        setUpiVpa(status.upiVpa ?? null);
+        setUpiStoreName(status.storeName ?? null);
+        setUpiStatusLoading(false);
+        if (status.storeActive === false || !status.upiVpa) {
+          setSelectedMode("CASH");
+          setUpiIntent(null);
+          setPaymentId(null);
+        }
+      })
+      .catch(async (error) => {
+        if (cancelled) return;
+        if (error instanceof ApiError) {
+          if (await handleDeviceAuthError(error)) {
+            return;
+          }
+          if (error.message === "store_inactive") {
+            setStoreActive(false);
+            setUpiStatusLoading(false);
+            setSelectedMode("CASH");
+            return;
+          }
+        }
+        setUpiStatusLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleDeviceAuthError, isOnline]);
+
+  useEffect(() => {
+    if (selectedMode !== "UPI") return;
+    if (storeActive === false || !upiVpa) {
+      setSelectedMode("CASH");
+      setUpiIntent(null);
+      setPaymentId(null);
+    }
+  }, [selectedMode, storeActive, upiVpa]);
 
   useEffect(() => {
     if (saleId || items.length === 0 || loadingSale) return;
@@ -138,21 +217,33 @@ const PaymentScreen = () => {
   }, [discountMinor, items, saleId, selectedMode, transactionId, currency, loadingSale]);
 
   useEffect(() => {
-    if (!isOnline || selectedMode !== "UPI" || !saleId || upiIntent || loadingUpi) return;
+    if (upiDisabled || selectedMode !== "UPI" || !saleId || upiIntent || loadingUpi) return;
 
     let cancelled = false;
     setLoadingUpi(true);
 
-    initUpiPayment({ saleId })
+    initUpiPayment({ saleId, transactionId })
       .then((res) => {
         if (cancelled) return;
-        setUpiIntent(res.upiIntent);
+        const intent = buildUpiIntent({
+          upiVpa: res.upiVpa ?? upiVpa,
+          storeName: res.storeName ?? upiStoreName,
+          amountMinor: res.amountMinor,
+          transactionId,
+          note: "Supermandi POS Sale"
+        });
+        if (!intent) {
+          throw new ApiError(0, "upi_vpa_missing");
+        }
+        setUpiIntent(intent);
         setPaymentId(res.paymentId);
+        setUpiVpa(res.upiVpa ?? null);
+        setUpiStoreName(res.storeName ?? null);
         void logPaymentEvent("PAYMENT_QR_CREATED", {
           transactionId,
           billId: res.billRef,
           paymentMode: "UPI",
-          upiString: res.upiIntent,
+          upiString: intent,
           amountMinor: res.amountMinor,
           currency
         });
@@ -174,6 +265,9 @@ const PaymentScreen = () => {
             Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
               { text: "OK", onPress: () => navigation.navigate("SellScan") }
             ]);
+            setSelectedMode("CASH");
+            setUpiIntent(null);
+            setPaymentId(null);
             return;
           }
           if (error.message === "upi_offline_blocked") {
@@ -182,6 +276,9 @@ const PaymentScreen = () => {
           }
           if (error.message === "upi_vpa_missing") {
             Alert.alert("UPI Missing", "UPI VPA is not set for this store.");
+            setSelectedMode("CASH");
+            setUpiIntent(null);
+            setPaymentId(null);
             return;
           }
         }
@@ -194,7 +291,19 @@ const PaymentScreen = () => {
     return () => {
       cancelled = true;
     };
-  }, [saleId, selectedMode, upiIntent, transactionId, currency, loadingUpi, isOnline]);
+  }, [
+    saleId,
+    selectedMode,
+    upiIntent,
+    transactionId,
+    currency,
+    loadingUpi,
+    upiDisabled,
+    upiVpa,
+    upiStoreName,
+    handleDeviceAuthError,
+    navigation
+  ]);
 
   useEffect(() => {
     return () => {
@@ -209,23 +318,6 @@ const PaymentScreen = () => {
       }
     };
   }, [billRef, currency, selectedMode, total, transactionId]);
-
-  const handleDeviceAuthError = async (error: ApiError): Promise<boolean> => {
-    if (error.message === "device_inactive") {
-      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
-      return true;
-    }
-    if (error.message === "device_unauthorized") {
-      await clearDeviceSession();
-      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
-      return true;
-    }
-    if (error.message === "device_not_enrolled") {
-      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
-      return true;
-    }
-    return false;
-  };
 
   const handlePaymentSelect = (mode: PaymentMode) => {
     setSelectedMode(mode);
@@ -375,7 +467,7 @@ const PaymentScreen = () => {
       <ScrollView style={styles.paymentOptions} contentContainerStyle={styles.paymentOptionsContent}>
         <Text style={styles.sectionTitle}>Choose Payment Method</Text>
 
-        {renderPaymentOption("UPI", "UPI Payment", "qrcode-scan", !isOnline)}
+        {renderPaymentOption("UPI", "UPI Payment", "qrcode-scan", upiDisabled)}
         {renderPaymentOption("CASH", "Cash Payment", "cash")}
         {renderPaymentOption("DUE", "Mark as Due", "calendar-clock")}
 
@@ -385,7 +477,18 @@ const PaymentScreen = () => {
             <Text style={styles.detailsText}>
               Show this QR code to the customer to pay.
             </Text>
-            {!isOnline ? (
+            {upiStoreName && (
+              <Text style={styles.upiStoreName}>{upiStoreName}</Text>
+            )}
+            {upiStatusLoading ? (
+              <View style={styles.qrPlaceholder}>
+                <Text style={styles.qrText}>Checking UPI details...</Text>
+              </View>
+            ) : upiBlocked ? (
+              <Text style={styles.offlineNote}>
+                UPI is unavailable until the store is active and UPI VPA is set.
+              </Text>
+            ) : !isOnline ? (
               <Text style={styles.offlineNote}>Offline: UPI is disabled.</Text>
             ) : upiIntent ? (
               <QRCode value={upiIntent} size={160} />
@@ -556,6 +659,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: "center",
     marginBottom: 16
+  },
+  upiStoreName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginBottom: 12
   },
   qrPlaceholder: {
     width: 160,

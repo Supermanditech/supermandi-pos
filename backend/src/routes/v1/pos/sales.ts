@@ -159,11 +159,22 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   });
 });
 
+// IMPORTANT:
+// UPI intent / QR must NEVER be generated on backend.
+// POS generates intent locally using upiVpa.
+// Do not add payment gateway logic here.
 posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) => {
-  const { saleId } = req.body as { saleId?: string };
+  const { saleId, transactionId, upiIntent } = req.body as {
+    saleId?: string;
+    transactionId?: string;
+    upiIntent?: string;
+  };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
     return res.status(400).json({ error: "saleId is required" });
+  }
+  if (typeof upiIntent === "string" && upiIntent.trim().length > 0) {
+    return res.status(400).json({ error: "upi_intent_not_allowed" });
   }
 
   const pool = getPool();
@@ -188,18 +199,18 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
     return res.status(404).json({ error: "sale not found" });
   }
 
-  const amountMajor = (sale.total_minor / 100).toFixed(2);
-  const upiIntent = `upi://pay?pa=${encodeURIComponent(store.upi_vpa)}&pn=${encodeURIComponent(
-    store.name
-  )}&am=${amountMajor}&cu=INR&tn=${encodeURIComponent(`Bill ${sale.bill_ref}`)}`;
+  const providerRef =
+    typeof transactionId === "string" && transactionId.trim().length > 0
+      ? transactionId.trim()
+      : null;
 
   const paymentId = randomUUID();
   await pool.query(
     `
-    INSERT INTO payments (id, sale_id, mode, status, amount_minor)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO payments (id, sale_id, mode, status, amount_minor, provider_ref)
+    VALUES ($1, $2, $3, $4, $5, $6)
     `,
-    [paymentId, saleId, "UPI", "PENDING", sale.total_minor]
+    [paymentId, saleId, "UPI", "PENDING", sale.total_minor, providerRef]
   );
 
   return res.json({
@@ -207,7 +218,8 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
     saleId,
     billRef: sale.bill_ref,
     amountMinor: sale.total_minor,
-    upiIntent,
+    storeName: store.name,
+    upiVpa: store.upi_vpa
   });
 });
 
@@ -331,13 +343,18 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
 });
 
 posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res) => {
-  const { amountMinor, reference } = req.body as {
+  const { amountMinor, reference, transactionId, upiIntent } = req.body as {
     amountMinor?: number;
     reference?: string | null;
+    transactionId?: string;
+    upiIntent?: string;
   };
 
   if (typeof amountMinor !== "number" || !Number.isFinite(amountMinor) || amountMinor <= 0) {
     return res.status(400).json({ error: "amountMinor is required" });
+  }
+  if (typeof upiIntent === "string" && upiIntent.trim().length > 0) {
+    return res.status(400).json({ error: "upi_intent_not_allowed" });
   }
 
   const pool = getPool();
@@ -357,10 +374,12 @@ posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res
     return res.status(400).json({ error: "upi_vpa_missing" });
   }
 
-  const amountMajor = (amountMinor / 100).toFixed(2);
-  const upiIntent = `upi://pay?pa=${encodeURIComponent(store.upi_vpa)}&pn=${encodeURIComponent(
-    store.name
-  )}&am=${amountMajor}&cu=INR&tn=${encodeURIComponent(reference ?? "Collection")}`;
+  const normalizedReference =
+    reference && reference.trim().length > 0
+      ? reference.trim()
+      : typeof transactionId === "string" && transactionId.trim().length > 0
+      ? transactionId.trim()
+      : null;
 
   const collectionId = randomUUID();
   await pool.query(
@@ -368,10 +387,15 @@ posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res
     INSERT INTO collections (id, store_id, device_id, amount_minor, mode, reference, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
     `,
-    [collectionId, storeId, deviceId, Math.round(amountMinor), "UPI", reference ?? null, "PENDING"]
+    [collectionId, storeId, deviceId, Math.round(amountMinor), "UPI", normalizedReference, "PENDING"]
   );
 
-  return res.json({ collectionId, amountMinor, upiIntent });
+  return res.json({
+    collectionId,
+    amountMinor,
+    storeName: store.name,
+    upiVpa: store.upi_vpa
+  });
 });
 
 posSalesRouter.post("/collections/upi/confirm-manual", requireDeviceToken, async (req, res) => {

@@ -34,7 +34,7 @@ type PrintingMode = "DIRECT_ESC_POS" | "SHARE_TO_PRINTER_APP" | "NONE";
 
 const DEVICE_TYPES: Array<{ value: DeviceType; label: string }> = [
   { value: "OEM_HANDHELD", label: "OEM Handheld" },
-  { value: "SUPMANDI_PHONE", label: "Supermandi Phone" },
+  { value: "SUPMANDI_PHONE", label: "SuperMandi Phone" },
   { value: "RETAILER_PHONE", label: "Retailer Phone" }
 ];
 

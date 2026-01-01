@@ -25,13 +25,13 @@ type DeviceType = "OEM_HANDHELD" | "SUPMANDI_PHONE" | "RETAILER_PHONE";
 
 const DEVICE_TYPE_OPTIONS: Array<{ value: DeviceType; label: string }> = [
   { value: "OEM_HANDHELD", label: "OEM Handheld" },
-  { value: "SUPMANDI_PHONE", label: "Supermandi Phone" },
+  { value: "SUPMANDI_PHONE", label: "SuperMandi Phone" },
   { value: "RETAILER_PHONE", label: "Retailer Phone" }
 ];
 
 const DEVICE_TYPE_LABELS: Record<DeviceType, string> = {
   OEM_HANDHELD: "OEM Handheld",
-  SUPMANDI_PHONE: "Supermandi Phone",
+  SUPMANDI_PHONE: "SuperMandi Phone",
   RETAILER_PHONE: "Retailer Phone"
 };
 
@@ -686,7 +686,10 @@ export default function App() {
     <div className="page">
       <header className="header">
         <div>
-          <div className="title">SuperMandi SuperAdmin</div>
+          <div className="title">
+            <span className="brandPill">SuperMandi</span>
+            SuperAdmin
+          </div>
           <div className="subtitle">Cloud POS operational dashboard</div>
         </div>
 
@@ -767,7 +770,8 @@ export default function App() {
           Payments
         </button>
         <button className={tab === "ai" ? "tab tabActive" : "tab"} onClick={() => setTab("ai")}>
-          SuperMandi AI
+          <span className="brandPill">SuperMandi</span>
+          AI
         </button>
 
         <div className="tabsRight muted">
@@ -1718,7 +1722,10 @@ export default function App() {
       {tab === "ai" && (
         <section className="card">
           <div className="cardHeader">
-            <div className="cardTitle">SuperMandi AI (Ops Copilot)</div>
+            <div className="cardTitle">
+              <span className="brandPill">SuperMandi</span>
+              AI (Ops Copilot)
+            </div>
             <div className="muted">Read-only - Uses analytics endpoints for context</div>
           </div>
 

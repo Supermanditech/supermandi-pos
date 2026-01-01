@@ -18,6 +18,18 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   const row = result.rows[0] ?? {};
   const nowIso = new Date().toISOString();
 
+  let storeName: string | null = null;
+  let upiVpa: string | null = null;
+  if (status.storeId) {
+    const storeRes = await pool.query(
+      `SELECT name, upi_vpa FROM stores WHERE id = $1`,
+      [status.storeId]
+    );
+    const storeRow = storeRes.rows[0];
+    storeName = storeRow?.name ? String(storeRow.name) : null;
+    upiVpa = storeRow?.upi_vpa ? String(storeRow.upi_vpa) : null;
+  }
+
   await pool.query(
     `UPDATE pos_devices SET last_seen_online = NOW(), updated_at = NOW() WHERE id = $1`,
     [status.deviceId]
@@ -30,12 +42,14 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
 
   return res.json({
     storeId: status.storeId,
+    storeName,
     deviceId: status.deviceId,
     storeActive: status.storeActive,
     deviceActive: status.deviceActive,
     pendingOutboxCount: pending,
     lastSyncAt: row.last_sync_at ? new Date(row.last_sync_at).toISOString() : null,
     lastSeenOnline: nowIso,
+    upiVpa,
     printerOk: null,
     scannerOk: null
   });

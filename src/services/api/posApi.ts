@@ -46,7 +46,8 @@ export async function createSale(input: {
 
 export async function initUpiPayment(input: {
   saleId: string;
-}): Promise<{ paymentId: string; billRef: string; amountMinor: number; upiIntent: string }> {
+  transactionId?: string;
+}): Promise<{ paymentId: string; billRef: string; amountMinor: number; storeName: string | null; upiVpa: string }> {
   if (!(await isOnline())) {
     throw new ApiError(0, "upi_offline_blocked");
   }
@@ -102,7 +103,8 @@ export async function recordDuePayment(input: {
 export async function initCollectionUpi(input: {
   amountMinor: number;
   reference?: string | null;
-}): Promise<{ collectionId: string; amountMinor: number; upiIntent: string }> {
+  transactionId?: string;
+}): Promise<{ collectionId: string; amountMinor: number; storeName: string | null; upiVpa: string }> {
   if (!(await isOnline())) {
     throw new ApiError(0, "upi_offline_blocked");
   }
