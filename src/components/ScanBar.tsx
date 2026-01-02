@@ -55,8 +55,6 @@ export default function ScanBar({
     const contentGap = Math.round(barHeight * 0.18);
     const iconButtonSize = Math.max(44, Math.round(barHeight * 0.75));
     const iconSize = Math.round(barHeight * 0.42);
-    const barcodeSize = Math.round(barHeight * 0.36);
-    const qrSize = Math.round(barHeight * 0.26);
     const textSize = Math.round(Math.max(14, Math.min(18, barHeight * 0.26 * fontScale)));
     const textLineHeight = Math.round(textSize * 1.2);
 
@@ -67,8 +65,6 @@ export default function ScanBar({
       contentGap,
       iconButtonSize,
       iconSize,
-      barcodeSize,
-      qrSize,
       textSize,
       textLineHeight,
     };
@@ -219,22 +215,6 @@ export default function ScanBar({
             {instruction}
           </Text>
 
-          <View
-            style={[
-              styles.rightIcons,
-              {
-                width: layout.iconButtonSize,
-                height: layout.iconButtonSize,
-                borderRadius: Math.round(layout.iconButtonSize * 0.3),
-                marginLeft: layout.contentGap,
-              },
-            ]}
-          >
-            <MaterialCommunityIcons name="barcode-scan" size={layout.barcodeSize} color={theme.colors.primaryDark} />
-            <View style={styles.qrBadge}>
-              <MaterialCommunityIcons name="qrcode-scan" size={layout.qrSize} color={theme.colors.primary} />
-            </View>
-          </View>
         </Pressable>
       </View>
 
@@ -296,20 +276,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontWeight: "500",
     minWidth: 0,
-  },
-  rightIcons: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-    flexShrink: 0,
-  },
-  qrBadge: {
-    position: "absolute",
-    right: 2,
-    bottom: 2,
   },
   hiddenInput: {
     position: "absolute",
