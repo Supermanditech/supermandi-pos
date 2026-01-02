@@ -13,11 +13,11 @@ import {
   Platform,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import PosStatusBar from "../components/PosStatusBar";
-import ScanBar from "../components/ScanBar";
 import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
 import { notifyHidScan, wasHidScannerActive } from "../services/hidScannerService";
 import { useCartStore, type CartItem as StoreCartItem } from "../stores/cartStore";
@@ -50,10 +50,16 @@ type PosMode = "SELL" | "DIGITISE";
 export default function SellScanScreen() {
   const navigation = useNavigation<NavProp>();
   const lastScanRef = useRef<{ code: string; mode: PosMode; ts: number } | null>(null);
+  const hidInputRef = useRef<TextInput>(null);
+  const manualInputRef = useRef<TextInput>(null);
+  const hidBufferRef = useRef("");
 
   /* ---------- STATE ---------- */
   const [mode, setMode] = useState<PosMode>("SELL");
   const [isResolving, setIsResolving] = useState(false);
+  const [manualEntry, setManualEntry] = useState(false);
+  const [scanInput, setScanInput] = useState("");
+  const [hidInput, setHidInput] = useState("");
   const [priceModal, setPriceModal] = useState<{ product: ScanProduct } | null>(
     null
   );
@@ -87,7 +93,7 @@ export default function SellScanScreen() {
   const collectDisabled = storeActive === false;
   const payDisabled = !hasItems || storeActive === false;
   const cameraDisabled = storeActive === false || isResolving || priceModal !== null;
-  const scanBarDisabled = cameraDisabled || scannerOpen;
+  const scanDisabled = cameraDisabled || scannerOpen;
 
   /* ---------- ACTIONS ---------- */
 
@@ -142,7 +148,10 @@ export default function SellScanScreen() {
     return false;
   }, [navigation]);
 
-  const handleScan = async (code: string, source: "HID" | "CAMERA" = "HID") => {
+  const handleScan = async (
+    code: string,
+    source: "HID" | "CAMERA" | "MANUAL" = "HID"
+  ) => {
     const trimmed = code.trim();
     if (!trimmed || isResolving || priceModal) return;
 
@@ -215,8 +224,49 @@ export default function SellScanScreen() {
     }
   };
 
+  const commitHidScan = (raw: string) => {
+    const value = raw.trim();
+    hidBufferRef.current = "";
+    setHidInput("");
+    if (value) {
+      void handleScan(value, "HID");
+    }
+  };
+
+  const handleHidChange = (text: string) => {
+    if (scanDisabled || manualEntry) return;
+    hidBufferRef.current = text;
+    setHidInput(text);
+  };
+
+  const handleHidSubmit = () => {
+    if (scanDisabled || manualEntry) return;
+    commitHidScan(hidBufferRef.current);
+  };
+
+  const handleHidKeyPress = (event: { nativeEvent: { key: string } }) => {
+    if (scanDisabled || manualEntry) return;
+    if (event.nativeEvent.key === "Enter") {
+      commitHidScan(hidBufferRef.current);
+    }
+  };
+
+  const enableManualEntry = () => {
+    if (scanDisabled) return;
+    setManualEntry(true);
+  };
+
+  const handleManualSubmit = () => {
+    if (scanDisabled) return;
+    const value = scanInput.trim();
+    if (!value) return;
+    setScanInput("");
+    void handleScan(value, "MANUAL");
+  };
+
   const handleOpenCamera = async () => {
     if (cameraDisabled) return;
+    setManualEntry(false);
     if (wasHidScannerActive()) {
       Alert.alert("Scanner Active", "HID scanner detected. Use the scanner to scan.");
       return;
@@ -405,6 +455,20 @@ export default function SellScanScreen() {
     }
   }, [items.length, removeDiscount]);
 
+  useEffect(() => {
+    if (scannerOpen) return;
+    if (manualEntry) {
+      requestAnimationFrame(() => {
+        manualInputRef.current?.focus();
+      });
+      return;
+    }
+    if (scanDisabled) return;
+    requestAnimationFrame(() => {
+      hidInputRef.current?.focus();
+    });
+  }, [manualEntry, scannerOpen, scanDisabled]);
+
   /* ---------- UI ---------- */
 
   return (
@@ -442,13 +506,49 @@ export default function SellScanScreen() {
         </View>
       </View>
 
-      <View style={styles.scanBarWrap}>
-        <ScanBar
-          disabled={scanBarDisabled}
-          onOpenScanner={handleOpenCamera}
-          onScan={(value) => handleScan(value, "HID")}
-          instruction="Scan Product to Digitise Store/Sale Billing"
-        />
+      <View style={styles.scanCard}>
+        <Text style={styles.scanLabel}>
+          {mode === "DIGITISE" ? "Scan product to digitise." : "Scan barcode to add item."}
+        </Text>
+        <View style={styles.scanInputWrap}>
+          <TextInput
+            ref={manualInputRef}
+            style={styles.scanInput}
+            placeholder="Scan barcode"
+            value={scanInput}
+            onChangeText={setScanInput}
+            onSubmitEditing={handleManualSubmit}
+            blurOnSubmit={false}
+            editable={manualEntry && !scanDisabled}
+            showSoftInputOnFocus={manualEntry}
+            inputMode={manualEntry ? "text" : "none"}
+          />
+          {!manualEntry && (
+            <Pressable
+              style={styles.scanTapOverlay}
+              onPress={handleOpenCamera}
+              disabled={scanDisabled}
+            />
+          )}
+        </View>
+        <View style={styles.scanActions}>
+          <Pressable
+            style={[styles.scanButton, scanDisabled && styles.ctaDisabled]}
+            onPress={handleOpenCamera}
+            disabled={scanDisabled}
+          >
+            <MaterialCommunityIcons name="camera" size={16} color={theme.colors.primary} />
+            <Text style={styles.scanButtonText}>Scan with Camera</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.scanButton, styles.scanButtonSecondary, scanDisabled && styles.ctaDisabled]}
+            onPress={enableManualEntry}
+            disabled={scanDisabled}
+          >
+            <MaterialCommunityIcons name="keyboard" size={16} color={theme.colors.primary} />
+            <Text style={styles.scanButtonText}>Type Manually</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* CART (SELL ONLY) */}
@@ -568,6 +668,24 @@ export default function SellScanScreen() {
         </View>
       </Modal>
 
+      <TextInput
+        ref={hidInputRef}
+        value={hidInput}
+        onChangeText={handleHidChange}
+        onSubmitEditing={handleHidSubmit}
+        onKeyPress={handleHidKeyPress}
+        blurOnSubmit={false}
+        autoCorrect={false}
+        autoCapitalize="none"
+        autoComplete="off"
+        caretHidden
+        contextMenuHidden
+        editable={!scanDisabled && !manualEntry}
+        inputMode="none"
+        showSoftInputOnFocus={false}
+        style={styles.hidInput}
+      />
+
       <Modal
         visible={priceModal !== null}
         transparent
@@ -659,8 +777,68 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
   },
 
-  scanBarWrap: {
+  scanCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    padding: 12,
     marginBottom: 12,
+  },
+  scanLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  scanInputWrap: {
+    position: "relative",
+  },
+  scanInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: theme.colors.surfaceAlt,
+    color: theme.colors.textPrimary,
+  },
+  scanTapOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  scanActions: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  scanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+  },
+  scanButtonSecondary: {
+    borderColor: theme.colors.border,
+  },
+  scanButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  hidInput: {
+    position: "absolute",
+    opacity: 0,
+    width: 1,
+    height: 1,
   },
 
   cart: {
