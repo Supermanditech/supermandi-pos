@@ -19,8 +19,13 @@ cd "$REPO_DIR"
 git pull
 
 cd "$BACKEND_DIR"
-npm ci
+ORIG_NODE_ENV="${NODE_ENV:-}"
+unset NODE_ENV
+npm ci --include=dev
 npm run build
+if [[ -n "$ORIG_NODE_ENV" ]]; then
+  export NODE_ENV="$ORIG_NODE_ENV"
+fi
 
 node -e "const { ensureCoreSchema } = require('./dist/db/ensureSchema'); ensureCoreSchema().then(()=>process.exit(0)).catch((e)=>{ console.error(e); process.exit(1); });"
 
@@ -29,7 +34,7 @@ if command -v systemctl >/dev/null 2>&1; then
 fi
 
 if command -v pm2 >/dev/null 2>&1; then
-  pm2 restart "$SERVICE_NAME" || true
+  pm2 restart "$SERVICE_NAME" --update-env || true
 fi
 
 echo "Deploy complete."
