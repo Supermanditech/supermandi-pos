@@ -506,50 +506,24 @@ export default function SellScanScreen() {
         </View>
       </View>
 
-      <View style={styles.scanCard}>
-        <Text style={styles.scanLabel}>
-          {mode === "DIGITISE" ? "Scan product to digitise." : "Scan barcode to add item."}
-        </Text>
-        <View style={styles.scanInputWrap}>
-          <TextInput
-            ref={manualInputRef}
-            style={styles.scanInput}
-            placeholder="Scan barcode"
-            value={scanInput}
-            onChangeText={setScanInput}
-            onSubmitEditing={handleManualSubmit}
-            blurOnSubmit={false}
-            editable={manualEntry && !scanDisabled}
-            showSoftInputOnFocus={manualEntry}
-            inputMode={manualEntry ? "text" : "none"}
-          />
-          {!manualEntry && (
-            <Pressable
-              style={styles.scanTapOverlay}
-              onPress={handleOpenCamera}
-              disabled={scanDisabled}
-            />
-          )}
+      <Pressable
+        style={[styles.scanCard, scanDisabled && styles.ctaDisabled]}
+        onPress={handleOpenCamera}
+        disabled={scanDisabled}
+      >
+        <View style={styles.scanCardRow}>
+          <View style={styles.scanCardIcon}>
+            <MaterialCommunityIcons name="camera" size={22} color={theme.colors.primary} />
+          </View>
+          <View style={styles.scanCardText}>
+            <Text style={styles.scanCardTitle}>Scan Product to Digitise</Text>
+            <Text style={styles.scanCardSubtitle}>Store/Sale Billing</Text>
+          </View>
+          <View style={styles.scanCardQr}>
+            <MaterialCommunityIcons name="qrcode-scan" size={20} color={theme.colors.primary} />
+          </View>
         </View>
-        <View style={styles.scanActions}>
-          <Pressable
-            style={[styles.scanButton, scanDisabled && styles.ctaDisabled]}
-            onPress={handleOpenCamera}
-            disabled={scanDisabled}
-          >
-            <MaterialCommunityIcons name="camera" size={16} color={theme.colors.primary} />
-            <Text style={styles.scanButtonText}>Scan with Camera</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.scanButton, styles.scanButtonSecondary, scanDisabled && styles.ctaDisabled]}
-            onPress={enableManualEntry}
-            disabled={scanDisabled}
-          >
-            <MaterialCommunityIcons name="keyboard" size={16} color={theme.colors.primary} />
-            <Text style={styles.scanButtonText}>Type Manually</Text>
-          </Pressable>
-        </View>
-      </View>
+      </Pressable>
 
       {/* CART (SELL ONLY) */}
       {mode === "SELL" && hasItems && (
@@ -785,54 +759,43 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
   },
-  scanLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  scanInputWrap: {
-    position: "relative",
-  },
-  scanInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    color: theme.colors.textPrimary,
-  },
-  scanTapOverlay: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  scanActions: {
-    marginTop: 10,
-    flexDirection: "row",
-    gap: 8,
-  },
-  scanButton: {
+  scanCardRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    gap: 12,
+  },
+  scanCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surface,
-  },
-  scanButtonSecondary: {
     borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  scanButtonText: {
-    fontSize: 13,
+  scanCardText: {
+    flex: 1,
+  },
+  scanCardTitle: {
+    fontSize: 15,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.textPrimary,
+  },
+  scanCardSubtitle: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  scanCardQr: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
   },
   hidInput: {
     position: "absolute",
