@@ -25,6 +25,7 @@ import { formatMoney } from "../utils/money";
 import { ApiError } from "../services/api/apiClient";
 import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
+import { offlineDb } from "../services/offline/localDb";
 import { theme } from "../theme";
 
 /* ---------------- NAV TYPES ---------------- */
@@ -42,6 +43,13 @@ type NavProp = NativeStackNavigationProp<RootStackParamList, "SellScan">;
 /* ---------------- TYPES ---------------- */
 
 type PosMode = "SELL" | "DIGITISE";
+
+type AddOverlayItem = {
+  barcode: string;
+  name: string;
+  currency: string;
+  priceMinor: number | null;
+};
 
 /* ---------------- SCREEN ---------------- */
 
@@ -64,24 +72,49 @@ export default function SellScanScreen() {
   const [cameraScanned, setCameraScanned] = useState(false);
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [lastAddMessage, setLastAddMessage] = useState<string | null>(null);
+  const [undoVisible, setUndoVisible] = useState(false);
+  const [addOverlayOpen, setAddOverlayOpen] = useState(false);
+  const [addQuery, setAddQuery] = useState("");
+  const [addResults, setAddResults] = useState<AddOverlayItem[]>([]);
+  const [addLoading, setAddLoading] = useState(false);
+  const [selectedAddItems, setSelectedAddItems] = useState<Record<string, AddOverlayItem>>({});
+  const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     items,
     total,
     discountAmount,
+    mutationHistory,
     applyDiscount,
     removeDiscount,
-    clearCart: clearCartStore
+    clearCart: clearCartStore,
+    undoLastAction,
+    lockCart,
+    locked
   } = useCartStore();
 
   /* ---------- DERIVED ---------- */
   const currency = items[0]?.currency ?? "INR";
   const totalLabel = formatMoney(total, currency);
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const hasItems = items.length > 0;
   const collectDisabled = storeActive === false;
-  const payDisabled = !hasItems || storeActive === false;
+  const payDisabled = !hasItems || storeActive === false || locked;
   const cameraDisabled = storeActive === false;
   const scanDisabled = cameraDisabled || scannerOpen;
+  const cartHint = locked
+    ? "Cart locked"
+    : discountAmount > 0
+      ? "Discount applied"
+      : itemCount === 0
+        ? "Scan or add items"
+        : itemCount <= 2
+          ? "Add more items"
+          : "Review bill";
+  const selectedAddCount = Object.keys(selectedAddItems).length;
 
   /* ---------- ACTIONS ---------- */
 
@@ -204,6 +237,70 @@ export default function SellScanScreen() {
     ]);
   };
 
+  const addItemFromOverlay = (item: AddOverlayItem) => {
+    useCartStore.getState().addItem({
+      id: item.barcode,
+      name: item.name,
+      priceMinor: item.priceMinor ?? 0,
+      currency: item.currency,
+      barcode: item.barcode
+    });
+
+    if (item.priceMinor === null) {
+      setScanNotice({ tone: "warning", message: POS_MESSAGES.newItemWarning });
+    }
+  };
+
+  const toggleSelectedItem = (item: AddOverlayItem) => {
+    setSelectedAddItems((prev) => {
+      if (prev[item.barcode]) {
+        const next = { ...prev };
+        delete next[item.barcode];
+        return next;
+      }
+      return { ...prev, [item.barcode]: item };
+    });
+  };
+
+  const handleAddSelected = () => {
+    const entries = Object.values(selectedAddItems);
+    if (entries.length === 0) return;
+    entries.forEach(addItemFromOverlay);
+    setSelectedAddItems({});
+  };
+
+  const handleAddOverlaySubmit = () => {
+    const value = addQuery.trim();
+    if (!value) return;
+    void handleGlobalScan(value);
+    setAddQuery("");
+  };
+
+  const closeAddOverlay = () => {
+    setAddOverlayOpen(false);
+    setAddQuery("");
+    setAddResults([]);
+    setSelectedAddItems({});
+  };
+
+  const clearAddTimers = () => {
+    if (addMessageTimerRef.current) {
+      clearTimeout(addMessageTimerRef.current);
+      addMessageTimerRef.current = null;
+    }
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+  };
+
+  const handleUndo = () => {
+    clearAddTimers();
+    setLastAddMessage(null);
+    setUndoVisible(false);
+    undoLastAction();
+  };
+
   /* ---------- EFFECTS ---------- */
 
   useEffect(() => {
@@ -319,6 +416,105 @@ export default function SellScanScreen() {
     });
   }, [scannerOpen, scanDisabled]);
 
+  useEffect(() => {
+    const lastMutation = mutationHistory[mutationHistory.length - 1];
+    if (!lastMutation || lastMutation.type !== "UPSERT_ITEM") return;
+
+    const currentItem = items.find(item => item.id === lastMutation.itemId);
+    if (!currentItem) return;
+
+    const previousQty = lastMutation.previousItem?.quantity ?? 0;
+    if (currentItem.quantity <= previousQty) return;
+
+    const variantLabel =
+      (currentItem.metadata?.variantName as string | undefined)
+      ?? (currentItem.metadata?.variant as string | undefined)
+      ?? currentItem.sku
+      ?? "";
+    const variantSuffix = variantLabel ? ` ${variantLabel}` : "";
+
+    clearAddTimers();
+    setLastAddMessage(`✔ ${currentItem.name}${variantSuffix} added`);
+    setUndoVisible(true);
+
+    addMessageTimerRef.current = setTimeout(() => {
+      setLastAddMessage(null);
+    }, 2000);
+
+    undoTimerRef.current = setTimeout(() => {
+      setUndoVisible(false);
+    }, 3000);
+  }, [items, mutationHistory]);
+
+  useEffect(() => {
+    return () => {
+      clearAddTimers();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (mode !== "SELL" && addOverlayOpen) {
+      closeAddOverlay();
+    }
+  }, [addOverlayOpen, mode]);
+
+  useEffect(() => {
+    if (!addOverlayOpen) {
+      if (addSearchTimerRef.current) {
+        clearTimeout(addSearchTimerRef.current);
+        addSearchTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (addSearchTimerRef.current) {
+      clearTimeout(addSearchTimerRef.current);
+    }
+
+    const query = addQuery.trim().toLowerCase();
+    setAddLoading(true);
+    let cancelled = false;
+
+    addSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const baseSelect = `
+          SELECT p.barcode as barcode,
+                 p.name as name,
+                 p.currency as currency,
+                 pr.price_minor as priceMinor
+          FROM offline_products p
+          LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
+        `;
+        const params: Array<string | number | null> = [];
+        let sql = baseSelect;
+
+        if (query.length > 0) {
+          const like = `%${query}%`;
+          sql += " WHERE lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?";
+          params.push(like, like);
+        }
+
+        sql += " ORDER BY p.updated_at DESC LIMIT 50";
+        const rows = await offlineDb.all<AddOverlayItem>(sql, params);
+        if (!cancelled) {
+          setAddResults(rows);
+        }
+      } finally {
+        if (!cancelled) {
+          setAddLoading(false);
+        }
+      }
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      if (addSearchTimerRef.current) {
+        clearTimeout(addSearchTimerRef.current);
+        addSearchTimerRef.current = null;
+      }
+    };
+  }, [addOverlayOpen, addQuery]);
+
   /* ---------- UI ---------- */
 
   return (
@@ -375,6 +571,17 @@ export default function SellScanScreen() {
         </View>
       </Pressable>
 
+      {mode === "SELL" && (
+        <Pressable
+          style={[styles.addItemsButton, storeActive === false && styles.ctaDisabled]}
+          onPress={() => setAddOverlayOpen(true)}
+          disabled={storeActive === false}
+        >
+          <MaterialCommunityIcons name="plus-circle" size={18} color={theme.colors.primary} />
+          <Text style={styles.addItemsText}>+ ADD ITEMS</Text>
+        </Pressable>
+      )}
+
       {scanNotice && (
         <View
           style={[
@@ -387,6 +594,98 @@ export default function SellScanScreen() {
           <Text style={styles.scanNoticeText}>{scanNotice.message}</Text>
         </View>
       )}
+
+      <Modal
+        visible={addOverlayOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAddOverlay}
+      >
+        <View style={styles.addOverlay}>
+          <View style={styles.addCard}>
+            <View style={styles.addHeader}>
+              <Text style={styles.addTitle}>Add items</Text>
+              <Pressable onPress={closeAddOverlay}>
+                <Text style={styles.addClose}>Close</Text>
+              </Pressable>
+            </View>
+
+            <TextInput
+              style={styles.addSearchInput}
+              value={addQuery}
+              onChangeText={setAddQuery}
+              placeholder="Search by name or barcode"
+              returnKeyType="search"
+              onSubmitEditing={handleAddOverlaySubmit}
+            />
+
+            {addLoading ? (
+              <Text style={styles.addEmptyText}>Searching...</Text>
+            ) : addResults.length === 0 ? (
+              <Text style={styles.addEmptyText}>No products found.</Text>
+            ) : (
+              <FlatList
+                data={addResults}
+                keyExtractor={(item) => item.barcode}
+                style={styles.addResults}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => {
+                  const selected = Boolean(selectedAddItems[item.barcode]);
+                  const priceLabel =
+                    item.priceMinor === null
+                      ? "Price pending"
+                      : formatMoney(item.priceMinor, item.currency ?? "INR");
+
+                  return (
+                    <Pressable
+                      style={[styles.addRow, selected && styles.addRowSelected]}
+                      onPress={() => addItemFromOverlay(item)}
+                    >
+                      <View style={styles.addRowInfo}>
+                        <Text style={styles.addRowName}>{item.name}</Text>
+                        <Text style={styles.addRowMeta}>
+                          {item.barcode} • {priceLabel}
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={(event) => {
+                          event.stopPropagation();
+                          toggleSelectedItem(item);
+                        }}
+                        hitSlop={8}
+                      >
+                        <MaterialCommunityIcons
+                          name={selected ? "checkbox-marked" : "checkbox-blank-outline"}
+                          size={20}
+                          color={selected ? theme.colors.primary : theme.colors.textSecondary}
+                        />
+                      </Pressable>
+                    </Pressable>
+                  );
+                }}
+              />
+            )}
+
+            <View style={styles.addFooter}>
+              <Text style={styles.addFooterText}>
+                {selectedAddCount} selected
+              </Text>
+              <Pressable
+                style={[
+                  styles.addFooterButton,
+                  selectedAddCount === 0 && styles.ctaDisabled
+                ]}
+                onPress={handleAddSelected}
+                disabled={selectedAddCount === 0}
+              >
+                <Text style={styles.addFooterButtonText}>
+                  Add to Bill ({selectedAddCount})
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* CART (SELL ONLY) */}
       {mode === "SELL" && hasItems && (
@@ -450,7 +749,10 @@ export default function SellScanScreen() {
                 payDisabled && styles.ctaDisabled
               ]}
               disabled={payDisabled}
-              onPress={() => navigation.navigate("Payment")}
+              onPress={() => {
+                lockCart();
+                navigation.navigate("Payment");
+              }}
             >
               <Text style={styles.payText}>TOTAL BILL {totalLabel}</Text>
             </Pressable>
@@ -523,6 +825,30 @@ export default function SellScanScreen() {
         style={styles.hidInput}
       />
 
+      <View style={styles.cartBar}>
+        <View style={styles.cartBarTop}>
+          <Text style={styles.cartBarCount}>
+            {itemCount} {itemCount === 1 ? "item" : "items"}
+          </Text>
+          <View style={styles.cartBarTopRight}>
+            {locked && (
+              <View style={styles.cartBarLocked}>
+                <Text style={styles.cartBarLockedText}>Cart locked</Text>
+              </View>
+            )}
+            <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+          </View>
+        </View>
+        <View style={styles.cartBarBottom}>
+          <Text style={styles.cartBarHint}>{lastAddMessage ?? cartHint}</Text>
+          {undoVisible && !locked && (
+            <Pressable onPress={handleUndo} hitSlop={8}>
+              <Text style={styles.cartBarUndo}>Undo</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
     </View>
   );
 }
@@ -534,6 +860,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
     padding: 12,
+    paddingBottom: 120,
   },
 
   modeRow: {
@@ -603,6 +930,23 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
+  addItemsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  addItemsText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.colors.primary,
+  },
   scanCardQr: {
     width: 40,
     height: 40,
@@ -639,11 +983,172 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  addOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayLight,
+    justifyContent: "center",
+    padding: 16,
+  },
+  addCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    maxHeight: "80%",
+  },
+  addHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  addTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  addClose: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  addSearchInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surfaceAlt,
+    marginBottom: 12,
+  },
+  addResults: {
+    marginBottom: 12,
+  },
+  addRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: 12,
+  },
+  addRowSelected: {
+    backgroundColor: theme.colors.accentSoft,
+  },
+  addRowInfo: {
+    flex: 1,
+  },
+  addRowName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  addRowMeta: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  addEmptyText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: 16,
+  },
+  addFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  addFooterText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontWeight: "600",
+  },
+  addFooterButton: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  addFooterButtonText: {
+    color: theme.colors.textInverse,
+    fontWeight: "800",
+    fontSize: 12,
+  },
   hidInput: {
     position: "absolute",
     opacity: 0,
     width: 1,
     height: 1,
+  },
+  cartBar: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 6,
+    ...theme.shadows.sm,
+  },
+  cartBarTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  cartBarTopRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cartBarLocked: {
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+    backgroundColor: theme.colors.warningSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  cartBarLockedText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.warning,
+  },
+  cartBarBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+  },
+  cartBarCount: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  cartBarTotal: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: theme.colors.primaryDark,
+  },
+  cartBarHint: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  cartBarUndo: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.primary,
   },
 
   cart: {
@@ -868,3 +1373,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
+
+

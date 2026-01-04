@@ -48,7 +48,7 @@ type PaymentMode = "UPI" | "CASH" | "DUE";
 
 const PaymentScreen = () => {
   const navigation = useNavigation<PaymentScreenNavigationProp>();
-  const { total, items } = useCartStore();
+  const { total, items, lockCart, unlockCart, locked, discount, discountTotal } = useCartStore();
   const [selectedMode, setSelectedMode] = useState<PaymentMode>("UPI");
   const [saleId, setSaleId] = useState<string | null>(null);
   const [billRef, setBillRef] = useState<string | null>(null);
@@ -88,10 +88,17 @@ const PaymentScreen = () => {
     () => items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0),
     [items]
   );
-  const discountMinor = Math.max(0, subtotalMinor - total);
+  const discountMinor = Math.max(0, Math.round(discountTotal ?? (subtotalMinor - total)));
   const upiDisabled =
     !isOnline || upiStatusLoading || storeActive === false || !upiVpa;
   const upiBlocked = storeActive === false || (!upiVpa && !upiStatusLoading);
+
+  useEffect(() => {
+    lockCart();
+    return () => {
+      unlockCart();
+    };
+  }, [lockCart, unlockCart]);
 
   useEffect(() => {
     const unsubscribe = subscribeNetworkStatus((online) => {
@@ -171,9 +178,11 @@ const PaymentScreen = () => {
         barcode: item.barcode,
         name: item.name,
         quantity: item.quantity,
-        priceMinor: item.priceMinor
+        priceMinor: item.priceMinor,
+        itemDiscount: item.itemDiscount ?? null
       })),
-      discountMinor
+      discountMinor,
+      cartDiscount: discount ?? null
     })
       .then((res) => {
         if (cancelled) return;
@@ -444,6 +453,11 @@ const PaymentScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Select Payment Method</Text>
       </View>
+      {locked && (
+        <View style={styles.lockedBadge}>
+          <Text style={styles.lockedBadgeText}>Cart locked</Text>
+        </View>
+      )}
 
       <View style={styles.amountSection}>
         <Text style={styles.amountLabel}>Total Amount</Text>
@@ -558,6 +572,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
     textAlign: "center"
+  },
+  lockedBadge: {
+    alignSelf: "center",
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+    backgroundColor: theme.colors.warningSoft
+  },
+  lockedBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.warning
   },
   amountSection: {
     backgroundColor: theme.colors.surface,

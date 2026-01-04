@@ -9,6 +9,38 @@ type SaleItemInput = {
   productId: string;
   quantity: number;
   priceMinor: number;
+  itemDiscount?: DiscountInput | null;
+};
+
+type DiscountInput = {
+  type: "percentage" | "fixed";
+  value: number;
+  reason?: string;
+};
+
+type NormalizedDiscount = {
+  type: "percentage" | "fixed";
+  value: number;
+  reason?: string;
+};
+
+const normalizeDiscount = (discount: DiscountInput | null | undefined): NormalizedDiscount | null => {
+  if (!discount) return null;
+  if (discount.type !== "percentage" && discount.type !== "fixed") return null;
+  const value = Number(discount.value);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return { type: discount.type, value, reason: discount.reason };
+};
+
+const calculateDiscountAmount = (baseAmount: number, discount: NormalizedDiscount | null): number => {
+  if (!discount) return 0;
+  const safeBase = Math.max(0, Math.round(baseAmount));
+  const safeValue = Math.max(0, Number.isFinite(discount.value) ? discount.value : 0);
+
+  if (discount.type === "percentage") {
+    return Math.min(Math.round(safeBase * (safeValue / 100)), safeBase);
+  }
+  return Math.min(Math.round(safeValue), safeBase);
 };
 
 function buildBillRef(): string {
@@ -66,33 +98,72 @@ async function getCollectionStoreStatus(collectionId: string): Promise<{ store_i
 }
 
 posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
-  const { items, discountMinor } = req.body as {
+  const { items, discountMinor, cartDiscount } = req.body as {
     items?: SaleItemInput[];
     discountMinor?: number;
+    cartDiscount?: DiscountInput | null;
   };
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "items are required" });
   }
 
-  const cleanedItems = items.filter(
-    (item) =>
-      typeof item.productId === "string" &&
-      item.productId.trim().length > 0 &&
-      typeof item.quantity === "number" &&
-      Number.isFinite(item.quantity) &&
-      item.quantity > 0 &&
-      typeof item.priceMinor === "number" &&
-      Number.isFinite(item.priceMinor) &&
-      item.priceMinor > 0
-  );
-
-  if (cleanedItems.length !== items.length) {
-    return res.status(400).json({ error: "items are invalid" });
+  const normalizedCartDiscount = normalizeDiscount(cartDiscount ?? null);
+  if (cartDiscount && !normalizedCartDiscount) {
+    return res.status(400).json({ error: "cart discount is invalid" });
   }
 
-  const discount = Math.max(0, Math.round(discountMinor ?? 0));
-  const subtotal = cleanedItems.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
+  const cleanedItems: Array<SaleItemInput & { itemDiscount: NormalizedDiscount | null }> = [];
+
+  for (const item of items) {
+    if (
+      typeof item.productId !== "string" ||
+      item.productId.trim().length === 0 ||
+      typeof item.quantity !== "number" ||
+      !Number.isFinite(item.quantity) ||
+      item.quantity <= 0 ||
+      typeof item.priceMinor !== "number" ||
+      !Number.isFinite(item.priceMinor) ||
+      item.priceMinor <= 0
+    ) {
+      return res.status(400).json({ error: "items are invalid" });
+    }
+
+    const normalizedItemDiscount = normalizeDiscount(item.itemDiscount ?? null);
+    if (item.itemDiscount && !normalizedItemDiscount) {
+      return res.status(400).json({ error: "item discount is invalid" });
+    }
+
+    cleanedItems.push({
+      ...item,
+      itemDiscount: normalizedItemDiscount
+    });
+  }
+
+  let subtotal = 0;
+  let itemDiscountTotal = 0;
+  const computedItems = cleanedItems.map((item) => {
+    const quantity = Math.round(item.quantity);
+    const priceMinor = Math.round(item.priceMinor);
+    const lineSubtotal = priceMinor * quantity;
+    const lineDiscount = calculateDiscountAmount(lineSubtotal, item.itemDiscount);
+    const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
+    subtotal += lineSubtotal;
+    itemDiscountTotal += lineDiscount;
+    return { ...item, quantity, priceMinor, lineSubtotal, lineDiscount, lineTotal };
+  });
+
+  const fallbackCartDiscount =
+    normalizedCartDiscount ??
+    (typeof discountMinor === "number" && Number.isFinite(discountMinor) && discountMinor > 0
+      ? { type: "fixed", value: Math.round(discountMinor) }
+      : null);
+
+  const cartDiscountAmount = calculateDiscountAmount(
+    Math.max(0, subtotal - itemDiscountTotal),
+    fallbackCartDiscount
+  );
+  const discount = itemDiscountTotal + cartDiscountAmount;
   const total = Math.max(0, subtotal - discount);
 
   const pool = getPool();
@@ -117,10 +188,36 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       try {
         await pool.query(
           `
-          INSERT INTO sales (id, store_id, device_id, bill_ref, subtotal_minor, discount_minor, total_minor, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          INSERT INTO sales (
+            id,
+            store_id,
+            device_id,
+            bill_ref,
+            subtotal_minor,
+            item_discount_minor,
+            cart_discount_minor,
+            cart_discount_type,
+            cart_discount_value,
+            discount_minor,
+            total_minor,
+            status
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           `,
-          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "CREATED"]
+          [
+            saleId,
+            storeId,
+            deviceId,
+            billRef,
+            subtotal,
+            itemDiscountTotal,
+            cartDiscountAmount,
+            fallbackCartDiscount?.type ?? null,
+            fallbackCartDiscount?.value ?? null,
+            discount,
+            total,
+            "CREATED"
+          ]
         );
         break;
       } catch (error) {
@@ -131,14 +228,35 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       }
     }
 
-    for (const item of cleanedItems) {
-      const lineTotal = item.priceMinor * item.quantity;
+    for (const item of computedItems) {
       await pool.query(
         `
-        INSERT INTO sale_items (id, sale_id, product_id, quantity, price_minor, line_total_minor)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO sale_items (
+          id,
+          sale_id,
+          product_id,
+          quantity,
+          price_minor,
+          line_subtotal_minor,
+          discount_type,
+          discount_value,
+          discount_minor,
+          line_total_minor
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         `,
-        [randomUUID(), saleId, item.productId, item.quantity, item.priceMinor, lineTotal]
+        [
+          randomUUID(),
+          saleId,
+          item.productId,
+          item.quantity,
+          item.priceMinor,
+          item.lineSubtotal,
+          item.itemDiscount?.type ?? null,
+          item.itemDiscount?.value ?? null,
+          item.lineDiscount,
+          item.lineTotal
+        ]
       );
     }
 

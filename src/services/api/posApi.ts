@@ -3,12 +3,19 @@ import { isOnline } from "../networkStatus";
 import { createOfflineSale, fetchOfflineSale, recordOfflineCashPayment, recordOfflineDuePayment } from "../offline/sales";
 import { createOfflineCollection } from "../offline/collections";
 
+export type DiscountInput = {
+  type: "percentage" | "fixed";
+  value: number;
+  reason?: string;
+};
+
 export type SaleItemInput = {
   productId: string;
   barcode?: string;
   name?: string;
   quantity: number;
   priceMinor: number;
+  itemDiscount?: DiscountInput | null;
 };
 
 export type SaleCreateResponse = {
@@ -24,6 +31,7 @@ export type SaleCreateResponse = {
 export async function createSale(input: {
   items: SaleItemInput[];
   discountMinor?: number;
+  cartDiscount?: DiscountInput | null;
 }): Promise<SaleCreateResponse> {
   if (await isOnline()) {
     return apiClient.post<SaleCreateResponse>("/api/v1/pos/sales", input);
@@ -35,9 +43,11 @@ export async function createSale(input: {
       barcode: item.barcode ?? item.productId,
       name: item.name ?? item.productId,
       priceMinor: item.priceMinor,
-      quantity: item.quantity
+      quantity: item.quantity,
+      itemDiscount: item.itemDiscount ?? null
     })),
     discountMinor: input.discountMinor ?? 0,
+    cartDiscount: input.cartDiscount ?? null,
     currency: "INR"
   });
 

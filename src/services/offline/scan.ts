@@ -6,6 +6,7 @@ type OfflineScanMode = "SELL" | "DIGITISE";
 export type OfflineScanProduct = {
   barcode: string;
   name: string;
+  category: string | null;
   currency: string;
   priceMinor: number | null;
 };
@@ -23,9 +24,10 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
   const rows = await offlineDb.all<{
     barcode: string;
     name: string;
+    category: string | null;
     currency: string;
   }>(
-    `SELECT barcode, name, currency FROM offline_products WHERE barcode = ? LIMIT 1`,
+    `SELECT barcode, name, category, currency FROM offline_products WHERE barcode = ? LIMIT 1`,
     [barcode]
   );
 
@@ -39,28 +41,36 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
   return {
     barcode: rows[0].barcode,
     name: rows[0].name,
+    category: rows[0].category ?? null,
     currency: rows[0].currency,
     priceMinor: priceRows[0]?.price_minor ?? null
   };
 }
 
-async function upsertLocalProduct(barcode: string, name: string, currency = "INR"): Promise<OfflineScanProduct> {
+export async function upsertLocalProduct(
+  barcode: string,
+  name: string,
+  currency = "INR",
+  category: string | null = null
+): Promise<OfflineScanProduct> {
   const now = new Date().toISOString();
   await offlineDb.run(
     `
-    INSERT INTO offline_products (barcode, name, currency, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO offline_products (barcode, name, category, currency, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON CONFLICT(barcode) DO UPDATE SET
       name = excluded.name,
+      category = COALESCE(excluded.category, offline_products.category),
       currency = excluded.currency,
       updated_at = excluded.updated_at
     `,
-    [barcode, name, currency, now, now]
+    [barcode, name, category, currency, now, now]
   );
 
   return {
     barcode,
     name,
+    category,
     currency,
     priceMinor: null
   };
@@ -95,6 +105,7 @@ export async function resolveOfflineScan(scanValue: string, mode: OfflineScanMod
     await enqueueEvent("PRODUCT_UPSERT", {
       barcode,
       name: created.name,
+      category: created.category,
       currency: created.currency,
       origin: "DIGITISE"
     });
@@ -106,6 +117,7 @@ export async function resolveOfflineScan(scanValue: string, mode: OfflineScanMod
     await enqueueEvent("PRODUCT_UPSERT", {
       barcode,
       name: created.name,
+      category: created.category,
       currency: created.currency,
       origin: "SELL"
     });

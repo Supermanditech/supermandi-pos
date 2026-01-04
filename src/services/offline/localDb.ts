@@ -16,6 +16,7 @@ export async function initOfflineDb(): Promise<void> {
     CREATE TABLE IF NOT EXISTS offline_products (
       barcode TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      category TEXT NULL,
       currency TEXT NOT NULL DEFAULT 'INR',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -39,6 +40,10 @@ export async function initOfflineDb(): Promise<void> {
       id TEXT PRIMARY KEY,
       bill_ref TEXT NOT NULL,
       subtotal_minor INTEGER NOT NULL,
+      item_discount_minor INTEGER NOT NULL DEFAULT 0,
+      cart_discount_minor INTEGER NOT NULL DEFAULT 0,
+      cart_discount_type TEXT NULL,
+      cart_discount_value REAL NULL,
       discount_minor INTEGER NOT NULL,
       total_minor INTEGER NOT NULL,
       status TEXT NOT NULL,
@@ -58,7 +63,12 @@ export async function initOfflineDb(): Promise<void> {
       barcode TEXT NOT NULL,
       name TEXT NOT NULL,
       price_minor INTEGER NOT NULL,
-      quantity INTEGER NOT NULL
+      quantity INTEGER NOT NULL,
+      line_subtotal_minor INTEGER NOT NULL DEFAULT 0,
+      discount_type TEXT NULL,
+      discount_value REAL NULL,
+      discount_minor INTEGER NOT NULL DEFAULT 0,
+      line_total_minor INTEGER NOT NULL DEFAULT 0
     );
     `
   );
@@ -97,9 +107,19 @@ export async function initOfflineDb(): Promise<void> {
     `ALTER TABLE offline_sales ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE offline_sales ADD COLUMN synced_at TEXT NULL`,
     `ALTER TABLE offline_sales ADD COLUMN server_sale_id TEXT NULL`,
+    `ALTER TABLE offline_sales ADD COLUMN item_discount_minor INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE offline_sales ADD COLUMN cart_discount_minor INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE offline_sales ADD COLUMN cart_discount_type TEXT NULL`,
+    `ALTER TABLE offline_sales ADD COLUMN cart_discount_value REAL NULL`,
     `ALTER TABLE offline_collections ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE offline_collections ADD COLUMN synced_at TEXT NULL`,
-    `ALTER TABLE offline_collections ADD COLUMN server_collection_id TEXT NULL`
+    `ALTER TABLE offline_collections ADD COLUMN server_collection_id TEXT NULL`,
+    `ALTER TABLE offline_products ADD COLUMN category TEXT NULL`,
+    `ALTER TABLE offline_sale_items ADD COLUMN line_subtotal_minor INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE offline_sale_items ADD COLUMN discount_type TEXT NULL`,
+    `ALTER TABLE offline_sale_items ADD COLUMN discount_value REAL NULL`,
+    `ALTER TABLE offline_sale_items ADD COLUMN discount_minor INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE offline_sale_items ADD COLUMN line_total_minor INTEGER NOT NULL DEFAULT 0`
   ];
 
   for (const stmt of alterStatements) {

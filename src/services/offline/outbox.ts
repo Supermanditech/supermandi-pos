@@ -7,7 +7,8 @@ export type OfflineEventType =
   | "SALE_CREATED"
   | "PAYMENT_CASH"
   | "PAYMENT_DUE"
-  | "COLLECTION_CREATED";
+  | "COLLECTION_CREATED"
+  | "PURCHASE_SUBMIT";
 
 export type OfflineEvent = {
   eventId: string;

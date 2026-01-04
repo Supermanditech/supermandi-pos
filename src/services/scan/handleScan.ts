@@ -1,5 +1,6 @@
 import { ApiError } from "../api/apiClient";
 import { lookupProductByBarcode, resolveScan, type ScanProduct } from "../api/scanApi";
+import { setLocalPrice, upsertLocalProduct } from "../offline/scan";
 import { useCartStore } from "../../stores/cartStore";
 import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
 import { POS_MESSAGES } from "../../utils/uiStatus";
@@ -22,8 +23,14 @@ type ScanRuntime = {
 };
 
 const DUPLICATE_WINDOW_MS = 500;
+const STORM_WINDOW_MS = 2000;
+const STORM_MAX_SCANS = 12;
+const STORM_COOLDOWN_MS = 1500;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
 let lastScan: { key: string; ts: number } | null = null;
+let recentScans: number[] = [];
+let stormUntil = 0;
+let lastStormNotice = 0;
 
 export function setScanRuntime(next: Partial<ScanRuntime>): void {
   runtime = { ...runtime, ...next };
@@ -43,14 +50,47 @@ function isDuplicate(barcode: string): boolean {
   return false;
 }
 
-function addToSellCart(product: ScanProduct, priceMinor: number): void {
+function isScanStorm(): boolean {
+  const now = Date.now();
+  recentScans = recentScans.filter((ts) => now - ts < STORM_WINDOW_MS);
+  recentScans.push(now);
+
+  if (now < stormUntil) {
+    return true;
+  }
+
+  if (recentScans.length > STORM_MAX_SCANS) {
+    stormUntil = now + STORM_COOLDOWN_MS;
+    if (now - lastStormNotice > STORM_COOLDOWN_MS) {
+      lastStormNotice = now;
+      notify({ tone: "warning", message: POS_MESSAGES.scanStorm });
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function addToSellCart(product: ScanProduct, priceMinor: number, flags?: string[]): void {
   useCartStore.getState().addItem({
     id: product.id,
     name: product.name,
     priceMinor,
     currency: product.currency,
-    barcode: product.barcode
+    barcode: product.barcode,
+    flags
   });
+}
+
+async function cacheLocalProduct(product: ScanProduct): Promise<void> {
+  try {
+    await upsertLocalProduct(product.barcode, product.name, product.currency, null);
+    if (product.priceMinor !== null) {
+      await setLocalPrice(product.barcode, product.priceMinor);
+    }
+  } catch {
+    // Local cache updates should not block scans.
+  }
 }
 
 export async function handleScan(barcode: string): Promise<void> {
@@ -64,16 +104,25 @@ export async function handleScan(barcode: string): Promise<void> {
     return;
   }
 
+  if (isScanStorm()) {
+    return;
+  }
+
   notify(null);
 
   try {
     if (runtime.intent === "PURCHASE") {
       const product = await lookupProductByBarcode(trimmed);
+      if (product) {
+        await cacheLocalProduct(product);
+      }
       usePurchaseDraftStore.getState().addOrUpdate({
         id: product?.id ?? trimmed,
         barcode: trimmed,
         name: product?.name ?? "",
         currency: product?.currency ?? "INR",
+        sellingPriceMinor: product?.priceMinor ?? null,
+        purchasePriceMinor: null,
         isNew: !product
       });
       return;
@@ -86,6 +135,9 @@ export async function handleScan(barcode: string): Promise<void> {
     }
 
     if (runtime.mode === "DIGITISE") {
+      if (result.action === "ALREADY_DIGITISED" || result.action === "DIGITISED") {
+        await cacheLocalProduct(result.product);
+      }
       if (result.action === "ALREADY_DIGITISED") {
         notify({ tone: "info", message: "Already digitised / known." });
         return;
@@ -95,10 +147,12 @@ export async function handleScan(barcode: string): Promise<void> {
     }
 
     if (result.action === "ADD_TO_CART" || result.action === "PROMPT_PRICE") {
+      await cacheLocalProduct(result.product);
       const priceMinor = result.product.priceMinor ?? 0;
-      addToSellCart(result.product, priceMinor);
+      const autoCreated = result.action === "PROMPT_PRICE" || result.product.priceMinor === null;
+      addToSellCart(result.product, priceMinor, autoCreated ? ["SELL_AUTO_CREATE"] : undefined);
 
-      if (result.product.priceMinor === null || result.action === "PROMPT_PRICE") {
+      if (autoCreated) {
         notify({ tone: "warning", message: POS_MESSAGES.newItemWarning });
       }
       return;
