@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import QRCode from "react-native-qrcode-svg";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
@@ -63,6 +64,7 @@ export default function SellScanScreen() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanned, setCameraScanned] = useState(false);
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
+  const [barcodePreview, setBarcodePreview] = useState<{ name: string; barcode: string } | null>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const {
@@ -396,9 +398,20 @@ export default function SellScanScreen() {
           style={styles.cart}
           renderItem={({ item }: { item: StoreCartItem }) => (
             <View style={styles.cartRow}>
-              <Text style={styles.itemName}>
-                {item.name} × {item.quantity}
-              </Text>
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>
+                  {item.name} x {item.quantity}
+                </Text>
+                {item.barcode ? (
+                  <Pressable
+                    onPress={() => setBarcodePreview({ name: item.name, barcode: item.barcode ?? "" })}
+                    style={styles.barcodeButton}
+                    hitSlop={6}
+                  >
+                    <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
+                  </Pressable>
+                ) : null}
+              </View>
               <Text style={styles.itemPrice}>
                 {formatMoney(item.priceMinor * item.quantity, item.currency ?? "INR")}
               </Text>
@@ -501,6 +514,30 @@ export default function SellScanScreen() {
                 <Text style={styles.cameraClose}>Close</Text>
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(barcodePreview)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBarcodePreview(null)}
+      >
+        <View style={styles.barcodeOverlay}>
+          <View style={styles.barcodeCard}>
+            <Text style={styles.barcodeTitle}>{barcodePreview?.name ?? "Barcode"}</Text>
+            {barcodePreview?.barcode ? (
+              <QRCode value={barcodePreview.barcode} size={180} />
+            ) : (
+              <Text style={styles.barcodeMissing}>Barcode unavailable.</Text>
+            )}
+            {barcodePreview?.barcode ? (
+              <Text style={styles.barcodeValue}>{barcodePreview.barcode}</Text>
+            ) : null}
+            <Pressable style={styles.barcodeClose} onPress={() => setBarcodePreview(null)}>
+              <Text style={styles.barcodeCloseText}>Close</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -664,10 +701,24 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
+  itemInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   itemName: {
     fontSize: 15,
     fontWeight: "600",
     color: theme.colors.textPrimary,
+    flexShrink: 1,
+  },
+  barcodeButton: {
+    padding: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
   },
   itemPrice: {
     fontSize: 15,
@@ -800,6 +851,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   cameraPermissionButtonText: {
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+
+  barcodeOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlayLight,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  barcodeCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    alignItems: "center",
+    minWidth: 240,
+  },
+  barcodeTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  barcodeValue: {
+    marginTop: 12,
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  barcodeMissing: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginVertical: 12,
+  },
+  barcodeClose: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  barcodeCloseText: {
     color: theme.colors.primary,
     fontWeight: "700",
   },

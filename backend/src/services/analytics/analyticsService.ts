@@ -357,9 +357,10 @@ export async function fetchOverview(params: { storeId?: string; from?: string; t
 
   const newProductsRes = await pool.query(
     `
-    SELECT COUNT(DISTINCT se.product_id)::int AS count
+    SELECT COUNT(DISTINCT se.variant_id)::int AS count
     FROM scan_events se
-    JOIN products p ON p.id = se.product_id
+    JOIN variants v ON v.id = se.variant_id
+    JOIN products p ON p.id = v.product_id
     WHERE se.created_at >= $1 AND se.created_at <= $2
       AND se.action IN ('DIGITISED', 'PROMPT_PRICE')
       AND p.retailer_status = 'retailer_created'
@@ -437,25 +438,26 @@ async function computeProfit(params: { storeId?: string; fromIso: string; toIso:
 
   const salesItemsRes = await pool.query(
     `
-    SELECT si.product_id, p.barcode, SUM(si.quantity) AS qty
+    SELECT v.product_id, SUM(si.quantity) AS qty
     FROM sale_items si
     JOIN sales s ON s.id = si.sale_id
-    JOIN products p ON p.id = si.product_id
+    JOIN variants v ON v.id = si.variant_id
     WHERE s.created_at >= $1 AND s.created_at <= $2
     ${storeId ? "AND s.store_id = $3" : ""}
-    GROUP BY si.product_id, p.barcode
+    GROUP BY v.product_id
     `,
     storeId ? [params.fromIso, params.toIso, storeId] : [params.fromIso, params.toIso]
   );
 
   const consumerItemsRes = await pool.query(
     `
-    SELECT coi.product_id, coi.sku, SUM(coi.quantity) AS qty
+    SELECT v.product_id, coi.sku, SUM(coi.quantity) AS qty
     FROM consumer_order_items coi
     JOIN consumer_orders co ON co.id = coi.order_id
+    LEFT JOIN variants v ON v.id = coi.variant_id
     WHERE co.created_at >= $1 AND co.created_at <= $2
     ${storeId ? "AND co.store_id = $3" : ""}
-    GROUP BY coi.product_id, coi.sku
+    GROUP BY v.product_id, coi.sku
     `,
     storeId ? [params.fromIso, params.toIso, storeId] : [params.fromIso, params.toIso]
   );
@@ -477,7 +479,7 @@ async function computeProfit(params: { storeId?: string; fromIso: string; toIso:
   };
 
   for (const row of salesItemsRes.rows) {
-    applyCost(row.product_id ? String(row.product_id) : null, row.barcode ? String(row.barcode) : null, toNumber(row.qty));
+    applyCost(row.product_id ? String(row.product_id) : null, null, toNumber(row.qty));
   }
   for (const row of consumerItemsRes.rows) {
     applyCost(row.product_id ? String(row.product_id) : null, row.sku ? String(row.sku) : null, toNumber(row.qty));
@@ -663,19 +665,20 @@ export async function fetchProductsAnalytics(params: {
 
   const topProductsRes = await pool.query(
     `
-    SELECT p.id,
-           p.name,
-           p.barcode,
-           p.category,
-           p.retailer_status,
+    SELECT v.id,
+           v.name,
+           b.barcode,
+           v.category,
+           v.retailer_status,
            SUM(si.quantity) AS qty,
            SUM(si.line_total_minor) AS total
     FROM sale_items si
     JOIN sales s ON s.id = si.sale_id
-    JOIN products p ON p.id = si.product_id
+    JOIN variants v ON v.id = si.variant_id
+    LEFT JOIN barcodes b ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
     WHERE s.created_at >= $1 AND s.created_at <= $2
       ${storeId ? "AND s.store_id = $3" : ""}
-    GROUP BY p.id, p.name, p.barcode, p.category, p.retailer_status
+    GROUP BY v.id, v.name, b.barcode, v.category, v.retailer_status
     ORDER BY total DESC
     LIMIT $${storeId ? 4 : 3} OFFSET $${storeId ? 5 : 4}
     `,
@@ -685,7 +688,7 @@ export async function fetchProductsAnalytics(params: {
   const topProducts: ProductAnalyticsRow[] = topProductsRes.rows.map((row) => ({
     product_id: row.id,
     name: row.name,
-    barcode: row.barcode,
+    barcode: row.barcode ?? "",
     category: row.category ?? null,
     source: row.retailer_status === "retailer_created" ? "retailer_created" : "supermandi_catalog",
     quantity: toNumber(row.qty),
@@ -694,9 +697,10 @@ export async function fetchProductsAnalytics(params: {
 
   const newProductsCountRes = await pool.query(
     `
-    SELECT COUNT(DISTINCT se.product_id)::int AS count
+    SELECT COUNT(DISTINCT se.variant_id)::int AS count
     FROM scan_events se
-    JOIN products p ON p.id = se.product_id
+    JOIN variants v ON v.id = se.variant_id
+    JOIN products p ON p.id = v.product_id
     WHERE se.created_at >= $1 AND se.created_at <= $2
       AND se.action IN ('DIGITISED', 'PROMPT_PRICE')
       AND p.retailer_status = 'retailer_created'
@@ -708,17 +712,19 @@ export async function fetchProductsAnalytics(params: {
 
   const newProductsRes = await pool.query(
     `
-    SELECT p.id,
-           p.name,
-           p.barcode,
+    SELECT v.id,
+           v.name,
+           b.barcode,
            MIN(se.created_at) AS created_at
     FROM scan_events se
-    JOIN products p ON p.id = se.product_id
+    JOIN variants v ON v.id = se.variant_id
+    JOIN products p ON p.id = v.product_id
+    LEFT JOIN barcodes b ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
     WHERE se.created_at >= $1 AND se.created_at <= $2
       AND se.action IN ('DIGITISED', 'PROMPT_PRICE')
       AND p.retailer_status = 'retailer_created'
       ${storeId ? "AND se.store_id = $3" : ""}
-    GROUP BY p.id, p.name, p.barcode
+    GROUP BY v.id, v.name, b.barcode
     ORDER BY created_at DESC
     LIMIT 20
     `,
@@ -727,7 +733,7 @@ export async function fetchProductsAnalytics(params: {
   const newProducts = newProductsRes.rows.map((row) => ({
     id: row.id,
     name: row.name,
-    barcode: row.barcode,
+    barcode: row.barcode ?? "",
     created_at: row.created_at ? new Date(row.created_at).toISOString() : ""
   }));
 
@@ -742,7 +748,7 @@ export async function fetchProductsAnalytics(params: {
              SUM(si.line_total_minor) AS total
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
-      JOIN products p ON p.id = si.product_id
+      JOIN variants p ON p.id = si.variant_id
       WHERE s.created_at >= $1 AND s.created_at <= $2
         ${storeId ? "AND s.store_id = $3" : ""}
       GROUP BY COALESCE(p.category, 'Uncategorized')
@@ -753,7 +759,7 @@ export async function fetchProductsAnalytics(params: {
 
     const hasCategory = categoryRes.rows.some((row) => row.group_label && row.group_label !== "Uncategorized");
     if (!hasCategory) {
-      missingFields.push("products.category");
+      missingFields.push("variants.category");
     }
 
     salesByGroup = categoryRes.rows.map((row) => ({
@@ -1293,9 +1299,10 @@ export async function fetchActivityAnalytics(params: {
 
   const newProductsRes = await pool.query(
     `
-    SELECT date_trunc('${groupBy}', se.created_at) AS bucket, COUNT(DISTINCT se.product_id)::int AS count
+    SELECT date_trunc('${groupBy}', se.created_at) AS bucket, COUNT(DISTINCT se.variant_id)::int AS count
     FROM scan_events se
-    JOIN products p ON p.id = se.product_id
+    JOIN variants v ON v.id = se.variant_id
+    JOIN products p ON p.id = v.product_id
     WHERE se.created_at >= $1 AND se.created_at <= $2
       AND se.action IN ('DIGITISED', 'PROMPT_PRICE')
       AND p.retailer_status = 'retailer_created'

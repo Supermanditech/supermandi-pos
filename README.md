@@ -78,15 +78,15 @@ Backend lives in [`backend/`](backend/package.json) and provides:
 
 ```bash
 cd backend
-npm install
+npm install # restores backend/node_modules
 
-# create local db + generate prisma client
+# copy env template and set DATABASE_URL (Postgres), e.g.
+# DATABASE_URL="postgres://USER:PASSWORD@127.0.0.1:5432/supermandi?sslmode=disable"
 # macOS/Linux
 cp .env.example .env
 
 # Windows (cmd.exe)
 copy .env.example .env
-npx prisma migrate dev
 
 # run the api
 npm run dev
@@ -97,7 +97,7 @@ npm run dev
 See [`backend/.env.example`](backend/.env.example):
 
 - `PORT` (default `3001`)
-- `DATABASE_URL` (default `file:./dev.db`)
+- `DATABASE_URL` (required Postgres connection string, e.g. `postgres://USER:PASSWORD@127.0.0.1:5432/supermandi?sslmode=disable`)
 - `JWT_SECRET` (required)
 
 ### Backend API routes

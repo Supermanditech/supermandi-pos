@@ -31,10 +31,10 @@ export async function createOfflineSale(input: OfflineSaleInput): Promise<{
 
   await offlineDb.run(
     `
-    INSERT INTO offline_sales (id, bill_ref, subtotal_minor, discount_minor, total_minor, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO offline_sales (id, bill_ref, subtotal_minor, discount_minor, total_minor, currency, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
-    [saleId, billRef, subtotalMinor, discountMinor, totalMinor, "CREATED", createdAt, createdAt]
+    [saleId, billRef, subtotalMinor, discountMinor, totalMinor, input.currency, "CREATED", createdAt, createdAt]
   );
 
   for (const item of input.items) {

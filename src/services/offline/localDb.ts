@@ -41,6 +41,7 @@ export async function initOfflineDb(): Promise<void> {
       subtotal_minor INTEGER NOT NULL,
       discount_minor INTEGER NOT NULL,
       total_minor INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
       status TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT '',
@@ -97,6 +98,7 @@ export async function initOfflineDb(): Promise<void> {
     `ALTER TABLE offline_sales ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE offline_sales ADD COLUMN synced_at TEXT NULL`,
     `ALTER TABLE offline_sales ADD COLUMN server_sale_id TEXT NULL`,
+    `ALTER TABLE offline_sales ADD COLUMN currency TEXT NOT NULL DEFAULT 'INR'`,
     `ALTER TABLE offline_collections ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE offline_collections ADD COLUMN synced_at TEXT NULL`,
     `ALTER TABLE offline_collections ADD COLUMN server_collection_id TEXT NULL`

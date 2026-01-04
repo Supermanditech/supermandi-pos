@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { applyBulkDeductions, ensureSaleAvailability } from "../../../services/inventoryService";
 
 export const posSalesRouter = Router();
 
@@ -9,12 +10,24 @@ type SaleItemInput = {
   productId: string;
   quantity: number;
   priceMinor: number;
+  name?: string;
+  barcode?: string;
 };
+
+type BillPaymentMode = "UPI" | "CASH" | "DUE" | "UNKNOWN";
 
 function buildBillRef(): string {
   const ts = Date.now().toString().slice(-6);
   const rand = Math.floor(100 + Math.random() * 900).toString();
   return `${ts}${rand}`;
+}
+
+function resolvePaymentMode(status: string | null | undefined): BillPaymentMode {
+  const normalized = (status ?? "").toUpperCase();
+  if (normalized.includes("UPI")) return "UPI";
+  if (normalized.includes("CASH")) return "CASH";
+  if (normalized.includes("DUE")) return "DUE";
+  return "UNKNOWN";
 }
 
 async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
@@ -33,6 +46,116 @@ async function getSale(saleId: string): Promise<{ id: string; store_id: string; 
   );
   return res.rows[0] ?? null;
 }
+
+posSalesRouter.get("/bills", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const limitRaw = typeof req.query.limit === "string" ? Number(req.query.limit) : 50;
+  const offsetRaw = typeof req.query.offset === "string" ? Number(req.query.offset) : 0;
+  const limit = Number.isFinite(limitRaw) ? Math.min(200, Math.max(1, Math.floor(limitRaw))) : 50;
+  const offset = Number.isFinite(offsetRaw) ? Math.max(0, Math.floor(offsetRaw)) : 0;
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  try {
+    const rows = await pool.query(
+      `
+      SELECT id, bill_ref, total_minor, status, created_at, currency
+      FROM sales
+      WHERE store_id = $1 AND status <> 'CREATED'
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+      `,
+      [storeId, limit, offset]
+    );
+
+    const bills = rows.rows.map((row) => ({
+      saleId: String(row.id),
+      billRef: String(row.bill_ref),
+      totalMinor: Number(row.total_minor ?? 0),
+      status: String(row.status ?? ""),
+      paymentMode: resolvePaymentMode(row.status),
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      currency: row.currency ? String(row.currency) : "INR"
+    }));
+
+    return res.json({ bills });
+  } catch (error) {
+    return res.status(500).json({ error: "failed to load bills" });
+  }
+});
+
+posSalesRouter.get("/bills/:saleId", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) {
+    return res.status(400).json({ error: "saleId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  try {
+    const saleRes = await pool.query(
+      `
+      SELECT id, store_id, bill_ref, subtotal_minor, discount_minor, total_minor, status, created_at, currency
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      return res.status(404).json({ error: "bill_not_found" });
+    }
+
+    const itemRes = await pool.query(
+      `
+      SELECT
+        si.variant_id,
+        si.quantity,
+        si.price_minor,
+        si.line_total_minor,
+        COALESCE(si.item_name, v.name) AS item_name,
+        COALESCE(si.barcode, b.barcode) AS barcode
+      FROM sale_items si
+      LEFT JOIN variants v ON v.id = si.variant_id
+      LEFT JOIN barcodes b ON b.variant_id = si.variant_id AND b.barcode_type = 'supermandi'
+      WHERE si.sale_id = $1
+      ORDER BY si.id ASC
+      `,
+      [saleId]
+    );
+
+    const bill = {
+      saleId: String(sale.id),
+      billRef: String(sale.bill_ref),
+      status: String(sale.status ?? ""),
+      paymentMode: resolvePaymentMode(sale.status),
+      currency: sale.currency ? String(sale.currency) : "INR",
+      createdAt: sale.created_at ? new Date(sale.created_at).toISOString() : new Date().toISOString(),
+      totals: {
+        subtotalMinor: Number(sale.subtotal_minor ?? 0),
+        discountMinor: Number(sale.discount_minor ?? 0),
+        totalMinor: Number(sale.total_minor ?? 0)
+      },
+      items: itemRes.rows.map((row) => ({
+        variantId: String(row.variant_id),
+        name: String(row.item_name ?? ""),
+        barcode: row.barcode ? String(row.barcode) : null,
+        quantity: Number(row.quantity ?? 0),
+        priceMinor: Number(row.price_minor ?? 0),
+        lineTotalMinor: Number(row.line_total_minor ?? 0)
+      }))
+    };
+
+    return res.json({ bill });
+  } catch (error) {
+    return res.status(500).json({ error: "failed to load bill" });
+  }
+});
 
 async function getPaymentStoreStatus(paymentId: string): Promise<{ sale_id: string; store_id: string; active: boolean } | null> {
   const pool = getPool();
@@ -66,9 +189,10 @@ async function getCollectionStoreStatus(collectionId: string): Promise<{ store_i
 }
 
 posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
-  const { items, discountMinor } = req.body as {
+  const { items, discountMinor, currency } = req.body as {
     items?: SaleItemInput[];
     discountMinor?: number;
+    currency?: string;
   };
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -94,6 +218,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   const discount = Math.max(0, Math.round(discountMinor ?? 0));
   const subtotal = cleanedItems.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
   const total = Math.max(0, subtotal - discount);
+  const saleCurrency = typeof currency === "string" && currency.trim() ? currency.trim() : "INR";
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
@@ -110,17 +235,43 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   const saleId = randomUUID();
   let billRef = buildBillRef();
 
+  const client = await pool.connect();
   try {
-    await pool.query("BEGIN");
+    await client.query("BEGIN");
+
+    await ensureSaleAvailability({
+      client,
+      storeId,
+      items: cleanedItems.map((item) => ({ variantId: item.productId, quantity: item.quantity }))
+    });
+
+    const variantRes = await client.query(
+      `
+      SELECT v.id, v.name, b.barcode AS supermandi_barcode
+      FROM variants v
+      LEFT JOIN barcodes b
+        ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
+      WHERE v.id = ANY($1::text[])
+      `,
+      [cleanedItems.map((item) => item.productId)]
+    );
+
+    const variantMap = new Map<string, { name: string; barcode: string | null }>();
+    for (const row of variantRes.rows) {
+      variantMap.set(String(row.id), {
+        name: String(row.name ?? ""),
+        barcode: row.supermandi_barcode ? String(row.supermandi_barcode) : null
+      });
+    }
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        await pool.query(
+        await client.query(
           `
-          INSERT INTO sales (id, store_id, device_id, bill_ref, subtotal_minor, discount_minor, total_minor, status)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          INSERT INTO sales (id, store_id, device_id, bill_ref, subtotal_minor, discount_minor, total_minor, status, currency)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           `,
-          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "CREATED"]
+          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "CREATED", saleCurrency]
         );
         break;
       } catch (error) {
@@ -132,20 +283,51 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     }
 
     for (const item of cleanedItems) {
+      const fallback = variantMap.get(item.productId);
+      const itemName =
+        typeof item.name === "string" && item.name.trim()
+          ? item.name.trim()
+          : fallback?.name
+          ? fallback.name
+          : `Item ${item.productId.slice(-4)}`;
+      const itemBarcode =
+        typeof item.barcode === "string" && item.barcode.trim()
+          ? item.barcode.trim()
+          : fallback?.barcode ?? null;
       const lineTotal = item.priceMinor * item.quantity;
-      await pool.query(
+      await client.query(
         `
-        INSERT INTO sale_items (id, sale_id, product_id, quantity, price_minor, line_total_minor)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO sale_items (id, sale_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         `,
-        [randomUUID(), saleId, item.productId, item.quantity, item.priceMinor, lineTotal]
+        [
+          randomUUID(),
+          saleId,
+          item.productId,
+          item.quantity,
+          item.priceMinor,
+          lineTotal,
+          itemName,
+          itemBarcode
+        ]
       );
     }
 
-    await pool.query("COMMIT");
+    await applyBulkDeductions({
+      client,
+      storeId,
+      items: cleanedItems.map((item) => ({ variantId: item.productId, quantity: item.quantity }))
+    });
+
+    await client.query("COMMIT");
   } catch (error) {
-    await pool.query("ROLLBACK");
+    await client.query("ROLLBACK");
+    if (error instanceof Error && error.message === "insufficient_stock") {
+      return res.status(409).json({ error: "insufficient_stock" });
+    }
     return res.status(500).json({ error: "failed to create sale" });
+  } finally {
+    client.release();
   }
 
   return res.json({

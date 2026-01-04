@@ -3,6 +3,13 @@ import { Router } from "express";
 import type { PoolClient } from "pg";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import {
+  applyBulkDeductions,
+  ensureSaleAvailability,
+  attachBarcodeToVariant,
+  isSupermandiBarcode
+} from "../../../services/inventoryService";
+import { createPurchase, type PurchaseItemInput } from "../../../services/purchaseService";
 
 export const posSyncRouter = Router();
 
@@ -42,39 +49,62 @@ async function ensureProductByBarcode(
     currency?: string | null;
   }
 ): Promise<string> {
-  const existing = await client.query(`SELECT id FROM products WHERE barcode = $1`, [params.barcode]);
-  if (existing.rows[0]?.id) return existing.rows[0].id as string;
+  const rawBarcode = params.barcode.trim();
+  const lookupBarcode = isSupermandiBarcode(rawBarcode) ? rawBarcode.toUpperCase() : rawBarcode;
+  const existing = await client.query(`SELECT variant_id FROM barcodes WHERE barcode = $1`, [lookupBarcode]);
+  if (existing.rows[0]?.variant_id) return existing.rows[0].variant_id as string;
 
-  const id = randomUUID();
-  const suffix = params.barcode.slice(-4);
-  const name = params.name?.trim() || `Item ${suffix || params.barcode}`;
+  const productId = randomUUID();
+  const variantId = randomUUID();
+  const suffix = rawBarcode.slice(-4);
+  const name = params.name?.trim() || `Item ${suffix || rawBarcode}`;
   const currency = params.currency?.trim() || "INR";
 
   await client.query(
     `
-    INSERT INTO products (id, barcode, name, currency, retailer_status, enrichment_status)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO products (id, name, category, retailer_status, enrichment_status)
+    VALUES ($1, $2, $3, $4, $5)
     `,
-    [id, params.barcode, name, currency, "retailer_created", "pending_enrichment"]
+    [productId, name, null, "retailer_created", "pending_enrichment"]
   );
 
-  return id;
+  await client.query(
+    `
+    INSERT INTO variants (id, product_id, name, currency)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [variantId, productId, name, currency]
+  );
+
+  try {
+    await attachBarcodeToVariant(client, rawBarcode, variantId);
+  } catch (error) {
+    await client.query(`DELETE FROM variants WHERE id = $1`, [variantId]);
+    await client.query(`DELETE FROM products WHERE id = $1`, [productId]);
+    const fallback = await client.query(`SELECT variant_id FROM barcodes WHERE barcode = $1`, [lookupBarcode]);
+    if (fallback.rows[0]?.variant_id) {
+      return fallback.rows[0].variant_id as string;
+    }
+    throw error;
+  }
+
+  return variantId;
 }
 
-async function ensureRetailerProduct(
+async function ensureRetailerVariant(
   client: PoolClient,
   params: {
     storeId: string;
-    productId: string;
+    variantId: string;
   }
 ): Promise<void> {
   await client.query(
     `
-    INSERT INTO retailer_products (store_id, product_id, digitised_by_retailer)
+    INSERT INTO retailer_variants (store_id, variant_id, digitised_by_retailer)
     VALUES ($1, $2, TRUE)
-    ON CONFLICT (store_id, product_id) DO NOTHING
+    ON CONFLICT (store_id, variant_id) DO NOTHING
     `,
-    [params.storeId, params.productId]
+    [params.storeId, params.variantId]
   );
 }
 
@@ -82,18 +112,18 @@ async function upsertRetailerPrice(
   client: PoolClient,
   params: {
     storeId: string;
-    productId: string;
+    variantId: string;
     priceMinor: number;
   }
 ): Promise<void> {
   await client.query(
     `
-    INSERT INTO retailer_products (store_id, product_id, selling_price_minor, digitised_by_retailer, price_updated_at)
+    INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer, price_updated_at)
     VALUES ($1, $2, $3, TRUE, NOW())
-    ON CONFLICT (store_id, product_id)
+    ON CONFLICT (store_id, variant_id)
     DO UPDATE SET selling_price_minor = EXCLUDED.selling_price_minor, price_updated_at = NOW()
     `,
-    [params.storeId, params.productId, params.priceMinor]
+    [params.storeId, params.variantId, params.priceMinor]
   );
 }
 
@@ -215,8 +245,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           if (!barcode) {
             throw new Error("barcode is required");
           }
-          const productId = await ensureProductByBarcode(client, { barcode, name, currency });
-          await ensureRetailerProduct(client, { storeId, productId });
+          const variantId = await ensureProductByBarcode(client, { barcode, name, currency });
+          await ensureRetailerVariant(client, { storeId, variantId });
         } else if (type === "PRODUCT_PRICE_SET") {
           const barcode = asTrimmedString((payload as any)?.barcode);
           const priceMinorRaw = asNumber((payload as any)?.priceMinor);
@@ -224,14 +254,15 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           if (!barcode || priceMinor === null || priceMinor <= 0) {
             throw new Error("invalid price");
           }
-          const productId = await ensureProductByBarcode(client, { barcode, name: null, currency: "INR" });
-          await upsertRetailerPrice(client, { storeId, productId, priceMinor });
+          const variantId = await ensureProductByBarcode(client, { barcode, name: null, currency: "INR" });
+          await upsertRetailerPrice(client, { storeId, variantId, priceMinor });
         } else if (type === "SALE_CREATED") {
           const saleId = asTrimmedString((payload as any)?.saleId);
           const offlineReceiptRef =
             asTrimmedString((payload as any)?.offlineReceiptRef) ??
             asTrimmedString((payload as any)?.billRef);
           const items = Array.isArray((payload as any)?.items) ? (payload as any).items : [];
+          const currency = asTrimmedString((payload as any)?.currency) ?? "INR";
           const discountMinor = Math.max(0, Math.round(asNumber((payload as any)?.discountMinor) ?? 0));
           const createdAt = asTrimmedString((payload as any)?.createdAt);
 
@@ -285,9 +316,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
                   discount_minor,
                   total_minor,
                   status,
-                  created_at
+                  created_at,
+                  currency
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()))
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()), $11)
                 `,
                 [
                   saleId,
@@ -299,7 +331,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
                   discountMinor,
                   computedTotal,
                   "CREATED",
-                  createdAt
+                  createdAt,
+                  currency
                 ]
               );
               insertedSale = true;
@@ -316,6 +349,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             throw new Error("failed to insert sale");
           }
 
+          const resolvedItems: Array<{ variantId: string; quantity: number; priceMinor: number; name: string; barcode: string }> = [];
+
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
             const name = asTrimmedString(item?.name);
@@ -328,18 +363,44 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               throw new Error("invalid sale item");
             }
 
-            const productId = await ensureProductByBarcode(client, { barcode, name, currency: "INR" });
-            await ensureRetailerProduct(client, { storeId, productId });
+            const fallbackName = `Item ${barcode.slice(-4)}`;
+            const itemName = name ?? fallbackName;
+            const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency });
+            await ensureRetailerVariant(client, { storeId, variantId });
+            resolvedItems.push({ variantId, quantity, priceMinor, name: itemName, barcode });
+          }
 
-            const lineTotal = priceMinor * quantity;
+          await ensureSaleAvailability({
+            client,
+            storeId,
+            items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
+          });
+
+          for (const item of resolvedItems) {
+            const lineTotal = item.priceMinor * item.quantity;
             await client.query(
               `
-              INSERT INTO sale_items (id, sale_id, product_id, quantity, price_minor, line_total_minor)
-              VALUES ($1, $2, $3, $4, $5, $6)
+              INSERT INTO sale_items (id, sale_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
               `,
-              [randomUUID(), saleId, productId, quantity, priceMinor, lineTotal]
+              [
+                randomUUID(),
+                saleId,
+                item.variantId,
+                item.quantity,
+                item.priceMinor,
+                lineTotal,
+                item.name,
+                item.barcode
+              ]
             );
           }
+
+          await applyBulkDeductions({
+            client,
+            storeId,
+            items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
+          });
 
           const saleRow = await client.query(
             `SELECT bill_ref, offline_receipt_ref FROM sales WHERE id = $1`,
@@ -352,6 +413,41 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             serverSaleId: saleId,
             billRef: saleInfo?.bill_ref ?? "",
             offlineReceiptRef: saleInfo?.offline_receipt_ref ?? offlineReceiptRef
+          });
+        } else if (type === "PURCHASE_CREATED") {
+          const purchaseId = asTrimmedString((payload as any)?.purchaseId) ?? undefined;
+          const supplierName = asTrimmedString((payload as any)?.supplierName) ?? null;
+          const currency = asTrimmedString((payload as any)?.currency) ?? undefined;
+          const items = Array.isArray((payload as any)?.items) ? (payload as any).items : [];
+          if (items.length === 0) {
+            throw new Error("invalid purchase payload");
+          }
+
+          const normalizedItems: PurchaseItemInput[] = items.map((item: any) => {
+            const quantityRaw = asNumber(item?.quantity);
+            const unitCostRaw = asNumber(item?.unitCostMinor);
+            const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
+            const unitCostMinor = unitCostRaw === null ? null : Math.round(unitCostRaw);
+            if (quantity === null || quantity <= 0 || unitCostMinor === null || unitCostMinor <= 0) {
+              throw new Error("invalid purchase item");
+            }
+
+            return {
+              barcode: asTrimmedString(item?.barcode) ?? undefined,
+              productId: asTrimmedString(item?.productId) ?? undefined,
+              productName: asTrimmedString(item?.productName) ?? undefined,
+              quantity,
+              unit: asTrimmedString(item?.unit) ?? undefined,
+              unitCostMinor,
+              currency: asTrimmedString(item?.currency) ?? currency
+            };
+          });
+
+          await createPurchase({
+            client,
+            storeId,
+            input: { purchaseId, supplierName, currency, items: normalizedItems },
+            skipIfExists: true
           });
         } else if (type === "PAYMENT_CASH" || type === "PAYMENT_DUE") {
           const saleId = asTrimmedString((payload as any)?.saleId);

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { posEventsRouter } from "./pos/events";
 import { posScanRouter } from "./pos/scan";
 import { posSalesRouter } from "./pos/sales";
+import { posPurchasesRouter } from "./pos/purchases";
 import { posStoreRouter } from "./pos/store";
 import { posSyncRouter } from "./pos/sync";
 import { posEnrollRouter } from "./pos/enroll";
@@ -13,12 +14,14 @@ import { adminStoresRouter } from "./admin/stores";
 import { adminDevicesRouter } from "./admin/devices";
 import { adminDeviceEnrollmentRouter } from "./admin/deviceEnrollments";
 import { adminAnalyticsRouter } from "./admin/analytics";
+import { adminBarcodeSheetsRouter } from "./admin/barcodeSheets";
 
 export const v1Router = Router();
 
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);
 v1Router.use("/pos", posSalesRouter);
+v1Router.use("/pos", posPurchasesRouter);
 v1Router.use("/pos", posStoreRouter);
 v1Router.use("/pos", posSyncRouter);
 v1Router.use("/pos", posEnrollRouter);
@@ -30,3 +33,4 @@ v1Router.use("/admin", adminStoresRouter);
 v1Router.use("/admin", adminDevicesRouter);
 v1Router.use("/admin", adminDeviceEnrollmentRouter);
 v1Router.use("/admin", adminAnalyticsRouter);
+v1Router.use("/admin", adminBarcodeSheetsRouter);

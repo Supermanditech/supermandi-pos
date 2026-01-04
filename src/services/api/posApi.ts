@@ -24,6 +24,7 @@ export type SaleCreateResponse = {
 export async function createSale(input: {
   items: SaleItemInput[];
   discountMinor?: number;
+  currency?: string;
 }): Promise<SaleCreateResponse> {
   if (await isOnline()) {
     return apiClient.post<SaleCreateResponse>("/api/v1/pos/sales", input);
@@ -38,7 +39,7 @@ export async function createSale(input: {
       quantity: item.quantity
     })),
     discountMinor: input.discountMinor ?? 0,
-    currency: "INR"
+    currency: input.currency ?? "INR"
   });
 
   return offline;

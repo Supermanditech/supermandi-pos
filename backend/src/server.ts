@@ -5,6 +5,12 @@ const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || "0.0.0.0";
 
 async function start(): Promise<void> {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    console.error("DATABASE_URL is required to start the backend. See backend/.env.example.");
+    process.exit(1);
+  }
+
   try {
     await ensureCoreSchema();
   } catch (error) {

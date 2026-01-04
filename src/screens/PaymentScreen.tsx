@@ -28,6 +28,8 @@ import { subscribeNetworkStatus } from "../services/networkStatus";
 import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { buildUpiIntent } from "../utils/upiIntent";
+import { upsertLocalBillSnapshot } from "../services/billing/billStorage";
+import type { BillSnapshot } from "../services/billing/billTypes";
 import { theme } from "../theme";
 
 type RootStackParamList = {
@@ -40,6 +42,7 @@ type RootStackParamList = {
     paymentMode: "UPI" | "CASH" | "DUE";
     transactionId: string;
     billId: string;
+    saleId: string;
   };
 };
 
@@ -173,7 +176,8 @@ const PaymentScreen = () => {
         quantity: item.quantity,
         priceMinor: item.priceMinor
       })),
-      discountMinor
+      discountMinor,
+      currency
     })
       .then((res) => {
         if (cancelled) return;
@@ -357,6 +361,33 @@ const PaymentScreen = () => {
         currency
       });
 
+      const status = selectedMode === "UPI" ? "PAID_UPI" : selectedMode === "CASH" ? "PAID_CASH" : "DUE";
+      const snapshot: BillSnapshot = {
+        saleId,
+        billRef,
+        status,
+        paymentMode: selectedMode,
+        currency,
+        createdAt: new Date().toISOString(),
+        subtotalMinor,
+        discountMinor,
+        totalMinor: total,
+        items: items.map((item) => ({
+          variantId: item.id,
+          name: item.name,
+          barcode: item.barcode ?? null,
+          quantity: item.quantity,
+          priceMinor: item.priceMinor,
+          lineTotalMinor: item.priceMinor * item.quantity
+        }))
+      };
+
+      try {
+        await upsertLocalBillSnapshot(snapshot, { synced: isOnline });
+      } catch {
+        // Non-blocking: bill can still be printed from in-memory flow.
+      }
+
       finalized.current = true;
       void logPaymentEvent("PAYMENT_SUCCESS", {
         transactionId,
@@ -369,7 +400,8 @@ const PaymentScreen = () => {
       navigation.navigate("SuccessPrint", {
         paymentMode: selectedMode,
         transactionId,
-        billId: billRef
+        billId: billRef,
+        saleId
       });
     } catch (error) {
       void logPaymentEvent("PAYMENT_FAILED", {
