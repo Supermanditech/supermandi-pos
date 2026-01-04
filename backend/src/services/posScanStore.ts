@@ -324,6 +324,21 @@ export async function resolveScan(
   return { action, product: existing };
 }
 
+export async function lookupProductByBarcode(
+  barcode: string,
+  storeId: string
+): Promise<PosProduct | null> {
+  const pool = getPool();
+  if (!pool) {
+    throw new Error("db_unavailable");
+  }
+
+  const trimmed = barcode.trim();
+  if (!trimmed) return null;
+
+  return fetchProductByBarcode(trimmed, storeId);
+}
+
 export async function updateProductPrice(
   productId: string,
   priceMinor: number,

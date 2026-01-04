@@ -23,6 +23,7 @@ export const POS_MESSAGES = {
   scannerMissing: "Scanner not ready. You can still type barcodes.",
   digitiseSaved: "Saved. You can scan the next product.",
   pricePrompt: "New item found. Enter the price to add it to cart.",
+  newItemWarning: "⚠ New item detected — confirm stock later",
   digitiseReady: "Digitise mode on. Scan products to save.",
   sellReady: "Ready to bill. Scan the next product."
 };

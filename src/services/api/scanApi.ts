@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { ApiError, apiClient } from "./apiClient";
 import { isOnline } from "../networkStatus";
 import { enqueueEvent } from "../offline/outbox";
 import { fetchLocalProduct, resolveOfflineScan, setLocalPrice } from "../offline/scan";
@@ -71,6 +71,36 @@ export async function setProductPrice(input: {
     name: local.name,
     barcode,
     priceMinor: Math.round(input.priceMinor),
+    currency: local.currency
+  };
+}
+
+export async function lookupProductByBarcode(barcode: string): Promise<ScanProduct | null> {
+  const trimmed = barcode.trim();
+  if (!trimmed) return null;
+
+  if (await isOnline()) {
+    try {
+      const res = await apiClient.get<{ product: ScanProduct }>(
+        `/api/v1/pos/products/lookup?barcode=${encodeURIComponent(trimmed)}`
+      );
+      return res.product;
+    } catch (error) {
+      if (error instanceof ApiError && error.message === "product_not_found") {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  const local = await fetchLocalProduct(trimmed);
+  if (!local) return null;
+
+  return {
+    id: local.barcode,
+    name: local.name,
+    barcode: local.barcode,
+    priceMinor: local.priceMinor,
     currency: local.currency
   };
 }

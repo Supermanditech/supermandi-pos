@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { resolveScan, updateProductPrice, type ScanMode } from "../../../services/posScanStore";
+import {
+  lookupProductByBarcode,
+  resolveScan,
+  updateProductPrice,
+  type ScanMode
+} from "../../../services/posScanStore";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 
 export const posScanRouter = Router();
@@ -53,6 +58,27 @@ posScanRouter.post("/products/price", requireDeviceToken, async (req, res) => {
     }
 
     return res.json({ product: updated });
+  } catch (error) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+});
+
+// GET /api/v1/pos/products/lookup?barcode=...
+posScanRouter.get("/products/lookup", requireDeviceToken, async (req, res) => {
+  const barcode = typeof req.query.barcode === "string" ? req.query.barcode : "";
+
+  if (!barcode.trim()) {
+    return res.status(400).json({ error: "barcode is required" });
+  }
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  try {
+    const product = await lookupProductByBarcode(barcode, storeId);
+    if (!product) {
+      return res.status(404).json({ error: "product_not_found" });
+    }
+    return res.json({ product });
   } catch (error) {
     return res.status(503).json({ error: "database unavailable" });
   }

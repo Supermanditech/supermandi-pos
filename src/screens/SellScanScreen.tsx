@@ -8,9 +8,7 @@ import {
   Pressable,
   FlatList,
   Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -21,7 +19,7 @@ import PosStatusBar from "../components/PosStatusBar";
 import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
 import { notifyHidScan, wasHidScannerActive } from "../services/hidScannerService";
 import { useCartStore, type CartItem as StoreCartItem } from "../stores/cartStore";
-import { resolveScan, setProductPrice, type ScanProduct } from "../services/api/scanApi";
+import { handleScan as handleGlobalScan, setScanRuntime, type ScanNotice } from "../services/scan/handleScan";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { formatMoney } from "../utils/money";
 import { ApiError } from "../services/api/apiClient";
@@ -49,22 +47,12 @@ type PosMode = "SELL" | "DIGITISE";
 
 export default function SellScanScreen() {
   const navigation = useNavigation<NavProp>();
-  const lastScanRef = useRef<{ code: string; mode: PosMode; ts: number } | null>(null);
   const hidInputRef = useRef<TextInput>(null);
-  const manualInputRef = useRef<TextInput>(null);
   const hidBufferRef = useRef("");
 
   /* ---------- STATE ---------- */
   const [mode, setMode] = useState<PosMode>("SELL");
-  const [isResolving, setIsResolving] = useState(false);
-  const [manualEntry, setManualEntry] = useState(false);
-  const [scanInput, setScanInput] = useState("");
   const [hidInput, setHidInput] = useState("");
-  const [priceModal, setPriceModal] = useState<{ product: ScanProduct } | null>(
-    null
-  );
-  const [priceInput, setPriceInput] = useState("");
-  const [priceSubmitting, setPriceSubmitting] = useState(false);
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
@@ -74,13 +62,13 @@ export default function SellScanScreen() {
   const [discountEditing, setDiscountEditing] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanned, setCameraScanned] = useState(false);
+  const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const {
     items,
     total,
     discountAmount,
-    addItem,
     applyDiscount,
     removeDiscount,
     clearCart: clearCartStore
@@ -92,25 +80,10 @@ export default function SellScanScreen() {
   const hasItems = items.length > 0;
   const collectDisabled = storeActive === false;
   const payDisabled = !hasItems || storeActive === false;
-  const cameraDisabled = storeActive === false || isResolving || priceModal !== null;
+  const cameraDisabled = storeActive === false;
   const scanDisabled = cameraDisabled || scannerOpen;
 
   /* ---------- ACTIONS ---------- */
-
-  const addProductToCart = (product: ScanProduct, priceMinorOverride?: number) => {
-    const priceMinor = priceMinorOverride ?? product.priceMinor;
-    if (priceMinor === null || priceMinor === undefined) {
-      return;
-    }
-
-    addItem({
-      id: product.id,
-      name: product.name,
-      priceMinor,
-      currency: product.currency,
-      barcode: product.barcode,
-    });
-  };
 
   const applyDiscountInput = () => {
     const parsed = Number(discountInput);
@@ -148,133 +121,62 @@ export default function SellScanScreen() {
     return false;
   }, [navigation]);
 
-  const handleScan = async (
-    code: string,
-    source: "HID" | "CAMERA" | "MANUAL" = "HID"
-  ) => {
-    const trimmed = code.trim();
-    if (!trimmed || isResolving || priceModal) return;
+  const handleStoreInactive = useCallback(() => {
+    setStoreActive(false);
+  }, []);
 
-    const now = Date.now();
-    const last = lastScanRef.current;
-    if (last && last.code === trimmed && last.mode === mode && now - last.ts < 500) {
-      return;
-    }
-    lastScanRef.current = { code: trimmed, mode, ts: now };
-
-    if (storeActive === false) {
-      Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
-      return;
-    }
-
-    if (source === "HID") {
-      notifyHidScan(true);
-    }
-    setIsResolving(true);
-
-    try {
-      const result = await resolveScan({
-        scanValue: trimmed,
-        mode
-      });
-
-      if (result.action === "IGNORED") {
-        return;
-      }
-
-      if (mode === "DIGITISE") {
-        if (result.action === "ALREADY_DIGITISED") {
-          Alert.alert("Already saved", "Already digitised / known.");
-          return;
-        }
-        Alert.alert("Saved", POS_MESSAGES.digitiseSaved);
-        return;
-      }
-
-      if (result.action === "ADD_TO_CART" && result.product.priceMinor !== null) {
-        addProductToCart(result.product);
-        return;
-      }
-
-      if (result.action === "PROMPT_PRICE") {
-        setPriceInput("");
-        setPriceModal({ product: result.product });
-        return;
-      }
-
-      Alert.alert("Scan Result", "Unable to add item from scan.");
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (await handleDeviceAuthError(error)) {
-          return;
-        }
-        if (error.message === "store_inactive") {
-          setStoreActive(false);
-          Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
-          return;
-        }
-        if (error.message === "store not found") {
-          Alert.alert("Store Missing", "Store not found. Check Superadmin setup.");
-          return;
-        }
-      }
-      Alert.alert("Scan Failed", "Could not resolve scan. Check connection.");
-    } finally {
-      setIsResolving(false);
-    }
-  };
+  useEffect(() => {
+    setScanRuntime({
+      intent: "SELL",
+      mode,
+      storeActive,
+      onNotice: setScanNotice,
+      onDeviceAuthError: handleDeviceAuthError,
+      onStoreInactive: handleStoreInactive
+    });
+  }, [handleDeviceAuthError, handleStoreInactive, mode, storeActive]);
 
   const commitHidScan = (raw: string) => {
     const value = raw.trim();
     hidBufferRef.current = "";
     setHidInput("");
     if (value) {
-      void handleScan(value, "HID");
+      notifyHidScan(true);
+      void handleGlobalScan(value);
     }
   };
 
   const handleHidChange = (text: string) => {
-    if (scanDisabled || manualEntry) return;
+    if (scanDisabled) return;
     hidBufferRef.current = text;
     setHidInput(text);
   };
 
   const handleHidSubmit = () => {
-    if (scanDisabled || manualEntry) return;
+    if (scanDisabled) return;
     commitHidScan(hidBufferRef.current);
   };
 
   const handleHidKeyPress = (event: { nativeEvent: { key: string } }) => {
-    if (scanDisabled || manualEntry) return;
+    if (scanDisabled) return;
     if (event.nativeEvent.key === "Enter") {
       commitHidScan(hidBufferRef.current);
     }
   };
 
-  const enableManualEntry = () => {
-    if (scanDisabled) return;
-    setManualEntry(true);
-  };
-
-  const handleManualSubmit = () => {
-    if (scanDisabled) return;
-    const value = scanInput.trim();
-    if (!value) return;
-    setScanInput("");
-    void handleScan(value, "MANUAL");
-  };
-
   const handleOpenCamera = async () => {
     if (cameraDisabled) return;
-    setManualEntry(false);
     if (wasHidScannerActive()) {
-      Alert.alert("Scanner Active", "HID scanner detected. Use the scanner to scan.");
+      setScanNotice({ tone: "info", message: "HID scanner detected. Use the scanner to scan." });
       return;
     }
     if (!cameraPermission?.granted) {
       const result = await requestCameraPermission();
       if (!result.granted) {
-        Alert.alert("Camera Required", "Allow camera access to scan barcodes.");
+        setScanNotice({
+          tone: "warning",
+          message: "Camera permission is required to scan barcodes."
+        });
         return;
       }
     }
@@ -286,53 +188,7 @@ export default function SellScanScreen() {
     if (!value) return;
     setCameraScanned(true);
     setScannerOpen(false);
-    void handleScan(value, "CAMERA");
-  };
-
-  const handlePriceSubmit = async () => {
-    if (!priceModal || priceSubmitting) return;
-
-    const parsed = Number(priceInput);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      Alert.alert("Invalid Price", "Enter a valid selling price.");
-      return;
-    }
-
-    const priceMinor = Math.round(parsed * 100);
-    setPriceSubmitting(true);
-
-    try {
-      const updated = await setProductPrice({
-        productId: priceModal.product.id,
-        priceMinor
-      });
-      addProductToCart(updated, priceMinor);
-      setPriceModal(null);
-      setPriceInput("");
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (await handleDeviceAuthError(error)) {
-          return;
-        }
-        if (error.message === "store_inactive") {
-          setStoreActive(false);
-          Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
-          return;
-        }
-        if (error.message === "product not found") {
-          Alert.alert("Product Missing", "Product not found. Re-scan the item.");
-          return;
-        }
-      }
-      Alert.alert("Price Save Failed", "Could not save price. Try again.");
-    } finally {
-      setPriceSubmitting(false);
-    }
-  };
-
-  const handlePriceCancel = () => {
-    setPriceModal(null);
-    setPriceInput("");
+    void handleGlobalScan(value);
   };
 
   const handleClearCart = () => {
@@ -457,17 +313,11 @@ export default function SellScanScreen() {
 
   useEffect(() => {
     if (scannerOpen) return;
-    if (manualEntry) {
-      requestAnimationFrame(() => {
-        manualInputRef.current?.focus();
-      });
-      return;
-    }
     if (scanDisabled) return;
     requestAnimationFrame(() => {
       hidInputRef.current?.focus();
     });
-  }, [manualEntry, scannerOpen, scanDisabled]);
+  }, [scannerOpen, scanDisabled]);
 
   /* ---------- UI ---------- */
 
@@ -524,6 +374,19 @@ export default function SellScanScreen() {
           </View>
         </View>
       </Pressable>
+
+      {scanNotice && (
+        <View
+          style={[
+            styles.scanNotice,
+            scanNotice.tone === "warning" && styles.scanNoticeWarning,
+            scanNotice.tone === "error" && styles.scanNoticeError,
+            scanNotice.tone === "info" && styles.scanNoticeInfo
+          ]}
+        >
+          <Text style={styles.scanNoticeText}>{scanNotice.message}</Text>
+        </View>
+      )}
 
       {/* CART (SELL ONLY) */}
       {mode === "SELL" && hasItems && (
@@ -654,59 +517,12 @@ export default function SellScanScreen() {
         autoComplete="off"
         caretHidden
         contextMenuHidden
-        editable={!scanDisabled && !manualEntry}
+        editable={!scanDisabled}
         inputMode="none"
         showSoftInputOnFocus={false}
         style={styles.hidInput}
       />
 
-      <Modal
-        visible={priceModal !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={handlePriceCancel}
-      >
-        <KeyboardAvoidingView
-          style={styles.priceOverlay}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          <View style={styles.priceCard}>
-            <Text style={styles.priceTitle}>Enter selling price</Text>
-            <Text style={styles.priceSubtitle}>
-              {priceModal?.product.name ?? "Scanned item"}
-            </Text>
-            <Text style={styles.priceHint}>{POS_MESSAGES.pricePrompt}</Text>
-
-            <TextInput
-              style={styles.priceInput}
-              value={priceInput}
-              onChangeText={setPriceInput}
-              placeholder="Price"
-              keyboardType="decimal-pad"
-              autoFocus
-            />
-
-            <View style={styles.priceActions}>
-              <Pressable
-                style={styles.priceCancel}
-                onPress={handlePriceCancel}
-                disabled={priceSubmitting}
-              >
-                <Text style={styles.priceCancelText}>Cancel</Text>
-              </Pressable>
-              <Pressable
-                style={styles.priceSave}
-                onPress={handlePriceSubmit}
-                disabled={priceSubmitting}
-              >
-                <Text style={styles.priceSaveText}>
-                  {priceSubmitting ? "Saving..." : "Save"}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
@@ -796,6 +612,32 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
+  },
+  scanNotice: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  scanNoticeWarning: {
+    borderColor: theme.colors.warning,
+    backgroundColor: theme.colors.warningSoft,
+  },
+  scanNoticeError: {
+    borderColor: theme.colors.error,
+    backgroundColor: theme.colors.errorSoft,
+  },
+  scanNoticeInfo: {
+    borderColor: theme.colors.info,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  scanNoticeText: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "600",
   },
   hidInput: {
     position: "absolute",
