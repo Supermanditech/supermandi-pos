@@ -21,6 +21,7 @@ export const POS_MESSAGES = {
   syncPending: (count: number) => `Sync pending: ${count} bills. Keep the app open for a minute.`,
   printerMissing: "Printer not connected. You can still bill; printing will be available once connected.",
   scannerMissing: "Scanner not ready. You can still type barcodes.",
+  scanStorm: "Too many scans. Pause for a moment.",
   digitiseSaved: "Saved. You can scan the next product.",
   pricePrompt: "New item found. Enter the price to add it to cart.",
   newItemWarning: "⚠ New item detected — confirm stock later",

@@ -67,6 +67,10 @@ export async function ensureCoreSchema(): Promise<void> {
       bill_ref TEXT NOT NULL UNIQUE,
       offline_receipt_ref TEXT NULL,
       subtotal_minor INTEGER NOT NULL,
+      item_discount_minor INTEGER NOT NULL DEFAULT 0,
+      cart_discount_minor INTEGER NOT NULL DEFAULT 0,
+      cart_discount_type TEXT NULL,
+      cart_discount_value NUMERIC NULL,
       discount_minor INTEGER NOT NULL DEFAULT 0,
       total_minor INTEGER NOT NULL,
       status TEXT NOT NULL,
@@ -79,6 +83,10 @@ export async function ensureCoreSchema(): Promise<void> {
       product_id TEXT NOT NULL REFERENCES products(id),
       quantity INTEGER NOT NULL,
       price_minor INTEGER NOT NULL,
+      line_subtotal_minor INTEGER NOT NULL DEFAULT 0,
+      discount_type TEXT NULL,
+      discount_value NUMERIC NULL,
+      discount_minor INTEGER NOT NULL DEFAULT 0,
       line_total_minor INTEGER NOT NULL
     );
 
@@ -161,6 +169,14 @@ export async function ensureCoreSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS inventory (
+      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      quantity INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (store_id, product_id)
+    );
+
     CREATE TABLE IF NOT EXISTS consumer_orders (
       id TEXT PRIMARY KEY,
       store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
@@ -221,6 +237,8 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS purchases_created_at_idx ON purchases (created_at DESC);
     CREATE INDEX IF NOT EXISTS purchase_items_purchase_id_idx ON purchase_items (purchase_id);
     CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
+    CREATE INDEX IF NOT EXISTS inventory_store_id_idx ON inventory (store_id);
+    CREATE INDEX IF NOT EXISTS inventory_product_id_idx ON inventory (product_id);
     CREATE INDEX IF NOT EXISTS consumer_orders_store_id_idx ON consumer_orders (store_id);
     CREATE INDEX IF NOT EXISTS consumer_orders_created_at_idx ON consumer_orders (created_at DESC);
     CREATE INDEX IF NOT EXISTS consumer_order_items_order_id_idx ON consumer_order_items (order_id);
@@ -248,6 +266,16 @@ export async function ensureCoreSchema(): Promise<void> {
 
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS offline_receipt_ref TEXT NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS item_discount_minor INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS cart_discount_minor INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS cart_discount_type TEXT NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS cart_discount_value NUMERIC NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_minor INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS line_subtotal_minor INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_type TEXT NULL;
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_value NUMERIC NULL;
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_minor INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS line_total_minor INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE collections ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS device_token TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS label TEXT NULL;

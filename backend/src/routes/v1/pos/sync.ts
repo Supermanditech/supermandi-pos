@@ -19,6 +19,18 @@ type SyncResult = {
   error?: string;
 };
 
+type DiscountInput = {
+  type: "percentage" | "fixed";
+  value: number;
+  reason?: string;
+};
+
+type NormalizedDiscount = {
+  type: "percentage" | "fixed";
+  value: number;
+  reason?: string;
+};
+
 function asTrimmedString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -32,6 +44,25 @@ function buildBillRef(): string {
   const ts = Date.now().toString().slice(-6);
   const rand = Math.floor(100 + Math.random() * 900).toString();
   return `${ts}${rand}`;
+}
+
+function normalizeDiscount(discount: DiscountInput | null | undefined): NormalizedDiscount | null {
+  if (!discount) return null;
+  if (discount.type !== "percentage" && discount.type !== "fixed") return null;
+  const value = Number(discount.value);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return { type: discount.type, value, reason: discount.reason };
+}
+
+function calculateDiscountAmount(baseAmount: number, discount: NormalizedDiscount | null): number {
+  if (!discount) return 0;
+  const safeBase = Math.max(0, Math.round(baseAmount));
+  const safeValue = Math.max(0, Number.isFinite(discount.value) ? discount.value : 0);
+
+  if (discount.type === "percentage") {
+    return Math.min(Math.round(safeBase * (safeValue / 100)), safeBase);
+  }
+  return Math.min(Math.round(safeValue), safeBase);
 }
 
 async function ensureProductByBarcode(
@@ -94,6 +125,25 @@ async function upsertRetailerPrice(
     DO UPDATE SET selling_price_minor = EXCLUDED.selling_price_minor, price_updated_at = NOW()
     `,
     [params.storeId, params.productId, params.priceMinor]
+  );
+}
+
+async function upsertInventory(
+  client: PoolClient,
+  params: {
+    storeId: string;
+    productId: string;
+    quantity: number;
+  }
+): Promise<void> {
+  await client.query(
+    `
+    INSERT INTO inventory (store_id, product_id, quantity, updated_at)
+    VALUES ($1, $2, $3, NOW())
+    ON CONFLICT (store_id, product_id)
+    DO UPDATE SET quantity = inventory.quantity + EXCLUDED.quantity, updated_at = NOW()
+    `,
+    [params.storeId, params.productId, params.quantity]
   );
 }
 
@@ -232,7 +282,12 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             asTrimmedString((payload as any)?.offlineReceiptRef) ??
             asTrimmedString((payload as any)?.billRef);
           const items = Array.isArray((payload as any)?.items) ? (payload as any).items : [];
-          const discountMinor = Math.max(0, Math.round(asNumber((payload as any)?.discountMinor) ?? 0));
+          const discountMinorRaw = asNumber((payload as any)?.discountMinor);
+          const cartDiscountRaw = (payload as any)?.cartDiscount as DiscountInput | null | undefined;
+          const normalizedCartDiscount = normalizeDiscount(cartDiscountRaw ?? null);
+          if (cartDiscountRaw && !normalizedCartDiscount) {
+            throw new Error("invalid cart discount");
+          }
           const createdAt = asTrimmedString((payload as any)?.createdAt);
 
           if (!saleId || !offlineReceiptRef || items.length === 0) {
@@ -260,13 +315,43 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             continue;
           }
 
-          const computedSubtotal = items.reduce((sum: number, item: any) => {
+          let computedSubtotal = 0;
+          let itemDiscountMinor = 0;
+          const computedItems = items.map((item: any) => {
             const qtyRaw = asNumber(item?.quantity);
             const priceRaw = asNumber(item?.priceMinor);
             const qty = qtyRaw === null ? 0 : Math.round(qtyRaw);
             const price = priceRaw === null ? 0 : Math.round(priceRaw);
-            return sum + qty * price;
-          }, 0);
+            const discount = normalizeDiscount(item?.itemDiscount ?? null);
+            if (item?.itemDiscount && !discount) {
+              throw new Error("invalid item discount");
+            }
+            const lineSubtotal = qty * price;
+            const lineDiscount = calculateDiscountAmount(lineSubtotal, discount);
+            const lineTotal = Math.max(0, lineSubtotal - lineDiscount);
+            computedSubtotal += lineSubtotal;
+            itemDiscountMinor += lineDiscount;
+            return {
+              ...item,
+              quantity: qty,
+              priceMinor: price,
+              lineSubtotal,
+              lineDiscount,
+              lineTotal,
+              discount
+            };
+          });
+
+          const fallbackCartDiscount =
+            normalizedCartDiscount ??
+            (discountMinorRaw !== null && discountMinorRaw > 0
+              ? { type: "fixed", value: Math.round(discountMinorRaw) }
+              : null);
+          const cartDiscountMinor = calculateDiscountAmount(
+            Math.max(0, computedSubtotal - itemDiscountMinor),
+            fallbackCartDiscount
+          );
+          const discountMinor = itemDiscountMinor + cartDiscountMinor;
           const computedTotal = Math.max(0, computedSubtotal - discountMinor);
 
           let billRef = buildBillRef();
@@ -282,12 +367,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
                   bill_ref,
                   offline_receipt_ref,
                   subtotal_minor,
+                  item_discount_minor,
+                  cart_discount_minor,
+                  cart_discount_type,
+                  cart_discount_value,
                   discount_minor,
                   total_minor,
                   status,
                   created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()))
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, COALESCE($14, NOW()))
                 `,
                 [
                   saleId,
@@ -296,6 +385,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
                   billRef,
                   offlineReceiptRef,
                   computedSubtotal,
+                  itemDiscountMinor,
+                  cartDiscountMinor,
+                  fallbackCartDiscount?.type ?? null,
+                  fallbackCartDiscount?.value ?? null,
                   discountMinor,
                   computedTotal,
                   "CREATED",
@@ -316,7 +409,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             throw new Error("failed to insert sale");
           }
 
-          for (const item of items) {
+          for (const item of computedItems) {
             const barcode = asTrimmedString(item?.barcode);
             const name = asTrimmedString(item?.name);
             const quantityRaw = asNumber(item?.quantity);
@@ -331,13 +424,34 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const productId = await ensureProductByBarcode(client, { barcode, name, currency: "INR" });
             await ensureRetailerProduct(client, { storeId, productId });
 
-            const lineTotal = priceMinor * quantity;
             await client.query(
               `
-              INSERT INTO sale_items (id, sale_id, product_id, quantity, price_minor, line_total_minor)
-              VALUES ($1, $2, $3, $4, $5, $6)
+              INSERT INTO sale_items (
+                id,
+                sale_id,
+                product_id,
+                quantity,
+                price_minor,
+                line_subtotal_minor,
+                discount_type,
+                discount_value,
+                discount_minor,
+                line_total_minor
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
               `,
-              [randomUUID(), saleId, productId, quantity, priceMinor, lineTotal]
+              [
+                randomUUID(),
+                saleId,
+                productId,
+                quantity,
+                priceMinor,
+                item.lineSubtotal,
+                item.discount?.type ?? null,
+                item.discount?.value ?? null,
+                item.lineDiscount,
+                item.lineTotal
+              ]
             );
           }
 
@@ -413,6 +527,123 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }
 
           collectionMappings.push({ collectionId, serverCollectionId: collectionId });
+        } else if (type === "PURCHASE_SUBMIT") {
+          const purchaseId = asTrimmedString((payload as any)?.purchaseId);
+          const supplierName = asTrimmedString((payload as any)?.supplierName);
+          const items = Array.isArray((payload as any)?.items) ? (payload as any).items : [];
+          const createdAt = asTrimmedString((payload as any)?.createdAt);
+
+          if (!purchaseId || items.length === 0) {
+            throw new Error("invalid purchase payload");
+          }
+
+          const existingPurchase = await client.query(
+            `SELECT id, store_id FROM purchases WHERE id = $1`,
+            [purchaseId]
+          );
+          if ((existingPurchase.rowCount ?? 0) > 0) {
+            const existing = existingPurchase.rows[0];
+            if (existing.store_id !== storeId) {
+              throw new Error("purchase not found");
+            }
+            await client.query("COMMIT");
+            results.push({ eventId, status: "duplicate_ignored" });
+            continue;
+          }
+
+          const parsedItems: Array<{
+            barcode: string;
+            name: string;
+            quantity: number;
+            purchasePriceMinor: number;
+            sellingPriceMinor: number;
+            currency: string;
+          }> = [];
+
+          for (const item of items) {
+            const barcode = asTrimmedString(item?.barcode);
+            const name = asTrimmedString(item?.name);
+            const quantityRaw = asNumber(item?.quantity);
+            const purchasePriceRaw = asNumber(item?.purchasePriceMinor);
+            const sellingPriceRaw = asNumber(item?.sellingPriceMinor);
+            const currency = asTrimmedString(item?.currency) ?? "INR";
+
+            const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
+            const purchasePriceMinor = purchasePriceRaw === null ? null : Math.round(purchasePriceRaw);
+            const sellingPriceMinor = sellingPriceRaw === null ? null : Math.round(sellingPriceRaw);
+
+            if (!barcode || !name || !name.trim()) {
+              throw new Error("invalid purchase item");
+            }
+            if (!quantity || quantity <= 0) {
+              throw new Error("invalid purchase item");
+            }
+            if (!purchasePriceMinor || purchasePriceMinor <= 0) {
+              throw new Error("invalid purchase item");
+            }
+            if (!sellingPriceMinor || sellingPriceMinor <= 0) {
+              throw new Error("invalid purchase item");
+            }
+
+            parsedItems.push({
+              barcode,
+              name,
+              quantity,
+              purchasePriceMinor,
+              sellingPriceMinor,
+              currency
+            });
+          }
+
+          const currency = parsedItems[0]?.currency ?? "INR";
+          if (parsedItems.some((item) => item.currency !== currency)) {
+            throw new Error("mixed currencies are not supported");
+          }
+
+          const totalMinor = parsedItems.reduce(
+            (sum, item) => sum + item.purchasePriceMinor * item.quantity,
+            0
+          );
+
+          await client.query(
+            `
+            INSERT INTO purchases (id, store_id, supplier_name, total_minor, currency, created_at)
+            VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()))
+            `,
+            [purchaseId, storeId, supplierName ?? null, totalMinor, currency, createdAt]
+          );
+
+          for (const item of parsedItems) {
+            const productId = await ensureProductByBarcode(client, {
+              barcode: item.barcode,
+              name: item.name,
+              currency: item.currency
+            });
+
+            await ensureRetailerProduct(client, { storeId, productId });
+            await upsertRetailerPrice(client, { storeId, productId, priceMinor: item.sellingPriceMinor });
+
+            await client.query(
+              `
+              INSERT INTO purchase_items (id, purchase_id, product_id, quantity, unit_cost_minor, line_total_minor)
+              VALUES ($1, $2, $3, $4, $5, $6)
+              `,
+              [
+                randomUUID(),
+                purchaseId,
+                productId,
+                item.quantity,
+                item.purchasePriceMinor,
+                item.purchasePriceMinor * item.quantity
+              ]
+            );
+
+            await upsertInventory(client, {
+              storeId,
+              productId,
+              quantity: item.quantity
+            });
+          }
         } else {
           throw new Error("unknown event type");
         }
