@@ -310,7 +310,6 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS purchases_store_id_idx ON purchases (store_id);
     CREATE INDEX IF NOT EXISTS purchases_created_at_idx ON purchases (created_at DESC);
     CREATE INDEX IF NOT EXISTS purchase_items_purchase_id_idx ON purchase_items (purchase_id);
-    CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
     CREATE INDEX IF NOT EXISTS purchase_items_variant_id_idx ON purchase_items (variant_id);
     CREATE INDEX IF NOT EXISTS consumer_orders_store_id_idx ON consumer_orders (store_id);
     CREATE INDEX IF NOT EXISTS consumer_orders_created_at_idx ON consumer_orders (created_at DESC);
@@ -368,6 +367,10 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS printing_mode TEXT NULL;
     ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
   `);
 
   await pool.query(`
