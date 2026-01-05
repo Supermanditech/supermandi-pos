@@ -161,7 +161,7 @@ export async function buildBarcodeSheetPdf(params: {
 
   const buffers: Buffer[] = [];
   const cache = new Map<string, Buffer>();
-  doc.on("data", (chunk) => buffers.push(chunk as Buffer));
+  doc.on("data", (chunk: Buffer) => buffers.push(chunk));
 
   const contentWidth = doc.page.width - layout.margin * 2;
   const contentHeight = doc.page.height - layout.margin * 2;
