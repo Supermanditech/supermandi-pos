@@ -13,6 +13,7 @@ import {
   fetchAnalyticsPurchases,
   fetchAnalyticsConsumerSales
 } from "./api/analytics";
+import { fetchBarcodeSheetPdf } from "./api/barcodeSheets";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
@@ -144,6 +145,13 @@ export default function App() {
   const [storeNameEdits, setStoreNameEdits] = useState<Record<string, string>>({});
   const [storeNameSaving, setStoreNameSaving] = useState<Record<string, boolean>>({});
   const [storeNameError, setStoreNameError] = useState<string>("");
+
+  // Barcode sheets
+  const [barcodeSheetStoreId, setBarcodeSheetStoreId] = useState<string>("");
+  const [barcodeSheetTier, setBarcodeSheetTier] = useState<"tier1" | "tier2">("tier1");
+  const [barcodeSheetBusy, setBarcodeSheetBusy] = useState<boolean>(false);
+  const [barcodeSheetError, setBarcodeSheetError] = useState<string>("");
+  const [barcodeSheetSuccess, setBarcodeSheetSuccess] = useState<string>("");
 
   const [deviceRecords, setDeviceRecords] = useState<DeviceRecord[]>([]);
   const [devicesError, setDevicesError] = useState<string>("");
@@ -562,6 +570,79 @@ export default function App() {
       setStoreNameError(e?.message ? String(e.message) : "Failed to update store name.");
     } finally {
       setStoreNameSaving((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
+  function resetBarcodeSheetNotice() {
+    setBarcodeSheetError("");
+    setBarcodeSheetSuccess("");
+  }
+
+  async function handleBarcodeSheetDownload() {
+    const storeId = barcodeSheetStoreId.trim();
+    resetBarcodeSheetNotice();
+    if (!storeId) {
+      setBarcodeSheetError("Store ID is required.");
+      return;
+    }
+
+    setBarcodeSheetBusy(true);
+    try {
+      const blob = await fetchBarcodeSheetPdf({ storeId, tier: barcodeSheetTier });
+      const filename = `supermandi-barcodes-${storeId}-${barcodeSheetTier}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setBarcodeSheetSuccess("Barcode sheet downloaded.");
+    } catch (e: any) {
+      setBarcodeSheetError(e?.message ? String(e.message) : "Failed to download barcode sheet.");
+    } finally {
+      setBarcodeSheetBusy(false);
+    }
+  }
+
+  async function handleBarcodeSheetShare() {
+    const storeId = barcodeSheetStoreId.trim();
+    resetBarcodeSheetNotice();
+    if (!storeId) {
+      setBarcodeSheetError("Store ID is required.");
+      return;
+    }
+
+    if (!(navigator as any).share) {
+      setBarcodeSheetError("Web Share is not supported. Download the PDF instead.");
+      return;
+    }
+
+    setBarcodeSheetBusy(true);
+    try {
+      const blob = await fetchBarcodeSheetPdf({ storeId, tier: barcodeSheetTier });
+      const filename = `supermandi-barcodes-${storeId}-${barcodeSheetTier}.pdf`;
+      const file = new File([blob], filename, { type: "application/pdf" });
+      const canShare = typeof (navigator as any).canShare === "function"
+        ? (navigator as any).canShare({ files: [file] })
+        : true;
+
+      if (!canShare) {
+        setBarcodeSheetError("This device cannot share PDF files. Download the file instead.");
+        return;
+      }
+
+      await (navigator as any).share({
+        files: [file],
+        title: "SuperMandi Barcode Sheet"
+      });
+      setBarcodeSheetSuccess("Share sheet opened.");
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+      setBarcodeSheetError(e?.message ? String(e.message) : "Failed to share barcode sheet.");
+    } finally {
+      setBarcodeSheetBusy(false);
     }
   }
 
@@ -1281,6 +1362,50 @@ export default function App() {
               </table>
             </div>
           )}
+
+          <div className="cardHeader" style={{ paddingTop: 0 }}>
+            <div className="cardTitle">Barcode Sheets</div>
+            <div className="muted">Generate A4 PDF sheets with existing barcodes (Tier-1 / Tier-2).</div>
+          </div>
+
+          {barcodeSheetError && <div className="banner" style={{ margin: "0 16px 12px" }}>{barcodeSheetError}</div>}
+          {barcodeSheetSuccess && <div className="muted" style={{ margin: "0 16px 12px" }}>{barcodeSheetSuccess}</div>}
+
+          <div className="tableWrap" style={{ paddingTop: 0 }}>
+            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+              <div className="control">
+                <label>Store ID</label>
+                <input
+                  value={barcodeSheetStoreId}
+                  onChange={(e) => setBarcodeSheetStoreId(e.target.value)}
+                  placeholder="store-1"
+                />
+              </div>
+              <div className="control">
+                <label>Tier</label>
+                <select
+                  value={barcodeSheetTier}
+                  onChange={(e) => setBarcodeSheetTier(e.target.value as "tier1" | "tier2")}
+                  className="selectSmall"
+                >
+                  <option value="tier1">Tier 1 (large)</option>
+                  <option value="tier2">Tier 2 (compact)</option>
+                </select>
+              </div>
+              <div className="control">
+                <label>&nbsp;</label>
+                <button onClick={handleBarcodeSheetDownload} disabled={barcodeSheetBusy}>
+                  {barcodeSheetBusy ? "Working..." : "Download PDF"}
+                </button>
+              </div>
+              <div className="control">
+                <label>&nbsp;</label>
+                <button onClick={handleBarcodeSheetShare} disabled={barcodeSheetBusy}>
+                  {barcodeSheetBusy ? "Working..." : "Share to WhatsApp"}
+                </button>
+              </div>
+            </div>
+          </div>
 
           <div className="cardHeader" style={{ paddingTop: 0 }}>
             <div className="cardTitle">Stores (activity)</div>

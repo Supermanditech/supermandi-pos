@@ -20,7 +20,9 @@
     "dotenv": "^16.4.5",
     "drizzle-orm": "^0.45.1",
     "express": "^4.19.2",
+    "bwip-js": "^4.6.0",
     "jsonwebtoken": "^9.0.2",
+    "pdfkit": "^0.15.0",
     "openai": "^6.15.0",
     "pg": "^8.16.3"
   },

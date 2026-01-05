@@ -9,6 +9,62 @@ export async function ensureCoreSchema(): Promise<void> {
   if (!pool) return;
 
   await pool.query(`
+    DO $$
+    BEGIN
+      IF to_regclass('public.variants') IS NULL AND to_regclass('public.products') IS NOT NULL THEN
+        ALTER TABLE products RENAME TO variants;
+      END IF;
+      IF to_regclass('public.retailer_variants') IS NULL AND to_regclass('public.retailer_products') IS NOT NULL THEN
+        ALTER TABLE retailer_products RENAME TO retailer_variants;
+      END IF;
+    END $$;
+
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'retailer_variants' AND column_name = 'product_id'
+      ) THEN
+        ALTER TABLE retailer_variants RENAME COLUMN product_id TO variant_id;
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'scan_events' AND column_name = 'product_id'
+      ) THEN
+        ALTER TABLE scan_events RENAME COLUMN product_id TO variant_id;
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'sale_items' AND column_name = 'product_id'
+      ) THEN
+        ALTER TABLE sale_items RENAME COLUMN product_id TO variant_id;
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'purchase_items' AND column_name = 'product_id'
+      ) THEN
+        ALTER TABLE purchase_items RENAME COLUMN product_id TO variant_id;
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'consumer_order_items' AND column_name = 'product_id'
+      ) THEN
+        ALTER TABLE consumer_order_items RENAME COLUMN product_id TO variant_id;
+      END IF;
+    END $$;
+
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'variants' AND column_name = 'barcode' AND is_nullable = 'NO'
+      ) THEN
+        ALTER TABLE variants ALTER COLUMN barcode DROP NOT NULL;
+      END IF;
+    END $$;
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS stores (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -29,23 +85,52 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
-      barcode TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
       category TEXT NULL,
-      currency TEXT NOT NULL DEFAULT 'INR',
       retailer_status TEXT NULL,
       enrichment_status TEXT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
-    CREATE TABLE IF NOT EXISTS retailer_products (
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    CREATE TABLE IF NOT EXISTS variants (
+      id TEXT PRIMARY KEY,
       product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      category TEXT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      unit_base TEXT NULL,
+      size_base INTEGER NULL,
+      retailer_status TEXT NULL,
+      enrichment_status TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS barcodes (
+      barcode TEXT PRIMARY KEY,
+      variant_id TEXT NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
+      barcode_type TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS retailer_variants (
+      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      variant_id TEXT NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
       selling_price_minor INTEGER NULL,
       digitised_by_retailer BOOLEAN NOT NULL DEFAULT TRUE,
       price_updated_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (store_id, variant_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS bulk_inventory (
+      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      base_unit TEXT NOT NULL,
+      quantity_base INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (store_id, product_id)
     );
 
@@ -56,7 +141,7 @@ export async function ensureCoreSchema(): Promise<void> {
       scan_value TEXT NOT NULL,
       mode TEXT NOT NULL,
       action TEXT NOT NULL,
-      product_id TEXT NULL REFERENCES products(id) ON DELETE SET NULL,
+      variant_id TEXT NULL REFERENCES variants(id) ON DELETE SET NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
@@ -67,10 +152,6 @@ export async function ensureCoreSchema(): Promise<void> {
       bill_ref TEXT NOT NULL UNIQUE,
       offline_receipt_ref TEXT NULL,
       subtotal_minor INTEGER NOT NULL,
-      item_discount_minor INTEGER NOT NULL DEFAULT 0,
-      cart_discount_minor INTEGER NOT NULL DEFAULT 0,
-      cart_discount_type TEXT NULL,
-      cart_discount_value NUMERIC NULL,
       discount_minor INTEGER NOT NULL DEFAULT 0,
       total_minor INTEGER NOT NULL,
       status TEXT NOT NULL,
@@ -80,13 +161,9 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS sale_items (
       id TEXT PRIMARY KEY,
       sale_id TEXT NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
-      product_id TEXT NOT NULL REFERENCES products(id),
+      variant_id TEXT NOT NULL REFERENCES variants(id),
       quantity INTEGER NOT NULL,
       price_minor INTEGER NOT NULL,
-      line_subtotal_minor INTEGER NOT NULL DEFAULT 0,
-      discount_type TEXT NULL,
-      discount_value NUMERIC NULL,
-      discount_minor INTEGER NOT NULL DEFAULT 0,
       line_total_minor INTEGER NOT NULL
     );
 
@@ -162,19 +239,14 @@ export async function ensureCoreSchema(): Promise<void> {
       id TEXT PRIMARY KEY,
       purchase_id TEXT NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
       product_id TEXT NULL REFERENCES products(id) ON DELETE SET NULL,
+      variant_id TEXT NULL REFERENCES variants(id) ON DELETE SET NULL,
       sku TEXT NULL,
       quantity INTEGER NOT NULL,
+      unit TEXT NULL,
+      quantity_base INTEGER NULL,
       unit_cost_minor INTEGER NOT NULL,
       line_total_minor INTEGER NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-
-    CREATE TABLE IF NOT EXISTS inventory (
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-      quantity INTEGER NOT NULL DEFAULT 0,
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (store_id, product_id)
     );
 
     CREATE TABLE IF NOT EXISTS consumer_orders (
@@ -190,7 +262,7 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS consumer_order_items (
       id TEXT PRIMARY KEY,
       order_id TEXT NOT NULL REFERENCES consumer_orders(id) ON DELETE CASCADE,
-      product_id TEXT NULL REFERENCES products(id) ON DELETE SET NULL,
+      variant_id TEXT NULL REFERENCES variants(id) ON DELETE SET NULL,
       sku TEXT NULL,
       quantity INTEGER NOT NULL,
       price_minor INTEGER NOT NULL,
@@ -215,8 +287,10 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS pos_device_enrollments_expires_idx ON pos_device_enrollments (expires_at);
     CREATE INDEX IF NOT EXISTS processed_events_device_idx ON processed_events (device_id);
     CREATE INDEX IF NOT EXISTS processed_events_received_idx ON processed_events (received_at DESC);
-    CREATE INDEX IF NOT EXISTS products_barcode_idx ON products (barcode);
-    CREATE INDEX IF NOT EXISTS retailer_products_store_id_idx ON retailer_products (store_id);
+    CREATE INDEX IF NOT EXISTS variants_product_id_idx ON variants (product_id);
+    CREATE INDEX IF NOT EXISTS barcodes_variant_id_idx ON barcodes (variant_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS barcodes_variant_type_uidx ON barcodes (variant_id, barcode_type);
+    CREATE INDEX IF NOT EXISTS retailer_products_store_id_idx ON retailer_variants (store_id);
     CREATE INDEX IF NOT EXISTS scan_events_created_at_idx ON scan_events (created_at DESC);
     CREATE INDEX IF NOT EXISTS scan_events_store_id_idx ON scan_events (store_id);
     CREATE INDEX IF NOT EXISTS scan_events_dedupe_idx ON scan_events (store_id, mode, scan_value, created_at DESC);
@@ -237,12 +311,11 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS purchases_created_at_idx ON purchases (created_at DESC);
     CREATE INDEX IF NOT EXISTS purchase_items_purchase_id_idx ON purchase_items (purchase_id);
     CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
-    CREATE INDEX IF NOT EXISTS inventory_store_id_idx ON inventory (store_id);
-    CREATE INDEX IF NOT EXISTS inventory_product_id_idx ON inventory (product_id);
+    CREATE INDEX IF NOT EXISTS purchase_items_variant_id_idx ON purchase_items (variant_id);
     CREATE INDEX IF NOT EXISTS consumer_orders_store_id_idx ON consumer_orders (store_id);
     CREATE INDEX IF NOT EXISTS consumer_orders_created_at_idx ON consumer_orders (created_at DESC);
     CREATE INDEX IF NOT EXISTS consumer_order_items_order_id_idx ON consumer_order_items (order_id);
-    CREATE INDEX IF NOT EXISTS consumer_order_items_product_id_idx ON consumer_order_items (product_id);
+    CREATE INDEX IF NOT EXISTS consumer_order_items_product_id_idx ON consumer_order_items (variant_id);
   `);
 
   await pool.query(`
@@ -261,21 +334,30 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS retailer_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS enrichment_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT NULL;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS product_id TEXT NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS name TEXT NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS category TEXT NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'INR';
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS unit_base TEXT NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS size_base INTEGER NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS retailer_status TEXT NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS enrichment_status TEXT NULL;
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE variants ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS product_id TEXT NULL;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS unit TEXT NULL;
+    ALTER TABLE purchase_items ADD COLUMN IF NOT EXISTS quantity_base INTEGER NULL;
 
     ALTER TABLE scan_events ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
 
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS offline_receipt_ref TEXT NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
-    ALTER TABLE sales ADD COLUMN IF NOT EXISTS item_discount_minor INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE sales ADD COLUMN IF NOT EXISTS cart_discount_minor INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE sales ADD COLUMN IF NOT EXISTS cart_discount_type TEXT NULL;
-    ALTER TABLE sales ADD COLUMN IF NOT EXISTS cart_discount_value NUMERIC NULL;
-    ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_minor INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS line_subtotal_minor INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_type TEXT NULL;
-    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_value NUMERIC NULL;
-    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS discount_minor INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS line_total_minor INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'INR';
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS item_name TEXT NULL;
+    ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS barcode TEXT NULL;
     ALTER TABLE collections ADD COLUMN IF NOT EXISTS device_id TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS device_token TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS label TEXT NULL;
@@ -286,6 +368,63 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS printing_mode TEXT NULL;
     ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
+  `);
+
+  await pool.query(`
+    UPDATE variants
+    SET product_id = id
+    WHERE product_id IS NULL;
+
+    INSERT INTO products (id, name, category, retailer_status, enrichment_status, created_at, updated_at)
+    SELECT v.product_id, v.name, v.category, v.retailer_status, v.enrichment_status, v.created_at, v.updated_at
+    FROM variants v
+    LEFT JOIN products p ON p.id = v.product_id
+    WHERE v.product_id IS NOT NULL AND p.id IS NULL;
+
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'variants' AND column_name = 'barcode'
+      ) THEN
+        INSERT INTO barcodes (barcode, variant_id, barcode_type, created_at)
+        SELECT v.barcode, v.id, 'supermandi', COALESCE(v.created_at, NOW())
+        FROM variants v
+        WHERE v.barcode IS NOT NULL
+        ON CONFLICT (barcode) DO NOTHING;
+      END IF;
+    END $$;
+
+    UPDATE purchase_items pi
+    SET product_id = v.product_id
+    FROM variants v
+    WHERE pi.product_id IS NULL
+      AND pi.variant_id IS NOT NULL
+      AND v.id = pi.variant_id;
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_schema = 'public'
+          AND table_name = 'variants'
+          AND constraint_name = 'variants_product_id_fkey'
+      ) THEN
+        ALTER TABLE variants
+          ADD CONSTRAINT variants_product_id_fkey
+          FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE;
+      END IF;
+    END $$;
+
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'variants' AND column_name = 'product_id' AND is_nullable = 'YES'
+      ) THEN
+        ALTER TABLE variants ALTER COLUMN product_id SET NOT NULL;
+      END IF;
+    END $$;
   `);
 
   const storeCount = await pool.query("SELECT COUNT(*)::int AS count FROM stores");

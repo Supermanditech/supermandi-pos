@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { getPool } from "../db/client";
+import { attachBarcodeToVariant, ensureSupermandiBarcode, isSupermandiBarcode } from "./inventoryService";
 
 export type ScanMode = "SELL" | "DIGITISE";
 export type ScanAction =
@@ -38,22 +39,28 @@ async function fetchProductByBarcode(
   const pool = getPool();
   if (!pool) return null;
 
+  const trimmed = barcode.trim();
+  const lookupBarcode = isSupermandiBarcode(trimmed) ? trimmed.toUpperCase() : trimmed;
   const res = await pool.query(
     `
     SELECT
-      p.id,
-      p.name,
-      p.barcode,
-      p.currency,
-      rp.selling_price_minor,
-      COALESCE(rp.digitised_by_retailer, FALSE) AS digitised_by_retailer
-    FROM products p
-    LEFT JOIN retailer_products rp
-      ON rp.product_id = p.id AND rp.store_id = $2
-    WHERE p.barcode = $1
+      v.id,
+      v.name,
+      COALESCE(sb.barcode, b.barcode) AS barcode,
+      v.currency,
+      rv.selling_price_minor,
+      COALESCE(rv.digitised_by_retailer, FALSE) AS digitised_by_retailer
+    FROM barcodes b
+    JOIN variants v
+      ON v.id = b.variant_id
+    LEFT JOIN barcodes sb
+      ON sb.variant_id = v.id AND sb.barcode_type = 'supermandi'
+    LEFT JOIN retailer_variants rv
+      ON rv.variant_id = v.id AND rv.store_id = $2
+    WHERE b.barcode = $1
     LIMIT 1
     `,
-    [barcode, storeId]
+    [lookupBarcode, storeId]
   );
 
   const row = res.rows[0];
@@ -162,69 +169,116 @@ function isDuplicateScanMemory(key: string): boolean {
   return false;
 }
 
-async function createProduct(
-  barcode: string,
-  storeId: string
-): Promise<PosProduct> {
+async function createProduct(barcode: string, storeId: string): Promise<PosProduct> {
   const pool = getPool();
   if (!pool) {
     throw new Error("db_unavailable");
   }
 
-  const productId = randomUUID();
-  const productName = buildProductName(barcode);
+  const trimmed = barcode.trim();
+  const productName = buildProductName(trimmed);
 
-  const productRes = await pool.query(
-    `
-    INSERT INTO products (id, barcode, name, currency, retailer_status, enrichment_status)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (barcode)
-    DO UPDATE SET
-      name = EXCLUDED.name,
-      updated_at = NOW(),
-      retailer_status = COALESCE(products.retailer_status, EXCLUDED.retailer_status),
-      enrichment_status = COALESCE(products.enrichment_status, EXCLUDED.enrichment_status)
-    RETURNING id, name, barcode, currency
-    `,
-    [productId, barcode, productName, "INR", "retailer_created", "pending_enrichment"]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const product = productRes.rows[0];
+    const existingRes = await client.query(
+      `
+      SELECT v.id, v.name, v.currency, b.barcode
+      FROM barcodes b
+      JOIN variants v ON v.id = b.variant_id
+      WHERE b.barcode = $1
+      LIMIT 1
+      `,
+      [isSupermandiBarcode(trimmed) ? trimmed.toUpperCase() : trimmed]
+    );
 
-  await pool.query(
-    `
-    INSERT INTO retailer_products (store_id, product_id, selling_price_minor, digitised_by_retailer)
-    VALUES ($1, $2, $3, $4)
-    ON CONFLICT (store_id, product_id)
-    DO UPDATE SET digitised_by_retailer = EXCLUDED.digitised_by_retailer
-    `,
-    [storeId, product.id, null, true]
-  );
+    if (existingRes.rows[0]) {
+      await client.query("ROLLBACK");
+      const existing = await fetchProductByBarcode(barcode, storeId);
+      if (existing) {
+        await ensureRetailerVariant(storeId, existing.id);
+        return existing;
+      }
+      const row = existingRes.rows[0];
+      return {
+        id: row.id,
+        name: row.name,
+        barcode: row.barcode,
+        currency: row.currency,
+        priceMinor: null,
+        digitisedByRetailer: false,
+      };
+    }
 
-  return {
-    id: product.id,
-    name: product.name,
-    barcode: product.barcode,
-    currency: product.currency,
-    priceMinor: null,
-    digitisedByRetailer: true,
-  };
+    const productId = randomUUID();
+    const variantId = randomUUID();
+
+    await client.query(
+      `
+      INSERT INTO products (id, name, category, retailer_status, enrichment_status)
+      VALUES ($1, $2, $3, $4, $5)
+      `,
+      [productId, productName, null, "retailer_created", "pending_enrichment"]
+    );
+
+    await client.query(
+      `
+      INSERT INTO variants (id, product_id, name, currency)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [variantId, productId, productName, "INR"]
+    );
+
+    await attachBarcodeToVariant(client, trimmed, variantId);
+    const supermandiBarcode = await ensureSupermandiBarcode(client, variantId);
+
+    await client.query(
+      `
+      INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (store_id, variant_id)
+      DO UPDATE SET digitised_by_retailer = EXCLUDED.digitised_by_retailer
+      `,
+      [storeId, variantId, null, true]
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      id: variantId,
+      name: productName,
+      barcode: supermandiBarcode,
+      currency: "INR",
+      priceMinor: null,
+      digitisedByRetailer: true,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    const existing = await fetchProductByBarcode(barcode, storeId);
+    if (existing) {
+      return existing;
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
-async function ensureRetailerProduct(
+async function ensureRetailerVariant(
   storeId: string,
-  productId: string
+  variantId: string
 ): Promise<void> {
   const pool = getPool();
   if (!pool) return;
 
   await pool.query(
     `
-    INSERT INTO retailer_products (store_id, product_id, selling_price_minor, digitised_by_retailer)
+    INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer)
     VALUES ($1, $2, $3, $4)
-    ON CONFLICT (store_id, product_id) DO NOTHING
+    ON CONFLICT (store_id, variant_id) DO NOTHING
     `,
-    [storeId, productId, null, true]
+    [storeId, variantId, null, true]
   );
 }
 
@@ -234,17 +288,17 @@ async function recordScanEvent(params: {
   scanValue: string;
   mode: ScanMode;
   action: ScanAction;
-  productId: string | null;
+  variantId: string | null;
 }): Promise<void> {
   const pool = getPool();
   if (!pool) return;
 
   await pool.query(
     `
-    INSERT INTO scan_events (id, store_id, device_id, scan_value, mode, action, product_id)
+    INSERT INTO scan_events (id, store_id, device_id, scan_value, mode, action, variant_id)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
     `,
-    [randomUUID(), params.storeId, params.deviceId, params.scanValue, params.mode, params.action, params.productId]
+    [randomUUID(), params.storeId, params.deviceId, params.scanValue, params.mode, params.action, params.variantId]
   );
 }
 
@@ -293,34 +347,34 @@ export async function resolveScan(
 
   if (mode === "DIGITISE") {
     if (existing) {
-      await ensureRetailerProduct(storeId, existing.id);
+      await ensureRetailerVariant(storeId, existing.id);
       const action: ScanAction = "ALREADY_DIGITISED";
-      await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: existing.id });
+      await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, variantId: existing.id });
       return { action, product: existing };
     }
 
     const created = await createProduct(barcode, storeId);
     const action: ScanAction = "DIGITISED";
-    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: created.id });
+    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, variantId: created.id });
     return { action, product: created };
   }
 
   if (!existing) {
     const created = await createProduct(barcode, storeId);
     const action: ScanAction = "PROMPT_PRICE";
-    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: created.id });
+    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, variantId: created.id });
     return { action, product: created };
   }
 
   if (existing.priceMinor === null) {
     const action: ScanAction = "PROMPT_PRICE";
-    await ensureRetailerProduct(storeId, existing.id);
-    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: existing.id });
+    await ensureRetailerVariant(storeId, existing.id);
+    await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, variantId: existing.id });
     return { action, product: existing };
   }
 
   const action: ScanAction = "ADD_TO_CART";
-  await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, productId: existing.id });
+  await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, variantId: existing.id });
   return { action, product: existing };
 }
 
@@ -358,7 +412,13 @@ export async function updateProductPrice(
   }
 
   const productRes = await pool.query(
-    `SELECT id, name, barcode, currency FROM products WHERE id = $1`,
+    `
+    SELECT v.id, v.name, v.currency, b.barcode
+    FROM variants v
+    LEFT JOIN barcodes b
+      ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
+    WHERE v.id = $1
+    `,
     [productId]
   );
 
@@ -367,9 +427,9 @@ export async function updateProductPrice(
 
   await pool.query(
     `
-    INSERT INTO retailer_products (store_id, product_id, selling_price_minor, digitised_by_retailer, price_updated_at)
+    INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer, price_updated_at)
     VALUES ($1, $2, $3, $4, NOW())
-    ON CONFLICT (store_id, product_id)
+    ON CONFLICT (store_id, variant_id)
     DO UPDATE SET selling_price_minor = EXCLUDED.selling_price_minor, price_updated_at = NOW()
     `,
     [storeId, productId, Math.round(priceMinor), true]
@@ -378,7 +438,7 @@ export async function updateProductPrice(
   return {
     id: product.id,
     name: product.name,
-    barcode: product.barcode,
+    barcode: product.barcode ?? "",
     currency: product.currency,
     priceMinor: Math.round(priceMinor),
     digitisedByRetailer: true,
