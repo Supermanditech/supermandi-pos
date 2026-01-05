@@ -370,7 +370,17 @@ export async function ensureCoreSchema(): Promise<void> {
   `);
 
   await pool.query(`
-    CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'purchase_items'
+          AND column_name = 'product_id'
+      ) THEN
+        CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
+      END IF;
+    END $$;
   `);
 
   await pool.query(`
