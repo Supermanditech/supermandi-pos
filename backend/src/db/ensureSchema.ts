@@ -287,7 +287,6 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS pos_device_enrollments_expires_idx ON pos_device_enrollments (expires_at);
     CREATE INDEX IF NOT EXISTS processed_events_device_idx ON processed_events (device_id);
     CREATE INDEX IF NOT EXISTS processed_events_received_idx ON processed_events (received_at DESC);
-    CREATE INDEX IF NOT EXISTS variants_product_id_idx ON variants (product_id);
     CREATE INDEX IF NOT EXISTS barcodes_variant_id_idx ON barcodes (variant_id);
     CREATE UNIQUE INDEX IF NOT EXISTS barcodes_variant_type_uidx ON barcodes (variant_id, barcode_type);
     CREATE INDEX IF NOT EXISTS retailer_products_store_id_idx ON retailer_variants (store_id);
@@ -379,6 +378,20 @@ export async function ensureCoreSchema(): Promise<void> {
           AND column_name = 'product_id'
       ) THEN
         CREATE INDEX IF NOT EXISTS purchase_items_product_id_idx ON purchase_items (product_id);
+      END IF;
+    END $$;
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'variants'
+          AND column_name = 'product_id'
+      ) THEN
+        CREATE INDEX IF NOT EXISTS variants_product_id_idx ON variants (product_id);
       END IF;
     END $$;
   `);
