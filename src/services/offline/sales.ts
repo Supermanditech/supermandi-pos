@@ -9,7 +9,7 @@ export type OfflineSaleItem = {
   name: string;
   priceMinor: number;
   quantity: number;
-  itemDiscount?: DiscountInput;
+  itemDiscount?: DiscountInput | null;
 };
 
 export type OfflineSaleInput = {

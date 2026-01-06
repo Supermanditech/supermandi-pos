@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Text } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import NetInfo from "@react-native-community/netinfo";
 import { printerService } from "../services/printerService";
+import { composePosMessage, getPrimaryTone, type UiStatus } from "../utils/uiStatus";
 import { theme } from "../theme";
 
 type PosStatusBarProps = {
@@ -12,9 +13,20 @@ type PosStatusBarProps = {
   mode?: "SELL" | "DIGITISE";
   storeName?: string | null;
   storeId?: string | null;
+  printerOk?: boolean | null;
+  scannerOk?: boolean | null;
 };
 
-export default function PosStatusBar(_: PosStatusBarProps) {
+export default function PosStatusBar({
+  storeActive,
+  deviceActive,
+  pendingOutboxCount,
+  mode,
+  storeName,
+  storeId,
+  printerOk,
+  scannerOk
+}: PosStatusBarProps) {
   const [networkState, setNetworkState] = useState<{
     isConnected: boolean | null;
     isInternetReachable: boolean | null;
@@ -76,6 +88,24 @@ export default function PosStatusBar(_: PosStatusBarProps) {
     }
   } as const;
 
+  const pendingCount =
+    typeof pendingOutboxCount === "number" && Number.isFinite(pendingOutboxCount)
+      ? pendingOutboxCount
+      : 0;
+  const networkOnline =
+    networkState.isConnected !== false && networkState.isInternetReachable !== false;
+  const status: UiStatus = {
+    storeActive: storeActive ?? null,
+    deviceActive: deviceActive ?? null,
+    pendingOutboxCount: pendingCount,
+    networkOnline,
+    mode
+  };
+  const statusMessage = composePosMessage(status);
+  const statusTone = tones[getPrimaryTone(status)];
+  const storeLabel = storeName ?? "Store";
+  const storeIdLabel = storeId ?? "--";
+
   const networkStatus =
     networkState.isConnected === false
       ? "disconnected"
@@ -88,12 +118,15 @@ export default function PosStatusBar(_: PosStatusBarProps) {
   const networkLabel =
     networkStatus === "online" ? "Online" : networkStatus === "offline" ? "Offline" : "Disconnected";
 
-  const printerTone = printerConnected ? tones.success : tones.warning;
+  const printerReady =
+    typeof printerOk === "boolean" ? printerOk : printerConnected;
+  const printerTone = printerReady ? tones.success : tones.warning;
   const printerIcon = "printer";
-  const printerLabel = printerConnected ? "Printer connected" : "Printer not connected";
+  const printerLabel = printerReady ? "Printer connected" : "Printer not connected";
 
-  const scannerTone = scannerActive ? tones.success : tones.neutral;
-  const scannerLabel = scannerActive ? "Scanner active" : "Scanner idle";
+  const scannerReady = scannerOk !== false;
+  const scannerTone = scannerActive ? tones.success : scannerReady ? tones.neutral : tones.warning;
+  const scannerLabel = scannerActive ? "Scanner active" : scannerReady ? "Scanner idle" : "Scanner not ready";
 
   return (
     <View style={styles.container}>
@@ -131,6 +164,15 @@ export default function PosStatusBar(_: PosStatusBarProps) {
           <MaterialCommunityIcons name="barcode-scan" size={16} color={scannerTone.text} />
         </View>
       </View>
+
+      <Text
+        style={styles.statusLine}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        {storeLabel} | ID {storeIdLabel} | {" "}
+        <Text style={[styles.statusMessage, { color: statusTone.text }]}>{statusMessage}</Text>
+      </Text>
     </View>
   );
 }
@@ -158,5 +200,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+  },
+  statusLine: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  statusMessage: {
+    fontWeight: "700",
   },
 });

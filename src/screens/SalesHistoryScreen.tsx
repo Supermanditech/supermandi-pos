@@ -71,7 +71,13 @@ export default function SalesHistoryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Sales History</Text>
+        <View style={styles.headerLeft}>
+          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
+            <MaterialCommunityIcons name="chevron-left" size={20} color={theme.colors.primary} />
+            <Text style={styles.backText}>Back</Text>
+          </Pressable>
+          <Text style={styles.title}>Bills</Text>
+        </View>
         <Pressable style={styles.refresh} onPress={loadBills} disabled={loading}>
           <MaterialCommunityIcons name="refresh" size={18} color={theme.colors.primary} />
           <Text style={styles.refreshText}>{loading ? "Loading..." : "Refresh"}</Text>
@@ -107,6 +113,20 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4
+  },
+  backText: {
+    color: theme.colors.primary,
+    fontWeight: "700"
   },
   title: {
     fontSize: 20,

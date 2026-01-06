@@ -1,291 +1,148 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  AppState,
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Pressable,
+  ActivityIndicator,
   FlatList,
-  Alert,
   Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import QRCode from "react-native-qrcode-svg";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
-import PosStatusBar from "../components/PosStatusBar";
-import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
-import { notifyHidScan, wasHidScannerActive } from "../services/hidScannerService";
-import { useCartStore, type CartItem as StoreCartItem } from "../stores/cartStore";
-import { handleScan as handleGlobalScan, setScanRuntime, type ScanNotice } from "../services/scan/handleScan";
-import { fetchUiStatus } from "../services/api/uiStatusApi";
+import { useCartStore } from "../stores/cartStore";
+import type { CartItem } from "../stores/cartStore";
 import { formatMoney } from "../utils/money";
-import { ApiError } from "../services/api/apiClient";
-import { clearDeviceSession } from "../services/deviceSession";
-import { POS_MESSAGES } from "../utils/uiStatus";
+import { buildCustomSkuBarcode } from "../utils/customSku";
 import { offlineDb } from "../services/offline/localDb";
 import { theme } from "../theme";
 
-/* ---------------- NAV TYPES ---------------- */
-
-type RootStackParamList = {
-  SellScan: undefined;
-  CollectPayment: undefined;
-  Payment: undefined;
-  EnrollDevice: undefined;
-  DeviceBlocked: undefined;
+type SellScanScreenProps = {
+  storeActive: boolean | null;
+  scanDisabled: boolean;
+  onOpenScanner: () => void;
 };
 
-type NavProp = NativeStackNavigationProp<RootStackParamList, "SellScan">;
+type RootStackParamList = {
+  Payment: undefined;
+};
 
-/* ---------------- TYPES ---------------- */
+type Nav = NativeStackNavigationProp<RootStackParamList, "Payment">;
 
-type PosMode = "SELL" | "DIGITISE";
-
-type AddOverlayItem = {
+type SkuItem = {
   barcode: string;
   name: string;
-  currency: string;
+  currency: string | null;
   priceMinor: number | null;
 };
 
-/* ---------------- SCREEN ---------------- */
+type DiscountType = "percentage" | "fixed";
 
-export default function SellScanScreen() {
-  const navigation = useNavigation<NavProp>();
-  const hidInputRef = useRef<TextInput>(null);
-  const hidBufferRef = useRef("");
+const PAGE_SIZE = 40;
+const NUM_COLUMNS = 2;
+const CUSTOM_UNITS = ["g", "kg", "ml", "l", "pcs"] as const;
+type CustomUnit = (typeof CUSTOM_UNITS)[number];
 
-  /* ---------- STATE ---------- */
-  const [mode, setMode] = useState<PosMode>("SELL");
-  const [hidInput, setHidInput] = useState("");
-  const [storeActive, setStoreActive] = useState<boolean | null>(null);
-  const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
-  const [storeName, setStoreName] = useState<string | null>(null);
-  const [deviceStoreId, setDeviceStoreId] = useState<string | null>(null);
-  const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
-  const [discountInput, setDiscountInput] = useState("");
-  const [discountEditing, setDiscountEditing] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [cameraScanned, setCameraScanned] = useState(false);
-  const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
-  const [barcodePreview, setBarcodePreview] = useState<{ name: string; barcode: string } | null>(null);
-  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
-  const [lastAddMessage, setLastAddMessage] = useState<string | null>(null);
-  const [undoVisible, setUndoVisible] = useState(false);
-  const [addOverlayOpen, setAddOverlayOpen] = useState(false);
-  const [addQuery, setAddQuery] = useState("");
-  const [addResults, setAddResults] = useState<AddOverlayItem[]>([]);
-  const [addLoading, setAddLoading] = useState(false);
-  const [selectedAddItems, setSelectedAddItems] = useState<Record<string, AddOverlayItem>>({});
-  const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const addSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+export default function SellScanScreen({
+  storeActive,
+  scanDisabled,
+  onOpenScanner,
+}: SellScanScreenProps) {
+  const navigation = useNavigation<Nav>();
   const {
     items,
     total,
-    discountAmount,
+    subtotal,
+    discount,
+    discountTotal,
     mutationHistory,
+    undoLastAction,
+    locked,
+    updateQuantity,
     applyDiscount,
     removeDiscount,
-    clearCart: clearCartStore,
-    undoLastAction,
-    lockCart,
-    locked
   } = useCartStore();
 
-  /* ---------- DERIVED ---------- */
+  const [catalogItems, setCatalogItems] = useState<SkuItem[]>([]);
+  const [catalogPage, setCatalogPage] = useState(0);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogHasMore, setCatalogHasMore] = useState(true);
+
+  const [lastAddMessage, setLastAddMessage] = useState<string | null>(null);
+  const [undoVisible, setUndoVisible] = useState(false);
+  const [flashActive, setFlashActive] = useState(false);
+
+  const [addOverlayOpen, setAddOverlayOpen] = useState(false);
+  const [addQuery, setAddQuery] = useState("");
+  const [addResults, setAddResults] = useState<SkuItem[]>([]);
+  const [addPage, setAddPage] = useState(0);
+  const [addLoading, setAddLoading] = useState(false);
+  const [addHasMore, setAddHasMore] = useState(true);
+  const [selectedAddItems, setSelectedAddItems] = useState<Record<string, SkuItem>>({});
+  const [cartExpanded, setCartExpanded] = useState(false);
+  const [discountType, setDiscountType] = useState<DiscountType>("percentage");
+  const [discountValue, setDiscountValue] = useState("");
+  const [customSkuOpen, setCustomSkuOpen] = useState(false);
+  const [customSkuQty, setCustomSkuQty] = useState("1");
+  const [customSkuUnit, setCustomSkuUnit] = useState<CustomUnit>("pcs");
+  const [customSkuPrice, setCustomSkuPrice] = useState("");
+  const [customSkuError, setCustomSkuError] = useState<string | null>(null);
+
+  const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const currency = items[0]?.currency ?? "INR";
   const totalLabel = formatMoney(total, currency);
+  const subtotalLabel = formatMoney(subtotal, currency);
+  const discountAmountLabel = formatMoney(Math.max(0, discountTotal ?? 0), currency);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-  const hasItems = items.length > 0;
-  const collectDisabled = storeActive === false;
-  const payDisabled = !hasItems || storeActive === false || locked;
-  const cameraDisabled = storeActive === false;
-  const scanDisabled = cameraDisabled || scannerOpen;
+  const canPay = itemCount > 0 && storeActive !== false && !locked;
+  const canOpenCart = itemCount > 0;
+  const canEditCart = storeActive !== false && !locked;
+  const selectedAddCount = Object.keys(selectedAddItems).length;
+  const parseDiscountInput = (value: string) => {
+    const normalized = value.replace(/[^0-9.]/g, "");
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return parsed;
+  };
+  const formatFixedDiscount = (minor: number) => {
+    const major = minor / 100;
+    return Number.isInteger(major) ? String(major) : major.toFixed(2);
+  };
+  const parseCustomQuantity = (value: string) => {
+    const normalized = value.replace(/[^0-9.]/g, "");
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.round(parsed);
+  };
+  const parseCustomPrice = (value: string) => {
+    const normalized = value.replace(/[^0-9.]/g, "");
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.round(parsed * 100);
+  };
+  const customSkuReady =
+    canEditCart && parseCustomQuantity(customSkuQty) > 0 && parseCustomPrice(customSkuPrice) > 0;
+  const discountValueNumber = parseDiscountInput(discountValue);
+  const discountValueMinor =
+    discountType === "fixed" ? Math.round(discountValueNumber * 100) : discountValueNumber;
+  const canApplyDiscount = canEditCart && discountValueMinor > 0;
+  const canClearDiscount = canEditCart && Boolean(discount);
+
   const cartHint = locked
     ? "Cart locked"
-    : discountAmount > 0
-      ? "Discount applied"
-      : itemCount === 0
-        ? "Scan or add items"
-        : itemCount <= 2
-          ? "Add more items"
-          : "Review bill";
-  const selectedAddCount = Object.keys(selectedAddItems).length;
+    : itemCount === 0
+      ? "Ready"
+      : itemCount <= 2
+        ? "Keep scanning"
+        : "Review cart";
 
-  /* ---------- ACTIONS ---------- */
-
-  const applyDiscountInput = () => {
-    const parsed = Number(discountInput);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      removeDiscount();
-      return;
-    }
-
-    const minor = Math.round(parsed * 100);
-    applyDiscount({ type: "fixed", value: minor });
-  };
-
-  const handleCollectPayment = () => {
-    if (storeActive === false) {
-      Alert.alert("POS Inactive", POS_MESSAGES.storeInactive);
-      return;
-    }
-    navigation.navigate("CollectPayment");
-  };
-
-  const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
-    if (error.message === "device_inactive") {
-      navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
-      return true;
-    }
-    if (error.message === "device_unauthorized") {
-      await clearDeviceSession();
-      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
-      return true;
-    }
-    if (error.message === "device_not_enrolled") {
-      navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
-      return true;
-    }
-    return false;
-  }, [navigation]);
-
-  const handleStoreInactive = useCallback(() => {
-    setStoreActive(false);
-  }, []);
-
-  useEffect(() => {
-    setScanRuntime({
-      intent: "SELL",
-      mode,
-      storeActive,
-      onNotice: setScanNotice,
-      onDeviceAuthError: handleDeviceAuthError,
-      onStoreInactive: handleStoreInactive
-    });
-  }, [handleDeviceAuthError, handleStoreInactive, mode, storeActive]);
-
-  const commitHidScan = (raw: string) => {
-    const value = raw.trim();
-    hidBufferRef.current = "";
-    setHidInput("");
-    if (value) {
-      notifyHidScan(true);
-      void handleGlobalScan(value);
-    }
-  };
-
-  const handleHidChange = (text: string) => {
-    if (scanDisabled) return;
-    hidBufferRef.current = text;
-    setHidInput(text);
-  };
-
-  const handleHidSubmit = () => {
-    if (scanDisabled) return;
-    commitHidScan(hidBufferRef.current);
-  };
-
-  const handleHidKeyPress = (event: { nativeEvent: { key: string } }) => {
-    if (scanDisabled) return;
-    if (event.nativeEvent.key === "Enter") {
-      commitHidScan(hidBufferRef.current);
-    }
-  };
-
-  const handleOpenCamera = async () => {
-    if (cameraDisabled) return;
-    if (wasHidScannerActive()) {
-      setScanNotice({ tone: "info", message: "HID scanner detected. Use the scanner to scan." });
-      return;
-    }
-    if (!cameraPermission?.granted) {
-      const result = await requestCameraPermission();
-      if (!result.granted) {
-        setScanNotice({
-          tone: "warning",
-          message: "Camera permission is required to scan barcodes."
-        });
-        return;
-      }
-    }
-    setCameraScanned(false);
-    setScannerOpen(true);
-  };
-
-  const handleCameraScan = (value: string) => {
-    if (!value) return;
-    setCameraScanned(true);
-    setScannerOpen(false);
-    void handleGlobalScan(value);
-  };
-
-  const handleClearCart = () => {
-    if (items.length === 0) return;
-
-    Alert.alert("Clear Cart", "Cancel current sale?", [
-      { text: "No" },
-      {
-        text: "Yes",
-        style: "destructive",
-        onPress: () => clearCartStore(),
-      },
-    ]);
-  };
-
-  const addItemFromOverlay = (item: AddOverlayItem) => {
-    useCartStore.getState().addItem({
-      id: item.barcode,
-      name: item.name,
-      priceMinor: item.priceMinor ?? 0,
-      currency: item.currency,
-      barcode: item.barcode
-    });
-
-    if (item.priceMinor === null) {
-      setScanNotice({ tone: "warning", message: POS_MESSAGES.newItemWarning });
-    }
-  };
-
-  const toggleSelectedItem = (item: AddOverlayItem) => {
-    setSelectedAddItems((prev) => {
-      if (prev[item.barcode]) {
-        const next = { ...prev };
-        delete next[item.barcode];
-        return next;
-      }
-      return { ...prev, [item.barcode]: item };
-    });
-  };
-
-  const handleAddSelected = () => {
-    const entries = Object.values(selectedAddItems);
-    if (entries.length === 0) return;
-    entries.forEach(addItemFromOverlay);
-    setSelectedAddItems({});
-  };
-
-  const handleAddOverlaySubmit = () => {
-    const value = addQuery.trim();
-    if (!value) return;
-    void handleGlobalScan(value);
-    setAddQuery("");
-  };
-
-  const closeAddOverlay = () => {
-    setAddOverlayOpen(false);
-    setAddQuery("");
-    setAddResults([]);
-    setSelectedAddItems({});
-  };
-
-  const clearAddTimers = () => {
+  const clearTimers = () => {
     if (addMessageTimerRef.current) {
       clearTimeout(addMessageTimerRef.current);
       addMessageTimerRef.current = null;
@@ -294,135 +151,146 @@ export default function SellScanScreen() {
       clearTimeout(undoTimerRef.current);
       undoTimerRef.current = null;
     }
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current);
+      flashTimerRef.current = null;
+    }
   };
 
   const handleUndo = () => {
-    clearAddTimers();
+    clearTimers();
     setLastAddMessage(null);
     setUndoVisible(false);
     undoLastAction();
   };
 
-  /* ---------- EFFECTS ---------- */
+  const loadCatalog = useCallback(async (reset: boolean) => {
+    if (catalogLoading) return;
+    if (!catalogHasMore && !reset) return;
+
+    const page = reset ? 0 : catalogPage;
+    const offset = page * PAGE_SIZE;
+
+    setCatalogLoading(true);
+    if (reset) {
+      setCatalogItems([]);
+    }
+
+    const params: Array<string | number> = [PAGE_SIZE, offset];
+    const sql = `
+      SELECT
+        p.barcode as barcode,
+        p.name as name,
+        p.currency as currency,
+        pr.price_minor as priceMinor
+      FROM offline_products p
+      LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
+      ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    try {
+      const rows = await offlineDb.all<SkuItem>(sql, params);
+      setCatalogItems((prev) => (reset ? rows : [...prev, ...rows]));
+      setCatalogHasMore(rows.length === PAGE_SIZE);
+      setCatalogPage(page + 1);
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [catalogHasMore, catalogLoading, catalogPage]);
+
+  const loadAddResults = useCallback(async (reset: boolean) => {
+    if (addLoading) return;
+    if (!addHasMore && !reset) return;
+
+    const query = addQuery.trim().toLowerCase();
+    const page = reset ? 0 : addPage;
+    const offset = page * PAGE_SIZE;
+
+    setAddLoading(true);
+    if (reset) {
+      setAddResults([]);
+    }
+
+    const params: Array<string | number> = [];
+    let sql = `
+      SELECT
+        p.barcode as barcode,
+        p.name as name,
+        p.currency as currency,
+        pr.price_minor as priceMinor
+      FROM offline_products p
+      LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
+    `;
+
+    if (query.length > 0) {
+      const like = `%${query}%`;
+      sql += " WHERE lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?";
+      params.push(like, like);
+    }
+
+    sql += " ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC LIMIT ? OFFSET ?";
+    params.push(PAGE_SIZE, offset);
+
+    try {
+      const rows = await offlineDb.all<SkuItem>(sql, params);
+      setAddResults((prev) => (reset ? rows : [...prev, ...rows]));
+      setAddHasMore(rows.length === PAGE_SIZE);
+      setAddPage(page + 1);
+    } finally {
+      setAddLoading(false);
+    }
+  }, [addHasMore, addLoading, addPage, addQuery]);
+
+  const initialLoadRef = useRef(false);
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadStatus = async () => {
-      try {
-        const status = await fetchUiStatus();
-        if (cancelled) return;
-        setStoreActive(status.storeActive ?? null);
-        setDeviceActive(status.deviceActive ?? null);
-        setDeviceStoreId(status.storeId ?? null);
-        setPendingOutboxCount(status.pendingOutboxCount ?? 0);
-        if (status.deviceActive === false) {
-          navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
-          return;
-        }
-      } catch (error) {
-        if (cancelled) return;
-        if (error instanceof ApiError) {
-          const handled = await handleDeviceAuthError(error);
-          if (handled) return;
-          if (error.message === "store_inactive") {
-            setStoreActive(false);
-            return;
-          }
-          if (error.message === "store not found") {
-            setStoreActive(false);
-            return;
-          }
-        }
-      }
-    };
-
-    loadStatus();
-    const interval = setInterval(loadStatus, 15000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [handleDeviceAuthError, navigation]);
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
+    setCatalogHasMore(true);
+    setCatalogPage(0);
+    void loadCatalog(true);
+  }, [loadCatalog]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!addOverlayOpen) return;
+    const timer = setTimeout(() => {
+      setAddHasMore(true);
+      setAddPage(0);
+      void loadAddResults(true);
+    }, 200);
 
-    const applyInfo = (info: { storeId: string | null; storeName: string | null }) => {
-      if (cancelled) return;
-      setDeviceStoreId(info.storeId ?? null);
-      setStoreName(info.storeName ?? null);
-    };
-
-    const loadCached = async () => {
-      const cached = await getCachedDeviceInfo();
-      if (cached) {
-        applyInfo(cached);
-      }
-    };
-
-    const refresh = async () => {
-      try {
-        const info = await fetchDeviceInfo();
-        applyInfo(info);
-        await cacheDeviceInfo(info);
-      } catch (error) {
-        if (error instanceof ApiError) {
-          await handleDeviceAuthError(error);
-        }
-      }
-    };
-
-    loadCached();
-    void refresh();
-
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        void refresh();
-      }
-    });
-
-    const interval = setInterval(() => {
-      void refresh();
-    }, 5 * 60 * 1000);
-
-    return () => {
-      cancelled = true;
-      subscription.remove();
-      clearInterval(interval);
-    };
-  }, [handleDeviceAuthError]);
+    return () => clearTimeout(timer);
+  }, [addOverlayOpen, addQuery, loadAddResults]);
 
   useEffect(() => {
-    if (discountEditing) return;
-    if (discountAmount > 0) {
-      setDiscountInput((discountAmount / 100).toFixed(2));
+    if (addOverlayOpen) return;
+    setAddQuery("");
+    setAddResults([]);
+    setAddPage(0);
+    setAddHasMore(true);
+    setAddLoading(false);
+    setSelectedAddItems({});
+  }, [addOverlayOpen]);
+
+  useEffect(() => {
+    if (!cartExpanded) return;
+    if (discount) {
+      setDiscountType(discount.type);
+      setDiscountValue(
+        discount.type === "fixed" ? formatFixedDiscount(discount.value) : String(discount.value)
+      );
     } else {
-      setDiscountInput("0.00");
+      setDiscountType("percentage");
+      setDiscountValue("");
     }
-  }, [discountAmount, discountEditing]);
-
-  useEffect(() => {
-    if (items.length === 0) {
-      removeDiscount();
-      setDiscountInput("0.00");
-    }
-  }, [items.length, removeDiscount]);
-
-  useEffect(() => {
-    if (scannerOpen) return;
-    if (scanDisabled) return;
-    requestAnimationFrame(() => {
-      hidInputRef.current?.focus();
-    });
-  }, [scannerOpen, scanDisabled]);
+  }, [cartExpanded, discount]);
 
   useEffect(() => {
     const lastMutation = mutationHistory[mutationHistory.length - 1];
     if (!lastMutation || lastMutation.type !== "UPSERT_ITEM") return;
 
-    const currentItem = items.find(item => item.id === lastMutation.itemId);
+    const currentItem = items.find((item) => item.id === lastMutation.itemId);
     if (!currentItem) return;
 
     const previousQty = lastMutation.previousItem?.quantity ?? 0;
@@ -435,167 +303,360 @@ export default function SellScanScreen() {
       ?? "";
     const variantSuffix = variantLabel ? ` ${variantLabel}` : "";
 
-    clearAddTimers();
-    setLastAddMessage(`✔ ${currentItem.name}${variantSuffix} added`);
+    clearTimers();
+    setLastAddMessage(`Added ${currentItem.name}${variantSuffix}`);
     setUndoVisible(true);
+    setFlashActive(true);
 
-    addMessageTimerRef.current = setTimeout(() => {
-      setLastAddMessage(null);
-    }, 2000);
-
-    undoTimerRef.current = setTimeout(() => {
-      setUndoVisible(false);
-    }, 3000);
+    flashTimerRef.current = setTimeout(() => setFlashActive(false), 260);
+    addMessageTimerRef.current = setTimeout(() => setLastAddMessage(null), 2000);
+    undoTimerRef.current = setTimeout(() => setUndoVisible(false), 3000);
   }, [items, mutationHistory]);
 
   useEffect(() => {
     return () => {
-      clearAddTimers();
+      clearTimers();
     };
   }, []);
 
-  useEffect(() => {
-    if (mode !== "SELL" && addOverlayOpen) {
-      closeAddOverlay();
-    }
-  }, [addOverlayOpen, mode]);
+  const handleAddPress = () => {
+    setAddOverlayOpen(true);
+  };
 
-  useEffect(() => {
-    if (!addOverlayOpen) {
-      if (addSearchTimerRef.current) {
-        clearTimeout(addSearchTimerRef.current);
-        addSearchTimerRef.current = null;
-      }
+  const closeAddOverlay = () => {
+    setAddOverlayOpen(false);
+  };
+
+  const handleOpenCustomSku = () => {
+    if (!canEditCart) return;
+    if (addOverlayOpen) {
+      setAddOverlayOpen(false);
+    }
+    if (cartExpanded) {
+      setCartExpanded(false);
+    }
+    setCustomSkuError(null);
+    setCustomSkuOpen(true);
+  };
+
+  const closeCustomSku = () => {
+    setCustomSkuOpen(false);
+    setCustomSkuError(null);
+  };
+
+  const resetCustomSku = () => {
+    setCustomSkuQty("1");
+    setCustomSkuUnit("pcs");
+    setCustomSkuPrice("");
+  };
+
+  const handleCustomSkuSubmit = () => {
+    if (!customSkuReady) {
+      setCustomSkuError("Enter quantity and price.");
       return;
     }
 
-    if (addSearchTimerRef.current) {
-      clearTimeout(addSearchTimerRef.current);
+    const quantity = parseCustomQuantity(customSkuQty);
+    const priceMinor = parseCustomPrice(customSkuPrice);
+    const suffix = Date.now().toString().slice(-6);
+    const barcode = buildCustomSkuBarcode(`manual_${suffix}`);
+    const unitLabel = customSkuUnit.toUpperCase();
+
+    useCartStore.getState().addItem({
+      id: barcode,
+      name: `Custom SKU (${unitLabel})`,
+      priceMinor,
+      currency,
+      barcode,
+      quantity,
+      metadata: {
+        unit: customSkuUnit,
+      },
+    });
+
+    resetCustomSku();
+    setCustomSkuOpen(false);
+  };
+
+  const handleOpenCart = () => {
+    if (!canOpenCart) return;
+    if (addOverlayOpen) {
+      setAddOverlayOpen(false);
     }
+    setCartExpanded(true);
+  };
 
-    const query = addQuery.trim().toLowerCase();
-    setAddLoading(true);
-    let cancelled = false;
+  const closeCart = () => {
+    setCartExpanded(false);
+  };
 
-    addSearchTimerRef.current = setTimeout(async () => {
-      try {
-        const baseSelect = `
-          SELECT p.barcode as barcode,
-                 p.name as name,
-                 p.currency as currency,
-                 pr.price_minor as priceMinor
-          FROM offline_products p
-          LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
-        `;
-        const params: Array<string | number | null> = [];
-        let sql = baseSelect;
+  const handleApplyDiscount = () => {
+    if (!canApplyDiscount) return;
+    applyDiscount({ type: discountType, value: discountValueMinor });
+  };
 
-        if (query.length > 0) {
-          const like = `%${query}%`;
-          sql += " WHERE lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?";
-          params.push(like, like);
-        }
+  const handleClearDiscount = () => {
+    if (!canClearDiscount) return;
+    removeDiscount();
+    setDiscountValue("");
+  };
 
-        sql += " ORDER BY p.updated_at DESC LIMIT 50";
-        const rows = await offlineDb.all<AddOverlayItem>(sql, params);
-        if (!cancelled) {
-          setAddResults(rows);
-        }
-      } finally {
-        if (!cancelled) {
-          setAddLoading(false);
-        }
+  const handleAddSku = (item: SkuItem) => {
+    if (storeActive === false) return;
+
+    useCartStore.getState().addItem({
+      id: item.barcode,
+      name: item.name,
+      priceMinor: item.priceMinor ?? 0,
+      currency: item.currency ?? "INR",
+      barcode: item.barcode,
+    });
+
+    setCatalogItems((prev) => [item, ...prev.filter((entry) => entry.barcode !== item.barcode)]);
+
+    const now = new Date().toISOString();
+    void offlineDb.run(
+      "UPDATE offline_products SET updated_at = ? WHERE barcode = ?",
+      [now, item.barcode]
+    );
+  };
+
+  const toggleAddSelection = (item: SkuItem) => {
+    setSelectedAddItems((prev) => {
+      const next = { ...prev };
+      if (next[item.barcode]) {
+        delete next[item.barcode];
+      } else {
+        next[item.barcode] = item;
       }
-    }, 200);
+      return next;
+    });
+  };
 
-    return () => {
-      cancelled = true;
-      if (addSearchTimerRef.current) {
-        clearTimeout(addSearchTimerRef.current);
-        addSearchTimerRef.current = null;
-      }
-    };
-  }, [addOverlayOpen, addQuery]);
+  const handleAddSelected = () => {
+    if (storeActive === false || selectedAddCount === 0) return;
+    Object.values(selectedAddItems).forEach((item) => handleAddSku(item));
+    setSelectedAddItems({});
+    setAddOverlayOpen(false);
+  };
 
-  /* ---------- UI ---------- */
+  const renderSkuItem = ({ item }: { item: SkuItem }) => {
+    const priceLabel =
+      item.priceMinor === null
+        ? "--"
+        : formatMoney(item.priceMinor, item.currency ?? "INR");
 
-  return (
-    <View style={styles.container}>
-      {/* REAL STATUS BAR (DEVICE STATE) */}
-      <PosStatusBar
-        storeActive={storeActive}
-        deviceActive={deviceActive}
-        pendingOutboxCount={pendingOutboxCount}
-        mode={mode}
-        storeName={storeName}
-        storeId={deviceStoreId}
-      />
+    return (
+      <Pressable
+        style={[styles.skuCard, storeActive === false && styles.skuCardDisabled]}
+        onPress={() => handleAddSku(item)}
+        disabled={storeActive === false}
+      >
+        <View style={styles.skuCardTop}>
+          <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
+          <View style={styles.pricePill}>
+            <Text style={styles.priceText}>{priceLabel}</Text>
+          </View>
+        </View>
+        <Text style={styles.skuName} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={styles.skuBarcode} numberOfLines={1}>
+          {item.barcode}
+        </Text>
+      </Pressable>
+    );
+  };
 
-      {/* MODE SELECTOR */}
-      <View style={styles.modeRow}>
-        <View style={styles.segmented}>
+  const renderAddRow = ({ item }: { item: SkuItem }) => {
+    const priceLabel =
+      item.priceMinor === null
+        ? "--"
+        : formatMoney(item.priceMinor, item.currency ?? "INR");
+    const selected = Boolean(selectedAddItems[item.barcode]);
+
+    return (
+      <Pressable
+        style={[styles.addRow, selected && styles.addRowSelected]}
+        onPress={() => toggleAddSelection(item)}
+        accessibilityLabel={`Select ${item.name}`}
+      >
+        <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
+        <View style={styles.addRowInfo}>
+          <Text style={styles.addRowName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.addRowMeta} numberOfLines={1}>
+            {item.barcode}
+          </Text>
+        </View>
+        <View style={styles.addRowRight}>
+          <Text style={styles.addRowPrice}>{priceLabel}</Text>
+          <MaterialCommunityIcons
+            name={selected ? "checkbox-marked" : "checkbox-blank-outline"}
+            size={18}
+            color={selected ? theme.colors.primary : theme.colors.textSecondary}
+          />
+        </View>
+      </Pressable>
+    );
+  };
+
+  const renderCartItem = ({ item }: { item: CartItem }) => {
+    const itemCurrency = item.currency ?? currency;
+    const lineTotal = item.priceMinor * item.quantity;
+    const lineTotalLabel = formatMoney(lineTotal, itemCurrency);
+    const unitPriceLabel = formatMoney(item.priceMinor, itemCurrency);
+    const controlsDisabled = !canEditCart;
+
+    return (
+      <View style={styles.cartItemRow}>
+        <View style={styles.cartItemInfo}>
+          <Text style={styles.cartItemName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.cartItemMeta} numberOfLines={1}>
+            {unitPriceLabel} x {item.quantity}
+          </Text>
+        </View>
+        <View style={styles.cartItemControls}>
           <Pressable
-            style={[styles.segment, mode === "SELL" && styles.segmentActive]}
-            onPress={() => setMode("SELL")}
+            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+            onPress={() => updateQuantity(item.id, item.quantity - 1)}
+            disabled={controlsDisabled}
+            accessibilityLabel={`Decrease ${item.name}`}
           >
-            <Text style={[styles.segmentText, mode === "SELL" && styles.segmentTextActive]}>
-              SELL
-            </Text>
+            <MaterialCommunityIcons name="minus" size={16} color={theme.colors.textPrimary} />
           </Pressable>
-
+          <Text style={styles.qtyValue}>{item.quantity}</Text>
           <Pressable
-            style={[styles.segment, mode === "DIGITISE" && styles.segmentActive]}
-            onPress={() => setMode("DIGITISE")}
+            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+            onPress={() => updateQuantity(item.id, item.quantity + 1)}
+            disabled={controlsDisabled}
+            accessibilityLabel={`Increase ${item.name}`}
           >
-            <Text style={[styles.segmentText, mode === "DIGITISE" && styles.segmentTextActive]}>
-              DIGITISE
-            </Text>
+            <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textPrimary} />
           </Pressable>
         </View>
+        <Text style={styles.cartItemTotal}>{lineTotalLabel}</Text>
       </View>
+    );
+  };
 
+  const header = (
+    <View>
       <Pressable
-        style={[styles.scanCard, scanDisabled && styles.ctaDisabled]}
-        onPress={handleOpenCamera}
+        style={[styles.scanPad, scanDisabled && styles.ctaDisabled]}
+        onPress={onOpenScanner}
         disabled={scanDisabled}
+        accessibilityLabel="Open scanner"
       >
-        <View style={styles.scanCardRow}>
-          <View style={styles.scanCardIcon}>
-            <MaterialCommunityIcons name="camera" size={22} color={theme.colors.primary} />
-          </View>
-          <View style={styles.scanCardText}>
-            <Text style={styles.scanCardTitle}>Scan Product to Digitise</Text>
-            <Text style={styles.scanCardSubtitle}>Store/Sale Billing</Text>
-          </View>
-          <View style={styles.scanCardQr}>
-            <MaterialCommunityIcons name="qrcode-scan" size={20} color={theme.colors.primary} />
-          </View>
+        <View style={styles.scanLeft}>
+          <MaterialCommunityIcons name="barcode-scan" size={24} color={theme.colors.primary} />
+        </View>
+        <View style={styles.scanCenter}>
+          <Text style={styles.scanTitle}>Scan here</Text>
+        </View>
+        <View style={styles.scanRight}>
+          <MaterialCommunityIcons name="qrcode-scan" size={22} color={theme.colors.primary} />
         </View>
       </Pressable>
 
-      {mode === "SELL" && (
-        <Pressable
-          style={[styles.addItemsButton, storeActive === false && styles.ctaDisabled]}
-          onPress={() => setAddOverlayOpen(true)}
-          disabled={storeActive === false}
-        >
-          <MaterialCommunityIcons name="plus-circle" size={18} color={theme.colors.primary} />
-          <Text style={styles.addItemsText}>+ ADD ITEMS</Text>
-        </Pressable>
-      )}
+      <Pressable
+        style={[styles.addItemsButton, storeActive === false && styles.ctaDisabled]}
+        onPress={handleAddPress}
+        disabled={storeActive === false}
+      >
+        <Text style={styles.addItemsText}>+ ADD ITEMS</Text>
+      </Pressable>
 
-      {scanNotice && (
-        <View
-          style={[
-            styles.scanNotice,
-            scanNotice.tone === "warning" && styles.scanNoticeWarning,
-            scanNotice.tone === "error" && styles.scanNoticeError,
-            scanNotice.tone === "info" && styles.scanNoticeInfo
-          ]}
-        >
-          <Text style={styles.scanNoticeText}>{scanNotice.message}</Text>
+      <Pressable
+        style={[styles.customSkuButton, !canEditCart && styles.ctaDisabled]}
+        onPress={handleOpenCustomSku}
+        disabled={!canEditCart}
+      >
+        <Text style={styles.customSkuText}>CUSTOM SKU</Text>
+      </Pressable>
+    </View>
+  );
+
+  const handleCheckout = () => {
+    if (!canPay) return;
+    setCartExpanded(false);
+    navigation.navigate("Payment");
+  };
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={catalogItems}
+        keyExtractor={(item) => item.barcode}
+        renderItem={renderSkuItem}
+        numColumns={NUM_COLUMNS}
+        columnWrapperStyle={styles.skuRow}
+        ListHeaderComponent={header}
+        ListEmptyComponent={
+          !catalogLoading ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No SKUs</Text>
+            </View>
+          ) : null
+        }
+        ListFooterComponent={
+          catalogLoading ? (
+            <View style={styles.footerLoading}>
+              <ActivityIndicator color={theme.colors.primary} />
+            </View>
+          ) : null
+        }
+        onEndReached={() => {
+          if (!catalogLoading && catalogHasMore) {
+            void loadCatalog(false);
+          }
+        }}
+        onEndReachedThreshold={0.3}
+        contentContainerStyle={styles.listContent}
+        removeClippedSubviews
+        windowSize={7}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={50}
+      />
+
+      <Pressable
+        style={[
+          styles.cartBar,
+          flashActive && styles.cartBarFlash,
+          !canOpenCart && styles.cartBarDisabled,
+        ]}
+        onPress={handleOpenCart}
+        disabled={!canOpenCart}
+        accessibilityLabel="View cart"
+      >
+        <View style={styles.cartBarTop}>
+          <Text style={styles.cartBarCount}>
+            {itemCount} {itemCount === 1 ? "item" : "items"}
+          </Text>
+          <View style={styles.cartBarTopRight}>
+            {locked ? (
+              <View style={styles.cartBarLocked}>
+                <Text style={styles.cartBarLockedText}>Locked</Text>
+              </View>
+            ) : null}
+            <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+          </View>
         </View>
-      )}
+        <View style={styles.cartBarBottom}>
+          <Text style={styles.cartBarHint} numberOfLines={1}>
+            {lastAddMessage ?? cartHint}
+          </Text>
+          {undoVisible && !locked ? (
+            <Pressable onPress={handleUndo} hitSlop={8}>
+              <Text style={styles.cartBarUndo}>Undo</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </Pressable>
 
       <Modal
         visible={addOverlayOpen}
@@ -603,426 +664,399 @@ export default function SellScanScreen() {
         animationType="fade"
         onRequestClose={closeAddOverlay}
       >
-        <View style={styles.addOverlay}>
-          <View style={styles.addCard}>
+        <Pressable style={styles.addOverlay} onPress={closeAddOverlay}>
+          <Pressable style={styles.addCard} onPress={() => {}}>
             <View style={styles.addHeader}>
               <Text style={styles.addTitle}>Add items</Text>
-              <Pressable onPress={closeAddOverlay}>
-                <Text style={styles.addClose}>Close</Text>
+              <Pressable onPress={closeAddOverlay} hitSlop={8} accessibilityLabel="Close add items">
+                <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
               </Pressable>
             </View>
 
-            <TextInput
-              style={styles.addSearchInput}
-              value={addQuery}
-              onChangeText={setAddQuery}
-              placeholder="Search by name or barcode"
-              returnKeyType="search"
-              onSubmitEditing={handleAddOverlaySubmit}
+            <View style={styles.addSearchRow}>
+              <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textSecondary} />
+              <TextInput
+                style={styles.addSearchInput}
+                value={addQuery}
+                onChangeText={setAddQuery}
+                placeholder="Search SKU"
+                placeholderTextColor={theme.colors.textTertiary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+              />
+              {addQuery ? (
+                <Pressable onPress={() => setAddQuery("")} hitSlop={8} accessibilityLabel="Clear search">
+                  <MaterialCommunityIcons
+                    name="close-circle"
+                    size={18}
+                    color={theme.colors.textSecondary}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <FlatList
+              data={addResults}
+              keyExtractor={(item) => item.barcode}
+              renderItem={renderAddRow}
+              style={styles.addList}
+              contentContainerStyle={styles.addListContent}
+              ListEmptyComponent={
+                !addLoading ? (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>No SKUs</Text>
+                  </View>
+                ) : null
+              }
+              ListFooterComponent={
+                addLoading ? (
+                  <View style={styles.footerLoading}>
+                    <ActivityIndicator color={theme.colors.primary} />
+                  </View>
+                ) : null
+              }
+              onEndReached={() => {
+                if (!addLoading && addHasMore) {
+                  void loadAddResults(false);
+                }
+              }}
+              onEndReachedThreshold={0.3}
+              removeClippedSubviews
+              windowSize={7}
+              initialNumToRender={12}
+              maxToRenderPerBatch={12}
+              updateCellsBatchingPeriod={50}
+              keyboardShouldPersistTaps="handled"
             />
 
-            {addLoading ? (
-              <Text style={styles.addEmptyText}>Searching...</Text>
-            ) : addResults.length === 0 ? (
-              <Text style={styles.addEmptyText}>No products found.</Text>
-            ) : (
-              <FlatList
-                data={addResults}
-                keyExtractor={(item) => item.barcode}
-                style={styles.addResults}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => {
-                  const selected = Boolean(selectedAddItems[item.barcode]);
-                  const priceLabel =
-                    item.priceMinor === null
-                      ? "Price pending"
-                      : formatMoney(item.priceMinor, item.currency ?? "INR");
-
-                  return (
-                    <Pressable
-                      style={[styles.addRow, selected && styles.addRowSelected]}
-                      onPress={() => addItemFromOverlay(item)}
-                    >
-                      <View style={styles.addRowInfo}>
-                        <Text style={styles.addRowName}>{item.name}</Text>
-                        <Text style={styles.addRowMeta}>
-                          {item.barcode} • {priceLabel}
-                        </Text>
-                      </View>
-                      <Pressable
-                        onPress={(event) => {
-                          event.stopPropagation();
-                          toggleSelectedItem(item);
-                        }}
-                        hitSlop={8}
-                      >
-                        <MaterialCommunityIcons
-                          name={selected ? "checkbox-marked" : "checkbox-blank-outline"}
-                          size={20}
-                          color={selected ? theme.colors.primary : theme.colors.textSecondary}
-                        />
-                      </Pressable>
-                    </Pressable>
-                  );
-                }}
-              />
-            )}
-
-            <View style={styles.addFooter}>
-              <Text style={styles.addFooterText}>
-                {selectedAddCount} selected
-              </Text>
-              <Pressable
-                style={[
-                  styles.addFooterButton,
-                  selectedAddCount === 0 && styles.ctaDisabled
-                ]}
-                onPress={handleAddSelected}
-                disabled={selectedAddCount === 0}
-              >
-                <Text style={styles.addFooterButtonText}>
-                  Add to Bill ({selectedAddCount})
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
+            <Pressable
+              style={[
+                styles.addCta,
+                (selectedAddCount === 0 || storeActive === false) && styles.ctaDisabled,
+              ]}
+              onPress={handleAddSelected}
+              disabled={selectedAddCount === 0 || storeActive === false}
+              accessibilityLabel="Add selected items"
+            >
+              <Text style={styles.addCtaText}>{`Add to Bill (${selectedAddCount})`}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
       </Modal>
 
-      {/* CART (SELL ONLY) */}
-      {mode === "SELL" && hasItems && (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          style={styles.cart}
-          renderItem={({ item }: { item: StoreCartItem }) => (
-            <View style={styles.cartRow}>
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>
-                  {item.name} x {item.quantity}
-                </Text>
-                {item.barcode ? (
-                  <Pressable
-                    onPress={() => setBarcodePreview({ name: item.name, barcode: item.barcode ?? "" })}
-                    style={styles.barcodeButton}
-                    hitSlop={6}
-                  >
-                    <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
-                  </Pressable>
+      <Modal
+        visible={customSkuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeCustomSku}
+      >
+        <Pressable style={styles.customSkuOverlay} onPress={closeCustomSku}>
+          <Pressable style={styles.customSkuCard} onPress={() => {}}>
+            <View style={styles.customSkuHeader}>
+              <Text style={styles.customSkuTitle}>Custom SKU</Text>
+              <Pressable onPress={closeCustomSku} hitSlop={8} accessibilityLabel="Close custom SKU">
+                <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <View style={styles.customSkuRow}>
+              <View style={styles.customSkuField}>
+                <Text style={styles.customSkuLabel}>Quantity</Text>
+                <TextInput
+                  style={styles.customSkuInput}
+                  value={customSkuQty}
+                  onChangeText={(value) => {
+                    setCustomSkuQty(value);
+                    if (customSkuError) setCustomSkuError(null);
+                  }}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.customSkuField}>
+                <Text style={styles.customSkuLabel}>Unit</Text>
+                <View style={styles.customSkuUnits}>
+                  {CUSTOM_UNITS.map((unit) => {
+                    const active = unit === customSkuUnit;
+                    return (
+                      <Pressable
+                        key={unit}
+                        style={[styles.customSkuUnitChip, active && styles.customSkuUnitChipActive]}
+                        onPress={() => {
+                          setCustomSkuUnit(unit);
+                          if (customSkuError) setCustomSkuError(null);
+                        }}
+                      >
+                        <Text style={[styles.customSkuUnitText, active && styles.customSkuUnitTextActive]}>
+                          {unit.toUpperCase()}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.customSkuField}>
+              <Text style={styles.customSkuLabel}>Price</Text>
+              <TextInput
+                style={styles.customSkuInput}
+                value={customSkuPrice}
+                onChangeText={(value) => {
+                  setCustomSkuPrice(value);
+                  if (customSkuError) setCustomSkuError(null);
+                }}
+                placeholder="Price"
+                placeholderTextColor={theme.colors.textTertiary}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {customSkuError ? <Text style={styles.customSkuError}>{customSkuError}</Text> : null}
+
+            <Pressable
+              style={[styles.customSkuCta, !customSkuReady && styles.ctaDisabled]}
+              onPress={handleCustomSkuSubmit}
+              disabled={!customSkuReady}
+              accessibilityLabel="Add custom SKU"
+            >
+              <Text style={styles.customSkuCtaText}>Add to Bill</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={cartExpanded}
+        transparent
+        animationType="slide"
+        onRequestClose={closeCart}
+      >
+        <Pressable style={styles.cartOverlay} onPress={closeCart}>
+          <Pressable style={styles.cartSheet} onPress={() => {}}>
+            <View style={styles.cartHandle} />
+            <View style={styles.cartHeader}>
+              <View>
+                <Text style={styles.cartTitle}>Cart</Text>
+                <Text style={styles.cartSubtitle}>{itemCount} items</Text>
+              </View>
+              <Pressable onPress={closeCart} hitSlop={8} accessibilityLabel="Close cart">
+                <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <FlatList
+              data={items}
+              keyExtractor={(item) => item.id}
+              renderItem={renderCartItem}
+              style={styles.cartList}
+              contentContainerStyle={styles.cartListContent}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>Cart empty</Text>
+                </View>
+              }
+              removeClippedSubviews
+              windowSize={7}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              updateCellsBatchingPeriod={50}
+              keyboardShouldPersistTaps="handled"
+            />
+
+            <View style={styles.discountSection}>
+              <View style={styles.discountHeader}>
+                <Text style={styles.discountTitle}>Discount</Text>
+                {discount ? (
+                  <Text style={styles.discountApplied}>Applied</Text>
                 ) : null}
               </View>
-              <Text style={styles.itemPrice}>
-                {formatMoney(item.priceMinor * item.quantity, item.currency ?? "INR")}
-              </Text>
-            </View>
-          )}
-        />
-      )}
-
-      {mode === "SELL" && hasItems && (
-        <View style={styles.discountRow}>
-          <Text style={styles.discountLabel}>Discount</Text>
-          <TextInput
-            style={styles.discountInput}
-            placeholder="0.00"
-            keyboardType="decimal-pad"
-            value={discountInput}
-            onFocus={() => setDiscountEditing(true)}
-            onBlur={() => {
-              setDiscountEditing(false);
-              applyDiscountInput();
-            }}
-            onChangeText={setDiscountInput}
-          />
-        </View>
-      )}
-
-      {/* FOOTER */}
-      {mode === "SELL" && hasItems && (
-        <View style={styles.footer}>
-          <Pressable onPress={handleClearCart} style={styles.clearBtn}>
-            <Text style={styles.clearText}>Clear Cart</Text>
-          </Pressable>
-
-          <View style={styles.ctaRow}>
-            <Pressable
-              style={[
-                styles.collectBtn,
-                collectDisabled && styles.ctaDisabled
-              ]}
-              onPress={handleCollectPayment}
-              disabled={collectDisabled}
-            >
-              <Text style={styles.collectText}>COLLECT PAYMENT</Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.payBtn,
-                payDisabled && styles.ctaDisabled
-              ]}
-              disabled={payDisabled}
-              onPress={() => {
-                lockCart();
-                navigation.navigate("Payment");
-              }}
-            >
-              <Text style={styles.payText}>TOTAL BILL {totalLabel}</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      <Modal
-        visible={scannerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setScannerOpen(false)}
-      >
-        <View style={styles.cameraOverlay}>
-          <View style={styles.cameraCard}>
-            {cameraPermission?.granted ? (
-              <CameraView
-                style={styles.cameraView}
-                facing="back"
-                barcodeScannerSettings={{
-                  barcodeTypes: [
-                    "qr",
-                    "ean13",
-                    "ean8",
-                    "code128",
-                    "code39",
-                    "code93",
-                    "upc_a",
-                    "upc_e",
-                    "itf14"
-                  ],
-                }}
-                onBarcodeScanned={cameraScanned ? undefined : (event) => handleCameraScan(event.data)}
-              />
-            ) : (
-              <View style={styles.cameraPermission}>
-                <Text style={styles.cameraPermissionText}>
-                  Camera permission is required to scan barcodes.
-                </Text>
-                <Pressable style={styles.cameraPermissionButton} onPress={() => requestCameraPermission()}>
-                  <Text style={styles.cameraPermissionButtonText}>Allow Camera</Text>
+              <View style={styles.discountControls}>
+                <View style={styles.discountToggle}>
+                  <Pressable
+                    style={[
+                      styles.discountChip,
+                      discountType === "percentage" && styles.discountChipActive
+                    ]}
+                    onPress={() => setDiscountType("percentage")}
+                    disabled={!canEditCart}
+                  >
+                    <Text
+                      style={[
+                        styles.discountChipText,
+                        discountType === "percentage" && styles.discountChipTextActive
+                      ]}
+                    >
+                      PCT
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.discountChip,
+                      discountType === "fixed" && styles.discountChipActive
+                    ]}
+                    onPress={() => setDiscountType("fixed")}
+                    disabled={!canEditCart}
+                  >
+                    <Text
+                      style={[
+                        styles.discountChipText,
+                        discountType === "fixed" && styles.discountChipTextActive
+                      ]}
+                    >
+                      RS
+                    </Text>
+                  </Pressable>
+                </View>
+                <TextInput
+                  style={[styles.discountInput, !canEditCart && styles.inputDisabled]}
+                  value={discountValue}
+                  onChangeText={setDiscountValue}
+                  placeholder={discountType === "percentage" ? "Percent" : "Amount"}
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="numeric"
+                  editable={canEditCart}
+                />
+              </View>
+              <View style={styles.discountButtons}>
+                <Pressable
+                  style={[styles.discountButton, !canApplyDiscount && styles.ctaDisabled]}
+                  onPress={handleApplyDiscount}
+                  disabled={!canApplyDiscount}
+                >
+                  <Text style={styles.discountButtonText}>Apply</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.discountButtonGhost, !canClearDiscount && styles.ctaDisabled]}
+                  onPress={handleClearDiscount}
+                  disabled={!canClearDiscount}
+                >
+                  <Text style={styles.discountButtonGhostText}>Clear</Text>
                 </Pressable>
               </View>
-            )}
-            <View style={styles.cameraActions}>
-              <Text style={styles.cameraHint}>Align the barcode/QR inside the frame.</Text>
-              <Pressable onPress={() => setScannerOpen(false)}>
-                <Text style={styles.cameraClose}>Close</Text>
-              </Pressable>
             </View>
-          </View>
-        </View>
-      </Modal>
 
-      <Modal
-        visible={Boolean(barcodePreview)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setBarcodePreview(null)}
-      >
-        <View style={styles.barcodeOverlay}>
-          <View style={styles.barcodeCard}>
-            <Text style={styles.barcodeTitle}>{barcodePreview?.name ?? "Barcode"}</Text>
-            {barcodePreview?.barcode ? (
-              <QRCode value={barcodePreview.barcode} size={180} />
-            ) : (
-              <Text style={styles.barcodeMissing}>Barcode unavailable.</Text>
-            )}
-            {barcodePreview?.barcode ? (
-              <Text style={styles.barcodeValue}>{barcodePreview.barcode}</Text>
-            ) : null}
-            <Pressable style={styles.barcodeClose} onPress={() => setBarcodePreview(null)}>
-              <Text style={styles.barcodeCloseText}>Close</Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
-
-      <TextInput
-        ref={hidInputRef}
-        value={hidInput}
-        onChangeText={handleHidChange}
-        onSubmitEditing={handleHidSubmit}
-        onKeyPress={handleHidKeyPress}
-        blurOnSubmit={false}
-        autoCorrect={false}
-        autoCapitalize="none"
-        autoComplete="off"
-        caretHidden
-        contextMenuHidden
-        editable={!scanDisabled}
-        inputMode="none"
-        showSoftInputOnFocus={false}
-        style={styles.hidInput}
-      />
-
-      <View style={styles.cartBar}>
-        <View style={styles.cartBarTop}>
-          <Text style={styles.cartBarCount}>
-            {itemCount} {itemCount === 1 ? "item" : "items"}
-          </Text>
-          <View style={styles.cartBarTopRight}>
-            {locked && (
-              <View style={styles.cartBarLocked}>
-                <Text style={styles.cartBarLockedText}>Cart locked</Text>
+            <View style={styles.cartTotals}>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Subtotal</Text>
+                <Text style={styles.totalValue}>{subtotalLabel}</Text>
               </View>
-            )}
-            <Text style={styles.cartBarTotal}>{totalLabel}</Text>
-          </View>
-        </View>
-        <View style={styles.cartBarBottom}>
-          <Text style={styles.cartBarHint}>{lastAddMessage ?? cartHint}</Text>
-          {undoVisible && !locked && (
-            <Pressable onPress={handleUndo} hitSlop={8}>
-              <Text style={styles.cartBarUndo}>Undo</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
+              {discountTotal ? (
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Discount</Text>
+                  <Text style={styles.totalValue}>-{discountAmountLabel}</Text>
+                </View>
+              ) : null}
+              <View style={[styles.totalRow, styles.totalRowEmphasis]}>
+                <Text style={styles.totalLabelStrong}>Total</Text>
+                <Text style={styles.totalValueStrong}>{totalLabel}</Text>
+              </View>
+            </View>
 
+            <Pressable
+              style={[styles.totalCta, !canPay && styles.ctaDisabled]}
+              onPress={handleCheckout}
+              disabled={!canPay}
+              accessibilityLabel="Total bill"
+            >
+              <Text style={styles.totalCtaText}>TOTAL BILL</Text>
+              <Text style={styles.totalCtaAmount}>{totalLabel}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
-
-/* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  listContent: {
     padding: 12,
-    paddingBottom: 120,
+    paddingBottom: 130,
   },
-
-  modeRow: {
-    marginBottom: 12,
-  },
-  segmented: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 999,
-    padding: 4,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 0,
-    alignItems: "center",
-  },
-  segmentActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  segmentText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-  segmentTextActive: {
-    color: theme.colors.textInverse,
-  },
-
-  scanCard: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
-  },
-  scanCardRow: {
+  scanPad: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 12,
   },
-  scanCardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  scanLeft: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
   },
-  scanCardText: {
+  scanCenter: {
     flex: 1,
+    alignItems: "flex-start",
+    gap: 2,
+    paddingHorizontal: 12,
   },
-  scanCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
+  scanTitle: {
+    fontSize: 14,
+    fontWeight: "800",
     color: theme.colors.textPrimary,
   },
-  scanCardSubtitle: {
-    fontSize: 13,
+  scanSubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
     color: theme.colors.textSecondary,
-    marginTop: 2,
   },
-  addItemsButton: {
-    flexDirection: "row",
+  scanRight: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.surface,
+  },
+  addItemsButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
     borderRadius: 12,
-    paddingVertical: 10,
-    marginBottom: 10,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
   addItemsText: {
     fontSize: 13,
     fontWeight: "800",
-    color: theme.colors.primary,
+    color: theme.colors.textInverse,
   },
-  scanCardQr: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
+  customSkuButton: {
     alignItems: "center",
     justifyContent: "center",
-  },
-  scanNotice: {
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginBottom: 12,
   },
-  scanNoticeWarning: {
-    borderColor: theme.colors.warning,
-    backgroundColor: theme.colors.warningSoft,
-  },
-  scanNoticeError: {
-    borderColor: theme.colors.error,
-    backgroundColor: theme.colors.errorSoft,
-  },
-  scanNoticeInfo: {
-    borderColor: theme.colors.info,
-    backgroundColor: theme.colors.accentSoft,
-  },
-  scanNoticeText: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
+  customSkuText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.colors.textSecondary,
   },
   addOverlay: {
     flex: 1,
-    backgroundColor: theme.colors.overlayLight,
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
     justifyContent: "center",
     padding: 16,
   },
@@ -1032,96 +1066,479 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: 16,
-    maxHeight: "80%",
+    maxHeight: "85%",
+    width: "100%",
+    gap: 12,
+    ...theme.shadows.sm,
   },
   addHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    justifyContent: "space-between",
   },
   addTitle: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "800",
     color: theme.colors.textPrimary,
   },
-  addClose: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.primary,
-  },
-  addSearchInput: {
+  addSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
+    borderRadius: 12,
     backgroundColor: theme.colors.surfaceAlt,
-    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  addResults: {
-    marginBottom: 12,
+  addSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    paddingVertical: 0,
+  },
+  addList: {
+    flex: 1,
+  },
+  addListContent: {
+    paddingVertical: 4,
   },
   addRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     paddingVertical: 10,
+    paddingHorizontal: 6,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: 12,
   },
   addRowSelected: {
-    backgroundColor: theme.colors.accentSoft,
+    backgroundColor: theme.colors.surfaceAlt,
   },
   addRowInfo: {
     flex: 1,
   },
   addRowName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
   addRowMeta: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  addRowRight: {
+    alignItems: "flex-end",
+    gap: 6,
+  },
+  addRowPrice: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  addCta: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  addCtaText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.colors.textInverse,
+  },
+  customSkuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    justifyContent: "center",
+    padding: 16,
+  },
+  customSkuCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 12,
+    ...theme.shadows.sm,
+  },
+  customSkuHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  customSkuTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  customSkuRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  customSkuField: {
+    flex: 1,
+    gap: 6,
+  },
+  customSkuLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  customSkuInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  customSkuUnits: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  customSkuUnitChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  customSkuUnitChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  customSkuUnitText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  customSkuUnitTextActive: {
+    color: theme.colors.textInverse,
+  },
+  customSkuError: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.warning,
+  },
+  customSkuCta: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  customSkuCtaText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.colors.textInverse,
+  },
+  cartOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    justifyContent: "flex-end",
+  },
+  cartSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 12,
+    maxHeight: "90%",
+    ...theme.shadows.sm,
+  },
+  cartHandle: {
+    alignSelf: "center",
+    width: 46,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: theme.colors.border,
+  },
+  cartHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  cartTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  cartSubtitle: {
     fontSize: 12,
     color: theme.colors.textSecondary,
     marginTop: 2,
   },
-  addEmptyText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-    paddingVertical: 16,
+  cartList: {
+    maxHeight: 280,
   },
-  addFooter: {
+  cartListContent: {
+    paddingBottom: 4,
+  },
+  cartItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  cartItemInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  cartItemName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  cartItemMeta: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  cartItemControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginRight: 8,
+  },
+  qtyButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyButtonDisabled: {
+    opacity: 0.5,
+  },
+  qtyValue: {
+    minWidth: 18,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  cartItemTotal: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  discountSection: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  discountHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
   },
-  addFooterText: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "600",
+  discountTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
   },
-  addFooterButton: {
+  discountApplied: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  discountControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  discountToggle: {
+    flexDirection: "row",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surface,
+  },
+  discountChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  discountChipActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  discountChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  discountChipTextActive: {
+    color: theme.colors.textInverse,
+  },
+  discountInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  inputDisabled: {
+    opacity: 0.6,
+  },
+  discountButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  discountButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: theme.colors.primary,
     borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 14,
   },
-  addFooterButtonText: {
-    color: theme.colors.textInverse,
-    fontWeight: "800",
+  discountButtonText: {
     fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
-  hidInput: {
-    position: "absolute",
-    opacity: 0,
-    width: 1,
-    height: 1,
+  discountButtonGhost: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 10,
+  },
+  discountButtonGhostText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  cartTotals: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: 10,
+    gap: 6,
+  },
+  totalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  totalRowEmphasis: {
+    marginTop: 4,
+  },
+  totalLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  totalValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  totalLabelStrong: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  totalValueStrong: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: theme.colors.primaryDark,
+  },
+  totalCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  totalCtaText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.textInverse,
+  },
+  totalCtaAmount: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.textInverse,
+  },
+  skuRow: {
+    gap: 12,
+  },
+  skuCard: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+    marginBottom: 12,
+    minHeight: 120,
+  },
+  skuCardDisabled: {
+    opacity: 0.5,
+  },
+  skuCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  pricePill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  priceText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  skuName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  skuBarcode: {
+    marginTop: 6,
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  emptyText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  footerLoading: {
+    paddingVertical: 16,
   },
   cartBar: {
     position: "absolute",
@@ -1136,6 +1553,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 6,
     ...theme.shadows.sm,
+  },
+  cartBarFlash: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  cartBarDisabled: {
+    opacity: 0.6,
   },
   cartBarTop: {
     flexDirection: "row",
@@ -1160,12 +1584,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.warning,
   },
-  cartBarBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 10,
-  },
   cartBarCount: {
     fontSize: 14,
     fontWeight: "700",
@@ -1175,6 +1593,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: theme.colors.primaryDark,
+  },
+  cartBarBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
   },
   cartBarHint: {
     flex: 1,
@@ -1187,289 +1611,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.primary,
   },
-
-  cart: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    marginTop: 8,
-    overflow: "hidden",
-  },
-
-  cartRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  itemInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: theme.colors.textPrimary,
-    flexShrink: 1,
-  },
-  barcodeButton: {
-    padding: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  itemPrice: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.primaryDark,
-  },
-  discountRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.surface,
-    marginTop: 10,
-  },
-  discountLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    fontWeight: "700",
-  },
-  discountInput: {
-    minWidth: 110,
-    textAlign: "right",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 15,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-
-  footer: {
-    paddingTop: 12,
-  },
-  clearBtn: {
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  clearText: {
-    color: theme.colors.textTertiary,
-    fontWeight: "600",
-  },
-  ctaRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  collectBtn: {
-    flex: 1,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 14,
-  },
-  collectText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: theme.colors.primary,
-  },
-  payBtn: {
-    flex: 1,
-    backgroundColor: theme.colors.primary,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderRadius: 14,
-  },
   ctaDisabled: {
     opacity: 0.5,
   },
-  payText: {
-    color: theme.colors.textInverse,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-
-  cameraOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlayLight,
-    justifyContent: "center",
-    padding: 16,
-  },
-  cameraCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-  },
-  cameraView: {
-    height: 280,
-    width: "100%",
-  },
-  cameraActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  cameraHint: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-    fontWeight: "600",
-  },
-  cameraClose: {
-    fontSize: 12,
-    color: theme.colors.primary,
-    fontWeight: "700",
-  },
-  cameraPermission: {
-    padding: 16,
-    alignItems: "center",
-    gap: 12,
-  },
-  cameraPermissionText: {
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-  },
-  cameraPermissionButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  cameraPermissionButtonText: {
-    color: theme.colors.primary,
-    fontWeight: "700",
-  },
-
-  barcodeOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlayLight,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 16,
-  },
-  barcodeCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 16,
-    alignItems: "center",
-    minWidth: 240,
-  },
-  barcodeTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  barcodeValue: {
-    marginTop: 12,
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-  barcodeMissing: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginVertical: 12,
-  },
-  barcodeClose: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  barcodeCloseText: {
-    color: theme.colors.primary,
-    fontWeight: "700",
-  },
-
-  priceOverlay: {
-    flex: 1,
-    backgroundColor: theme.colors.overlayLight,
-    justifyContent: "center",
-    padding: 20,
-  },
-  priceCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  priceTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 6,
-    color: theme.colors.textPrimary,
-  },
-  priceSubtitle: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginBottom: 12,
-  },
-  priceHint: {
-    fontSize: 13,
-    color: theme.colors.textSecondary,
-    marginBottom: 12,
-  },
-  priceInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 16,
-    backgroundColor: theme.colors.surfaceAlt,
-    color: theme.colors.textPrimary,
-  },
-  priceActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-  },
-  priceCancel: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  priceCancelText: {
-    color: theme.colors.textSecondary,
-    fontWeight: "700",
-  },
-  priceSave: {
-    backgroundColor: theme.colors.primaryDark,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-  },
-  priceSaveText: {
-    color: theme.colors.textInverse,
-    fontWeight: "800",
-  },
 });
-
-

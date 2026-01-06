@@ -11,8 +11,7 @@
       "url": "https://u.expo.dev/633923dd-e9cd-4bee-8b7a-f2120c1cce91"
     },
     "android": {
-      "package": "com.supermanditech.supermandipos",
-      "usesCleartextTraffic": true
+      "package": "com.supermanditech.supermandipos"
     },
     "extra": {
       "API_URL": "https://34.14.150.183.nip.io",

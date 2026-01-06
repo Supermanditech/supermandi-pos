@@ -53,6 +53,8 @@ web-build/
 # Tooling artifacts (do not commit)
 screenshots/
 artifacts/
+_tmp_pdf/
+builds/
 
 # @generated expo-cli sync
 /.expo/

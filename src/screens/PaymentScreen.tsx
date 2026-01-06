@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Alert
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -406,38 +405,36 @@ const PaymentScreen = () => {
     }
   };
 
-  const renderPaymentOption = (mode: PaymentMode, title: string, icon: string, disabled = false) => (
-    <TouchableOpacity
-      style={[
-        styles.paymentOption,
-        selectedMode === mode && styles.paymentOptionSelected,
-        disabled && styles.paymentOptionDisabled
-      ]}
-      onPress={() => handlePaymentSelect(mode)}
-      disabled={disabled}
-    >
-      <MaterialCommunityIcons
-        name={icon as any}
-        size={24}
-        color={selectedMode === mode ? theme.colors.secondary : theme.colors.textTertiary}
-      />
-      <Text style={[
-        styles.paymentOptionText,
-        selectedMode === mode && styles.paymentOptionTextSelected,
-        disabled && styles.paymentOptionTextDisabled
-      ]}>
-        {title}
-      </Text>
-      {selectedMode === mode && (
+  const renderModeTab = (mode: PaymentMode, title: string, icon: string, disabled = false) => {
+    const selected = selectedMode === mode;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.modeTab,
+          selected && styles.modeTabActive,
+          disabled && styles.modeTabDisabled
+        ]}
+        onPress={() => handlePaymentSelect(mode)}
+        disabled={disabled}
+      >
         <MaterialCommunityIcons
-          name="check-circle"
+          name={icon as any}
           size={20}
-          color={theme.colors.secondary}
-          style={styles.checkIcon}
+          color={selected ? theme.colors.textInverse : theme.colors.textSecondary}
         />
-      )}
-    </TouchableOpacity>
-  );
+        <Text
+          style={[
+            styles.modeTabText,
+            selected && styles.modeTabTextActive,
+            disabled && styles.modeTabTextDisabled
+          ]}
+        >
+          {title}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   const canSubmit =
     Boolean(saleId && billRef) &&
@@ -451,25 +448,15 @@ const PaymentScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Select Payment Method</Text>
-      </View>
-      {locked && (
-        <View style={styles.lockedBadge}>
-          <Text style={styles.lockedBadgeText}>Cart locked</Text>
+        <View>
+          <Text style={styles.headerTitle}>Payment</Text>
+          {billRef && <Text style={styles.billRef}>Bill #{billRef}</Text>}
         </View>
-      )}
-
-      <View style={styles.amountSection}>
-        <Text style={styles.amountLabel}>Total Amount</Text>
-        <Text
-          style={styles.amountValue}
-          adjustsFontSizeToFit
-          minimumFontScale={0.5}
-          numberOfLines={1}
-        >
-          {formatMoney(total, currency)}
-        </Text>
-        {billRef && <Text style={styles.billRef}>Bill #{billRef}</Text>}
+        {locked && (
+          <View style={styles.lockedBadge}>
+            <Text style={styles.lockedBadgeText}>Cart locked</Text>
+          </View>
+        )}
       </View>
 
       {!isOnline && (
@@ -478,75 +465,68 @@ const PaymentScreen = () => {
         </View>
       )}
 
-      <ScrollView style={styles.paymentOptions} contentContainerStyle={styles.paymentOptionsContent}>
-        <Text style={styles.sectionTitle}>Choose Payment Method</Text>
+      <View style={styles.modeTabs}>
+        {renderModeTab("UPI", "UPI", "qrcode-scan", upiDisabled)}
+        {renderModeTab("CASH", "Cash", "cash")}
+        {renderModeTab("DUE", "Due", "calendar-clock")}
+      </View>
 
-        {renderPaymentOption("UPI", "UPI Payment", "qrcode-scan", upiDisabled)}
-        {renderPaymentOption("CASH", "Cash Payment", "cash")}
-        {renderPaymentOption("DUE", "Mark as Due", "calendar-clock")}
-
-        {selectedMode === "UPI" && (
-          <View style={styles.paymentDetails}>
-            <Text style={styles.detailsTitle}>UPI Payment</Text>
-            <Text style={styles.detailsText}>
-              Show this QR code to the customer to pay.
-            </Text>
-            {upiStoreName && (
-              <Text style={styles.upiStoreName}>{upiStoreName}</Text>
-            )}
-            {upiStatusLoading ? (
-              <View style={styles.qrPlaceholder}>
-                <Text style={styles.qrText}>Checking UPI details...</Text>
-              </View>
-            ) : upiBlocked ? (
-              <Text style={styles.offlineNote}>
-                UPI is unavailable until the store is active and UPI VPA is set.
-              </Text>
-            ) : !isOnline ? (
-              <Text style={styles.offlineNote}>Offline: UPI is disabled.</Text>
-            ) : upiIntent ? (
-              <QRCode value={upiIntent} size={160} />
-            ) : (
-              <View style={styles.qrPlaceholder}>
-                <Text style={styles.qrText}>{loadingUpi ? "Generating QR..." : "QR not ready"}</Text>
-              </View>
-            )}
-            <Text style={styles.upiAmount}>{formatMoney(total, currency)}</Text>
-          </View>
-        )}
-
-        {selectedMode === "CASH" && (
-          <View style={styles.paymentDetails}>
-            <Text style={styles.detailsTitle}>Cash Payment</Text>
+      <View style={styles.content}>
+        {selectedMode === "UPI" ? (
+          <View style={styles.qrStage}>
+            <Text style={styles.amountLabel}>Amount</Text>
             <Text
-              style={styles.detailsText}
+              style={styles.amountValue}
               adjustsFontSizeToFit
-              minimumFontScale={0.7}
-              numberOfLines={2}
+              minimumFontScale={0.6}
+              numberOfLines={1}
             >
-              Collect {formatMoney(total, currency)} from customer
+              {formatMoney(total, currency)}
+            </Text>
+            <View style={styles.qrShell}>
+              {upiStatusLoading ? (
+                <Text style={styles.qrHint}>Checking UPI details...</Text>
+              ) : upiBlocked ? (
+                <Text style={styles.qrHint}>
+                  UPI unavailable until the store is active and VPA is set.
+                </Text>
+              ) : !isOnline ? (
+                <Text style={styles.qrHint}>Offline: UPI disabled.</Text>
+              ) : upiIntent ? (
+                <QRCode value={upiIntent} size={220} />
+              ) : (
+                <Text style={styles.qrHint}>{loadingUpi ? "Generating QR..." : "QR not ready"}</Text>
+              )}
+            </View>
+            {upiStoreName && <Text style={styles.storeName}>{upiStoreName}</Text>}
+          </View>
+        ) : (
+          <View style={styles.cashStage}>
+            <Text style={styles.amountLabel}>Amount</Text>
+            <Text
+              style={styles.amountValue}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+              numberOfLines={1}
+            >
+              {formatMoney(total, currency)}
+            </Text>
+            <Text style={styles.cashHint}>
+              {selectedMode === "CASH"
+                ? "Collect cash from customer"
+                : "Record as due and collect later"}
             </Text>
           </View>
         )}
-
-        {selectedMode === "DUE" && (
-          <View style={styles.paymentDetails}>
-            <Text style={styles.detailsTitle}>Due Payment</Text>
-            <Text style={styles.detailsText}>
-              {formatMoney(total, currency)} will be collected later
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+      </View>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.completeButton, !canSubmit && styles.completeButtonDisabled]}
+          style={[styles.primaryCta, !canSubmit && styles.primaryCtaDisabled]}
           onPress={handleCompletePayment}
           disabled={!canSubmit}
         >
-          <Text style={styles.completeButtonText}>{ctaLabel}</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color={theme.colors.textInverse} />
+          <Text style={styles.primaryCtaText}>{ctaLabel}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -562,20 +542,26 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border
+    borderBottomColor: theme.colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    textAlign: "center"
+    fontWeight: "800",
+    color: theme.colors.textPrimary
+  },
+  billRef: {
+    marginTop: 4,
+    fontSize: 12,
+    color: theme.colors.textTertiary
   },
   lockedBadge: {
-    alignSelf: "center",
-    marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -584,155 +570,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.warningSoft
   },
   lockedBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     color: theme.colors.warning
   },
-  amountSection: {
-    backgroundColor: theme.colors.surface,
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  amountLabel: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginBottom: 8
-  },
-  amountValue: {
-    fontSize: 32,
-    fontWeight: "900",
-    color: theme.colors.textPrimary
-  },
-  billRef: {
-    marginTop: 6,
-    fontSize: 12,
-    color: theme.colors.textTertiary
-  },
-  paymentOptions: {
-    flex: 1
-  },
-  paymentOptionsContent: {
-    padding: 16
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginBottom: 16
-  },
-  paymentOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "transparent",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1
-  },
-  paymentOptionSelected: {
-    borderColor: theme.colors.secondary,
-    backgroundColor: theme.colors.accentSoft
-  },
-  paymentOptionDisabled: {
-    opacity: 0.5
-  },
-  paymentOptionText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-    marginLeft: 12,
-    flex: 1
-  },
-  paymentOptionTextSelected: {
-    color: theme.colors.secondary
-  },
-  paymentOptionTextDisabled: {
-    color: theme.colors.textTertiary
-  },
-  checkIcon: {
-    marginLeft: 8
-  },
-  paymentDetails: {
-    backgroundColor: theme.colors.surface,
-    padding: 20,
-    borderRadius: 12,
-    marginTop: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  detailsTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 8
-  },
-  detailsText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    textAlign: "center",
-    marginBottom: 16
-  },
-  upiStoreName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-    marginBottom: 12
-  },
-  qrPlaceholder: {
-    width: 160,
-    height: 160,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    borderStyle: "dashed",
-    marginBottom: 12
-  },
-  qrText: {
-    fontSize: 12,
-    color: theme.colors.textTertiary,
-    textAlign: "center"
-  },
-  offlineNote: {
-    fontSize: 13,
-    color: theme.colors.warning,
-    fontWeight: "600",
-    marginBottom: 12
-  },
-  upiAmount: {
-    marginTop: 12,
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.colors.secondary
-  },
-  footer: {
-    padding: 16,
-    backgroundColor: theme.colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border
-  },
   banner: {
     marginHorizontal: 16,
-    marginBottom: 4,
+    marginTop: 12,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
@@ -741,30 +585,119 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     color: theme.colors.warning,
-    fontSize: 13,
-    fontWeight: "700"
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center"
   },
-  completeButton: {
-    backgroundColor: theme.colors.primary,
+  modeTabs: {
     flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    overflow: "hidden"
+  },
+  modeTab: {
+    flex: 1,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4
+    gap: 4
   },
-  completeButtonDisabled: {
-    backgroundColor: theme.colors.textTertiary,
-    shadowOpacity: 0
+  modeTabActive: {
+    backgroundColor: theme.colors.primary
   },
-  completeButtonText: {
-    color: theme.colors.textInverse,
-    fontSize: 18,
+  modeTabDisabled: {
+    opacity: 0.5
+  },
+  modeTabText: {
+    fontSize: 12,
     fontWeight: "700",
-    marginRight: 8
+    color: theme.colors.textSecondary
+  },
+  modeTabTextActive: {
+    color: theme.colors.textInverse
+  },
+  modeTabTextDisabled: {
+    color: theme.colors.textTertiary
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 8
+  },
+  qrStage: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16
+  },
+  cashStage: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16
+  },
+  amountLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary
+  },
+  amountValue: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: theme.colors.textPrimary
+  },
+  qrShell: {
+    width: 240,
+    height: 240,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    ...theme.shadows.sm
+  },
+  qrHint: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    textAlign: "center"
+  },
+  storeName: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textSecondary
+  },
+  cashHint: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    paddingHorizontal: 24
+  },
+  footer: {
+    padding: 16,
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border
+  },
+  primaryCta: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center"
+  },
+  primaryCtaDisabled: {
+    backgroundColor: theme.colors.textTertiary
+  },
+  primaryCtaText: {
+    color: theme.colors.textInverse,
+    fontSize: 16,
+    fontWeight: "800"
   }
 });
