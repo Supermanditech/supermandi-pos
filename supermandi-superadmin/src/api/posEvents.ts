@@ -46,10 +46,20 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
   });
 
   if (!res.ok) {
+    let detail = "";
+    try {
+      const body = (await res.json()) as { error?: unknown };
+      if (body && typeof body.error === "string") {
+        detail = body.error;
+      }
+    } catch {
+      // ignore parse errors
+    }
     if (res.status === 401) {
       throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
     }
-    throw new Error(`Failed to fetch POS events (${res.status})`);
+    const suffix = detail ? `: ${detail}` : "";
+    throw new Error(`Failed to fetch POS events (${res.status})${suffix}`);
   }
 
   const raw = (await res.json()) as unknown;

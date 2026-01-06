@@ -12,6 +12,22 @@ export type IncomingPosEvent = {
   pendingOutboxCount?: unknown;
 };
 
+function isMissingRelationError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  if (code === "42P01") return true;
+  const message = "message" in (error as any) ? String((error as any).message) : "";
+  return message.includes("relation \"pos_events\" does not exist");
+}
+
+function isPermissionError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  if (code === "42501") return true;
+  const message = "message" in (error as any) ? String((error as any).message) : "";
+  return message.toLowerCase().includes("permission denied");
+}
+
 function normalize(input: IncomingPosEvent) {
   const deviceId = typeof input.deviceId === "string" && input.deviceId.trim() ? input.deviceId.trim() : "unknown";
   const storeId = typeof input.storeId === "string" && input.storeId.trim() ? input.storeId.trim() : "unknown";
@@ -83,23 +99,32 @@ export async function fetchLatestPosEvents(opts: { limit: number }) {
   const db = getDb();
   if (!db) return [];
 
-  await ensurePosEventsTable();
+  try {
+    await ensurePosEventsTable();
 
-  const rows = await db
-    .select({
-      id: posEvents.id,
-      deviceId: posEvents.deviceId,
-      storeId: posEvents.storeId,
-      eventType: posEvents.eventType,
-      payload: posEvents.payload,
-      createdAt: posEvents.createdAt
-    })
-    .from(posEvents)
-    .orderBy(desc(posEvents.createdAt))
-    .limit(opts.limit);
+    const rows = await db
+      .select({
+        id: posEvents.id,
+        deviceId: posEvents.deviceId,
+        storeId: posEvents.storeId,
+        eventType: posEvents.eventType,
+        payload: posEvents.payload,
+        createdAt: posEvents.createdAt
+      })
+      .from(posEvents)
+      .orderBy(desc(posEvents.createdAt))
+      .limit(opts.limit);
 
-  return rows.map((r: any) => ({
-    ...r,
-    createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt)
-  }));
+    return rows.map((r: any) => ({
+      ...r,
+      createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt)
+    }));
+  } catch (error) {
+    if (isMissingRelationError(error) || isPermissionError(error)) {
+      const message = error instanceof Error ? error.message : "pos_events unavailable";
+      console.warn("POS events unavailable; returning empty list:", message);
+      return [];
+    }
+    throw error;
+  }
 }
