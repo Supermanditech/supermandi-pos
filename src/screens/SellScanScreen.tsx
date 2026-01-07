@@ -17,6 +17,8 @@ import { useCartStore } from "../stores/cartStore";
 import type { CartItem } from "../stores/cartStore";
 import { formatMoney } from "../utils/money";
 import { buildCustomSkuBarcode } from "../utils/customSku";
+import * as productsApi from "../services/api/productsApi";
+import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { offlineDb } from "../services/offline/localDb";
 import { theme } from "../theme";
 
@@ -41,10 +43,60 @@ type SkuItem = {
 
 type DiscountType = "percentage" | "fixed";
 
+async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
+  const trimmedQuery = query?.trim();
+  try {
+    const remote = await productsApi.listProducts(trimmedQuery ? { q: trimmedQuery } : undefined);
+    const items: SkuItem[] = [];
+
+    for (const product of remote) {
+      const barcode = typeof product.barcode === "string" ? product.barcode.trim() : "";
+      if (!barcode) continue;
+      const currency = product.currency ?? "INR";
+      const priceMinor = Number.isFinite(product.price) && product.price > 0 ? Math.round(product.price) : null;
+
+      items.push({
+        barcode,
+        name: product.name,
+        currency,
+        priceMinor
+      });
+
+      await upsertLocalProduct(barcode, product.name, currency, null);
+      if (priceMinor !== null) {
+        await setLocalPrice(barcode, priceMinor);
+      }
+    }
+
+    return items;
+  } catch {
+    return [];
+  }
+}
+
 const PAGE_SIZE = 40;
 const NUM_COLUMNS = 2;
 const CUSTOM_UNITS = ["g", "kg", "ml", "l", "pcs"] as const;
 type CustomUnit = (typeof CUSTOM_UNITS)[number];
+
+const mergeSkuItems = (prev: SkuItem[], incoming: SkuItem[]): SkuItem[] => {
+  if (prev.length === 0 && incoming.length <= 1) return incoming;
+  const merged = [...prev];
+  const indexByBarcode = new Map<string, number>();
+  merged.forEach((item, index) => indexByBarcode.set(item.barcode, index));
+
+  for (const item of incoming) {
+    const existingIndex = indexByBarcode.get(item.barcode);
+    if (existingIndex === undefined) {
+      indexByBarcode.set(item.barcode, merged.length);
+      merged.push(item);
+    } else {
+      merged[existingIndex] = item;
+    }
+  }
+
+  return merged;
+};
 
 export default function SellScanScreen({
   storeActive,
@@ -190,8 +242,14 @@ export default function SellScanScreen({
     `;
 
     try {
-      const rows = await offlineDb.all<SkuItem>(sql, params);
-      setCatalogItems((prev) => (reset ? rows : [...prev, ...rows]));
+      let rows = await offlineDb.all<SkuItem>(sql, params);
+      if (reset && rows.length === 0) {
+        const remote = await syncProductsToOffline();
+        if (remote.length > 0) {
+          rows = await offlineDb.all<SkuItem>(sql, params);
+        }
+      }
+      setCatalogItems((prev) => mergeSkuItems(reset ? [] : prev, rows));
       setCatalogHasMore(rows.length === PAGE_SIZE);
       setCatalogPage(page + 1);
     } finally {
@@ -233,8 +291,14 @@ export default function SellScanScreen({
     params.push(PAGE_SIZE, offset);
 
     try {
-      const rows = await offlineDb.all<SkuItem>(sql, params);
-      setAddResults((prev) => (reset ? rows : [...prev, ...rows]));
+      let rows = await offlineDb.all<SkuItem>(sql, params);
+      if (reset && rows.length === 0) {
+        const remote = await syncProductsToOffline(query);
+        if (remote.length > 0) {
+          rows = await offlineDb.all<SkuItem>(sql, params);
+        }
+      }
+      setAddResults((prev) => mergeSkuItems(reset ? [] : prev, rows));
       setAddHasMore(rows.length === PAGE_SIZE);
       setAddPage(page + 1);
     } finally {
