@@ -81,17 +81,6 @@ posEnrollRouter.post("/enroll", async (req, res) => {
       return res.status(400).json({ error: "enrollment_invalid" });
     }
 
-    if (enrollment.used_at) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "enrollment_invalid" });
-    }
-
-    const expiresAt = new Date(enrollment.expires_at);
-    if (!Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "enrollment_invalid" });
-    }
-
     const storeRes = await client.query(`SELECT id, active FROM stores WHERE id = $1`, [enrollment.store_id]);
     const store = storeRes.rows[0];
     if (!store) {
@@ -111,6 +100,15 @@ posEnrollRouter.post("/enroll", async (req, res) => {
     );
 
     const existingDevice = existingDeviceRes.rows[0];
+    const wasUsed = Boolean(enrollment.used_at);
+    const expiresAt = new Date(enrollment.expires_at);
+    const isExpired = !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
+
+    // Allow re-enrollment for existing devices even if the code was used or expired.
+    if ((wasUsed || isExpired) && !existingDevice) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "enrollment_invalid" });
+    }
 
     const deviceId = existingDevice?.id ?? randomUUID();
     let deviceToken = generateDeviceToken();
@@ -194,10 +192,12 @@ posEnrollRouter.post("/enroll", async (req, res) => {
       throw new Error("device insert failed");
     }
 
-    await client.query(
-      `UPDATE pos_device_enrollments SET used_at = NOW() WHERE code = $1`,
-      [code]
-    );
+    if (!wasUsed) {
+      await client.query(
+        `UPDATE pos_device_enrollments SET used_at = NOW() WHERE code = $1`,
+        [code]
+      );
+    }
 
     await client.query("COMMIT");
 
