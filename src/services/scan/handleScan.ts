@@ -1,6 +1,6 @@
 import { ApiError } from "../api/apiClient";
 import { lookupProductByBarcode, resolveScan, type ScanProduct } from "../api/scanApi";
-import { setLocalPrice, upsertLocalProduct } from "../offline/scan";
+import { fetchLocalProduct, setLocalPrice, upsertLocalProduct } from "../offline/scan";
 import { useCartStore } from "../../stores/cartStore";
 import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
 import { POS_MESSAGES } from "../../utils/uiStatus";
@@ -31,6 +31,7 @@ let lastScan: { key: string; ts: number } | null = null;
 let recentScans: number[] = [];
 let stormUntil = 0;
 let lastStormNotice = 0;
+const warnedNewItems = new Set<string>();
 
 export function setScanRuntime(next: Partial<ScanRuntime>): void {
   runtime = { ...runtime, ...next };
@@ -72,8 +73,15 @@ function isScanStorm(): boolean {
 }
 
 function addToSellCart(product: ScanProduct, priceMinor: number, flags?: string[]): void {
-  useCartStore.getState().addItem({
-    id: product.id,
+  const cartState = useCartStore.getState();
+  const match =
+    product.barcode
+      ? cartState.items.find((item) => item.barcode === product.barcode)
+      : undefined;
+  const resolvedId = match?.id ?? product.id;
+
+  cartState.addItem({
+    id: resolvedId,
     name: product.name,
     priceMinor,
     currency: product.currency,
@@ -111,6 +119,26 @@ export async function handleScan(barcode: string): Promise<void> {
   notify(null);
 
   try {
+    if (runtime.intent === "SELL" && runtime.mode === "SELL") {
+      let local = await fetchLocalProduct(trimmed);
+      if (!local && trimmed !== trimmed.toUpperCase()) {
+        local = await fetchLocalProduct(trimmed.toUpperCase());
+      }
+      if (local?.barcode) {
+        addToSellCart(
+          {
+            id: local.barcode,
+            name: local.name || local.barcode,
+            barcode: local.barcode,
+            priceMinor: local.priceMinor,
+            currency: local.currency ?? "INR"
+          },
+          local.priceMinor ?? 0
+        );
+        return;
+      }
+    }
+
     if (runtime.intent === "PURCHASE") {
       const product = await lookupProductByBarcode(trimmed);
       if (product) {
@@ -152,7 +180,9 @@ export async function handleScan(barcode: string): Promise<void> {
       const autoCreated = result.action === "PROMPT_PRICE" || result.product.priceMinor === null;
       addToSellCart(result.product, priceMinor, autoCreated ? ["SELL_AUTO_CREATE"] : undefined);
 
-      if (autoCreated) {
+      const warningKey = trimmed.toUpperCase();
+      if (result.product_not_found_for_store === true && !warnedNewItems.has(warningKey)) {
+        warnedNewItems.add(warningKey);
         notify({ tone: "warning", message: POS_MESSAGES.newItemWarning });
       }
       return;

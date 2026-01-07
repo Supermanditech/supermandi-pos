@@ -8,6 +8,7 @@ export type UiStatus = {
   lastSeenOnline?: string | null;
   printerOk?: boolean | null;
   scannerOk?: boolean | null;
+  cameraAvailable?: boolean | null;
   networkOnline: boolean;
   mode?: PosMode;
 };
@@ -31,19 +32,23 @@ export const POS_MESSAGES = {
 
 export function getPrimaryTone(status: UiStatus): StatusTone {
   if (status.deviceActive === false || status.storeActive === false) return "error";
+  const scannerReady =
+    status.cameraAvailable !== false || status.scannerOk === true;
   if (!status.networkOnline) return "warning";
   if (status.pendingOutboxCount > 0) return "warning";
-  if (status.printerOk === false || status.scannerOk === false) return "warning";
+  if (!scannerReady) return "warning";
   return "success";
 }
 
 export function composePosMessage(status: UiStatus): string {
-  if (status.deviceActive === false) return POS_MESSAGES.deviceInactive;
-  if (status.storeActive === false) return POS_MESSAGES.storeInactive;
-  if (!status.networkOnline) return POS_MESSAGES.offline;
-  if (status.pendingOutboxCount > 0) return POS_MESSAGES.syncPending(status.pendingOutboxCount);
-  if (status.printerOk === false) return POS_MESSAGES.printerMissing;
-  if (status.scannerOk === false) return POS_MESSAGES.scannerMissing;
-  if (status.mode === "DIGITISE") return POS_MESSAGES.digitiseReady;
-  return POS_MESSAGES.sellReady;
+  if (status.deviceActive === false || status.storeActive === false) return "Action required";
+  const scannerReady =
+    status.cameraAvailable !== false || status.scannerOk === true;
+  if (!status.networkOnline) {
+    if (status.pendingOutboxCount > 0) return "Sync pending";
+    return "Offline mode";
+  }
+  if (status.pendingOutboxCount > 0) return "Syncing...";
+  if (!scannerReady) return "Scanner not ready";
+  return "Ready for billing";
 }

@@ -1,16 +1,21 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AppState,
+  Keyboard,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  findNodeHandle,
   View,
 } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 
 import PosStatusBar from "../components/PosStatusBar";
 import ScanNoticeBanner from "../components/ScanNoticeBanner";
@@ -18,10 +23,16 @@ import MenuScreen from "./MenuScreen";
 import SellScanScreen from "./SellScanScreen";
 import PurchaseScreen from "./PurchaseScreen";
 import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
-import { clearDeviceSession } from "../services/deviceSession";
+import { clearDeviceSession, getDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
-import { notifyHidScan, wasHidScannerActive } from "../services/hidScannerService";
+import {
+  feedHidKey,
+  feedHidText,
+  resetHidTracking,
+  setHidScanHandler,
+  submitHidBuffer,
+} from "../services/hidScannerService";
 import { handleScan as handleGlobalScan, setScanRuntime, type ScanNotice } from "../services/scan/handleScan";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme } from "../theme";
@@ -42,30 +53,52 @@ const TABS: Array<{ id: PosTab; label: string }> = [
   { id: "PURCHASE", label: "PURCHASE" },
 ];
 
+const HID_ACTIVE_WINDOW_MS = 60000;
+const CAMERA_IDLE_TIMEOUT_MS = 5000;
+const CAMERA_SCAN_COOLDOWN_MS = 700;
+const POS_DEVICE_HINTS = ["sunmi", "pax", "urovo", "newland", "zebra", "honeywell", "datalogic"];
+
 export default function PosRootLayout() {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
   const hidInputRef = useRef<TextInput>(null);
-  const hidBufferRef = useRef("");
+  const hidActiveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cameraIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cameraScanCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [activeTab, setActiveTab] = useState<PosTab>("SELL");
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
 
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
+  const [deviceType, setDeviceType] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
   const [deviceStoreId, setDeviceStoreId] = useState<string | null>(null);
   const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
   const [printerOk, setPrinterOk] = useState<boolean | null>(null);
-  const [scannerOk, setScannerOk] = useState<boolean | null>(null);
+  const [scannerOk, setScannerOk] = useState<boolean>(false);
 
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [cameraScanned, setCameraScanned] = useState(false);
+  const [cameraScanLocked, setCameraScanLocked] = useState(false);
   const [hidInput, setHidInput] = useState("");
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const scanDisabled = !isFocused || storeActive === false || scannerOpen;
   const statusMode = "SELL";
+  const hidConnected = scannerOk;
+  const cameraAvailable = cameraPermission?.granted !== false;
+  const isDedicatedPosDevice = useMemo(() => {
+    if (deviceType) return deviceType === "OEM_HANDHELD";
+    if (Platform.OS !== "android") return false;
+    const androidMeta = (Constants.platform as any)?.android ?? {};
+    const manufacturer = String(androidMeta.manufacturer ?? "").toLowerCase();
+    const model = String(androidMeta.model ?? "").toLowerCase();
+    const deviceName = String(Constants.deviceName ?? "").toLowerCase();
+    const signature = `${manufacturer} ${model} ${deviceName}`;
+    return POS_DEVICE_HINTS.some((hint) => signature.includes(hint));
+  }, [deviceType]);
+  const isMobileDevice = !isDedicatedPosDevice;
+  const showCameraTimeoutNote = !isMobileDevice && !hidConnected;
 
   const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
     if (error.message === "device_inactive") {
@@ -113,7 +146,6 @@ export default function PosRootLayout() {
         setDeviceStoreId(status.storeId ?? null);
         setPendingOutboxCount(status.pendingOutboxCount ?? 0);
         setPrinterOk(status.printerOk ?? null);
-        setScannerOk(status.scannerOk ?? null);
         if (status.storeName) {
           setStoreName((prev) => status.storeName ?? prev);
         }
@@ -146,6 +178,24 @@ export default function PosRootLayout() {
       clearInterval(interval);
     };
   }, [handleDeviceAuthError, navigation]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDeviceType = async () => {
+      const session = await getDeviceSession();
+      if (cancelled) return;
+      if (session?.deviceType) {
+        setDeviceType(session.deviceType);
+      }
+    };
+
+    void loadDeviceType();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -204,6 +254,25 @@ export default function PosRootLayout() {
     });
   }, [isFocused, scanDisabled, scannerOpen]);
 
+  const ensureHidFocus = useCallback(() => {
+    if (!isFocused || scanDisabled || scannerOpen) return;
+    const state = (TextInput as any).State;
+    if (!state) return;
+    if (typeof state.currentlyFocusedInput === "function") {
+      const focused = state.currentlyFocusedInput();
+      if (focused && focused !== hidInputRef.current) return;
+    } else if (typeof state.currentlyFocusedField === "function") {
+      const focusedTag = state.currentlyFocusedField();
+      const hidTag = hidInputRef.current ? findNodeHandle(hidInputRef.current) : null;
+      if (focusedTag && hidTag && focusedTag !== hidTag) return;
+    } else {
+      return;
+    }
+    requestAnimationFrame(() => {
+      hidInputRef.current?.focus();
+    });
+  }, [isFocused, scanDisabled, scannerOpen]);
+
   useEffect(() => {
     if (!isFocused) {
       hidInputRef.current?.blur();
@@ -213,31 +282,118 @@ export default function PosRootLayout() {
     }
   }, [isFocused, scannerOpen]);
 
-  const commitHidScan = (raw: string) => {
-    const value = raw.trim();
-    hidBufferRef.current = "";
-    setHidInput("");
-    if (value) {
-      notifyHidScan(true);
-      void handleGlobalScan(value);
+  useEffect(() => {
+    const subscription = Keyboard.addListener("keyboardDidHide", () => {
+      ensureHidFocus();
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [ensureHidFocus]);
+
+  useEffect(() => {
+    return () => {
+      if (hidActiveTimeoutRef.current) {
+        clearTimeout(hidActiveTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cameraIdleTimerRef.current) {
+        clearTimeout(cameraIdleTimerRef.current);
+      }
+      if (cameraScanCooldownRef.current) {
+        clearTimeout(cameraScanCooldownRef.current);
+      }
+    };
+  }, []);
+
+  const clearCameraIdleTimer = useCallback(() => {
+    if (cameraIdleTimerRef.current) {
+      clearTimeout(cameraIdleTimerRef.current);
+      cameraIdleTimerRef.current = null;
     }
-  };
+  }, []);
+
+  const resetCameraIdleTimer = useCallback(() => {
+    if (!scannerOpen) return;
+    if (isMobileDevice) return;
+    if (hidConnected) return;
+    clearCameraIdleTimer();
+    cameraIdleTimerRef.current = setTimeout(() => {
+      setScannerOpen(false);
+    }, CAMERA_IDLE_TIMEOUT_MS);
+  }, [clearCameraIdleTimer, hidConnected, isMobileDevice, scannerOpen]);
+
+  useEffect(() => {
+    if (!scannerOpen || isMobileDevice || hidConnected) {
+      clearCameraIdleTimer();
+      return;
+    }
+    resetCameraIdleTimer();
+    return clearCameraIdleTimer;
+  }, [clearCameraIdleTimer, hidConnected, isMobileDevice, resetCameraIdleTimer, scannerOpen]);
+
+  useEffect(() => {
+    if (!scannerOpen) {
+      setCameraScanLocked(false);
+      if (cameraScanCooldownRef.current) {
+        clearTimeout(cameraScanCooldownRef.current);
+        cameraScanCooldownRef.current = null;
+      }
+    }
+  }, [scannerOpen]);
+
+  const markHidActive = useCallback(() => {
+    setScannerOk(true);
+    if (hidActiveTimeoutRef.current) {
+      clearTimeout(hidActiveTimeoutRef.current);
+    }
+    hidActiveTimeoutRef.current = setTimeout(() => {
+      setScannerOk(false);
+      hidActiveTimeoutRef.current = null;
+    }, HID_ACTIVE_WINDOW_MS);
+  }, []);
+
+  useEffect(() => {
+    setHidScanHandler((value) => {
+      markHidActive();
+      setHidInput("");
+      void handleGlobalScan(value);
+    });
+    return () => {
+      setHidScanHandler(null);
+    };
+  }, [markHidActive]);
+
+  useEffect(() => {
+    if (!scanDisabled) return;
+    resetHidTracking();
+    setHidInput("");
+  }, [scanDisabled]);
 
   const handleHidChange = (text: string) => {
     if (scanDisabled) return;
-    hidBufferRef.current = text;
+    feedHidText(text);
     setHidInput(text);
   };
 
   const handleHidSubmit = () => {
     if (scanDisabled) return;
-    commitHidScan(hidBufferRef.current);
+    const scanValue = submitHidBuffer();
+    if (scanValue) {
+      setHidInput("");
+    }
   };
 
   const handleHidKeyPress = (event: { nativeEvent: { key: string } }) => {
     if (scanDisabled) return;
-    if (event.nativeEvent.key === "Enter") {
-      commitHidScan(hidBufferRef.current);
+    const scanValue = feedHidKey(event.nativeEvent.key);
+    if (scanValue) {
+      setHidInput("");
     }
   };
 
@@ -247,7 +403,7 @@ export default function PosRootLayout() {
       setScanNotice({ tone: "error", message: POS_MESSAGES.storeInactive });
       return;
     }
-    if (wasHidScannerActive()) {
+    if (isDedicatedPosDevice && hidConnected) {
       setScanNotice({ tone: "info", message: "HID scanner detected. Use the scanner to scan." });
       return;
     }
@@ -261,16 +417,29 @@ export default function PosRootLayout() {
         return;
       }
     }
-    setCameraScanned(false);
+    setCameraScanLocked(false);
     setScannerOpen(true);
   };
 
   const handleCameraScan = (value: string) => {
     if (!value) return;
-    setCameraScanned(true);
-    setScannerOpen(false);
+    setCameraScanLocked(true);
+    resetCameraIdleTimer();
+    if (cameraScanCooldownRef.current) {
+      clearTimeout(cameraScanCooldownRef.current);
+    }
+    cameraScanCooldownRef.current = setTimeout(() => {
+      setCameraScanLocked(false);
+      cameraScanCooldownRef.current = null;
+    }, CAMERA_SCAN_COOLDOWN_MS);
     void handleGlobalScan(value);
   };
+
+  useEffect(() => {
+    if (scannerOpen && isDedicatedPosDevice && hidConnected) {
+      setScannerOpen(false);
+    }
+  }, [hidConnected, isDedicatedPosDevice, scannerOpen]);
 
   return (
     <View style={styles.container}>
@@ -283,18 +452,53 @@ export default function PosRootLayout() {
         storeId={deviceStoreId}
         printerOk={printerOk}
         scannerOk={scannerOk}
+        cameraAvailable={cameraAvailable}
       />
 
       <View style={styles.tabs}>
         {TABS.map((tab) => {
           const active = activeTab === tab.id;
+          const isMenu = tab.id === "MENU";
+          const isSell = tab.id === "SELL";
+          const isPurchase = tab.id === "PURCHASE";
           return (
             <Pressable
               key={tab.id}
-              style={[styles.tabButton, active && styles.tabButtonActive]}
+              style={({ pressed }) => [
+                styles.tabButton,
+                isMenu && styles.tabMenu,
+                isSell && styles.tabSell,
+                isPurchase && styles.tabPurchase,
+                active && isMenu && styles.tabMenuActive,
+                active && isSell && styles.tabSellActive,
+                active && isPurchase && styles.tabPurchaseActive,
+                pressed && styles.tabPressed,
+              ]}
               onPress={() => setActiveTab(tab.id)}
             >
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>{tab.label}</Text>
+              {isMenu ? (
+                <View style={styles.tabMenuContent}>
+                  <MaterialCommunityIcons
+                    name="menu"
+                    size={16}
+                    color={active ? theme.colors.textPrimary : theme.colors.textSecondary}
+                  />
+                  <Text style={[styles.tabText, styles.tabMenuText, active && styles.tabMenuTextActive]}>
+                    {tab.label}
+                  </Text>
+                </View>
+              ) : (
+                <Text
+                  style={[
+                    styles.tabText,
+                    isSell && styles.tabSellText,
+                    isPurchase && styles.tabPurchaseText,
+                    active && isPurchase && styles.tabPurchaseTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              )}
             </Pressable>
           );
         })}
@@ -349,7 +553,7 @@ export default function PosRootLayout() {
                     "itf14",
                   ],
                 }}
-                onBarcodeScanned={cameraScanned ? undefined : (event) => handleCameraScan(event.data)}
+                onBarcodeScanned={cameraScanLocked ? undefined : (event) => handleCameraScan(event.data)}
               />
             ) : (
               <View style={styles.cameraPermission}>
@@ -362,7 +566,14 @@ export default function PosRootLayout() {
               </View>
             )}
             <View style={styles.cameraActions}>
-              <Text style={styles.cameraHint}>Align the barcode/QR inside the frame.</Text>
+              <View style={styles.cameraHintBlock}>
+                <Text style={styles.cameraHint}>Align the barcode/QR inside the frame.</Text>
+                {showCameraTimeoutNote ? (
+                  <Text style={styles.cameraTimeoutHint}>
+                    Auto-closes after 5s of inactivity.
+                  </Text>
+                ) : null}
+              </View>
               <Pressable onPress={() => setScannerOpen(false)}>
                 <Text style={styles.cameraClose}>Close</Text>
               </Pressable>
@@ -377,14 +588,19 @@ export default function PosRootLayout() {
         onChangeText={handleHidChange}
         onSubmitEditing={handleHidSubmit}
         onKeyPress={handleHidKeyPress}
+        onBlur={() => {
+          setTimeout(() => {
+            ensureHidFocus();
+          }, 50);
+        }}
         blurOnSubmit={false}
         autoCorrect={false}
         autoCapitalize="none"
         autoComplete="off"
+        autoFocus
         caretHidden
         contextMenuHidden
         editable={!scanDisabled}
-        inputMode="none"
         showSoftInputOnFocus={false}
         style={styles.hidInput}
       />
@@ -399,28 +615,77 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   tabButton: {
-    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
+    justifyContent: "center",
+    borderRadius: 999,
   },
-  tabButtonActive: {
-    borderBottomColor: theme.colors.primary,
+  tabSell: {
+    backgroundColor: theme.colors.primary,
+    ...theme.shadows.sm,
+  },
+  tabSellActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  tabPurchase: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+  },
+  tabPurchaseActive: {
+    borderColor: theme.colors.primaryDark,
     backgroundColor: theme.colors.surfaceAlt,
+  },
+  tabMenu: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 14,
+  },
+  tabMenuActive: {
+    borderColor: theme.colors.textSecondary,
+    backgroundColor: theme.colors.surface,
+  },
+  tabMenuContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  tabPressed: {
+    transform: [{ scale: 0.98 }],
+    opacity: 0.9,
   },
   tabText: {
     fontSize: 12,
     fontWeight: "800",
     color: theme.colors.textSecondary,
   },
-  tabTextActive: {
+  tabSellText: {
+    color: theme.colors.textInverse,
+  },
+  tabPurchaseText: {
     color: theme.colors.primaryDark,
+  },
+  tabPurchaseTextActive: {
+    color: theme.colors.primaryDark,
+  },
+  tabMenuText: {
+    color: theme.colors.textSecondary,
+    fontWeight: "700",
+  },
+  tabMenuTextActive: {
+    color: theme.colors.textPrimary,
   },
   noticeWrap: {
     paddingHorizontal: 12,
@@ -450,12 +715,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+  cameraHintBlock: {
+    flex: 1,
   },
   cameraHint: {
     fontSize: 12,
     color: theme.colors.textSecondary,
+    fontWeight: "600",
+  },
+  cameraTimeoutHint: {
+    marginTop: 2,
+    fontSize: 11,
+    color: theme.colors.textTertiary,
     fontWeight: "600",
   },
   cameraClose: {

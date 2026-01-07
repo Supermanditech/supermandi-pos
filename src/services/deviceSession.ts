@@ -7,6 +7,7 @@ export type DeviceSession = {
   deviceId: string;
   storeId: string;
   deviceToken: string;
+  deviceType?: string | null;
 };
 
 function normalizeSession(value: unknown): DeviceSession | null {
@@ -15,8 +16,9 @@ function normalizeSession(value: unknown): DeviceSession | null {
   const deviceId = typeof candidate.deviceId === "string" ? candidate.deviceId.trim() : "";
   const storeId = typeof candidate.storeId === "string" ? candidate.storeId.trim() : "";
   const deviceToken = typeof candidate.deviceToken === "string" ? candidate.deviceToken.trim() : "";
+  const deviceType = typeof candidate.deviceType === "string" ? candidate.deviceType.trim() : null;
   if (!deviceId || !storeId || !deviceToken) return null;
-  return { deviceId, storeId, deviceToken };
+  return { deviceId, storeId, deviceToken, deviceType };
 }
 
 async function secureStoreAvailable(): Promise<boolean> {

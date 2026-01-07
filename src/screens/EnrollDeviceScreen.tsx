@@ -155,7 +155,8 @@ export default function EnrollDeviceScreen() {
       await saveDeviceSession({
         deviceId: res.deviceId,
         storeId: res.storeId,
-        deviceToken: res.deviceToken
+        deviceToken: res.deviceToken,
+        deviceType
       });
       if (!res.storeActive) {
         Alert.alert("Store Inactive", POS_MESSAGES.storeInactive);

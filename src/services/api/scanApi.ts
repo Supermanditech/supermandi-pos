@@ -18,6 +18,7 @@ export type ScanResolveResponse =
   | {
       action: "ADD_TO_CART" | "PROMPT_PRICE" | "DIGITISED" | "ALREADY_DIGITISED";
       product: ScanProduct;
+      product_not_found_for_store?: boolean;
     };
 
 export async function resolveScan(input: {
@@ -41,7 +42,8 @@ export async function resolveScan(input: {
       barcode: offline.product.barcode,
       priceMinor: offline.product.priceMinor,
       currency: offline.product.currency
-    }
+    },
+    product_not_found_for_store: offline.product_not_found_for_store
   };
 }
 

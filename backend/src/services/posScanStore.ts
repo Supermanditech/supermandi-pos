@@ -21,7 +21,11 @@ export type PosProduct = {
 
 export type ScanResult =
   | { action: "IGNORED" }
-  | { action: Exclude<ScanAction, "IGNORED">; product: PosProduct };
+  | {
+      action: Exclude<ScanAction, "IGNORED">;
+      product: PosProduct;
+      product_not_found_for_store?: boolean;
+    };
 
 const DUPLICATE_WINDOW_MS = 500;
 const CROSS_DEVICE_WINDOW_MS = 30 * 60 * 1000;
@@ -363,7 +367,7 @@ export async function resolveScan(
     const created = await createProduct(barcode, storeId);
     const action: ScanAction = "PROMPT_PRICE";
     await recordScanEvent({ storeId, deviceId, scanValue: barcode, mode, action, variantId: created.id });
-    return { action, product: created };
+    return { action, product: created, product_not_found_for_store: true };
   }
 
   if (existing.priceMinor === null) {

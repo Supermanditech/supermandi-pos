@@ -1,3 +1,5 @@
+import { formatStoreName } from "./storeName";
+
 export type UpiIntentInput = {
   upiVpa: string | null | undefined;
   storeName: string | null | undefined;
@@ -14,10 +16,7 @@ export function buildUpiIntent(input: UpiIntentInput): string | null {
   const transactionId = typeof input.transactionId === "string" ? input.transactionId.trim() : "";
   if (!vpa || !transactionId) return null;
 
-  const name =
-    typeof input.storeName === "string" && input.storeName.trim()
-      ? input.storeName.trim()
-      : "SuperMandi Store";
+  const name = formatStoreName(input.storeName) ?? "SuperMandi Store";
 
   const amountMinor = Number.isFinite(input.amountMinor) ? input.amountMinor : 0;
   const amountMajor = (Math.max(0, amountMinor) / 100).toFixed(2);

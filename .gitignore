@@ -1,3 +1,7 @@
+# Temp / runtime
+.tmp/
+*.log
+
 # OSX
 .DS_Store
 

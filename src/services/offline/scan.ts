@@ -13,7 +13,11 @@ export type OfflineScanProduct = {
 
 export type OfflineScanResult =
   | { action: "IGNORED" }
-  | { action: "ADD_TO_CART" | "PROMPT_PRICE" | "DIGITISED" | "ALREADY_DIGITISED"; product: OfflineScanProduct };
+  | {
+      action: "ADD_TO_CART" | "PROMPT_PRICE" | "DIGITISED" | "ALREADY_DIGITISED";
+      product: OfflineScanProduct;
+      product_not_found_for_store?: boolean;
+    };
 
 function buildProductName(barcode: string): string {
   const suffix = barcode.slice(-4);
@@ -121,7 +125,7 @@ export async function resolveOfflineScan(scanValue: string, mode: OfflineScanMod
       currency: created.currency,
       origin: "SELL"
     });
-    return { action: "PROMPT_PRICE", product: created };
+    return { action: "PROMPT_PRICE", product: created, product_not_found_for_store: true };
   }
 
   if (existing.priceMinor === null) {

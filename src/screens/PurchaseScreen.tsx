@@ -1,9 +1,28 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import * as productsApi from "../services/api/productsApi";
+import { handleScan as handleGlobalScan } from "../services/scan/handleScan";
+import { offlineDb } from "../services/offline/localDb";
+import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { submitPurchaseDraft } from "../services/purchaseDraft";
 import { usePurchaseDraftStore, type PurchaseDraftItem } from "../stores/purchaseDraftStore";
+import {
+  feedHidKey,
+  feedHidText,
+  submitHidBuffer,
+  wasHidCommitRecent,
+} from "../services/hidScannerService";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
 
@@ -23,6 +42,66 @@ type PurchaseItemRowProps = {
   item: PurchaseDraftItem;
   onUpdate: (barcode: string, updates: PurchaseItemUpdates) => void;
   onRemove: (barcode: string) => void;
+};
+
+type SkuItem = {
+  barcode: string;
+  name: string;
+  currency: string | null;
+  priceMinor: number | null;
+};
+
+async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
+  const trimmedQuery = query?.trim();
+  try {
+    const remote = await productsApi.listProducts(trimmedQuery ? { q: trimmedQuery } : undefined);
+    const items: SkuItem[] = [];
+
+    for (const product of remote) {
+      const barcode = typeof product.barcode === "string" ? product.barcode.trim() : "";
+      if (!barcode) continue;
+      const currency = product.currency ?? "INR";
+      const priceMinor = Number.isFinite(product.price) && product.price > 0 ? Math.round(product.price) : null;
+
+      items.push({
+        barcode,
+        name: product.name,
+        currency,
+        priceMinor
+      });
+
+      await upsertLocalProduct(barcode, product.name, currency, null);
+      if (priceMinor !== null) {
+        await setLocalPrice(barcode, priceMinor);
+      }
+    }
+
+    return items;
+  } catch {
+    return [];
+  }
+}
+
+const PAGE_SIZE = 40;
+const SCAN_SEGMENT_DOCKED_WIDTH = 64;
+
+const mergeSkuItems = (prev: SkuItem[], incoming: SkuItem[]): SkuItem[] => {
+  if (prev.length === 0 && incoming.length <= 1) return incoming;
+  const merged = [...prev];
+  const indexByBarcode = new Map<string, number>();
+  merged.forEach((item, index) => indexByBarcode.set(item.barcode, index));
+
+  for (const item of incoming) {
+    const existingIndex = indexByBarcode.get(item.barcode);
+    if (existingIndex === undefined) {
+      indexByBarcode.set(item.barcode, merged.length);
+      merged.push(item);
+    } else {
+      merged[existingIndex] = item;
+    }
+  }
+
+  return merged;
 };
 
 const parsePriceInput = (text: string): number | null => {
@@ -132,6 +211,17 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   const { items, updateItem, remove, hasIncomplete } = usePurchaseDraftStore();
   const hasOpenItems = hasIncomplete();
 
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SkuItem[]>([]);
+  const [searchPage, setSearchPage] = useState(0);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchHasMore, setSearchHasMore] = useState(true);
+  const searchInputRef = useRef<TextInput>(null);
+  const lastSearchQueryRef = useRef<string | null>(null);
+  const suppressSearchBlurRef = useRef(false);
+  const suppressSearchBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const totalMinor = useMemo(() => {
     return items.reduce((sum, item) => {
       const price = item.purchasePriceMinor ?? 0;
@@ -143,6 +233,276 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   const totalLabel = formatMoney(totalMinor, currency);
 
   const submitDisabled = items.length === 0 || hasOpenItems || storeActive === false;
+  const searchQueryNormalized = searchQuery.trim().toLowerCase();
+
+  const focusSearchInput = () => {
+    requestAnimationFrame(() => searchInputRef.current?.focus());
+  };
+
+  const markSearchInteraction = useCallback((durationMs = 400) => {
+    suppressSearchBlurRef.current = true;
+    if (suppressSearchBlurTimerRef.current) {
+      clearTimeout(suppressSearchBlurTimerRef.current);
+    }
+    suppressSearchBlurTimerRef.current = setTimeout(() => {
+      suppressSearchBlurRef.current = false;
+      suppressSearchBlurTimerRef.current = null;
+    }, durationMs);
+  }, []);
+
+  const openSearch = () => {
+    if (storeActive === false) return;
+    setSearchExpanded(true);
+  };
+
+  const handleSearchChange = (value: string) => {
+    if (!scanDisabled) {
+      feedHidText(value);
+    }
+    setSearchQuery(value);
+    if (!searchExpanded) {
+      setSearchExpanded(true);
+    }
+  };
+
+  const handleSearchSubmit = (event?: { nativeEvent: { text: string } }) => {
+    const raw = event?.nativeEvent?.text ?? searchQuery;
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    void handleGlobalScan(trimmed);
+    setSearchQuery("");
+    setSearchExpanded(true);
+    focusSearchInput();
+  };
+
+  const handleSearchKeyPress = (event: { nativeEvent: { key: string } }) => {
+    if (scanDisabled) return;
+    const scanValue = feedHidKey(event.nativeEvent.key);
+    if (scanValue) {
+      setSearchQuery("");
+      setSearchExpanded(true);
+      focusSearchInput();
+    }
+  };
+
+  const handleSearchSubmitEditing = (event?: { nativeEvent: { text: string } }) => {
+    if (!scanDisabled) {
+      const scanValue = submitHidBuffer();
+      if (scanValue || wasHidCommitRecent()) {
+        setSearchQuery("");
+        setSearchExpanded(true);
+        focusSearchInput();
+        return;
+      }
+    }
+    handleSearchSubmit(event);
+  };
+
+  const handleCameraPress = () => {
+    if (scanDisabled) return;
+    markSearchInteraction(1000);
+    onOpenScanner();
+  };
+
+  const loadSearchResults = useCallback(async (reset: boolean) => {
+    if (searchLoading) return;
+    if (!searchHasMore && !reset) return;
+
+    const query = searchQuery.trim().toLowerCase();
+    const page = reset ? 0 : searchPage;
+    const offset = page * PAGE_SIZE;
+
+    setSearchLoading(true);
+
+    const params: Array<string | number> = [];
+    let sql = `
+      SELECT
+        p.barcode as barcode,
+        p.name as name,
+        p.currency as currency,
+        pr.price_minor as priceMinor
+      FROM offline_products p
+      LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
+    `;
+
+    if (query.length > 0) {
+      const like = `%${query}%`;
+      sql += " WHERE lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?";
+      params.push(like, like);
+    }
+
+    sql += " ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC LIMIT ? OFFSET ?";
+    params.push(PAGE_SIZE, offset);
+
+    try {
+      let rows = await offlineDb.all<SkuItem>(sql, params);
+      if (reset && rows.length === 0) {
+        const remote = await syncProductsToOffline(query);
+        if (remote.length > 0) {
+          rows = await offlineDb.all<SkuItem>(sql, params);
+        }
+      }
+      setSearchResults((prev) => mergeSkuItems(reset ? [] : prev, rows));
+      setSearchHasMore(rows.length === PAGE_SIZE);
+      setSearchPage(page + 1);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [searchHasMore, searchLoading, searchPage, searchQuery]);
+
+  useEffect(() => {
+    if (!searchExpanded) return;
+    if (lastSearchQueryRef.current === searchQueryNormalized) return;
+    lastSearchQueryRef.current = searchQueryNormalized;
+    const timer = setTimeout(() => {
+      setSearchHasMore(true);
+      setSearchPage(0);
+      void loadSearchResults(true);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchExpanded, searchQueryNormalized, loadSearchResults]);
+
+  useEffect(() => {
+    if (!searchExpanded) return;
+    focusSearchInput();
+  }, [searchExpanded]);
+
+  useEffect(() => {
+    return () => {
+      if (suppressSearchBlurTimerRef.current) {
+        clearTimeout(suppressSearchBlurTimerRef.current);
+      }
+    };
+  }, []);
+
+  const collapseSearchExpanded = useCallback((blurInput: boolean) => {
+    suppressSearchBlurRef.current = false;
+    setSearchExpanded(false);
+    if (blurInput) {
+      searchInputRef.current?.blur();
+    }
+  }, []);
+
+  const handleAddFromSearch = (item: SkuItem) => {
+    if (storeActive === false) return;
+    usePurchaseDraftStore.getState().addOrUpdate({
+      id: item.barcode,
+      barcode: item.barcode,
+      name: item.name,
+      currency: item.currency ?? "INR",
+      sellingPriceMinor: item.priceMinor ?? null,
+      purchasePriceMinor: null
+    });
+    setSearchQuery("");
+    setSearchExpanded(true);
+    focusSearchInput();
+  };
+
+  const renderSearchRow = ({ item }: { item: SkuItem }) => {
+    const priceLabel =
+      item.priceMinor === null
+        ? "--"
+        : formatMoney(item.priceMinor, item.currency ?? "INR");
+
+    return (
+      <Pressable
+        style={styles.searchRow}
+        onPressIn={() => markSearchInteraction()}
+        onPress={() => handleAddFromSearch(item)}
+        accessibilityLabel={`Add ${item.name}`}
+      >
+        <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
+        <View style={styles.searchRowInfo}>
+          <Text style={styles.searchRowName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.searchRowMeta} numberOfLines={1}>
+            {item.barcode}
+          </Text>
+        </View>
+        <View style={styles.searchRowRight}>
+          <Text style={styles.searchRowPrice}>{priceLabel}</Text>
+        </View>
+      </Pressable>
+    );
+  };
+  const renderSearchBar = (variant: "collapsed" | "expanded") => (
+    <View
+      style={[
+        styles.searchBar,
+        variant === "expanded" && styles.searchBarExpanded,
+        storeActive === false && styles.searchBarDisabled,
+      ]}
+    >
+      <View
+        style={[
+          styles.searchSegment,
+          variant === "expanded" && styles.searchSegmentExpanded,
+        ]}
+      >
+        <MaterialCommunityIcons name="magnify" size={18} color="#000000" />
+        <TextInput
+          ref={searchInputRef}
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={handleSearchChange}
+          onFocus={openSearch}
+          onBlur={() => {
+            if (suppressSearchBlurRef.current) {
+              suppressSearchBlurRef.current = false;
+              focusSearchInput();
+              return;
+            }
+            if (!searchQuery.trim()) {
+              setSearchExpanded(false);
+            }
+          }}
+          onKeyPress={handleSearchKeyPress}
+          onSubmitEditing={handleSearchSubmitEditing}
+          placeholder="Search product"
+          placeholderTextColor="#000000"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          blurOnSubmit={false}
+          editable={storeActive !== false}
+        />
+        {searchQuery ? (
+          <Pressable
+            onPressIn={() => markSearchInteraction()}
+            onPress={() => setSearchQuery("")}
+            hitSlop={8}
+            accessibilityLabel="Clear search"
+          >
+            <MaterialCommunityIcons
+              name="close-circle"
+              size={18}
+              color="#000000"
+            />
+          </Pressable>
+        ) : null}
+      </View>
+      <Pressable
+        style={[
+          styles.scanSegment,
+          variant === "expanded" && styles.scanSegmentExpanded,
+          scanDisabled && styles.ctaDisabled,
+        ]}
+        onPressIn={() => markSearchInteraction(1000)}
+        onPress={handleCameraPress}
+        disabled={scanDisabled}
+        accessibilityLabel="Open camera scanner"
+      >
+        <MaterialCommunityIcons name="camera" size={18} color={theme.colors.textInverse} />
+        {variant === "collapsed" ? (
+          <Text style={styles.scanSegmentText} numberOfLines={1}>
+            Scan product here
+          </Text>
+        ) : null}
+      </Pressable>
+    </View>
+  );
 
   const handleSubmit = async () => {
     try {
@@ -162,24 +522,59 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     }
   };
 
-  const header = (
-    <View>
-      <Pressable
-        style={[styles.scanPad, scanDisabled && styles.ctaDisabled]}
-        onPress={onOpenScanner}
-        disabled={scanDisabled}
+  const searchHeader = (
+    <View style={styles.searchHeader}>
+      {renderSearchBar(searchExpanded ? "expanded" : "collapsed")}
+      <View
+        style={[styles.searchPanel, !searchExpanded && styles.searchPanelCollapsed]}
+        pointerEvents={searchExpanded ? "auto" : "none"}
+        onTouchStart={() => markSearchInteraction()}
       >
-        <View style={styles.scanLeft}>
-          <MaterialCommunityIcons name="barcode-scan" size={24} color={theme.colors.primary} />
-        </View>
-        <View style={styles.scanCenter}>
-          <Text style={styles.scanTitle}>Scan here</Text>
-        </View>
-        <View style={styles.scanRight}>
-          <MaterialCommunityIcons name="qrcode-scan" size={22} color={theme.colors.primary} />
-        </View>
-      </Pressable>
+        <Text style={styles.searchPanelTitle}>
+          {searchQuery.trim() ? "Search results" : "Recent products"}
+        </Text>
+        <FlatList
+          data={searchResults}
+          keyExtractor={(item) => item.barcode}
+          renderItem={renderSearchRow}
+          style={styles.searchPanelList}
+          contentContainerStyle={styles.searchPanelListContent}
+          ListEmptyComponent={
+            !searchLoading ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyText}>
+                  {searchQuery.trim() ? "No matches found." : "No recent products."}
+                </Text>
+              </View>
+            ) : null
+          }
+          ListFooterComponent={
+            searchLoading ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color={theme.colors.primary} />
+              </View>
+            ) : null
+          }
+          onEndReached={() => {
+            if (!searchLoading && searchHasMore) {
+              void loadSearchResults(false);
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          removeClippedSubviews
+          windowSize={7}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        />
+      </View>
+    </View>
+  );
 
+  const listHeader = (
+    <View>
       <View style={styles.draftHeader}>
         <Text style={styles.draftTitle}>Invoice Data Sheet</Text>
         <View style={styles.draftMeta}>
@@ -203,6 +598,14 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
 
   return (
     <View style={styles.container}>
+      {searchHeader}
+      {searchExpanded ? (
+        <Pressable
+          style={styles.searchDismissOverlay}
+          onPress={() => collapseSearchExpanded(true)}
+          accessibilityLabel="Close search"
+        />
+      ) : null}
       <FlatList
         data={items}
         keyExtractor={(item) => item.barcode}
@@ -213,7 +616,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
             onRemove={remove}
           />
         )}
-        ListHeaderComponent={header}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No drafts yet.</Text>
@@ -221,21 +624,15 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
           </View>
         }
         contentContainerStyle={items.length === 0 ? styles.emptyContent : styles.listContent}
+        style={styles.list}
       />
+
       <View style={styles.actionBar}>
         {storeActive === false ? (
           <Text style={styles.actionHint}>Store is inactive. Purchase is disabled.</Text>
         ) : hasOpenItems ? (
           <Text style={styles.actionHint}>Complete all item fields to submit.</Text>
         ) : null}
-        <Pressable
-          style={[styles.invoiceButton, scanDisabled && styles.ctaDisabled]}
-          onPress={onOpenScanner}
-          disabled={scanDisabled}
-        >
-          <MaterialCommunityIcons name="file-document-outline" size={18} color={theme.colors.textSecondary} />
-          <Text style={styles.invoiceText}>Scan Supplier Invoice</Text>
-        </Pressable>
         <Pressable
           style={[styles.submitButton, submitDisabled && styles.ctaDisabled]}
           onPress={handleSubmit}
@@ -253,61 +650,144 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  list: {
+    position: "relative",
+    zIndex: 0,
+  },
   listContent: {
-    padding: 12,
+    paddingHorizontal: 12,
     paddingBottom: 170,
   },
   emptyContent: {
-    padding: 12,
+    paddingHorizontal: 12,
     paddingBottom: 170,
   },
-  scanPad: {
+  searchHeader: {
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    marginBottom: 16,
+    position: "relative",
+    zIndex: 2,
+  },
+  searchDismissOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceAlt,
+    position: "relative",
+    overflow: "hidden",
+  },
+  searchBarExpanded: {
+    borderColor: theme.colors.primary,
+  },
+  searchBarDisabled: {
+    opacity: 0.6,
+  },
+  searchSegment: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  searchSegmentExpanded: {
+    paddingRight: SCAN_SEGMENT_DOCKED_WIDTH + 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#000000",
+    paddingVertical: 0,
+  },
+  scanSegment: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.primary,
+  },
+  scanSegmentExpanded: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: SCAN_SEGMENT_DOCKED_WIDTH,
+    paddingHorizontal: 0,
+    justifyContent: "center",
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+  scanSegmentText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
+  },
+  searchPanel: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
+    padding: 10,
+    gap: 8,
+    ...theme.shadows.sm,
+  },
+  searchPanelCollapsed: {
+    display: "none",
+  },
+  searchPanelTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  searchPanelList: {
+    maxHeight: 260,
+  },
+  searchPanelListContent: {
+    paddingVertical: 4,
+  },
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 16,
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  scanLeft: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scanCenter: {
+  searchRowInfo: {
     flex: 1,
-    alignItems: "flex-start",
-    paddingHorizontal: 12,
-    gap: 2,
   },
-  scanTitle: {
-    fontSize: 14,
-    fontWeight: "800",
+  searchRowName: {
+    fontSize: 13,
+    fontWeight: "700",
     color: theme.colors.textPrimary,
   },
-  scanSubtitle: {
-    fontSize: 12,
-    fontWeight: "600",
+  searchRowMeta: {
+    fontSize: 11,
     color: theme.colors.textSecondary,
+    marginTop: 2,
   },
-  scanRight: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
+  searchRowRight: {
+    alignItems: "flex-end",
+  },
+  searchRowPrice: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  footerLoading: {
+    paddingVertical: 16,
   },
   draftHeader: {
     flexDirection: "row",
@@ -469,27 +949,12 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
     ...theme.shadows.sm,
+    zIndex: 3,
   },
   actionHint: {
     fontSize: 12,
     fontWeight: "600",
     color: theme.colors.warning,
-  },
-  invoiceButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
-  invoiceText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
   },
   submitButton: {
     backgroundColor: theme.colors.primary,

@@ -27,6 +27,7 @@ import { subscribeNetworkStatus } from "../services/networkStatus";
 import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { buildUpiIntent } from "../utils/upiIntent";
+import { formatStoreName } from "../utils/storeName";
 import { theme } from "../theme";
 
 type RootStackParamList = {
@@ -445,6 +446,8 @@ const PaymentScreen = () => {
   const ctaLabel =
     selectedMode === "UPI" ? "Payment Received" : selectedMode === "DUE" ? "Mark as Due" : "Complete Payment";
 
+  const formattedStoreName = formatStoreName(upiStoreName);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -498,7 +501,9 @@ const PaymentScreen = () => {
                 <Text style={styles.qrHint}>{loadingUpi ? "Generating QR..." : "QR not ready"}</Text>
               )}
             </View>
-            {upiStoreName && <Text style={styles.storeName}>{upiStoreName}</Text>}
+            {formattedStoreName && (
+              <Text style={styles.storeName}>{formattedStoreName}</Text>
+            )}
           </View>
         ) : (
           <View style={styles.cashStage}>

@@ -16,10 +16,16 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCartStore } from "../stores/cartStore";
 import type { CartItem } from "../stores/cartStore";
 import { formatMoney } from "../utils/money";
-import { buildCustomSkuBarcode } from "../utils/customSku";
 import * as productsApi from "../services/api/productsApi";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { offlineDb } from "../services/offline/localDb";
+import { handleScan as handleGlobalScan } from "../services/scan/handleScan";
+import {
+  feedHidKey,
+  feedHidText,
+  submitHidBuffer,
+  wasHidCommitRecent,
+} from "../services/hidScannerService";
 import { theme } from "../theme";
 
 type SellScanScreenProps = {
@@ -76,8 +82,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
 const PAGE_SIZE = 40;
 const NUM_COLUMNS = 2;
-const CUSTOM_UNITS = ["g", "kg", "ml", "l", "pcs"] as const;
-type CustomUnit = (typeof CUSTOM_UNITS)[number];
+const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 
 const mergeSkuItems = (prev: SkuItem[], incoming: SkuItem[]): SkuItem[] => {
   if (prev.length === 0 && incoming.length <= 1) return incoming;
@@ -127,25 +132,27 @@ export default function SellScanScreen({
   const [undoVisible, setUndoVisible] = useState(false);
   const [flashActive, setFlashActive] = useState(false);
 
-  const [addOverlayOpen, setAddOverlayOpen] = useState(false);
+  const [addExpanded, setAddExpanded] = useState(false);
   const [addQuery, setAddQuery] = useState("");
   const [addResults, setAddResults] = useState<SkuItem[]>([]);
   const [addPage, setAddPage] = useState(0);
   const [addLoading, setAddLoading] = useState(false);
   const [addHasMore, setAddHasMore] = useState(true);
-  const [selectedAddItems, setSelectedAddItems] = useState<Record<string, SkuItem>>({});
   const [cartExpanded, setCartExpanded] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountType>("percentage");
   const [discountValue, setDiscountValue] = useState("");
-  const [customSkuOpen, setCustomSkuOpen] = useState(false);
-  const [customSkuQty, setCustomSkuQty] = useState("1");
-  const [customSkuUnit, setCustomSkuUnit] = useState<CustomUnit>("pcs");
-  const [customSkuPrice, setCustomSkuPrice] = useState("");
-  const [customSkuError, setCustomSkuError] = useState<string | null>(null);
 
   const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addInputRef = useRef<TextInput>(null);
+  const lastAddQueryRef = useRef<string | null>(null);
+  const suppressAddBlurRef = useRef(false);
+  const suppressAddBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const addFocusedRef = useRef(false);
+  const addExpandedBeforeCartRef = useRef(false);
+  const addFocusedBeforeCartRef = useRef(false);
+  const cartOpeningRef = useRef(false);
 
   const currency = items[0]?.currency ?? "INR";
   const totalLabel = formatMoney(total, currency);
@@ -155,7 +162,6 @@ export default function SellScanScreen({
   const canPay = itemCount > 0 && storeActive !== false && !locked;
   const canOpenCart = itemCount > 0;
   const canEditCart = storeActive !== false && !locked;
-  const selectedAddCount = Object.keys(selectedAddItems).length;
   const parseDiscountInput = (value: string) => {
     const normalized = value.replace(/[^0-9.]/g, "");
     const parsed = Number(normalized);
@@ -166,20 +172,6 @@ export default function SellScanScreen({
     const major = minor / 100;
     return Number.isInteger(major) ? String(major) : major.toFixed(2);
   };
-  const parseCustomQuantity = (value: string) => {
-    const normalized = value.replace(/[^0-9.]/g, "");
-    const parsed = Number(normalized);
-    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-    return Math.round(parsed);
-  };
-  const parseCustomPrice = (value: string) => {
-    const normalized = value.replace(/[^0-9.]/g, "");
-    const parsed = Number(normalized);
-    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-    return Math.round(parsed * 100);
-  };
-  const customSkuReady =
-    canEditCart && parseCustomQuantity(customSkuQty) > 0 && parseCustomPrice(customSkuPrice) > 0;
   const discountValueNumber = parseDiscountInput(discountValue);
   const discountValueMinor =
     discountType === "fixed" ? Math.round(discountValueNumber * 100) : discountValueNumber;
@@ -214,6 +206,75 @@ export default function SellScanScreen({
     setLastAddMessage(null);
     setUndoVisible(false);
     undoLastAction();
+  };
+
+  const focusAddInput = () => {
+    requestAnimationFrame(() => addInputRef.current?.focus());
+  };
+
+  const markAddInteraction = useCallback((durationMs = 400) => {
+    suppressAddBlurRef.current = true;
+    if (suppressAddBlurTimerRef.current) {
+      clearTimeout(suppressAddBlurTimerRef.current);
+    }
+    suppressAddBlurTimerRef.current = setTimeout(() => {
+      suppressAddBlurRef.current = false;
+      suppressAddBlurTimerRef.current = null;
+    }, durationMs);
+  }, []);
+
+  const openAddExpanded = () => {
+    if (storeActive === false) return;
+    setAddExpanded(true);
+  };
+
+  const handleAddQueryChange = (value: string) => {
+    if (!scanDisabled) {
+      feedHidText(value);
+    }
+    setAddQuery(value);
+    if (!addExpanded) {
+      setAddExpanded(true);
+    }
+  };
+
+  const handleScanSubmit = (event?: { nativeEvent: { text: string } }) => {
+    const raw = event?.nativeEvent?.text ?? addQuery;
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    void handleGlobalScan(trimmed);
+    setAddQuery("");
+    setAddExpanded(true);
+    focusAddInput();
+  };
+
+  const handleCameraPress = () => {
+    if (scanDisabled) return;
+    markAddInteraction(1000);
+    onOpenScanner();
+  };
+
+  const handleAddKeyPress = (event: { nativeEvent: { key: string } }) => {
+    if (scanDisabled) return;
+    const scanValue = feedHidKey(event.nativeEvent.key);
+    if (scanValue) {
+      setAddQuery("");
+      setAddExpanded(true);
+      focusAddInput();
+    }
+  };
+
+  const handleAddSubmitEditing = (event?: { nativeEvent: { text: string } }) => {
+    if (!scanDisabled) {
+      const scanValue = submitHidBuffer();
+      if (scanValue || wasHidCommitRecent()) {
+        setAddQuery("");
+        setAddExpanded(true);
+        focusAddInput();
+        return;
+      }
+    }
+    handleScanSubmit(event);
   };
 
   const loadCatalog = useCallback(async (reset: boolean) => {
@@ -266,9 +327,6 @@ export default function SellScanScreen({
     const offset = page * PAGE_SIZE;
 
     setAddLoading(true);
-    if (reset) {
-      setAddResults([]);
-    }
 
     const params: Array<string | number> = [];
     let sql = `
@@ -307,6 +365,7 @@ export default function SellScanScreen({
   }, [addHasMore, addLoading, addPage, addQuery]);
 
   const initialLoadRef = useRef(false);
+  const addQueryNormalized = addQuery.trim().toLowerCase();
 
   useEffect(() => {
     if (initialLoadRef.current) return;
@@ -317,7 +376,9 @@ export default function SellScanScreen({
   }, [loadCatalog]);
 
   useEffect(() => {
-    if (!addOverlayOpen) return;
+    if (!addExpanded) return;
+    if (lastAddQueryRef.current === addQueryNormalized) return;
+    lastAddQueryRef.current = addQueryNormalized;
     const timer = setTimeout(() => {
       setAddHasMore(true);
       setAddPage(0);
@@ -325,17 +386,12 @@ export default function SellScanScreen({
     }, 200);
 
     return () => clearTimeout(timer);
-  }, [addOverlayOpen, addQuery, loadAddResults]);
+  }, [addExpanded, addQueryNormalized, loadAddResults]);
 
   useEffect(() => {
-    if (addOverlayOpen) return;
-    setAddQuery("");
-    setAddResults([]);
-    setAddPage(0);
-    setAddHasMore(true);
-    setAddLoading(false);
-    setSelectedAddItems({});
-  }, [addOverlayOpen]);
+    if (!addExpanded) return;
+    focusAddInput();
+  }, [addExpanded]);
 
   useEffect(() => {
     if (!cartExpanded) return;
@@ -349,6 +405,12 @@ export default function SellScanScreen({
       setDiscountValue("");
     }
   }, [cartExpanded, discount]);
+
+  useEffect(() => {
+    if (cartExpanded) {
+      cartOpeningRef.current = false;
+    }
+  }, [cartExpanded]);
 
   useEffect(() => {
     const lastMutation = mutationHistory[mutationHistory.length - 1];
@@ -383,75 +445,37 @@ export default function SellScanScreen({
     };
   }, []);
 
-  const handleAddPress = () => {
-    setAddOverlayOpen(true);
-  };
+  useEffect(() => {
+    return () => {
+      if (suppressAddBlurTimerRef.current) {
+        clearTimeout(suppressAddBlurTimerRef.current);
+      }
+    };
+  }, []);
 
-  const closeAddOverlay = () => {
-    setAddOverlayOpen(false);
-  };
-
-  const handleOpenCustomSku = () => {
-    if (!canEditCart) return;
-    if (addOverlayOpen) {
-      setAddOverlayOpen(false);
+  const collapseAddExpanded = useCallback((blurInput: boolean) => {
+    suppressAddBlurRef.current = false;
+    setAddExpanded(false);
+    if (blurInput) {
+      addInputRef.current?.blur();
     }
-    if (cartExpanded) {
-      setCartExpanded(false);
-    }
-    setCustomSkuError(null);
-    setCustomSkuOpen(true);
-  };
-
-  const closeCustomSku = () => {
-    setCustomSkuOpen(false);
-    setCustomSkuError(null);
-  };
-
-  const resetCustomSku = () => {
-    setCustomSkuQty("1");
-    setCustomSkuUnit("pcs");
-    setCustomSkuPrice("");
-  };
-
-  const handleCustomSkuSubmit = () => {
-    if (!customSkuReady) {
-      setCustomSkuError("Enter quantity and price.");
-      return;
-    }
-
-    const quantity = parseCustomQuantity(customSkuQty);
-    const priceMinor = parseCustomPrice(customSkuPrice);
-    const suffix = Date.now().toString().slice(-6);
-    const barcode = buildCustomSkuBarcode(`manual_${suffix}`);
-    const unitLabel = customSkuUnit.toUpperCase();
-
-    useCartStore.getState().addItem({
-      id: barcode,
-      name: `Custom SKU (${unitLabel})`,
-      priceMinor,
-      currency,
-      barcode,
-      quantity,
-      metadata: {
-        unit: customSkuUnit,
-      },
-    });
-
-    resetCustomSku();
-    setCustomSkuOpen(false);
-  };
+  }, []);
 
   const handleOpenCart = () => {
     if (!canOpenCart) return;
-    if (addOverlayOpen) {
-      setAddOverlayOpen(false);
-    }
+    addExpandedBeforeCartRef.current = addExpanded;
+    addFocusedBeforeCartRef.current = addFocusedRef.current;
+    cartOpeningRef.current = true;
     setCartExpanded(true);
   };
 
   const closeCart = () => {
     setCartExpanded(false);
+    const shouldRestoreSearch = addExpandedBeforeCartRef.current;
+    setAddExpanded(shouldRestoreSearch);
+    if (shouldRestoreSearch && addFocusedBeforeCartRef.current) {
+      focusAddInput();
+    }
   };
 
   const handleApplyDiscount = () => {
@@ -485,23 +509,11 @@ export default function SellScanScreen({
     );
   };
 
-  const toggleAddSelection = (item: SkuItem) => {
-    setSelectedAddItems((prev) => {
-      const next = { ...prev };
-      if (next[item.barcode]) {
-        delete next[item.barcode];
-      } else {
-        next[item.barcode] = item;
-      }
-      return next;
-    });
-  };
-
-  const handleAddSelected = () => {
-    if (storeActive === false || selectedAddCount === 0) return;
-    Object.values(selectedAddItems).forEach((item) => handleAddSku(item));
-    setSelectedAddItems({});
-    setAddOverlayOpen(false);
+  const handleAddFromSearch = (item: SkuItem) => {
+    handleAddSku(item);
+    setAddQuery("");
+    setAddExpanded(true);
+    focusAddInput();
   };
 
   const renderSkuItem = ({ item }: { item: SkuItem }) => {
@@ -537,13 +549,13 @@ export default function SellScanScreen({
       item.priceMinor === null
         ? "--"
         : formatMoney(item.priceMinor, item.currency ?? "INR");
-    const selected = Boolean(selectedAddItems[item.barcode]);
 
     return (
       <Pressable
-        style={[styles.addRow, selected && styles.addRowSelected]}
-        onPress={() => toggleAddSelection(item)}
-        accessibilityLabel={`Select ${item.name}`}
+        style={styles.addRow}
+        onPressIn={() => markAddInteraction()}
+        onPress={() => handleAddFromSearch(item)}
+        accessibilityLabel={`Add ${item.name}`}
       >
         <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
         <View style={styles.addRowInfo}>
@@ -556,11 +568,6 @@ export default function SellScanScreen({
         </View>
         <View style={styles.addRowRight}>
           <Text style={styles.addRowPrice}>{priceLabel}</Text>
-          <MaterialCommunityIcons
-            name={selected ? "checkbox-marked" : "checkbox-blank-outline"}
-            size={18}
-            color={selected ? theme.colors.primary : theme.colors.textSecondary}
-          />
         </View>
       </Pressable>
     );
@@ -606,41 +613,138 @@ export default function SellScanScreen({
       </View>
     );
   };
-
-  const header = (
-    <View>
+  const renderSearchBar = (variant: "collapsed" | "expanded") => (
+    <View
+      style={[
+        styles.searchBar,
+        variant === "expanded" && styles.searchBarExpanded,
+        storeActive === false && styles.searchBarDisabled,
+      ]}
+    >
+      <View
+        style={[
+          styles.searchSegment,
+          variant === "expanded" && styles.searchSegmentExpanded,
+        ]}
+      >
+        <MaterialCommunityIcons name="magnify" size={18} color="#000000" />
+        <TextInput
+          ref={addInputRef}
+          style={styles.searchInput}
+          value={addQuery}
+          onChangeText={handleAddQueryChange}
+          onFocus={() => {
+            addFocusedRef.current = true;
+            openAddExpanded();
+          }}
+          onBlur={() => {
+            addFocusedRef.current = false;
+            if (cartExpanded || cartOpeningRef.current) {
+              return;
+            }
+            if (suppressAddBlurRef.current) {
+              suppressAddBlurRef.current = false;
+              focusAddInput();
+              return;
+            }
+            if (!addQuery.trim()) {
+              setAddExpanded(false);
+            }
+          }}
+          onKeyPress={handleAddKeyPress}
+          onSubmitEditing={handleAddSubmitEditing}
+          placeholder="Search product"
+          placeholderTextColor="#000000"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          blurOnSubmit={false}
+          editable={storeActive !== false}
+        />
+        {addQuery ? (
+          <Pressable
+            onPressIn={() => markAddInteraction()}
+            onPress={() => setAddQuery("")}
+            hitSlop={8}
+            accessibilityLabel="Clear search"
+          >
+            <MaterialCommunityIcons
+              name="close-circle"
+              size={18}
+              color="#000000"
+            />
+          </Pressable>
+        ) : null}
+      </View>
       <Pressable
-        style={[styles.scanPad, scanDisabled && styles.ctaDisabled]}
-        onPress={onOpenScanner}
+        style={[
+          styles.scanSegment,
+          variant === "expanded" && styles.scanSegmentExpanded,
+          scanDisabled && styles.ctaDisabled,
+        ]}
+        onPressIn={() => markAddInteraction(1000)}
+        onPress={handleCameraPress}
         disabled={scanDisabled}
-        accessibilityLabel="Open scanner"
+        accessibilityLabel="Open camera scanner"
       >
-        <View style={styles.scanLeft}>
-          <MaterialCommunityIcons name="barcode-scan" size={24} color={theme.colors.primary} />
-        </View>
-        <View style={styles.scanCenter}>
-          <Text style={styles.scanTitle}>Scan here</Text>
-        </View>
-        <View style={styles.scanRight}>
-          <MaterialCommunityIcons name="qrcode-scan" size={22} color={theme.colors.primary} />
-        </View>
+        <MaterialCommunityIcons name="camera" size={18} color={theme.colors.textInverse} />
+        {variant === "collapsed" ? (
+          <Text style={styles.scanSegmentText} numberOfLines={1}>
+            Scan product here
+          </Text>
+        ) : null}
       </Pressable>
+    </View>
+  );
 
-      <Pressable
-        style={[styles.addItemsButton, storeActive === false && styles.ctaDisabled]}
-        onPress={handleAddPress}
-        disabled={storeActive === false}
+  const searchHeader = (
+    <View style={styles.searchHeader}>
+      {renderSearchBar(addExpanded ? "expanded" : "collapsed")}
+      <View
+        style={[styles.searchPanel, !addExpanded && styles.searchPanelCollapsed]}
+        pointerEvents={addExpanded ? "auto" : "none"}
+        onTouchStart={() => markAddInteraction()}
       >
-        <Text style={styles.addItemsText}>+ ADD ITEMS</Text>
-      </Pressable>
-
-      <Pressable
-        style={[styles.customSkuButton, !canEditCart && styles.ctaDisabled]}
-        onPress={handleOpenCustomSku}
-        disabled={!canEditCart}
-      >
-        <Text style={styles.customSkuText}>CUSTOM SKU</Text>
-      </Pressable>
+        <Text style={styles.searchPanelTitle}>
+          {addQuery.trim() ? "Search results" : "Recent products"}
+        </Text>
+        <FlatList
+          data={addResults}
+          keyExtractor={(item) => item.barcode}
+          renderItem={renderAddRow}
+          style={styles.searchPanelList}
+          contentContainerStyle={styles.searchPanelListContent}
+          ListEmptyComponent={
+            !addLoading ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>
+                  {addQuery.trim() ? "No matches found." : "No recent products."}
+                </Text>
+              </View>
+            ) : null
+          }
+          ListFooterComponent={
+            addLoading ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color={theme.colors.primary} />
+              </View>
+            ) : null
+          }
+          onEndReached={() => {
+            if (!addLoading && addHasMore) {
+              void loadAddResults(false);
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          removeClippedSubviews
+          windowSize={7}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          updateCellsBatchingPeriod={50}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+        />
+      </View>
     </View>
   );
 
@@ -652,13 +756,20 @@ export default function SellScanScreen({
 
   return (
     <View style={styles.container}>
+      {searchHeader}
+      {addExpanded ? (
+        <Pressable
+          style={styles.searchDismissOverlay}
+          onPress={() => collapseAddExpanded(true)}
+          accessibilityLabel="Close search"
+        />
+      ) : null}
       <FlatList
         data={catalogItems}
         keyExtractor={(item) => item.barcode}
         renderItem={renderSkuItem}
         numColumns={NUM_COLUMNS}
         columnWrapperStyle={styles.skuRow}
-        ListHeaderComponent={header}
         ListEmptyComponent={
           !catalogLoading ? (
             <View style={styles.emptyState}>
@@ -680,6 +791,7 @@ export default function SellScanScreen({
         }}
         onEndReachedThreshold={0.3}
         contentContainerStyle={styles.listContent}
+        style={styles.list}
         removeClippedSubviews
         windowSize={7}
         initialNumToRender={8}
@@ -721,174 +833,6 @@ export default function SellScanScreen({
           ) : null}
         </View>
       </Pressable>
-
-      <Modal
-        visible={addOverlayOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={closeAddOverlay}
-      >
-        <Pressable style={styles.addOverlay} onPress={closeAddOverlay}>
-          <Pressable style={styles.addCard} onPress={() => {}}>
-            <View style={styles.addHeader}>
-              <Text style={styles.addTitle}>Add items</Text>
-              <Pressable onPress={closeAddOverlay} hitSlop={8} accessibilityLabel="Close add items">
-                <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <View style={styles.addSearchRow}>
-              <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textSecondary} />
-              <TextInput
-                style={styles.addSearchInput}
-                value={addQuery}
-                onChangeText={setAddQuery}
-                placeholder="Search SKU"
-                placeholderTextColor={theme.colors.textTertiary}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="search"
-              />
-              {addQuery ? (
-                <Pressable onPress={() => setAddQuery("")} hitSlop={8} accessibilityLabel="Clear search">
-                  <MaterialCommunityIcons
-                    name="close-circle"
-                    size={18}
-                    color={theme.colors.textSecondary}
-                  />
-                </Pressable>
-              ) : null}
-            </View>
-
-            <FlatList
-              data={addResults}
-              keyExtractor={(item) => item.barcode}
-              renderItem={renderAddRow}
-              style={styles.addList}
-              contentContainerStyle={styles.addListContent}
-              ListEmptyComponent={
-                !addLoading ? (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>No SKUs</Text>
-                  </View>
-                ) : null
-              }
-              ListFooterComponent={
-                addLoading ? (
-                  <View style={styles.footerLoading}>
-                    <ActivityIndicator color={theme.colors.primary} />
-                  </View>
-                ) : null
-              }
-              onEndReached={() => {
-                if (!addLoading && addHasMore) {
-                  void loadAddResults(false);
-                }
-              }}
-              onEndReachedThreshold={0.3}
-              removeClippedSubviews
-              windowSize={7}
-              initialNumToRender={12}
-              maxToRenderPerBatch={12}
-              updateCellsBatchingPeriod={50}
-              keyboardShouldPersistTaps="handled"
-            />
-
-            <Pressable
-              style={[
-                styles.addCta,
-                (selectedAddCount === 0 || storeActive === false) && styles.ctaDisabled,
-              ]}
-              onPress={handleAddSelected}
-              disabled={selectedAddCount === 0 || storeActive === false}
-              accessibilityLabel="Add selected items"
-            >
-              <Text style={styles.addCtaText}>{`Add to Bill (${selectedAddCount})`}</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
-        visible={customSkuOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={closeCustomSku}
-      >
-        <Pressable style={styles.customSkuOverlay} onPress={closeCustomSku}>
-          <Pressable style={styles.customSkuCard} onPress={() => {}}>
-            <View style={styles.customSkuHeader}>
-              <Text style={styles.customSkuTitle}>Custom SKU</Text>
-              <Pressable onPress={closeCustomSku} hitSlop={8} accessibilityLabel="Close custom SKU">
-                <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
-              </Pressable>
-            </View>
-
-            <View style={styles.customSkuRow}>
-              <View style={styles.customSkuField}>
-                <Text style={styles.customSkuLabel}>Quantity</Text>
-                <TextInput
-                  style={styles.customSkuInput}
-                  value={customSkuQty}
-                  onChangeText={(value) => {
-                    setCustomSkuQty(value);
-                    if (customSkuError) setCustomSkuError(null);
-                  }}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.customSkuField}>
-                <Text style={styles.customSkuLabel}>Unit</Text>
-                <View style={styles.customSkuUnits}>
-                  {CUSTOM_UNITS.map((unit) => {
-                    const active = unit === customSkuUnit;
-                    return (
-                      <Pressable
-                        key={unit}
-                        style={[styles.customSkuUnitChip, active && styles.customSkuUnitChipActive]}
-                        onPress={() => {
-                          setCustomSkuUnit(unit);
-                          if (customSkuError) setCustomSkuError(null);
-                        }}
-                      >
-                        <Text style={[styles.customSkuUnitText, active && styles.customSkuUnitTextActive]}>
-                          {unit.toUpperCase()}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.customSkuField}>
-              <Text style={styles.customSkuLabel}>Price</Text>
-              <TextInput
-                style={styles.customSkuInput}
-                value={customSkuPrice}
-                onChangeText={(value) => {
-                  setCustomSkuPrice(value);
-                  if (customSkuError) setCustomSkuError(null);
-                }}
-                placeholder="Price"
-                placeholderTextColor={theme.colors.textTertiary}
-                keyboardType="numeric"
-              />
-            </View>
-
-            {customSkuError ? <Text style={styles.customSkuError}>{customSkuError}</Text> : null}
-
-            <Pressable
-              style={[styles.customSkuCta, !customSkuReady && styles.ctaDisabled]}
-              onPress={handleCustomSkuSubmit}
-              disabled={!customSkuReady}
-              accessibilityLabel="Add custom SKU"
-            >
-              <Text style={styles.customSkuCtaText}>Add to Bill</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
 
       <Modal
         visible={cartExpanded}
@@ -1038,147 +982,116 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  list: {
+    position: "relative",
+    zIndex: 0,
+  },
   listContent: {
-    padding: 12,
+    paddingHorizontal: 12,
     paddingBottom: 130,
   },
-  scanPad: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 12,
-  },
-  scanLeft: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scanCenter: {
-    flex: 1,
-    alignItems: "flex-start",
-    gap: 2,
+  searchHeader: {
     paddingHorizontal: 12,
-  },
-  scanTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-  },
-  scanSubtitle: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.textSecondary,
-  },
-  scanRight: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addItemsButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
+    paddingTop: 12,
     marginBottom: 12,
+    position: "relative",
+    zIndex: 2,
   },
-  addItemsText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: theme.colors.textInverse,
+  searchDismissOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 1,
   },
-  customSkuButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  customSkuText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: theme.colors.textSecondary,
-  },
-  addOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 15, 20, 0.55)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  addCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 16,
-    maxHeight: "85%",
-    width: "100%",
-    gap: 12,
-    ...theme.shadows.sm,
-  },
-  addHeader: {
+  searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceAlt,
+    position: "relative",
+    overflow: "hidden",
   },
-  addTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
+  searchBarExpanded: {
+    borderColor: theme.colors.primary,
   },
-  addSearchRow: {
+  searchBarDisabled: {
+    opacity: 0.6,
+  },
+  searchSegment: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: theme.colors.surface,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
-  addSearchInput: {
+  searchSegmentExpanded: {
+    paddingRight: SCAN_SEGMENT_DOCKED_WIDTH + 12,
+  },
+  searchInput: {
     flex: 1,
     fontSize: 14,
-    color: theme.colors.textPrimary,
+    color: "#000000",
     paddingVertical: 0,
   },
-  addList: {
-    flex: 1,
+  scanSegment: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.primary,
   },
-  addListContent: {
+  scanSegmentExpanded: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: SCAN_SEGMENT_DOCKED_WIDTH,
+    paddingHorizontal: 0,
+    justifyContent: "center",
+    borderTopRightRadius: 14,
+    borderBottomRightRadius: 14,
+  },
+  scanSegmentText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
+  },
+  searchPanel: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surface,
+    padding: 10,
+    gap: 8,
+    ...theme.shadows.sm,
+  },
+  searchPanelCollapsed: {
+    display: "none",
+  },
+  searchPanelTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  searchPanelList: {
+    maxHeight: 260,
+  },
+  searchPanelListContent: {
     paddingVertical: 4,
   },
   addRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: 10,
     paddingVertical: 10,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-  },
-  addRowSelected: {
-    backgroundColor: theme.colors.surfaceAlt,
   },
   addRowInfo: {
     flex: 1,
@@ -1195,114 +1108,11 @@ const styles = StyleSheet.create({
   },
   addRowRight: {
     alignItems: "flex-end",
-    gap: 6,
   },
   addRowPrice: {
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.textPrimary,
-  },
-  addCta: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
-  addCtaText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: theme.colors.textInverse,
-  },
-  customSkuOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 15, 20, 0.55)",
-    justifyContent: "center",
-    padding: 16,
-  },
-  customSkuCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 16,
-    gap: 12,
-    ...theme.shadows.sm,
-  },
-  customSkuHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  customSkuTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-  },
-  customSkuRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  customSkuField: {
-    flex: 1,
-    gap: 6,
-  },
-  customSkuLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-  customSkuInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surfaceAlt,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: theme.colors.textPrimary,
-  },
-  customSkuUnits: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  customSkuUnitChip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: theme.colors.surfaceAlt,
-  },
-  customSkuUnitChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  customSkuUnitText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-  customSkuUnitTextActive: {
-    color: theme.colors.textInverse,
-  },
-  customSkuError: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.warning,
-  },
-  customSkuCta: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
-  customSkuCtaText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: theme.colors.textInverse,
   },
   cartOverlay: {
     flex: 1,
@@ -1617,6 +1427,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 6,
     ...theme.shadows.sm,
+    zIndex: 3,
   },
   cartBarFlash: {
     borderColor: theme.colors.accent,
