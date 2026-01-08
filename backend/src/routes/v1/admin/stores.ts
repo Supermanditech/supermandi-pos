@@ -256,6 +256,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     name,
     storeName,
     upiVpa,
+    upi_vpa: upiVpaSnake,
     address,
     contactName,
     contactPhone,
@@ -277,8 +278,9 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
 
   if (storeName !== undefined) addUpdate("name", typeof storeName === "string" ? storeName.trim() : storeName);
   else if (name !== undefined) addUpdate("name", typeof name === "string" ? name.trim() : name);
-  if (upiVpa !== undefined) {
-    const normalized = normalizeUpiVpa(upiVpa);
+  const upiVpaValue = upiVpa !== undefined ? upiVpa : upiVpaSnake;
+  if (upiVpaValue !== undefined) {
+    const normalized = normalizeUpiVpa(upiVpaValue);
     if (normalized === undefined) {
       return res.status(400).json({ error: "upi_vpa_invalid" });
     }

@@ -44,6 +44,7 @@ const PRINTING_MODE_LABELS: Record<string, string> = {
 
 const ADMIN_POLL_MS = 60000;
 const RATE_LIMIT_BACKOFF_MS = 60000;
+const UPI_VPA_PATTERN = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -750,14 +751,23 @@ export default function App() {
       setStoreError("Store ID is required.");
       return;
     }
+    const trimmedVpa = storeUpiInput.trim();
+    if (!trimmedVpa) {
+      const ok = window.confirm("Clear UPI VPA and deactivate this store?");
+      if (!ok) return;
+    } else if (!UPI_VPA_PATTERN.test(trimmedVpa)) {
+      setStoreError("UPI VPA format is invalid.");
+      return;
+    }
     setStoreError("");
     setStoreSuccess("");
     setStoreLoading(true);
     try {
-      const record = await updateStore(id, { upiVpa: storeUpiInput });
+      const record = await updateStore(id, { upiVpa: trimmedVpa });
       setStoreRecord(record);
       setStoreUpiInput(record.upi_vpa ?? "");
       setStoreSuccess(record.active ? "Store activated." : "Store deactivated.");
+      void refreshStores();
     } catch (e: any) {
       setStoreError(e?.message ? String(e.message) : "Failed to update store");
     } finally {
@@ -2012,6 +2022,5 @@ export default function App() {
     </div>
   );
 }
-
 
 
