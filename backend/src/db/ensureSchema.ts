@@ -41,15 +41,35 @@ export async function ensureCoreSchema(): Promise<void> {
       END IF;
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public' AND table_name = 'purchase_items' AND column_name = 'product_id'
-      ) THEN
-        ALTER TABLE purchase_items RENAME COLUMN product_id TO variant_id;
-      END IF;
-      IF EXISTS (
-        SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'consumer_order_items' AND column_name = 'product_id'
       ) THEN
         ALTER TABLE consumer_order_items RENAME COLUMN product_id TO variant_id;
+      END IF;
+    END $$;
+
+    -- Idempotent purchase_items rename/backfill to avoid 42701 when variant_id already exists.
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='purchase_items' AND column_name='product_id'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='purchase_items' AND column_name='variant_id'
+      ) THEN
+        ALTER TABLE purchase_items RENAME COLUMN product_id TO variant_id;
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='purchase_items' AND column_name='product_id'
+      ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='purchase_items' AND column_name='variant_id'
+      ) THEN
+        UPDATE purchase_items
+          SET variant_id = COALESCE(variant_id, product_id)
+        WHERE variant_id IS NULL AND product_id IS NOT NULL;
       END IF;
     END $$;
 
@@ -368,6 +388,7 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS consumer_order_items_product_id_idx ON consumer_order_items (variant_id);
   `);
 
+  // Keep purchase_items rename idempotent to avoid 42701 in prod when variant_id already exists.
   await pool.query(`
     ALTER TABLE stores ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE stores ADD COLUMN IF NOT EXISTS address TEXT NULL;
