@@ -173,14 +173,23 @@ const PaymentScreen = () => {
     setLoadingSale(true);
 
     createSale({
-      items: items.map((item) => ({
-        productId: item.id,
-        barcode: item.barcode,
-        name: item.name,
-        quantity: item.quantity,
-        priceMinor: item.priceMinor,
-        itemDiscount: item.itemDiscount ?? null
-      })),
+      items: items.map((item) => {
+        const metadata = item.metadata ?? {};
+        const globalProductId =
+          typeof metadata.globalProductId === "string" && metadata.globalProductId.trim()
+            ? metadata.globalProductId.trim()
+            : undefined;
+
+        return {
+          productId: item.id,
+          barcode: item.barcode,
+          name: item.name,
+          quantity: item.quantity,
+          priceMinor: item.priceMinor,
+          itemDiscount: item.itemDiscount ?? null,
+          global_product_id: globalProductId
+        };
+      }),
       discountMinor,
       cartDiscount: discount ?? null
     })

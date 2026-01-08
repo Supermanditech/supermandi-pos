@@ -187,8 +187,9 @@ export async function ensureStandardVariants(params: {
   productName: string;
   currency: string;
   baseUnit: BaseUnit;
+  storeId?: string;
 }): Promise<void> {
-  const { client, productId, productName, currency, baseUnit } = params;
+  const { client, productId, productName, currency, baseUnit, storeId } = params;
   const existingRes = await client.query(
     `
     SELECT id, size_base
@@ -210,6 +211,16 @@ export async function ensureStandardVariants(params: {
     const existingId = existingBySize.get(sizeBase);
     if (existingId) {
       await ensureSupermandiBarcode(client, existingId);
+      if (storeId) {
+        await client.query(
+          `
+          INSERT INTO retailer_variants (store_id, variant_id)
+          VALUES ($1, $2)
+          ON CONFLICT (store_id, variant_id) DO NOTHING
+          `,
+          [storeId, existingId]
+        );
+      }
       continue;
     }
 
@@ -226,6 +237,16 @@ export async function ensureStandardVariants(params: {
     );
 
     await ensureSupermandiBarcode(client, variantId);
+    if (storeId) {
+      await client.query(
+        `
+        INSERT INTO retailer_variants (store_id, variant_id)
+        VALUES ($1, $2)
+        ON CONFLICT (store_id, variant_id) DO NOTHING
+        `,
+        [storeId, variantId]
+      );
+    }
   }
 }
 
@@ -370,7 +391,7 @@ export async function listInventoryVariants(params: {
            bi.quantity_base AS bulk_quantity_base,
            ${stockSelect}
     FROM variants v
-    LEFT JOIN retailer_variants rv
+    JOIN retailer_variants rv
       ON rv.variant_id = v.id AND rv.store_id = $1
     LEFT JOIN barcodes b
       ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
@@ -428,6 +449,8 @@ export async function ensureSaleAvailability(params: {
            bi.quantity_base AS bulk_quantity_base,
            ${stockSelect}
     FROM variants v
+    JOIN retailer_variants rv
+      ON rv.variant_id = v.id AND rv.store_id = $1
     LEFT JOIN bulk_inventory bi
       ON bi.store_id = $1 AND bi.product_id = v.product_id
     WHERE v.id = ANY($2::text[])
@@ -435,6 +458,10 @@ export async function ensureSaleAvailability(params: {
     `,
     [storeId, variantIds]
   );
+
+  if (res.rows.length !== variantIds.length) {
+    throw new Error("product_not_found");
+  }
 
   const bulkRequiredByProduct = new Map<
     string,

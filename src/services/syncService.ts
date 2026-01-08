@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import { ApiError } from "./api/apiClient";
 import { createTransaction, type CreateTransactionInput } from "./api/transactionsApi";
 import { syncOutbox } from "./offline/sync";
+import { storeScopedStorage } from "./storeScope";
 
 const PENDING_TX_KEY = "supermandi.pendingTransactions";
 
@@ -13,7 +13,7 @@ type PendingTx = {
 };
 
 async function loadQueue(): Promise<PendingTx[]> {
-  const raw = await AsyncStorage.getItem(PENDING_TX_KEY);
+  const raw = await storeScopedStorage.getItem(PENDING_TX_KEY);
   if (!raw) return [];
   try {
     return JSON.parse(raw) as PendingTx[];
@@ -23,7 +23,7 @@ async function loadQueue(): Promise<PendingTx[]> {
 }
 
 async function saveQueue(queue: PendingTx[]): Promise<void> {
-  await AsyncStorage.setItem(PENDING_TX_KEY, JSON.stringify(queue));
+  await storeScopedStorage.setItem(PENDING_TX_KEY, JSON.stringify(queue));
 }
 
 export async function enqueueTransaction(payload: CreateTransactionInput): Promise<void> {

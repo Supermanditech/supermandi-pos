@@ -211,8 +211,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const saleId = asTrimmedString((payload as any)?.saleId);
             if (saleId) {
               const saleRow = await client.query(
-                `SELECT id, bill_ref, offline_receipt_ref FROM sales WHERE id = $1`,
-                [saleId]
+                `SELECT id, bill_ref, offline_receipt_ref FROM sales WHERE id = $1 AND store_id = $2`,
+                [saleId, storeId]
               );
               const sale = saleRow.rows[0];
               if (sale) {
@@ -229,7 +229,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           if (type === "COLLECTION_CREATED") {
             const collectionId = asTrimmedString((payload as any)?.collectionId);
             if (collectionId) {
-              const collectionRow = await client.query(`SELECT id FROM collections WHERE id = $1`, [collectionId]);
+              const collectionRow = await client.query(
+                `SELECT id FROM collections WHERE id = $1 AND store_id = $2`,
+                [collectionId, storeId]
+              );
               if (collectionRow.rows[0]) {
                 collectionMappings.push({ collectionId, serverCollectionId: collectionId });
               }
@@ -271,14 +274,11 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }
 
           const existingSale = await client.query(
-            `SELECT id, store_id, bill_ref, offline_receipt_ref FROM sales WHERE id = $1`,
-            [saleId]
+            `SELECT id, store_id, bill_ref, offline_receipt_ref FROM sales WHERE id = $1 AND store_id = $2`,
+            [saleId, storeId]
           );
           if ((existingSale.rowCount ?? 0) > 0) {
             const existing = existingSale.rows[0];
-            if (existing.store_id !== storeId) {
-              throw new Error("sale not found");
-            }
             await client.query("COMMIT");
             results.push({ eventId, status: "duplicate_ignored" });
             saleMappings.push({
@@ -403,8 +403,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           });
 
           const saleRow = await client.query(
-            `SELECT bill_ref, offline_receipt_ref FROM sales WHERE id = $1`,
-            [saleId]
+            `SELECT bill_ref, offline_receipt_ref FROM sales WHERE id = $1 AND store_id = $2`,
+            [saleId, storeId]
           );
           const saleInfo = saleRow.rows[0];
           saleMappings.push({
@@ -427,8 +427,9 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           const normalizedItems: PurchaseItemInput[] = items.map((item: any) => {
             const quantityRaw = asNumber(item?.quantity);
             const purchasePriceRaw = asNumber(item?.purchasePriceMinor);
+            const unitCostRaw = purchasePriceRaw === null ? asNumber(item?.unitCostMinor) : purchasePriceRaw;
             const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
-            const unitCostMinor = purchasePriceRaw === null ? null : Math.round(purchasePriceRaw);
+            const unitCostMinor = unitCostRaw === null ? null : Math.round(unitCostRaw);
             if (quantity === null || quantity <= 0 || unitCostMinor === null || unitCostMinor <= 0) {
               throw new Error("invalid purchase item");
             }
@@ -436,7 +437,12 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             return {
               barcode: asTrimmedString(item?.barcode) ?? undefined,
               productId: asTrimmedString(item?.productId) ?? undefined,
-              productName: asTrimmedString(item?.name) ?? undefined,
+              productName: asTrimmedString(item?.name) ?? asTrimmedString(item?.productName) ?? undefined,
+              globalProductId:
+                asTrimmedString(item?.globalProductId) ??
+                asTrimmedString(item?.global_product_id) ??
+                undefined,
+              scanFormat: asTrimmedString(item?.scanFormat) ?? asTrimmedString(item?.format) ?? null,
               quantity,
               unit: asTrimmedString(item?.unit) ?? undefined,
               unitCostMinor,
@@ -477,7 +483,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
           const normalizedItems: PurchaseItemInput[] = items.map((item: any) => {
             const quantityRaw = asNumber(item?.quantity);
-            const unitCostRaw = asNumber(item?.unitCostMinor);
+            const purchasePriceRaw = asNumber(item?.purchasePriceMinor);
+            const unitCostRaw = purchasePriceRaw === null ? asNumber(item?.unitCostMinor) : purchasePriceRaw;
             const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
             const unitCostMinor = unitCostRaw === null ? null : Math.round(unitCostRaw);
             if (quantity === null || quantity <= 0 || unitCostMinor === null || unitCostMinor <= 0) {
@@ -487,7 +494,12 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             return {
               barcode: asTrimmedString(item?.barcode) ?? undefined,
               productId: asTrimmedString(item?.productId) ?? undefined,
-              productName: asTrimmedString(item?.productName) ?? undefined,
+              productName: asTrimmedString(item?.productName) ?? asTrimmedString(item?.name) ?? undefined,
+              globalProductId:
+                asTrimmedString(item?.globalProductId) ??
+                asTrimmedString(item?.global_product_id) ??
+                undefined,
+              scanFormat: asTrimmedString(item?.scanFormat) ?? asTrimmedString(item?.format) ?? null,
               quantity,
               unit: asTrimmedString(item?.unit) ?? undefined,
               unitCostMinor,
@@ -509,9 +521,12 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             throw new Error("invalid payment payload");
           }
 
-          const saleRes = await client.query(`SELECT id, store_id FROM sales WHERE id = $1`, [saleId]);
+          const saleRes = await client.query(
+            `SELECT id, store_id FROM sales WHERE id = $1 AND store_id = $2`,
+            [saleId, storeId]
+          );
           const sale = saleRes.rows[0];
-          if (!sale || sale.store_id !== storeId) {
+          if (!sale) {
             throw new Error("sale not found");
           }
 
@@ -549,7 +564,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             throw new Error("invalid collection payload");
           }
 
-          const existing = await client.query(`SELECT id FROM collections WHERE id = $1`, [collectionId]);
+          const existing = await client.query(
+            `SELECT id FROM collections WHERE id = $1 AND store_id = $2`,
+            [collectionId, storeId]
+          );
           if ((existing.rowCount ?? 0) === 0) {
             await client.query(
               `

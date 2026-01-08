@@ -12,7 +12,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import * as productsApi from "../services/api/productsApi";
-import { handleScan as handleGlobalScan } from "../services/scan/handleScan";
+import { handleIncomingScan } from "../services/scan/handleScan";
 import { offlineDb } from "../services/offline/localDb";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { submitPurchaseDraft } from "../services/purchaseDraft";
@@ -45,10 +45,21 @@ type PurchaseItemRowProps = {
 };
 
 type SkuItem = {
+  productId?: string | null;
   barcode: string;
   name: string;
   currency: string | null;
-  priceMinor: number | null;
+  inventoryPriceMinor: number | null;
+  variantPriceMinor: number | null;
+  variantMrpMinor: number | null;
+};
+
+const resolveSkuPrice = (item: SkuItem) => {
+  return productsApi.resolvePriceMinorFromSources({
+    inventoryPrice: item.inventoryPriceMinor,
+    variantPrice: item.variantPriceMinor,
+    variantMrp: item.variantMrpMinor
+  });
 };
 
 async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
@@ -61,19 +72,23 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
       const barcode = typeof product.barcode === "string" ? product.barcode.trim() : "";
       if (!barcode) continue;
       const currency = product.currency ?? "INR";
-      const resolvedPriceMinor = productsApi.resolveProductPriceMinor(product);
-      const priceMinor = resolvedPriceMinor > 0 ? resolvedPriceMinor : null;
+      const priceSources = productsApi.getProductPriceSources(product);
+      const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
+      const resolvedPriceMinor = resolved.priceMinor > 0 ? resolved.priceMinor : null;
 
       items.push({
+        productId: product.id,
         barcode,
         name: product.name,
         currency,
-        priceMinor
+        inventoryPriceMinor: priceSources.inventoryPrice ?? null,
+        variantPriceMinor: priceSources.variantPrice ?? null,
+        variantMrpMinor: priceSources.variantMrp ?? null
       });
 
       await upsertLocalProduct(barcode, product.name, currency, null);
-      if (priceMinor !== null) {
-        await setLocalPrice(barcode, priceMinor);
+      if (resolvedPriceMinor !== null) {
+        await setLocalPrice(barcode, resolvedPriceMinor);
       }
     }
 
@@ -222,6 +237,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   const lastSearchQueryRef = useRef<string | null>(null);
   const suppressSearchBlurRef = useRef(false);
   const suppressSearchBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const priceLogRef = useRef<Set<string>>(new Set());
 
   const totalMinor = useMemo(() => {
     return items.reduce((sum, item) => {
@@ -239,6 +255,16 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   const focusSearchInput = () => {
     requestAnimationFrame(() => searchInputRef.current?.focus());
   };
+
+  const logPriceDebug = useCallback((item: SkuItem, resolved: productsApi.PriceResolution) => {
+    const productId = item.productId ?? item.barcode;
+    const key = `${productId}:${resolved.priceMinor}:${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`;
+    if (priceLogRef.current.has(key)) return;
+    priceLogRef.current.add(key);
+    console.log(
+      `[PRICE_DEBUG] ${productId} ${resolved.priceMinor} ${resolved.inventoryPrice ?? "null"} ${resolved.variantPrice ?? "null"} ${resolved.mrp ?? "null"}`
+    );
+  }, []);
 
   const markSearchInteraction = useCallback((durationMs = 400) => {
     suppressSearchBlurRef.current = true;
@@ -270,7 +296,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     const raw = event?.nativeEvent?.text ?? searchQuery;
     const trimmed = raw.trim();
     if (!trimmed) return;
-    void handleGlobalScan(trimmed);
+    void handleIncomingScan(trimmed);
     setSearchQuery("");
     setSearchExpanded(true);
     focusSearchInput();
@@ -280,6 +306,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     if (scanDisabled) return;
     const scanValue = feedHidKey(event.nativeEvent.key);
     if (scanValue) {
+      void handleIncomingScan(scanValue);
       setSearchQuery("");
       setSearchExpanded(true);
       focusSearchInput();
@@ -290,6 +317,9 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     if (!scanDisabled) {
       const scanValue = submitHidBuffer();
       if (scanValue || wasHidCommitRecent()) {
+        if (scanValue) {
+          void handleIncomingScan(scanValue);
+        }
         setSearchQuery("");
         setSearchExpanded(true);
         focusSearchInput();
@@ -321,7 +351,9 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
         p.barcode as barcode,
         p.name as name,
         p.currency as currency,
-        pr.price_minor as priceMinor
+        pr.price_minor as inventoryPriceMinor,
+        NULL as variantPriceMinor,
+        NULL as variantMrpMinor
       FROM offline_products p
       LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
     `;
@@ -387,12 +419,13 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
 
   const handleAddFromSearch = (item: SkuItem) => {
     if (storeActive === false) return;
+    const resolved = resolveSkuPrice(item);
     usePurchaseDraftStore.getState().addOrUpdate({
       id: item.barcode,
       barcode: item.barcode,
       name: item.name,
       currency: item.currency ?? "INR",
-      sellingPriceMinor: item.priceMinor ?? null,
+      sellingPriceMinor: resolved.priceMinor,
       purchasePriceMinor: null
     });
     setSearchQuery("");
@@ -401,8 +434,9 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   };
 
   const renderSearchRow = ({ item }: { item: SkuItem }) => {
-    const priceMinor = item.priceMinor ?? 0;
-    const priceLabel = formatMoney(priceMinor, item.currency ?? "INR");
+    const resolved = resolveSkuPrice(item);
+    logPriceDebug(item, resolved);
+    const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
 
     return (
       <Pressable

@@ -19,7 +19,7 @@ import { formatMoney } from "../utils/money";
 import * as productsApi from "../services/api/productsApi";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { offlineDb } from "../services/offline/localDb";
-import { handleScan as handleGlobalScan } from "../services/scan/handleScan";
+import { handleIncomingScan } from "../services/scan/handleScan";
 import {
   feedHidKey,
   feedHidText,
@@ -41,10 +41,21 @@ type RootStackParamList = {
 type Nav = NativeStackNavigationProp<RootStackParamList, "Payment">;
 
 type SkuItem = {
+  productId?: string | null;
   barcode: string;
   name: string;
   currency: string | null;
-  priceMinor: number | null;
+  inventoryPriceMinor: number | null;
+  variantPriceMinor: number | null;
+  variantMrpMinor: number | null;
+};
+
+const resolveSkuPrice = (item: SkuItem) => {
+  return productsApi.resolvePriceMinorFromSources({
+    inventoryPrice: item.inventoryPriceMinor,
+    variantPrice: item.variantPriceMinor,
+    variantMrp: item.variantMrpMinor
+  });
 };
 
 type DiscountType = "percentage" | "fixed";
@@ -59,19 +70,23 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
       const barcode = typeof product.barcode === "string" ? product.barcode.trim() : "";
       if (!barcode) continue;
       const currency = product.currency ?? "INR";
-      const resolvedPriceMinor = productsApi.resolveProductPriceMinor(product);
-      const priceMinor = resolvedPriceMinor > 0 ? resolvedPriceMinor : null;
+      const priceSources = productsApi.getProductPriceSources(product);
+      const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
+      const resolvedPriceMinor = resolved.priceMinor > 0 ? resolved.priceMinor : null;
 
       items.push({
+        productId: product.id,
         barcode,
         name: product.name,
         currency,
-        priceMinor
+        inventoryPriceMinor: priceSources.inventoryPrice ?? null,
+        variantPriceMinor: priceSources.variantPrice ?? null,
+        variantMrpMinor: priceSources.variantMrp ?? null
       });
 
       await upsertLocalProduct(barcode, product.name, currency, null);
-      if (priceMinor !== null) {
-        await setLocalPrice(barcode, priceMinor);
+      if (resolvedPriceMinor !== null) {
+        await setLocalPrice(barcode, resolvedPriceMinor);
       }
     }
 
@@ -104,6 +119,149 @@ const mergeSkuItems = (prev: SkuItem[], incoming: SkuItem[]): SkuItem[] => {
   return merged;
 };
 
+const parsePriceInput = (text: string): number | null => {
+  const normalized = text.replace(/[^0-9.]/g, "");
+  if (!normalized) return null;
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.round(value * 100);
+};
+
+const formatPriceInput = (minor: number | null): string => {
+  if (!minor || minor <= 0) return "";
+  return (minor / 100).toFixed(2);
+};
+
+type CartItemRowProps = {
+  item: CartItem;
+  currency: string;
+  canEdit: boolean;
+  onUpdateQuantity: (itemId: string, quantity: number) => void;
+  onUpdatePrice: (itemId: string, priceMinor: number) => void;
+  onSaveDefaultPrice: (item: CartItem, priceMinor: number) => Promise<boolean>;
+};
+
+function CartItemRow({
+  item,
+  currency,
+  canEdit,
+  onUpdateQuantity,
+  onUpdatePrice,
+  onSaveDefaultPrice
+}: CartItemRowProps) {
+  const [priceInput, setPriceInput] = useState(formatPriceInput(item.priceMinor));
+  const [saveDefault, setSaveDefault] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const lastSavedPriceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setPriceInput(formatPriceInput(item.priceMinor));
+  }, [item.priceMinor]);
+
+  const lineTotal = item.priceMinor * item.quantity;
+  const lineTotalLabel = formatMoney(lineTotal, currency);
+  const controlsDisabled = !canEdit || saving;
+
+  const commitDefaultPrice = async (priceMinor: number) => {
+    if (saving || lastSavedPriceRef.current === priceMinor) return;
+    setSaving(true);
+    const saved = await onSaveDefaultPrice(item, priceMinor);
+    setSaving(false);
+    if (saved) {
+      lastSavedPriceRef.current = priceMinor;
+    }
+  };
+
+  const handlePriceCommit = async () => {
+    const parsed = parsePriceInput(priceInput);
+    if (parsed === null) {
+      setPriceInput(formatPriceInput(item.priceMinor));
+      return;
+    }
+    if (parsed !== item.priceMinor) {
+      onUpdatePrice(item.id, parsed);
+    }
+    if (saveDefault) {
+      await commitDefaultPrice(parsed);
+    }
+  };
+
+  const handleToggleSaveDefault = async () => {
+    if (!canEdit) return;
+    const next = !saveDefault;
+    setSaveDefault(next);
+    if (!next) return;
+    const parsed = parsePriceInput(priceInput);
+    if (parsed !== null) {
+      if (parsed !== item.priceMinor) {
+        onUpdatePrice(item.id, parsed);
+      }
+      await commitDefaultPrice(parsed);
+    }
+  };
+
+  return (
+    <View style={styles.cartItemRow}>
+      <View style={styles.cartItemInfo}>
+        <Text style={styles.cartItemName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View style={styles.cartItemPriceRow}>
+          <TextInput
+            style={[styles.cartPriceInput, !canEdit && styles.inputDisabled]}
+            value={priceInput}
+            onChangeText={setPriceInput}
+            onEndEditing={handlePriceCommit}
+            placeholder="Price"
+            placeholderTextColor={theme.colors.textTertiary}
+            keyboardType="numeric"
+            editable={canEdit}
+          />
+          <Pressable
+            style={[
+              styles.cartSaveToggle,
+              saveDefault && styles.cartSaveToggleActive,
+              controlsDisabled && styles.qtyButtonDisabled
+            ]}
+            onPress={handleToggleSaveDefault}
+            disabled={controlsDisabled}
+            accessibilityLabel={`Save ${item.name} price as store default`}
+          >
+            <MaterialCommunityIcons
+              name={saveDefault ? "checkbox-marked" : "checkbox-blank-outline"}
+              size={16}
+              color={saveDefault ? theme.colors.primary : theme.colors.textSecondary}
+            />
+            <Text style={[styles.cartSaveLabel, saveDefault && styles.cartSaveLabelActive]}>
+              Save default
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+      <View style={styles.cartItemControls}>
+        <Pressable
+          style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+          onPress={() => onUpdateQuantity(item.id, item.quantity - 1)}
+          disabled={controlsDisabled}
+          accessibilityLabel={`Decrease ${item.name}`}
+        >
+          <MaterialCommunityIcons name="minus" size={16} color={theme.colors.textPrimary} />
+        </Pressable>
+        <Text style={styles.qtyValue}>{item.quantity}</Text>
+        <Pressable
+          style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+          onPress={() => onUpdateQuantity(item.id, item.quantity + 1)}
+          disabled={controlsDisabled}
+          accessibilityLabel={`Increase ${item.name}`}
+        >
+          <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textPrimary} />
+        </Pressable>
+      </View>
+      <Text style={styles.cartItemTotal}>{lineTotalLabel}</Text>
+    </View>
+  );
+}
+
 export default function SellScanScreen({
   storeActive,
   scanDisabled,
@@ -120,6 +278,7 @@ export default function SellScanScreen({
     undoLastAction,
     locked,
     updateQuantity,
+    updatePrice,
     applyDiscount,
     removeDiscount,
   } = useCartStore();
@@ -146,6 +305,7 @@ export default function SellScanScreen({
   const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const priceLogRef = useRef<Set<string>>(new Set());
   const addInputRef = useRef<TextInput>(null);
   const lastAddQueryRef = useRef<string | null>(null);
   const suppressAddBlurRef = useRef(false);
@@ -239,11 +399,51 @@ export default function SellScanScreen({
     }
   };
 
+  const logPriceDebug = useCallback((item: SkuItem, resolved: productsApi.PriceResolution) => {
+    const productId = item.productId ?? item.barcode;
+    const key = `${productId}:${resolved.priceMinor}:${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`;
+    if (priceLogRef.current.has(key)) return;
+    priceLogRef.current.add(key);
+    console.log(
+      `[PRICE_DEBUG] ${productId} ${resolved.priceMinor} ${resolved.inventoryPrice ?? "null"} ${resolved.variantPrice ?? "null"} ${resolved.mrp ?? "null"}`
+    );
+  }, []);
+
+  const handleSaveDefaultPrice = useCallback(async (item: CartItem, priceMinor: number): Promise<boolean> => {
+    const metadata = item.metadata ?? {};
+    const globalProductId =
+      typeof metadata.globalProductId === "string" ? metadata.globalProductId : undefined;
+    const scanFormat = typeof metadata.scanFormat === "string" ? metadata.scanFormat : undefined;
+    const barcode = typeof item.barcode === "string" ? item.barcode : undefined;
+    const scanned = !globalProductId ? barcode : undefined;
+
+    if (!globalProductId && !scanned) {
+      console.warn("Missing product identifier for store price update", { itemId: item.id });
+      return false;
+    }
+
+    try {
+      await productsApi.updateStoreProductPrice({
+        globalProductId,
+        scanned,
+        format: scanFormat,
+        sellPriceMinor: priceMinor
+      });
+      if (barcode) {
+        await setLocalPrice(barcode, priceMinor);
+      }
+      return true;
+    } catch (error) {
+      console.warn("Failed to save store price", error);
+      return false;
+    }
+  }, []);
+
   const handleScanSubmit = (event?: { nativeEvent: { text: string } }) => {
     const raw = event?.nativeEvent?.text ?? addQuery;
     const trimmed = raw.trim();
     if (!trimmed) return;
-    void handleGlobalScan(trimmed);
+    void handleIncomingScan(trimmed);
     setAddQuery("");
     setAddExpanded(true);
     focusAddInput();
@@ -259,6 +459,7 @@ export default function SellScanScreen({
     if (scanDisabled) return;
     const scanValue = feedHidKey(event.nativeEvent.key);
     if (scanValue) {
+      void handleIncomingScan(scanValue);
       setAddQuery("");
       setAddExpanded(true);
       focusAddInput();
@@ -269,6 +470,9 @@ export default function SellScanScreen({
     if (!scanDisabled) {
       const scanValue = submitHidBuffer();
       if (scanValue || wasHidCommitRecent()) {
+        if (scanValue) {
+          void handleIncomingScan(scanValue);
+        }
         setAddQuery("");
         setAddExpanded(true);
         focusAddInput();
@@ -296,7 +500,9 @@ export default function SellScanScreen({
         p.barcode as barcode,
         p.name as name,
         p.currency as currency,
-        pr.price_minor as priceMinor
+        pr.price_minor as inventoryPriceMinor,
+        NULL as variantPriceMinor,
+        NULL as variantMrpMinor
       FROM offline_products p
       LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
       ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC
@@ -335,7 +541,9 @@ export default function SellScanScreen({
         p.barcode as barcode,
         p.name as name,
         p.currency as currency,
-        pr.price_minor as priceMinor
+        pr.price_minor as inventoryPriceMinor,
+        NULL as variantPriceMinor,
+        NULL as variantMrpMinor
       FROM offline_products p
       LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
     `;
@@ -492,11 +700,12 @@ export default function SellScanScreen({
 
   const handleAddSku = (item: SkuItem) => {
     if (storeActive === false) return;
+    const resolved = resolveSkuPrice(item);
 
     useCartStore.getState().addItem({
       id: item.barcode,
       name: item.name,
-      priceMinor: item.priceMinor ?? 0,
+      priceMinor: resolved.priceMinor,
       currency: item.currency ?? "INR",
       barcode: item.barcode,
     });
@@ -518,8 +727,9 @@ export default function SellScanScreen({
   };
 
   const renderSkuItem = ({ item }: { item: SkuItem }) => {
-    const priceMinor = item.priceMinor ?? 0;
-    const priceLabel = formatMoney(priceMinor, item.currency ?? "INR");
+    const resolved = resolveSkuPrice(item);
+    logPriceDebug(item, resolved);
+    const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
 
     return (
       <Pressable
@@ -544,8 +754,9 @@ export default function SellScanScreen({
   };
 
   const renderAddRow = ({ item }: { item: SkuItem }) => {
-    const priceMinor = item.priceMinor ?? 0;
-    const priceLabel = formatMoney(priceMinor, item.currency ?? "INR");
+    const resolved = resolveSkuPrice(item);
+    logPriceDebug(item, resolved);
+    const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
 
     return (
       <Pressable
@@ -570,46 +781,16 @@ export default function SellScanScreen({
     );
   };
 
-  const renderCartItem = ({ item }: { item: CartItem }) => {
-    const itemCurrency = item.currency ?? currency;
-    const lineTotal = item.priceMinor * item.quantity;
-    const lineTotalLabel = formatMoney(lineTotal, itemCurrency);
-    const unitPriceLabel = formatMoney(item.priceMinor, itemCurrency);
-    const controlsDisabled = !canEditCart;
-
-    return (
-      <View style={styles.cartItemRow}>
-        <View style={styles.cartItemInfo}>
-          <Text style={styles.cartItemName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.cartItemMeta} numberOfLines={1}>
-            {unitPriceLabel} x {item.quantity}
-          </Text>
-        </View>
-        <View style={styles.cartItemControls}>
-          <Pressable
-            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
-            onPress={() => updateQuantity(item.id, item.quantity - 1)}
-            disabled={controlsDisabled}
-            accessibilityLabel={`Decrease ${item.name}`}
-          >
-            <MaterialCommunityIcons name="minus" size={16} color={theme.colors.textPrimary} />
-          </Pressable>
-          <Text style={styles.qtyValue}>{item.quantity}</Text>
-          <Pressable
-            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
-            onPress={() => updateQuantity(item.id, item.quantity + 1)}
-            disabled={controlsDisabled}
-            accessibilityLabel={`Increase ${item.name}`}
-          >
-            <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textPrimary} />
-          </Pressable>
-        </View>
-        <Text style={styles.cartItemTotal}>{lineTotalLabel}</Text>
-      </View>
-    );
-  };
+  const renderCartItem = ({ item }: { item: CartItem }) => (
+    <CartItemRow
+      item={item}
+      currency={item.currency ?? currency}
+      canEdit={canEditCart}
+      onUpdateQuantity={updateQuantity}
+      onUpdatePrice={updatePrice}
+      onSaveDefaultPrice={handleSaveDefaultPrice}
+    />
+  );
   const renderSearchBar = (variant: "collapsed" | "expanded") => (
     <View
       style={[
@@ -1175,6 +1356,46 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textSecondary,
     marginTop: 2,
+  },
+  cartItemPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  cartPriceInput: {
+    minWidth: 76,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 12,
+    color: theme.colors.textPrimary,
+  },
+  cartSaveToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  cartSaveToggleActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+  },
+  cartSaveLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  cartSaveLabelActive: {
+    color: theme.colors.primaryDark,
   },
   cartItemControls: {
     flexDirection: "row",

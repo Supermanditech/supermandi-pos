@@ -36,7 +36,7 @@ function buildProductName(barcode: string): string {
   return `Item ${suffix || barcode}`;
 }
 
-async function fetchProductByBarcode(
+async function fetchStoreProductByBarcode(
   barcode: string,
   storeId: string
 ): Promise<PosProduct | null> {
@@ -53,13 +53,13 @@ async function fetchProductByBarcode(
       COALESCE(sb.barcode, b.barcode) AS barcode,
       v.currency,
       rv.selling_price_minor,
-      COALESCE(rv.digitised_by_retailer, FALSE) AS digitised_by_retailer
+      rv.digitised_by_retailer
     FROM barcodes b
     JOIN variants v
       ON v.id = b.variant_id
     LEFT JOIN barcodes sb
       ON sb.variant_id = v.id AND sb.barcode_type = 'supermandi'
-    LEFT JOIN retailer_variants rv
+    JOIN retailer_variants rv
       ON rv.variant_id = v.id AND rv.store_id = $2
     WHERE b.barcode = $1
     LIMIT 1
@@ -76,7 +76,7 @@ async function fetchProductByBarcode(
     barcode: row.barcode,
     currency: row.currency,
     priceMinor: row.selling_price_minor ?? null,
-    digitisedByRetailer: Boolean(row.digitised_by_retailer),
+    digitisedByRetailer: Boolean(row.digitised_by_retailer)
   };
 }
 
@@ -186,6 +186,7 @@ async function createProduct(barcode: string, storeId: string): Promise<PosProdu
   try {
     await client.query("BEGIN");
 
+    const lookupBarcode = isSupermandiBarcode(trimmed) ? trimmed.toUpperCase() : trimmed;
     const existingRes = await client.query(
       `
       SELECT v.id, v.name, v.currency, b.barcode
@@ -194,24 +195,34 @@ async function createProduct(barcode: string, storeId: string): Promise<PosProdu
       WHERE b.barcode = $1
       LIMIT 1
       `,
-      [isSupermandiBarcode(trimmed) ? trimmed.toUpperCase() : trimmed]
+      [lookupBarcode]
     );
 
     if (existingRes.rows[0]) {
-      await client.query("ROLLBACK");
-      const existing = await fetchProductByBarcode(barcode, storeId);
+      const row = existingRes.rows[0];
+      await client.query(
+        `
+        INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (store_id, variant_id)
+        DO UPDATE SET digitised_by_retailer = EXCLUDED.digitised_by_retailer
+        `,
+        [storeId, row.id, null, true]
+      );
+      await client.query("COMMIT");
+
+      const existing = await fetchStoreProductByBarcode(barcode, storeId);
       if (existing) {
-        await ensureRetailerVariant(storeId, existing.id);
         return existing;
       }
-      const row = existingRes.rows[0];
+
       return {
         id: row.id,
         name: row.name,
         barcode: row.barcode,
         currency: row.currency,
         priceMinor: null,
-        digitisedByRetailer: false,
+        digitisedByRetailer: true
       };
     }
 
@@ -255,11 +266,11 @@ async function createProduct(barcode: string, storeId: string): Promise<PosProdu
       barcode: supermandiBarcode,
       currency: "INR",
       priceMinor: null,
-      digitisedByRetailer: true,
+      digitisedByRetailer: true
     };
   } catch (error) {
     await client.query("ROLLBACK");
-    const existing = await fetchProductByBarcode(barcode, storeId);
+    const existing = await fetchStoreProductByBarcode(barcode, storeId);
     if (existing) {
       return existing;
     }
@@ -347,7 +358,7 @@ export async function resolveScan(
     }
   }
 
-  const existing = await fetchProductByBarcode(barcode, storeId);
+  const existing = await fetchStoreProductByBarcode(barcode, storeId);
 
   if (mode === "DIGITISE") {
     if (existing) {
@@ -394,7 +405,7 @@ export async function lookupProductByBarcode(
   const trimmed = barcode.trim();
   if (!trimmed) return null;
 
-  return fetchProductByBarcode(trimmed, storeId);
+  return fetchStoreProductByBarcode(trimmed, storeId);
 }
 
 export async function updateProductPrice(
@@ -439,12 +450,28 @@ export async function updateProductPrice(
     [storeId, productId, Math.round(priceMinor), true]
   );
 
+  const storeRes = await pool.query(
+    `
+    SELECT v.id, v.name, v.currency, b.barcode, rv.selling_price_minor, rv.digitised_by_retailer
+    FROM variants v
+    JOIN retailer_variants rv
+      ON rv.variant_id = v.id AND rv.store_id = $2
+    LEFT JOIN barcodes b
+      ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
+    WHERE v.id = $1
+    `,
+    [productId, storeId]
+  );
+
+  const storeProduct = storeRes.rows[0];
+  if (!storeProduct) return null;
+
   return {
-    id: product.id,
-    name: product.name,
-    barcode: product.barcode ?? "",
-    currency: product.currency,
-    priceMinor: Math.round(priceMinor),
-    digitisedByRetailer: true,
+    id: storeProduct.id,
+    name: storeProduct.name,
+    barcode: storeProduct.barcode ?? "",
+    currency: storeProduct.currency,
+    priceMinor: storeProduct.selling_price_minor ?? Math.round(priceMinor),
+    digitisedByRetailer: Boolean(storeProduct.digitised_by_retailer)
   };
 }

@@ -11,6 +11,8 @@ export type DiscountInput = {
 
 export type SaleItemInput = {
   productId: string;
+  globalProductId?: string;
+  global_product_id?: string;
   barcode?: string;
   name?: string;
   quantity: number;
@@ -37,15 +39,28 @@ export async function createSale(input: {
     return apiClient.post<SaleCreateResponse>("/api/v1/pos/sales", input);
   }
 
-  const offline = await createOfflineSale({
-    items: input.items.map((item) => ({
+  const offlineItems = input.items.map((item) => {
+    const rawGlobalProductId =
+      typeof item.global_product_id === "string"
+        ? item.global_product_id.trim()
+        : typeof item.globalProductId === "string"
+          ? item.globalProductId.trim()
+          : "";
+    const globalProductId = rawGlobalProductId ? rawGlobalProductId : null;
+
+    return {
       id: item.productId,
       barcode: item.barcode ?? item.productId,
       name: item.name ?? item.productId,
       priceMinor: item.priceMinor,
       quantity: item.quantity,
-      itemDiscount: item.itemDiscount ?? null
-    })),
+      itemDiscount: item.itemDiscount ?? null,
+      globalProductId
+    };
+  });
+
+  const offline = await createOfflineSale({
+    items: offlineItems,
     discountMinor: input.discountMinor ?? 0,
     cartDiscount: input.cartDiscount ?? null,
     currency: "INR"

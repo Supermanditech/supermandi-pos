@@ -21,6 +21,10 @@ import { ApiError } from "../services/api/apiClient";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme } from "../theme";
 import { API_BASE_URL } from "../config/api";
+import { logPosEvent } from "../services/cloudEventLogger";
+import { useCartStore } from "../stores/cartStore";
+import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
+import { useProductsStore } from "../stores/productsStore";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -151,13 +155,28 @@ export default function EnrollDeviceScreen() {
 
     setLoading(true);
     try {
+      const previousSession = await getDeviceSession();
+      const previousStoreId = previousSession?.storeId ?? null;
       const res = await enrollDevice({ code, deviceMeta });
+      const storeChanged = previousStoreId !== res.storeId;
+      if (storeChanged) {
+        useCartStore.getState().resetForStore();
+        usePurchaseDraftStore.getState().resetForStore();
+        useProductsStore.getState().resetForStore();
+      }
       await saveDeviceSession({
         deviceId: res.deviceId,
         storeId: res.storeId,
         deviceToken: res.deviceToken,
         deviceType
       });
+      if (storeChanged) {
+        void logPosEvent("STORE_SWITCH", {
+          previousStoreId,
+          nextStoreId: res.storeId,
+          reason: "enroll"
+        });
+      }
       if (!res.storeActive) {
         Alert.alert("Store Inactive", POS_MESSAGES.storeInactive);
       }

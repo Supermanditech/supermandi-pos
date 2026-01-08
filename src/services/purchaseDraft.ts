@@ -12,6 +12,8 @@ type PurchaseSubmitResponse = {
 
 type PurchaseSubmitItem = {
   barcode: string;
+  globalProductId?: string | null;
+  scanFormat?: string | null;
   name: string;
   quantity: number;
   purchasePriceMinor: number;
@@ -28,6 +30,8 @@ function ensureValidItems(items: PurchaseDraftItem[]): PurchaseSubmitItem[] {
 
     normalized.push({
       barcode: item.barcode,
+      globalProductId: item.globalProductId ?? null,
+      scanFormat: item.scanFormat ?? null,
       name: item.name.trim(),
       quantity: Math.max(1, Math.round(item.quantity)),
       purchasePriceMinor: Math.max(1, Math.round(item.purchasePriceMinor ?? 0)),

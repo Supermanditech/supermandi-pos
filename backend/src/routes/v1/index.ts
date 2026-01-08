@@ -15,6 +15,7 @@ import { adminDevicesRouter } from "./admin/devices";
 import { adminDeviceEnrollmentRouter } from "./admin/deviceEnrollments";
 import { adminAnalyticsRouter } from "./admin/analytics";
 import { adminBarcodeSheetsRouter } from "./admin/barcodeSheets";
+import { adminGlobalProductsRouter } from "./admin/globalProducts";
 
 export const v1Router = Router();
 
@@ -34,3 +35,4 @@ v1Router.use("/admin", adminDevicesRouter);
 v1Router.use("/admin", adminDeviceEnrollmentRouter);
 v1Router.use("/admin", adminAnalyticsRouter);
 v1Router.use("/admin", adminBarcodeSheetsRouter);
+v1Router.use("/admin", adminGlobalProductsRouter);

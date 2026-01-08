@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StatusBar, Platform } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -14,10 +14,15 @@ import SalesHistoryScreen from "./src/screens/SalesHistoryScreen";
 import BillDetailScreen from "./src/screens/BillDetailScreen";
 import BarcodeSheetScreen from "./src/screens/BarcodeSheetScreen";
 import { theme } from "./src/theme";
+import { startScanIntentListener } from "./src/services/scan/scanIntent";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  useEffect(() => {
+    startScanIntentListener();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar

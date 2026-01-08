@@ -12,6 +12,9 @@ export type UiStatusResponse = {
   upiVpa?: string | null;
   printerOk?: boolean | null;
   scannerOk?: boolean | null;
+  features?: {
+    scan_lookup_v2?: boolean;
+  };
 };
 
 export async function fetchUiStatus(): Promise<UiStatusResponse> {

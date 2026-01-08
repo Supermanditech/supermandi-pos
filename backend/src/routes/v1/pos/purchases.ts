@@ -11,9 +11,15 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
       barcode?: string;
       productId?: string;
       productName?: string;
+      name?: string;
+      globalProductId?: string;
+      global_product_id?: string;
+      scanFormat?: string | null;
+      format?: string | null;
       quantity?: number;
       unit?: string | null;
       unitCostMinor?: number;
+      purchasePriceMinor?: number;
       currency?: string | null;
     }>;
     supplierName?: string | null;
@@ -25,15 +31,44 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
     return res.status(400).json({ error: "items are required" });
   }
 
-  const normalizedItems: PurchaseItemInput[] = items.map((item) => ({
-    barcode: typeof item.barcode === "string" ? item.barcode.trim() : undefined,
-    productId: typeof item.productId === "string" ? item.productId.trim() : undefined,
-    productName: typeof item.productName === "string" ? item.productName.trim() : undefined,
-    quantity: typeof item.quantity === "number" ? item.quantity : NaN,
-    unit: typeof item.unit === "string" ? item.unit.trim() : null,
-    unitCostMinor: typeof item.unitCostMinor === "number" ? item.unitCostMinor : NaN,
-    currency: typeof item.currency === "string" ? item.currency.trim() : undefined
-  }));
+  const normalizedItems: PurchaseItemInput[] = items.map((item) => {
+    const unitCostMinor =
+      typeof item.unitCostMinor === "number"
+        ? item.unitCostMinor
+        : typeof item.purchasePriceMinor === "number"
+          ? item.purchasePriceMinor
+          : NaN;
+    const productName =
+      typeof item.productName === "string"
+        ? item.productName.trim()
+        : typeof item.name === "string"
+          ? item.name.trim()
+          : undefined;
+    const globalProductId =
+      typeof item.globalProductId === "string"
+        ? item.globalProductId.trim()
+        : typeof item.global_product_id === "string"
+          ? item.global_product_id.trim()
+          : undefined;
+    const scanFormat =
+      typeof item.scanFormat === "string"
+        ? item.scanFormat.trim()
+        : typeof item.format === "string"
+          ? item.format.trim()
+          : null;
+
+    return {
+      barcode: typeof item.barcode === "string" ? item.barcode.trim() : undefined,
+      productId: typeof item.productId === "string" ? item.productId.trim() : undefined,
+      productName,
+      globalProductId,
+      scanFormat,
+      quantity: typeof item.quantity === "number" ? item.quantity : NaN,
+      unit: typeof item.unit === "string" ? item.unit.trim() : null,
+      unitCostMinor,
+      currency: typeof item.currency === "string" ? item.currency.trim() : undefined
+    };
+  });
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });

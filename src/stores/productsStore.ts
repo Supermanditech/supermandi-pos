@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { eventLogger } from '../services/eventLogger';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as productsApi from '../services/api/productsApi';
+import { storeScopedStorage } from "../services/storeScope";
 
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
@@ -23,6 +23,7 @@ interface ProductsState {
   loadProducts: () => Promise<void>;
   getProductByBarcode: (barcode: string) => Product | undefined;
   searchProducts: (query: string) => Product[];
+  resetForStore: () => void;
 }
 
 export const useProductsStore = create<ProductsState>((set, get) => ({
@@ -36,16 +37,20 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     try {
       // 1) Try backend first
       const remote = await productsApi.listProducts();
-      const productsData: Product[] = remote.map((p) => ({
-        id: p.id,
-        name: p.name,
-        priceMinor: p.price,
-        currency: p.currency,
-        barcode: p.barcode ?? undefined,
-        stock: p.stock
-      }));
+      const productsData: Product[] = remote.map((p) => {
+        const priceSources = productsApi.getProductPriceSources(p);
+        const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
+        return {
+          id: p.id,
+          name: p.name,
+          priceMinor: resolved.priceMinor,
+          currency: p.currency,
+          barcode: p.barcode ?? undefined,
+          stock: p.stock
+        };
+      });
 
-      await AsyncStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(productsData));
+      await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(productsData));
 
       set({
         products: productsData,
@@ -60,7 +65,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
     } catch (error) {
       // 2) Fallback to cache
-      const cached = await AsyncStorage.getItem(PRODUCTS_CACHE_KEY);
+      const cached = await storeScopedStorage.getItem(PRODUCTS_CACHE_KEY);
       if (cached) {
         try {
           const productsData = JSON.parse(cached) as Product[];
@@ -106,6 +111,14 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       (product.barcode ? product.barcode.toLowerCase().includes(lowercaseQuery) : false) ||
       product.category?.toLowerCase().includes(lowercaseQuery)
     );
+  },
+
+  resetForStore: () => {
+    set({
+      products: [],
+      loading: false,
+      error: null
+    });
   }
 }));
 

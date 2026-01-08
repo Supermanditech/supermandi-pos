@@ -13,6 +13,73 @@ export type PosDeviceStatusContext = {
   storeActive: boolean | null;
 };
 
+type StoreIdCandidate = {
+  source: string;
+  value: string;
+};
+
+function normalizeStoreId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function collectStoreIdCandidates(candidates: StoreIdCandidate[], value: unknown, source: string): void {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectStoreIdCandidates(candidates, entry, source);
+    }
+    return;
+  }
+  const normalized = normalizeStoreId(value);
+  if (normalized) {
+    candidates.push({ source, value: normalized });
+  }
+}
+
+function extractClientStoreIds(req: Request): StoreIdCandidate[] {
+  const candidates: StoreIdCandidate[] = [];
+  collectStoreIdCandidates(candidates, (req.params as any)?.storeId, "params.storeId");
+  collectStoreIdCandidates(candidates, (req.params as any)?.store_id, "params.store_id");
+  collectStoreIdCandidates(candidates, (req.query as any)?.storeId, "query.storeId");
+  collectStoreIdCandidates(candidates, (req.query as any)?.store_id, "query.store_id");
+
+  if (req.body && typeof req.body === "object") {
+    const body = req.body as any;
+    collectStoreIdCandidates(candidates, body.storeId, "body.storeId");
+    collectStoreIdCandidates(candidates, body.store_id, "body.store_id");
+
+    const payload = body.payload;
+    if (payload && typeof payload === "object") {
+      collectStoreIdCandidates(candidates, payload.storeId, "body.payload.storeId");
+      collectStoreIdCandidates(candidates, payload.store_id, "body.payload.store_id");
+    }
+  }
+
+  return candidates;
+}
+
+function enforceStoreBinding(req: Request, res: Response, status: PosDeviceStatusContext): boolean {
+  if (!status.storeId) return true;
+
+  const candidates = extractClientStoreIds(req);
+  if (candidates.length === 0) return true;
+
+  const mismatches = candidates.filter((candidate) => candidate.value !== status.storeId);
+  if (mismatches.length === 0) return true;
+
+  console.warn("store_mismatch_reject", {
+    deviceId: status.deviceId,
+    enrolledStoreId: status.storeId,
+    method: req.method,
+    path: req.originalUrl ?? req.url,
+    mismatches
+  });
+
+  res.status(403).json({ error: "store_mismatch" });
+  return false;
+}
+
 async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosDeviceStatusContext | null> {
   const token = req.header("x-device-token")?.trim();
   if (!token) {
@@ -62,6 +129,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
 export async function requireDeviceToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   const status = await resolveDeviceFromToken(req, res);
   if (!status) return;
+  if (!enforceStoreBinding(req, res, status)) return;
 
   if (!status.storeId) {
     res.status(403).json({ error: "device_not_enrolled" });
@@ -92,6 +160,7 @@ export async function requireDeviceTokenAllowInactive(
 ): Promise<void> {
   const status = await resolveDeviceFromToken(req, res);
   if (!status) return;
+  if (!enforceStoreBinding(req, res, status)) return;
 
   (req as any).posDeviceStatus = status satisfies PosDeviceStatusContext;
   (req as any).posDevice = {

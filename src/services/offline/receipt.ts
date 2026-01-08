@@ -1,6 +1,6 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getOrCreateDeviceId } from "../deviceId";
 import { getDeviceIdFromSession } from "../deviceSession";
+import { storeScopedStorage } from "../storeScope";
 
 const SEQ_PREFIX = "supermandi.offline.seq";
 
@@ -16,10 +16,10 @@ export async function nextOfflineBillRef(): Promise<string> {
   const dateKey = formatDateKey(new Date());
   const storageKey = `${SEQ_PREFIX}.${dateKey}`;
 
-  const raw = await AsyncStorage.getItem(storageKey);
+  const raw = await storeScopedStorage.getItem(storageKey);
   const current = Number(raw ?? 0);
   const next = Number.isFinite(current) ? current + 1 : 1;
-  await AsyncStorage.setItem(storageKey, String(next));
+  await storeScopedStorage.setItem(storageKey, String(next));
 
   const deviceShort = deviceId.replace(/[^a-zA-Z0-9]/g, "").slice(-6) || "device";
   const seq = String(next).padStart(4, "0");

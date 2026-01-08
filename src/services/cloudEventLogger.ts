@@ -3,6 +3,7 @@ import NetInfo from "@react-native-community/netinfo";
 import Constants from "expo-constants";
 import { API_BASE_URL } from "../config/api";
 import { getDeviceSession, getDeviceToken } from "./deviceSession";
+import { getStoreScopedKey, storeScopedStorage } from "./storeScope";
 
 /**
  * Cloud-first POS event logger.
@@ -23,6 +24,7 @@ export type PosEventType =
   | "PAYMENT_FAILED"
   | "PRINTER_ERROR"
   | "NETWORK_OFFLINE"
+  | "STORE_SWITCH"
   // Payment lifecycle (UPI/QR)
   | "PAYMENT_QR_CREATED"
   | "PAYMENT_PENDING"
@@ -44,6 +46,7 @@ const QUEUE_KEY = "supermandi.queue.posEvents.v1";
 let started = false;
 let isOnline = true;
 let inMemoryQueue: QueuedPosEvent[] | null = null;
+let inMemoryQueueKey: string | null = null;
 let flushing = false;
 
 function nowIso(): string {
@@ -61,10 +64,12 @@ function appVersion(): string {
 }
 
 async function loadQueue(): Promise<QueuedPosEvent[]> {
-  if (inMemoryQueue) return inMemoryQueue;
-  const raw = await AsyncStorage.getItem(QUEUE_KEY);
+  const scopedKey = await getStoreScopedKey(QUEUE_KEY);
+  if (inMemoryQueue && inMemoryQueueKey === scopedKey) return inMemoryQueue;
+  const raw = await AsyncStorage.getItem(scopedKey);
   if (!raw) {
     inMemoryQueue = [];
+    inMemoryQueueKey = scopedKey;
     return inMemoryQueue;
   }
   try {
@@ -73,12 +78,17 @@ async function loadQueue(): Promise<QueuedPosEvent[]> {
   } catch {
     inMemoryQueue = [];
   }
+  inMemoryQueueKey = scopedKey;
   return inMemoryQueue;
 }
 
 async function saveQueue(queue: QueuedPosEvent[]): Promise<void> {
-  inMemoryQueue = queue;
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+  const scopedKey = await getStoreScopedKey(QUEUE_KEY);
+  const storeChanged = inMemoryQueueKey && inMemoryQueueKey !== scopedKey;
+  const nextQueue = storeChanged ? [] : queue;
+  inMemoryQueueKey = scopedKey;
+  inMemoryQueue = nextQueue;
+  await AsyncStorage.setItem(scopedKey, JSON.stringify(nextQueue));
 }
 
 async function sendToBackend(ev: QueuedPosEvent): Promise<boolean> {
@@ -240,9 +250,9 @@ export async function logPaymentEvent(
   if (terminal.has(eventType)) {
     try {
       const key = `supermandi.payment.once.${transactionId}.${eventType}`;
-      const seen = await AsyncStorage.getItem(key);
+      const seen = await storeScopedStorage.getItem(key);
       if (seen) return;
-      await AsyncStorage.setItem(key, nowIso());
+      await storeScopedStorage.setItem(key, nowIso());
     } catch {
       // If storage fails, still attempt to log.
     }

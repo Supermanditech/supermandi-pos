@@ -10,11 +10,14 @@ import {
   isSupermandiBarcode,
   type BaseUnit
 } from "./inventoryService";
+import { normalizeScan } from "./scanNormalization";
 
 export type PurchaseItemInput = {
   barcode?: string;
   productId?: string;
   productName?: string;
+  globalProductId?: string;
+  scanFormat?: string | null;
   quantity: number;
   unit?: string | null;
   unitCostMinor: number;
@@ -32,6 +35,7 @@ type ResolvedItem = {
   productId: string;
   productName: string;
   variantId: string | null;
+  globalProductId: string | null;
   quantity: number;
   unit: string | null;
   quantityBase: number | null;
@@ -52,6 +56,61 @@ function formatSizeLabel(baseUnit: BaseUnit, sizeBase: number): string {
     return sizeBase === 1000 ? "1kg" : `${sizeBase}g`;
   }
   return sizeBase === 1000 ? "1l" : `${sizeBase}ml`;
+}
+
+async function resolveGlobalProductId(params: {
+  client: PoolClient;
+  globalProductId?: string;
+  barcode?: string;
+  scanFormat?: string | null;
+}): Promise<string | null> {
+  const rawGlobalId = params.globalProductId?.trim();
+  if (rawGlobalId) {
+    const res = await params.client.query(
+      `SELECT id FROM global_products WHERE id = $1 LIMIT 1`,
+      [rawGlobalId]
+    );
+    if (res.rows[0]) {
+      return rawGlobalId;
+    }
+  }
+
+  const barcode = params.barcode?.trim();
+  if (!barcode) return null;
+
+  const normalized = normalizeScan(params.scanFormat, barcode);
+  if (!normalized) return null;
+
+  const match = await params.client.query(
+    `
+    SELECT global_product_id
+    FROM global_product_identifiers
+    WHERE code_type = $1 AND normalized_value = $2
+    LIMIT 1
+    `,
+    [normalized.code_type, normalized.normalized_value]
+  );
+  if (match.rows[0]?.global_product_id) {
+    return String(match.rows[0].global_product_id);
+  }
+
+  if (normalized.code_type === "UNKNOWN") {
+    const fallback = await params.client.query(
+      `
+      SELECT global_product_id
+      FROM global_product_identifiers
+      WHERE normalized_value = $1
+      ORDER BY created_at ASC
+      LIMIT 1
+      `,
+      [normalized.normalized_value]
+    );
+    if (fallback.rows[0]?.global_product_id) {
+      return String(fallback.rows[0].global_product_id);
+    }
+  }
+
+  return null;
 }
 
 async function createProduct(params: {
@@ -86,6 +145,21 @@ async function createVariant(params: {
     [variantId, params.productId, params.name, params.currency, params.baseUnit ?? null, params.sizeBase ?? null]
   );
   return variantId;
+}
+
+async function ensureRetailerVariantLink(params: {
+  client: PoolClient;
+  storeId: string;
+  variantId: string;
+}): Promise<void> {
+  await params.client.query(
+    `
+    INSERT INTO retailer_variants (store_id, variant_id)
+    VALUES ($1, $2)
+    ON CONFLICT (store_id, variant_id) DO NOTHING
+    `,
+    [params.storeId, params.variantId]
+  );
 }
 
 async function resolveVariantByBarcode(
@@ -147,9 +221,10 @@ async function updateVariantSizeIfMissing(params: {
 
 async function resolvePurchaseItem(params: {
   client: PoolClient;
+  storeId: string;
   item: PurchaseItemInput;
 }): Promise<ResolvedItem> {
-  const { client, item } = params;
+  const { client, storeId, item } = params;
   const quantity = Math.round(item.quantity);
   if (!Number.isFinite(quantity) || quantity <= 0) {
     throw new Error("invalid_quantity");
@@ -165,6 +240,12 @@ async function resolvePurchaseItem(params: {
   const baseUnit = baseInfo?.baseUnit ?? null;
   const quantityBase = baseInfo?.quantityBase ?? null;
   const isBulk = quantityBase !== null && isBulkQuantity(quantityBase);
+  const globalProductId = await resolveGlobalProductId({
+    client,
+    globalProductId: item.globalProductId,
+    barcode: item.barcode,
+    scanFormat: item.scanFormat ?? null
+  });
 
   let productId: string;
   let productName: string;
@@ -218,11 +299,15 @@ async function resolvePurchaseItem(params: {
   if (variantId && baseUnit && quantityBase !== null) {
     await updateVariantSizeIfMissing({ client, variantId, baseUnit, sizeBase: quantityBase });
   }
+  if (variantId) {
+    await ensureRetailerVariantLink({ client, storeId, variantId });
+  }
 
   return {
     productId,
     productName,
     variantId,
+    globalProductId,
     quantity,
     unit,
     quantityBase,
@@ -232,6 +317,53 @@ async function resolvePurchaseItem(params: {
     lineTotalMinor: unitCostMinor * quantity,
     currency
   };
+}
+
+async function applyStorePurchaseUpdates(params: {
+  client: PoolClient;
+  storeId: string;
+  items: ResolvedItem[];
+}): Promise<void> {
+  const { client, storeId, items } = params;
+  const quantityByGlobal = new Map<string, number>();
+  const purchasePriceByGlobal = new Map<string, number>();
+
+  for (const item of items) {
+    if (!item.globalProductId) continue;
+    const key = item.globalProductId;
+    quantityByGlobal.set(key, (quantityByGlobal.get(key) ?? 0) + item.quantity);
+    purchasePriceByGlobal.set(key, item.unitCostMinor);
+  }
+
+  for (const [globalProductId, delta] of quantityByGlobal.entries()) {
+    const safeDelta = Math.round(delta);
+    if (!Number.isFinite(safeDelta) || safeDelta === 0) continue;
+    await client.query(
+      `
+      INSERT INTO store_inventory (store_id, global_product_id, available_qty)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (store_id, global_product_id) DO UPDATE
+      SET available_qty = store_inventory.available_qty + EXCLUDED.available_qty,
+          updated_at = NOW()
+      `,
+      [storeId, globalProductId, safeDelta]
+    );
+  }
+
+  for (const [globalProductId, priceMinor] of purchasePriceByGlobal.entries()) {
+    const safePrice = Math.round(priceMinor);
+    if (!Number.isFinite(safePrice) || safePrice <= 0) continue;
+    await client.query(
+      `
+      INSERT INTO store_products (id, store_id, global_product_id, purchase_price_minor)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (store_id, global_product_id) DO UPDATE
+      SET purchase_price_minor = EXCLUDED.purchase_price_minor,
+          updated_at = NOW()
+      `,
+      [randomUUID(), storeId, globalProductId, safePrice]
+    );
+  }
 }
 
 export async function createPurchase(params: {
@@ -248,7 +380,10 @@ export async function createPurchase(params: {
 
   const purchaseId = input.purchaseId?.trim() || randomUUID();
   if (skipIfExists) {
-    const existing = await client.query(`SELECT id, total_minor, currency FROM purchases WHERE id = $1`, [purchaseId]);
+    const existing = await client.query(
+      `SELECT id, total_minor, currency FROM purchases WHERE id = $1 AND store_id = $2`,
+      [purchaseId, storeId]
+    );
     if (existing.rows[0]) {
       return {
         purchaseId,
@@ -260,7 +395,7 @@ export async function createPurchase(params: {
 
   const resolvedItems: ResolvedItem[] = [];
   for (const item of input.items) {
-    resolvedItems.push(await resolvePurchaseItem({ client, item }));
+    resolvedItems.push(await resolvePurchaseItem({ client, storeId, item }));
   }
 
   const currency =
@@ -323,10 +458,13 @@ export async function createPurchase(params: {
         productId: item.productId,
         productName: item.productName,
         currency,
-        baseUnit: item.baseUnit
+        baseUnit: item.baseUnit,
+        storeId
       });
     }
   }
+
+  await applyStorePurchaseUpdates({ client, storeId, items: resolvedItems });
 
   return { purchaseId, totalMinor, currency };
 }

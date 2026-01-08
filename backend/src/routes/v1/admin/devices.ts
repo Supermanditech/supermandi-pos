@@ -40,6 +40,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
            d.android_version,
            d.app_version,
            d.printing_mode,
+           d.scan_lookup_v2_enabled,
            d.last_seen_online,
            d.last_sync_at,
            d.pending_outbox_count,
@@ -65,6 +66,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
     android_version: row.android_version,
     app_version: row.app_version,
     printing_mode: row.printing_mode,
+    scan_lookup_v2_enabled: row.scan_lookup_v2_enabled ?? null,
     last_seen_online: row.last_seen_online ? new Date(row.last_seen_online).toISOString() : null,
     last_sync_at: row.last_sync_at ? new Date(row.last_sync_at).toISOString() : null,
     pending_outbox_count: row.pending_outbox_count,
@@ -87,12 +89,20 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
   const hasDeviceType = Object.prototype.hasOwnProperty.call(body, "deviceType");
   const hasActive = Object.prototype.hasOwnProperty.call(body, "active");
   const hasPrintingMode = Object.prototype.hasOwnProperty.call(body, "printingMode");
+  const hasScanLookupV2 =
+    Object.prototype.hasOwnProperty.call(body, "scanLookupV2Enabled") ||
+    Object.prototype.hasOwnProperty.call(body, "scan_lookup_v2_enabled");
   const resetToken = body.resetToken === true;
 
   const label = hasLabel ? asTrimmedString(body.label) : null;
   const deviceType = hasDeviceType ? normalizeEnum(asTrimmedString(body.deviceType)) : null;
   const printingMode = hasPrintingMode ? normalizeEnum(asTrimmedString(body.printingMode)) : null;
   const active = hasActive && typeof body.active === "boolean" ? body.active : null;
+  const scanLookupV2Raw = hasScanLookupV2
+    ? (body.scanLookupV2Enabled ?? body.scan_lookup_v2_enabled)
+    : undefined;
+  const scanLookupV2Enabled =
+    hasScanLookupV2 && typeof scanLookupV2Raw === "boolean" ? scanLookupV2Raw : null;
 
   if (hasLabel && !label) {
     return res.status(400).json({ error: "label is required" });
@@ -103,13 +113,16 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
   if (hasPrintingMode && (!printingMode || !PRINTING_MODES.has(printingMode))) {
     return res.status(400).json({ error: "printingMode invalid" });
   }
+  if (hasScanLookupV2 && scanLookupV2Raw !== null && typeof scanLookupV2Raw !== "boolean") {
+    return res.status(400).json({ error: "scanLookupV2Enabled must be boolean or null" });
+  }
 
-  if (!hasLabel && !hasDeviceType && !hasActive && !hasPrintingMode && !resetToken) {
+  if (!hasLabel && !hasDeviceType && !hasActive && !hasPrintingMode && !hasScanLookupV2 && !resetToken) {
     return res.status(400).json({ error: "no updates provided" });
   }
 
   const updates: string[] = [];
-  const params: Array<string | boolean> = [];
+  const params: Array<string | boolean | null> = [];
 
   if (hasLabel) {
     params.push(label as string);
@@ -129,6 +142,11 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
   if (hasActive) {
     params.push(active as boolean);
     updates.push(`active = $${params.length}`);
+  }
+
+  if (hasScanLookupV2) {
+    params.push(scanLookupV2Raw === null ? null : scanLookupV2Enabled);
+    updates.push(`scan_lookup_v2_enabled = $${params.length}`);
   }
 
   if (resetToken) {
@@ -156,6 +174,7 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
               android_version,
               app_version,
               printing_mode,
+              scan_lookup_v2_enabled,
               last_seen_online,
               last_sync_at,
               pending_outbox_count,
@@ -188,6 +207,7 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
       android_version: row.android_version,
       app_version: row.app_version,
       printing_mode: row.printing_mode,
+      scan_lookup_v2_enabled: row.scan_lookup_v2_enabled ?? null,
       last_seen_online: row.last_seen_online ? new Date(row.last_seen_online).toISOString() : null,
       last_sync_at: row.last_sync_at ? new Date(row.last_sync_at).toISOString() : null,
       pending_outbox_count: row.pending_outbox_count,

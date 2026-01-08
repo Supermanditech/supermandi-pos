@@ -1,15 +1,28 @@
 import { randomUUID } from "crypto";
+import type { PoolClient } from "pg";
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
-import { applyBulkDeductions, ensureSaleAvailability } from "../../../services/inventoryService";
+import {
+  applyBulkDeductions,
+  ensureSaleAvailability,
+  ensureStandardVariants,
+  ensureSupermandiBarcode,
+  normalizeUnit,
+  type BaseUnit
+} from "../../../services/inventoryService";
 
 export const posSalesRouter = Router();
 
 type SaleItemInput = {
-  productId: string;
-  quantity: number;
-  priceMinor: number;
+  productId?: string;
+  retailerVariantId?: string;
+  retailer_variant_id?: string;
+  variantId?: string;
+  globalProductId?: string;
+  global_product_id?: string;
+  quantity?: number;
+  priceMinor?: number;
   name?: string;
   barcode?: string;
 };
@@ -30,6 +43,228 @@ function resolvePaymentMode(status: string | null | undefined): BillPaymentMode 
   return "UNKNOWN";
 }
 
+function asTrimmedString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function parseVariantSize(variantRaw: string | null | undefined): { baseUnit: BaseUnit; sizeBase: number } | null {
+  if (!variantRaw) return null;
+  const trimmed = variantRaw.trim().toLowerCase();
+  if (!trimmed) return null;
+  const match = trimmed.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|l)\b/);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const unitInfo = normalizeUnit(match[2]);
+  if (!unitInfo) return null;
+  const sizeBase = Math.round(amount * unitInfo.multiplier);
+  if (sizeBase <= 0) return null;
+  return { baseUnit: unitInfo.baseUnit, sizeBase };
+}
+
+async function ensureRetailerVariantLink(
+  client: PoolClient,
+  storeId: string,
+  variantId: string
+): Promise<void> {
+  await client.query(
+    `
+    INSERT INTO retailer_variants (store_id, variant_id, digitised_by_retailer)
+    VALUES ($1, $2, TRUE)
+    ON CONFLICT (store_id, variant_id) DO NOTHING
+    `,
+    [storeId, variantId]
+  );
+}
+
+async function findVariantForProduct(params: {
+  client: PoolClient;
+  storeId: string;
+  productId: string;
+  baseUnit: BaseUnit;
+  preferredSizeBase: number | null;
+}): Promise<string | null> {
+  const { client, storeId, productId, baseUnit, preferredSizeBase } = params;
+
+  if (preferredSizeBase !== null) {
+    const preferred = await client.query(
+      `
+      SELECT id
+      FROM variants
+      WHERE product_id = $1 AND unit_base = $2 AND size_base = $3
+      LIMIT 1
+      `,
+      [productId, baseUnit, preferredSizeBase]
+    );
+    if (preferred.rows[0]?.id) {
+      const variantId = String(preferred.rows[0].id);
+      await ensureRetailerVariantLink(client, storeId, variantId);
+      return variantId;
+    }
+  }
+
+  const standard = await client.query(
+    `
+    SELECT id
+    FROM variants
+    WHERE product_id = $1 AND unit_base = $2 AND size_base = 1000
+    LIMIT 1
+    `,
+    [productId, baseUnit]
+  );
+  if (standard.rows[0]?.id) {
+    const variantId = String(standard.rows[0].id);
+    await ensureRetailerVariantLink(client, storeId, variantId);
+    return variantId;
+  }
+
+  const fallback = await client.query(
+    `
+    SELECT id
+    FROM variants
+    WHERE product_id = $1 AND unit_base = $2
+    ORDER BY size_base ASC, created_at ASC
+    LIMIT 1
+    `,
+    [productId, baseUnit]
+  );
+  if (fallback.rows[0]?.id) {
+    const variantId = String(fallback.rows[0].id);
+    await ensureRetailerVariantLink(client, storeId, variantId);
+    return variantId;
+  }
+
+  return null;
+}
+
+async function resolveVariantForGlobalProduct(params: {
+  client: PoolClient;
+  storeId: string;
+  globalProductId: string;
+  fallbackName?: string | null;
+  currency: string;
+}): Promise<string | null> {
+  const { client, storeId, globalProductId, fallbackName, currency } = params;
+  const productRes = await client.query(
+    `
+    SELECT gp.global_name, sp.store_display_name, sp.unit, sp.variant
+    FROM global_products gp
+    LEFT JOIN store_products sp
+      ON sp.global_product_id = gp.id AND sp.store_id = $2
+    WHERE gp.id = $1
+    LIMIT 1
+    `,
+    [globalProductId, storeId]
+  );
+
+  const productRow = productRes.rows[0];
+  if (!productRow) return null;
+
+  const globalName = productRow.global_name ? String(productRow.global_name) : "";
+  const storeName = productRow.store_display_name ? String(productRow.store_display_name) : null;
+  const unitRaw = productRow.unit ? String(productRow.unit) : null;
+  const variantRaw = productRow.variant ? String(productRow.variant) : null;
+  const productName =
+    storeName ||
+    globalName ||
+    (fallbackName ? fallbackName.trim() : "") ||
+    `Item ${globalProductId.slice(-4)}`;
+
+  const linkedRes = await client.query(
+    `
+    SELECT v.id
+    FROM variants v
+    JOIN retailer_variants rv
+      ON rv.variant_id = v.id AND rv.store_id = $1
+    WHERE v.product_id = $2
+    ORDER BY v.size_base NULLS LAST, v.created_at ASC
+    LIMIT 1
+    `,
+    [storeId, globalProductId]
+  );
+  if (linkedRes.rows[0]?.id) {
+    return String(linkedRes.rows[0].id);
+  }
+
+  const existingVariant = await client.query(
+    `
+    SELECT v.id
+    FROM variants v
+    WHERE v.product_id = $1
+    ORDER BY v.size_base NULLS LAST, v.created_at ASC
+    LIMIT 1
+    `,
+    [globalProductId]
+  );
+  if (existingVariant.rows[0]?.id) {
+    const variantId = String(existingVariant.rows[0].id);
+    await ensureRetailerVariantLink(client, storeId, variantId);
+    return variantId;
+  }
+
+  await client.query(
+    `
+    INSERT INTO products (id, name, category, retailer_status, enrichment_status)
+    VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (id) DO NOTHING
+    `,
+    [globalProductId, productName, null, "retailer_created", "pending_enrichment"]
+  );
+
+  const unitInfo = normalizeUnit(unitRaw);
+  const variantSize = parseVariantSize(variantRaw);
+  const baseUnit = unitInfo?.baseUnit ?? variantSize?.baseUnit ?? null;
+  const preferredSizeBase =
+    variantSize && (!baseUnit || variantSize.baseUnit === baseUnit) ? variantSize.sizeBase : null;
+
+  if (baseUnit) {
+    await ensureStandardVariants({
+      client,
+      productId: globalProductId,
+      productName,
+      currency,
+      baseUnit,
+      storeId
+    });
+
+    const variantId = await findVariantForProduct({
+      client,
+      storeId,
+      productId: globalProductId,
+      baseUnit,
+      preferredSizeBase
+    });
+    if (variantId) return variantId;
+  }
+
+  const variantId = randomUUID();
+  await client.query(
+    `
+    INSERT INTO variants (id, product_id, name, currency)
+    VALUES ($1, $2, $3, $4)
+    `,
+    [variantId, globalProductId, productName, currency]
+  );
+  await ensureSupermandiBarcode(client, variantId);
+  await ensureRetailerVariantLink(client, storeId, variantId);
+  return variantId;
+}
+
+async function variantExists(client: PoolClient, variantId: string): Promise<boolean> {
+  const res = await client.query(
+    `
+    SELECT 1
+    FROM variants
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [variantId]
+  );
+  return (res.rowCount ?? 0) > 0;
+}
+
 async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
   const pool = getPool();
   if (!pool) return null;
@@ -37,12 +272,15 @@ async function getStore(storeId: string): Promise<{ id: string; name: string; up
   return res.rows[0] ?? null;
 }
 
-async function getSale(saleId: string): Promise<{ id: string; store_id: string; bill_ref: string; total_minor: number } | null> {
+async function getSale(
+  storeId: string,
+  saleId: string
+): Promise<{ id: string; store_id: string; bill_ref: string; total_minor: number } | null> {
   const pool = getPool();
   if (!pool) return null;
   const res = await pool.query(
-    `SELECT id, store_id, bill_ref, total_minor FROM sales WHERE id = $1`,
-    [saleId]
+    `SELECT id, store_id, bill_ref, total_minor FROM sales WHERE id = $1 AND store_id = $2`,
+    [saleId, storeId]
   );
   return res.rows[0] ?? null;
 }
@@ -121,12 +359,13 @@ posSalesRouter.get("/bills/:saleId", requireDeviceToken, async (req, res) => {
         COALESCE(si.item_name, v.name) AS item_name,
         COALESCE(si.barcode, b.barcode) AS barcode
       FROM sale_items si
+      JOIN sales s ON s.id = si.sale_id
       LEFT JOIN variants v ON v.id = si.variant_id
       LEFT JOIN barcodes b ON b.variant_id = si.variant_id AND b.barcode_type = 'supermandi'
-      WHERE si.sale_id = $1
+      WHERE si.sale_id = $1 AND s.store_id = $2
       ORDER BY si.id ASC
       `,
-      [saleId]
+      [saleId, storeId]
     );
 
     const bill = {
@@ -157,7 +396,10 @@ posSalesRouter.get("/bills/:saleId", requireDeviceToken, async (req, res) => {
   }
 });
 
-async function getPaymentStoreStatus(paymentId: string): Promise<{ sale_id: string; store_id: string; active: boolean } | null> {
+async function getPaymentStoreStatus(
+  storeId: string,
+  paymentId: string
+): Promise<{ sale_id: string; store_id: string; active: boolean } | null> {
   const pool = getPool();
   if (!pool) return null;
   const res = await pool.query(
@@ -166,14 +408,17 @@ async function getPaymentStoreStatus(paymentId: string): Promise<{ sale_id: stri
       FROM payments p
       JOIN sales s ON s.id = p.sale_id
       JOIN stores st ON st.id = s.store_id
-      WHERE p.id = $1
+      WHERE p.id = $1 AND s.store_id = $2
     `,
-    [paymentId]
+    [paymentId, storeId]
   );
   return res.rows[0] ?? null;
 }
 
-async function getCollectionStoreStatus(collectionId: string): Promise<{ store_id: string; active: boolean } | null> {
+async function getCollectionStoreStatus(
+  storeId: string,
+  collectionId: string
+): Promise<{ store_id: string; active: boolean } | null> {
   const pool = getPool();
   if (!pool) return null;
   const res = await pool.query(
@@ -181,9 +426,9 @@ async function getCollectionStoreStatus(collectionId: string): Promise<{ store_i
       SELECT c.store_id, st.active
       FROM collections c
       JOIN stores st ON st.id = c.store_id
-      WHERE c.id = $1
+      WHERE c.id = $1 AND c.store_id = $2
     `,
-    [collectionId]
+    [collectionId, storeId]
   );
   return res.rows[0] ?? null;
 }
@@ -199,19 +444,43 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     return res.status(400).json({ error: "items are required" });
   }
 
-  const cleanedItems = items.filter(
+  const cleanedItems = items.map((item) => {
+    const explicitVariantId =
+      asTrimmedString(item.retailerVariantId) ??
+      asTrimmedString(item.retailer_variant_id) ??
+      asTrimmedString(item.variantId);
+    const productId = asTrimmedString(item.productId);
+    const globalProductId =
+      asTrimmedString(item.globalProductId) ?? asTrimmedString(item.global_product_id);
+    const quantity =
+      typeof item.quantity === "number" && Number.isFinite(item.quantity)
+        ? Math.round(item.quantity)
+        : NaN;
+    const priceMinor =
+      typeof item.priceMinor === "number" && Number.isFinite(item.priceMinor)
+        ? Math.round(item.priceMinor)
+        : NaN;
+    return {
+      explicitVariantId,
+      productId,
+      globalProductId,
+      name: asTrimmedString(item.name) ?? undefined,
+      barcode: asTrimmedString(item.barcode) ?? undefined,
+      quantity,
+      priceMinor
+    };
+  });
+
+  const invalidItem = cleanedItems.find(
     (item) =>
-      typeof item.productId === "string" &&
-      item.productId.trim().length > 0 &&
-      typeof item.quantity === "number" &&
-      Number.isFinite(item.quantity) &&
-      item.quantity > 0 &&
-      typeof item.priceMinor === "number" &&
-      Number.isFinite(item.priceMinor) &&
-      item.priceMinor > 0
+      (!item.explicitVariantId && !item.productId && !item.globalProductId) ||
+      !Number.isFinite(item.quantity) ||
+      item.quantity <= 0 ||
+      !Number.isFinite(item.priceMinor) ||
+      item.priceMinor <= 0
   );
 
-  if (cleanedItems.length !== items.length) {
+  if (invalidItem) {
     return res.status(400).json({ error: "items are invalid" });
   }
 
@@ -239,10 +508,57 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   try {
     await client.query("BEGIN");
 
+    const resolvedItems: Array<{
+      variantId: string;
+      quantity: number;
+      priceMinor: number;
+      name?: string;
+      barcode?: string;
+    }> = [];
+
+    for (const item of cleanedItems) {
+      let variantId: string | null = null;
+      if (item.explicitVariantId) {
+        variantId = item.explicitVariantId;
+      } else if (item.globalProductId) {
+        variantId = await resolveVariantForGlobalProduct({
+          client,
+          storeId,
+          globalProductId: item.globalProductId,
+          fallbackName: item.name ?? null,
+          currency: saleCurrency
+        });
+      } else if (item.productId) {
+        if (await variantExists(client, item.productId)) {
+          variantId = item.productId;
+        } else {
+          variantId = await resolveVariantForGlobalProduct({
+            client,
+            storeId,
+            globalProductId: item.productId,
+            fallbackName: item.name ?? null,
+            currency: saleCurrency
+          });
+        }
+      }
+
+      if (!variantId) {
+        throw new Error("product_not_found");
+      }
+
+      resolvedItems.push({
+        variantId,
+        quantity: item.quantity,
+        priceMinor: item.priceMinor,
+        name: item.name,
+        barcode: item.barcode
+      });
+    }
+
     await ensureSaleAvailability({
       client,
       storeId,
-      items: cleanedItems.map((item) => ({ variantId: item.productId, quantity: item.quantity }))
+      items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
     });
 
     const variantRes = await client.query(
@@ -253,7 +569,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
         ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
       WHERE v.id = ANY($1::text[])
       `,
-      [cleanedItems.map((item) => item.productId)]
+      [resolvedItems.map((item) => item.variantId)]
     );
 
     const variantMap = new Map<string, { name: string; barcode: string | null }>();
@@ -282,14 +598,14 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       }
     }
 
-    for (const item of cleanedItems) {
-      const fallback = variantMap.get(item.productId);
+    for (const item of resolvedItems) {
+      const fallback = variantMap.get(item.variantId);
       const itemName =
         typeof item.name === "string" && item.name.trim()
           ? item.name.trim()
           : fallback?.name
           ? fallback.name
-          : `Item ${item.productId.slice(-4)}`;
+          : `Item ${item.variantId.slice(-4)}`;
       const itemBarcode =
         typeof item.barcode === "string" && item.barcode.trim()
           ? item.barcode.trim()
@@ -303,7 +619,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
         [
           randomUUID(),
           saleId,
-          item.productId,
+          item.variantId,
           item.quantity,
           item.priceMinor,
           lineTotal,
@@ -316,7 +632,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     await applyBulkDeductions({
       client,
       storeId,
-      items: cleanedItems.map((item) => ({ variantId: item.productId, quantity: item.quantity }))
+      items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
     });
 
     await client.query("COMMIT");
@@ -324,6 +640,9 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     await client.query("ROLLBACK");
     if (error instanceof Error && error.message === "insufficient_stock") {
       return res.status(409).json({ error: "insufficient_stock" });
+    }
+    if (error instanceof Error && error.message === "product_not_found") {
+      return res.status(404).json({ error: "product_not_found" });
     }
     return res.status(500).json({ error: "failed to create sale" });
   } finally {
@@ -376,7 +695,7 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
     return res.status(400).json({ error: "upi_vpa_missing" });
   }
 
-  const sale = await getSale(saleId);
+  const sale = await getSale(storeId, saleId);
   if (!sale || sale.store_id !== storeId) {
     return res.status(404).json({ error: "sale not found" });
   }
@@ -415,11 +734,11 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const paymentStatus = await getPaymentStoreStatus(paymentId);
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const paymentStatus = await getPaymentStoreStatus(storeId, paymentId);
   if (!paymentStatus) {
     return res.status(404).json({ error: "payment not found" });
   }
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   if (paymentStatus.store_id !== storeId) {
     return res.status(404).json({ error: "payment not found" });
   }
@@ -469,7 +788,7 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
     return res.status(403).json({ error: "store_inactive" });
   }
 
-  const sale = await getSale(saleId);
+  const sale = await getSale(storeId, saleId);
   if (!sale || sale.store_id !== storeId) {
     return res.status(404).json({ error: "sale not found" });
   }
@@ -506,7 +825,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
     return res.status(403).json({ error: "store_inactive" });
   }
 
-  const sale = await getSale(saleId);
+  const sale = await getSale(storeId, saleId);
   if (!sale || sale.store_id !== storeId) {
     return res.status(404).json({ error: "sale not found" });
   }
@@ -590,11 +909,11 @@ posSalesRouter.post("/collections/upi/confirm-manual", requireDeviceToken, async
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const collectionStatus = await getCollectionStoreStatus(collectionId);
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+  const collectionStatus = await getCollectionStoreStatus(storeId, collectionId);
   if (!collectionStatus) {
     return res.status(404).json({ error: "collection not found" });
   }
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
   if (collectionStatus.store_id !== storeId) {
     return res.status(404).json({ error: "collection not found" });
   }

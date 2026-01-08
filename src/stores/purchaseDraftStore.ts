@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { storeScopedStorage } from "../services/storeScope";
 
 export type PurchaseDraftItem = {
   id: string;
   barcode: string;
+  globalProductId?: string | null;
+  scanFormat?: string | null;
   name: string;
   category?: string;
   quantity: number;
@@ -18,6 +20,8 @@ export type PurchaseDraftItem = {
 type PurchaseDraftInput = {
   id?: string;
   barcode: string;
+  globalProductId?: string | null;
+  scanFormat?: string | null;
   name?: string;
   category?: string;
   quantity?: number;
@@ -34,6 +38,7 @@ type PurchaseDraftState = {
   remove: (barcode: string) => void;
   clear: () => void;
   hasIncomplete: () => boolean;
+  resetForStore: () => void;
 };
 
 const PURCHASE_DRAFT_STORAGE_KEY = "supermandi.purchase.draft.v1";
@@ -75,6 +80,8 @@ function normalizeItem(entry: PurchaseDraftInput & { quantity: number }): Purcha
   return {
     id: entry.id ?? entry.barcode,
     barcode: entry.barcode,
+    globalProductId: entry.globalProductId ?? null,
+    scanFormat: entry.scanFormat ?? null,
     name,
     category: entry.category,
     quantity: entry.quantity,
@@ -103,7 +110,9 @@ export const usePurchaseDraftStore = create<PurchaseDraftState>()(
             purchasePriceMinor: existing.purchasePriceMinor ?? item.purchasePriceMinor ?? null,
             sellingPriceMinor: existing.sellingPriceMinor ?? item.sellingPriceMinor ?? null,
             currency: existing.currency || item.currency,
-            isNew: existing.isNew ?? item.isNew
+            isNew: existing.isNew ?? item.isNew,
+            globalProductId: existing.globalProductId ?? item.globalProductId ?? null,
+            scanFormat: existing.scanFormat ?? item.scanFormat ?? null
           });
           set({
             items: get().items.map((entry) => (entry.barcode === item.barcode ? nextItem : entry))
@@ -139,11 +148,12 @@ export const usePurchaseDraftStore = create<PurchaseDraftState>()(
         set({ items: get().items.filter((entry) => entry.barcode !== barcode) });
       },
       clear: () => set({ items: [] }),
-      hasIncomplete: () => get().items.some((entry) => entry.status === "INCOMPLETE")
+      hasIncomplete: () => get().items.some((entry) => entry.status === "INCOMPLETE"),
+      resetForStore: () => set({ items: [] })
     }),
     {
       name: PURCHASE_DRAFT_STORAGE_KEY,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => storeScopedStorage),
       partialize: (state) => ({
         items: state.items
       })

@@ -1,5 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiClient } from "./api/apiClient";
+import { storeScopedStorage } from "./storeScope";
 
 const DEVICE_INFO_KEY = "supermandi.pos.device.info.v1";
 
@@ -25,7 +25,7 @@ export async function fetchDeviceInfo(): Promise<DeviceInfo> {
 
 export async function getCachedDeviceInfo(): Promise<DeviceInfo | null> {
   try {
-    const raw = await AsyncStorage.getItem(DEVICE_INFO_KEY);
+    const raw = await storeScopedStorage.getItem(DEVICE_INFO_KEY);
     if (!raw) return null;
     return normalizeDeviceInfo(JSON.parse(raw));
   } catch {
@@ -35,5 +35,5 @@ export async function getCachedDeviceInfo(): Promise<DeviceInfo | null> {
 
 export async function cacheDeviceInfo(info: DeviceInfo): Promise<void> {
   const payload = JSON.stringify(info);
-  await AsyncStorage.setItem(DEVICE_INFO_KEY, payload);
+  await storeScopedStorage.setItem(DEVICE_INFO_KEY, payload);
 }

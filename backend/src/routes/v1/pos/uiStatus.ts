@@ -12,7 +12,14 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   const status = (req as any).posDeviceStatus as PosDeviceStatusContext;
 
   const result = await pool.query(
-    `SELECT pending_outbox_count, last_sync_at, last_seen_online FROM pos_devices WHERE id = $1`,
+    `
+    SELECT pending_outbox_count,
+           last_sync_at,
+           last_seen_online,
+           scan_lookup_v2_enabled
+    FROM pos_devices
+    WHERE id = $1
+    `,
     [status.deviceId]
   );
   const row = result.rows[0] ?? {};
@@ -20,14 +27,16 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
 
   let storeName: string | null = null;
   let upiVpa: string | null = null;
+  let storeScanLookupV2Enabled = false;
   if (status.storeId) {
     const storeRes = await pool.query(
-      `SELECT name, upi_vpa FROM stores WHERE id = $1`,
+      `SELECT name, upi_vpa, scan_lookup_v2_enabled FROM stores WHERE id = $1`,
       [status.storeId]
     );
     const storeRow = storeRes.rows[0];
     storeName = storeRow?.name ? String(storeRow.name) : null;
     upiVpa = storeRow?.upi_vpa ? String(storeRow.upi_vpa) : null;
+    storeScanLookupV2Enabled = Boolean(storeRow?.scan_lookup_v2_enabled);
   }
 
   await pool.query(
@@ -40,6 +49,11 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       ? row.pending_outbox_count
       : 0;
 
+  const deviceScanLookupV2Enabled =
+    typeof row.scan_lookup_v2_enabled === "boolean" ? row.scan_lookup_v2_enabled : null;
+  const scanLookupV2Enabled =
+    deviceScanLookupV2Enabled !== null ? deviceScanLookupV2Enabled : storeScanLookupV2Enabled;
+
   return res.json({
     storeId: status.storeId,
     storeName,
@@ -51,6 +65,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     lastSeenOnline: nowIso,
     upiVpa,
     printerOk: null,
-    scannerOk: null
+    scannerOk: null,
+    features: {
+      scan_lookup_v2: scanLookupV2Enabled
+    }
   });
 });

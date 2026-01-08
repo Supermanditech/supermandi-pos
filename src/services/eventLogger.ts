@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getStoreScopeSuffix, storeScopedStorage } from "./storeScope";
 
 export type EventType =
   | 'APP_START'
@@ -34,12 +34,23 @@ const MAX_LOGS = 1000; // Keep last 1000 events
 class EventLogger {
   private logs: EventLog[] = [];
   private initialized = false;
+  private storeScope: string | null = null;
+
+  private async ensureScope(): Promise<void> {
+    const scope = await getStoreScopeSuffix();
+    if (this.storeScope !== scope) {
+      this.storeScope = scope;
+      this.logs = [];
+      this.initialized = false;
+    }
+  }
 
   async initialize(): Promise<void> {
+    await this.ensureScope();
     if (this.initialized) return;
     
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
+      const stored = await storeScopedStorage.getItem(STORAGE_KEY);
       if (stored) {
         this.logs = JSON.parse(stored);
       }
@@ -52,6 +63,7 @@ class EventLogger {
   }
 
   async log(type: EventType, payload: Record<string, any> = {}): Promise<void> {
+    await this.ensureScope();
     if (!this.initialized) {
       await this.initialize();
     }
@@ -78,7 +90,7 @@ class EventLogger {
 
   private async persistLogs(): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.logs));
+      await storeScopedStorage.setItem(STORAGE_KEY, JSON.stringify(this.logs));
     } catch (error) {
       console.error('Failed to persist logs:', error);
     }
@@ -90,6 +102,7 @@ class EventLogger {
     endTime?: number;
     limit?: number;
   }): Promise<EventLog[]> {
+    await this.ensureScope();
     if (!this.initialized) {
       await this.initialize();
     }
@@ -116,15 +129,17 @@ class EventLogger {
   }
 
   async clearLogs(): Promise<void> {
+    await this.ensureScope();
     this.logs = [];
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await storeScopedStorage.removeItem(STORAGE_KEY);
     } catch (error) {
       console.error('Failed to clear logs:', error);
     }
   }
 
   async exportLogs(): Promise<string> {
+    await this.ensureScope();
     if (!this.initialized) {
       await this.initialize();
     }

@@ -34,6 +34,7 @@ adminStoresRouter.get("/stores", async (_req, res) => {
         location,
         pos_device_id,
         kyc_status,
+        scan_lookup_v2_enabled,
         upi_vpa_updated_at,
         upi_vpa_updated_by,
         created_at,
@@ -74,6 +75,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
         location,
         pos_device_id,
         kyc_status,
+        scan_lookup_v2_enabled,
         upi_vpa_updated_at,
         upi_vpa_updated_by,
         created_at,
@@ -109,7 +111,9 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     contactEmail,
     location,
     posDeviceId,
-    kycStatus
+    kycStatus,
+    scanLookupV2Enabled,
+    scan_lookup_v2_enabled: scanLookupV2EnabledSnake
   } = req.body as Record<string, unknown>;
 
   const updates: string[] = [];
@@ -142,6 +146,13 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
   if (location !== undefined) addUpdate("location", typeof location === "string" ? location.trim() : location);
   if (posDeviceId !== undefined) addUpdate("pos_device_id", typeof posDeviceId === "string" ? posDeviceId.trim() : posDeviceId);
   if (kycStatus !== undefined) addUpdate("kyc_status", typeof kycStatus === "string" ? kycStatus.trim() : kycStatus);
+  const scanLookupV2Value = scanLookupV2Enabled !== undefined ? scanLookupV2Enabled : scanLookupV2EnabledSnake;
+  if (scanLookupV2Value !== undefined) {
+    if (typeof scanLookupV2Value !== "boolean") {
+      return res.status(400).json({ error: "scanLookupV2Enabled must be boolean" });
+    }
+    addUpdate("scan_lookup_v2_enabled", scanLookupV2Value);
+  }
 
   if (updates.length === 0) {
     return res.status(400).json({ error: "No fields to update" });
@@ -156,7 +167,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     UPDATE stores
     SET ${updates.join(", ")}
     WHERE id = $${values.length + 1}
-    RETURNING id, name, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
+    RETURNING id, name, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, scan_lookup_v2_enabled, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
   `;
   values.push(storeId);
 

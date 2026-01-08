@@ -70,6 +70,7 @@ export async function ensureCoreSchema(): Promise<void> {
       name TEXT NOT NULL,
       upi_vpa TEXT NULL,
       active BOOLEAN NOT NULL DEFAULT FALSE,
+      scan_lookup_v2_enabled BOOLEAN NOT NULL DEFAULT FALSE,
       address TEXT NULL,
       contact_name TEXT NULL,
       contact_phone TEXT NULL,
@@ -81,6 +82,47 @@ export async function ensureCoreSchema(): Promise<void> {
       upi_vpa_updated_by TEXT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS global_products (
+      id TEXT PRIMARY KEY,
+      global_name TEXT NOT NULL,
+      category TEXT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS global_product_identifiers (
+      id TEXT PRIMARY KEY,
+      global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
+      code_type TEXT NOT NULL,
+      raw_value TEXT NOT NULL,
+      normalized_value TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS store_products (
+      id TEXT PRIMARY KEY,
+      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
+      store_display_name TEXT NULL,
+      sell_price_minor INTEGER NULL,
+      purchase_price_minor INTEGER NULL,
+      unit TEXT NULL,
+      variant TEXT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (store_id, global_product_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS store_inventory (
+      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
+      available_qty INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (store_id, global_product_id)
     );
 
     CREATE TABLE IF NOT EXISTS products (
@@ -213,6 +255,7 @@ export async function ensureCoreSchema(): Promise<void> {
       last_seen_online TIMESTAMPTZ NULL,
       last_sync_at TIMESTAMPTZ NULL,
       pending_outbox_count INTEGER NOT NULL DEFAULT 0,
+      scan_lookup_v2_enabled BOOLEAN NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -280,6 +323,15 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS pos_events_created_at_idx ON pos_events (created_at DESC);
     CREATE INDEX IF NOT EXISTS pos_events_store_id_idx ON pos_events (store_id);
     CREATE INDEX IF NOT EXISTS pos_events_device_id_idx ON pos_events (device_id);
+    CREATE INDEX IF NOT EXISTS global_products_name_idx ON global_products (global_name);
+    CREATE INDEX IF NOT EXISTS global_product_identifiers_product_id_idx ON global_product_identifiers (global_product_id);
+    CREATE INDEX IF NOT EXISTS global_product_identifiers_code_type_idx ON global_product_identifiers (code_type);
+    CREATE UNIQUE INDEX IF NOT EXISTS global_product_identifiers_code_norm_uidx
+      ON global_product_identifiers (code_type, normalized_value);
+    CREATE INDEX IF NOT EXISTS store_products_store_id_idx ON store_products (store_id);
+    CREATE INDEX IF NOT EXISTS store_products_global_product_id_idx ON store_products (global_product_id);
+    CREATE INDEX IF NOT EXISTS store_inventory_store_id_idx ON store_inventory (store_id);
+    CREATE INDEX IF NOT EXISTS store_inventory_global_product_id_idx ON store_inventory (global_product_id);
     CREATE INDEX IF NOT EXISTS pos_devices_store_id_idx ON pos_devices (store_id);
     CREATE INDEX IF NOT EXISTS pos_devices_last_seen_idx ON pos_devices (last_seen_online DESC);
     CREATE UNIQUE INDEX IF NOT EXISTS pos_devices_token_uidx ON pos_devices (device_token) WHERE device_token IS NOT NULL;
@@ -328,6 +380,7 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE stores ADD COLUMN IF NOT EXISTS upi_vpa_updated_at TIMESTAMPTZ NULL;
     ALTER TABLE stores ADD COLUMN IF NOT EXISTS upi_vpa_updated_by TEXT NULL;
     ALTER TABLE stores ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    ALTER TABLE stores ADD COLUMN IF NOT EXISTS scan_lookup_v2_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS retailer_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS enrichment_status TEXT NULL;
@@ -365,6 +418,7 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS android_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS app_version TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS printing_mode TEXT NULL;
+    ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS scan_lookup_v2_enabled BOOLEAN NULL;
     ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
   `);
 

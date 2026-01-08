@@ -33,7 +33,8 @@ import {
   setHidScanHandler,
   submitHidBuffer,
 } from "../services/hidScannerService";
-import { handleScan as handleGlobalScan, setScanRuntime, type ScanNotice } from "../services/scan/handleScan";
+import { handleIncomingScan, setScanRuntime, type ScanNotice } from "../services/scan/handleScan";
+import { getLastPosMode, setLastPosMode } from "../services/posMode";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme } from "../theme";
 
@@ -67,6 +68,7 @@ export default function PosRootLayout() {
   const cameraScanCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [activeTab, setActiveTab] = useState<PosTab>("SELL");
+  const [lastModeLoaded, setLastModeLoaded] = useState(false);
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
 
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
@@ -77,6 +79,7 @@ export default function PosRootLayout() {
   const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
   const [printerOk, setPrinterOk] = useState<boolean | null>(null);
   const [scannerOk, setScannerOk] = useState<boolean>(false);
+  const [scanLookupV2Enabled, setScanLookupV2Enabled] = useState(false);
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanLocked, setCameraScanLocked] = useState(false);
@@ -124,11 +127,33 @@ export default function PosRootLayout() {
       intent,
       mode: runtimeMode,
       storeActive,
+      scanLookupV2Enabled,
       onNotice: setScanNotice,
       onDeviceAuthError: handleDeviceAuthError,
       onStoreInactive: () => setStoreActive(false),
     });
-  }, [activeTab, handleDeviceAuthError, storeActive]);
+  }, [activeTab, handleDeviceAuthError, scanLookupV2Enabled, storeActive]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadLastMode = async () => {
+      const lastMode = await getLastPosMode();
+      if (cancelled) return;
+      setActiveTab(lastMode === "PURCHASE" ? "PURCHASE" : "SELL");
+      setLastModeLoaded(true);
+    };
+    void loadLastMode();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!lastModeLoaded) return;
+    if (activeTab === "SELL" || activeTab === "PURCHASE") {
+      void setLastPosMode(activeTab);
+    }
+  }, [activeTab, lastModeLoaded]);
 
   useEffect(() => {
     setScanNotice(null);
@@ -138,17 +163,18 @@ export default function PosRootLayout() {
     let cancelled = false;
 
     const loadStatus = async () => {
-      try {
-        const status = await fetchUiStatus();
-        if (cancelled) return;
-        setStoreActive(status.storeActive ?? null);
-        setDeviceActive(status.deviceActive ?? null);
-        setDeviceStoreId(status.storeId ?? null);
-        setPendingOutboxCount(status.pendingOutboxCount ?? 0);
-        setPrinterOk(status.printerOk ?? null);
-        if (status.storeName) {
-          setStoreName((prev) => status.storeName ?? prev);
-        }
+        try {
+          const status = await fetchUiStatus();
+          if (cancelled) return;
+          setStoreActive(status.storeActive ?? null);
+          setDeviceActive(status.deviceActive ?? null);
+          setDeviceStoreId(status.storeId ?? null);
+          setPendingOutboxCount(status.pendingOutboxCount ?? 0);
+          setPrinterOk(status.printerOk ?? null);
+          setScanLookupV2Enabled(Boolean(status.features?.scan_lookup_v2));
+          if (status.storeName) {
+            setStoreName((prev) => status.storeName ?? prev);
+          }
         if (status.deviceActive === false) {
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
           return;
@@ -362,7 +388,7 @@ export default function PosRootLayout() {
     setHidScanHandler((value) => {
       markHidActive();
       setHidInput("");
-      void handleGlobalScan(value);
+      void handleIncomingScan(value);
     });
     return () => {
       setHidScanHandler(null);
@@ -385,6 +411,7 @@ export default function PosRootLayout() {
     if (scanDisabled) return;
     const scanValue = submitHidBuffer();
     if (scanValue) {
+      void handleIncomingScan(scanValue);
       setHidInput("");
     }
   };
@@ -393,6 +420,7 @@ export default function PosRootLayout() {
     if (scanDisabled) return;
     const scanValue = feedHidKey(event.nativeEvent.key);
     if (scanValue) {
+      void handleIncomingScan(scanValue);
       setHidInput("");
     }
   };
@@ -421,7 +449,7 @@ export default function PosRootLayout() {
     setScannerOpen(true);
   };
 
-  const handleCameraScan = (value: string) => {
+  const handleCameraScan = (value: string, format?: string) => {
     if (!value) return;
     setCameraScanLocked(true);
     resetCameraIdleTimer();
@@ -432,7 +460,7 @@ export default function PosRootLayout() {
       setCameraScanLocked(false);
       cameraScanCooldownRef.current = null;
     }, CAMERA_SCAN_COOLDOWN_MS);
-    void handleGlobalScan(value);
+    void handleIncomingScan(value, format);
   };
 
   useEffect(() => {
@@ -553,7 +581,9 @@ export default function PosRootLayout() {
                     "itf14",
                   ],
                 }}
-                onBarcodeScanned={cameraScanLocked ? undefined : (event) => handleCameraScan(event.data)}
+                onBarcodeScanned={
+                  cameraScanLocked ? undefined : (event) => handleCameraScan(event.data, event.type)
+                }
               />
             ) : (
               <View style={styles.cameraPermission}>

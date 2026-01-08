@@ -10,6 +10,7 @@ export type OfflineSaleItem = {
   priceMinor: number;
   quantity: number;
   itemDiscount?: DiscountInput | null;
+  globalProductId?: string | null;
 };
 
 export type OfflineSaleInput = {
@@ -175,7 +176,8 @@ export async function createOfflineSale(input: OfflineSaleInput): Promise<{
       name: item.name,
       quantity: item.quantity,
       priceMinor: item.priceMinor,
-      itemDiscount: item.discount ? { ...item.discount } : null
+      itemDiscount: item.discount ? { ...item.discount } : null,
+      global_product_id: item.globalProductId ?? undefined
     })),
     cartDiscount: fallbackCartDiscount ? { ...fallbackCartDiscount } : null,
     itemDiscountMinor,

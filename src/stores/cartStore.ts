@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eventLogger } from '../services/eventLogger';
 import { logPosEvent } from "../services/cloudEventLogger";
+import { storeScopedStorage } from "../services/storeScope";
 
 export interface CartItem {
   id: string;
@@ -60,6 +60,7 @@ interface CartState {
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
+  updatePrice: (itemId: string, priceMinor: number) => void;
   applyItemDiscount: (itemId: string, discount: ItemDiscount) => void;
   removeItemDiscount: (itemId: string) => void;
   clearCart: (force?: boolean) => void;
@@ -68,6 +69,7 @@ interface CartState {
   removeDiscount: () => void;
   lockCart: () => void;
   unlockCart: () => void;
+  resetForStore: () => void;
   
   // Internal
   recalculate: () => void;
@@ -268,6 +270,37 @@ export const useCartStore = create<CartState>()(
     });
   },
 
+  updatePrice: (itemId, priceMinor) => {
+    if (get().locked) return;
+    if (!Number.isFinite(priceMinor) || priceMinor <= 0) return;
+
+    const state = get();
+    const existingIndex = state.items.findIndex(i => i.id === itemId);
+    const existingItem = existingIndex >= 0 ? state.items[existingIndex] : null;
+    if (!existingItem) return;
+
+    const nextItem = { ...existingItem, priceMinor: Math.round(priceMinor) };
+    const newItems = state.items.map(i => (i.id === itemId ? nextItem : i));
+
+    const mutation: CartMutation = {
+      type: "UPSERT_ITEM",
+      itemId,
+      previousItem: cloneItem(existingItem),
+      previousIndex: existingIndex
+    };
+
+    set({
+      items: newItems,
+      mutationHistory: [...state.mutationHistory, mutation]
+    });
+    get().recalculate();
+
+    eventLogger.log('CART_UPDATE_PRICE', {
+      itemId,
+      priceMinor: nextItem.priceMinor
+    });
+  },
+
   applyItemDiscount: (itemId, discount) => {
     if (get().locked) return;
     const state = get();
@@ -408,6 +441,21 @@ export const useCartStore = create<CartState>()(
   unlockCart: () => {
     set({ locked: false });
   },
+
+  resetForStore: () => {
+    set({
+      items: [],
+      discount: null,
+      mutationHistory: [],
+      locked: false,
+      subtotal: 0,
+      itemDiscountAmount: 0,
+      cartDiscountAmount: 0,
+      discountAmount: 0,
+      discountTotal: 0,
+      total: 0
+    });
+  },
   
   recalculate: () => {
     const state = get();
@@ -424,7 +472,7 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: CART_STORAGE_KEY,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => storeScopedStorage),
       partialize: (state) => ({
         items: state.items,
         discount: state.discount
