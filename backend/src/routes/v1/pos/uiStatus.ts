@@ -4,6 +4,8 @@ import { requireDeviceTokenAllowInactive, type PosDeviceStatusContext } from "..
 
 export const posUiStatusRouter = Router();
 
+const scanLookupV2LogState = new Map<string, string>();
+
 // GET /api/v1/pos/ui-status
 posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req, res) => {
   const pool = getPool();
@@ -53,6 +55,26 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     typeof row.scan_lookup_v2_enabled === "boolean" ? row.scan_lookup_v2_enabled : null;
   const scanLookupV2Enabled =
     deviceScanLookupV2Enabled !== null ? deviceScanLookupV2Enabled : storeScanLookupV2Enabled;
+  const scanLookupV2Source = deviceScanLookupV2Enabled !== null ? "device" : "store";
+  const logKey = [
+    scanLookupV2Source,
+    String(deviceScanLookupV2Enabled),
+    String(storeScanLookupV2Enabled),
+    String(scanLookupV2Enabled)
+  ].join(":");
+  const prior = scanLookupV2LogState.get(status.deviceId);
+  if (prior !== logKey) {
+    scanLookupV2LogState.set(status.deviceId, logKey);
+    console.log(
+      "[scan_lookup_v2] deviceId=%s storeId=%s source=%s deviceFlag=%s storeFlag=%s effective=%s",
+      status.deviceId,
+      status.storeId ?? "none",
+      scanLookupV2Source,
+      deviceScanLookupV2Enabled ?? "null",
+      storeScanLookupV2Enabled,
+      scanLookupV2Enabled
+    );
+  }
 
   return res.json({
     storeId: status.storeId,

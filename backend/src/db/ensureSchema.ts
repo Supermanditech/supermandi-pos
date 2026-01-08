@@ -390,6 +390,16 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS consumer_order_items_product_id_idx ON consumer_order_items (variant_id);
   `);
 
+  await pool.query(`
+    -- Compatibility view for legacy queries that expect a devices table.
+    DO $$
+    BEGIN
+      IF to_regclass('public.devices') IS NULL AND to_regclass('public.pos_devices') IS NOT NULL THEN
+        CREATE VIEW public.devices AS SELECT * FROM public.pos_devices;
+      END IF;
+    END $$;
+  `);
+
   // Keep purchase_items rename idempotent to avoid 42701 in prod when variant_id already exists.
   await pool.query(`
     ALTER TABLE stores ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT FALSE;
