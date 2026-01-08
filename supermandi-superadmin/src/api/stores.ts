@@ -75,6 +75,31 @@ export async function fetchStores(): Promise<StoreRecord[]> {
   return Array.isArray(data?.stores) ? (data.stores as StoreRecord[]) : [];
 }
 
+export async function createStore(input: { storeName: string; storeId?: string }): Promise<StoreRecord> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+
+  const payload: Record<string, unknown> = { storeName: input.storeName };
+  if (input.storeId) payload.storeId = input.storeId;
+
+  const res = await fetch(`${base}/api/v1/admin/stores`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  return (data?.store ?? {}) as StoreRecord;
+}
+
 export async function updateStore(
   storeId: string,
   input: { upiVpa?: string; storeName?: string }

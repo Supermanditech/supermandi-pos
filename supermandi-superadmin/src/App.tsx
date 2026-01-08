@@ -3,7 +3,7 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
 import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken } from "./api/authToken";
-import { fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
+import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
 import {
@@ -145,6 +145,13 @@ export default function App() {
   const [storeNameEdits, setStoreNameEdits] = useState<Record<string, string>>({});
   const [storeNameSaving, setStoreNameSaving] = useState<Record<string, boolean>>({});
   const [storeNameError, setStoreNameError] = useState<string>("");
+
+  // Store creation
+  const [createStoreName, setCreateStoreName] = useState<string>("");
+  const [createStoreId, setCreateStoreId] = useState<string>("");
+  const [createStoreLoading, setCreateStoreLoading] = useState<boolean>(false);
+  const [createStoreError, setCreateStoreError] = useState<string>("");
+  const [createStoreSuccess, setCreateStoreSuccess] = useState<string>("");
 
   // Barcode sheets
   const [barcodeSheetStoreId, setBarcodeSheetStoreId] = useState<string>("");
@@ -687,6 +694,32 @@ export default function App() {
       setDeviceActionError(e?.message ? String(e.message) : "Failed to reset device token.");
     } finally {
       setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
+    }
+  }
+
+  async function handleCreateStore() {
+    const name = createStoreName.trim();
+    const storeId = createStoreId.trim();
+    if (!name) {
+      setCreateStoreError("Store name is required.");
+      return;
+    }
+    setCreateStoreError("");
+    setCreateStoreSuccess("");
+    setCreateStoreLoading(true);
+    try {
+      const created = await createStore({ storeName: name, storeId: storeId || undefined });
+      setStoreDirectory((prev) => [created, ...prev.filter((s) => s.id !== created.id)]);
+      setCreateStoreSuccess(`Created ${created.id}`);
+      setCreateStoreName("");
+      setCreateStoreId("");
+      setEnrollStoreId(created.id);
+      setStoreAdminId(created.id);
+      setBarcodeSheetStoreId(created.id);
+    } catch (e: any) {
+      setCreateStoreError(e?.message ? String(e.message) : "Failed to create store");
+    } finally {
+      setCreateStoreLoading(false);
     }
   }
 
@@ -1246,8 +1279,47 @@ export default function App() {
       {tab === "stores" && (
         <section className="card">
           <div className="cardHeader">
+            <div className="cardTitle">Create Store</div>
+            <div className="muted">Generate a Store ID for new device enrollment.</div>
+          </div>
+
+          <div className="tableWrap" style={{ paddingTop: 0 }}>
+            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              <div className="control">
+                <label>Store name</label>
+                <input
+                  value={createStoreName}
+                  onChange={(e) => setCreateStoreName(e.target.value)}
+                  placeholder="Supermandi Pilot Store"
+                />
+              </div>
+              <div className="control">
+                <label>Store ID (optional)</label>
+                <input
+                  value={createStoreId}
+                  onChange={(e) => setCreateStoreId(e.target.value)}
+                  placeholder="store-1"
+                />
+              </div>
+              <div className="control">
+                <label>&nbsp;</label>
+                <button onClick={handleCreateStore} disabled={createStoreLoading}>
+                  {createStoreLoading ? "Creating..." : "Create store"}
+                </button>
+              </div>
+            </div>
+
+            {createStoreError && (
+              <div className="banner" style={{ marginTop: 12 }}>{createStoreError}</div>
+            )}
+            {createStoreSuccess && (
+              <div className="muted" style={{ marginTop: 12 }}>{createStoreSuccess}</div>
+            )}
+          </div>
+
+          <div className="cardHeader">
             <div className="cardTitle">Store Activation (UPI VPA)</div>
-            <div className="muted">GET prefill → PATCH save + activate/deactivate</div>
+            <div className="muted">GET prefill â†’ PATCH save + activate/deactivate</div>
           </div>
 
           <div className="tableWrap" style={{ paddingTop: 0 }}>
@@ -1886,7 +1958,7 @@ export default function App() {
                 value={aiQuestion}
                 onChange={(e) => setAiQuestion(e.target.value)}
                 rows={4}
-                placeholder="Ask a question about POS activity…"
+                placeholder="Ask a question about POS activityâ€¦"
                 className="textArea"
               />
 
@@ -1907,7 +1979,7 @@ export default function App() {
                   }}
                   disabled={aiLoading}
                 >
-                  {aiLoading ? "Asking…" : "Ask"}
+                  {aiLoading ? "Askingâ€¦" : "Ask"}
                 </button>
 
                 <button
