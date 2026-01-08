@@ -47,29 +47,31 @@ export async function ensureCoreSchema(): Promise<void> {
       END IF;
     END $$;
 
-    -- Idempotent purchase_items rename/backfill to avoid 42701 when variant_id already exists.
+    -- Idempotent purchase_items rename/backfill; guard backfill to avoid FK violations in prod.
     DO $$
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name='purchase_items' AND column_name='product_id'
+        WHERE table_schema='public' AND table_name='purchase_items' AND column_name='product_id'
       ) AND NOT EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name='purchase_items' AND column_name='variant_id'
+        WHERE table_schema='public' AND table_name='purchase_items' AND column_name='variant_id'
       ) THEN
-        ALTER TABLE purchase_items RENAME COLUMN product_id TO variant_id;
+        ALTER TABLE public.purchase_items RENAME COLUMN product_id TO variant_id;
       END IF;
 
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name='purchase_items' AND column_name='product_id'
+        WHERE table_schema='public' AND table_name='purchase_items' AND column_name='product_id'
       ) AND EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_name='purchase_items' AND column_name='variant_id'
+        WHERE table_schema='public' AND table_name='purchase_items' AND column_name='variant_id'
       ) THEN
-        UPDATE purchase_items
-          SET variant_id = COALESCE(variant_id, product_id)
-        WHERE variant_id IS NULL AND product_id IS NOT NULL;
+        UPDATE public.purchase_items pi
+        SET variant_id = pi.product_id
+        WHERE pi.variant_id IS NULL
+          AND pi.product_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM public.variants v WHERE v.id = pi.product_id);
       END IF;
     END $$;
 
