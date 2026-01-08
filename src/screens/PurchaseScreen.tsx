@@ -61,7 +61,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
       const barcode = typeof product.barcode === "string" ? product.barcode.trim() : "";
       if (!barcode) continue;
       const currency = product.currency ?? "INR";
-      const priceMinor = Number.isFinite(product.price) && product.price > 0 ? Math.round(product.price) : null;
+      const resolvedPriceMinor = productsApi.resolveProductPriceMinor(product);
+      const priceMinor = resolvedPriceMinor > 0 ? resolvedPriceMinor : null;
 
       items.push({
         barcode,
@@ -400,10 +401,8 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   };
 
   const renderSearchRow = ({ item }: { item: SkuItem }) => {
-    const priceLabel =
-      item.priceMinor === null
-        ? "--"
-        : formatMoney(item.priceMinor, item.currency ?? "INR");
+    const priceMinor = item.priceMinor ?? 0;
+    const priceLabel = formatMoney(priceMinor, item.currency ?? "INR");
 
     return (
       <Pressable
