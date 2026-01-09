@@ -737,7 +737,7 @@ export default function App() {
     try {
       const record = await fetchStore(id);
       setStoreRecord(record);
-      setStoreUpiInput(record.upi_vpa ?? "");
+      setStoreUpiInput((prev) => (record.upi_vpa ? record.upi_vpa : prev));
     } catch (e: any) {
       setStoreRecord(null);
       setStoreError(e?.message ? String(e.message) : "Failed to fetch store");
@@ -756,6 +756,10 @@ export default function App() {
     const trimmedVpa = rawVpa.trim();
     setStoreUpiInput(rawVpa);
     if (!trimmedVpa) {
+      if (!storeRecord?.upi_vpa) {
+        setStoreError("UPI VPA is required to activate the store.");
+        return;
+      }
       const ok = window.confirm("Clear UPI VPA and deactivate this store?");
       if (!ok) return;
     } else if (!UPI_VPA_PATTERN.test(trimmedVpa)) {
@@ -2026,4 +2030,3 @@ export default function App() {
     </div>
   );
 }
-
