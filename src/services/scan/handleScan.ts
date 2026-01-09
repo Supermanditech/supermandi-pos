@@ -8,10 +8,10 @@ import {
 import { lookupProductByBarcode, resolveScan, type ScanProduct } from "../api/scanApi";
 import { isOnline } from "../networkStatus";
 import { resolveOfflineScan, setLocalPrice, upsertLocalProduct } from "../offline/scan";
-import { getLastPosMode } from "../posMode";
 import { useCartStore } from "../../stores/cartStore";
 import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
 import { POS_MESSAGES } from "../../utils/uiStatus";
+import { updateStockCacheEntries } from "../stockCache";
 
 type ScanIntent = "SELL" | "PURCHASE";
 type ScanMode = "SELL" | "DIGITISE";
@@ -32,14 +32,17 @@ type ScanRuntime = {
 };
 
 const DUPLICATE_WINDOW_MS = 500;
+const DEFAULT_DUPLICATE_GUARD_MS = 200;
 const STORM_WINDOW_MS = 2000;
 const STORM_MAX_SCANS = 12;
 const STORM_COOLDOWN_MS = 1500;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
 let lastScan: { key: string; ts: number } | null = null;
+let lastBarcodeSeen: { value: string; ts: number } | null = null;
 let recentScans: number[] = [];
 let stormUntil = 0;
 let lastStormNotice = 0;
+let duplicateGuardWindowMs = DEFAULT_DUPLICATE_GUARD_MS;
 const warnedNewItems = new Set<string>();
 let purchaseConfirmActive = false;
 
@@ -47,6 +50,10 @@ type CartScanProduct = ScanProduct & { metadata?: Record<string, any> };
 
 export function setScanRuntime(next: Partial<ScanRuntime>): void {
   runtime = { ...runtime, ...next };
+}
+
+export function setScanDuplicateGuardWindowMs(windowMs: number): void {
+  duplicateGuardWindowMs = Math.max(0, Math.round(windowMs));
 }
 
 function notify(notice: ScanNotice | null): void {
@@ -60,6 +67,17 @@ function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boole
     return true;
   }
   lastScan = { key, ts: now };
+  return false;
+}
+
+function isDuplicateGuard(barcode: string): boolean {
+  const now = Date.now();
+  if (lastBarcodeSeen && lastBarcodeSeen.value === barcode) {
+    if (now - lastBarcodeSeen.ts < duplicateGuardWindowMs) {
+      return true;
+    }
+  }
+  lastBarcodeSeen = { value: barcode, ts: now };
   return false;
 }
 
@@ -130,6 +148,25 @@ function resolveDisplayName(product: StoreLookupProduct): string {
   return product.global_name?.trim() || "";
 }
 
+async function ensureSharedStoreProduct(params: {
+  barcode: string;
+  format?: string;
+  name?: string;
+}): Promise<void> {
+  if (!(await isOnline())) return;
+  const fallbackName = params.name?.trim() || buildFallbackName(params.barcode);
+  try {
+    await createStoreProductFromScan({
+      scanned: params.barcode,
+      format: params.format,
+      globalName: fallbackName,
+      storeDisplayName: fallbackName
+    });
+  } catch {
+    // Best-effort: avoid blocking scans if creation fails or already exists.
+  }
+}
+
 function confirmPurchaseAdd(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
@@ -144,12 +181,19 @@ function confirmPurchaseAdd(): Promise<boolean> {
   });
 }
 
-export async function handleIncomingScan(rawText: string, format?: string): Promise<void> {
+export async function onBarcodeScanned(rawText: string, format?: string): Promise<void> {
   const trimmed = rawText.trim();
   if (!trimmed) return;
 
-  const lastMode = await getLastPosMode();
-  if (lastMode === "PURCHASE") {
+  if (duplicateGuardWindowMs > 0 && isDuplicateGuard(trimmed)) {
+    console.log("scan_duplicate_ignored");
+    return;
+  }
+
+  const intent = runtime.intent;
+  console.log(`scan_routed:${intent}`);
+
+  if (intent === "PURCHASE") {
     if (purchaseConfirmActive) return;
     purchaseConfirmActive = true;
     try {
@@ -165,7 +209,7 @@ export async function handleIncomingScan(rawText: string, format?: string): Prom
   await handleScan(trimmed, format, "SELL");
 }
 
-export async function handleScan(
+async function handleScan(
   barcode: string,
   format?: string,
   intentOverride?: ScanIntent
@@ -206,6 +250,10 @@ export async function handleScan(
 
         const displayName = resolveDisplayName(storeProduct) || trimmed;
         const priceMinor = storeProduct.sell_price ?? 0;
+        updateStockCacheEntries([
+          { key: storeProduct.global_product_id, stock: storeProduct.available_qty },
+          { key: trimmed, stock: storeProduct.available_qty }
+        ]);
         addToSellCart(
           {
             id: storeProduct.global_product_id,
@@ -217,7 +265,8 @@ export async function handleScan(
               globalProductId: storeProduct.global_product_id,
               globalName: storeProduct.global_name,
               storeDisplayName: storeProduct.store_display_name,
-              scanFormat: format ?? null
+              scanFormat: format ?? null,
+              availableQty: storeProduct.available_qty
             }
           },
           priceMinor
@@ -284,6 +333,10 @@ export async function handleScan(
         }
 
         const displayName = resolveDisplayName(storeProduct) || trimmed;
+        updateStockCacheEntries([
+          { key: storeProduct.global_product_id, stock: storeProduct.available_qty },
+          { key: trimmed, stock: storeProduct.available_qty }
+        ]);
         await cacheLocalProduct({
           barcode: trimmed,
           name: displayName,
@@ -368,6 +421,14 @@ export async function handleScan(
       const priceMinor = result.product.priceMinor ?? 0;
       const autoCreated = result.action === "PROMPT_PRICE" || result.product.priceMinor === null;
       addToSellCart(result.product, priceMinor, autoCreated ? ["SELL_AUTO_CREATE"] : undefined);
+
+      if (result.action === "PROMPT_PRICE" || result.product_not_found_for_store === true) {
+        void ensureSharedStoreProduct({
+          barcode: trimmed,
+          format,
+          name: result.product.name
+        });
+      }
 
       const warningKey = trimmed.toUpperCase();
       if (result.product_not_found_for_store === true && !warnedNewItems.has(warningKey)) {

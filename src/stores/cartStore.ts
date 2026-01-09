@@ -3,6 +3,9 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { eventLogger } from '../services/eventLogger';
 import { logPosEvent } from "../services/cloudEventLogger";
 import { storeScopedStorage } from "../services/storeScope";
+import { useProductsStore } from "./productsStore";
+import { capAddQuantity, capRequestedQuantity } from "../services/stockCap";
+import { getCachedStock } from "../services/stockCache";
 
 export interface CartItem {
   id: string;
@@ -29,6 +32,17 @@ export interface CartDiscount {
   reason?: string;
 }
 
+export type StockLimitReason = "out_of_stock" | "capped" | "unknown_stock";
+
+export type StockLimitEvent = {
+  itemId: string;
+  availableStock: number;
+  reason: StockLimitReason;
+  requestedQty: number;
+  nextQty: number;
+  at: number;
+};
+
 export type CartMutation =
   | {
       type: "UPSERT_ITEM" | "REMOVE_ITEM";
@@ -47,6 +61,7 @@ interface CartState {
   discount: CartDiscount | null;
   mutationHistory: CartMutation[];
   locked: boolean;
+  stockLimitEvent: StockLimitEvent | null;
   
   // Computed values
   subtotal: number;
@@ -58,7 +73,7 @@ interface CartState {
   
   // Actions
   addItem: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
-  removeItem: (itemId: string) => void;
+  removeItem: (itemId: string, force?: boolean) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   updatePrice: (itemId: string, priceMinor: number) => void;
   applyItemDiscount: (itemId: string, discount: ItemDiscount) => void;
@@ -70,6 +85,7 @@ interface CartState {
   lockCart: () => void;
   unlockCart: () => void;
   resetForStore: () => void;
+  normalizeItemsToStock: () => boolean;
   
   // Internal
   recalculate: () => void;
@@ -82,8 +98,10 @@ const calculateDiscountAmount = (
   discount: CartDiscount | ItemDiscount | null
 ): number => {
   if (!discount) return 0;
-  const safeBase = Math.max(0, Math.round(baseAmount));
-  const safeValue = Math.max(0, Number.isFinite(discount.value) ? discount.value : 0);
+  const baseParsed = Number(baseAmount);
+  const safeBase = Math.max(0, Math.round(Number.isFinite(baseParsed) ? baseParsed : 0));
+  const valueParsed = Number(discount.value);
+  const safeValue = Math.max(0, Number.isFinite(valueParsed) ? valueParsed : 0);
 
   if (discount.type === 'percentage') {
     return Math.min(Math.round(safeBase * (safeValue / 100)), safeBase);
@@ -96,7 +114,11 @@ const calculateCartTotals = (items: CartItem[], discount: CartDiscount | null) =
   let itemDiscountAmount = 0;
 
   for (const item of items) {
-    const lineSubtotal = Math.round(item.priceMinor) * Math.round(item.quantity);
+    const priceParsed = Number(item.priceMinor);
+    const qtyParsed = Number(item.quantity);
+    const safePrice = Math.max(0, Math.round(Number.isFinite(priceParsed) ? priceParsed : 0));
+    const safeQty = Math.max(0, Math.round(Number.isFinite(qtyParsed) ? qtyParsed : 0));
+    const lineSubtotal = safePrice * safeQty;
     const lineDiscount = calculateDiscountAmount(lineSubtotal, item.itemDiscount ?? null);
     subtotal += lineSubtotal;
     itemDiscountAmount += lineDiscount;
@@ -131,6 +153,86 @@ const mergeFlags = (existing: string[] | undefined, incoming: string[] | undefin
   return Array.from(set);
 };
 
+const mergeMetadata = (
+  existing: Record<string, any> | undefined,
+  incoming: Record<string, any> | undefined
+): Record<string, any> | undefined => {
+  if (!existing && !incoming) return undefined;
+  return { ...(existing ?? {}), ...(incoming ?? {}) };
+};
+
+const resolveItemAvailableStock = (item: CartItem): number | null => {
+  const meta = item.metadata ?? {};
+  const metaValue =
+    typeof meta.availableQty === "number"
+      ? meta.availableQty
+      : typeof meta.available_qty === "number"
+        ? meta.available_qty
+        : null;
+  if (metaValue !== null && Number.isFinite(metaValue)) {
+    return Math.max(0, Math.floor(metaValue));
+  }
+
+  if (item.barcode) {
+    const product = useProductsStore.getState().getProductByBarcode(item.barcode);
+    const stock = product?.stock;
+    if (typeof stock === "number" && Number.isFinite(stock)) {
+      return Math.max(0, Math.floor(stock));
+    }
+  }
+
+  if (item.barcode) {
+    const cached = getCachedStock(item.barcode);
+    if (cached !== null) return cached;
+  }
+  const cachedById = getCachedStock(item.id);
+  if (cachedById !== null) return cachedById;
+
+  return null;
+};
+
+const buildStockLimitEvent = (
+  itemId: string,
+  availableStock: number,
+  reason: StockLimitReason,
+  requestedQty: number,
+  nextQty: number
+): StockLimitEvent => ({
+  itemId,
+  availableStock,
+  reason,
+  requestedQty,
+  nextQty,
+  at: Date.now()
+});
+
+const normalizeItemsForStock = (
+  items: CartItem[]
+): { items: CartItem[]; changed: boolean } => {
+  let changed = false;
+  const nextItems: CartItem[] = [];
+
+  for (const item of items) {
+    const availableStock = resolveItemAvailableStock(item);
+    const cap = capRequestedQuantity(item.quantity, item.quantity, availableStock);
+    const nextQty = cap.nextQty;
+
+    if (nextQty <= 0) {
+      changed = true;
+      continue;
+    }
+
+    if (nextQty !== item.quantity) {
+      changed = true;
+      nextItems.push({ ...item, quantity: nextQty });
+    } else {
+      nextItems.push(item);
+    }
+  }
+
+  return { items: nextItems, changed };
+};
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -138,6 +240,7 @@ export const useCartStore = create<CartState>()(
       discount: null,
       mutationHistory: [],
       locked: false,
+      stockLimitEvent: null,
       subtotal: 0,
       itemDiscountAmount: 0,
       cartDiscountAmount: 0,
@@ -145,6 +248,8 @@ export const useCartStore = create<CartState>()(
       discountTotal: 0,
       total: 0,
       
+      // DEV-GUARD: All quantity changes must go through stockCap helpers.
+      // Use addItem/updateQuantity/normalizeItemsToStock to avoid bypassing caps.
       addItem: (item) => {
         if (get().locked) return;
         const state = get();
@@ -153,19 +258,58 @@ export const useCartStore = create<CartState>()(
         
         let newItems: CartItem[];
         let nextItem: CartItem;
-        const quantity = item.quantity || 1;
-        
+        const currentQty = existingItem ? existingItem.quantity : 0;
+        const mergedMetadata = mergeMetadata(existingItem?.metadata, item.metadata);
+        const combinedItem = existingItem
+          ? { ...existingItem, ...item, metadata: mergedMetadata }
+          : { ...item, metadata: mergedMetadata };
+        const availableStock = resolveItemAvailableStock(combinedItem);
+        const cap = capAddQuantity(currentQty, item.quantity ?? 1, availableStock);
+        const requestedQty = cap.requestedQty;
+        const nextQty = cap.nextQty;
+        const addedQty = cap.addedQty;
+        const stockReason: StockLimitReason | null = cap.unknownStock
+          ? "unknown_stock"
+          : cap.outOfStock
+            ? "out_of_stock"
+            : cap.capped
+              ? "capped"
+              : null;
+        const stockEvent = stockReason
+          ? buildStockLimitEvent(
+              existingItem?.id ?? item.id,
+              availableStock ?? 0,
+              stockReason,
+              requestedQty,
+              nextQty
+            )
+          : null;
+
+        if (addedQty <= 0) {
+          if (stockEvent) {
+            set({ stockLimitEvent: stockEvent });
+          }
+          return;
+        }
+
         if (existingItem) {
           nextItem = {
             ...existingItem,
             ...item,
-            quantity: existingItem.quantity + quantity,
+            quantity: nextQty,
             flags: mergeFlags(existingItem.flags, item.flags),
-            itemDiscount: item.itemDiscount ?? existingItem.itemDiscount
+            itemDiscount: item.itemDiscount ?? existingItem.itemDiscount,
+            metadata: mergedMetadata
           };
           newItems = state.items.map(i => (i.id === item.id ? nextItem : i));
         } else {
-          nextItem = { ...item, quantity, flags: item.flags, itemDiscount: item.itemDiscount };
+          nextItem = {
+            ...item,
+            quantity: nextQty,
+            flags: item.flags,
+            itemDiscount: item.itemDiscount,
+            metadata: mergedMetadata
+          };
           newItems = [...state.items, nextItem];
         }
         
@@ -176,16 +320,20 @@ export const useCartStore = create<CartState>()(
           previousIndex: existingIndex
         };
 
-        set({
+        const nextState: Partial<CartState> = {
           items: newItems,
           mutationHistory: [...state.mutationHistory, mutation]
-        });
+        };
+        if (stockEvent) {
+          nextState.stockLimitEvent = stockEvent;
+        }
+        set(nextState as Partial<CartState>);
         get().recalculate();
-        
+
         eventLogger.log('CART_ADD_ITEM', {
           itemId: item.id,
           itemName: item.name,
-          quantity,
+          quantity: addedQty,
           priceMinor: item.priceMinor,
         });
 
@@ -193,15 +341,15 @@ export const useCartStore = create<CartState>()(
         void logPosEvent("ADD_TO_CART", {
           productId: item.id,
           name: item.name,
-          quantity,
+          quantity: addedQty,
           priceMinor: item.priceMinor,
           currency: item.currency ?? undefined,
           barcode: item.barcode ?? undefined
         });
       },
   
-  removeItem: (itemId) => {
-    if (get().locked) return;
+  removeItem: (itemId, force = false) => {
+    if (get().locked && !force) return;
     const state = get();
     const itemIndex = state.items.findIndex(i => i.id === itemId);
     const item = itemIndex >= 0 ? state.items[itemIndex] : null;
@@ -239,16 +387,41 @@ export const useCartStore = create<CartState>()(
   
   updateQuantity: (itemId, quantity) => {
     if (get().locked) return;
-    if (quantity <= 0) {
-      get().removeItem(itemId);
-      return;
-    }
-    
     const state = get();
     const existingIndex = state.items.findIndex(i => i.id === itemId);
     const existingItem = existingIndex >= 0 ? state.items[existingIndex] : null;
     if (!existingItem) return;
-    const nextItem = { ...existingItem, quantity };
+    const availableStock = resolveItemAvailableStock(existingItem);
+    const cap = capRequestedQuantity(existingItem.quantity, quantity, availableStock);
+    const requestedQty = cap.requestedQty;
+    const nextQty = cap.nextQty;
+    const stockReason: StockLimitReason | null = cap.unknownStock
+      ? "unknown_stock"
+      : cap.outOfStock
+        ? "out_of_stock"
+        : cap.capped
+          ? "capped"
+          : null;
+    const stockEvent = stockReason
+      ? buildStockLimitEvent(itemId, availableStock ?? 0, stockReason, requestedQty, nextQty)
+      : null;
+
+    if (nextQty <= 0) {
+      get().removeItem(itemId);
+      if (stockEvent) {
+        set({ stockLimitEvent: stockEvent });
+      }
+      return;
+    }
+
+    if (nextQty === existingItem.quantity) {
+      if (stockEvent) {
+        set({ stockLimitEvent: stockEvent });
+      }
+      return;
+    }
+
+    const nextItem = { ...existingItem, quantity: nextQty };
     const newItems = state.items.map(i => (i.id === itemId ? nextItem : i));
     
     const mutation: CartMutation = {
@@ -258,15 +431,19 @@ export const useCartStore = create<CartState>()(
       previousIndex: existingIndex
     };
 
-    set({
+    const nextState: Partial<CartState> = {
       items: newItems,
       mutationHistory: [...state.mutationHistory, mutation]
-    });
+    };
+    if (stockEvent) {
+      nextState.stockLimitEvent = stockEvent;
+    }
+    set(nextState as Partial<CartState>);
     get().recalculate();
     
     eventLogger.log('CART_UPDATE_QUANTITY', {
       itemId,
-      quantity,
+      quantity: nextQty,
     });
   },
 
@@ -409,8 +586,9 @@ export const useCartStore = create<CartState>()(
       ];
     }
 
+    const normalized = normalizeItemsForStock(nextItems);
     set({
-      items: nextItems,
+      items: normalized.items,
       mutationHistory: state.mutationHistory.slice(0, -1)
     });
     get().recalculate();
@@ -456,6 +634,15 @@ export const useCartStore = create<CartState>()(
       total: 0
     });
   },
+
+  normalizeItemsToStock: () => {
+    const state = get();
+    const { items: nextItems, changed } = normalizeItemsForStock(state.items);
+    if (!changed) return false;
+    set({ items: nextItems });
+    get().recalculate();
+    return true;
+  },
   
   recalculate: () => {
     const state = get();
@@ -478,7 +665,10 @@ export const useCartStore = create<CartState>()(
         discount: state.discount
       }),
       onRehydrateStorage: () => (state) => {
-        state?.recalculate();
+        const changed = state?.normalizeItemsToStock?.() ?? false;
+        if (!changed) {
+          state?.recalculate();
+        }
       }
     }
   )

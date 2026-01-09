@@ -3,16 +3,21 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
+  ScrollView,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
+  useWindowDimensions,
+  type ViewStyle
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import * as productsApi from "../services/api/productsApi";
-import { handleIncomingScan } from "../services/scan/handleScan";
+import { onBarcodeScanned } from "../services/scan/handleScan";
 import { offlineDb } from "../services/offline/localDb";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { submitPurchaseDraft } from "../services/purchaseDraft";
@@ -38,10 +43,22 @@ type PurchaseItemUpdates = {
   sellingPriceMinor?: number | null;
 };
 
+type ColumnStyles = {
+  item: ViewStyle;
+  qty: ViewStyle;
+  price: ViewStyle;
+  status: ViewStyle;
+  remove: ViewStyle;
+};
+
 type PurchaseItemRowProps = {
   item: PurchaseDraftItem;
   onUpdate: (barcode: string, updates: PurchaseItemUpdates) => void;
   onRemove: (barcode: string) => void;
+  onEdit: (item: PurchaseDraftItem) => void;
+  minWidth: number;
+  compact: boolean;
+  columnStyles: ColumnStyles;
 };
 
 type SkuItem = {
@@ -139,7 +156,15 @@ const formatPriceInput = (minor: number | null): string => {
   return (minor / 100).toFixed(2);
 };
 
-function PurchaseItemRow({ item, onUpdate, onRemove }: PurchaseItemRowProps) {
+function PurchaseItemRow({
+  item,
+  onUpdate,
+  onRemove,
+  onEdit,
+  minWidth,
+  compact,
+  columnStyles
+}: PurchaseItemRowProps) {
   const [qty, setQty] = useState(String(item.quantity));
   const [purchasePrice, setPurchasePrice] = useState(formatPriceInput(item.purchasePriceMinor));
   const [sellingPrice, setSellingPrice] = useState(formatPriceInput(item.sellingPriceMinor));
@@ -157,45 +182,125 @@ function PurchaseItemRow({ item, onUpdate, onRemove }: PurchaseItemRowProps) {
   }, [item.sellingPriceMinor]);
 
   const statusComplete = item.status === "COMPLETE";
+  const statusLabel = statusComplete
+    ? compact
+      ? "OK"
+      : "Complete"
+    : compact
+      ? "Open"
+      : "Incomplete";
+  const cellPaddingStyle = compact ? styles.sheetCellCompact : null;
+  const inputStyle = compact ? styles.sheetInputCompact : null;
+  const statusTextStyle = compact ? styles.sheetStatusTextCompact : null;
+  const itemNameStyle = compact ? styles.sheetItemNameCompact : null;
+  const itemBarcodeStyle = compact ? styles.sheetItemBarcodeCompact : null;
+  const currency = item.currency ?? "INR";
+  const hasPurchasePrice =
+    typeof item.purchasePriceMinor === "number" && item.purchasePriceMinor > 0;
+  const totalLabel = hasPurchasePrice
+    ? formatMoney(item.purchasePriceMinor * item.quantity, currency)
+    : "--";
+
+  if (compact) {
+    return (
+      <Pressable
+        style={[styles.sheetRow, styles.sheetRowCompact, { minWidth }]}
+        onPress={() => onEdit(item)}
+        accessibilityLabel={`Edit ${item.name || item.barcode}`}
+      >
+        <View style={[styles.compactRowInfo, columnStyles.item]}>
+          <Text style={[styles.sheetItemName, itemNameStyle]} numberOfLines={1}>
+            {item.name || item.barcode}
+          </Text>
+          <Text style={[styles.sheetItemBarcode, itemBarcodeStyle]} numberOfLines={1}>
+            {item.barcode}
+          </Text>
+        </View>
+        <View style={[styles.compactRowControls, columnStyles.qty]}>
+          <Pressable
+            style={[
+              styles.compactQtyButton,
+              item.quantity <= 1 && styles.compactQtyButtonDisabled
+            ]}
+            onPress={(event) => {
+              event.stopPropagation();
+              onUpdate(item.barcode, { quantity: Math.max(1, item.quantity - 1) });
+            }}
+            disabled={item.quantity <= 1}
+            accessibilityLabel={`Decrease ${item.name || item.barcode}`}
+          >
+            <MaterialCommunityIcons name="minus" size={14} color={theme.colors.textPrimary} />
+          </Pressable>
+          <Text style={styles.compactQtyValue}>{item.quantity}</Text>
+          <Pressable
+            style={styles.compactQtyButton}
+            onPress={(event) => {
+              event.stopPropagation();
+              onUpdate(item.barcode, { quantity: item.quantity + 1 });
+            }}
+            accessibilityLabel={`Increase ${item.name || item.barcode}`}
+          >
+            <MaterialCommunityIcons name="plus" size={14} color={theme.colors.textPrimary} />
+          </Pressable>
+        </View>
+        <View style={[styles.compactTotalBlock, columnStyles.price]}>
+          <Text style={styles.compactTotalLabel}>Total</Text>
+          <Text
+            style={[
+              styles.compactTotalValue,
+              !hasPurchasePrice && styles.compactTotalValueMuted
+            ]}
+          >
+            {totalLabel}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
-    <View style={styles.sheetRow}>
-      <View style={[styles.sheetCell, styles.sheetCellItem]}>
-        <Text style={styles.sheetItemName} numberOfLines={1}>
+    <ScrollView
+      horizontal
+      nestedScrollEnabled
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={[styles.sheetRow, { minWidth }]}
+    >
+      <View style={[styles.sheetCell, styles.sheetCellItem, columnStyles.item, cellPaddingStyle]}>
+        <Text style={[styles.sheetItemName, itemNameStyle]} numberOfLines={1}>
           {item.name || item.barcode}
         </Text>
-        <Text style={styles.sheetItemBarcode} numberOfLines={1}>
+        <Text style={[styles.sheetItemBarcode, itemBarcodeStyle]} numberOfLines={1}>
           {item.barcode}
         </Text>
       </View>
-      <View style={[styles.sheetCell, styles.sheetCellQty]}>
+      <View style={[styles.sheetCell, styles.sheetCellQty, columnStyles.qty, cellPaddingStyle]}>
         <TextInput
-          style={[styles.sheetInput, styles.sheetInputCenter]}
+          style={[styles.sheetInput, styles.sheetInputCenter, inputStyle]}
           value={qty}
           onChangeText={setQty}
           onEndEditing={() => onUpdate(item.barcode, { quantity: parseQuantityInput(qty) })}
           keyboardType="numeric"
         />
       </View>
-      <View style={[styles.sheetCell, styles.sheetCellPrice]}>
+      <View style={[styles.sheetCell, styles.sheetCellPrice, columnStyles.price, cellPaddingStyle]}>
         <TextInput
-          style={[styles.sheetInput, styles.sheetInputRight]}
+          style={[styles.sheetInput, styles.sheetInputRight, inputStyle]}
           value={purchasePrice}
           onChangeText={setPurchasePrice}
           onEndEditing={() => onUpdate(item.barcode, { purchasePriceMinor: parsePriceInput(purchasePrice) })}
           keyboardType="numeric"
         />
       </View>
-      <View style={[styles.sheetCell, styles.sheetCellPrice]}>
+      <View style={[styles.sheetCell, styles.sheetCellPrice, columnStyles.price, cellPaddingStyle]}>
         <TextInput
-          style={[styles.sheetInput, styles.sheetInputRight]}
+          style={[styles.sheetInput, styles.sheetInputRight, inputStyle]}
           value={sellingPrice}
           onChangeText={setSellingPrice}
           onEndEditing={() => onUpdate(item.barcode, { sellingPriceMinor: parsePriceInput(sellingPrice) })}
           keyboardType="numeric"
         />
       </View>
-      <View style={[styles.sheetCell, styles.sheetCellStatus]}>
+      <View style={[styles.sheetCell, styles.sheetCellStatus, columnStyles.status, cellPaddingStyle]}>
         <View
           style={[
             styles.sheetStatusDot,
@@ -205,26 +310,77 @@ function PurchaseItemRow({ item, onUpdate, onRemove }: PurchaseItemRowProps) {
         <Text
           style={[
             styles.sheetStatusText,
+            statusTextStyle,
             statusComplete ? styles.sheetStatusTextComplete : styles.sheetStatusTextIncomplete
           ]}
           numberOfLines={1}
         >
-          {statusComplete ? "Complete" : "Incomplete"}
+          {statusLabel}
         </Text>
       </View>
       <Pressable
-        style={[styles.sheetCell, styles.sheetCellRemove, styles.sheetCellLast]}
+        style={[
+          styles.sheetCell,
+          styles.sheetCellRemove,
+          styles.sheetCellLast,
+          columnStyles.remove,
+          cellPaddingStyle
+        ]}
         onPress={() => onRemove(item.barcode)}
         accessibilityLabel={`Remove ${item.name || item.barcode}`}
       >
         <MaterialCommunityIcons name="trash-can-outline" size={16} color={theme.colors.textSecondary} />
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanner }: PurchaseScreenProps) {
   const { items, updateItem, remove, hasIncomplete } = usePurchaseDraftStore();
+  const { width: screenWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const listPaddingLeft = 12 + insets.left;
+  const listPaddingRight = 12 + insets.right;
+  const availableWidth = Math.max(0, screenWidth - listPaddingLeft - listPaddingRight);
+  const isCompact = availableWidth <= 360;
+  const rowMinWidth = Math.max(availableWidth, 0);
+  const listPaddingStyle = useMemo(
+    () => ({ paddingLeft: listPaddingLeft, paddingRight: listPaddingRight }),
+    [listPaddingLeft, listPaddingRight]
+  );
+  const actionBarInsetStyle = useMemo(
+    () => ({
+      left: listPaddingLeft,
+      right: listPaddingRight,
+      bottom: 12 + insets.bottom
+    }),
+    [insets.bottom, listPaddingLeft, listPaddingRight]
+  );
+  const columnStyles = useMemo<ColumnStyles>(() => {
+    const flex = isCompact
+      ? { item: 2.4, qty: 0.7, price: 1, status: 0.9, remove: 0.6 }
+      : { item: 2.8, qty: 0.8, price: 1.2, status: 1.1, remove: 0.6 };
+    const build = (value: number): ViewStyle => ({
+      flexGrow: value,
+      flexShrink: 1,
+      flexBasis: 0
+    });
+    return {
+      item: build(flex.item),
+      qty: build(flex.qty),
+      price: build(flex.price),
+      status: build(flex.status),
+      remove: build(flex.remove)
+    };
+  }, [isCompact]);
+  const headerLabels = useMemo(
+    () => ({
+      purchase: isCompact ? "Pur" : "Purchase",
+      selling: isCompact ? "Sell" : "Selling",
+      status: isCompact ? "St" : "Status"
+    }),
+    [isCompact]
+  );
   const hasOpenItems = hasIncomplete();
 
   const [searchExpanded, setSearchExpanded] = useState(false);
@@ -238,6 +394,37 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   const suppressSearchBlurRef = useRef(false);
   const suppressSearchBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const priceLogRef = useRef<Set<string>>(new Set());
+  const [editorItem, setEditorItem] = useState<PurchaseDraftItem | null>(null);
+  const [editorQty, setEditorQty] = useState("");
+  const [editorPurchasePrice, setEditorPurchasePrice] = useState("");
+  const [editorSellingPrice, setEditorSellingPrice] = useState("");
+
+  const openEditor = useCallback((item: PurchaseDraftItem) => {
+    setEditorItem(item);
+    setEditorQty(String(item.quantity));
+    setEditorPurchasePrice(formatPriceInput(item.purchasePriceMinor));
+    setEditorSellingPrice(formatPriceInput(item.sellingPriceMinor));
+  }, []);
+
+  const closeEditor = useCallback(() => {
+    setEditorItem(null);
+  }, []);
+
+  const saveEditor = useCallback(() => {
+    if (!editorItem) return;
+    updateItem(editorItem.barcode, {
+      quantity: parseQuantityInput(editorQty),
+      purchasePriceMinor: parsePriceInput(editorPurchasePrice),
+      sellingPriceMinor: parsePriceInput(editorSellingPrice)
+    });
+    setEditorItem(null);
+  }, [editorItem, editorPurchasePrice, editorQty, editorSellingPrice, updateItem]);
+
+  const removeEditor = useCallback(() => {
+    if (!editorItem) return;
+    remove(editorItem.barcode);
+    setEditorItem(null);
+  }, [editorItem, remove]);
 
   const totalMinor = useMemo(() => {
     return items.reduce((sum, item) => {
@@ -251,6 +438,13 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
 
   const submitDisabled = items.length === 0 || hasOpenItems || storeActive === false;
   const searchQueryNormalized = searchQuery.trim().toLowerCase();
+  const editorTotalLabel = useMemo(() => {
+    if (!editorItem) return "";
+    const qty = parseQuantityInput(editorQty);
+    const priceMinor = parsePriceInput(editorPurchasePrice);
+    if (!priceMinor) return "--";
+    return formatMoney(priceMinor * qty, editorItem.currency ?? "INR");
+  }, [editorItem, editorPurchasePrice, editorQty]);
 
   const focusSearchInput = () => {
     requestAnimationFrame(() => searchInputRef.current?.focus());
@@ -296,7 +490,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     const raw = event?.nativeEvent?.text ?? searchQuery;
     const trimmed = raw.trim();
     if (!trimmed) return;
-    void handleIncomingScan(trimmed);
+    void onBarcodeScanned(trimmed);
     setSearchQuery("");
     setSearchExpanded(true);
     focusSearchInput();
@@ -306,7 +500,6 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     if (scanDisabled) return;
     const scanValue = feedHidKey(event.nativeEvent.key);
     if (scanValue) {
-      void handleIncomingScan(scanValue);
       setSearchQuery("");
       setSearchExpanded(true);
       focusSearchInput();
@@ -317,9 +510,6 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
     if (!scanDisabled) {
       const scanValue = submitHidBuffer();
       if (scanValue || wasHidCommitRecent()) {
-        if (scanValue) {
-          void handleIncomingScan(scanValue);
-        }
         setSearchQuery("");
         setSearchExpanded(true);
         focusSearchInput();
@@ -556,7 +746,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   };
 
   const searchHeader = (
-    <View style={styles.searchHeader}>
+    <View style={[styles.searchHeader, listPaddingStyle]}>
       {renderSearchBar(searchExpanded ? "expanded" : "collapsed")}
       <View
         style={[styles.searchPanel, !searchExpanded && styles.searchPanelCollapsed]}
@@ -616,16 +806,102 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
         </View>
       </View>
 
-      <View style={styles.sheetHeader}>
-        <Text style={[styles.sheetHeaderCell, styles.sheetCellItem, styles.sheetHeaderCellLeft]}>
-          Item
-        </Text>
-        <Text style={[styles.sheetHeaderCell, styles.sheetCellQty]}>Qty</Text>
-        <Text style={[styles.sheetHeaderCell, styles.sheetCellPrice]}>Purchase</Text>
-        <Text style={[styles.sheetHeaderCell, styles.sheetCellPrice]}>Selling</Text>
-        <Text style={[styles.sheetHeaderCell, styles.sheetCellStatus]}>Status</Text>
-        <Text style={[styles.sheetHeaderCell, styles.sheetCellRemove, styles.sheetCellLast]}> </Text>
-      </View>
+      {isCompact ? (
+        <View style={styles.sheetHeaderCompact}>
+          <Text
+            style={[
+              styles.sheetHeaderCompactCell,
+              styles.sheetHeaderCompactItem,
+              columnStyles.item
+            ]}
+          >
+            Item
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCompactCell,
+              styles.sheetHeaderCompactQty,
+              columnStyles.qty
+            ]}
+          >
+            Qty
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCompactCell,
+              styles.sheetHeaderCompactTotal,
+              styles.sheetHeaderCompactCellLast,
+              columnStyles.price
+            ]}
+          >
+            Total
+          </Text>
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.sheetHeader, { minWidth: rowMinWidth }]}
+        >
+          <Text
+            style={[
+              styles.sheetHeaderCell,
+              styles.sheetHeaderCellLeft,
+              styles.sheetCellItem,
+              columnStyles.item
+            ]}
+          >
+            Item
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCell,
+              styles.sheetCellQty,
+              columnStyles.qty
+            ]}
+          >
+            Qty
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCell,
+              styles.sheetCellPrice,
+              columnStyles.price
+            ]}
+          >
+            {headerLabels.purchase}
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCell,
+              styles.sheetCellPrice,
+              columnStyles.price
+            ]}
+          >
+            {headerLabels.selling}
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCell,
+              styles.sheetCellStatus,
+              columnStyles.status
+            ]}
+          >
+            {headerLabels.status}
+          </Text>
+          <Text
+            style={[
+              styles.sheetHeaderCell,
+              styles.sheetCellRemove,
+              styles.sheetCellLast,
+              columnStyles.remove
+            ]}
+          >
+            {" "}
+          </Text>
+        </ScrollView>
+      )}
     </View>
   );
 
@@ -647,6 +923,10 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
             item={item}
             onUpdate={updateItem}
             onRemove={remove}
+            onEdit={openEditor}
+            minWidth={rowMinWidth}
+            compact={isCompact}
+            columnStyles={columnStyles}
           />
         )}
         ListHeaderComponent={listHeader}
@@ -656,11 +936,14 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
             <Text style={styles.emptySubtext}>Scan items to start a purchase draft.</Text>
           </View>
         }
-        contentContainerStyle={items.length === 0 ? styles.emptyContent : styles.listContent}
+        contentContainerStyle={[
+          items.length === 0 ? styles.emptyContent : styles.listContent,
+          listPaddingStyle
+        ]}
         style={styles.list}
       />
 
-      <View style={styles.actionBar}>
+      <View style={[styles.actionBar, actionBarInsetStyle]}>
         {storeActive === false ? (
           <Text style={styles.actionHint}>Store is inactive. Purchase is disabled.</Text>
         ) : hasOpenItems ? (
@@ -674,6 +957,81 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
           <Text style={styles.submitText}>Submit Purchase</Text>
         </Pressable>
       </View>
+
+      <Modal
+        visible={Boolean(editorItem)}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEditor}
+      >
+        <Pressable style={styles.editOverlay} onPress={closeEditor}>
+          <Pressable
+            style={[styles.editSheet, { paddingBottom: 16 + insets.bottom }]}
+            onPress={() => {}}
+          >
+            <View style={styles.editHandle} />
+            <Text style={styles.editTitle}>Edit line item</Text>
+            {editorItem ? (
+              <>
+                <Text style={styles.editName} numberOfLines={2}>
+                  {editorItem.name || editorItem.barcode}
+                </Text>
+                <Text style={styles.editBarcode} numberOfLines={1}>
+                  {editorItem.barcode}
+                </Text>
+              </>
+            ) : null}
+            <View style={styles.editFields}>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Qty</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editorQty}
+                  onChangeText={setEditorQty}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Purchase price</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editorPurchasePrice}
+                  onChangeText={setEditorPurchasePrice}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  placeholderTextColor={theme.colors.textTertiary}
+                />
+              </View>
+              <View style={styles.editField}>
+                <Text style={styles.editLabel}>Selling price</Text>
+                <TextInput
+                  style={styles.editInput}
+                  value={editorSellingPrice}
+                  onChangeText={setEditorSellingPrice}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                  placeholderTextColor={theme.colors.textTertiary}
+                />
+              </View>
+            </View>
+            <View style={styles.editTotalRow}>
+              <Text style={styles.editTotalLabel}>Line total</Text>
+              <Text style={styles.editTotalValue}>{editorTotalLabel || "--"}</Text>
+            </View>
+            <View style={styles.editActions}>
+              <Pressable style={[styles.editButton, styles.editButtonGhost]} onPress={closeEditor}>
+                <Text style={styles.editButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.editButton, styles.editButtonPrimary]} onPress={saveEditor}>
+                <Text style={styles.editButtonTextInverse}>Save</Text>
+              </Pressable>
+            </View>
+            <Pressable style={styles.editRemoveButton} onPress={removeEditor}>
+              <Text style={styles.editRemoveText}>Remove item</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -845,6 +1203,36 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: theme.colors.primaryDark,
   },
+  sheetHeaderCompact: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 14,
+    overflow: "hidden",
+  },
+  sheetHeaderCompactCell: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+    borderRightWidth: 1,
+    borderColor: theme.colors.border,
+    textAlign: "center",
+  },
+  sheetHeaderCompactItem: {
+    textAlign: "left",
+  },
+  sheetHeaderCompactQty: {
+    textAlign: "center",
+  },
+  sheetHeaderCompactTotal: {
+    textAlign: "right",
+  },
+  sheetHeaderCompactCellLast: {
+    borderRightWidth: 0,
+  },
   sheetHeader: {
     flexDirection: "row",
     backgroundColor: theme.colors.surfaceAlt,
@@ -874,6 +1262,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
   },
+  sheetRowCompact: {
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 10,
+  },
   sheetCell: {
     paddingVertical: 8,
     paddingHorizontal: 8,
@@ -881,28 +1275,23 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     justifyContent: "center",
   },
+  sheetCellCompact: {
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+  },
   sheetCellItem: {
-    flex: 1.8,
-    minWidth: 140,
     alignItems: "flex-start",
   },
   sheetCellQty: {
-    flex: 0.6,
-    minWidth: 60,
   },
   sheetCellPrice: {
-    flex: 0.9,
-    minWidth: 86,
   },
   sheetCellStatus: {
-    flex: 0.9,
-    minWidth: 90,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
   sheetCellRemove: {
-    width: 42,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -914,10 +1303,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
+  sheetItemNameCompact: {
+    fontSize: 12,
+  },
   sheetItemBarcode: {
     marginTop: 2,
     fontSize: 11,
     color: theme.colors.textSecondary,
+  },
+  sheetItemBarcodeCompact: {
+    fontSize: 10,
   },
   sheetInput: {
     borderWidth: 1,
@@ -928,6 +1323,10 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     fontSize: 12,
     color: theme.colors.textPrimary,
+  },
+  sheetInputCompact: {
+    paddingVertical: 2,
+    fontSize: 11,
   },
   sheetInputCenter: {
     textAlign: "center",
@@ -949,6 +1348,55 @@ const styles = StyleSheet.create({
   sheetStatusText: {
     fontSize: 11,
     fontWeight: "700",
+  },
+  sheetStatusTextCompact: {
+    fontSize: 10,
+  },
+  compactRowInfo: {
+    minWidth: 0,
+  },
+  compactRowControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  compactQtyButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compactQtyButtonDisabled: {
+    opacity: 0.5,
+  },
+  compactQtyValue: {
+    minWidth: 18,
+    textAlign: "center",
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  compactTotalBlock: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  compactTotalLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  compactTotalValue: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  compactTotalValueMuted: {
+    color: theme.colors.textTertiary,
   },
   sheetStatusTextComplete: {
     color: theme.colors.success,
@@ -1002,5 +1450,119 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: {
     opacity: 0.5,
+  },
+  editOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
+  },
+  editSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    gap: 12,
+  },
+  editHandle: {
+    alignSelf: "center",
+    width: 44,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: theme.colors.border,
+  },
+  editTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
+  },
+  editName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
+  },
+  editBarcode: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
+  editFields: {
+    gap: 10,
+  },
+  editField: {
+    gap: 6,
+  },
+  editLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  editTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  editTotalLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  editTotalValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.primaryDark,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  editButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  editButtonPrimary: {
+    backgroundColor: theme.colors.primary,
+  },
+  editButtonGhost: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  editButtonTextInverse: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.colors.textInverse,
+  },
+  editRemoveButton: {
+    alignSelf: "center",
+    paddingVertical: 6,
+  },
+  editRemoveText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.error,
   },
 });

@@ -1,6 +1,6 @@
 import { NativeEventEmitter, NativeModules, Platform } from "react-native";
 import Constants from "expo-constants";
-import { handleIncomingScan } from "./handleScan";
+import { onBarcodeScanned } from "./handleScan";
 
 type ScanIntentConfig = {
   action?: string;
@@ -49,7 +49,7 @@ export function startScanIntentListener(config?: ScanIntentConfig): void {
   emitter.addListener("ScanIntent", (payload: ScanIntentPayload) => {
     const resolved = resolvePayload(payload);
     if (!resolved) return;
-    void handleIncomingScan(resolved.text ?? "", resolved.format ?? undefined);
+    void onBarcodeScanned(resolved.text ?? "", resolved.format ?? undefined);
   });
   nativeModule.markReady?.();
 
@@ -59,7 +59,7 @@ export function startScanIntentListener(config?: ScanIntentConfig): void {
       for (const item of pending) {
         const resolved = resolvePayload(item);
         if (!resolved) continue;
-        void handleIncomingScan(resolved.text ?? "", resolved.format ?? undefined);
+        void onBarcodeScanned(resolved.text ?? "", resolved.format ?? undefined);
       }
     })
     .catch(() => undefined);

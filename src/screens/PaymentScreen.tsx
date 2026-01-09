@@ -6,12 +6,13 @@ import {
   TouchableOpacity,
   Alert
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
 
 import { useCartStore } from "../stores/cartStore";
+import type { CartDiscount, CartItem, ItemDiscount } from "../stores/cartStore";
 import { formatMoney } from "../utils/money";
 import {
   confirmUpiPaymentManual,
@@ -28,27 +29,68 @@ import { clearDeviceSession } from "../services/deviceSession";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { buildUpiIntent } from "../utils/upiIntent";
 import { formatStoreName } from "../utils/storeName";
+import { uuidv4 } from "../utils/uuid";
+import { buildStockDeductionLogs, partitionSaleItems } from "../services/saleScope";
 import { theme } from "../theme";
 
 type RootStackParamList = {
   Splash: undefined;
   SellScan: undefined;
-  Payment: undefined;
+  Payment: { saleItemIds?: string[] } | undefined;
   EnrollDevice: undefined;
   DeviceBlocked: undefined;
   SuccessPrint: {
     paymentMode: "UPI" | "CASH" | "DUE";
     transactionId: string;
     billId: string;
+    saleItems?: CartItem[];
+    saleTotalMinor?: number;
+    saleCurrency?: string;
+    partialSale?: boolean;
   };
 };
 
 type PaymentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Payment">;
+type PaymentScreenRouteProp = RouteProp<RootStackParamList, "Payment">;
 type PaymentMode = "UPI" | "CASH" | "DUE";
+
+const calculateDiscountAmount = (
+  baseAmount: number,
+  discount: CartDiscount | ItemDiscount | null
+): number => {
+  if (!discount) return 0;
+  const safeBase = Math.max(0, Math.round(baseAmount));
+  const safeValue = Math.max(0, Number.isFinite(discount.value) ? discount.value : 0);
+
+  if (discount.type === "percentage") {
+    return Math.min(Math.round(safeBase * (safeValue / 100)), safeBase);
+  }
+  return Math.min(Math.round(safeValue), safeBase);
+};
+
+const computeSaleTotals = (items: CartItem[], cartDiscount: CartDiscount | null) => {
+  let subtotalMinor = 0;
+  let itemDiscountMinor = 0;
+
+  for (const item of items) {
+    const lineSubtotal = Math.round(item.priceMinor) * Math.round(item.quantity);
+    const lineDiscount = calculateDiscountAmount(lineSubtotal, item.itemDiscount ?? null);
+    subtotalMinor += lineSubtotal;
+    itemDiscountMinor += lineDiscount;
+  }
+
+  const subtotalAfterItemDiscounts = Math.max(0, subtotalMinor - itemDiscountMinor);
+  const cartDiscountMinor = calculateDiscountAmount(subtotalAfterItemDiscounts, cartDiscount);
+  const discountTotalMinor = itemDiscountMinor + cartDiscountMinor;
+  const totalMinor = Math.max(0, subtotalMinor - discountTotalMinor);
+
+  return { subtotalMinor, discountTotalMinor, totalMinor };
+};
 
 const PaymentScreen = () => {
   const navigation = useNavigation<PaymentScreenNavigationProp>();
-  const { total, items, lockCart, unlockCart, locked, discount, discountTotal } = useCartStore();
+  const route = useRoute<PaymentScreenRouteProp>();
+  const { items, lockCart, unlockCart, locked, discount, removeItem } = useCartStore();
   const [selectedMode, setSelectedMode] = useState<PaymentMode>("UPI");
   const [saleId, setSaleId] = useState<string | null>(null);
   const [billRef, setBillRef] = useState<string | null>(null);
@@ -63,9 +105,24 @@ const PaymentScreen = () => {
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [upiStatusLoading, setUpiStatusLoading] = useState(true);
 
-  const currency = items[0]?.currency ?? "INR";
+  const saleItemIds = route.params?.saleItemIds;
+  const { saleItems: computedSaleItems, isPartial: isPartialSale } = useMemo(
+    () => partitionSaleItems(items, saleItemIds),
+    [items, saleItemIds]
+  );
+  const [saleItemsSnapshot, setSaleItemsSnapshot] = useState<CartItem[] | null>(null);
+
+  useEffect(() => {
+    if (!saleItemsSnapshot && computedSaleItems.length > 0) {
+      setSaleItemsSnapshot(computedSaleItems);
+    }
+  }, [computedSaleItems, saleItemsSnapshot]);
+
+  const saleItems = saleItemsSnapshot ?? computedSaleItems;
+  const currency = saleItems[0]?.currency ?? "INR";
   const transactionId = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
   const finalized = useRef(false);
+  const pendingSaleIdRef = useRef<string | null>(null);
 
   const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
     if (error.message === "device_inactive") {
@@ -84,11 +141,13 @@ const PaymentScreen = () => {
     return false;
   }, [navigation]);
 
-  const subtotalMinor = useMemo(
-    () => items.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0),
-    [items]
+  const appliedCartDiscount = isPartialSale ? null : discount;
+  const { discountTotalMinor, totalMinor } = useMemo(
+    () => computeSaleTotals(saleItems, appliedCartDiscount),
+    [saleItems, appliedCartDiscount]
   );
-  const discountMinor = Math.max(0, Math.round(discountTotal ?? (subtotalMinor - total)));
+  const discountMinor = Math.max(0, Math.round(discountTotalMinor));
+  const itemCount = saleItems.reduce((sum, item) => sum + item.quantity, 0);
   const upiDisabled =
     !isOnline || upiStatusLoading || storeActive === false || !upiVpa;
   const upiBlocked = storeActive === false || (!upiVpa && !upiStatusLoading);
@@ -167,13 +226,19 @@ const PaymentScreen = () => {
   }, [selectedMode, storeActive, upiVpa]);
 
   useEffect(() => {
-    if (saleId || items.length === 0 || loadingSale) return;
+    if (saleId || saleItems.length === 0 || loadingSale) return;
 
     let cancelled = false;
     setLoadingSale(true);
 
+    if (!pendingSaleIdRef.current) {
+      pendingSaleIdRef.current = uuidv4();
+    }
+    const requestedSaleId = pendingSaleIdRef.current;
+
     createSale({
-      items: items.map((item) => {
+      saleId: requestedSaleId,
+      items: saleItems.map((item) => {
         const metadata = item.metadata ?? {};
         const globalProductId =
           typeof metadata.globalProductId === "string" && metadata.globalProductId.trim()
@@ -191,7 +256,8 @@ const PaymentScreen = () => {
         };
       }),
       discountMinor,
-      cartDiscount: discount ?? null
+      cartDiscount: appliedCartDiscount ?? null,
+      currency
     })
       .then((res) => {
         if (cancelled) return;
@@ -203,7 +269,7 @@ const PaymentScreen = () => {
           paymentMode: selectedMode,
           amountMinor: res.totals.totalMinor,
           currency,
-          itemCount: items.length
+          itemCount
         });
       })
       .catch(async (error) => {
@@ -232,7 +298,17 @@ const PaymentScreen = () => {
     return () => {
       cancelled = true;
     };
-  }, [discountMinor, items, saleId, selectedMode, transactionId, currency, loadingSale]);
+  }, [
+    appliedCartDiscount,
+    currency,
+    discountMinor,
+    itemCount,
+    loadingSale,
+    saleId,
+    saleItems,
+    selectedMode,
+    transactionId
+  ]);
 
   useEffect(() => {
     if (upiDisabled || selectedMode !== "UPI" || !saleId || upiIntent || loadingUpi) return;
@@ -330,12 +406,12 @@ const PaymentScreen = () => {
           transactionId,
           billId: billRef,
           paymentMode: selectedMode,
-          amountMinor: total,
+          amountMinor: totalMinor,
           currency
         });
       }
     };
-  }, [billRef, currency, selectedMode, total, transactionId]);
+  }, [billRef, currency, selectedMode, totalMinor, transactionId]);
 
   const handlePaymentSelect = (mode: PaymentMode) => {
     setSelectedMode(mode);
@@ -367,11 +443,20 @@ const PaymentScreen = () => {
         await recordDuePayment({ saleId });
       }
 
+      const stockLogs = buildStockDeductionLogs(saleItems, saleId);
+      stockLogs.forEach((entry) => console.log(entry));
+
+      if (isPartialSale) {
+        for (const item of saleItems) {
+          removeItem(item.id, true);
+        }
+      }
+
       void logPaymentEvent("PAYMENT_CONFIRMED", {
         transactionId,
         billId: billRef,
         paymentMode: selectedMode,
-        amountMinor: total,
+        amountMinor: totalMinor,
         currency
       });
 
@@ -380,21 +465,25 @@ const PaymentScreen = () => {
         transactionId,
         billId: billRef,
         paymentMode: selectedMode,
-        amountMinor: total,
+        amountMinor: totalMinor,
         currency
       });
 
       navigation.navigate("SuccessPrint", {
         paymentMode: selectedMode,
         transactionId,
-        billId: billRef
+        billId: billRef,
+        saleItems: isPartialSale ? saleItems : undefined,
+        saleTotalMinor: isPartialSale ? totalMinor : undefined,
+        saleCurrency: isPartialSale ? currency : undefined,
+        partialSale: isPartialSale ? true : undefined
       });
     } catch (error) {
       void logPaymentEvent("PAYMENT_FAILED", {
         transactionId,
         billId: billRef,
         paymentMode: selectedMode,
-        amountMinor: total,
+        amountMinor: totalMinor,
         currency,
         reason: "backend_error"
       });
@@ -493,7 +582,7 @@ const PaymentScreen = () => {
               minimumFontScale={0.6}
               numberOfLines={1}
             >
-              {formatMoney(total, currency)}
+              {formatMoney(totalMinor, currency)}
             </Text>
             <View style={styles.qrShell}>
               {upiStatusLoading ? (
@@ -523,7 +612,7 @@ const PaymentScreen = () => {
               minimumFontScale={0.6}
               numberOfLines={1}
             >
-              {formatMoney(total, currency)}
+              {formatMoney(totalMinor, currency)}
             </Text>
             <Text style={styles.cashHint}>
               {selectedMode === "CASH"

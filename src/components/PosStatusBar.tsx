@@ -291,6 +291,7 @@ export default function PosStatusBar({
           <Pressable
             ref={networkRef}
             collapsable={false}
+            focusable={false}
             accessible
             accessibilityLabel={networkLabel}
             accessibilityRole="button"
@@ -308,6 +309,7 @@ export default function PosStatusBar({
           <Pressable
             ref={printerRef}
             collapsable={false}
+            focusable={false}
             accessible
             accessibilityLabel={printerLabel}
             accessibilityRole="button"
@@ -325,6 +327,7 @@ export default function PosStatusBar({
           <Pressable
             ref={scannerRef}
             collapsable={false}
+            focusable={false}
             accessible
             accessibilityLabel={scannerLabel}
             accessibilityRole="button"
@@ -342,6 +345,7 @@ export default function PosStatusBar({
 
         <Pressable
           style={styles.storeInfo}
+          focusable={false}
           onPress={() => {
             closePopover();
             setDetailsOpen(true);

@@ -434,10 +434,11 @@ async function getCollectionStoreStatus(
 }
 
 posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
-  const { items, discountMinor, currency } = req.body as {
+  const { items, discountMinor, currency, saleId: requestedSaleIdRaw } = req.body as {
     items?: SaleItemInput[];
     discountMinor?: number;
     currency?: string;
+    saleId?: string;
   };
 
   if (!Array.isArray(items) || items.length === 0) {
@@ -488,6 +489,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   const subtotal = cleanedItems.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
   const total = Math.max(0, subtotal - discount);
   const saleCurrency = typeof currency === "string" && currency.trim() ? currency.trim() : "INR";
+  const requestedSaleId = asTrimmedString(requestedSaleIdRaw);
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
@@ -497,11 +499,34 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   if (!store) {
     return res.status(404).json({ error: "store not found" });
   }
+  if (requestedSaleId) {
+    const existing = await pool.query(
+      `
+      SELECT id, bill_ref, subtotal_minor, discount_minor, total_minor
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      LIMIT 1
+      `,
+      [requestedSaleId, storeId]
+    );
+    const row = existing.rows[0];
+    if (row) {
+      return res.json({
+        saleId: String(row.id),
+        billRef: String(row.bill_ref),
+        totals: {
+          subtotalMinor: Number(row.subtotal_minor ?? 0),
+          discountMinor: Number(row.discount_minor ?? 0),
+          totalMinor: Number(row.total_minor ?? 0)
+        }
+      });
+    }
+  }
   if (!store.active) {
     return res.status(403).json({ error: "store_inactive" });
   }
 
-  const saleId = randomUUID();
+  const saleId = requestedSaleId ?? randomUUID();
   let billRef = buildBillRef();
 
   const client = await pool.connect();
@@ -582,14 +607,41 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
 
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        await client.query(
+        const inserted = await client.query(
           `
           INSERT INTO sales (id, store_id, device_id, bill_ref, subtotal_minor, discount_minor, total_minor, status, currency)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (id) DO NOTHING
+          RETURNING id
           `,
           [saleId, storeId, deviceId, billRef, subtotal, discount, total, "CREATED", saleCurrency]
         );
-        break;
+        if ((inserted.rowCount ?? 0) > 0) {
+          break;
+        }
+        const existing = await client.query(
+          `
+          SELECT id, bill_ref, subtotal_minor, discount_minor, total_minor
+          FROM sales
+          WHERE id = $1 AND store_id = $2
+          LIMIT 1
+          `,
+          [saleId, storeId]
+        );
+        const row = existing.rows[0];
+        if (row) {
+          await client.query("COMMIT");
+          return res.json({
+            saleId: String(row.id),
+            billRef: String(row.bill_ref),
+            totals: {
+              subtotalMinor: Number(row.subtotal_minor ?? 0),
+              discountMinor: Number(row.discount_minor ?? 0),
+              totalMinor: Number(row.total_minor ?? 0)
+            }
+          });
+        }
+        throw new Error("sale_id_conflict");
       } catch (error) {
         billRef = buildBillRef();
         if (attempt === 2) {
@@ -643,6 +695,9 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     }
     if (error instanceof Error && error.message === "product_not_found") {
       return res.status(404).json({ error: "product_not_found" });
+    }
+    if (error instanceof Error && error.message === "sale_id_conflict") {
+      return res.status(409).json({ error: "sale_id_conflict" });
     }
     return res.status(500).json({ error: "failed to create sale" });
   } finally {

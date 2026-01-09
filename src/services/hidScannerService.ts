@@ -5,6 +5,7 @@ const HID_MAX_INTERVAL_MS = 80;
 const HID_MAX_DURATION_MS = 1200;
 const HID_IDLE_TIMEOUT_MS = 120;
 const HID_TERMINATORS = new Set(["Enter", "Tab", "Return", "NumpadEnter", "\n", "\t", "\r"]);
+const HID_NEWLINE_REGEX = /[\r\n]+/g;
 
 let lastHidScanAt = 0;
 let lastHidCommitAt = 0;
@@ -14,6 +15,7 @@ let hidLastInputAt = 0;
 let hidLastValue = "";
 let hidScanHandler: HidScanHandler | null = null;
 let hidIdleTimer: ReturnType<typeof setTimeout> | null = null;
+let hidScanStarted = false;
 
 export function notifyHidScan(isHid = true): void {
   if (!isHid) return;
@@ -43,10 +45,27 @@ const clearIdleTimer = () => {
   }
 };
 
+const normalizeHidValue = (value: string): string => value.replace(HID_NEWLINE_REGEX, "").trim();
+
+const logScanStart = () => {
+  if (hidScanStarted) return;
+  hidScanStarted = true;
+  console.log("scan_start");
+};
+
+const logScanComplete = (value: string) => {
+  console.log(`scan_complete:${value}`);
+};
+
+const logScanIgnored = () => {
+  console.log("scan_ignored");
+};
+
 export function resetHidBuffer(): void {
   hidBuffer = "";
   hidStartAt = 0;
   hidLastInputAt = 0;
+  hidScanStarted = false;
   clearIdleTimer();
 }
 
@@ -58,12 +77,13 @@ export function resetHidTracking(): void {
 const appendHidChars = (chars: string, now: number) => {
   if (!chars) return;
   if (!hidBuffer || (hidLastInputAt && now - hidLastInputAt > HID_MAX_INTERVAL_MS)) {
-    hidBuffer = "";
+    resetHidBuffer();
     hidStartAt = now;
   }
   if (!hidBuffer) {
     hidStartAt = now;
   }
+  logScanStart();
   hidBuffer += chars;
   hidLastInputAt = now;
   clearIdleTimer();
@@ -80,20 +100,26 @@ const commitHidBuffer = (now: number): string | null => {
   }
   const value = hidBuffer;
   const duration = hidLastInputAt - hidStartAt;
-  const averageInterval = value.length > 1 ? duration / (value.length - 1) : duration;
   resetHidBuffer();
 
+  const normalized = normalizeHidValue(value);
+  const normalizedLength = normalized.length;
+  const averageInterval =
+    normalizedLength > 1 ? duration / (normalizedLength - 1) : duration;
+
   if (
-    value.length >= HID_MIN_LENGTH &&
+    normalizedLength >= HID_MIN_LENGTH &&
     duration <= HID_MAX_DURATION_MS &&
     averageInterval <= HID_MAX_INTERVAL_MS
   ) {
     lastHidCommitAt = now;
     notifyHidScan(true);
-    hidScanHandler?.(value);
-    return value;
+    logScanComplete(normalized);
+    hidScanHandler?.(normalized);
+    return normalized;
   }
 
+  logScanIgnored();
   return null;
 };
 

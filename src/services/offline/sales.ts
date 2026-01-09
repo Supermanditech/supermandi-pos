@@ -54,12 +54,39 @@ const calculateDiscountAmount = (
   return Math.min(Math.round(safeValue), safeBase);
 };
 
-export async function createOfflineSale(input: OfflineSaleInput): Promise<{
+export async function createOfflineSale(
+  input: OfflineSaleInput & { saleId?: string }
+): Promise<{
   saleId: string;
   billRef: string;
   totals: { subtotalMinor: number; discountMinor: number; totalMinor: number };
 }> {
-  const saleId = uuidv4();
+  const saleId = typeof input.saleId === "string" && input.saleId.trim()
+    ? input.saleId.trim()
+    : uuidv4();
+  if (input.saleId) {
+    const existing = await offlineDb.all<{
+      id: string;
+      bill_ref: string;
+      subtotal_minor: number;
+      discount_minor: number;
+      total_minor: number;
+    }>(
+      `SELECT id, bill_ref, subtotal_minor, discount_minor, total_minor FROM offline_sales WHERE id = ? LIMIT 1`,
+      [saleId]
+    );
+    if (existing[0]) {
+      return {
+        saleId: existing[0].id,
+        billRef: existing[0].bill_ref,
+        totals: {
+          subtotalMinor: existing[0].subtotal_minor,
+          discountMinor: existing[0].discount_minor,
+          totalMinor: existing[0].total_minor
+        }
+      };
+    }
+  }
   const billRef = await nextOfflineBillRef();
   const createdAt = new Date().toISOString();
 

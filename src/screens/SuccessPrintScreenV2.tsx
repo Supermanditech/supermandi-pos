@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 import { theme } from "../theme";
 import { useCartStore } from "../stores/cartStore";
+import type { CartItem } from "../stores/cartStore";
 import { eventLogger } from "../services/eventLogger";
 import { logPaymentEvent, logPosEvent } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
@@ -13,8 +14,16 @@ import { formatMoney } from "../utils/money";
 type RootStackParamList = {
   Splash: undefined;
   SellScan: undefined;
-  Payment: undefined;
-  SuccessPrint: { paymentMode: "UPI" | "CASH" | "DUE"; transactionId: string; billId: string };
+  Payment: { saleItemIds?: string[] } | undefined;
+  SuccessPrint: {
+    paymentMode: "UPI" | "CASH" | "DUE";
+    transactionId: string;
+    billId: string;
+    saleItems?: CartItem[];
+    saleTotalMinor?: number;
+    saleCurrency?: string;
+    partialSale?: boolean;
+  };
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "SuccessPrint">;
@@ -25,9 +34,12 @@ export default function SuccessPrintScreenV2() {
   const route = useRoute<Rt>();
   const { items, total, clearCart, unlockCart } = useCartStore();
 
-  const currency = items[0]?.currency ?? "INR";
+  const saleItems = route.params?.saleItems ?? items;
+  const saleTotalMinor = route.params?.saleTotalMinor ?? total;
+  const currency = route.params?.saleCurrency ?? saleItems[0]?.currency ?? "INR";
   const paymentMode = route.params?.paymentMode ?? "CASH";
   const billNumber = route.params?.billId ?? useRef(Date.now().toString().slice(-6)).current;
+  const isPartialSale = route.params?.partialSale === true;
   // For reconciliation: tie receipt/print outcomes to a bill id.
   const transactionId = route.params?.transactionId ?? useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
 
@@ -44,13 +56,13 @@ export default function SuccessPrintScreenV2() {
       "=================================",
       "",
       "ITEMS:",
-      ...items.map(
+      ...saleItems.map(
         (i) =>
           `${i.name}\n  ${i.quantity} x ${formatMoney(i.priceMinor, currency)} = ${formatMoney(i.quantity * i.priceMinor, currency)}`
       ),
       "",
       "=================================",
-      `TOTAL: ${formatMoney(total, currency)}`,
+      `TOTAL: ${formatMoney(saleTotalMinor, currency)}`,
       "=================================",
       "",
       "Thank you for your business!",
@@ -63,15 +75,15 @@ export default function SuccessPrintScreenV2() {
       action: "SALE_COMPLETED",
       paymentMode,
       billNumber,
-      total,
-      itemCount: items.length
+      total: saleTotalMinor,
+      itemCount: saleItems.length
     });
 
     void logPaymentEvent("PAYMENT_SUCCESS", {
       transactionId,
       billId: billNumber,
       paymentMode,
-      amountMinor: total,
+      amountMinor: saleTotalMinor,
       currency
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +103,9 @@ export default function SuccessPrintScreenV2() {
   };
 
   const handleSkip = () => {
-    clearCart(true);
+    if (!isPartialSale) {
+      clearCart(true);
+    }
     unlockCart();
     navigation.navigate("SellScan");
   };
@@ -160,4 +174,3 @@ const styles = StyleSheet.create({
   btnText: { color: theme.colors.textInverse, fontSize: 16, fontWeight: "800" },
   btnTextSecondary: { color: theme.colors.textPrimary }
 });
-
