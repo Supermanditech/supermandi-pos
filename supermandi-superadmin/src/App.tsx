@@ -137,6 +137,7 @@ export default function App() {
   const [storeAdminId, setStoreAdminId] = useState<string>("");
   const [storeRecord, setStoreRecord] = useState<StoreRecord | null>(null);
   const [storeUpiInput, setStoreUpiInput] = useState<string>("");
+  const storeUpiInputRef = useRef<HTMLInputElement | null>(null);
   const [storeLoading, setStoreLoading] = useState<boolean>(false);
   const [storeError, setStoreError] = useState<string>("");
   const [storeSuccess, setStoreSuccess] = useState<string>("");
@@ -751,7 +752,9 @@ export default function App() {
       setStoreError("Store ID is required.");
       return;
     }
-    const trimmedVpa = storeUpiInput.trim();
+    const rawVpa = storeUpiInputRef.current?.value ?? storeUpiInput;
+    const trimmedVpa = rawVpa.trim();
+    setStoreUpiInput(rawVpa);
     if (!trimmedVpa) {
       const ok = window.confirm("Clear UPI VPA and deactivate this store?");
       if (!ok) return;
@@ -1345,6 +1348,7 @@ export default function App() {
               <div className="control">
                 <label>UPI VPA</label>
                 <input
+                  ref={storeUpiInputRef}
                   value={storeUpiInput}
                   onChange={(e) => setStoreUpiInput(e.target.value)}
                   placeholder="merchant@upi"
@@ -2022,5 +2026,4 @@ export default function App() {
     </div>
   );
 }
-
 
