@@ -525,7 +525,6 @@ function CartItemRow({
     </Animated.View>
   );
 }
-}
 
 export default function SellScanScreen({
   storeActive,
