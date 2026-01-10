@@ -8,6 +8,7 @@ import {
   PanResponder,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +19,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useCartStore } from "../stores/cartStore";
 import type { CartItem } from "../stores/cartStore";
@@ -144,6 +146,12 @@ const parsePriceInput = (text: string): number | null => {
   return Math.round(value * 100);
 };
 
+const parseQuantityInput = (text: string): number => {
+  const value = Math.round(Number(text));
+  if (!Number.isFinite(value) || value <= 0) return 1;
+  return value;
+};
+
 const formatPriceInput = (minor: number | null): string => {
   if (!minor || minor <= 0) return "";
   return (minor / 100).toFixed(2);
@@ -161,6 +169,8 @@ type CartItemRowProps = {
   canEdit: boolean;
   autoFocusPrice?: boolean;
   stockLimitPulse?: number;
+  rowTestId?: string;
+  onPressRow?: () => void;
   onAutoFocusConsumed?: (itemId: string) => void;
   onUpdateQuantity: (itemId: string, quantity: number) => void;
   onUpdatePrice: (itemId: string, priceMinor: number) => void;
@@ -176,6 +186,8 @@ function CartItemRow({
   canEdit,
   autoFocusPrice = false,
   stockLimitPulse = 0,
+  rowTestId,
+  onPressRow,
   onAutoFocusConsumed,
   onUpdateQuantity,
   onUpdatePrice,
@@ -380,15 +392,42 @@ function CartItemRow({
     ],
   };
 
-  return (
-    <Animated.View style={[styles.cartItemRow, isCompactRow && styles.cartItemRowCompact, rowStyle]}>
+  const rowMinWidth = screenWidth;
+  const enableRowPress = mode === "SELL" && typeof onPressRow === "function";
+
+  const handleQtyDecrease = (event?: any) => {
+    event?.stopPropagation?.();
+    onUpdateQuantity(item.id, item.quantity - 1);
+  };
+
+  const handleQtyIncrease = (event?: any) => {
+    event?.stopPropagation?.();
+    handleIncrement();
+  };
+
+  const handleRemove = (event?: any) => {
+    event?.stopPropagation?.();
+    onRemoveItem(item.id);
+  };
+
+  const rowBody = (
+    <Pressable
+      style={[
+        styles.cartItemRowContent,
+        isCompactRow && styles.cartItemRowContentCompact,
+        { minWidth: rowMinWidth }
+      ]}
+      onPress={enableRowPress ? onPressRow : undefined}
+      disabled={!enableRowPress}
+      testID={rowTestId}
+    >
       <View style={[styles.cartItemInfo, isCompactRow && styles.cartItemInfoCompact]}>
         <Text style={styles.cartItemName} numberOfLines={1} ellipsizeMode="tail">
           {item.name}
         </Text>
         <View style={[styles.cartItemPriceRow, isCompactRow && styles.cartItemPriceRowCompact]}>
           <View style={styles.cartPriceField}>
-            <Text style={styles.cartPriceLabel}>Unit price (₹)</Text>
+            <Text style={styles.cartPriceLabel}>Unit price</Text>
             {showPriceInput ? (
               <TextInput
                 style={[
@@ -400,6 +439,7 @@ function CartItemRow({
                 value={priceInput}
                 onChangeText={handlePriceChange}
                 onEndEditing={handlePriceCommit}
+                onTouchStart={(event) => event?.stopPropagation?.()}
                 placeholder={pricePlaceholder}
                 placeholderTextColor={theme.colors.textTertiary}
                 keyboardType="decimal-pad"
@@ -423,7 +463,7 @@ function CartItemRow({
           >
             <Pressable
               style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
-              onPress={() => onUpdateQuantity(item.id, item.quantity - 1)}
+              onPress={handleQtyDecrease}
               disabled={controlsDisabled}
               accessibilityLabel={`Decrease ${item.name}`}
             >
@@ -434,7 +474,7 @@ function CartItemRow({
             </Animated.Text>
             <Pressable
               style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
-              onPress={handleIncrement}
+              onPress={handleQtyIncrease}
               disabled={controlsDisabled}
               accessibilityLabel={`Increase ${item.name}`}
             >
@@ -452,7 +492,7 @@ function CartItemRow({
           </Text>
           <Pressable
             style={[styles.removeItemButton, removeDisabled && styles.removeItemButtonDisabled]}
-            onPress={() => onRemoveItem(item.id)}
+            onPress={handleRemove}
             disabled={removeDisabled}
             accessibilityLabel={`Remove ${item.name}`}
           >
@@ -464,8 +504,27 @@ function CartItemRow({
           </Pressable>
         </View>
       </View>
+    </Pressable>
+  );
+
+  return (
+    <Animated.View style={[styles.cartItemRow, isCompactRow && styles.cartItemRowCompact, rowStyle]}>
+      {mode === "SELL" ? (
+        <ScrollView
+          horizontal
+          nestedScrollEnabled
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cartItemScrollContent}
+          style={styles.cartItemScroll}
+        >
+          {rowBody}
+        </ScrollView>
+      ) : (
+        rowBody
+      )}
     </Animated.View>
   );
+}
 }
 
 export default function SellScanScreen({
@@ -476,6 +535,7 @@ export default function SellScanScreen({
 }: SellScanScreenProps) {
   const navigation = useNavigation<Nav>();
   const { height: screenHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const products = useProductsStore((state) => state.products);
   const loadProducts = useProductsStore((state) => state.loadProducts);
   const {
@@ -491,6 +551,8 @@ export default function SellScanScreen({
     updateQuantity,
     updatePrice,
     removeItem,
+    applyItemDiscount,
+    removeItemDiscount,
     applyDiscount,
     removeDiscount,
   } = useCartStore();
@@ -557,6 +619,11 @@ export default function SellScanScreen({
   const [autoFocusItemId, setAutoFocusItemId] = useState<string | null>(null);
   const [stockLimitItemId, setStockLimitItemId] = useState<string | null>(null);
   const [stockLimitPulse, setStockLimitPulse] = useState(0);
+  const [editorItem, setEditorItem] = useState<CartItem | null>(null);
+  const [editorQty, setEditorQty] = useState("");
+  const [editorPrice, setEditorPrice] = useState("");
+  const [editorDiscountType, setEditorDiscountType] = useState<DiscountType>("percentage");
+  const [editorDiscountValue, setEditorDiscountValue] = useState("");
 
   const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -585,6 +652,7 @@ export default function SellScanScreen({
   const canPay = itemCount > 0 && storeActive !== false && !locked;
   const canOpenCart = itemCount > 0;
   const canEditCart = storeActive !== false && !locked;
+  const editorDisabled = !canEditCart;
   const parseDiscountInput = (value: string) => {
     const normalized = value.replace(/[^0-9.]/g, "");
     const parsed = Number(normalized);
@@ -595,6 +663,24 @@ export default function SellScanScreen({
     const major = minor / 100;
     return Number.isInteger(major) ? String(major) : major.toFixed(2);
   };
+
+  useEffect(() => {
+    if (!editorItem) return;
+    setEditorQty(String(editorItem.quantity));
+    setEditorPrice(formatPriceInput(editorItem.priceMinor));
+    if (editorItem.itemDiscount) {
+      const discountType = editorItem.itemDiscount.type === "fixed" ? "fixed" : "percentage";
+      const discountValue =
+        discountType === "fixed"
+          ? formatFixedDiscount(editorItem.itemDiscount.value)
+          : String(editorItem.itemDiscount.value);
+      setEditorDiscountType(discountType);
+      setEditorDiscountValue(discountValue);
+    } else {
+      setEditorDiscountType("percentage");
+      setEditorDiscountValue("");
+    }
+  }, [editorItem]);
 
   const cartHint = locked
     ? "Cart locked"
@@ -1061,6 +1147,77 @@ export default function SellScanScreen({
     removeItem(itemId);
   };
 
+  const openEditor = useCallback(
+    (item: CartItem) => {
+      if (cartMode !== "SELL") return;
+      if (!canEditCart) return;
+      setEditorItem(item);
+    },
+    [canEditCart, cartMode]
+  );
+
+  const closeEditor = useCallback(() => {
+    setEditorItem(null);
+  }, []);
+
+  const handleEditorRemove = useCallback(() => {
+    if (!editorItem) return;
+    removeItem(editorItem.id);
+    closeEditor();
+  }, [closeEditor, editorItem, removeItem]);
+
+  const handleEditorSave = useCallback(() => {
+    if (!editorItem) return;
+    const nextQty = parseQuantityInput(editorQty);
+    updateQuantity(editorItem.id, nextQty);
+
+    const parsedPrice = parsePriceInput(editorPrice);
+    if (parsedPrice !== null && parsedPrice > 0) {
+      updatePrice(editorItem.id, parsedPrice);
+      void handleSaveDefaultPrice(editorItem, parsedPrice);
+    }
+
+    const parsedDiscount = parseDiscountInput(editorDiscountValue);
+    if (parsedDiscount <= 0) {
+      removeItemDiscount(editorItem.id);
+    } else {
+      const value = editorDiscountType === "fixed" ? Math.round(parsedDiscount * 100) : parsedDiscount;
+      applyItemDiscount(editorItem.id, { type: editorDiscountType, value });
+    }
+
+    closeEditor();
+  }, [
+    applyItemDiscount,
+    closeEditor,
+    editorDiscountType,
+    editorDiscountValue,
+    editorItem,
+    editorPrice,
+    editorQty,
+    handleSaveDefaultPrice,
+    removeItemDiscount,
+    updatePrice,
+    updateQuantity
+  ]);
+
+  const editorTotalLabel = useMemo(() => {
+    if (!editorItem) return "";
+    const qty = parseQuantityInput(editorQty);
+    const priceMinor = parsePriceInput(editorPrice) ?? editorItem.priceMinor ?? 0;
+    const lineSubtotal = priceMinor * qty;
+    const parsedDiscount = parseDiscountInput(editorDiscountValue);
+    let discountMinor = 0;
+    if (parsedDiscount > 0) {
+      if (editorDiscountType === "fixed") {
+        discountMinor = Math.min(Math.round(parsedDiscount * 100), lineSubtotal);
+      } else {
+        discountMinor = Math.min(Math.round(lineSubtotal * (parsedDiscount / 100)), lineSubtotal);
+      }
+    }
+    const lineTotal = Math.max(0, lineSubtotal - discountMinor);
+    return formatMoney(lineTotal, editorItem.currency ?? "INR");
+  }, [editorDiscountType, editorDiscountValue, editorItem, editorPrice, editorQty]);
+
   const scheduleDiscountApply = useCallback(
     (value: string, type: DiscountType) => {
       if (!canEditCart) return;
@@ -1203,22 +1360,28 @@ export default function SellScanScreen({
     );
   };
 
-  const renderCartItem = ({ item }: { item: CartItem }) => (
-    <CartItemRow
-      item={item}
-      currency={item.currency ?? currency}
-      mode={cartMode}
-      availableStock={resolveAvailableStock(item)}
-      canEdit={canEditCart}
-      autoFocusPrice={item.id === autoFocusItemId}
-      stockLimitPulse={stockLimitItemId === item.id ? stockLimitPulse : 0}
-      onAutoFocusConsumed={handleAutoFocusConsumed}
-      onUpdateQuantity={updateQuantity}
-      onUpdatePrice={updatePrice}
-      onSaveDefaultPrice={handleSaveDefaultPrice}
-      onRemoveItem={handleRemoveItem}
-    />
-  );
+  const renderCartItem = ({ item }: { item: CartItem }) => {
+    const rowKey = (item.sku ?? item.barcode ?? item.id).replace(/\s+/g, "-");
+    const rowTestId = cartMode === "SELL" ? `sell-lineitem-row-${rowKey}` : undefined;
+    return (
+      <CartItemRow
+        item={item}
+        currency={item.currency ?? currency}
+        mode={cartMode}
+        availableStock={resolveAvailableStock(item)}
+        canEdit={canEditCart}
+        autoFocusPrice={item.id === autoFocusItemId}
+        stockLimitPulse={stockLimitItemId === item.id ? stockLimitPulse : 0}
+        rowTestId={rowTestId}
+        onPressRow={cartMode === "SELL" ? () => openEditor(item) : undefined}
+        onAutoFocusConsumed={handleAutoFocusConsumed}
+        onUpdateQuantity={updateQuantity}
+        onUpdatePrice={updatePrice}
+        onSaveDefaultPrice={handleSaveDefaultPrice}
+        onRemoveItem={handleRemoveItem}
+      />
+    );
+  };
   const renderSearchBar = (variant: "collapsed" | "expanded") => (
     <View
       style={[
@@ -1484,6 +1647,7 @@ export default function SellScanScreen({
               renderItem={renderCartItem}
               style={styles.cartList}
               contentContainerStyle={styles.cartListContent}
+              nestedScrollEnabled
               ListFooterComponent={
                 items.length ? <View style={styles.cartListFooterSpacer} /> : null
               }
@@ -1591,6 +1755,138 @@ export default function SellScanScreen({
               <Text style={styles.totalCtaAmount}>{totalLabel}</Text>
             </Pressable>
           </Animated.View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(editorItem)}
+        transparent
+        animationType="slide"
+        onRequestClose={closeEditor}
+      >
+        <View style={styles.editOverlay}>
+          <Pressable style={styles.editOverlayTap} onPress={closeEditor} />
+          <View
+            style={[styles.editSheet, { paddingBottom: 16 + insets.bottom }]}
+            testID="sell-lineitem-editor"
+          >
+            <View style={styles.editHandle} />
+            <Text style={styles.editTitle}>Edit line item</Text>
+            {editorItem ? (
+              <View style={styles.editContent}>
+                <Text style={styles.editName} numberOfLines={2}>
+                  {editorItem.name}
+                </Text>
+                {editorItem.barcode ? (
+                  <Text style={styles.editBarcode} numberOfLines={1}>
+                    {editorItem.barcode}
+                  </Text>
+                ) : null}
+                <View style={styles.editFields}>
+                  <View style={styles.editField}>
+                    <Text style={styles.editLabel}>Qty</Text>
+                    <TextInput
+                      style={styles.editInput}
+                      value={editorQty}
+                      onChangeText={setEditorQty}
+                      keyboardType="number-pad"
+                      editable={!editorDisabled}
+                    />
+                  </View>
+                  <View style={styles.editField}>
+                    <Text style={styles.editLabel}>Unit price</Text>
+                    <TextInput
+                      style={styles.editInput}
+                      value={editorPrice}
+                      onChangeText={setEditorPrice}
+                      keyboardType="decimal-pad"
+                      editable={!editorDisabled}
+                    />
+                  </View>
+                  <View style={styles.editField}>
+                    <Text style={styles.editLabel}>Discount</Text>
+                    <View style={styles.editDiscountRow}>
+                      <View style={styles.editDiscountToggle}>
+                        <Pressable
+                          style={[
+                            styles.editDiscountChip,
+                            editorDiscountType === "percentage" && styles.editDiscountChipActive
+                          ]}
+                          onPress={() => setEditorDiscountType("percentage")}
+                          disabled={editorDisabled}
+                        >
+                          <Text
+                            style={[
+                              styles.editDiscountChipText,
+                              editorDiscountType === "percentage" && styles.editDiscountChipTextActive
+                            ]}
+                          >
+                            % Discount
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          style={[
+                            styles.editDiscountChip,
+                            editorDiscountType === "fixed" && styles.editDiscountChipActive
+                          ]}
+                          onPress={() => setEditorDiscountType("fixed")}
+                          disabled={editorDisabled}
+                        >
+                          <Text
+                            style={[
+                              styles.editDiscountChipText,
+                              editorDiscountType === "fixed" && styles.editDiscountChipTextActive
+                            ]}
+                          >
+                            Flat Discount
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <TextInput
+                        style={styles.editInput}
+                        value={editorDiscountValue}
+                        onChangeText={setEditorDiscountValue}
+                        placeholder={editorDiscountType === "percentage" ? "Enter %" : "Enter amount (INR)"}
+                        placeholderTextColor={theme.colors.textTertiary}
+                        keyboardType="decimal-pad"
+                        editable={!editorDisabled}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.editTotalRow}>
+                  <Text style={styles.editTotalLabel}>Line total</Text>
+                  <Text style={styles.editTotalValue}>{editorTotalLabel || "--"}</Text>
+                </View>
+
+                <View style={styles.editActions}>
+                  <Pressable
+                    style={[styles.editButton, styles.editButtonGhost]}
+                    onPress={closeEditor}
+                    disabled={editorDisabled}
+                  >
+                    <Text style={styles.editButtonText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.editButton, styles.editButtonPrimary, editorDisabled && styles.editButtonDisabled]}
+                    onPress={handleEditorSave}
+                    disabled={editorDisabled}
+                  >
+                    <Text style={styles.editButtonTextInverse}>Save</Text>
+                  </Pressable>
+                </View>
+                <Pressable
+                  style={[styles.editRemoveButton, editorDisabled && styles.editRemoveButtonDisabled]}
+                  onPress={handleEditorRemove}
+                  disabled={editorDisabled}
+                  testID="sell-lineitem-remove"
+                >
+                  <Text style={styles.editRemoveText}>Remove item</Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
         </View>
       </Modal>
     </View>
@@ -1800,13 +2096,24 @@ const styles = StyleSheet.create({
     height: CART_LIST_FOOTER_SPACER,
   },
   cartItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   cartItemRowCompact: {
+    paddingVertical: 10,
+  },
+  cartItemScroll: {
+    width: "100%",
+  },
+  cartItemScrollContent: {
+    flexGrow: 1,
+  },
+  cartItemRowContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  cartItemRowContentCompact: {
     flexDirection: "column",
     alignItems: "stretch",
     gap: 8,
@@ -2208,6 +2515,157 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.primary,
+  },
+  editOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    justifyContent: "flex-end",
+  },
+  editOverlayTap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  editSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 12,
+    ...theme.shadows.sm,
+  },
+  editHandle: {
+    alignSelf: "center",
+    width: 46,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: theme.colors.border,
+    marginBottom: 6,
+  },
+  editTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  editContent: {
+    gap: 12,
+  },
+  editName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  editBarcode: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+  },
+  editFields: {
+    gap: 10,
+  },
+  editField: {
+    gap: 6,
+  },
+  editLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  editDiscountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  editDiscountToggle: {
+    flexDirection: "row",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    backgroundColor: theme.colors.surface,
+  },
+  editDiscountChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  editDiscountChipActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  editDiscountChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  editDiscountChipTextActive: {
+    color: theme.colors.textInverse,
+  },
+  editTotalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  editTotalLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  editTotalValue: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: theme.colors.primaryDark,
+    fontVariant: ["tabular-nums"],
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  editButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  editButtonPrimary: {
+    backgroundColor: theme.colors.primary,
+  },
+  editButtonGhost: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  editButtonDisabled: {
+    opacity: 0.6,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  editButtonTextInverse: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
+  },
+  editRemoveButton: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  editRemoveButtonDisabled: {
+    opacity: 0.6,
+  },
+  editRemoveText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.error,
   },
   ctaDisabled: {
     opacity: 0.5,

@@ -43,6 +43,7 @@ import { onBarcodeScanned, setScanRuntime, type ScanNotice } from "../services/s
 import { getLastPosMode, setLastPosMode } from "../services/posMode";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/stockCache";
+import { useSettingsStore } from "../stores/settingsStore";
 import { theme } from "../theme";
 
 type RootStackParamList = {
@@ -85,8 +86,7 @@ export default function PosRootLayout() {
   const tabIndicatorX = useRef(new Animated.Value(0)).current;
   const tabIndicatorWidth = useRef(new Animated.Value(0)).current;
   const tabIndicatorReadyRef = useRef(false);
-  // TODO: Replace with settings store flag when reorder automation is wired.
-  const [reorderEnabled] = useState(false);
+  const reorderEnabled = useSettingsStore((state) => state.reorderEnabled);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const reorderPulse = useRef(new Animated.Value(0)).current;
   const reorderPulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -125,8 +125,8 @@ export default function PosRootLayout() {
   const isMobileDevice = !isDedicatedPosDevice;
   const showCameraTimeoutNote = !isMobileDevice && !hidConnected;
   const compactTabs = screenWidth <= 360;
-  const reorderLabel = "REORDER";
-  const reorderStatusLabel = reorderEnabled ? "On" : "Off";
+  const reorderLabel = reorderEnabled ? "REORDER • ON" : "REORDER • OFF";
+  const reorderStatusLabel = reorderEnabled ? "ON" : "OFF";
   const showMenuText = !compactTabs;
   const reorderTabColor = reorderEnabled ? theme.colors.success : theme.colors.error;
   const reorderTextColor = theme.colors.textInverse;
