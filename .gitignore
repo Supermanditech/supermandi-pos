@@ -80,3 +80,6 @@ POS DEVELOPER TICKET.pdf
 android/
 
 
+
+# React Native devsupport cache artifact
+com.facebook.react.devsupport.BundleDownloader
