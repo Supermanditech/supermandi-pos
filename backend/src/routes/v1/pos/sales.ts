@@ -11,6 +11,11 @@ import {
   normalizeUnit,
   type BaseUnit
 } from "../../../services/inventoryService";
+import {
+  recordSaleInventoryMovements,
+  ensureStoreInventoryAvailability,
+  InsufficientStockError
+} from "../../../services/inventoryLedgerService";
 
 export const posSalesRouter = Router();
 
@@ -539,6 +544,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       priceMinor: number;
       name?: string;
       barcode?: string;
+      globalProductId?: string;
     }> = [];
 
     for (const item of cleanedItems) {
@@ -576,9 +582,21 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
         quantity: item.quantity,
         priceMinor: item.priceMinor,
         name: item.name,
-        barcode: item.barcode
+        barcode: item.barcode,
+        globalProductId: item.globalProductId
       });
     }
+
+    await ensureStoreInventoryAvailability({
+      client,
+      storeId,
+      items: resolvedItems.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        globalProductId: item.globalProductId,
+        name: item.name ?? null
+      }))
+    });
 
     await ensureSaleAvailability({
       client,
@@ -681,6 +699,19 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       );
     }
 
+    await recordSaleInventoryMovements({
+      client,
+      storeId,
+      saleId,
+      items: resolvedItems.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        unitSellMinor: item.priceMinor,
+        name: item.name ?? null,
+        globalProductId: item.globalProductId ?? null
+      }))
+    });
+
     await applyBulkDeductions({
       client,
       storeId,
@@ -690,8 +721,22 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
+    if (error instanceof InsufficientStockError) {
+      const message =
+        error.details.length === 1
+          ? error.details[0].message
+          : "Stock changed.";
+      return res.status(409).json({
+        error: "insufficient_stock",
+        message,
+        details: error.details
+      });
+    }
     if (error instanceof Error && error.message === "insufficient_stock") {
-      return res.status(409).json({ error: "insufficient_stock" });
+      return res.status(409).json({
+        error: "insufficient_stock",
+        message: "Stock changed."
+      });
     }
     if (error instanceof Error && error.message === "product_not_found") {
       return res.status(404).json({ error: "product_not_found" });

@@ -3,9 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { eventLogger } from '../services/eventLogger';
 import { logPosEvent } from "../services/cloudEventLogger";
 import { storeScopedStorage } from "../services/storeScope";
-import { useProductsStore } from "./productsStore";
 import { capAddQuantity, capRequestedQuantity } from "../services/stockCap";
-import { getCachedStock } from "../services/stockCache";
+import { resolveStockForCartItem } from "../services/stockService";
 
 export interface CartItem {
   id: string;
@@ -162,33 +161,7 @@ const mergeMetadata = (
 };
 
 const resolveItemAvailableStock = (item: CartItem): number | null => {
-  const meta = item.metadata ?? {};
-  const metaValue =
-    typeof meta.availableQty === "number"
-      ? meta.availableQty
-      : typeof meta.available_qty === "number"
-        ? meta.available_qty
-        : null;
-  if (metaValue !== null && Number.isFinite(metaValue)) {
-    return Math.max(0, Math.floor(metaValue));
-  }
-
-  if (item.barcode) {
-    const product = useProductsStore.getState().getProductByBarcode(item.barcode);
-    const stock = product?.stock;
-    if (typeof stock === "number" && Number.isFinite(stock)) {
-      return Math.max(0, Math.floor(stock));
-    }
-  }
-
-  if (item.barcode) {
-    const cached = getCachedStock(item.barcode);
-    if (cached !== null) return cached;
-  }
-  const cachedById = getCachedStock(item.id);
-  if (cachedById !== null) return cachedById;
-
-  return null;
+  return resolveStockForCartItem({ id: item.id, barcode: item.barcode ?? null });
 };
 
 const buildStockLimitEvent = (

@@ -21,6 +21,7 @@ import { onBarcodeScanned } from "../services/scan/handleScan";
 import { offlineDb } from "../services/offline/localDb";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { submitPurchaseDraft } from "../services/purchaseDraft";
+import { refreshStockSnapshot } from "../services/stockService";
 import { usePurchaseDraftStore, type PurchaseDraftItem } from "../stores/purchaseDraftStore";
 import {
   feedHidKey,
@@ -730,6 +731,7 @@ export default function PurchaseScreen({ storeActive, scanDisabled, onOpenScanne
   const handleSubmit = async () => {
     try {
       const result = await submitPurchaseDraft();
+      void refreshStockSnapshot();
       Alert.alert("Purchase submitted", `Purchase ID ${result.purchaseId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "purchase_failed";

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { eventLogger } from '../services/eventLogger';
 import * as productsApi from '../services/api/productsApi';
 import { storeScopedStorage } from "../services/storeScope";
-import { updateStockCacheEntries } from "../services/stockCache";
+import { upsertStockFromProducts } from "../services/stockService";
 
 const PRODUCTS_CACHE_KEY = 'supermandi.cache.products.v1';
 
@@ -52,15 +52,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       });
 
       await storeScopedStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(productsData));
-      updateStockCacheEntries(
-        productsData.flatMap((product) => {
-          const entries = [{ key: product.id, stock: product.stock ?? 0 }];
-          if (product.barcode) {
-            entries.push({ key: product.barcode, stock: product.stock ?? 0 });
-          }
-          return entries;
-        })
-      );
+      upsertStockFromProducts(productsData);
 
       set({
         products: productsData,
@@ -80,15 +72,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
         try {
           const productsData = JSON.parse(cached) as Product[];
           set({ products: productsData, loading: false, error: null });
-          updateStockCacheEntries(
-            productsData.flatMap((product) => {
-              const entries = [{ key: product.id, stock: product.stock ?? 0 }];
-              if (product.barcode) {
-                entries.push({ key: product.barcode, stock: product.stock ?? 0 });
-              }
-              return entries;
-            })
-          );
+          upsertStockFromProducts(productsData);
           await eventLogger.log('PRODUCTS_LOADED', {
             count: productsData.length,
             source: 'cache'
@@ -102,15 +86,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       // 3) Final fallback to bundled sample data
       const productsData = await loadProductsFromData();
       set({ products: productsData, loading: false, error: null });
-      updateStockCacheEntries(
-        productsData.flatMap((product) => {
-          const entries = [{ key: product.id, stock: product.stock ?? 0 }];
-          if (product.barcode) {
-            entries.push({ key: product.barcode, stock: product.stock ?? 0 });
-          }
-          return entries;
-        })
-      );
+      upsertStockFromProducts(productsData);
 
       const errorMessage = error instanceof Error ? error.message : 'Failed to load products';
       set({

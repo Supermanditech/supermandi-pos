@@ -54,6 +54,29 @@ type PaymentScreenNavigationProp = NativeStackNavigationProp<RootStackParamList,
 type PaymentScreenRouteProp = RouteProp<RootStackParamList, "Payment">;
 type PaymentMode = "UPI" | "CASH" | "DUE";
 
+const resolveStockErrorMessage = (error: ApiError): string | null => {
+  const payload = error.payload;
+  if (!payload || typeof payload !== "object") return null;
+  const data = payload as { message?: unknown; details?: unknown };
+  const details = Array.isArray(data.details) ? data.details : null;
+  if (details) {
+    const messages = details
+      .map((entry) =>
+        entry && typeof entry === "object" && "message" in entry && typeof (entry as any).message === "string"
+          ? (entry as any).message.trim()
+          : ""
+      )
+      .filter(Boolean);
+    if (messages.length > 0) {
+      return messages.join("\n");
+    }
+  }
+  if (typeof data.message === "string" && data.message.trim()) {
+    return data.message.trim();
+  }
+  return null;
+};
+
 const calculateDiscountAmount = (
   baseAmount: number,
   discount: CartDiscount | ItemDiscount | null
@@ -495,6 +518,11 @@ const PaymentScreen = () => {
           Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
             { text: "OK", onPress: () => navigation.navigate("SellScan") }
           ]);
+          return;
+        }
+        if (error.message === "insufficient_stock") {
+          const message = resolveStockErrorMessage(error) ?? "Stock changed. Please review the cart.";
+          Alert.alert("Stock changed", message);
           return;
         }
       }

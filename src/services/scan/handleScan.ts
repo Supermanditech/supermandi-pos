@@ -3,6 +3,7 @@ import { ApiError } from "../api/apiClient";
 import {
   createStoreProductFromScan,
   lookupStoreProductByScan,
+  lookupStoreProductPreviewByScan,
   type StoreLookupProduct
 } from "../api/productsApi";
 import { lookupProductByBarcode, resolveScan, type ScanProduct } from "../api/scanApi";
@@ -11,7 +12,7 @@ import { resolveOfflineScan, setLocalPrice, upsertLocalProduct } from "../offlin
 import { useCartStore } from "../../stores/cartStore";
 import { usePurchaseDraftStore } from "../../stores/purchaseDraftStore";
 import { POS_MESSAGES } from "../../utils/uiStatus";
-import { updateStockCacheEntries } from "../stockCache";
+import { upsertStockEntries } from "../stockService";
 
 type ScanIntent = "SELL" | "PURCHASE";
 type ScanMode = "SELL" | "DIGITISE";
@@ -21,12 +22,20 @@ export type ScanNotice = {
   message: string;
 };
 
+export type SellFirstOnboardingRequest = {
+  barcode: string;
+  format?: string;
+  product: StoreLookupProduct;
+};
+
 type ScanRuntime = {
   intent: ScanIntent;
   mode: ScanMode;
   storeActive?: boolean | null;
   scanLookupV2Enabled?: boolean;
   onNotice?: (notice: ScanNotice | null) => void;
+  onSellFirstOnboarding?: (request: SellFirstOnboardingRequest) => void;
+  sellFirstOnboardingActive?: boolean;
   onDeviceAuthError?: (error: ApiError) => Promise<boolean> | boolean;
   onStoreInactive?: () => void;
 };
@@ -47,6 +56,15 @@ const warnedNewItems = new Set<string>();
 let purchaseConfirmActive = false;
 
 type CartScanProduct = ScanProduct & { metadata?: Record<string, any> };
+
+export function needsSellFirstOnboarding(product: StoreLookupProduct | null): boolean {
+  if (!product) return true;
+  const availableRaw = typeof product.available_qty === "number" ? product.available_qty : 0;
+  const hasStock = Number.isFinite(availableRaw) && availableRaw > 0;
+  const purchasePrice = typeof product.purchase_price === "number" ? product.purchase_price : 0;
+  const hasReceiveHistory = Number.isFinite(purchasePrice) && purchasePrice > 0;
+  return Boolean(product.is_first_time_in_store) || (!hasStock && !hasReceiveHistory);
+}
 
 export function setScanRuntime(next: Partial<ScanRuntime>): void {
   runtime = { ...runtime, ...next };
@@ -148,25 +166,6 @@ function resolveDisplayName(product: StoreLookupProduct): string {
   return product.global_name?.trim() || "";
 }
 
-async function ensureSharedStoreProduct(params: {
-  barcode: string;
-  format?: string;
-  name?: string;
-}): Promise<void> {
-  if (!(await isOnline())) return;
-  const fallbackName = params.name?.trim() || buildFallbackName(params.barcode);
-  try {
-    await createStoreProductFromScan({
-      scanned: params.barcode,
-      format: params.format,
-      globalName: fallbackName,
-      storeDisplayName: fallbackName
-    });
-  } catch {
-    // Best-effort: avoid blocking scans if creation fails or already exists.
-  }
-}
-
 function confirmPurchaseAdd(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
@@ -216,6 +215,7 @@ async function handleScan(
 ): Promise<void> {
   const trimmed = barcode.trim();
   if (!trimmed) return;
+  if (runtime.sellFirstOnboardingActive) return;
 
   const intent = intentOverride ?? runtime.intent;
   const mode = runtime.mode;
@@ -237,20 +237,30 @@ async function handleScan(
   try {
     if (intent === "SELL" && mode === "SELL" && useScanLookupV2) {
       if (await isOnline()) {
-        let storeProduct = await lookupStoreProductByScan({ scanned: trimmed, format });
+        const fallbackName = buildFallbackName(trimmed);
+        let storeProduct = await lookupStoreProductPreviewByScan({ scanned: trimmed, format });
         if (!storeProduct) {
-          const fallbackName = buildFallbackName(trimmed);
-          storeProduct = await createStoreProductFromScan({
-            scanned: trimmed,
-            format,
-            globalName: fallbackName,
-            storeDisplayName: fallbackName
-          });
+          storeProduct = {
+            global_product_id: trimmed,
+            global_name: fallbackName,
+            store_display_name: fallbackName,
+            sell_price: null,
+            purchase_price: null,
+            unit: null,
+            variant: null,
+            available_qty: 0,
+            is_first_time_in_store: true
+          };
+        }
+
+        if (needsSellFirstOnboarding(storeProduct)) {
+          runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
+          return;
         }
 
         const displayName = resolveDisplayName(storeProduct) || trimmed;
         const priceMinor = storeProduct.sell_price ?? 0;
-        updateStockCacheEntries([
+        upsertStockEntries([
           { key: storeProduct.global_product_id, stock: storeProduct.available_qty },
           { key: trimmed, stock: storeProduct.available_qty }
         ]);
@@ -295,9 +305,24 @@ async function handleScan(
         return;
       }
 
-      if (offline.action === "ADD_TO_CART" || offline.action === "PROMPT_PRICE") {
+      if (offline.action === "PROMPT_PRICE") {
+        const offlineProduct: StoreLookupProduct = {
+          global_product_id: trimmed,
+          global_name: offline.product.name,
+          store_display_name: offline.product.name,
+          sell_price: offline.product.priceMinor ?? null,
+          purchase_price: null,
+          unit: null,
+          variant: null,
+          available_qty: 0,
+          is_first_time_in_store: offline.product_not_found_for_store === true
+        };
+        runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: offlineProduct });
+        return;
+      }
+
+      if (offline.action === "ADD_TO_CART") {
         const priceMinor = offline.product.priceMinor ?? 0;
-        const autoCreated = offline.action === "PROMPT_PRICE" || offline.product.priceMinor === null;
         addToSellCart(
           {
             id: offline.product.barcode,
@@ -306,8 +331,7 @@ async function handleScan(
             priceMinor: offline.product.priceMinor,
             currency: offline.product.currency ?? "INR"
           },
-          priceMinor,
-          autoCreated ? ["SELL_AUTO_CREATE"] : undefined
+          priceMinor
         );
 
         const warningKey = trimmed.toUpperCase();
@@ -333,7 +357,7 @@ async function handleScan(
         }
 
         const displayName = resolveDisplayName(storeProduct) || trimmed;
-        updateStockCacheEntries([
+        upsertStockEntries([
           { key: storeProduct.global_product_id, stock: storeProduct.available_qty },
           { key: trimmed, stock: storeProduct.available_qty }
         ]);
@@ -416,19 +440,30 @@ async function handleScan(
       return;
     }
 
-    if (result.action === "ADD_TO_CART" || result.action === "PROMPT_PRICE") {
+    if (result.action === "PROMPT_PRICE") {
+      const fallbackName = result.product.name?.trim() || buildFallbackName(trimmed);
+      runtime.onSellFirstOnboarding?.({
+        barcode: trimmed,
+        format,
+        product: {
+          global_product_id: trimmed,
+          global_name: fallbackName,
+          store_display_name: fallbackName,
+          sell_price: result.product.priceMinor ?? null,
+          purchase_price: null,
+          unit: null,
+          variant: null,
+          available_qty: 0,
+          is_first_time_in_store: result.product_not_found_for_store === true
+        }
+      });
+      return;
+    }
+
+    if (result.action === "ADD_TO_CART") {
       await cacheLocalProduct(result.product);
       const priceMinor = result.product.priceMinor ?? 0;
-      const autoCreated = result.action === "PROMPT_PRICE" || result.product.priceMinor === null;
-      addToSellCart(result.product, priceMinor, autoCreated ? ["SELL_AUTO_CREATE"] : undefined);
-
-      if (result.action === "PROMPT_PRICE" || result.product_not_found_for_store === true) {
-        void ensureSharedStoreProduct({
-          barcode: trimmed,
-          format,
-          name: result.product.name
-        });
-      }
+      addToSellCart(result.product, priceMinor);
 
       const warningKey = trimmed.toUpperCase();
       if (result.product_not_found_for_store === true && !warnedNewItems.has(warningKey)) {

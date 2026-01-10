@@ -39,10 +39,16 @@ import {
   setHidScanHandler,
   submitHidBuffer,
 } from "../services/hidScannerService";
-import { onBarcodeScanned, setScanRuntime, type ScanNotice } from "../services/scan/handleScan";
+import {
+  onBarcodeScanned,
+  setScanRuntime,
+  type ScanNotice,
+  type SellFirstOnboardingRequest
+} from "../services/scan/handleScan";
 import { getLastPosMode, setLastPosMode } from "../services/posMode";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/stockCache";
+import { refreshStockSnapshot } from "../services/stockService";
 import { useSettingsStore } from "../stores/settingsStore";
 import { theme } from "../theme";
 
@@ -100,6 +106,8 @@ export default function PosRootLayout() {
   const [printerOk, setPrinterOk] = useState<boolean | null>(null);
   const [scannerOk, setScannerOk] = useState<boolean>(false);
   const [scanLookupV2Enabled, setScanLookupV2Enabled] = useState(false);
+  const [sellOnboardingRequest, setSellOnboardingRequest] =
+    useState<SellFirstOnboardingRequest | null>(null);
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanLocked, setCameraScanLocked] = useState(false);
@@ -107,7 +115,8 @@ export default function PosRootLayout() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { width: screenWidth } = useWindowDimensions();
 
-  const scanDisabled = !isFocused || storeActive === false || scannerOpen;
+  const sellOnboardingActive = sellOnboardingRequest !== null && selectedMode === "SELL";
+  const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive;
   const cartMode = selectedMode === "PURCHASE" ? "PURCHASE" : "SELL";
   const statusMode = "SELL";
   const hidConnected = scannerOk;
@@ -269,10 +278,15 @@ export default function PosRootLayout() {
       storeActive,
       scanLookupV2Enabled,
       onNotice: setScanNotice,
+      onSellFirstOnboarding: (request) => {
+        if (selectedMode !== "SELL") return;
+        setSellOnboardingRequest((current) => current ?? request);
+      },
+      sellFirstOnboardingActive: sellOnboardingActive,
       onDeviceAuthError: handleDeviceAuthError,
       onStoreInactive: () => setStoreActive(false),
     });
-  }, [handleDeviceAuthError, scanLookupV2Enabled, selectedMode, storeActive]);
+  }, [handleDeviceAuthError, scanLookupV2Enabled, selectedMode, sellOnboardingActive, storeActive]);
 
   useEffect(() => {
     let cancelled = false;
@@ -415,6 +429,11 @@ export default function PosRootLayout() {
     setStockCacheStoreId(deviceStoreId);
     void hydrateStockCacheForStore(deviceStoreId);
   }, [deviceStoreId]);
+
+  useEffect(() => {
+    if (selectedMode !== "SELL") return;
+    void refreshStockSnapshot();
+  }, [deviceStoreId, selectedMode]);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -583,6 +602,10 @@ export default function PosRootLayout() {
     if (scanDisabled) return;
     feedHidKey(event.nativeEvent.key);
   };
+
+  const closeSellOnboarding = useCallback(() => {
+    setSellOnboardingRequest(null);
+  }, []);
 
   const handleOpenCamera = async () => {
     if (!isFocused || scannerOpen) return;
@@ -766,6 +789,8 @@ export default function PosRootLayout() {
             scanDisabled={scanDisabled}
             onOpenScanner={handleOpenCamera}
             cartMode={cartMode}
+            sellOnboardingRequest={sellOnboardingRequest}
+            onSellOnboardingClose={closeSellOnboarding}
           />
         ) : null}
         {selectedMode === "PURCHASE" ? (

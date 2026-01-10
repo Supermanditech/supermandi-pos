@@ -10,6 +10,7 @@ import {
   isSupermandiBarcode,
   type BaseUnit
 } from "./inventoryService";
+import { applyInventoryMovement, ensureGlobalProductEntry } from "./inventoryLedgerService";
 import { normalizeScan } from "./scanNormalization";
 
 export type PurchaseItemInput = {
@@ -322,32 +323,31 @@ async function resolvePurchaseItem(params: {
 async function applyStorePurchaseUpdates(params: {
   client: PoolClient;
   storeId: string;
+  purchaseId: string;
   items: ResolvedItem[];
 }): Promise<void> {
   const { client, storeId, items } = params;
-  const quantityByGlobal = new Map<string, number>();
   const purchasePriceByGlobal = new Map<string, number>();
 
   for (const item of items) {
-    if (!item.globalProductId) continue;
-    const key = item.globalProductId;
-    quantityByGlobal.set(key, (quantityByGlobal.get(key) ?? 0) + item.quantity);
-    purchasePriceByGlobal.set(key, item.unitCostMinor);
-  }
-
-  for (const [globalProductId, delta] of quantityByGlobal.entries()) {
-    const safeDelta = Math.round(delta);
-    if (!Number.isFinite(safeDelta) || safeDelta === 0) continue;
-    await client.query(
-      `
-      INSERT INTO store_inventory (store_id, global_product_id, available_qty)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (store_id, global_product_id) DO UPDATE
-      SET available_qty = store_inventory.available_qty + EXCLUDED.available_qty,
-          updated_at = NOW()
-      `,
-      [storeId, globalProductId, safeDelta]
-    );
+    const ledgerProductId = item.globalProductId ?? item.productId;
+    if (!ledgerProductId) continue;
+    await ensureGlobalProductEntry({
+      client,
+      globalProductId: ledgerProductId,
+      globalName: item.productName
+    });
+    await applyInventoryMovement({
+      client,
+      storeId,
+      globalProductId: ledgerProductId,
+      movementType: "RECEIVE",
+      quantity: item.quantity,
+      unitCostMinor: item.unitCostMinor,
+      referenceType: "PURCHASE",
+      referenceId: params.purchaseId
+    });
+    purchasePriceByGlobal.set(ledgerProductId, item.unitCostMinor);
   }
 
   for (const [globalProductId, priceMinor] of purchasePriceByGlobal.entries()) {
@@ -464,7 +464,7 @@ export async function createPurchase(params: {
     }
   }
 
-  await applyStorePurchaseUpdates({ client, storeId, items: resolvedItems });
+  await applyStorePurchaseUpdates({ client, storeId, purchaseId, items: resolvedItems });
 
   return { purchaseId, totalMinor, currency };
 }

@@ -28,7 +28,14 @@ import { formatMoney } from "../utils/money";
 import * as productsApi from "../services/api/productsApi";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { offlineDb } from "../services/offline/localDb";
-import { onBarcodeScanned } from "../services/scan/handleScan";
+import { onBarcodeScanned, type SellFirstOnboardingRequest } from "../services/scan/handleScan";
+import { submitSellFirstOnboarding } from "../services/scan/sellFirstOnboarding";
+import {
+  refreshStockSnapshot,
+  resolveStockForCartItem,
+  resolveStockForSku,
+  subscribeStockUpdates
+} from "../services/stockService";
 import {
   feedHidKey,
   feedHidText,
@@ -44,6 +51,8 @@ type SellScanScreenProps = {
   scanDisabled: boolean;
   onOpenScanner: () => void;
   cartMode?: CartMode;
+  sellOnboardingRequest?: SellFirstOnboardingRequest | null;
+  onSellOnboardingClose?: () => void;
 };
 
 type RootStackParamList = {
@@ -531,6 +540,8 @@ export default function SellScanScreen({
   scanDisabled,
   onOpenScanner,
   cartMode = "SELL",
+  sellOnboardingRequest = null,
+  onSellOnboardingClose,
 }: SellScanScreenProps) {
   const navigation = useNavigation<Nav>();
   const { height: screenHeight } = useWindowDimensions();
@@ -562,37 +573,32 @@ export default function SellScanScreen({
     }
   }, [loadProducts, products.length]);
 
-  const stockByKey = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const product of products) {
-      if (typeof product.stock !== "number" || !Number.isFinite(product.stock)) continue;
-      map.set(product.id, product.stock);
-      if (product.barcode) {
-        map.set(product.barcode, product.stock);
-      }
+  useEffect(() => {
+    if (cartMode !== "PURCHASE" && autoFocusItemId) {
+      setAutoFocusItemId(null);
     }
-    return map;
-  }, [products]);
+  }, [autoFocusItemId, cartMode]);
+
+  useEffect(() => {
+    if (!sellOnboarding) return;
+    const existingPrice =
+      typeof sellOnboarding.product.sell_price === "number" && sellOnboarding.product.sell_price > 0
+        ? sellOnboarding.product.sell_price
+        : null;
+    const existingPurchase =
+      typeof sellOnboarding.product.purchase_price === "number" &&
+      sellOnboarding.product.purchase_price > 0
+        ? sellOnboarding.product.purchase_price
+        : null;
+    setSellOnboardingPrice(formatPriceInput(existingPrice));
+    setSellOnboardingPurchasePrice(formatPriceInput(existingPurchase));
+    setSellOnboardingStock("1");
+    setSellOnboardingError(null);
+  }, [sellOnboarding]);
 
   const resolveAvailableStock = useCallback((item: CartItem): number | null => {
-    const meta = item.metadata ?? {};
-    const metaValue =
-      typeof (meta as any).availableQty === "number"
-        ? (meta as any).availableQty
-        : typeof (meta as any).available_qty === "number"
-          ? (meta as any).available_qty
-          : null;
-    if (metaValue !== null && Number.isFinite(metaValue)) {
-      return metaValue;
-    }
-    if (item.barcode && stockByKey.has(item.barcode)) {
-      return stockByKey.get(item.barcode) ?? null;
-    }
-    if (stockByKey.has(item.id)) {
-      return stockByKey.get(item.id) ?? null;
-    }
-    return null;
-  }, [stockByKey]);
+    return resolveStockForCartItem({ id: item.id, barcode: item.barcode ?? null });
+  }, []);
 
   const totalAnimatedValue = useRef(new Animated.Value(total)).current;
   const [animatedTotalMinor, setAnimatedTotalMinor] = useState(total);
@@ -615,6 +621,12 @@ export default function SellScanScreen({
   const [cartExpanded, setCartExpanded] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountType>("percentage");
   const [discountValue, setDiscountValue] = useState("");
+  const [stockRefreshTick, setStockRefreshTick] = useState(0);
+  const [sellOnboardingPrice, setSellOnboardingPrice] = useState("");
+  const [sellOnboardingPurchasePrice, setSellOnboardingPurchasePrice] = useState("");
+  const [sellOnboardingStock, setSellOnboardingStock] = useState("1");
+  const [sellOnboardingBusy, setSellOnboardingBusy] = useState(false);
+  const [sellOnboardingError, setSellOnboardingError] = useState<string | null>(null);
   const [autoFocusItemId, setAutoFocusItemId] = useState<string | null>(null);
   const [stockLimitItemId, setStockLimitItemId] = useState<string | null>(null);
   const [stockLimitPulse, setStockLimitPulse] = useState(0);
@@ -623,11 +635,41 @@ export default function SellScanScreen({
   const [editorPrice, setEditorPrice] = useState("");
   const [editorDiscountType, setEditorDiscountType] = useState<DiscountType>("percentage");
   const [editorDiscountValue, setEditorDiscountValue] = useState("");
+  const [detailItem, setDetailItem] = useState<SkuItem | null>(null);
 
+  useEffect(() => {
+    return subscribeStockUpdates(() => {
+      setStockRefreshTick((prev) => prev + 1);
+    });
+  }, []);
+
+  const detailPressRef = useRef(false);
   const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const priceLogRef = useRef<Set<string>>(new Set());
+  const sellOnboarding = sellOnboardingRequest ?? null;
+  const sellOnboardingVisible = cartMode === "SELL" && Boolean(sellOnboarding);
+  const sellOnboardingName =
+    sellOnboarding?.product.store_display_name?.trim() ||
+    sellOnboarding?.product.global_name?.trim() ||
+    sellOnboarding?.barcode ||
+    "";
+  const sellOnboardingPriceMinor = parsePriceInput(sellOnboardingPrice);
+  const sellOnboardingPurchaseProvided = sellOnboardingPurchasePrice.trim().length > 0;
+  const sellOnboardingPurchaseMinor = parsePriceInput(sellOnboardingPurchasePrice);
+  const sellOnboardingStockRaw = Number(sellOnboardingStock);
+  const sellOnboardingStockParsed = Number.isFinite(sellOnboardingStockRaw)
+    ? Math.round(sellOnboardingStockRaw)
+    : NaN;
+  const sellOnboardingStockValid =
+    Number.isFinite(sellOnboardingStockParsed) && sellOnboardingStockParsed >= 1;
+  const sellOnboardingPurchaseValid =
+    !sellOnboardingPurchaseProvided || sellOnboardingPurchaseMinor !== null;
+  const sellOnboardingFormValid =
+    sellOnboardingPriceMinor !== null &&
+    sellOnboardingStockValid &&
+    sellOnboardingPurchaseValid;
   const addInputRef = useRef<TextInput>(null);
   const lastAddQueryRef = useRef<string | null>(null);
   const suppressAddBlurRef = useRef(false);
@@ -797,6 +839,90 @@ export default function SellScanScreen({
     setUndoVisible(false);
     undoLastAction();
   };
+
+  const closeSellOnboarding = useCallback(
+    (force = false) => {
+      if (sellOnboardingBusy && !force) return;
+      setSellOnboardingError(null);
+      setSellOnboardingPrice("");
+      setSellOnboardingPurchasePrice("");
+      setSellOnboardingStock("1");
+      onSellOnboardingClose?.();
+    },
+    [onSellOnboardingClose, sellOnboardingBusy]
+  );
+
+  const handleSellOnboardingConfirm = useCallback(async () => {
+    if (!sellOnboarding || sellOnboardingBusy) return;
+    if (sellOnboardingPriceMinor === null || !sellOnboardingStockValid) {
+      setSellOnboardingError("Enter a sell price and initial stock.");
+      return;
+    }
+    if (sellOnboardingPurchaseProvided && sellOnboardingPurchaseMinor === null) {
+      setSellOnboardingError("Enter a valid purchase price.");
+      return;
+    }
+
+    setSellOnboardingBusy(true);
+    setSellOnboardingError(null);
+    try {
+      await submitSellFirstOnboarding({
+        barcode: sellOnboarding.barcode,
+        format: sellOnboarding.format,
+        sellPriceMinor: sellOnboardingPriceMinor,
+        initialStock: sellOnboardingStockParsed,
+        purchasePriceMinor: sellOnboardingPurchaseProvided
+          ? (sellOnboardingPurchaseMinor as number)
+          : undefined,
+        name: sellOnboardingName
+      });
+      closeSellOnboarding(true);
+    } catch {
+      setSellOnboardingError("Unable to receive product. Try again.");
+    } finally {
+      setSellOnboardingBusy(false);
+    }
+  }, [
+    closeSellOnboarding,
+    sellOnboarding,
+    sellOnboardingBusy,
+    sellOnboardingName,
+    sellOnboardingPriceMinor,
+    sellOnboardingPurchaseMinor,
+    sellOnboardingPurchaseProvided,
+    sellOnboardingStockParsed,
+    sellOnboardingStockValid
+  ]);
+
+  const handleSellOnboardingPriceChange = useCallback(
+    (value: string) => {
+      setSellOnboardingPrice(value);
+      if (sellOnboardingError) {
+        setSellOnboardingError(null);
+      }
+    },
+    [sellOnboardingError]
+  );
+
+  const handleSellOnboardingStockChange = useCallback(
+    (value: string) => {
+      setSellOnboardingStock(value);
+      if (sellOnboardingError) {
+        setSellOnboardingError(null);
+      }
+    },
+    [sellOnboardingError]
+  );
+
+  const handleSellOnboardingPurchasePriceChange = useCallback(
+    (value: string) => {
+      setSellOnboardingPurchasePrice(value);
+      if (sellOnboardingError) {
+        setSellOnboardingError(null);
+      }
+    },
+    [sellOnboardingError]
+  );
 
   const handleAutoFocusConsumed = useCallback((itemId: string) => {
     setAutoFocusItemId((current) => (current === itemId ? null : current));
@@ -1053,6 +1179,12 @@ export default function SellScanScreen({
   }, [cartExpanded]);
 
   useEffect(() => {
+    if (!cartExpanded) return;
+    if (cartMode !== "SELL") return;
+    void refreshStockSnapshot();
+  }, [cartExpanded, cartMode]);
+
+  useEffect(() => {
     if (!stockLimitEvent) return;
     if (Platform.OS === "android") {
       const message =
@@ -1069,20 +1201,20 @@ export default function SellScanScreen({
     }
   }, [stockLimitEvent]);
 
-  useEffect(() => {
-    const lastMutation = mutationHistory[mutationHistory.length - 1];
-    if (!lastMutation || lastMutation.type !== "UPSERT_ITEM") return;
+    useEffect(() => {
+      const lastMutation = mutationHistory[mutationHistory.length - 1];
+      if (!lastMutation || lastMutation.type !== "UPSERT_ITEM") return;
 
-    const currentItem = items.find((item) => item.id === lastMutation.itemId);
-    if (!currentItem) return;
+      const currentItem = items.find((item) => item.id === lastMutation.itemId);
+      if (!currentItem) return;
 
     const previousQty = lastMutation.previousItem?.quantity ?? 0;
-    if (!lastMutation.previousItem) {
-      const needsPrice = !Number.isFinite(currentItem.priceMinor) || currentItem.priceMinor <= 0;
-      if (needsPrice) {
-        setAutoFocusItemId(currentItem.id);
+      if (!lastMutation.previousItem && cartMode === "PURCHASE") {
+        const needsPrice = !Number.isFinite(currentItem.priceMinor) || currentItem.priceMinor <= 0;
+        if (needsPrice) {
+          setAutoFocusItemId(currentItem.id);
+        }
       }
-    }
     if (currentItem.quantity <= previousQty) return;
 
     const variantLabel =
@@ -1100,7 +1232,7 @@ export default function SellScanScreen({
     flashTimerRef.current = setTimeout(() => setFlashActive(false), 260);
     addMessageTimerRef.current = setTimeout(() => setLastAddMessage(null), 2000);
     undoTimerRef.current = setTimeout(() => setUndoVisible(false), 3000);
-  }, [items, mutationHistory]);
+  }, [cartMode, items, mutationHistory]);
 
   useEffect(() => {
     return () => {
@@ -1157,6 +1289,10 @@ export default function SellScanScreen({
 
   const closeEditor = useCallback(() => {
     setEditorItem(null);
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    setDetailItem(null);
   }, []);
 
   const handleEditorRemove = useCallback(() => {
@@ -1217,6 +1353,27 @@ export default function SellScanScreen({
     return formatMoney(lineTotal, editorItem.currency ?? "INR");
   }, [editorDiscountType, editorDiscountValue, editorItem, editorPrice, editorQty]);
 
+  const editorStockLabel = useMemo(() => {
+    if (!editorItem) return "";
+    const stockValue = resolveStockForCartItem({
+      id: editorItem.id,
+      barcode: editorItem.barcode ?? null
+    });
+    return stockValue === null ? "Unknown" : String(stockValue);
+  }, [editorItem, stockRefreshTick]);
+
+  const detailPriceLabel = useMemo(() => {
+    if (!detailItem) return "";
+    const resolved = resolveSkuPrice(detailItem);
+    return formatMoney(resolved.priceMinor, detailItem.currency ?? "INR");
+  }, [detailItem]);
+
+  const detailStockLabel = useMemo(() => {
+    if (!detailItem) return "";
+    const stockValue = resolveStockForSku(detailItem);
+    return stockValue === null ? "Unknown" : String(stockValue);
+  }, [detailItem, stockRefreshTick]);
+
   const scheduleDiscountApply = useCallback(
     (value: string, type: DiscountType) => {
       if (!canEditCart) return;
@@ -1265,18 +1422,9 @@ export default function SellScanScreen({
   const handleAddSku = (item: SkuItem) => {
     if (storeActive === false) return;
     const resolved = resolveSkuPrice(item);
-    const stockKey = item.productId && stockByKey.has(item.productId)
-      ? item.productId
-      : item.barcode;
-    const availableStock = stockKey && stockByKey.has(stockKey)
-      ? stockByKey.get(stockKey)
-      : null;
     const existing = items.find((entry) => entry.barcode === item.barcode);
     const mergedMetadata = {
-      ...(existing?.metadata ?? {}),
-      ...(typeof availableStock === "number" && Number.isFinite(availableStock)
-        ? { availableQty: availableStock }
-        : {})
+      ...(existing?.metadata ?? {})
     };
 
     useCartStore.getState().addItem({
@@ -1308,11 +1456,27 @@ export default function SellScanScreen({
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
+    const stockValue = resolveStockForSku(item);
+    const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
 
     return (
       <Pressable
         style={[styles.skuCard, storeActive === false && styles.skuCardDisabled]}
-        onPress={() => handleAddSku(item)}
+        onPressIn={() => {
+          detailPressRef.current = false;
+        }}
+        onLongPress={() => {
+          detailPressRef.current = true;
+          setDetailItem(item);
+        }}
+        delayLongPress={250}
+        onPress={() => {
+          if (detailPressRef.current) {
+            detailPressRef.current = false;
+            return;
+          }
+          handleAddSku(item);
+        }}
         disabled={storeActive === false}
       >
         <View style={styles.skuCardTop}>
@@ -1327,6 +1491,9 @@ export default function SellScanScreen({
         <Text style={styles.skuBarcode} numberOfLines={1}>
           {item.barcode}
         </Text>
+        <Text style={styles.skuStock} numberOfLines={1}>
+          Stock: {stockLabel}
+        </Text>
       </Pressable>
     );
   };
@@ -1335,12 +1502,28 @@ export default function SellScanScreen({
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
+    const stockValue = resolveStockForSku(item);
+    const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
 
     return (
       <Pressable
         style={styles.addRow}
-        onPressIn={() => markAddInteraction()}
-        onPress={() => handleAddFromSearch(item)}
+        onPressIn={() => {
+          detailPressRef.current = false;
+          markAddInteraction();
+        }}
+        onLongPress={() => {
+          detailPressRef.current = true;
+          setDetailItem(item);
+        }}
+        delayLongPress={250}
+        onPress={() => {
+          if (detailPressRef.current) {
+            detailPressRef.current = false;
+            return;
+          }
+          handleAddFromSearch(item);
+        }}
         accessibilityLabel={`Add ${item.name}`}
       >
         <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
@@ -1354,6 +1537,7 @@ export default function SellScanScreen({
         </View>
         <View style={styles.addRowRight}>
           <Text style={styles.addRowPrice}>{priceLabel}</Text>
+          <Text style={styles.addRowStock}>Stock: {stockLabel}</Text>
         </View>
       </Pressable>
     );
@@ -1754,6 +1938,165 @@ export default function SellScanScreen({
               <Text style={styles.totalCtaAmount}>{totalLabel}</Text>
             </Pressable>
           </Animated.View>
+          </View>
+        </Modal>
+
+      <Modal
+        visible={sellOnboardingVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => closeSellOnboarding()}
+      >
+        <View style={styles.onboardingOverlay}>
+          <Pressable
+            style={styles.onboardingOverlayTap}
+            onPress={() => closeSellOnboarding()}
+            disabled={sellOnboardingBusy}
+          />
+          <View style={styles.onboardingSheet}>
+            <View style={styles.onboardingHandle} />
+            <View style={styles.onboardingHeader}>
+              <Text style={styles.onboardingTitle}>New product</Text>
+              {sellOnboardingName ? (
+                <Text
+                  style={styles.onboardingSubtitle}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {sellOnboardingName}
+                </Text>
+              ) : null}
+              {sellOnboarding?.barcode ? (
+                <Text style={styles.onboardingBarcode}>{sellOnboarding.barcode}</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.onboardingFields}>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Sell price</Text>
+                <TextInput
+                  style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
+                  value={sellOnboardingPrice}
+                  onChangeText={handleSellOnboardingPriceChange}
+                  placeholder="Enter sell price"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="decimal-pad"
+                  editable={!sellOnboardingBusy}
+                />
+              </View>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Purchase price (optional)</Text>
+                <TextInput
+                  style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
+                  value={sellOnboardingPurchasePrice}
+                  onChangeText={handleSellOnboardingPurchasePriceChange}
+                  placeholder="Enter purchase price"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="decimal-pad"
+                  editable={!sellOnboardingBusy}
+                />
+              </View>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Initial stock</Text>
+                <TextInput
+                  style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
+                  value={sellOnboardingStock}
+                  onChangeText={handleSellOnboardingStockChange}
+                  placeholder="Enter stock"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="number-pad"
+                  editable={!sellOnboardingBusy}
+                />
+              </View>
+            </View>
+
+            {sellOnboardingError ? (
+              <Text style={styles.onboardingError}>{sellOnboardingError}</Text>
+            ) : null}
+
+            <View style={styles.onboardingActions}>
+              <Pressable
+                style={[
+                  styles.onboardingButton,
+                  styles.onboardingButtonGhost,
+                  sellOnboardingBusy && styles.onboardingButtonDisabled
+                ]}
+                onPress={() => closeSellOnboarding()}
+                disabled={sellOnboardingBusy}
+              >
+                <Text style={styles.onboardingButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.onboardingButton,
+                  styles.onboardingButtonPrimary,
+                  (!sellOnboardingFormValid || sellOnboardingBusy) && styles.onboardingButtonDisabled
+                ]}
+                onPress={handleSellOnboardingConfirm}
+                disabled={!sellOnboardingFormValid || sellOnboardingBusy}
+              >
+                {sellOnboardingBusy ? (
+                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                ) : (
+                  <Text style={styles.onboardingButtonTextInverse}>Receive & Add to Cart</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(detailItem)}
+        transparent
+        animationType="slide"
+        onRequestClose={closeDetail}
+      >
+        <View style={styles.detailOverlay}>
+          <Pressable style={styles.detailOverlayTap} onPress={closeDetail} />
+          <View style={[styles.detailSheet, { paddingBottom: 16 + insets.bottom }]}>
+            <View style={styles.detailHandle} />
+            <Text style={styles.detailTitle}>Product details</Text>
+            {detailItem ? (
+              <View style={styles.detailContent}>
+                <Text style={styles.detailName} numberOfLines={2}>
+                  {detailItem.name}
+                </Text>
+                <Text style={styles.detailBarcode} numberOfLines={1}>
+                  {detailItem.barcode}
+                </Text>
+                <View style={styles.detailMetaRow}>
+                  <View style={styles.detailMetaBlock}>
+                    <Text style={styles.detailMetaLabel}>Price</Text>
+                    <Text style={styles.detailMetaValue}>{detailPriceLabel}</Text>
+                  </View>
+                  <View style={styles.detailMetaBlock}>
+                    <Text style={styles.detailMetaLabel}>Stock</Text>
+                    <Text style={styles.detailMetaValue}>{detailStockLabel}</Text>
+                  </View>
+                </View>
+                <View style={styles.detailActions}>
+                  <Pressable style={styles.detailButton} onPress={closeDetail}>
+                    <Text style={styles.detailButtonText}>Close</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.detailButton,
+                      styles.detailButtonPrimary,
+                      storeActive === false && styles.detailButtonDisabled
+                    ]}
+                    onPress={() => {
+                      handleAddSku(detailItem);
+                      closeDetail();
+                    }}
+                    disabled={storeActive === false}
+                  >
+                    <Text style={styles.detailButtonTextInverse}>Add to cart</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+          </View>
         </View>
       </Modal>
 
@@ -1781,6 +2124,9 @@ export default function SellScanScreen({
                     {editorItem.barcode}
                   </Text>
                 ) : null}
+                <Text style={styles.editStock} numberOfLines={1}>
+                  In stock: {editorStockLabel}
+                </Text>
                 <View style={styles.editFields}>
                   <View style={styles.editField}>
                     <Text style={styles.editLabel}>Qty</Text>
@@ -2029,6 +2375,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
+  addRowStock: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
   cartOverlay: {
     flex: 1,
     backgroundColor: "rgba(15, 15, 20, 0.55)",
@@ -2036,6 +2388,106 @@ const styles = StyleSheet.create({
   },
   cartOverlayTap: {
     ...StyleSheet.absoluteFillObject,
+  },
+  onboardingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    justifyContent: "flex-end",
+  },
+  onboardingOverlayTap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  onboardingSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 12,
+    ...theme.shadows.sm,
+  },
+  onboardingHandle: {
+    alignSelf: "center",
+    width: 46,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: theme.colors.border,
+    marginBottom: 6,
+  },
+  onboardingHeader: {
+    gap: 4,
+  },
+  onboardingTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  onboardingSubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  onboardingBarcode: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+  },
+  onboardingFields: {
+    gap: 10,
+  },
+  onboardingField: {
+    gap: 6,
+  },
+  onboardingLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  onboardingInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+  },
+  onboardingError: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.error,
+  },
+  onboardingActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  onboardingButton: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  onboardingButtonPrimary: {
+    backgroundColor: theme.colors.primary,
+  },
+  onboardingButtonGhost: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  onboardingButtonDisabled: {
+    opacity: 0.6,
+  },
+  onboardingButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  onboardingButtonTextInverse: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
   cartSheet: {
     backgroundColor: theme.colors.surface,
@@ -2431,6 +2883,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textSecondary,
   },
+  skuStock: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
   emptyState: {
     alignItems: "center",
     paddingVertical: 20,
@@ -2515,6 +2973,102 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.primary,
   },
+  detailOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 15, 20, 0.55)",
+    justifyContent: "flex-end",
+  },
+  detailOverlayTap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  detailSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 16,
+    gap: 12,
+    ...theme.shadows.sm,
+  },
+  detailHandle: {
+    alignSelf: "center",
+    width: 46,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: theme.colors.border,
+    marginBottom: 6,
+  },
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  detailContent: {
+    gap: 12,
+  },
+  detailName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  detailBarcode: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+  },
+  detailMetaRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  detailMetaBlock: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceAlt,
+    padding: 10,
+  },
+  detailMetaLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  detailMetaValue: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  detailActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  detailButton: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  detailButtonPrimary: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  detailButtonDisabled: {
+    opacity: 0.5,
+  },
+  detailButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  detailButtonTextInverse: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
+  },
   editOverlay: {
     flex: 1,
     backgroundColor: "rgba(15, 15, 20, 0.55)",
@@ -2556,6 +3110,11 @@ const styles = StyleSheet.create({
   },
   editBarcode: {
     fontSize: 11,
+    color: theme.colors.textSecondary,
+  },
+  editStock: {
+    fontSize: 11,
+    fontWeight: "600",
     color: theme.colors.textSecondary,
   },
   editFields: {

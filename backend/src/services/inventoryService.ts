@@ -9,7 +9,7 @@ const SUPERMANDI_REGEX = /^SM[0-9A-F]{12}$/;
 
 type UnitNormalization = { baseUnit: BaseUnit; multiplier: number };
 type Queryable = { query: (text: string, params?: any[]) => Promise<{ rows: any[] }> };
-type AvailabilitySource = "bulk" | "stock" | "unknown";
+type AvailabilitySource = "bulk" | "stock" | "ledger" | "unknown";
 
 let variantStockColumnKnown: boolean | null = null;
 
@@ -74,6 +74,16 @@ function computeAvailabilityFromRow(
   row: any,
   hasVariantStock: boolean
 ): { available: number | null; source: AvailabilitySource } {
+  const storeQtyRaw = row.store_available_qty;
+  const storeQty =
+    storeQtyRaw === null || storeQtyRaw === undefined ? null : Number(storeQtyRaw);
+  if (storeQty !== null && Number.isFinite(storeQty)) {
+    return {
+      available: Math.max(0, Math.floor(storeQty)),
+      source: "ledger"
+    };
+  }
+
   const unitBase = row.unit_base ? String(row.unit_base) : null;
   const sizeBase =
     row.size_base === null || row.size_base === undefined ? null : Number(row.size_base);
@@ -389,6 +399,7 @@ export async function listInventoryVariants(params: {
            b.barcode AS supermandi_barcode,
            bi.base_unit AS bulk_base_unit,
            bi.quantity_base AS bulk_quantity_base,
+           si.available_qty AS store_available_qty,
            ${stockSelect}
     FROM variants v
     JOIN retailer_variants rv
@@ -397,6 +408,8 @@ export async function listInventoryVariants(params: {
       ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
     LEFT JOIN bulk_inventory bi
       ON bi.store_id = $1 AND bi.product_id = v.product_id
+    LEFT JOIN store_inventory si
+      ON si.store_id = $1 AND si.global_product_id = v.product_id
     ${whereClause}
     ORDER BY v.name ASC
     `,

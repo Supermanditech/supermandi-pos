@@ -9,6 +9,11 @@ import {
   attachBarcodeToVariant,
   isSupermandiBarcode
 } from "../../../services/inventoryService";
+import {
+  recordSaleInventoryMovements,
+  ensureStoreInventoryAvailability,
+  InsufficientStockError
+} from "../../../services/inventoryLedgerService";
 import { createPurchase, type PurchaseItemInput } from "../../../services/purchaseService";
 
 export const posSyncRouter = Router();
@@ -349,13 +354,22 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             throw new Error("failed to insert sale");
           }
 
-          const resolvedItems: Array<{ variantId: string; quantity: number; priceMinor: number; name: string; barcode: string }> = [];
+          const resolvedItems: Array<{
+            variantId: string;
+            quantity: number;
+            priceMinor: number;
+            name: string;
+            barcode: string;
+            globalProductId?: string | null;
+          }> = [];
 
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
             const name = asTrimmedString(item?.name);
             const quantityRaw = asNumber(item?.quantity);
             const priceMinorRaw = asNumber(item?.priceMinor);
+            const globalProductId =
+              asTrimmedString(item?.globalProductId) ?? asTrimmedString(item?.global_product_id);
             const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
             const priceMinor = priceMinorRaw === null ? null : Math.round(priceMinorRaw);
 
@@ -367,8 +381,26 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const itemName = name ?? fallbackName;
             const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency });
             await ensureRetailerVariant(client, { storeId, variantId });
-            resolvedItems.push({ variantId, quantity, priceMinor, name: itemName, barcode });
+            resolvedItems.push({
+              variantId,
+              quantity,
+              priceMinor,
+              name: itemName,
+              barcode,
+              globalProductId
+            });
           }
+
+          await ensureStoreInventoryAvailability({
+            client,
+            storeId,
+            items: resolvedItems.map((item) => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              globalProductId: item.globalProductId ?? null,
+              name: item.name
+            }))
+          });
 
           await ensureSaleAvailability({
             client,
@@ -395,6 +427,19 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               ]
             );
           }
+
+          await recordSaleInventoryMovements({
+            client,
+            storeId,
+            saleId,
+            items: resolvedItems.map((item) => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              unitSellMinor: item.priceMinor,
+              name: item.name,
+              globalProductId: item.globalProductId ?? null
+            }))
+          });
 
           await applyBulkDeductions({
             client,
@@ -587,7 +632,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         results.push({ eventId, status: "applied" });
       } catch (error: any) {
         await client.query("ROLLBACK");
-        results.push({ eventId, status: "rejected", error: error?.message ? String(error.message) : "rejected" });
+        let errorMessage = error?.message ? String(error.message) : "rejected";
+        if (error instanceof InsufficientStockError) {
+          const details = Array.isArray(error.details) ? error.details : [];
+          if (details.length > 0) {
+            errorMessage = details.map((detail) => `${detail.skuId}: ${detail.message}`).join("; ");
+          } else {
+            errorMessage = "insufficient_stock";
+          }
+        }
+        results.push({ eventId, status: "rejected", error: errorMessage });
       }
     }
   } finally {

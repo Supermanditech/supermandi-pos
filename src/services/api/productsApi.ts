@@ -80,6 +80,29 @@ export async function lookupStoreProductByScan(input: {
   }
 }
 
+export async function lookupStoreProductPreviewByScan(input: {
+  scanned: string;
+  format?: string;
+}): Promise<StoreLookupProduct | null> {
+  const scanned = input.scanned.trim();
+  if (!scanned) return null;
+  const query = new URLSearchParams({ scanned, preview: "1" });
+  if (input.format) {
+    query.set("format", input.format);
+  }
+  try {
+    const res = await apiClient.get<{ product: StoreLookupProduct }>(
+      `${PRODUCTS_BASE}/lookup?${query.toString()}`
+    );
+    return res.product;
+  } catch (error) {
+    if (error instanceof ApiError && error.message === "product_not_found") {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function createStoreProductFromScan(input: {
   scanned: string;
   format?: string;
@@ -97,6 +120,39 @@ export async function createStoreProductFromScan(input: {
 
   const res = await apiClient.post<{ product: StoreLookupProduct }>(
     `${PRODUCTS_BASE}/create-from-scan`,
+    payload
+  );
+  return res.product;
+}
+
+export async function receiveStoreProductFromScan(input: {
+  scanned: string;
+  format?: string;
+  sellPriceMinor: number;
+  initialStock: number;
+  purchasePriceMinor?: number;
+  globalName?: string | null;
+  storeDisplayName?: string | null;
+}): Promise<StoreLookupProduct> {
+  const scanned = input.scanned.trim();
+  if (!scanned) {
+    throw new Error("scanned is required");
+  }
+
+  const payload: Record<string, unknown> = {
+    scanned,
+    sell_price_minor: input.sellPriceMinor,
+    initial_stock: input.initialStock
+  };
+  if (typeof input.purchasePriceMinor === "number") {
+    payload.purchase_price_minor = input.purchasePriceMinor;
+  }
+  if (input.format) payload.format = input.format;
+  if (input.globalName) payload.global_name = input.globalName;
+  if (input.storeDisplayName) payload.store_display_name = input.storeDisplayName;
+
+  const res = await apiClient.post<{ product: StoreLookupProduct }>(
+    `${PRODUCTS_BASE}/receive`,
     payload
   );
   return res.product;

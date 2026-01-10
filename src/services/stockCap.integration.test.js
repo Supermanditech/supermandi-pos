@@ -21,6 +21,81 @@ const memoryStorage = (() => {
   };
 })();
 
+const stockCache = new Map();
+const stockListeners = new Set();
+let stockVersion = 0;
+const normalizeStock = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor(parsed));
+};
+const resetStockCache = () => {
+  stockCache.clear();
+};
+const notifyStockUpdated = () => {
+  stockVersion += 1;
+  for (const listener of stockListeners) {
+    listener();
+  }
+};
+const stockServiceMock = {
+  upsertStockEntries: (entries) => {
+    for (const entry of entries) {
+      const key = typeof entry.key === "string" ? entry.key.trim() : "";
+      const normalized = normalizeStock(entry.stock);
+      if (!key || normalized === null) continue;
+      stockCache.set(key, normalized);
+    }
+    if (entries.length) {
+      notifyStockUpdated();
+    }
+  },
+  upsertStockFromProducts: (products) => {
+    for (const product of products) {
+      const stock = normalizeStock(product.stock);
+      if (stock === null) continue;
+      const idKey = typeof product.id === "string" ? product.id.trim() : "";
+      const barcodeKey =
+        typeof product.barcode === "string" ? product.barcode.trim() : "";
+      if (idKey) stockCache.set(idKey, stock);
+      if (barcodeKey) stockCache.set(barcodeKey, stock);
+    }
+    if (products.length) {
+      notifyStockUpdated();
+    }
+  },
+  resolveStockForCartItem: ({ id, barcode }) => {
+    const barcodeKey = typeof barcode === "string" ? barcode.trim() : "";
+    if (barcodeKey && stockCache.has(barcodeKey)) {
+      return stockCache.get(barcodeKey);
+    }
+    const idKey = typeof id === "string" ? id.trim() : "";
+    if (idKey && stockCache.has(idKey)) {
+      return stockCache.get(idKey);
+    }
+    return null;
+  },
+  resolveStockForSku: ({ productId, barcode }) => {
+    const productKey = typeof productId === "string" ? productId.trim() : "";
+    if (productKey && stockCache.has(productKey)) {
+      return stockCache.get(productKey);
+    }
+    const barcodeKey = typeof barcode === "string" ? barcode.trim() : "";
+    if (barcodeKey && stockCache.has(barcodeKey)) {
+      return stockCache.get(barcodeKey);
+    }
+    return null;
+  },
+  refreshStockSnapshot: async () => false,
+  subscribeStockUpdates: (listener) => {
+    stockListeners.add(listener);
+    return () => {
+      stockListeners.delete(listener);
+    };
+  },
+  getStockVersion: () => stockVersion
+};
+
 let mockScanStock = 1;
 let mockScanPriceMinor = 100;
 let mockScanName = "Test Item";
@@ -32,6 +107,17 @@ moduleMocks.set("react-native", {
 });
 moduleMocks.set("../api/apiClient", { ApiError: class ApiError extends Error {} });
 moduleMocks.set("../api/productsApi", {
+  lookupStoreProductPreviewByScan: async () => ({
+    global_product_id: "global-1",
+    global_name: mockScanName,
+    store_display_name: mockScanName,
+    sell_price: mockScanPriceMinor,
+    purchase_price: null,
+    unit: null,
+    variant: null,
+    available_qty: mockScanStock,
+    is_first_time_in_store: false
+  }),
   lookupStoreProductByScan: async () => ({
     global_product_id: "global-1",
     global_name: mockScanName,
@@ -83,6 +169,8 @@ moduleMocks.set("../services/storeScope", {
   normalizeStoreScope: (storeId) => (storeId ? String(storeId) : "unassigned"),
   storeScopedStorage: memoryStorage
 });
+moduleMocks.set("../services/stockService", stockServiceMock);
+moduleMocks.set("../stockService", stockServiceMock);
 moduleMocks.set("./storeScope", {
   normalizeStoreScope: (storeId) => (storeId ? String(storeId) : "unassigned"),
   storeScopedStorage: memoryStorage
@@ -184,18 +272,22 @@ function formatStockMessage(event) {
 function resetCart(useCartStore) {
   useCartStore.getState().resetForStore();
   useCartStore.setState({ stockLimitEvent: null });
+  resetStockCache();
 }
 
 async function testTapLoop(useCartStore) {
   resetCart(useCartStore);
+  stockServiceMock.upsertStockEntries([
+    { key: "tap-sku", stock: 1 },
+    { key: "tap-barcode", stock: 1 }
+  ]);
   for (let i = 0; i < 20; i += 1) {
     useCartStore.getState().addItem({
       id: "tap-sku",
       name: "Tap Item",
       priceMinor: 100,
       quantity: 1,
-      barcode: "tap-barcode",
-      metadata: { availableQty: 1 }
+      barcode: "tap-barcode"
     });
   }
   const item = useCartStore.getState().items.find((entry) => entry.id === "tap-sku");
@@ -239,13 +331,16 @@ async function testScanLoop(useCartStore, scanApi) {
 
 async function testPlusButton(useCartStore) {
   resetCart(useCartStore);
+  stockServiceMock.upsertStockEntries([
+    { key: "plus-sku", stock: 2 },
+    { key: "plus-barcode", stock: 2 }
+  ]);
   useCartStore.getState().addItem({
     id: "plus-sku",
     name: "Plus Item",
     priceMinor: 100,
     quantity: 1,
-    barcode: "plus-barcode",
-    metadata: { availableQty: 2 }
+    barcode: "plus-barcode"
   });
 
   for (let i = 0; i < 5; i += 1) {
@@ -263,13 +358,16 @@ async function testPlusButton(useCartStore) {
 
 async function testManualQty(useCartStore) {
   resetCart(useCartStore);
+  stockServiceMock.upsertStockEntries([
+    { key: "manual-sku", stock: 3 },
+    { key: "manual-barcode", stock: 3 }
+  ]);
   useCartStore.getState().addItem({
     id: "manual-sku",
     name: "Manual Item",
     priceMinor: 100,
     quantity: 1,
-    barcode: "manual-barcode",
-    metadata: { availableQty: 3 }
+    barcode: "manual-barcode"
   });
 
   useCartStore.getState().updateQuantity("manual-sku", 99);
@@ -284,6 +382,10 @@ async function testManualQty(useCartStore) {
 
 async function testNormalizeItemsToStock(useCartStore) {
   resetCart(useCartStore);
+  stockServiceMock.upsertStockEntries([
+    { key: "bulk-cap", stock: 2 },
+    { key: "bulk-zero", stock: 0 }
+  ]);
   useCartStore.setState({
     items: [
       {
@@ -291,16 +393,14 @@ async function testNormalizeItemsToStock(useCartStore) {
         name: "Bulk Cap",
         priceMinor: 100,
         quantity: 9,
-        barcode: "bulk-cap",
-        metadata: { availableQty: 2 }
+        barcode: "bulk-cap"
       },
       {
         id: "bulk-zero",
         name: "Bulk Zero",
         priceMinor: 100,
         quantity: 1,
-        barcode: "bulk-zero",
-        metadata: { availableQty: 0 }
+        barcode: "bulk-zero"
       },
       {
         id: "bulk-unknown",
@@ -329,13 +429,16 @@ async function testNormalizeItemsToStock(useCartStore) {
 
 async function testOutOfStock(useCartStore) {
   resetCart(useCartStore);
+  stockServiceMock.upsertStockEntries([
+    { key: "oos-sku", stock: 0 },
+    { key: "oos-barcode", stock: 0 }
+  ]);
   useCartStore.getState().addItem({
     id: "oos-sku",
     name: "OOS Item",
     priceMinor: 100,
     quantity: 1,
-    barcode: "oos-barcode",
-    metadata: { availableQty: 0 }
+    barcode: "oos-barcode"
   });
 
   assert.strictEqual(useCartStore.getState().items.length, 0);
