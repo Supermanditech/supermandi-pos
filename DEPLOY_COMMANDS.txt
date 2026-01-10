@@ -1,0 +1,53 @@
+=================================================================
+COPY & PASTE THESE COMMANDS DIRECTLY INTO YOUR VM SSH SESSION
+=================================================================
+
+SSH into your VM first:
+  ssh supermanditech@34.14.150.183
+
+Then run these commands one by one:
+
+---
+
+# Step 1: Navigate to backend directory
+cd ~/supermandi-backend
+
+# Step 2: Fetch and pull latest changes
+git fetch --all --tags
+git pull origin main
+
+# Step 3: Verify commit
+git log -1 --oneline
+# Should show: 3b632ca fix(pos): retailer_variants auto-link + two-phase payment + cart fixes (2026-01-11)
+
+# Step 4: Install dependencies (if needed)
+npm install
+
+# Step 5: Restart backend services
+pm2 restart all
+
+# Step 6: Check service status
+pm2 list
+
+# Step 7: Monitor logs for AUTOFIXED messages
+pm2 logs backend --lines 50 | grep "AUTOFIXED"
+
+# Step 8: Monitor real-time logs (Ctrl+C to exit)
+pm2 logs backend
+
+=================================================================
+DEPLOYMENT COMPLETE!
+=================================================================
+
+Expected Results:
+✅ Commit should be: 3b632ca
+✅ Tag should be: pos-retailer-variants-fix-2026-01-11-0153IST
+✅ PM2 services should restart successfully
+✅ May see [AUTOFIXED] messages if missing links are detected
+
+Test on store-3:
+- Open sell screen
+- Verify item 1006 appears in product list
+- Try adding it to cart
+
+=================================================================
