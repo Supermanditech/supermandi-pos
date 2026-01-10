@@ -128,6 +128,17 @@ export async function recordDuePayment(input: {
   return { status: "DUE" };
 }
 
+export async function cancelSale(input: {
+  saleId: string;
+}): Promise<{ status: string; message: string }> {
+  // Only cancel online sales - offline sales don't need cancellation
+  if (await isOnline()) {
+    return apiClient.post(`/api/v1/pos/sales/${input.saleId}/cancel`, {});
+  }
+  // Offline sales are not persisted until payment, so no cancellation needed
+  return { status: "CANCELLED", message: "Offline sale not persisted" };
+}
+
 export async function initCollectionUpi(input: {
   amountMinor: number;
   reference?: string | null;

@@ -97,10 +97,14 @@ const calculateDiscountAmount = (
   discount: CartDiscount | ItemDiscount | null
 ): number => {
   if (!discount) return 0;
+  const MAX_MINOR = 2147483647; // INT32_MAX to prevent overflow
   const baseParsed = Number(baseAmount);
-  const safeBase = Math.max(0, Math.round(Number.isFinite(baseParsed) ? baseParsed : 0));
+  const safeBase = Math.max(0, Math.min(Math.round(Number.isFinite(baseParsed) ? baseParsed : 0), MAX_MINOR));
   const valueParsed = Number(discount.value);
-  const safeValue = Math.max(0, Number.isFinite(valueParsed) ? valueParsed : 0);
+
+  // Cap percentage at 100% and fixed amount at MAX_MINOR
+  const maxValue = discount.type === 'percentage' ? 100 : MAX_MINOR;
+  const safeValue = Math.max(0, Math.min(Number.isFinite(valueParsed) ? valueParsed : 0, maxValue));
 
   if (discount.type === 'percentage') {
     return Math.min(Math.round(safeBase * (safeValue / 100)), safeBase);
@@ -233,9 +237,9 @@ export const useCartStore = create<CartState>()(
         let nextItem: CartItem;
         const currentQty = existingItem ? existingItem.quantity : 0;
         const mergedMetadata = mergeMetadata(existingItem?.metadata, item.metadata);
-        const combinedItem = existingItem
+        const combinedItem: CartItem = existingItem
           ? { ...existingItem, ...item, metadata: mergedMetadata }
-          : { ...item, metadata: mergedMetadata };
+          : { ...item, quantity: item.quantity ?? 1, metadata: mergedMetadata };
         const availableStock = resolveItemAvailableStock(combinedItem);
         const cap = capAddQuantity(currentQty, item.quantity ?? 1, availableStock);
         const requestedQty = cap.requestedQty;
@@ -624,7 +628,7 @@ export const useCartStore = create<CartState>()(
       subtotal: totals.subtotal,
       itemDiscountAmount: totals.itemDiscountAmount,
       cartDiscountAmount: totals.cartDiscountAmount,
-      discountAmount: totals.cartDiscountAmount,
+      discountAmount: totals.discountTotal,
       discountTotal: totals.discountTotal,
       total: totals.total
     });

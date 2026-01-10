@@ -387,6 +387,8 @@ export async function listInventoryVariants(params: {
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
+  // CRITICAL FIX: Use LEFT JOIN instead of INNER JOIN to find variants with stock but no retailer_variants link
+  // This ensures products with inventory show up even if the link is missing
   const res = await client.query(
     `
     SELECT v.id,
@@ -402,7 +404,7 @@ export async function listInventoryVariants(params: {
            si.available_qty AS store_available_qty,
            ${stockSelect}
     FROM variants v
-    JOIN retailer_variants rv
+    LEFT JOIN retailer_variants rv
       ON rv.variant_id = v.id AND rv.store_id = $1
     LEFT JOIN barcodes b
       ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
@@ -410,11 +412,38 @@ export async function listInventoryVariants(params: {
       ON bi.store_id = $1 AND bi.product_id = v.product_id
     LEFT JOIN store_inventory si
       ON si.store_id = $1 AND si.global_product_id = v.product_id
-    ${whereClause}
+    WHERE (bi.quantity_base IS NOT NULL OR si.available_qty IS NOT NULL OR rv.variant_id IS NOT NULL)
+    ${whereClause ? `AND ${whereClause.replace('WHERE ', '')}` : ''}
     ORDER BY v.name ASC
     `,
     args
   );
+
+  // Auto-create missing retailer_variants links (failsafe fix)
+  const missingLinks: string[] = [];
+  for (const row of res.rows) {
+    // If variant has stock but no retailer_variants link (selling_price_minor would be NULL)
+    if (row.id && (row.bulk_quantity_base != null || row.store_available_qty != null) && row.selling_price_minor == null) {
+      missingLinks.push(String(row.id));
+    }
+  }
+
+  if (missingLinks.length > 0) {
+    // Bulk insert missing retailer_variants links
+    const values = missingLinks.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2}, TRUE)`).join(", ");
+    const params = missingLinks.flatMap(variantId => [storeId, variantId]);
+
+    await client.query(
+      `
+      INSERT INTO retailer_variants (store_id, variant_id, digitised_by_retailer)
+      VALUES ${values}
+      ON CONFLICT (store_id, variant_id) DO NOTHING
+      `,
+      params
+    );
+
+    console.warn(`[AUTOFIXED] Created ${missingLinks.length} missing retailer_variants links for store ${storeId}`);
+  }
 
   return res.rows.map((row) => {
     const availability = computeAvailabilityFromRow(row, hasVariantStock);

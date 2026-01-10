@@ -286,8 +286,17 @@ export default function PosStatusBar({
 
   return (
     <>
-      <View style={styles.container}>
-        <View style={styles.iconRow}>
+      <Pressable
+        style={styles.container}
+        focusable={false}
+        onPress={() => {
+          closePopover();
+          setDetailsOpen(true);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="System status details"
+      >
+        <View style={styles.iconRow} pointerEvents="box-none">
           <Pressable
             ref={networkRef}
             collapsable={false}
@@ -295,8 +304,11 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={networkLabel}
             accessibilityRole="button"
-            onPress={() => openPopover("network")}
-            hitSlop={6}
+            onPress={(e) => {
+              e.stopPropagation();
+              openPopover("network");
+            }}
+            hitSlop={8}
             style={styles.iconSlot}
           >
             <MaterialCommunityIcons
@@ -313,8 +325,11 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={printerLabel}
             accessibilityRole="button"
-            onPress={() => openPopover("printer")}
-            hitSlop={6}
+            onPress={(e) => {
+              e.stopPropagation();
+              openPopover("printer");
+            }}
+            hitSlop={8}
             style={styles.iconSlot}
           >
             <MaterialCommunityIcons
@@ -331,8 +346,11 @@ export default function PosStatusBar({
             accessible
             accessibilityLabel={scannerLabel}
             accessibilityRole="button"
-            onPress={() => openPopover("scanner")}
-            hitSlop={6}
+            onPress={(e) => {
+              e.stopPropagation();
+              openPopover("scanner");
+            }}
+            hitSlop={8}
             style={styles.iconSlot}
           >
             <MaterialCommunityIcons
@@ -343,16 +361,7 @@ export default function PosStatusBar({
           </Pressable>
         </View>
 
-        <Pressable
-          style={styles.storeInfo}
-          focusable={false}
-          onPress={() => {
-            closePopover();
-            setDetailsOpen(true);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="System status details"
-        >
+        <View style={styles.storeInfo} pointerEvents="none">
           <Text
             style={styles.storeName}
             numberOfLines={2}
@@ -369,8 +378,8 @@ export default function PosStatusBar({
             {" | "}
             <Text style={[styles.statusMessage, { color: statusTone.text }]}>{statusMessage}</Text>
           </Text>
-        </Pressable>
-      </View>
+        </View>
+      </Pressable>
 
       {popover && popoverItem && popoverLayout ? (
         <Modal

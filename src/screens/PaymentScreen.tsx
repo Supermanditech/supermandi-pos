@@ -15,6 +15,7 @@ import { useCartStore } from "../stores/cartStore";
 import type { CartDiscount, CartItem, ItemDiscount } from "../stores/cartStore";
 import { formatMoney } from "../utils/money";
 import {
+  cancelSale,
   confirmUpiPaymentManual,
   createSale,
   initUpiPayment,
@@ -82,8 +83,12 @@ const calculateDiscountAmount = (
   discount: CartDiscount | ItemDiscount | null
 ): number => {
   if (!discount) return 0;
-  const safeBase = Math.max(0, Math.round(baseAmount));
-  const safeValue = Math.max(0, Number.isFinite(discount.value) ? discount.value : 0);
+  const MAX_MINOR = 2147483647; // INT32_MAX to prevent overflow
+  const safeBase = Math.max(0, Math.min(Math.round(baseAmount), MAX_MINOR));
+
+  // Cap percentage at 100% and fixed amount at MAX_MINOR
+  const maxValue = discount.type === 'percentage' ? 100 : MAX_MINOR;
+  const safeValue = Math.max(0, Math.min(Number.isFinite(discount.value) ? discount.value : 0, maxValue));
 
   if (discount.type === "percentage") {
     return Math.min(Math.round(safeBase * (safeValue / 100)), safeBase);
@@ -424,17 +429,24 @@ const PaymentScreen = () => {
 
   useEffect(() => {
     return () => {
-      if (!finalized.current && billRef) {
-        void logPaymentEvent("PAYMENT_CANCELLED", {
-          transactionId,
-          billId: billRef,
-          paymentMode: selectedMode,
-          amountMinor: totalMinor,
-          currency
+      if (!finalized.current && saleId) {
+        // Cancel the sale to prevent stock loss
+        void cancelSale({ saleId }).catch((error) => {
+          console.error("Failed to cancel sale on cleanup:", error);
         });
+
+        if (billRef) {
+          void logPaymentEvent("PAYMENT_CANCELLED", {
+            transactionId,
+            billId: billRef,
+            paymentMode: selectedMode,
+            amountMinor: totalMinor,
+            currency
+          });
+        }
       }
     };
-  }, [billRef, currency, selectedMode, totalMinor, transactionId]);
+  }, [billRef, currency, selectedMode, saleId, totalMinor, transactionId]);
 
   const handlePaymentSelect = (mode: PaymentMode) => {
     setSelectedMode(mode);

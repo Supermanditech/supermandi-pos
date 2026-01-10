@@ -865,11 +865,7 @@ export default function PosRootLayout() {
         onChangeText={handleHidChange}
         onSubmitEditing={handleHidSubmit}
         onKeyPress={handleHidKeyPress}
-        onBlur={() => {
-          setTimeout(() => {
-            ensureHidFocus();
-          }, 50);
-        }}
+        onBlur={scheduleHidFocus}
         blurOnSubmit={false}
         autoCorrect={false}
         autoCapitalize="none"

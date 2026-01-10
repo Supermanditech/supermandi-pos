@@ -41,9 +41,11 @@ function asNumber(value: unknown): number | null {
 }
 
 function buildBillRef(): string {
-  const ts = Date.now().toString().slice(-6);
-  const rand = Math.floor(100 + Math.random() * 900).toString();
-  return `${ts}${rand}`;
+  // Use full timestamp + cryptographically secure random bytes to avoid collisions
+  const ts = Date.now().toString();
+  const randomBytes = require("crypto").randomBytes(3); // 3 bytes = 24 bits
+  const rand = randomBytes.readUIntBE(0, 3).toString(36).toUpperCase().padStart(5, '0');
+  return `${ts.slice(-8)}${rand}`; // 8-digit timestamp + 5-char random = 13 chars
 }
 
 async function ensureProductByBarcode(
@@ -198,6 +200,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
       try {
         await client.query("BEGIN");
+        // Set SERIALIZABLE isolation to prevent race conditions in inventory deduction
+        await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
         const inserted = await client.query(
           `
           INSERT INTO processed_events (event_id, device_id, store_id, event_type)
@@ -363,6 +367,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             globalProductId?: string | null;
           }> = [];
 
+          // Validation constants to prevent overflow and abuse
+          const MAX_QUANTITY = 100000; // Maximum 100k items per line
+          const MAX_PRICE_MINOR = 100000000; // Maximum 1 million INR per item
+
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
             const name = asTrimmedString(item?.name);
@@ -373,8 +381,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const quantity = quantityRaw === null ? null : Math.round(quantityRaw);
             const priceMinor = priceMinorRaw === null ? null : Math.round(priceMinorRaw);
 
-            if (!barcode || quantity === null || quantity <= 0 || priceMinor === null || priceMinor <= 0) {
-              throw new Error("invalid sale item");
+            if (
+              !barcode ||
+              quantity === null ||
+              quantity <= 0 ||
+              quantity > MAX_QUANTITY ||
+              priceMinor === null ||
+              priceMinor <= 0 ||
+              priceMinor > MAX_PRICE_MINOR
+            ) {
+              throw new Error("invalid sale item: quantity must be 1-100000, price must be 1-100000000 minor");
             }
 
             const fallbackName = `Item ${barcode.slice(-4)}`;

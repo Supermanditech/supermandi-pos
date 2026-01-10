@@ -35,9 +35,11 @@ type SaleItemInput = {
 type BillPaymentMode = "UPI" | "CASH" | "DUE" | "UNKNOWN";
 
 function buildBillRef(): string {
-  const ts = Date.now().toString().slice(-6);
-  const rand = Math.floor(100 + Math.random() * 900).toString();
-  return `${ts}${rand}`;
+  // Use full timestamp + cryptographically secure random bytes to avoid collisions
+  const ts = Date.now().toString();
+  const randomBytes = require("crypto").randomBytes(3); // 3 bytes = 24 bits
+  const rand = randomBytes.readUIntBE(0, 3).toString(36).toUpperCase().padStart(5, '0');
+  return `${ts.slice(-8)}${rand}`; // 8-digit timestamp + 5-char random = 13 chars
 }
 
 function resolvePaymentMode(status: string | null | undefined): BillPaymentMode {
@@ -306,7 +308,7 @@ posSalesRouter.get("/bills", requireDeviceToken, async (req, res) => {
       `
       SELECT id, bill_ref, total_minor, status, created_at, currency
       FROM sales
-      WHERE store_id = $1 AND status <> 'CREATED'
+      WHERE store_id = $1 AND status NOT IN ('CREATED', 'PENDING', 'CANCELLED')
       ORDER BY created_at DESC
       LIMIT $2 OFFSET $3
       `,
@@ -477,17 +479,26 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     };
   });
 
+  // Validation constants to prevent overflow and abuse
+  const MAX_QUANTITY = 100000; // Maximum 100k items per line
+  const MAX_PRICE_MINOR = 100000000; // Maximum 1 million INR per item
+
   const invalidItem = cleanedItems.find(
     (item) =>
       (!item.explicitVariantId && !item.productId && !item.globalProductId) ||
       !Number.isFinite(item.quantity) ||
       item.quantity <= 0 ||
+      item.quantity > MAX_QUANTITY ||
       !Number.isFinite(item.priceMinor) ||
-      item.priceMinor <= 0
+      item.priceMinor <= 0 ||
+      item.priceMinor > MAX_PRICE_MINOR
   );
 
   if (invalidItem) {
-    return res.status(400).json({ error: "items are invalid" });
+    return res.status(400).json({
+      error: "items are invalid",
+      message: "Item quantity must be between 1 and 100,000. Price must be between 1 and 1,000,000 INR."
+    });
   }
 
   const discount = Math.max(0, Math.round(discountMinor ?? 0));
@@ -537,6 +548,8 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    // Set SERIALIZABLE isolation to prevent race conditions in inventory deduction
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
     const resolvedItems: Array<{
       variantId: string;
@@ -583,7 +596,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
         priceMinor: item.priceMinor,
         name: item.name,
         barcode: item.barcode,
-        globalProductId: item.globalProductId
+        globalProductId: item.globalProductId ?? undefined
       });
     }
 
@@ -632,7 +645,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
           ON CONFLICT (id) DO NOTHING
           RETURNING id
           `,
-          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "CREATED", saleCurrency]
+          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "PENDING", saleCurrency]
         );
         if ((inserted.rowCount ?? 0) > 0) {
           break;
@@ -712,11 +725,9 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       }))
     });
 
-    await applyBulkDeductions({
-      client,
-      storeId,
-      items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
-    });
+    // Stock deduction moved to confirmPayment endpoint
+    // Sale status is PENDING until payment is confirmed
+    // If payment fails, sale can be cancelled via cancelSale endpoint
 
     await client.query("COMMIT");
   } catch (error) {
@@ -758,6 +769,184 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       totalMinor: total,
     }
   });
+});
+
+// Confirm payment and deduct stock (two-phase commit)
+// This endpoint is called AFTER payment is confirmed
+// Stock is only deducted when payment is successful
+posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) {
+    return res.status(400).json({ error: "saleId is required" });
+  }
+
+  const { paymentMode } = req.body as { paymentMode?: "CASH" | "UPI" | "DUE" };
+  if (!paymentMode || !["CASH", "UPI", "DUE"].includes(paymentMode)) {
+    return res.status(400).json({ error: "paymentMode is required (CASH, UPI, or DUE)" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+
+    // Get sale and verify it's in PENDING status
+    const saleRes = await client.query(
+      `
+      SELECT id, store_id, status, subtotal_minor, discount_minor, total_minor
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    if (sale.status !== "PENDING") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "sale_already_confirmed",
+        message: `Sale is in ${sale.status} status and cannot be confirmed again`
+      });
+    }
+
+    // Get sale items
+    const itemsRes = await client.query(
+      `
+      SELECT variant_id, quantity
+      FROM sale_items
+      WHERE sale_id = $1
+      `,
+      [saleId]
+    );
+
+    const items = itemsRes.rows.map((row) => ({
+      variantId: String(row.variant_id),
+      quantity: Number(row.quantity ?? 0)
+    }));
+
+    // Re-verify stock availability (critical - stock might have changed)
+    await ensureStoreInventoryAvailability({
+      client,
+      storeId,
+      items: items.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        globalProductId: null,
+        name: null
+      }))
+    });
+
+    // Deduct stock NOW (only after payment is confirmed)
+    await applyBulkDeductions({
+      client,
+      storeId,
+      items
+    });
+
+    // Update sale status based on payment mode
+    const newStatus = paymentMode === "CASH" ? "PAID_CASH" : paymentMode === "UPI" ? "PAID_UPI" : "DUE";
+    await client.query(
+      `UPDATE sales SET status = $1 WHERE id = $2`,
+      [newStatus, saleId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      saleId,
+      status: newStatus,
+      message: "Payment confirmed and stock deducted"
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error instanceof InsufficientStockError) {
+      const message =
+        error.details.length === 1
+          ? error.details[0].message
+          : "Stock changed since sale was created.";
+      return res.status(409).json({
+        error: "insufficient_stock",
+        message,
+        details: error.details
+      });
+    }
+    return res.status(500).json({ error: "failed to confirm payment" });
+  } finally {
+    client.release();
+  }
+});
+
+// Cancel a pending sale (cleanup abandoned carts)
+// This endpoint restocks items if needed
+posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) {
+    return res.status(400).json({ error: "saleId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Get sale and verify it exists
+    const saleRes = await client.query(
+      `
+      SELECT id, store_id, status
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // Only allow cancelling PENDING sales
+    if (sale.status !== "PENDING") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "cannot_cancel",
+        message: `Cannot cancel sale in ${sale.status} status`
+      });
+    }
+
+    // Update status to CANCELLED
+    await client.query(
+      `UPDATE sales SET status = 'CANCELLED' WHERE id = $1`,
+      [saleId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      saleId,
+      status: "CANCELLED",
+      message: "Sale cancelled successfully"
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ error: "failed to cancel sale" });
+  } finally {
+    client.release();
+  }
 });
 
 // IMPORTANT:
@@ -846,27 +1035,122 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
     return res.status(403).json({ error: "store_inactive" });
   }
 
-  const paymentRes = await pool.query(
-    `
-    UPDATE payments
-    SET status = 'PAID', confirmed_at = NOW()
-    WHERE id = $1
-    RETURNING id, sale_id
-    `,
-    [paymentId]
-  );
+  // Use transaction to ensure atomicity: payment + stock deduction + status update
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
-  const payment = paymentRes.rows[0];
-  if (!payment) {
-    return res.status(404).json({ error: "payment not found" });
+    const paymentRes = await client.query(
+      `
+      SELECT id, sale_id
+      FROM payments
+      WHERE id = $1
+      `,
+      [paymentId]
+    );
+
+    const payment = paymentRes.rows[0];
+    if (!payment) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "payment not found" });
+    }
+
+    const saleId = String(payment.sale_id);
+
+    // Get sale and verify it's in PENDING status
+    const saleRes = await client.query(
+      `
+      SELECT id, store_id, status, total_minor
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale not found" });
+    }
+
+    if (sale.status !== "PENDING") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "sale_not_pending",
+        message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // Get sale items for stock deduction
+    const itemsRes = await client.query(
+      `
+      SELECT variant_id, quantity
+      FROM sale_items
+      WHERE sale_id = $1
+      `,
+      [saleId]
+    );
+
+    const items = itemsRes.rows.map((row) => ({
+      variantId: String(row.variant_id),
+      quantity: Number(row.quantity ?? 0)
+    }));
+
+    // Re-verify stock availability (critical - stock might have changed)
+    await ensureStoreInventoryAvailability({
+      client,
+      storeId,
+      items: items.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        globalProductId: null,
+        name: null
+      }))
+    });
+
+    // Deduct stock NOW (only after payment is being processed)
+    await applyBulkDeductions({
+      client,
+      storeId,
+      items
+    });
+
+    // Update payment status
+    await client.query(
+      `
+      UPDATE payments
+      SET status = 'PAID', confirmed_at = NOW()
+      WHERE id = $1
+      `,
+      [paymentId]
+    );
+
+    // Update sale status
+    await client.query(
+      `UPDATE sales SET status = 'PAID_UPI' WHERE id = $1`,
+      [saleId]
+    );
+
+    await client.query("COMMIT");
+    return res.json({ status: "PAID" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error instanceof InsufficientStockError) {
+      const message =
+        error.details.length === 1
+          ? error.details[0].message
+          : "Stock changed since sale was created.";
+      return res.status(409).json({
+        error: "insufficient_stock",
+        message,
+        details: error.details
+      });
+    }
+    return res.status(500).json({ error: "failed to confirm payment" });
+  } finally {
+    client.release();
   }
-
-  await pool.query(
-    `UPDATE sales SET status = 'PAID_UPI' WHERE id = $1`,
-    [payment.sale_id]
-  );
-
-  return res.json({ status: "PAID" });
 });
 
 posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
@@ -888,22 +1172,115 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
     return res.status(403).json({ error: "store_inactive" });
   }
 
-  const sale = await getSale(storeId, saleId);
-  if (!sale || sale.store_id !== storeId) {
-    return res.status(404).json({ error: "sale not found" });
+  // Use transaction to ensure atomicity: payment + stock deduction + status update
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+
+    // Get sale and verify it's in PENDING status
+    const saleRes = await client.query(
+      `
+      SELECT id, store_id, status, total_minor
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale not found" });
+    }
+
+    if (sale.status !== "PENDING") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "sale_not_pending",
+        message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // Get sale items for stock deduction
+    const itemsRes = await client.query(
+      `
+      SELECT variant_id, quantity
+      FROM sale_items
+      WHERE sale_id = $1
+      `,
+      [saleId]
+    );
+
+    const items = itemsRes.rows.map((row) => ({
+      variantId: String(row.variant_id),
+      quantity: Number(row.quantity ?? 0)
+    }));
+
+    // Re-verify stock availability (critical - stock might have changed)
+    await ensureStoreInventoryAvailability({
+      client,
+      storeId,
+      items: items.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        globalProductId: null,
+        name: null
+      }))
+    });
+
+    // Deduct stock NOW (only after payment is being processed)
+    await applyBulkDeductions({
+      client,
+      storeId,
+      items
+    });
+
+    const paymentId = randomUUID();
+    await client.query(
+      `
+      INSERT INTO payments (id, sale_id, mode, status, amount_minor)
+      VALUES ($1, $2, $3, $4, $5)
+      `,
+      [paymentId, saleId, "CASH", "PAID", sale.total_minor]
+    );
+
+    // Verify payment was created for correct store (defense in depth)
+    const paymentVerify = await client.query(
+      `
+      SELECT p.id FROM payments p
+      JOIN sales s ON s.id = p.sale_id
+      WHERE p.id = $1 AND s.store_id = $2
+      `,
+      [paymentId, storeId]
+    );
+
+    if (!paymentVerify.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ error: "payment_store_mismatch" });
+    }
+
+    await client.query(`UPDATE sales SET status = 'PAID_CASH' WHERE id = $1`, [saleId]);
+
+    await client.query("COMMIT");
+    return res.json({ status: "PAID" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error instanceof InsufficientStockError) {
+      const message =
+        error.details.length === 1
+          ? error.details[0].message
+          : "Stock changed since sale was created.";
+      return res.status(409).json({
+        error: "insufficient_stock",
+        message,
+        details: error.details
+      });
+    }
+    return res.status(500).json({ error: "failed to process payment" });
+  } finally {
+    client.release();
   }
-
-  await pool.query(
-    `
-    INSERT INTO payments (id, sale_id, mode, status, amount_minor)
-    VALUES ($1, $2, $3, $4, $5)
-    `,
-    [randomUUID(), saleId, "CASH", "PAID", sale.total_minor]
-  );
-
-  await pool.query(`UPDATE sales SET status = 'PAID_CASH' WHERE id = $1`, [saleId]);
-
-  return res.json({ status: "PAID" });
 });
 
 posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
@@ -925,22 +1302,115 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
     return res.status(403).json({ error: "store_inactive" });
   }
 
-  const sale = await getSale(storeId, saleId);
-  if (!sale || sale.store_id !== storeId) {
-    return res.status(404).json({ error: "sale not found" });
+  // Use transaction to ensure atomicity: payment + stock deduction + status update
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+
+    // Get sale and verify it's in PENDING status
+    const saleRes = await client.query(
+      `
+      SELECT id, store_id, status, total_minor
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale not found" });
+    }
+
+    if (sale.status !== "PENDING") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "sale_not_pending",
+        message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // Get sale items for stock deduction
+    const itemsRes = await client.query(
+      `
+      SELECT variant_id, quantity
+      FROM sale_items
+      WHERE sale_id = $1
+      `,
+      [saleId]
+    );
+
+    const items = itemsRes.rows.map((row) => ({
+      variantId: String(row.variant_id),
+      quantity: Number(row.quantity ?? 0)
+    }));
+
+    // Re-verify stock availability (critical - stock might have changed)
+    await ensureStoreInventoryAvailability({
+      client,
+      storeId,
+      items: items.map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        globalProductId: null,
+        name: null
+      }))
+    });
+
+    // Deduct stock NOW (only after payment is being processed)
+    await applyBulkDeductions({
+      client,
+      storeId,
+      items
+    });
+
+    const paymentId = randomUUID();
+    await client.query(
+      `
+      INSERT INTO payments (id, sale_id, mode, status, amount_minor)
+      VALUES ($1, $2, $3, $4, $5)
+      `,
+      [paymentId, saleId, "DUE", "DUE", sale.total_minor]
+    );
+
+    // Verify payment was created for correct store (defense in depth)
+    const paymentVerify = await client.query(
+      `
+      SELECT p.id FROM payments p
+      JOIN sales s ON s.id = p.sale_id
+      WHERE p.id = $1 AND s.store_id = $2
+      `,
+      [paymentId, storeId]
+    );
+
+    if (!paymentVerify.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(500).json({ error: "payment_store_mismatch" });
+    }
+
+    await client.query(`UPDATE sales SET status = 'DUE' WHERE id = $1`, [saleId]);
+
+    await client.query("COMMIT");
+    return res.json({ status: "DUE" });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error instanceof InsufficientStockError) {
+      const message =
+        error.details.length === 1
+          ? error.details[0].message
+          : "Stock changed since sale was created.";
+      return res.status(409).json({
+        error: "insufficient_stock",
+        message,
+        details: error.details
+      });
+    }
+    return res.status(500).json({ error: "failed to process payment" });
+  } finally {
+    client.release();
   }
-
-  await pool.query(
-    `
-    INSERT INTO payments (id, sale_id, mode, status, amount_minor)
-    VALUES ($1, $2, $3, $4, $5)
-    `,
-    [randomUUID(), saleId, "DUE", "DUE", sale.total_minor]
-  );
-
-  await pool.query(`UPDATE sales SET status = 'DUE' WHERE id = $1`, [saleId]);
-
-  return res.json({ status: "DUE" });
 });
 
 posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res) => {

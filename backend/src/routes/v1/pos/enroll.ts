@@ -1,6 +1,16 @@
 import { randomBytes, randomUUID } from "crypto";
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+
+// Rate limiter for enrollment endpoint to prevent brute force attacks
+const enrollmentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Maximum 10 enrollment attempts per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "enrollment_rate_limited", message: "Too many enrollment attempts. Please try again in 15 minutes." }
+});
 
 export const posEnrollRouter = Router();
 
@@ -29,8 +39,8 @@ function normalizeEnum(value: string | null): string | null {
   return value ? value.trim().toUpperCase() : null;
 }
 
-// POST /api/v1/pos/enroll
-posEnrollRouter.post("/enroll", async (req, res) => {
+// POST /api/v1/pos/enroll (with rate limiting to prevent brute force)
+posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
   const code = asTrimmedString(req.body?.code)?.toUpperCase();
   if (!code) {
     return res.status(400).json({ error: "code is required" });
