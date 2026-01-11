@@ -1,4 +1,4 @@
-import { Alert } from "react-native";
+import { Alert, ToastAndroid, Platform } from "react-native";
 import { ApiError } from "../api/apiClient";
 import {
   createStoreProductFromScan,
@@ -40,8 +40,8 @@ type ScanRuntime = {
   onStoreInactive?: () => void;
 };
 
-const DUPLICATE_WINDOW_MS = 500;
-const DEFAULT_DUPLICATE_GUARD_MS = 200;
+const DUPLICATE_WINDOW_MS = 800;
+const DEFAULT_DUPLICATE_GUARD_MS = 600;
 const STORM_WINDOW_MS = 2000;
 const STORM_MAX_SCANS = 12;
 const STORM_COOLDOWN_MS = 1500;
@@ -186,6 +186,9 @@ export async function onBarcodeScanned(rawText: string, format?: string): Promis
 
   if (duplicateGuardWindowMs > 0 && isDuplicateGuard(trimmed)) {
     console.log("scan_duplicate_ignored");
+    if (Platform.OS === "android") {
+      ToastAndroid.show("Wait before re-scanning", ToastAndroid.SHORT);
+    }
     return;
   }
 

@@ -122,10 +122,12 @@ const NUM_COLUMNS = 2;
 const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
-const CART_SHEET_COLLAPSED_RATIO = 0.52;
-const CART_SHEET_EXPANDED_RATIO = 0.95;
+const CART_SHEET_COLLAPSED_RATIO = 0.45;
+const CART_SHEET_EXPANDED_RATIO = 0.92;
 const CART_SHEET_SNAP_DURATION_MS = 220;
-const CART_LIST_FOOTER_SPACER = 220;
+const CART_LIST_FOOTER_SPACER = 100;
+const SMALL_SCREEN_WIDTH = 400;
+const SMALL_SCREEN_HEIGHT = 700;
 
 
 const mergeSkuItems = (prev: SkuItem[], incoming: SkuItem[]): SkuItem[] => {
@@ -203,8 +205,8 @@ function CartItemRow({
   onSaveDefaultPrice,
   onRemoveItem
 }: CartItemRowProps) {
-  const { width: screenWidth } = useWindowDimensions();
-  const isCompactRow = screenWidth <= 360;
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isCompactRow = screenWidth <= SMALL_SCREEN_WIDTH || screenHeight <= SMALL_SCREEN_HEIGHT;
   const [priceInput, setPriceInput] = useState(formatPriceInput(item.priceMinor));
   const [saving, setSaving] = useState(false);
   const priceEditedRef = useRef(false);
@@ -431,7 +433,7 @@ function CartItemRow({
       testID={rowTestId}
     >
       <View style={[styles.cartItemInfo, isCompactRow && styles.cartItemInfoCompact]}>
-        <Text style={styles.cartItemName} numberOfLines={1} ellipsizeMode="tail">
+        <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail">
           {item.name}
         </Text>
         <View style={[styles.cartItemPriceRow, isCompactRow && styles.cartItemPriceRowCompact]}>
@@ -544,7 +546,8 @@ export default function SellScanScreen({
   onSellOnboardingClose,
 }: SellScanScreenProps) {
   const navigation = useNavigation<Nav>();
-  const { height: screenHeight } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isSmallScreen = screenWidth <= SMALL_SCREEN_WIDTH || screenHeight <= SMALL_SCREEN_HEIGHT;
   const insets = useSafeAreaInsets();
   const products = useProductsStore((state) => state.products);
   const loadProducts = useProductsStore((state) => state.loadProducts);
@@ -1797,6 +1800,7 @@ export default function SellScanScreen({
           <Animated.View
             style={[
               styles.cartSheet,
+              isSmallScreen && styles.cartSheetCompact,
               {
                 height: expandedHeight,
                 transform: [{ translateY: sheetTranslateY }],
@@ -1806,19 +1810,19 @@ export default function SellScanScreen({
             <View style={styles.cartHandleWrap} {...panResponder.panHandlers}>
               <View style={styles.cartHandle} />
             </View>
-            <View style={styles.cartHeader}>
+            <View style={[styles.cartHeader, isSmallScreen && styles.cartHeaderCompact]}>
               <View style={styles.cartHeaderLeft}>
                 <Pressable onPress={closeCart} hitSlop={8} accessibilityLabel="Back to scan">
                   <MaterialCommunityIcons
                     name="chevron-left"
-                    size={20}
+                    size={isSmallScreen ? 18 : 20}
                     color={theme.colors.textSecondary}
                   />
                 </Pressable>
                 <View style={styles.cartTitleWrap}>
-                  <Text style={styles.cartTitle}>{cartTitle}</Text>
+                  <Text style={[styles.cartTitle, isSmallScreen && styles.cartTitleCompact]}>{cartTitle}</Text>
                   <Text style={styles.cartSubtitle}>
-                    Items: {uniqueSkuCount} | Qty: {itemCount}
+                    {uniqueSkuCount} items | Qty: {itemCount}
                   </Text>
                 </View>
               </View>
@@ -1832,7 +1836,7 @@ export default function SellScanScreen({
               contentContainerStyle={styles.cartListContent}
               nestedScrollEnabled
               ListFooterComponent={
-                items.length ? <View style={styles.cartListFooterSpacer} /> : null
+                items.length ? <View style={[styles.cartListFooterSpacer, isSmallScreen && styles.cartListFooterSpacerCompact]} /> : null
               }
               ListEmptyComponent={
                 <View style={styles.emptyState}>
@@ -1847,96 +1851,98 @@ export default function SellScanScreen({
               keyboardShouldPersistTaps="handled"
             />
 
-            <View style={styles.discountSection}>
-              <View style={styles.discountHeader}>
-                <Text style={styles.discountTitle}>Discount</Text>
-                {discount ? (
-                  <Text style={styles.discountApplied}>Applied</Text>
-                ) : null}
-              </View>
-              <View style={styles.discountControls}>
-                <View style={styles.discountToggle}>
-                  <Pressable
-                    style={[
-                      styles.discountChip,
-                      discountType === "percentage" && styles.discountChipActive
-                    ]}
-                    onPress={() => {
-                      setDiscountType("percentage");
-                      scheduleDiscountApply(discountValue, "percentage");
-                    }}
-                    disabled={!canEditCart}
-                  >
-                    <Text
-                      style={[
-                        styles.discountChipText,
-                        discountType === "percentage" && styles.discountChipTextActive
-                      ]}
-                    >
-                      % Discount
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.discountChip,
-                      discountType === "fixed" && styles.discountChipActive
-                    ]}
-                    onPress={() => {
-                      setDiscountType("fixed");
-                      scheduleDiscountApply(discountValue, "fixed");
-                    }}
-                    disabled={!canEditCart}
-                  >
-                    <Text
-                      style={[
-                        styles.discountChipText,
-                        discountType === "fixed" && styles.discountChipTextActive
-                      ]}
-                    >
-                      Flat Discount
-                    </Text>
-                  </Pressable>
+            <View style={[styles.cartFooter, isSmallScreen && styles.cartFooterCompact]}>
+              <View style={[styles.discountSection, isSmallScreen && styles.discountSectionCompact]}>
+                <View style={styles.discountHeader}>
+                  <Text style={styles.discountTitle}>Discount</Text>
+                  {discount ? (
+                    <Text style={styles.discountApplied}>Applied</Text>
+                  ) : null}
                 </View>
-                <TextInput
-                  style={[styles.discountInput, !canEditCart && styles.inputDisabled]}
-                  value={discountValue}
-                  onChangeText={handleDiscountValueChange}
-                  placeholder={
-                    discountType === "percentage" ? "Enter %" : "Enter amount (INR)"
-                  }
-                  placeholderTextColor={theme.colors.textTertiary}
-                  keyboardType="numeric"
-                  editable={canEditCart}
-                />
+                <View style={styles.discountControls}>
+                  <View style={styles.discountToggle}>
+                    <Pressable
+                      style={[
+                        styles.discountChip,
+                        discountType === "percentage" && styles.discountChipActive
+                      ]}
+                      onPress={() => {
+                        setDiscountType("percentage");
+                        scheduleDiscountApply(discountValue, "percentage");
+                      }}
+                      disabled={!canEditCart}
+                    >
+                      <Text
+                        style={[
+                          styles.discountChipText,
+                          discountType === "percentage" && styles.discountChipTextActive
+                        ]}
+                      >
+                        %
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.discountChip,
+                        discountType === "fixed" && styles.discountChipActive
+                      ]}
+                      onPress={() => {
+                        setDiscountType("fixed");
+                        scheduleDiscountApply(discountValue, "fixed");
+                      }}
+                      disabled={!canEditCart}
+                    >
+                      <Text
+                        style={[
+                          styles.discountChipText,
+                          discountType === "fixed" && styles.discountChipTextActive
+                        ]}
+                      >
+                        Flat
+                      </Text>
+                    </Pressable>
+                  </View>
+                  <TextInput
+                    style={[styles.discountInput, !canEditCart && styles.inputDisabled]}
+                    value={discountValue}
+                    onChangeText={handleDiscountValueChange}
+                    placeholder={
+                      discountType === "percentage" ? "%" : "INR"
+                    }
+                    placeholderTextColor={theme.colors.textTertiary}
+                    keyboardType="numeric"
+                    editable={canEditCart}
+                  />
+                </View>
               </View>
-            </View>
 
-            <View style={styles.cartTotals}>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Subtotal</Text>
-                <Text style={styles.totalValue}>{subtotalLabel}</Text>
-              </View>
-              {discountTotal ? (
+              <View style={[styles.cartTotals, isSmallScreen && styles.cartTotalsCompact]}>
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Discount</Text>
-                  <Text style={styles.totalValue}>-{discountAmountLabel}</Text>
+                  <Text style={styles.totalLabel}>Subtotal</Text>
+                  <Text style={styles.totalValue}>{subtotalLabel}</Text>
                 </View>
-              ) : null}
-              <View style={[styles.totalRow, styles.totalRowEmphasis]}>
-                <Text style={styles.totalLabelStrong}>Total</Text>
-                <Text style={styles.totalValueStrong}>{totalLabel}</Text>
+                {discountTotal ? (
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Discount</Text>
+                    <Text style={styles.totalValue}>-{discountAmountLabel}</Text>
+                  </View>
+                ) : null}
+                <View style={[styles.totalRow, styles.totalRowEmphasis]}>
+                  <Text style={styles.totalLabelStrong}>Total</Text>
+                  <Text style={styles.totalValueStrong}>{totalLabel}</Text>
+                </View>
               </View>
-            </View>
 
-            <Pressable
-              style={[styles.totalCta, !canPay && styles.ctaDisabled]}
-              onPress={handleCheckout}
-              disabled={!canPay}
-              accessibilityLabel="Total bill"
-            >
-              <Text style={styles.totalCtaText}>Checkout</Text>
-              <Text style={styles.totalCtaAmount}>{totalLabel}</Text>
-            </Pressable>
+              <Pressable
+                style={[styles.totalCta, isSmallScreen && styles.totalCtaCompact, !canPay && styles.ctaDisabled]}
+                onPress={handleCheckout}
+                disabled={!canPay}
+                accessibilityLabel="Total bill"
+              >
+                <Text style={styles.totalCtaText}>Checkout</Text>
+                <Text style={styles.totalCtaAmount}>{totalLabel}</Text>
+              </Pressable>
+            </View>
           </Animated.View>
           </View>
         </Modal>
@@ -2499,6 +2505,12 @@ const styles = StyleSheet.create({
     gap: 12,
     ...theme.shadows.sm,
   },
+  cartSheetCompact: {
+    padding: 10,
+    gap: 8,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
   cartHandleWrap: {
     alignSelf: "center",
     paddingVertical: 6,
@@ -2516,6 +2528,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
+  cartHeaderCompact: {
+    marginBottom: 4,
+  },
   cartHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
@@ -2531,6 +2546,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: theme.colors.textPrimary,
   },
+  cartTitleCompact: {
+    fontSize: 16,
+  },
   cartSubtitle: {
     fontSize: 12,
     color: theme.colors.textSecondary,
@@ -2545,6 +2563,9 @@ const styles = StyleSheet.create({
   },
   cartListFooterSpacer: {
     height: CART_LIST_FOOTER_SPACER,
+  },
+  cartListFooterSpacerCompact: {
+    height: 60,
   },
   cartItemRow: {
     paddingVertical: 10,
@@ -2584,6 +2605,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     flexShrink: 1,
     minWidth: 0,
+  },
+  cartItemNameCompact: {
+    fontSize: 12,
   },
   cartItemMeta: {
     fontSize: 11,
@@ -2724,6 +2748,10 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
   },
+  discountSectionCompact: {
+    padding: 8,
+    gap: 6,
+  },
   discountHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -2826,6 +2854,22 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 16,
+  },
+  totalCtaCompact: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+  },
+  cartTotalsCompact: {
+    paddingTop: 6,
+    gap: 4,
+  },
+  cartFooter: {
+    backgroundColor: theme.colors.surface,
+    gap: 10,
+  },
+  cartFooterCompact: {
+    gap: 6,
   },
   totalCtaText: {
     fontSize: 14,
