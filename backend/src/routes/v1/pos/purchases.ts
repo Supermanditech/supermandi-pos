@@ -20,6 +20,7 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
       unit?: string | null;
       unitCostMinor?: number;
       purchasePriceMinor?: number;
+      sellingPriceMinor?: number;
       currency?: string | null;
     }>;
     supplierName?: string | null;
@@ -57,6 +58,9 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
           ? item.format.trim()
           : null;
 
+    const sellingPriceMinor =
+      typeof item.sellingPriceMinor === "number" ? item.sellingPriceMinor : undefined;
+
     return {
       barcode: typeof item.barcode === "string" ? item.barcode.trim() : undefined,
       productId: typeof item.productId === "string" ? item.productId.trim() : undefined,
@@ -66,6 +70,7 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
       quantity: typeof item.quantity === "number" ? item.quantity : NaN,
       unit: typeof item.unit === "string" ? item.unit.trim() : null,
       unitCostMinor,
+      sellingPriceMinor,
       currency: typeof item.currency === "string" ? item.currency.trim() : undefined
     };
   });

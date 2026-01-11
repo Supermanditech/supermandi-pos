@@ -22,6 +22,7 @@ export type PurchaseItemInput = {
   quantity: number;
   unit?: string | null;
   unitCostMinor: number;
+  sellingPriceMinor?: number;
   currency?: string | null;
 };
 
@@ -43,6 +44,7 @@ type ResolvedItem = {
   baseUnit: BaseUnit | null;
   isBulk: boolean;
   unitCostMinor: number;
+  sellingPriceMinor: number | null;
   lineTotalMinor: number;
   currency: string;
 };
@@ -152,15 +154,33 @@ async function ensureRetailerVariantLink(params: {
   client: PoolClient;
   storeId: string;
   variantId: string;
+  sellingPriceMinor?: number | null;
 }): Promise<void> {
-  await params.client.query(
-    `
-    INSERT INTO retailer_variants (store_id, variant_id)
-    VALUES ($1, $2)
-    ON CONFLICT (store_id, variant_id) DO NOTHING
-    `,
-    [params.storeId, params.variantId]
-  );
+  const { client, storeId, variantId, sellingPriceMinor } = params;
+
+  // If selling price is provided, insert or update with the price
+  if (typeof sellingPriceMinor === "number" && sellingPriceMinor > 0) {
+    await client.query(
+      `
+      INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer)
+      VALUES ($1, $2, $3, TRUE)
+      ON CONFLICT (store_id, variant_id) DO UPDATE
+      SET selling_price_minor = COALESCE(EXCLUDED.selling_price_minor, retailer_variants.selling_price_minor),
+          updated_at = NOW()
+      `,
+      [storeId, variantId, sellingPriceMinor]
+    );
+  } else {
+    // No price provided, just ensure the link exists
+    await client.query(
+      `
+      INSERT INTO retailer_variants (store_id, variant_id, digitised_by_retailer)
+      VALUES ($1, $2, TRUE)
+      ON CONFLICT (store_id, variant_id) DO NOTHING
+      `,
+      [storeId, variantId]
+    );
+  }
 }
 
 async function resolveVariantByBarcode(
@@ -236,6 +256,12 @@ async function resolvePurchaseItem(params: {
     throw new Error("invalid_unit_cost");
   }
 
+  // Parse selling price (optional but recommended)
+  const sellingPriceMinor =
+    typeof item.sellingPriceMinor === "number" && item.sellingPriceMinor > 0
+      ? Math.round(item.sellingPriceMinor)
+      : null;
+
   const unit = item.unit?.trim() || null;
   const baseInfo = computeBaseQuantity(quantity, unit);
   const baseUnit = baseInfo?.baseUnit ?? null;
@@ -301,7 +327,7 @@ async function resolvePurchaseItem(params: {
     await updateVariantSizeIfMissing({ client, variantId, baseUnit, sizeBase: quantityBase });
   }
   if (variantId) {
-    await ensureRetailerVariantLink({ client, storeId, variantId });
+    await ensureRetailerVariantLink({ client, storeId, variantId, sellingPriceMinor });
   }
 
   return {
@@ -315,6 +341,7 @@ async function resolvePurchaseItem(params: {
     baseUnit,
     isBulk,
     unitCostMinor,
+    sellingPriceMinor,
     lineTotalMinor: unitCostMinor * quantity,
     currency
   };
@@ -330,24 +357,25 @@ async function applyStorePurchaseUpdates(params: {
   const purchasePriceByGlobal = new Map<string, number>();
 
   for (const item of items) {
-    const ledgerProductId = item.globalProductId ?? item.productId;
-    if (!ledgerProductId) continue;
+    // Use productId for store_inventory to match listInventoryVariants JOIN (si.global_product_id = v.product_id)
+    const inventoryProductId = item.productId;
+    if (!inventoryProductId) continue;
     await ensureGlobalProductEntry({
       client,
-      globalProductId: ledgerProductId,
+      globalProductId: inventoryProductId,
       globalName: item.productName
     });
     await applyInventoryMovement({
       client,
       storeId,
-      globalProductId: ledgerProductId,
+      globalProductId: inventoryProductId,
       movementType: "RECEIVE",
       quantity: item.quantity,
       unitCostMinor: item.unitCostMinor,
       referenceType: "PURCHASE",
       referenceId: params.purchaseId
     });
-    purchasePriceByGlobal.set(ledgerProductId, item.unitCostMinor);
+    purchasePriceByGlobal.set(inventoryProductId, item.unitCostMinor);
   }
 
   for (const [globalProductId, priceMinor] of purchasePriceByGlobal.entries()) {
