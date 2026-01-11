@@ -40,11 +40,11 @@ type ScanRuntime = {
   onStoreInactive?: () => void;
 };
 
-const DUPLICATE_WINDOW_MS = 800;
-const DEFAULT_DUPLICATE_GUARD_MS = 600;
-const STORM_WINDOW_MS = 2000;
-const STORM_MAX_SCANS = 12;
-const STORM_COOLDOWN_MS = 1500;
+const DUPLICATE_WINDOW_MS = 1200;
+const DEFAULT_DUPLICATE_GUARD_MS = 1000;
+const STORM_WINDOW_MS = 3000;
+const STORM_MAX_SCANS = 8;
+const STORM_COOLDOWN_MS = 2000;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
 let lastScan: { key: string; ts: number } | null = null;
 let lastBarcodeSeen: { value: string; ts: number } | null = null;
@@ -59,10 +59,18 @@ type CartScanProduct = ScanProduct & { metadata?: Record<string, any> };
 
 export function needsSellFirstOnboarding(product: StoreLookupProduct | null): boolean {
   if (!product) return true;
+
+  // Check if sell price is set - require onboarding if missing
+  const sellPrice = typeof product.sell_price === "number" ? product.sell_price : 0;
+  const hasSellPrice = Number.isFinite(sellPrice) && sellPrice > 0;
+  if (!hasSellPrice) return true;
+
   const availableRaw = typeof product.available_qty === "number" ? product.available_qty : 0;
   const hasStock = Number.isFinite(availableRaw) && availableRaw > 0;
   const purchasePrice = typeof product.purchase_price === "number" ? product.purchase_price : 0;
   const hasReceiveHistory = Number.isFinite(purchasePrice) && purchasePrice > 0;
+
+  // Require onboarding if: first time in store, OR no stock and no receive history
   return Boolean(product.is_first_time_in_store) || (!hasStock && !hasReceiveHistory);
 }
 

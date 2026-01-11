@@ -453,8 +453,8 @@ function CartItemRow({
         >
           <MaterialCommunityIcons
             name="trash-can-outline"
-            size={14}
-            color={theme.colors.textSecondary}
+            size={18}
+            color={theme.colors.error}
           />
         </Pressable>
       </View>
@@ -494,7 +494,7 @@ function CartItemRow({
             disabled={controlsDisabled}
             accessibilityLabel={`Decrease ${item.name}`}
           >
-            <MaterialCommunityIcons name="minus" size={14} color={theme.colors.textPrimary} />
+            <MaterialCommunityIcons name="minus" size={16} color={theme.colors.primary} />
           </Pressable>
           <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]}>
             {item.quantity}
@@ -505,7 +505,7 @@ function CartItemRow({
             disabled={controlsDisabled}
             accessibilityLabel={`Increase ${item.name}`}
           >
-            <MaterialCommunityIcons name="plus" size={14} color={theme.colors.textPrimary} />
+            <MaterialCommunityIcons name="plus" size={16} color={theme.colors.primary} />
           </Pressable>
         </Animated.View>
 
@@ -819,12 +819,12 @@ export default function SellScanScreen({
   useEffect(() => {
     if (!cartExpanded) return;
     sheetTranslateY.stopAnimation();
-    // On small screens, start expanded; on larger screens, start collapsed
-    const startExpanded = isSmallScreen;
-    const initialValue = startExpanded ? 0 : collapsedOffset;
-    sheetTranslateY.setValue(initialValue);
-    sheetSnapRef.current = startExpanded ? "expanded" : "collapsed";
-  }, [cartExpanded, collapsedOffset, sheetTranslateY, isSmallScreen]);
+    // Always start expanded so discount/total/checkout area is visible immediately
+    // This fixes the issue on handheld POS devices (Sunmi V2, iMin Swift 2) where
+    // the collapsed state hides the checkout button
+    sheetTranslateY.setValue(0);
+    sheetSnapRef.current = "expanded";
+  }, [cartExpanded, sheetTranslateY]);
 
   useEffect(() => {
     const id = totalAnimatedValue.addListener(({ value }) => {
@@ -1839,11 +1839,16 @@ export default function SellScanScreen({
             </View>
             <View style={[styles.cartHeader, isSmallScreen && styles.cartHeaderCompact]}>
               <View style={styles.cartHeaderLeft}>
-                <Pressable onPress={closeCart} hitSlop={8} accessibilityLabel="Back to scan">
+                <Pressable
+                  style={styles.backButton}
+                  onPress={closeCart}
+                  hitSlop={12}
+                  accessibilityLabel="Back to scan"
+                >
                   <MaterialCommunityIcons
-                    name="chevron-left"
-                    size={isSmallScreen ? 18 : 20}
-                    color={theme.colors.textSecondary}
+                    name="arrow-left"
+                    size={22}
+                    color={theme.colors.primary}
                   />
                 </Pressable>
                 <View style={styles.cartTitleWrap}>
@@ -2565,6 +2570,16 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   cartTitleWrap: {
     minWidth: 0,
   },
@@ -2762,17 +2777,18 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   qtyButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   qtyButtonDisabled: {
     opacity: 0.5,
+    borderColor: theme.colors.border,
   },
   qtyValue: {
     minWidth: 18,
@@ -2806,14 +2822,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   removeItemButton: {
-    borderRadius: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    padding: 4,
+    borderColor: theme.colors.errorSoft,
+    backgroundColor: theme.colors.errorSoft,
+    padding: 6,
   },
   removeItemButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.4,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderColor: theme.colors.border,
   },
   discountSection: {
     borderWidth: 1,

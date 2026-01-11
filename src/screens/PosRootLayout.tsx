@@ -133,10 +133,12 @@ export default function PosRootLayout() {
   }, [deviceType]);
   const isMobileDevice = !isDedicatedPosDevice;
   const showCameraTimeoutNote = !isMobileDevice && !hidConnected;
-  const compactTabs = screenWidth <= 360;
+  // Lowered threshold from 360 to 280 so Menu text shows on handheld POS devices
+  const compactTabs = screenWidth <= 280;
   const reorderLabel = reorderEnabled ? "REORDER • ON" : "REORDER • OFF";
   const reorderStatusLabel = reorderEnabled ? "ON" : "OFF";
-  const showMenuText = !compactTabs;
+  // Always show Menu text on handheld POS devices for better usability
+  const showMenuText = true;
   const reorderTabColor = reorderEnabled ? theme.colors.success : theme.colors.error;
   const reorderTextColor = theme.colors.textInverse;
   const showReorderPulse = reorderEnabled && !reduceMotionEnabled;
