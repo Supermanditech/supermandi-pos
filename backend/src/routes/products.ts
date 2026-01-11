@@ -468,6 +468,9 @@ productsRouter.post("/create-from-scan", requireDeviceToken, async (req, res) =>
 
 // POST /api/products/receive
 productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
+  const { storeId: reqStoreId, deviceId: reqDeviceId } = (req as any).posDevice ?? {};
+  console.info("[receive_start]", { storeId: reqStoreId, deviceId: reqDeviceId, body: JSON.stringify(req.body).slice(0, 500) });
+
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
