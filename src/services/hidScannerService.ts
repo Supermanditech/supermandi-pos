@@ -115,10 +115,16 @@ const commitHidBuffer = (now: number): string | null => {
     lastHidCommitAt = now;
     notifyHidScan(true);
     logScanComplete(normalized);
-    hidScanHandler?.(normalized);
+    if (hidScanHandler) {
+      console.log(`hid_calling_handler:${normalized}`);
+      hidScanHandler(normalized);
+    } else {
+      console.log("hid_no_handler_registered");
+    }
     return normalized;
   }
 
+  console.log(`hid_scan_rejected:len=${normalizedLength},dur=${duration},avg=${averageInterval.toFixed(0)}`);
   logScanIgnored();
   return null;
 };

@@ -1,8 +1,10 @@
-import React, { useEffect } from "react";
-import { StatusBar, Platform } from "react-native";
+import React, { useEffect, useState, useCallback } from "react";
+import { StatusBar, Platform, View, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import * as Font from "expo-font";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
@@ -19,9 +21,33 @@ import { startScanIntentListener } from "./src/services/scan/scanIntent";
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  useEffect(() => {
-    startScanIntentListener();
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  const loadFonts = useCallback(async () => {
+    try {
+      // Load MaterialCommunityIcons font for APK builds
+      await Font.loadAsync(MaterialCommunityIcons.font);
+      setFontsLoaded(true);
+    } catch (error) {
+      console.error("Error loading fonts:", error);
+      // Still allow app to render even if fonts fail
+      setFontsLoaded(true);
+    }
   }, []);
+
+  useEffect(() => {
+    loadFonts();
+    startScanIntentListener();
+  }, [loadFonts]);
+
+  // Show loading indicator while fonts are loading
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background }}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

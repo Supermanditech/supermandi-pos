@@ -1,0 +1,275 @@
+{
+  "version": "2.0.0",
+  "description": "Tracks all fixes, changes, and WIP tasks. APK build is BLOCKED if any WIP tasks remain incomplete.",
+  "lastUpdated": "2026-01-11",
+  "wip": {
+    "description": "Work-in-progress tasks that MUST be completed before APK build. APK check will FAIL if any WIP tasks exist.",
+    "tasks": []
+  },
+  "completedFixes": [
+    {
+      "id": "FIX-001",
+      "name": "Font Loading for APK",
+      "date": "2025-01-12",
+      "file": "App.tsx",
+      "mustContain": [
+        "Font.loadAsync",
+        "MaterialCommunityIcons.font"
+      ],
+      "mustNotContain": [],
+      "description": "Icons show as empty boxes in APK without font loading"
+    },
+    {
+      "id": "FIX-002",
+      "name": "Cart bar hidden when empty",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "itemCount > 0 ?"
+      ],
+      "mustNotContain": [],
+      "description": "Cart bar should not show '0 items' on home screen"
+    },
+    {
+      "id": "FIX-003",
+      "name": "Status bar - no big modal",
+      "date": "2025-01-12",
+      "file": "src/components/PosStatusBar.tsx",
+      "mustContain": [],
+      "mustNotContain": [
+        "setDetailsOpen",
+        "detailsOpen"
+      ],
+      "description": "Status bar should only show small popovers, not big modal sheet"
+    },
+    {
+      "id": "FIX-004",
+      "name": "Edit modal stock validation",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "Cannot exceed stock"
+      ],
+      "mustNotContain": [],
+      "description": "Edit modal should prevent qty > available stock"
+    },
+    {
+      "id": "FIX-005",
+      "name": "Edit modal discount validation",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "Discount cannot exceed 100%"
+      ],
+      "mustNotContain": [],
+      "description": "Percentage discount should not exceed 100%"
+    },
+    {
+      "id": "FIX-006",
+      "name": "Cart auto-collapse when empty",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "cartExpanded && items.length === 0"
+      ],
+      "mustNotContain": [],
+      "description": "Cart modal should auto-close when all items removed"
+    },
+    {
+      "id": "FIX-007",
+      "name": "Expo updates disabled",
+      "date": "2025-01-12",
+      "file": "app.json",
+      "mustContain": [
+        "\"enabled\": false"
+      ],
+      "mustNotContain": [],
+      "description": "Expo updates must be disabled to prevent remote update errors"
+    },
+    {
+      "id": "FIX-008",
+      "name": "Free item toggle in edit modal",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "handleMakeFree",
+        "Free item"
+      ],
+      "mustNotContain": [],
+      "description": "Edit modal has Free button that sets 100% discount"
+    },
+    {
+      "id": "FIX-009",
+      "name": "Cart clear button",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "clearCart"
+      ],
+      "mustNotContain": [],
+      "description": "Cart header has Clear button to remove all items"
+    },
+    {
+      "id": "FIX-010",
+      "name": "Pencil icon placement",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "pencil-outline"
+      ],
+      "mustNotContain": [],
+      "description": "Edit pencil icon is near product name, not near trash"
+    },
+    {
+      "id": "FIX-011",
+      "name": "Single scan mode - no qty increment",
+      "date": "2025-01-12",
+      "file": "src/services/scan/handleScan.ts",
+      "mustContain": [
+        "already in cart"
+      ],
+      "mustNotContain": [],
+      "description": "Scanning same barcode shows toast instead of adding quantity"
+    },
+    {
+      "id": "FIX-012",
+      "name": "Auto-close camera after scan",
+      "date": "2025-01-12",
+      "file": "src/screens/PosRootLayout.tsx",
+      "mustContain": [
+        "Auto-close camera after single scan"
+      ],
+      "mustNotContain": [],
+      "description": "Camera closes automatically after successful barcode scan"
+    },
+    {
+      "id": "FIX-013",
+      "name": "Onboarding only for products without price",
+      "date": "2025-01-12",
+      "file": "src/services/scan/handleScan.ts",
+      "mustContain": [
+        "Only require onboarding if sell price is missing",
+        "If product has a valid sell price, add directly to cart"
+      ],
+      "mustNotContain": [],
+      "description": "Products with valid sell price are added directly to cart without onboarding modal"
+    },
+    {
+      "id": "FIX-014",
+      "name": "Search adds qty not duplicate",
+      "date": "2025-01-12",
+      "file": "src/screens/SellScanScreen.tsx",
+      "mustContain": [
+        "Get fresh cart state to avoid stale data",
+        "Check for existing item by barcode (handles HID scan items with different id)",
+        "cartState.updateQuantity(existing.id, existing.quantity + 1)"
+      ],
+      "mustNotContain": [],
+      "description": "Tapping search result when item already in cart increases quantity instead of adding duplicate"
+    },
+    {
+      "id": "FIX-015",
+      "name": "HID TextInput always editable",
+      "date": "2025-01-12",
+      "file": "src/screens/PosRootLayout.tsx",
+      "mustContain": [
+        "editable",
+        "showSoftInputOnFocus={false}"
+      ],
+      "mustNotContain": [
+        "editable={!scanDisabled}"
+      ],
+      "description": "HID scanner TextInput must always be editable - blocking logic handled in handler not via editable prop"
+    },
+    {
+      "id": "FIX-016",
+      "name": "HID scanner status updates on input",
+      "date": "2025-01-12",
+      "file": "src/screens/PosRootLayout.tsx",
+      "mustContain": [
+        "Mark HID as active whenever we receive any input",
+        "markHidActive()"
+      ],
+      "mustNotContain": [],
+      "description": "HID scanner status bar indicator updates on any input, not just successful scans"
+    },
+    {
+      "id": "FIX-017",
+      "name": "HID scan blocking feedback",
+      "date": "2025-01-12",
+      "file": "src/screens/PosRootLayout.tsx",
+      "mustContain": [
+        "Complete price setup first",
+        "Close camera to use scanner",
+        "Store is inactive"
+      ],
+      "mustNotContain": [],
+      "description": "Toast feedback shown when HID scan is blocked explaining why"
+    },
+    {
+      "id": "FIX-018",
+      "name": "HID scan handler with try-catch",
+      "date": "2025-01-12",
+      "file": "src/screens/PosRootLayout.tsx",
+      "mustContain": [
+        "hid_scan_error:",
+        "camera_scan_error:"
+      ],
+      "mustNotContain": [],
+      "description": "Scan handlers wrapped in try-catch to prevent app crashes"
+    },
+    {
+      "id": "FIX-019",
+      "name": "Scan error handling in addToSellCart",
+      "date": "2025-01-12",
+      "file": "src/services/scan/handleScan.ts",
+      "mustContain": [
+        "addToSellCart: product is null/undefined",
+        "addToSellCart: product.id is missing",
+        "addToSellCart error:"
+      ],
+      "mustNotContain": [],
+      "description": "Comprehensive error handling in addToSellCart with logging and user feedback"
+    },
+    {
+      "id": "FIX-020",
+      "name": "HID debug logging",
+      "date": "2025-01-12",
+      "file": "src/services/hidScannerService.ts",
+      "mustContain": [
+        "hid_calling_handler:",
+        "hid_no_handler_registered",
+        "hid_scan_rejected:"
+      ],
+      "mustNotContain": [],
+      "description": "Debug logging in HID scanner service for troubleshooting scan issues"
+    }
+  ],
+  "changelog": [
+    {
+      "date": "2025-01-12",
+      "changes": [
+        "FIX-001: Added font loading for APK builds",
+        "FIX-002: Cart bar hidden when empty",
+        "FIX-003: Removed big status modal, kept small popovers",
+        "FIX-004: Stock validation in edit modal",
+        "FIX-005: Discount validation (max 100%)",
+        "FIX-006: Cart auto-collapse on empty",
+        "FIX-007: Expo updates disabled",
+        "FIX-008: Free item toggle added",
+        "FIX-009: Cart clear button added",
+        "FIX-010: Pencil icon repositioned",
+        "FIX-011: Single scan mode - no qty increment on rescan",
+        "FIX-012: Auto-close camera after successful scan",
+        "FIX-013: Onboarding modal only for products without sell price",
+        "FIX-014: Search adds quantity instead of duplicate when item already in cart",
+        "FIX-015: HID TextInput always editable (blocking in handler)",
+        "FIX-016: HID scanner status updates on any input",
+        "FIX-017: HID scan blocking feedback toasts",
+        "FIX-018: HID/camera scan handlers with try-catch",
+        "FIX-019: Comprehensive error handling in addToSellCart",
+        "FIX-020: HID debug logging for troubleshooting"
+      ]
+    }
+  ]
+}

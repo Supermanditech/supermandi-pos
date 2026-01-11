@@ -1,8 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
 import {
-  Animated,
   Modal,
-  PanResponder,
   Pressable,
   StyleSheet,
   Text,
@@ -52,7 +50,6 @@ export default function PosStatusBar({
   scannerOk,
   cameraAvailable
 }: PosStatusBarProps) {
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [popover, setPopover] = useState<StatusPopover | null>(null);
   const [popoverSize, setPopoverSize] = useState<{ width: number; height: number } | null>(null);
   const [networkState, setNetworkState] = useState<{
@@ -63,7 +60,6 @@ export default function PosStatusBar({
   const printerRef = useRef<View>(null);
   const scannerRef = useRef<View>(null);
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const sheetTranslateY = useRef(new Animated.Value(0)).current;
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   useEffect(() => {
@@ -140,11 +136,6 @@ export default function PosStatusBar({
   const scannerIcon = scannerDetected ? "barcode-scan" : "barcode-off";
   const scannerLabel = scannerDetected ? "HID scanner connected" : "HID scanner not detected";
 
-  const closeDetails = useCallback(() => {
-    setDetailsOpen(false);
-    sheetTranslateY.setValue(0);
-  }, [sheetTranslateY]);
-
   const closePopover = useCallback(() => {
     setPopover(null);
   }, []);
@@ -199,33 +190,6 @@ export default function PosStatusBar({
       return { width, height };
     });
   }, []);
-
-  const panResponder = useMemo(() => {
-    return PanResponder.create({
-      onMoveShouldSetPanResponder: (_event, gesture) => Math.abs(gesture.dy) > 4,
-      onPanResponderMove: (_event, gesture) => {
-        if (gesture.dy > 0) {
-          sheetTranslateY.setValue(gesture.dy);
-        }
-      },
-      onPanResponderRelease: (_event, gesture) => {
-        if (gesture.dy > 80 || gesture.vy > 1) {
-          closeDetails();
-          return;
-        }
-        Animated.spring(sheetTranslateY, {
-          toValue: 0,
-          useNativeDriver: true,
-        }).start();
-      },
-      onPanResponderTerminate: () => {
-        Animated.spring(sheetTranslateY, {
-          toValue: 0,
-          useNativeDriver: true,
-        }).start();
-      },
-    });
-  }, [closeDetails, sheetTranslateY]);
 
   const statusItems = useMemo(() => {
     return [
@@ -286,15 +250,8 @@ export default function PosStatusBar({
 
   return (
     <>
-      <Pressable
+      <View
         style={styles.container}
-        focusable={false}
-        onPress={() => {
-          closePopover();
-          setDetailsOpen(true);
-        }}
-        accessibilityRole="button"
-        accessibilityLabel="System status details"
       >
         <View style={styles.iconRow} pointerEvents="box-none">
           <Pressable
@@ -379,7 +336,7 @@ export default function PosStatusBar({
             <Text style={[styles.statusMessage, { color: statusTone.text }]}>{statusMessage}</Text>
           </Text>
         </View>
-      </Pressable>
+      </View>
 
       {popover && popoverItem && popoverLayout ? (
         <Modal
@@ -408,43 +365,6 @@ export default function PosStatusBar({
           </Pressable>
         </Modal>
       ) : null}
-
-      <Modal
-        visible={detailsOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={closeDetails}
-      >
-        <View style={styles.detailsOverlay}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeDetails} />
-          <Animated.View
-            style={[
-              styles.detailsSheet,
-              { transform: [{ translateY: sheetTranslateY }] },
-            ]}
-            {...panResponder.panHandlers}
-          >
-            <View style={styles.detailsHandle} />
-            <Text style={styles.detailsTitle}>System status</Text>
-            {statusItems.map((item) => (
-              <View key={item.id} style={styles.detailsRow}>
-                <MaterialCommunityIcons
-                  name={item.icon as any}
-                  size={18}
-                  color={item.ok ? theme.colors.textPrimary : theme.colors.textSecondary}
-                />
-                <View style={styles.detailsRowText}>
-                  <Text style={styles.detailsLabel}>{item.label}</Text>
-                  <Text style={[styles.detailsValue, { color: item.tone }]}>
-                    {item.ok ? item.okLabel : item.badLabel}
-                  </Text>
-                </View>
-                <View style={[styles.detailsDot, { backgroundColor: item.tone }]} />
-              </View>
-            ))}
-          </Animated.View>
-        </View>
-      </Modal>
     </>
   );
 }
@@ -525,60 +445,5 @@ const styles = StyleSheet.create({
   popoverValue: {
     fontSize: 11,
     fontWeight: "700",
-  },
-  detailsOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(15, 15, 20, 0.45)",
-  },
-  detailsSheet: {
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 18,
-    gap: 12,
-  },
-  detailsHandle: {
-    alignSelf: "center",
-    width: 44,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: theme.colors.border,
-    marginBottom: 6,
-  },
-  detailsTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-  detailsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  detailsRowText: {
-    flex: 1,
-  },
-  detailsLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  detailsValue: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  detailsDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
   },
 });

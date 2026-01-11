@@ -60,18 +60,12 @@ type CartScanProduct = ScanProduct & { metadata?: Record<string, any> };
 export function needsSellFirstOnboarding(product: StoreLookupProduct | null): boolean {
   if (!product) return true;
 
-  // Check if sell price is set - require onboarding if missing
+  // Only require onboarding if sell price is missing
+  // If product has a valid sell price, add directly to cart
   const sellPrice = typeof product.sell_price === "number" ? product.sell_price : 0;
   const hasSellPrice = Number.isFinite(sellPrice) && sellPrice > 0;
-  if (!hasSellPrice) return true;
 
-  const availableRaw = typeof product.available_qty === "number" ? product.available_qty : 0;
-  const hasStock = Number.isFinite(availableRaw) && availableRaw > 0;
-  const purchasePrice = typeof product.purchase_price === "number" ? product.purchase_price : 0;
-  const hasReceiveHistory = Number.isFinite(purchasePrice) && purchasePrice > 0;
-
-  // Require onboarding if: first time in store, OR no stock and no receive history
-  return Boolean(product.is_first_time_in_store) || (!hasStock && !hasReceiveHistory);
+  return !hasSellPrice;
 }
 
 export function setScanRuntime(next: Partial<ScanRuntime>): void {
@@ -128,23 +122,69 @@ function isScanStorm(): boolean {
   return false;
 }
 
-function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: string[]): void {
-  const cartState = useCartStore.getState();
-  const match =
-    product.barcode
-      ? cartState.items.find((item) => item.barcode === product.barcode)
-      : undefined;
-  const resolvedId = match?.id ?? product.id;
+function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: string[]): boolean {
+  try {
+    // Validate product data
+    if (!product) {
+      console.error("addToSellCart: product is null/undefined");
+      return false;
+    }
 
-  cartState.addItem({
-    id: resolvedId,
-    name: product.name,
-    priceMinor,
-    currency: product.currency,
-    barcode: product.barcode,
-    flags,
-    metadata: product.metadata
-  });
+    const cartState = useCartStore.getState();
+    const cartItems = cartState.items || [];
+    const productBarcode = product.barcode;
+    const productId = product.id;
+
+    // Validate we have at least an id
+    if (!productId) {
+      console.error("addToSellCart: product.id is missing");
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Cannot add item: missing product ID", ToastAndroid.SHORT);
+      }
+      return false;
+    }
+
+    // Single scan mode: Check if item already in cart (by barcode or id)
+    // Only check by barcode if it's a non-empty string
+    let existingItem = null;
+    if (productBarcode && typeof productBarcode === "string" && productBarcode.trim()) {
+      existingItem = cartItems.find((item) => item.barcode === productBarcode);
+    }
+    // Fallback to id check if no barcode match and we have a valid id
+    if (!existingItem && productId) {
+      existingItem = cartItems.find((item) => item.id === productId);
+    }
+
+    if (existingItem) {
+      // Item already in cart - don't add more quantity
+      console.log(`scan_duplicate_in_cart:${productBarcode || productId}`);
+      if (Platform.OS === "android") {
+        ToastAndroid.show(`${existingItem.name} already in cart`, ToastAndroid.SHORT);
+      }
+      return false;
+    }
+
+    // Ensure valid price
+    const safePriceMinor = typeof priceMinor === "number" && Number.isFinite(priceMinor) ? priceMinor : 0;
+
+    console.log(`scan_add_to_cart:${productBarcode || productId},price=${safePriceMinor}`);
+    cartState.addItem({
+      id: productId,
+      name: product.name || productBarcode || productId,
+      priceMinor: safePriceMinor,
+      currency: product.currency || "INR",
+      barcode: productBarcode,
+      flags,
+      metadata: product.metadata
+    });
+    return true;
+  } catch (err) {
+    console.error("addToSellCart error:", err);
+    if (Platform.OS === "android") {
+      ToastAndroid.show("Error adding item to cart", ToastAndroid.SHORT);
+    }
+    return false;
+  }
 }
 
 async function cacheLocalProduct(product: {
@@ -189,34 +229,41 @@ function confirmPurchaseAdd(): Promise<boolean> {
 }
 
 export async function onBarcodeScanned(rawText: string, format?: string): Promise<void> {
-  const trimmed = rawText.trim();
-  if (!trimmed) return;
+  try {
+    const trimmed = rawText?.trim?.() ?? "";
+    if (!trimmed) return;
 
-  if (duplicateGuardWindowMs > 0 && isDuplicateGuard(trimmed)) {
-    console.log("scan_duplicate_ignored");
-    if (Platform.OS === "android") {
-      ToastAndroid.show("Wait before re-scanning", ToastAndroid.SHORT);
+    console.log(`scan_barcode_received:${trimmed}`);
+
+    if (duplicateGuardWindowMs > 0 && isDuplicateGuard(trimmed)) {
+      console.log("scan_duplicate_ignored");
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Wait before re-scanning", ToastAndroid.SHORT);
+      }
+      return;
     }
-    return;
-  }
 
-  const intent = runtime.intent;
-  console.log(`scan_routed:${intent}`);
+    const intent = runtime.intent;
+    console.log(`scan_routed:${intent}`);
 
-  if (intent === "PURCHASE") {
-    if (purchaseConfirmActive) return;
-    purchaseConfirmActive = true;
-    try {
-      const confirmed = await confirmPurchaseAdd();
-      if (!confirmed) return;
-      await handleScan(trimmed, format, "PURCHASE");
-    } finally {
-      purchaseConfirmActive = false;
+    if (intent === "PURCHASE") {
+      if (purchaseConfirmActive) return;
+      purchaseConfirmActive = true;
+      try {
+        const confirmed = await confirmPurchaseAdd();
+        if (!confirmed) return;
+        await handleScan(trimmed, format, "PURCHASE");
+      } finally {
+        purchaseConfirmActive = false;
+      }
+      return;
     }
-    return;
-  }
 
-  await handleScan(trimmed, format, "SELL");
+    await handleScan(trimmed, format, "SELL");
+  } catch (err) {
+    console.error("onBarcodeScanned error:", err);
+    notify({ tone: "error", message: "Scan failed. Please try again." });
+  }
 }
 
 async function handleScan(
@@ -265,6 +312,7 @@ async function handleScan(
         }
 
         if (needsSellFirstOnboarding(storeProduct)) {
+          console.log(`scan_needs_onboarding:${trimmed},sellPrice=${storeProduct.sell_price},isNew=${storeProduct.is_first_time_in_store}`);
           runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
           return;
         }
@@ -486,6 +534,7 @@ async function handleScan(
 
     notify({ tone: "error", message: "Unable to add item from scan." });
   } catch (error) {
+    console.error("handleScan error:", error);
     if (error instanceof ApiError) {
       if (runtime.onDeviceAuthError) {
         const handled = await runtime.onDeviceAuthError(error);
@@ -500,6 +549,10 @@ async function handleScan(
         notify({ tone: "error", message: "Store not found. Check Superadmin setup." });
         return;
       }
+    }
+    // Log non-API errors for debugging
+    if (!(error instanceof ApiError)) {
+      console.error("handleScan non-API error:", String(error));
     }
     notify({ tone: "error", message: "Could not resolve scan. Check connection." });
   }

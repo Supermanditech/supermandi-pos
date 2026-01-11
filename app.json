@@ -6,16 +6,14 @@
     "version": "1.0.1",
     "updates": {
       "enabled": false,
-      "checkAutomatically": "NEVER"
+      "checkAutomatically": "NEVER",
+      "fallbackToCacheTimeout": 0
     },
     "android": {
       "package": "com.supermanditech.supermandipos"
     },
     "extra": {
-      "API_URL": "https://34.14.150.183.nip.io",
-      "eas": {
-        "projectId": "633923dd-e9cd-4bee-8b7a-f2120c1cce91"
-      }
+      "API_URL": "https://34.14.150.183.nip.io"
     },
     "plugins": [
       "expo-secure-store",

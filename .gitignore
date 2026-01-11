@@ -83,3 +83,17 @@ android/
 
 # React Native devsupport cache artifact
 com.facebook.react.devsupport.BundleDownloader
+
+# Build artifacts (auto-generated)
+.build-manifest.json
+
+# Temporary output files
+nul
+expo-output.txt
+expo-lan-output.txt
+expo-qr.html
+superadmin-output.txt
+COMMIT_STATUS_SUMMARY.txt
+
+# Claude Code
+.claude/

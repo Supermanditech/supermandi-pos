@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   findNodeHandle,
   useWindowDimensions,
   View,
@@ -574,14 +575,50 @@ export default function PosRootLayout() {
 
   useEffect(() => {
     setHidScanHandler((value) => {
+      console.log(`hid_scan_received:${value}`);
       markHidActive();
       setHidInput("");
-      void onBarcodeScanned(value);
+
+      // Check if we should block the scan and show feedback
+      if (sellOnboardingActive) {
+        console.log("hid_scan_blocked:onboarding_active");
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Complete price setup first", ToastAndroid.SHORT);
+        }
+        return;
+      }
+      if (scannerOpen) {
+        console.log("hid_scan_blocked:camera_open");
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Close camera to use scanner", ToastAndroid.SHORT);
+        }
+        return;
+      }
+      if (storeActive === false) {
+        console.log("hid_scan_blocked:store_inactive");
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Store is inactive", ToastAndroid.SHORT);
+        }
+        return;
+      }
+      if (!isFocused) {
+        console.log("hid_scan_blocked:not_focused");
+        return;
+      }
+
+      // Process the scan
+      (async () => {
+        try {
+          await onBarcodeScanned(value);
+        } catch (err) {
+          console.error("hid_scan_error:", err);
+        }
+      })();
     });
     return () => {
       setHidScanHandler(null);
     };
-  }, [markHidActive]);
+  }, [isFocused, markHidActive, scannerOpen, sellOnboardingActive, storeActive]);
 
   useEffect(() => {
     if (!scanDisabled) return;
@@ -590,18 +627,40 @@ export default function PosRootLayout() {
   }, [scanDisabled]);
 
   const handleHidChange = (text: string) => {
-    if (scanDisabled) return;
+    // Mark HID as active whenever we receive any input (shows scanner is connected)
+    if (text && text.length > 0) {
+      markHidActive();
+    }
+
+    // Always process HID input to the buffer (so we capture the full barcode)
     feedHidText(text);
     setHidInput(text);
+
+    // If scanning is disabled, show feedback on why (only once per blocked scan)
+    if (scanDisabled && text.length >= 4) {
+      if (sellOnboardingActive) {
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Complete price setup first", ToastAndroid.SHORT);
+        }
+      } else if (scannerOpen) {
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Close camera to use scanner", ToastAndroid.SHORT);
+        }
+      } else if (storeActive === false) {
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Store is inactive", ToastAndroid.SHORT);
+        }
+      }
+    }
   };
 
   const handleHidSubmit = () => {
-    if (scanDisabled) return;
+    // Always submit the buffer - let the handler decide what to do
     submitHidBuffer();
   };
 
   const handleHidKeyPress = (event: { nativeEvent: { key: string } }) => {
-    if (scanDisabled) return;
+    // Always process key presses - let the handler decide what to do with the scan
     feedHidKey(event.nativeEvent.key);
   };
 
@@ -640,11 +699,17 @@ export default function PosRootLayout() {
     if (cameraScanCooldownRef.current) {
       clearTimeout(cameraScanCooldownRef.current);
     }
-    cameraScanCooldownRef.current = setTimeout(() => {
-      setCameraScanLocked(false);
-      cameraScanCooldownRef.current = null;
-    }, CAMERA_SCAN_COOLDOWN_MS);
-    void onBarcodeScanned(value, format);
+    // Auto-close camera after single scan
+    setScannerOpen(false);
+    clearCameraIdleTimer();
+    // Wrap in try-catch to prevent app crash on scan errors
+    (async () => {
+      try {
+        await onBarcodeScanned(value, format);
+      } catch (err) {
+        console.error("camera_scan_error:", err);
+      }
+    })();
   };
 
   useEffect(() => {
@@ -875,7 +940,7 @@ export default function PosRootLayout() {
         autoFocus
         caretHidden
         contextMenuHidden
-        editable={!scanDisabled}
+        editable
         showSoftInputOnFocus={false}
         style={styles.hidInput}
       />

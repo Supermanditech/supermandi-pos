@@ -430,21 +430,52 @@ function CartItemRow({
     onRemoveItem(item.id);
   };
 
+  // Determine discount badge
+  const isFreeItem = item.itemDiscount?.type === "percentage" && item.itemDiscount?.value === 100;
+  const discountBadgeText = isFreeItem
+    ? "FREE"
+    : item.itemDiscount?.type === "percentage"
+      ? `${item.itemDiscount.value}% OFF`
+      : item.itemDiscount?.type === "fixed" && item.itemDiscount.value > 0
+        ? `₹${(item.itemDiscount.value / 100).toFixed(0)} OFF`
+        : null;
+
+  // Stock warning level
+  const stockWarningLevel = stockValue === null ? "none" : stockValue <= 2 ? "critical" : stockValue <= 5 ? "low" : "none";
+
   const rowBody = (
     <Pressable
       style={[
         styles.cartItemRowContent,
         isCompactRow && styles.cartItemRowContentCompact,
+        isFreeItem && styles.cartItemRowFree,
       ]}
       onPress={enableRowPress ? onPressRow : undefined}
       disabled={!enableRowPress}
       testID={rowTestId}
     >
-      {/* Row 1: Product name + delete button */}
+      {/* Row 1: Product name + badges + delete button */}
       <View style={styles.cartItemNameRow}>
-        <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail">
-          {item.name}
-        </Text>
+        <View style={styles.cartItemNameSection}>
+          <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail">
+            {item.name}
+          </Text>
+          {enableRowPress ? (
+            <MaterialCommunityIcons
+              name="pencil-outline"
+              size={12}
+              color={theme.colors.textTertiary}
+              style={styles.editHintIcon}
+            />
+          ) : null}
+          {discountBadgeText ? (
+            <View style={[styles.discountBadge, isFreeItem && styles.discountBadgeFree]}>
+              <Text style={[styles.discountBadgeText, isFreeItem && styles.discountBadgeTextFree]}>
+                {discountBadgeText}
+              </Text>
+            </View>
+          ) : null}
+        </View>
         <Pressable
           style={[styles.removeItemButton, removeDisabled && styles.removeItemButtonDisabled]}
           onPress={handleRemove}
@@ -516,7 +547,9 @@ function CartItemRow({
               <Text style={styles.cartItemOriginalPrice}>
                 {formatMoney(lineSubtotal, currency)}
               </Text>
-              <Text style={styles.cartItemDiscountedPrice}>{lineTotalLabel}</Text>
+              <Text style={[styles.cartItemDiscountedPrice, isFreeItem && styles.cartItemFreePrice]}>
+                {isFreeItem ? "FREE" : lineTotalLabel}
+              </Text>
             </>
           ) : (
             <Text style={styles.cartItemTotalText}>{lineTotalLabel}</Text>
@@ -524,9 +557,18 @@ function CartItemRow({
         </View>
       </View>
 
-      {/* Row 3: Stock info */}
+      {/* Row 3: Stock info with warning colors */}
       {showStock ? (
-        <Text style={styles.stockLabel}>In stock: {stockLabel}</Text>
+        <View style={styles.stockRow}>
+          <Text style={[
+            styles.stockLabel,
+            stockWarningLevel === "low" && styles.stockLabelWarning,
+            stockWarningLevel === "critical" && styles.stockLabelCritical,
+          ]}>
+            {stockWarningLevel === "critical" ? "⚠ " : stockWarningLevel === "low" ? "● " : ""}
+            In stock: {stockLabel}
+          </Text>
+        </View>
       ) : null}
     </Pressable>
   );
@@ -569,6 +611,7 @@ export default function SellScanScreen({
     removeItemDiscount,
     applyDiscount,
     removeDiscount,
+    clearCart,
   } = useCartStore();
 
   useEffect(() => {
@@ -825,6 +868,13 @@ export default function SellScanScreen({
     sheetTranslateY.setValue(0);
     sheetSnapRef.current = "expanded";
   }, [cartExpanded, sheetTranslateY]);
+
+  // Auto-collapse cart when all items are removed
+  useEffect(() => {
+    if (cartExpanded && items.length === 0) {
+      setCartExpanded(false);
+    }
+  }, [cartExpanded, items.length]);
 
   useEffect(() => {
     const id = totalAnimatedValue.addListener(({ value }) => {
@@ -1331,6 +1381,20 @@ export default function SellScanScreen({
   const handleEditorSave = useCallback(() => {
     if (!editorItem) return;
     const nextQty = parseQuantityInput(editorQty);
+
+    // Validate stock - prevent saving qty that exceeds available stock
+    const maxStock = resolveStockForCartItem({
+      id: editorItem.id,
+      barcode: editorItem.barcode ?? null
+    });
+    if (maxStock !== null && nextQty > maxStock) {
+      ToastAndroid.show(
+        `Cannot exceed stock (${maxStock} available)`,
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+
     updateQuantity(editorItem.id, nextQty);
 
     const parsedPrice = parsePriceInput(editorPrice);
@@ -1343,6 +1407,11 @@ export default function SellScanScreen({
     if (parsedDiscount <= 0) {
       removeItemDiscount(editorItem.id);
     } else {
+      // Validate percentage discount doesn't exceed 100%
+      if (editorDiscountType === "percentage" && parsedDiscount > 100) {
+        ToastAndroid.show("Discount cannot exceed 100%", ToastAndroid.SHORT);
+        return;
+      }
       const value = editorDiscountType === "fixed" ? Math.round(parsedDiscount * 100) : parsedDiscount;
       applyItemDiscount(editorItem.id, { type: editorDiscountType, value });
     }
@@ -1362,6 +1431,12 @@ export default function SellScanScreen({
     updateQuantity
   ]);
 
+  const handleMakeFree = useCallback(() => {
+    // Set 100% discount to make item free (stock still deducted on checkout)
+    setEditorDiscountType("percentage");
+    setEditorDiscountValue("100");
+  }, []);
+
   const editorTotalLabel = useMemo(() => {
     if (!editorItem) return "";
     const qty = parseQuantityInput(editorQty);
@@ -1380,17 +1455,30 @@ export default function SellScanScreen({
     return formatMoney(lineTotal, editorItem.currency ?? "INR");
   }, [editorDiscountType, editorDiscountValue, editorItem, editorPrice, editorQty]);
 
-  const editorStockLabel = useMemo(() => {
-    if (!editorItem) return "";
-    const rawStock = resolveStockForCartItem({
+  const editorMaxStock = useMemo(() => {
+    if (!editorItem) return null;
+    return resolveStockForCartItem({
       id: editorItem.id,
       barcode: editorItem.barcode ?? null
     });
-    if (rawStock === null) return "Unknown";
-    // Show remaining stock after cart reservation
-    const remaining = Math.max(0, rawStock - editorItem.quantity);
-    return String(remaining);
   }, [editorItem, stockRefreshTick]);
+
+  const editorStockLabel = useMemo(() => {
+    if (editorMaxStock === null) return "Unknown";
+    return String(editorMaxStock);
+  }, [editorMaxStock]);
+
+  const editorQtyExceedsStock = useMemo(() => {
+    if (editorMaxStock === null) return false;
+    const qty = parseQuantityInput(editorQty);
+    return qty > editorMaxStock;
+  }, [editorMaxStock, editorQty]);
+
+  const editorDiscountExceeds100 = useMemo(() => {
+    if (editorDiscountType !== "percentage") return false;
+    const parsed = parseDiscountInput(editorDiscountValue);
+    return parsed > 100;
+  }, [editorDiscountType, editorDiscountValue]);
 
   const detailPriceLabel = useMemo(() => {
     if (!detailItem) return "";
@@ -1452,19 +1540,32 @@ export default function SellScanScreen({
   const handleAddSku = (item: SkuItem) => {
     if (storeActive === false) return;
     const resolved = resolveSkuPrice(item);
-    const existing = items.find((entry) => entry.barcode === item.barcode);
-    const mergedMetadata = {
-      ...(existing?.metadata ?? {})
-    };
 
-    useCartStore.getState().addItem({
-      id: item.barcode,
-      name: item.name,
-      priceMinor: resolved.priceMinor,
-      currency: item.currency ?? "INR",
-      barcode: item.barcode,
-      metadata: Object.keys(mergedMetadata).length ? mergedMetadata : undefined
-    });
+    // Get fresh cart state to avoid stale data
+    const cartState = useCartStore.getState();
+    const cartItems = cartState.items || [];
+
+    // Check for existing item by barcode (handles HID scan items with different id)
+    const existing = cartItems.find((entry) => entry.barcode === item.barcode);
+
+    if (existing) {
+      // Item already in cart - increase quantity instead of adding duplicate
+      console.log(`handleAddSku:duplicate_found:${item.barcode},existingId=${existing.id},qty=${existing.quantity}+1`);
+      cartState.updateQuantity(existing.id, existing.quantity + 1);
+      if (Platform.OS === "android") {
+        ToastAndroid.show(`${existing.name} qty +1`, ToastAndroid.SHORT);
+      }
+    } else {
+      // New item - add to cart
+      console.log(`handleAddSku:new_item:${item.barcode}`);
+      cartState.addItem({
+        id: item.barcode,
+        name: item.name,
+        priceMinor: resolved.priceMinor,
+        currency: item.currency ?? "INR",
+        barcode: item.barcode
+      });
+    }
 
     setCatalogItems((prev) => [item, ...prev.filter((entry) => entry.barcode !== item.barcode)]);
 
@@ -1781,40 +1882,40 @@ export default function SellScanScreen({
         updateCellsBatchingPeriod={50}
       />
 
-      <Pressable
-        style={[
-          styles.cartBar,
-          flashActive && styles.cartBarFlash,
-          !canOpenCart && styles.cartBarDisabled,
-        ]}
-        onPress={handleOpenCart}
-        disabled={!canOpenCart}
-        accessibilityLabel="View cart"
-      >
-        <View style={styles.cartBarTop}>
-          <Text style={styles.cartBarCount}>
-            {itemCount} {itemCount === 1 ? "item" : "items"}
-          </Text>
-          <View style={styles.cartBarTopRight}>
-            {locked ? (
-              <View style={styles.cartBarLocked}>
-                <Text style={styles.cartBarLockedText}>Locked</Text>
-              </View>
-            ) : null}
-            <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+      {itemCount > 0 ? (
+        <Pressable
+          style={[
+            styles.cartBar,
+            flashActive && styles.cartBarFlash,
+          ]}
+          onPress={handleOpenCart}
+          accessibilityLabel="View cart"
+        >
+          <View style={styles.cartBarTop}>
+            <Text style={styles.cartBarCount}>
+              {itemCount} {itemCount === 1 ? "item" : "items"}
+            </Text>
+            <View style={styles.cartBarTopRight}>
+              {locked ? (
+                <View style={styles.cartBarLocked}>
+                  <Text style={styles.cartBarLockedText}>Locked</Text>
+                </View>
+              ) : null}
+              <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.cartBarBottom}>
-          <Text style={styles.cartBarHint} numberOfLines={1}>
-            {lastAddMessage ?? cartHint}
-          </Text>
-          {undoVisible && !locked ? (
-            <Pressable onPress={handleUndo} hitSlop={8}>
-              <Text style={styles.cartBarUndo}>Undo</Text>
-            </Pressable>
-          ) : null}
-        </View>
-      </Pressable>
+          <View style={styles.cartBarBottom}>
+            <Text style={styles.cartBarHint} numberOfLines={1}>
+              {lastAddMessage ?? cartHint}
+            </Text>
+            {undoVisible && !locked ? (
+              <Pressable onPress={handleUndo} hitSlop={8}>
+                <Text style={styles.cartBarUndo}>Undo</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </Pressable>
+      ) : null}
 
       <Modal
         visible={cartExpanded}
@@ -1855,6 +1956,18 @@ export default function SellScanScreen({
                   <Text style={[styles.cartTitle, isSmallScreen && styles.cartTitleCompact]}>{cartTitle}</Text>
                 </View>
               </View>
+              {items.length > 0 ? (
+                <Pressable
+                  style={styles.clearCartButton}
+                  onPress={() => {
+                    clearCart();
+                  }}
+                  hitSlop={8}
+                  accessibilityLabel="Clear cart"
+                >
+                  <Text style={styles.clearCartText}>Clear</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             <FlatList
@@ -2148,7 +2261,7 @@ export default function SellScanScreen({
             testID="sell-lineitem-editor"
           >
             <View style={styles.editHandle} />
-            <Text style={styles.editTitle}>Edit line item</Text>
+            <Text style={styles.editTitle}>Edit Product</Text>
             {editorItem ? (
               <View style={styles.editContent}>
                 <Text style={styles.editName} numberOfLines={2}>
@@ -2159,14 +2272,14 @@ export default function SellScanScreen({
                     {editorItem.barcode}
                   </Text>
                 ) : null}
-                <Text style={styles.editStock} numberOfLines={1}>
-                  In stock: {editorStockLabel}
+                <Text style={[styles.editStock, editorQtyExceedsStock && styles.editStockError]} numberOfLines={1}>
+                  In stock: {editorStockLabel}{editorQtyExceedsStock ? " (exceeded!)" : ""}
                 </Text>
                 <View style={styles.editFields}>
                   <View style={styles.editField}>
-                    <Text style={styles.editLabel}>Qty</Text>
+                    <Text style={[styles.editLabel, editorQtyExceedsStock && styles.editLabelError]}>Qty</Text>
                     <TextInput
-                      style={styles.editInput}
+                      style={[styles.editInput, editorQtyExceedsStock && styles.editInputError]}
                       value={editorQty}
                       onChangeText={setEditorQty}
                       keyboardType="number-pad"
@@ -2184,24 +2297,29 @@ export default function SellScanScreen({
                     />
                   </View>
                   <View style={styles.editField}>
-                    <Text style={styles.editLabel}>Discount</Text>
+                    <Text style={[styles.editLabel, editorDiscountExceeds100 && styles.editLabelError]}>
+                      Discount{editorDiscountExceeds100 ? " (max 100%)" : ""}
+                    </Text>
                     <View style={styles.editDiscountRow}>
                       <View style={styles.editDiscountToggle}>
                         <Pressable
                           style={[
                             styles.editDiscountChip,
-                            editorDiscountType === "percentage" && styles.editDiscountChipActive
+                            editorDiscountType === "percentage" && editorDiscountValue !== "100" && styles.editDiscountChipActive
                           ]}
-                          onPress={() => setEditorDiscountType("percentage")}
+                          onPress={() => {
+                            setEditorDiscountType("percentage");
+                            if (editorDiscountValue === "100") setEditorDiscountValue("");
+                          }}
                           disabled={editorDisabled}
                         >
                           <Text
                             style={[
                               styles.editDiscountChipText,
-                              editorDiscountType === "percentage" && styles.editDiscountChipTextActive
+                              editorDiscountType === "percentage" && editorDiscountValue !== "100" && styles.editDiscountChipTextActive
                             ]}
                           >
-                            % Discount
+                            %
                           </Text>
                         </Pressable>
                         <Pressable
@@ -2209,7 +2327,10 @@ export default function SellScanScreen({
                             styles.editDiscountChip,
                             editorDiscountType === "fixed" && styles.editDiscountChipActive
                           ]}
-                          onPress={() => setEditorDiscountType("fixed")}
+                          onPress={() => {
+                            setEditorDiscountType("fixed");
+                            if (editorDiscountValue === "100") setEditorDiscountValue("");
+                          }}
                           disabled={editorDisabled}
                         >
                           <Text
@@ -2218,19 +2339,40 @@ export default function SellScanScreen({
                               editorDiscountType === "fixed" && styles.editDiscountChipTextActive
                             ]}
                           >
-                            Flat Discount
+                            Flat
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          style={[
+                            styles.editDiscountChip,
+                            editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editDiscountChipFree
+                          ]}
+                          onPress={handleMakeFree}
+                          disabled={editorDisabled}
+                        >
+                          <Text
+                            style={[
+                              styles.editDiscountChipText,
+                              editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editDiscountChipTextFree
+                            ]}
+                          >
+                            Free
                           </Text>
                         </Pressable>
                       </View>
-                      <TextInput
-                        style={styles.editInput}
-                        value={editorDiscountValue}
-                        onChangeText={setEditorDiscountValue}
-                        placeholder={editorDiscountType === "percentage" ? "Enter %" : "Enter amount (INR)"}
-                        placeholderTextColor={theme.colors.textTertiary}
-                        keyboardType="decimal-pad"
-                        editable={!editorDisabled}
-                      />
+                      {editorDiscountType === "percentage" && editorDiscountValue === "100" ? (
+                        <Text style={styles.freeMarkedText}>Free item</Text>
+                      ) : (
+                        <TextInput
+                          style={[styles.editInput, styles.editDiscountInput, editorDiscountExceeds100 && styles.editInputError]}
+                          value={editorDiscountValue}
+                          onChangeText={setEditorDiscountValue}
+                          placeholder={editorDiscountType === "percentage" ? "%" : "₹"}
+                          placeholderTextColor={theme.colors.textTertiary}
+                          keyboardType="decimal-pad"
+                          editable={!editorDisabled}
+                        />
+                      )}
                     </View>
                   </View>
                 </View>
@@ -2570,6 +2712,17 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  clearCartButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: theme.colors.errorSoft,
+  },
+  clearCartText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.error,
+  },
   backButton: {
     width: 36,
     height: 36,
@@ -2613,25 +2766,70 @@ const styles = StyleSheet.create({
     height: 8,
   },
   cartItemRow: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginHorizontal: 8,
+    marginVertical: 4,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
   },
   cartItemRowCompact: {
-    paddingVertical: 8,
+    marginVertical: 3,
+    borderRadius: 8,
   },
   cartItemRowContent: {
     flexDirection: "column",
-    gap: 6,
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
   },
   cartItemRowContentCompact: {
-    gap: 4,
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  cartItemRowFree: {
+    backgroundColor: "rgba(245, 158, 11, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(245, 158, 11, 0.2)",
   },
   cartItemNameRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 8,
+  },
+  cartItemNameSection: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  cartItemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  discountBadge: {
+    backgroundColor: "rgba(29, 78, 216, 0.12)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountBadgeFree: {
+    backgroundColor: theme.colors.warning,
+  },
+  discountBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  discountBadgeTextFree: {
+    color: "#fff",
   },
   cartItemMainRow: {
     flexDirection: "row",
@@ -2669,6 +2867,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.success,
   },
+  cartItemFreePrice: {
+    color: theme.colors.warning,
+    fontWeight: "800",
+  },
   cartItemInfo: {
     flex: 1,
     marginRight: 8,
@@ -2687,6 +2889,10 @@ const styles = StyleSheet.create({
   },
   cartItemNameCompact: {
     fontSize: 12,
+  },
+  editHintIcon: {
+    marginLeft: 4,
+    opacity: 0.6,
   },
   cartItemMeta: {
     fontSize: 11,
@@ -2797,10 +3003,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
+  stockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   stockLabel: {
     fontSize: 10,
     color: theme.colors.textSecondary,
-    marginTop: 2,
+  },
+  stockLabelWarning: {
+    color: theme.colors.warning,
+    fontWeight: "600",
+  },
+  stockLabelCritical: {
+    color: theme.colors.error,
+    fontWeight: "700",
   },
   cartItemTotalLabel: {
     fontSize: 10,
@@ -3060,9 +3277,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.accentSoft,
   },
-  cartBarDisabled: {
-    opacity: 0.6,
-  },
   cartBarTop: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -3279,6 +3493,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textPrimary,
   },
+  editInputError: {
+    borderColor: theme.colors.error,
+    borderWidth: 2,
+  },
+  editLabelError: {
+    color: theme.colors.error,
+  },
+  editStockError: {
+    color: theme.colors.error,
+    fontWeight: "700",
+  },
   editDiscountRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -3307,6 +3532,23 @@ const styles = StyleSheet.create({
   },
   editDiscountChipTextActive: {
     color: theme.colors.textInverse,
+  },
+  editDiscountChipFree: {
+    backgroundColor: theme.colors.warning,
+  },
+  editDiscountChipTextFree: {
+    color: "#fff",
+  },
+  editDiscountInput: {
+    flex: 1,
+    minWidth: 50,
+  },
+  freeMarkedText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.warning,
+    textAlign: "center",
   },
   editTotalRow: {
     flexDirection: "row",

@@ -12,6 +12,20 @@ chmod +x .githooks/pre-commit
 
 ---
 
+## CRITICAL: WIP Gate System
+
+**Before ANY APK build, the system ENFORCES:**
+1. No uncommitted changes (staged or unstaged)
+2. No untracked source files in src/
+3. No unpushed commits to origin
+4. Must be on a branch (not detached HEAD)
+
+**This is NOT bypassable** - gradle will block the build automatically.
+
+The APK is ALWAYS built from the **latest committed & pushed code**.
+
+---
+
 ## Standard Release Process
 
 ### 1. Make Changes
@@ -23,18 +37,19 @@ npm run typecheck          # Check TypeScript
 npm run pre-commit-check   # Run all checks
 ```
 
-### 3. Commit
+### 3. Commit & Push ALL Work
 ```bash
 git add .
 git commit -m "type(scope): description"
+git push origin main
 ```
-Pre-commit hook runs automatically.
+**ALL work MUST be committed and pushed before building APK.**
 
 ### 4. Build Release APK
 ```bash
 npm run build:release
 ```
-This prompts for checklist verification.
+WIP Gate runs automatically - **blocks if uncommitted work exists**.
 
 ### 5. Install on Devices
 ```bash
@@ -91,6 +106,20 @@ adb -s SERIAL shell monkey -p com.supermanditech.supermandipos -c android.intent
 
 ## Troubleshooting
 
+### Build blocked by WIP Gate
+```bash
+# See what's uncommitted
+git status
+
+# Commit everything
+git add .
+git commit -m "your message"
+git push origin main
+
+# Then build again
+npm run build:release
+```
+
 ### Build fails with TypeScript errors
 ```bash
 npm run typecheck
@@ -131,6 +160,9 @@ ssh supermandi-vm "cd ~/supermandi-pos && git pull origin main && pm2 restart al
 |------|---------|
 | `RELEASE_CHECKLIST.md` | Full checklist for releases |
 | `.release-status.json` | Current release status |
+| `.build-manifest.json` | Auto-generated build info |
+| `scripts/wip-gate.js` | **WIP detection (HARD BLOCK)** |
+| `scripts/pre-build-gate.js` | **Gradle pre-build checks** |
 | `scripts/pre-commit-check.js` | Pre-commit validation |
 | `scripts/build-release.js` | Build with checks |
 | `scripts/deploy-vm.js` | VM deployment |

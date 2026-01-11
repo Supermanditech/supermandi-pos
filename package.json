@@ -8,9 +8,14 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "pre-commit-check": "node scripts/pre-commit-check.js",
+    "build:check": "node scripts/build-check.js",
+    "apk:check": "node scripts/apk-readiness-check.js",
     "build:release": "node scripts/build-release.js",
     "deploy:vm": "node scripts/deploy-vm.js",
-    "install:devices": "adb devices && adb install -r android/app/build/outputs/apk/release/app-release.apk"
+    "install:devices": "adb devices && adb install -r android/app/build/outputs/apk/release/app-release.apk",
+    "wip": "node scripts/wip.js",
+    "wip:list": "node scripts/wip.js list",
+    "wip:add": "node scripts/wip.js add"
   },
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",
