@@ -5,7 +5,12 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "typecheck": "tsc --noEmit",
+    "pre-commit-check": "node scripts/pre-commit-check.js",
+    "build:release": "node scripts/build-release.js",
+    "deploy:vm": "node scripts/deploy-vm.js",
+    "install:devices": "adb devices && adb install -r android/app/build/outputs/apk/release/app-release.apk"
   },
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",

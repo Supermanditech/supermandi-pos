@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# Pre-commit hook for SuperMandi POS
+# Runs validation checks before allowing commit
+#
+# To install: git config core.hooksPath .githooks
+#
+
+echo ""
+echo "Running pre-commit checks..."
+echo ""
+
+# Run TypeScript check
+echo "Checking TypeScript..."
+npx tsc --noEmit
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: TypeScript compilation failed!"
+    echo "Fix TypeScript errors before committing."
+    exit 1
+fi
+
+# Run pre-commit validation script
+node scripts/pre-commit-check.js
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "ERROR: Pre-commit checks failed!"
+    echo "Fix issues before committing."
+    exit 1
+fi
+
+echo ""
+echo "Pre-commit checks passed!"
+echo ""

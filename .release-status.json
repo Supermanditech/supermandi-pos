@@ -1,0 +1,17 @@
+{
+  "version": "1.0.1",
+  "commit": "e6b504d",
+  "tag": "pos-ui-regression-fix-2026-01-11-1952IST",
+  "checklist_completed": true,
+  "tested_devices": [
+    "iMin Swift 2 (NMS211NE1416E0099)",
+    "Redmi (TG8HCYTGGQT885OF)",
+    "Sunmi V2 (V3A7249S20378)"
+  ],
+  "tester": "Claude",
+  "date": "2026-01-11",
+  "build_time": "2026-01-11T19:52:00.000Z",
+  "deployed_to_vm": true,
+  "vm_deploy_time": "2026-01-11T19:55:00.000Z",
+  "notes": "UI regression fixes: cart expanded, visible buttons, Menu text, scan debouncing"
+}
