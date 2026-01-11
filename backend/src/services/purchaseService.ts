@@ -162,11 +162,11 @@ async function ensureRetailerVariantLink(params: {
   if (typeof sellingPriceMinor === "number" && sellingPriceMinor > 0) {
     await client.query(
       `
-      INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer)
-      VALUES ($1, $2, $3, TRUE)
+      INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer, price_updated_at)
+      VALUES ($1, $2, $3, TRUE, NOW())
       ON CONFLICT (store_id, variant_id) DO UPDATE
       SET selling_price_minor = COALESCE(EXCLUDED.selling_price_minor, retailer_variants.selling_price_minor),
-          updated_at = NOW()
+          price_updated_at = NOW()
       `,
       [storeId, variantId, sellingPriceMinor]
     );
