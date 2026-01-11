@@ -96,7 +96,8 @@ async function buildStoreProductPayload(
   storeId: string,
   globalProductId: string,
   globalName: string,
-  storeDisplayName?: string | null
+  storeDisplayName?: string | null,
+  inventoryProductId?: string | null
 ): Promise<{
   global_product_id: string;
   global_name: string;
@@ -151,6 +152,9 @@ async function buildStoreProductPayload(
     [storeId, globalProductId]
   );
 
+  // Query store_inventory with inventoryProductId if provided (products.id),
+  // otherwise fall back to globalProductId for backward compatibility
+  const inventoryKey = inventoryProductId || globalProductId;
   const inventoryRes = await client.query(
     `
     SELECT available_qty
@@ -158,7 +162,7 @@ async function buildStoreProductPayload(
     WHERE store_id = $1 AND global_product_id = $2
     LIMIT 1
     `,
-    [storeId, globalProductId]
+    [storeId, inventoryKey]
   );
 
   const storeRow = storeRes.rows[0] ?? {};
@@ -653,12 +657,29 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
       }
     });
 
+    // Get the productId from the created/linked variant for store_inventory query
+    // store_inventory.global_product_id stores products.id (via variants.product_id)
+    const variantRes = await client.query(
+      `
+      SELECT v.product_id
+      FROM barcodes b
+      JOIN variants v ON v.id = b.variant_id
+      WHERE b.barcode = $1
+      LIMIT 1
+      `,
+      [scanned.trim()]
+    );
+    const inventoryProductId = variantRes.rows[0]?.product_id
+      ? String(variantRes.rows[0].product_id)
+      : null;
+
     const payload = await buildStoreProductPayload(
       client,
       storeId,
       globalProductId,
       globalName ?? globalNameFallback,
-      storeDisplayName
+      storeDisplayName,
+      inventoryProductId
     );
 
     await client.query("COMMIT");
