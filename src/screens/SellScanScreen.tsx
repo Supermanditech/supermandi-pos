@@ -122,12 +122,13 @@ const NUM_COLUMNS = 2;
 const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
-const CART_SHEET_COLLAPSED_RATIO = 0.45;
+const CART_SHEET_COLLAPSED_RATIO = 0.50;
+const CART_SHEET_COLLAPSED_RATIO_SMALL = 0.70;
 const CART_SHEET_EXPANDED_RATIO = 0.92;
-const CART_SHEET_SNAP_DURATION_MS = 220;
+const CART_SHEET_SNAP_DURATION_MS = 180;
 const CART_LIST_FOOTER_SPACER = 100;
 const SMALL_SCREEN_WIDTH = 400;
-const SMALL_SCREEN_HEIGHT = 700;
+const SMALL_SCREEN_HEIGHT = 750;
 
 
 const mergeSkuItems = (prev: SkuItem[], incoming: SkuItem[]): SkuItem[] => {
@@ -294,8 +295,16 @@ function CartItemRow({
     onAutoFocusConsumed?.(item.id);
   }, [autoFocusPrice, canEdit, item.id, onAutoFocusConsumed, showPriceInput]);
 
-  const lineTotal = item.priceMinor * item.quantity;
+  const lineSubtotal = item.priceMinor * item.quantity;
+  // Apply item discount if present (fixed discount already stored in minor units)
+  const itemDiscountAmount = item.itemDiscount
+    ? item.itemDiscount.type === "percentage"
+      ? Math.min(Math.round(lineSubtotal * (item.itemDiscount.value / 100)), lineSubtotal)
+      : Math.min(Math.round(item.itemDiscount.value), lineSubtotal)
+    : 0;
+  const lineTotal = Math.max(0, lineSubtotal - itemDiscountAmount);
   const lineTotalLabel = formatMoney(lineTotal, currency);
+  const hasItemDiscount = itemDiscountAmount > 0;
   const controlsDisabled = !canEdit || saving;
   const removeDisabled = controlsDisabled;
   const qtyHighlightBg = qtyHighlight.interpolate({
@@ -426,113 +435,105 @@ function CartItemRow({
       style={[
         styles.cartItemRowContent,
         isCompactRow && styles.cartItemRowContentCompact,
-        { minWidth: rowMinWidth }
       ]}
       onPress={enableRowPress ? onPressRow : undefined}
       disabled={!enableRowPress}
       testID={rowTestId}
     >
-      <View style={[styles.cartItemInfo, isCompactRow && styles.cartItemInfoCompact]}>
+      {/* Row 1: Product name + delete button */}
+      <View style={styles.cartItemNameRow}>
         <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail">
           {item.name}
         </Text>
-        <View style={[styles.cartItemPriceRow, isCompactRow && styles.cartItemPriceRowCompact]}>
-          <View style={styles.cartPriceField}>
-            <Text style={styles.cartPriceLabel}>Unit price</Text>
-            {showPriceInput ? (
-              <TextInput
-                style={[
-                  styles.cartPriceInput,
-                  isCompactRow && styles.cartPriceInputCompact,
-                  !canEdit && styles.inputDisabled
-                ]}
-                ref={priceInputRef}
-                value={priceInput}
-                onChangeText={handlePriceChange}
-                onEndEditing={handlePriceCommit}
-                onTouchStart={(event) => event?.stopPropagation?.()}
-                placeholder={pricePlaceholder}
-                placeholderTextColor={theme.colors.textTertiary}
-                keyboardType="decimal-pad"
-                editable={canEdit}
-              />
-            ) : (
-              <View style={styles.cartPriceValue}>
-                <Text style={styles.cartPriceValueText}>{unitPriceLabel}</Text>
-              </View>
-            )}
-          </View>
-        </View>
+        <Pressable
+          style={[styles.removeItemButton, removeDisabled && styles.removeItemButtonDisabled]}
+          onPress={handleRemove}
+          disabled={removeDisabled}
+          accessibilityLabel={`Remove ${item.name}`}
+        >
+          <MaterialCommunityIcons
+            name="trash-can-outline"
+            size={14}
+            color={theme.colors.textSecondary}
+          />
+        </Pressable>
       </View>
-      <View style={[styles.cartItemMetaRow, isCompactRow && styles.cartItemMetaRowCompact]}>
-        <View style={styles.cartItemControlsWrap}>
-          <Animated.View
-            style={[
-              styles.cartItemControls,
-              { backgroundColor: qtyHighlightBg }
-            ]}
-          >
-            <Pressable
-              style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
-              onPress={handleQtyDecrease}
-              disabled={controlsDisabled}
-              accessibilityLabel={`Decrease ${item.name}`}
-            >
-              <MaterialCommunityIcons name="minus" size={16} color={theme.colors.textPrimary} />
-            </Pressable>
-            <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]}>
-              {item.quantity}
-            </Animated.Text>
-            <Pressable
-              style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
-              onPress={handleQtyIncrease}
-              disabled={controlsDisabled}
-              accessibilityLabel={`Increase ${item.name}`}
-            >
-              <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textPrimary} />
-            </Pressable>
-          </Animated.View>
-          {showStock ? (
-            <Text style={styles.stockLabel}>In stock: {stockLabel}</Text>
-          ) : null}
-        </View>
-        <View style={[styles.cartItemSummary, isCompactRow && styles.cartItemSummaryCompact]}>
-          <Text style={styles.cartItemTotal}>
-            <Text style={styles.cartItemTotalLabel}>Total </Text>
-            {lineTotalLabel}
-          </Text>
-          <Pressable
-            style={[styles.removeItemButton, removeDisabled && styles.removeItemButtonDisabled]}
-            onPress={handleRemove}
-            disabled={removeDisabled}
-            accessibilityLabel={`Remove ${item.name}`}
-          >
-            <MaterialCommunityIcons
-              name="trash-can-outline"
-              size={16}
-              color={theme.colors.textSecondary}
+
+      {/* Row 2: Unit price | Qty stepper | Line total */}
+      <View style={styles.cartItemMainRow}>
+        {/* Unit price */}
+        <View style={styles.cartItemPriceBox}>
+          {showPriceInput ? (
+            <TextInput
+              style={[styles.cartPriceInputCompact, !canEdit && styles.inputDisabled]}
+              ref={priceInputRef}
+              value={`₹${priceInput}`}
+              onChangeText={(text) => handlePriceChange(text.replace(/₹/g, ""))}
+              onEndEditing={handlePriceCommit}
+              onTouchStart={(event) => event?.stopPropagation?.()}
+              placeholder="₹0.00"
+              placeholderTextColor={theme.colors.textTertiary}
+              keyboardType="decimal-pad"
+              editable={canEdit}
             />
+          ) : (
+            <Text style={styles.cartItemPriceText}>{unitPriceLabel}</Text>
+          )}
+        </View>
+
+        {/* Qty stepper */}
+        <Animated.View
+          style={[
+            styles.cartItemControls,
+            { backgroundColor: qtyHighlightBg }
+          ]}
+        >
+          <Pressable
+            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+            onPress={handleQtyDecrease}
+            disabled={controlsDisabled}
+            accessibilityLabel={`Decrease ${item.name}`}
+          >
+            <MaterialCommunityIcons name="minus" size={14} color={theme.colors.textPrimary} />
           </Pressable>
+          <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]}>
+            {item.quantity}
+          </Animated.Text>
+          <Pressable
+            style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
+            onPress={handleQtyIncrease}
+            disabled={controlsDisabled}
+            accessibilityLabel={`Increase ${item.name}`}
+          >
+            <MaterialCommunityIcons name="plus" size={14} color={theme.colors.textPrimary} />
+          </Pressable>
+        </Animated.View>
+
+        {/* Line total - always visible */}
+        <View style={styles.cartItemTotalBox}>
+          {hasItemDiscount ? (
+            <>
+              <Text style={styles.cartItemOriginalPrice}>
+                {formatMoney(lineSubtotal, currency)}
+              </Text>
+              <Text style={styles.cartItemDiscountedPrice}>{lineTotalLabel}</Text>
+            </>
+          ) : (
+            <Text style={styles.cartItemTotalText}>{lineTotalLabel}</Text>
+          )}
         </View>
       </View>
+
+      {/* Row 3: Stock info */}
+      {showStock ? (
+        <Text style={styles.stockLabel}>In stock: {stockLabel}</Text>
+      ) : null}
     </Pressable>
   );
 
   return (
     <Animated.View style={[styles.cartItemRow, isCompactRow && styles.cartItemRowCompact, rowStyle]}>
-      {mode === "SELL" ? (
-        <ScrollView
-          horizontal
-          nestedScrollEnabled
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.cartItemScrollContent}
-          style={styles.cartItemScroll}
-        >
-          {rowBody}
-        </ScrollView>
-      ) : (
-        rowBody
-      )}
+      {rowBody}
     </Animated.View>
   );
 }
@@ -576,31 +577,11 @@ export default function SellScanScreen({
     }
   }, [loadProducts, products.length]);
 
-  useEffect(() => {
-    if (cartMode !== "PURCHASE" && autoFocusItemId) {
-      setAutoFocusItemId(null);
-    }
-  }, [autoFocusItemId, cartMode]);
-
-  useEffect(() => {
-    if (!sellOnboarding) return;
-    const existingPrice =
-      typeof sellOnboarding.product.sell_price === "number" && sellOnboarding.product.sell_price > 0
-        ? sellOnboarding.product.sell_price
-        : null;
-    const existingPurchase =
-      typeof sellOnboarding.product.purchase_price === "number" &&
-      sellOnboarding.product.purchase_price > 0
-        ? sellOnboarding.product.purchase_price
-        : null;
-    setSellOnboardingPrice(formatPriceInput(existingPrice));
-    setSellOnboardingPurchasePrice(formatPriceInput(existingPurchase));
-    setSellOnboardingStock("1");
-    setSellOnboardingError(null);
-  }, [sellOnboarding]);
-
   const resolveAvailableStock = useCallback((item: CartItem): number | null => {
-    return resolveStockForCartItem({ id: item.id, barcode: item.barcode ?? null });
+    const rawStock = resolveStockForCartItem({ id: item.id, barcode: item.barcode ?? null });
+    if (rawStock === null) return null;
+    // Show remaining stock after cart reservation
+    return Math.max(0, rawStock - item.quantity);
   }, []);
 
   const totalAnimatedValue = useRef(new Animated.Value(total)).current;
@@ -686,6 +667,31 @@ export default function SellScanScreen({
   const sheetDragStartYRef = useRef(0);
   const sheetSnapRef = useRef<"collapsed" | "expanded">("collapsed");
 
+  // Reset autoFocusItemId when leaving PURCHASE mode
+  useEffect(() => {
+    if (cartMode !== "PURCHASE" && autoFocusItemId) {
+      setAutoFocusItemId(null);
+    }
+  }, [autoFocusItemId, cartMode]);
+
+  // Initialize sell onboarding form when request changes
+  useEffect(() => {
+    if (!sellOnboarding) return;
+    const existingPrice =
+      typeof sellOnboarding.product.sell_price === "number" && sellOnboarding.product.sell_price > 0
+        ? sellOnboarding.product.sell_price
+        : null;
+    const existingPurchase =
+      typeof sellOnboarding.product.purchase_price === "number" &&
+      sellOnboarding.product.purchase_price > 0
+        ? sellOnboarding.product.purchase_price
+        : null;
+    setSellOnboardingPrice(formatPriceInput(existingPrice));
+    setSellOnboardingPurchasePrice(formatPriceInput(existingPurchase));
+    setSellOnboardingStock("1");
+    setSellOnboardingError(null);
+  }, [sellOnboarding]);
+
   const currency = items[0]?.currency ?? "INR";
   const totalLabel = formatMoney(animatedTotalMinor, currency);
   const subtotalLabel = formatMoney(subtotal, currency);
@@ -734,7 +740,8 @@ export default function SellScanScreen({
         ? "Keep scanning"
         : "Review cart";
 
-  const collapsedHeight = Math.round(screenHeight * CART_SHEET_COLLAPSED_RATIO);
+  const collapsedRatio = isSmallScreen ? CART_SHEET_COLLAPSED_RATIO_SMALL : CART_SHEET_COLLAPSED_RATIO;
+  const collapsedHeight = Math.round(screenHeight * collapsedRatio);
   const expandedHeight = Math.round(screenHeight * CART_SHEET_EXPANDED_RATIO);
   const collapsedOffset = Math.max(0, expandedHeight - collapsedHeight);
 
@@ -755,12 +762,25 @@ export default function SellScanScreen({
   const handleSheetDragEnd = useCallback(
     (nextOffset: number, velocityY: number) => {
       if (collapsedOffset === 0) {
-        snapSheetTo("collapsed");
+        snapSheetTo("expanded");
         return;
       }
+      // Lower velocity threshold for easier gesture detection
+      // Expand if: fast upward swipe OR dragged past 40% of collapse distance
       const shouldExpand =
-        velocityY < -0.4 || nextOffset < collapsedOffset * 0.5;
-      snapSheetTo(shouldExpand ? "expanded" : "collapsed");
+        velocityY < -0.25 || nextOffset < collapsedOffset * 0.4;
+      // Collapse if: fast downward swipe OR dragged past 60% of collapse distance
+      const shouldCollapse =
+        velocityY > 0.25 || nextOffset > collapsedOffset * 0.6;
+
+      if (shouldExpand && !shouldCollapse) {
+        snapSheetTo("expanded");
+      } else if (shouldCollapse && !shouldExpand) {
+        snapSheetTo("collapsed");
+      } else {
+        // Default: snap to nearest based on position
+        snapSheetTo(nextOffset < collapsedOffset * 0.5 ? "expanded" : "collapsed");
+      }
     },
     [collapsedOffset, snapSheetTo]
   );
@@ -770,8 +790,9 @@ export default function SellScanScreen({
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, gesture) => {
-          const vertical = Math.abs(gesture.dy) > Math.abs(gesture.dx);
-          return vertical && Math.abs(gesture.dy) > 4;
+          // Lower threshold for easier gesture capture
+          const vertical = Math.abs(gesture.dy) > Math.abs(gesture.dx) * 0.8;
+          return vertical && Math.abs(gesture.dy) > 2;
         },
         onPanResponderGrant: () => {
           sheetTranslateY.stopAnimation((value) => {
@@ -798,9 +819,12 @@ export default function SellScanScreen({
   useEffect(() => {
     if (!cartExpanded) return;
     sheetTranslateY.stopAnimation();
-    sheetTranslateY.setValue(collapsedOffset);
-    sheetSnapRef.current = "collapsed";
-  }, [cartExpanded, collapsedOffset, sheetTranslateY]);
+    // On small screens, start expanded; on larger screens, start collapsed
+    const startExpanded = isSmallScreen;
+    const initialValue = startExpanded ? 0 : collapsedOffset;
+    sheetTranslateY.setValue(initialValue);
+    sheetSnapRef.current = startExpanded ? "expanded" : "collapsed";
+  }, [cartExpanded, collapsedOffset, sheetTranslateY, isSmallScreen]);
 
   useEffect(() => {
     const id = totalAnimatedValue.addListener(({ value }) => {
@@ -1358,11 +1382,14 @@ export default function SellScanScreen({
 
   const editorStockLabel = useMemo(() => {
     if (!editorItem) return "";
-    const stockValue = resolveStockForCartItem({
+    const rawStock = resolveStockForCartItem({
       id: editorItem.id,
       barcode: editorItem.barcode ?? null
     });
-    return stockValue === null ? "Unknown" : String(stockValue);
+    if (rawStock === null) return "Unknown";
+    // Show remaining stock after cart reservation
+    const remaining = Math.max(0, rawStock - editorItem.quantity);
+    return String(remaining);
   }, [editorItem, stockRefreshTick]);
 
   const detailPriceLabel = useMemo(() => {
@@ -1821,9 +1848,6 @@ export default function SellScanScreen({
                 </Pressable>
                 <View style={styles.cartTitleWrap}>
                   <Text style={[styles.cartTitle, isSmallScreen && styles.cartTitleCompact]}>{cartTitle}</Text>
-                  <Text style={styles.cartSubtitle}>
-                    {uniqueSkuCount} items | Qty: {itemCount}
-                  </Text>
                 </View>
               </View>
             </View>
@@ -2044,7 +2068,7 @@ export default function SellScanScreen({
                 {sellOnboardingBusy ? (
                   <ActivityIndicator size="small" color={theme.colors.textInverse} />
                 ) : (
-                  <Text style={styles.onboardingButtonTextInverse}>Receive & Add to Cart</Text>
+                  <Text style={styles.onboardingButtonTextInverse}>Save & Add</Text>
                 )}
               </Pressable>
             </View>
@@ -2496,30 +2520,33 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
   },
   cartSheet: {
+    flex: 1,
     backgroundColor: theme.colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: 16,
-    gap: 12,
+    gap: 10,
     ...theme.shadows.sm,
   },
   cartSheetCompact: {
     padding: 10,
-    gap: 8,
+    gap: 6,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
   cartHandleWrap: {
     alignSelf: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 40,
+    marginTop: -2,
+    marginBottom: -2,
   },
   cartHandle: {
     alignSelf: "center",
-    width: 46,
-    height: 4,
+    width: 50,
+    height: 5,
     borderRadius: 999,
     backgroundColor: theme.colors.border,
   },
@@ -2529,7 +2556,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   cartHeaderCompact: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   cartHeaderLeft: {
     flexDirection: "row",
@@ -2557,15 +2584,18 @@ const styles = StyleSheet.create({
   cartList: {
     flex: 1,
     minHeight: 0,
+    flexGrow: 1,
+    flexShrink: 1,
   },
   cartListContent: {
-    paddingBottom: 4,
+    paddingBottom: 8,
+    flexGrow: 1,
   },
   cartListFooterSpacer: {
-    height: CART_LIST_FOOTER_SPACER,
+    height: 16,
   },
   cartListFooterSpacerCompact: {
-    height: 60,
+    height: 8,
   },
   cartItemRow: {
     paddingVertical: 10,
@@ -2573,22 +2603,56 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   cartItemRowCompact: {
-    paddingVertical: 10,
-  },
-  cartItemScroll: {
-    width: "100%",
-  },
-  cartItemScrollContent: {
-    flexGrow: 1,
+    paddingVertical: 8,
   },
   cartItemRowContent: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "column",
+    gap: 6,
   },
   cartItemRowContentCompact: {
-    flexDirection: "column",
-    alignItems: "stretch",
+    gap: 4,
+  },
+  cartItemNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: 8,
+  },
+  cartItemMainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  cartItemPriceBox: {
+    minWidth: 70,
+    flexShrink: 0,
+  },
+  cartItemPriceText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  cartItemTotalBox: {
+    minWidth: 70,
+    alignItems: "flex-end",
+    flexShrink: 0,
+  },
+  cartItemTotalText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.primaryDark,
+  },
+  cartItemOriginalPrice: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: theme.colors.textTertiary,
+    textDecorationLine: "line-through",
+  },
+  cartItemDiscountedPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.success,
   },
   cartItemInfo: {
     flex: 1,
@@ -2648,7 +2712,17 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
   },
   cartPriceInputCompact: {
-    width: "100%",
+    minWidth: 65,
+    maxWidth: 80,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
   },
   cartPriceValue: {
     flex: 1,
@@ -2688,9 +2762,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   qtyButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceAlt,
@@ -2710,6 +2784,7 @@ const styles = StyleSheet.create({
   stockLabel: {
     fontSize: 10,
     color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   cartItemTotalLabel: {
     fontSize: 10,
@@ -2731,11 +2806,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   removeItemButton: {
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surfaceAlt,
-    padding: 6,
+    padding: 4,
   },
   removeItemButtonDisabled: {
     opacity: 0.5,
@@ -2749,8 +2824,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   discountSectionCompact: {
-    padding: 8,
-    gap: 6,
+    padding: 6,
+    gap: 4,
+    borderRadius: 8,
   },
   discountHeader: {
     flexDirection: "row",
@@ -2813,10 +2889,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   cartTotals: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    paddingTop: 10,
-    gap: 6,
+    paddingTop: 4,
+    gap: 4,
   },
   totalRow: {
     flexDirection: "row",
@@ -2861,15 +2935,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   cartTotalsCompact: {
-    paddingTop: 6,
-    gap: 4,
+    paddingTop: 2,
+    gap: 2,
   },
   cartFooter: {
     backgroundColor: theme.colors.surface,
-    gap: 10,
+    gap: 8,
+    flexShrink: 0,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
   },
   cartFooterCompact: {
     gap: 6,
+    paddingTop: 6,
   },
   totalCtaText: {
     fontSize: 14,

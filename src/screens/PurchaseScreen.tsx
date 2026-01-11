@@ -198,7 +198,7 @@ function PurchaseItemRow({
   const currency = item.currency ?? "INR";
   const hasPurchasePrice =
     typeof item.purchasePriceMinor === "number" && item.purchasePriceMinor > 0;
-  const totalLabel = hasPurchasePrice
+  const totalLabel = hasPurchasePrice && item.purchasePriceMinor
     ? formatMoney(item.purchasePriceMinor * item.quantity, currency)
     : "--";
 

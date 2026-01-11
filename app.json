@@ -4,11 +4,9 @@
     "slug": "supermandi-pos",
     "scheme": "supermandi",
     "version": "1.0.1",
-    "runtimeVersion": "pos-v1",
     "updates": {
-      "enabled": true,
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/633923dd-e9cd-4bee-8b7a-f2120c1cce91"
+      "enabled": false,
+      "checkAutomatically": "NEVER"
     },
     "android": {
       "package": "com.supermanditech.supermandipos"

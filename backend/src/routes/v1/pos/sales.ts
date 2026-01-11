@@ -606,7 +606,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       items: resolvedItems.map((item) => ({
         variantId: item.variantId,
         quantity: item.quantity,
-        globalProductId: item.globalProductId,
+        globalProductId: item.globalProductId ?? undefined,
         name: item.name ?? null
       }))
     });

@@ -13,7 +13,8 @@ import Constants from "expo-constants";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as Updates from "expo-updates";
+// expo-updates disabled for development - channel info not needed
+const Updates = { channel: null as string | null };
 
 import { enrollDevice } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession } from "../services/deviceSession";

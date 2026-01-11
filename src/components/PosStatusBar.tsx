@@ -429,7 +429,7 @@ export default function PosStatusBar({
             {statusItems.map((item) => (
               <View key={item.id} style={styles.detailsRow}>
                 <MaterialCommunityIcons
-                  name={item.icon}
+                  name={item.icon as any}
                   size={18}
                   color={item.ok ? theme.colors.textPrimary : theme.colors.textSecondary}
                 />
