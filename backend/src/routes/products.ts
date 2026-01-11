@@ -639,6 +639,7 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
       scanFormat: format ?? null,
       quantity: initialStock,
       unitCostMinor: purchasePriceMinor ?? sellPriceMinor,
+      sellingPriceMinor: sellPriceMinor,
       currency: "INR"
     };
 
@@ -674,8 +675,17 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
   } catch (error: any) {
     await client.query("ROLLBACK");
     const message = error?.message ? String(error.message) : "";
+    console.error("receive_product_error", { storeId, scanned, error: message, stack: error?.stack });
     if (message === "global_identifier_conflict") {
       return res.status(409).json({ error: message });
+    }
+    if (
+      message === "invalid_quantity" ||
+      message === "invalid_unit_cost" ||
+      message === "invalid_item" ||
+      message === "product_not_found"
+    ) {
+      return res.status(400).json({ error: message });
     }
     return res.status(500).json({ error: "failed to receive product" });
   } finally {
