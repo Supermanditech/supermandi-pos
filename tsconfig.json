@@ -4,5 +4,5 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "exclude": ["backend", "backend/**", "backend/dist", "dist", "supermandi-superadmin", "supermandi-superadmin/**"]
+  "exclude": ["backend", "backend/**", "backend/dist", "dist", "supermandi-superadmin", "supermandi-superadmin/**", "e2e", "e2e/**"]
 }

@@ -1,4 +1,5 @@
 import * as productsApi from "./api/productsApi";
+import { getStock, getStockBatch } from "./api/inventoryApi";
 import { getCachedStock, updateStockCacheEntries } from "./stockCache";
 import { isOnline } from "./networkStatus";
 
@@ -105,4 +106,97 @@ export function subscribeStockUpdates(listener: StockListener): () => void {
 
 export function getStockVersion(): number {
   return stockVersion;
+}
+
+// =============================================================================
+// INVENTORY API INTEGRATION (V3.0.9)
+// =============================================================================
+
+/**
+ * Get real-time stock for a single product from inventory service.
+ * Updates the local cache and notifies listeners.
+ */
+export async function getRealTimeStock(productId: string): Promise<number> {
+  try {
+    if (!(await isOnline())) {
+      // Return cached value when offline
+      return getCachedStock(productId) ?? 0;
+    }
+
+    const result = await getStock(productId);
+    const stock = result.currentQty;
+
+    // Update cache
+    upsertStockEntries([{ key: productId, stock }]);
+
+    return stock;
+  } catch (error) {
+    console.warn(`[Stock] Failed to get real-time stock for ${productId}:`, error);
+    // Return cached value on error
+    return getCachedStock(productId) ?? 0;
+  }
+}
+
+/**
+ * Get real-time stock for multiple products from inventory service.
+ * More efficient than individual lookups.
+ */
+export async function getRealTimeStockBatch(
+  productIds: string[]
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+
+  if (productIds.length === 0) {
+    return result;
+  }
+
+  try {
+    if (!(await isOnline())) {
+      // Return cached values when offline
+      for (const productId of productIds) {
+        result.set(productId, getCachedStock(productId) ?? 0);
+      }
+      return result;
+    }
+
+    const stockBatch = await getStockBatch(productIds);
+    const entries: StockEntry[] = [];
+
+    for (const productId of productIds) {
+      const stockData = stockBatch[productId];
+      const stock = stockData?.currentQty ?? 0;
+      result.set(productId, stock);
+      entries.push({ key: productId, stock });
+    }
+
+    // Update cache
+    upsertStockEntries(entries);
+
+    return result;
+  } catch (error) {
+    console.warn(`[Stock] Failed to get real-time stock batch:`, error);
+    // Return cached values on error
+    for (const productId of productIds) {
+      result.set(productId, getCachedStock(productId) ?? 0);
+    }
+    return result;
+  }
+}
+
+/**
+ * Refresh stock from inventory service for cart items.
+ * Used to get accurate stock before checkout.
+ */
+export async function refreshCartStock(
+  items: Array<{ id: string; barcode?: string | null }>
+): Promise<boolean> {
+  try {
+    const productIds = items.map((item) => item.id).filter(Boolean);
+    if (productIds.length === 0) return true;
+
+    await getRealTimeStockBatch(productIds);
+    return true;
+  } catch {
+    return false;
+  }
 }

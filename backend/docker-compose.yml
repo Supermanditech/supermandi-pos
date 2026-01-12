@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: supermandi-postgres
+    environment:
+      POSTGRES_USER: supermandi
+      POSTGRES_PASSWORD: supermandi_dev_password
+      POSTGRES_DB: supermandi
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supermandi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - supermandi-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: supermandi-redis
+    # CRITICAL: AOF persistence for Bull queue durability (V3.0.9)
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - supermandi-network
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  supermandi-network:
+    driver: bridge

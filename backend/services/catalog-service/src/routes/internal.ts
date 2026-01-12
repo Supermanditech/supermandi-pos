@@ -1,0 +1,332 @@
+// Internal Routes - V3.0.9 compliant
+// Service-to-service endpoints (validated by X-Service-Name header)
+
+import { Router, Request, Response, NextFunction } from 'express';
+import type { Router as RouterType } from 'express';
+import { ApiError, getClient, query, queryOne } from '@supermandi/common';
+
+const router: RouterType = Router();
+
+// =============================================================================
+// INTERNAL SERVICE VALIDATION MIDDLEWARE
+// =============================================================================
+
+const ALLOWED_SERVICES = [
+  'api-gateway',
+  'order-service',
+  'inventory-service',
+  'reorder-service',
+  'platform-service',
+];
+
+/**
+ * Middleware to validate X-Service-Name header.
+ * Only allows requests from known internal services.
+ */
+function validateInternalService(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const serviceName = req.headers['x-service-name'] as string;
+
+  if (!serviceName) {
+    res.status(401).json({
+      error: {
+        code: 'MISSING_SERVICE_HEADER',
+        message: 'X-Service-Name header is required for internal endpoints',
+      },
+    });
+    return;
+  }
+
+  if (!ALLOWED_SERVICES.includes(serviceName)) {
+    res.status(403).json({
+      error: {
+        code: 'INVALID_SERVICE',
+        message: `Service '${serviceName}' is not authorized for internal endpoints`,
+      },
+    });
+    return;
+  }
+
+  // Add service name to request for logging
+  (req as Request & { internalService?: string }).internalService = serviceName;
+
+  next();
+}
+
+// Apply validation to all internal routes
+router.use(validateInternalService);
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface ReconcileStockBody {
+  storeId: string;
+  productIds?: string[]; // Optional: specific products to reconcile (all if not provided)
+}
+
+interface ReconcileResult {
+  storeId: string;
+  productsReconciled: number;
+  stockBalancesUpdated: number;
+  storeProductsUpdated: number;
+  errors: string[];
+}
+
+// =============================================================================
+// STOCK RECONCILIATION
+// =============================================================================
+
+/**
+ * POST /internal/catalog/reconcile-stock
+ * Backfill stock values from inventory ledger.
+ *
+ * This endpoint:
+ * 1. Reads current stock from inventory.stock_balances
+ * 2. Updates catalog.store_products with current stock values
+ *
+ * Used for data recovery or initial sync.
+ *
+ * Body:
+ * - storeId: UUID (required)
+ * - productIds: string[] (optional, reconcile all if not provided)
+ */
+router.post(
+  '/catalog/reconcile-stock',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId, productIds } = req.body as ReconcileStockBody;
+
+      // Validate input
+      if (!storeId) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'storeId is required');
+      }
+
+      console.log(
+        `[internal] reconcile-stock called by ${(req as Request & { internalService?: string }).internalService}`,
+        `storeId=${storeId} productIds=${productIds?.length ?? 'all'}`
+      );
+
+      const result = await reconcileStock(storeId, productIds);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /internal/catalog/store/:storeId/product/:productId/stock
+ * Get current stock for a specific product in a store.
+ * Used by order-service for validation.
+ */
+router.get(
+  '/catalog/store/:storeId/product/:productId/stock',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId, productId } = req.params;
+
+      const stock = await queryOne<{
+        qty: number;
+        reserved_qty: number;
+        available_qty: number;
+        last_updated: Date;
+      }>(
+        `SELECT
+          sb.qty,
+          sb.reserved_qty,
+          (sb.qty - sb.reserved_qty) as available_qty,
+          sb.updated_at as last_updated
+         FROM inventory.stock_balances sb
+         WHERE sb.store_id = $1 AND sb.product_id = $2`,
+        [storeId, productId]
+      );
+
+      if (!stock) {
+        // Return 0 stock if not found
+        res.json({
+          success: true,
+          data: {
+            storeId,
+            productId,
+            qty: 0,
+            reservedQty: 0,
+            availableQty: 0,
+            lastUpdated: null,
+          },
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          storeId,
+          productId,
+          qty: stock.qty,
+          reservedQty: stock.reserved_qty,
+          availableQty: stock.available_qty,
+          lastUpdated: stock.last_updated,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /internal/catalog/store/:storeId/products/bulk-stock
+ * Get stock for multiple products at once.
+ * Used by order-service for cart validation.
+ */
+router.post(
+  '/catalog/store/:storeId/products/bulk-stock',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId } = req.params;
+      const { productIds } = req.body as { productIds: string[] };
+
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'productIds array is required');
+      }
+
+      // Limit to prevent abuse
+      if (productIds.length > 100) {
+        throw new ApiError(400, 'VALIDATION_ERROR', 'Maximum 100 products per request');
+      }
+
+      const placeholders = productIds.map((_, i) => `$${i + 2}`).join(', ');
+
+      const stocks = await query<{
+        product_id: string;
+        qty: number;
+        reserved_qty: number;
+      }>(
+        `SELECT
+          product_id,
+          qty,
+          reserved_qty
+         FROM inventory.stock_balances
+         WHERE store_id = $1 AND product_id IN (${placeholders})`,
+        [storeId, ...productIds]
+      );
+
+      // Create a map for quick lookup
+      const stockMap = new Map(stocks.map((s) => [s.product_id, s]));
+
+      // Build result with 0 for missing products
+      const result = productIds.map((productId) => {
+        const stock = stockMap.get(productId);
+        return {
+          productId,
+          qty: stock?.qty ?? 0,
+          reservedQty: stock?.reserved_qty ?? 0,
+          availableQty: (stock?.qty ?? 0) - (stock?.reserved_qty ?? 0),
+        };
+      });
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Reconcile stock from inventory.stock_balances to catalog.store_products.
+ */
+async function reconcileStock(
+  storeId: string,
+  productIds?: string[]
+): Promise<ReconcileResult> {
+  const result: ReconcileResult = {
+    storeId,
+    productsReconciled: 0,
+    stockBalancesUpdated: 0,
+    storeProductsUpdated: 0,
+    errors: [],
+  };
+
+  const client = await getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    // Get stock balances
+    let stockQuery = `
+      SELECT product_id, qty
+      FROM inventory.stock_balances
+      WHERE store_id = $1
+    `;
+    const params: unknown[] = [storeId];
+
+    if (productIds && productIds.length > 0) {
+      const placeholders = productIds.map((_, i) => `$${i + 2}`).join(', ');
+      stockQuery += ` AND product_id IN (${placeholders})`;
+      params.push(...productIds);
+    }
+
+    const stockBalances = await client.query<{
+      product_id: string;
+      qty: number;
+    }>(stockQuery, params);
+
+    result.stockBalancesUpdated = stockBalances.rows.length;
+
+    // Update store_products with current stock
+    for (const row of stockBalances.rows) {
+      try {
+        const updateResult = await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $1,
+               stock_last_event_at = NOW(),
+               updated_at = NOW()
+           WHERE store_id = $2 AND product_id = $3`,
+          [row.qty, storeId, row.product_id]
+        );
+
+        if ((updateResult.rowCount ?? 0) > 0) {
+          result.storeProductsUpdated++;
+        }
+
+        result.productsReconciled++;
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        result.errors.push(`Product ${row.product_id}: ${errMsg}`);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    console.log(
+      `[internal] reconcile-stock complete: ` +
+      `reconciled=${result.productsReconciled}, ` +
+      `storeProducts=${result.storeProductsUpdated}, ` +
+      `errors=${result.errors.length}`
+    );
+
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export default router;

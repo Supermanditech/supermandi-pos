@@ -1,0 +1,53 @@
+# Docker Ignore - V3.0.9 compliant
+# Files to exclude from Docker build context
+
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (will be created in container)
+dist
+**/dist
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+tests/
+**/tests/
+coverage/
+**/coverage/
+
+# Development files
+.env
+.env.*
+!.env.prod.example
+*.log
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker/
+
+# Documentation
+*.md
+docs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp

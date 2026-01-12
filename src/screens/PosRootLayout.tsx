@@ -25,10 +25,13 @@ import Constants from "expo-constants";
 
 import PosStatusBar from "../components/PosStatusBar";
 import ScanNoticeBanner from "../components/ScanNoticeBanner";
+import { TabBadge } from "../components/TabBadge";
 import MenuScreen from "./MenuScreen";
 import SellScanScreen from "./SellScanScreen";
 import PurchaseScreen from "./PurchaseScreen";
 import ReorderScreen from "./ReorderScreen";
+import { usePurchaseCartStore } from "../stores/purchaseCartStore";
+import * as reorderApi from "../services/api/reorderApi";
 import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
 import { clearDeviceSession, getDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
@@ -93,7 +96,10 @@ export default function PosRootLayout() {
   const tabIndicatorX = useRef(new Animated.Value(0)).current;
   const tabIndicatorWidth = useRef(new Animated.Value(0)).current;
   const tabIndicatorReadyRef = useRef(false);
+  const buyEnabled = useSettingsStore((state) => state.buyEnabled);
   const reorderEnabled = useSettingsStore((state) => state.reorderEnabled);
+  const cartItemCount = usePurchaseCartStore((state) => state.items.length);
+  const [pendingReorderCount, setPendingReorderCount] = useState(0);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const reorderPulse = useRef(new Animated.Value(0)).current;
   const reorderPulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -438,6 +444,38 @@ export default function PosRootLayout() {
     void refreshStockSnapshot();
   }, [deviceStoreId, selectedMode]);
 
+  // Fetch pending reorder count for badge
+  useEffect(() => {
+    if (!deviceStoreId || !reorderEnabled) {
+      setPendingReorderCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchCount = async () => {
+      try {
+        const response = await reorderApi.listPendingReorders(deviceStoreId, {
+          status: "pending",
+          limit: 1,
+        });
+        if (!cancelled) {
+          setPendingReorderCount(response.pagination.total);
+        }
+      } catch (error) {
+        console.error("[PosRootLayout] Failed to fetch pending reorder count:", error);
+      }
+    };
+
+    void fetchCount();
+    const interval = setInterval(fetchCount, 60000); // Refresh every minute
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [deviceStoreId, reorderEnabled]);
+
   useEffect(() => {
     if (!isFocused) return;
     if (scannerOpen) return;
@@ -758,15 +796,22 @@ export default function PosRootLayout() {
             ]}
           />
         ) : null}
-        {TABS.map((tab) => {
+        {TABS.filter((tab) => {
+          // Feature flag checks: hide tabs if not enabled
+          if (tab.id === "PURCHASE" && !buyEnabled) return false;
+          return true;
+        }).map((tab) => {
           const active = selectedMode === tab.id;
           const isReorder = tab.id === "REORDER";
+          const isPurchase = tab.id === "PURCHASE";
           const iconColor = active ? theme.colors.textInverse : theme.colors.textPrimary;
           const tabTextColor = isReorder
             ? reorderTextColor
             : active
               ? theme.colors.textInverse
               : theme.colors.textPrimary;
+          // Badge counts
+          const badgeCount = isPurchase ? cartItemCount : isReorder && reorderEnabled ? pendingReorderCount : 0;
           return (
             <Pressable
               key={tab.id}
@@ -779,7 +824,7 @@ export default function PosRootLayout() {
                 pressed && styles.tabPressed,
               ]}
               onPress={() => setSelectedMode(tab.id)}
-              testID={isReorder ? "tab-reorder" : undefined}
+              testID={isReorder ? "tab-reorder" : isPurchase ? "tab-buy" : undefined}
               accessibilityLabel={
                 isReorder ? `Reorder ${reorderStatusLabel}` : tab.id === "MENU" ? "Menu" : undefined
               }
@@ -811,7 +856,9 @@ export default function PosRootLayout() {
                   >
                     {reorderLabel}
                   </Text>
-                  {reorderEnabled ? (
+                  {reorderEnabled && pendingReorderCount > 0 ? (
+                    <TabBadge count={pendingReorderCount} color={theme.colors.warning} />
+                  ) : reorderEnabled ? (
                     <Animated.View
                       style={[
                         styles.reorderPulseDot,
@@ -824,18 +871,27 @@ export default function PosRootLayout() {
                   ) : null}
                 </View>
               ) : (
-                <Text
-                  style={[
-                    styles.tabText,
-                    compactTabs && styles.tabTextCompact,
-                    active && styles.tabTextActive,
-                    !active && { color: tabTextColor },
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="clip"
-                >
-                  {tab.label}
-                </Text>
+                <View style={styles.tabLabelRow}>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      compactTabs && styles.tabTextCompact,
+                      active && styles.tabTextActive,
+                      !active && { color: tabTextColor },
+                    ]}
+                    numberOfLines={1}
+                    ellipsizeMode="clip"
+                  >
+                    {tab.label}
+                  </Text>
+                  {badgeCount > 0 ? (
+                    <TabBadge
+                      count={badgeCount}
+                      color={active ? theme.colors.textInverse : theme.colors.primary}
+                      textColor={active ? theme.colors.primary : theme.colors.textInverse}
+                    />
+                  ) : null}
+                </View>
               )}
             </Pressable>
           );

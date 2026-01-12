@@ -1,0 +1,28 @@
+# Maestro Configuration - V3.0.9 compliant
+# E2E test configuration for SuperMandi POS
+
+appId: com.supermanditech.supermandipos
+
+# Environment variables for tests
+env:
+  TEST_PHONE: ${TEST_PHONE:-+919999900001}
+  TEST_PIN: ${TEST_PIN:-1234}
+  TEST_BARCODE: ${TEST_BARCODE:-8901234567890}
+
+# Default timeouts (in milliseconds)
+defaultRetryCount: 3
+defaultTimeout: 10000
+
+# Tags for filtering tests
+tags:
+  - smoke
+  - regression
+
+# Before each test flow
+onFlowStart:
+  - launchApp:
+      clearState: false
+
+# After each test flow
+onFlowComplete:
+  - evalScript: console.log('Flow completed successfully')

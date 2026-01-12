@@ -7,6 +7,13 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
+    "test:e2e": "jest --config e2e/jest.config.js",
+    "test:e2e:watch": "jest --config e2e/jest.config.js --watch",
+    "e2e": "maestro test e2e/",
+    "e2e:sell": "maestro test e2e/sellFlow.yaml",
+    "e2e:buy": "maestro test e2e/buyFlow.yaml",
+    "e2e:reorder": "maestro test e2e/reorderFlow.yaml",
+    "e2e:grn": "maestro test e2e/grnFlow.yaml",
     "pre-commit-check": "node scripts/pre-commit-check.js",
     "build:check": "node scripts/build-check.js",
     "apk:check": "node scripts/apk-readiness-check.js",
@@ -49,8 +56,11 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@react-native/babel-preset": "^0.76.0",
+    "@types/jest": "^29.5.14",
     "@types/react": "~18.3.12",
     "babel-plugin-module-resolver": "^5.0.0",
+    "jest": "^29.7.0",
     "typescript": "^5.3.3"
   },
   "private": true

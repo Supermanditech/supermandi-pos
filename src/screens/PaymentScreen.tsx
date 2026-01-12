@@ -16,12 +16,10 @@ import type { CartDiscount, CartItem, ItemDiscount } from "../stores/cartStore";
 import { formatMoney } from "../utils/money";
 import {
   cancelSale,
-  confirmUpiPaymentManual,
   createSale,
   initUpiPayment,
-  recordCashPayment,
-  recordDuePayment
 } from "../services/api/posApi";
+import { completeCheckout } from "../services/checkoutService";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { logPaymentEvent } from "../services/cloudEventLogger";
 import { ApiError } from "../services/api/apiClient";
@@ -462,6 +460,7 @@ const PaymentScreen = () => {
     setSubmitting(true);
 
     try {
+      // Validate UPI mode requirements
       if (selectedMode === "UPI") {
         if (!isOnline) {
           Alert.alert("UPI Offline", "UPI is unavailable while offline. Use Cash or Due.");
@@ -471,15 +470,28 @@ const PaymentScreen = () => {
           Alert.alert("UPI Error", "UPI payment is not ready yet.");
           return;
         }
-        await confirmUpiPaymentManual({ paymentId });
-      } else if (selectedMode === "CASH") {
-        await recordCashPayment({ saleId });
-      } else {
-        await recordDuePayment({ saleId });
       }
 
+      // Complete checkout with payment + inventory deduction
+      const result = await completeCheckout({
+        saleId,
+        billRef,
+        paymentMode: selectedMode,
+        paymentId: selectedMode === "UPI" && paymentId ? paymentId : undefined,
+        items: saleItems,
+        totalMinor,
+        currency,
+        transactionId,
+      });
+
+      // Log stock deduction (for debugging/audit trail)
       const stockLogs = buildStockDeductionLogs(saleItems, saleId);
       stockLogs.forEach((entry) => console.log(entry));
+
+      // Warn if inventory deduction failed (payment still succeeded)
+      if (!result.inventoryDeducted) {
+        console.warn(`[Payment] Inventory not deducted for sale ${saleId} - will reconcile later`);
+      }
 
       if (isPartialSale) {
         for (const item of saleItems) {
@@ -487,21 +499,14 @@ const PaymentScreen = () => {
         }
       }
 
-      void logPaymentEvent("PAYMENT_CONFIRMED", {
-        transactionId,
-        billId: billRef,
-        paymentMode: selectedMode,
-        amountMinor: totalMinor,
-        currency
-      });
-
       finalized.current = true;
       void logPaymentEvent("PAYMENT_SUCCESS", {
         transactionId,
         billId: billRef,
         paymentMode: selectedMode,
         amountMinor: totalMinor,
-        currency
+        currency,
+        inventoryDeducted: result.inventoryDeducted,
       });
 
       navigation.navigate("SuccessPrint", {

@@ -1,17 +1,14 @@
 {
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "rootDir": "src",
-    "outDir": "dist",
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "verbatimModuleSyntax": false
-  },
-  "exclude": [
-    "**/*.prisma_disabled.ts"
+  "files": [],
+  "references": [
+    { "path": "packages/common" },
+    { "path": "services/api-gateway" },
+    { "path": "services/auth-service" },
+    { "path": "services/platform-service" },
+    { "path": "services/supplier-service" },
+    { "path": "services/catalog-service" },
+    { "path": "services/inventory-service" },
+    { "path": "services/order-service" },
+    { "path": "services/reorder-service" }
   ]
 }
