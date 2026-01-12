@@ -53,6 +53,7 @@ type SellScanScreenProps = {
   cartMode?: CartMode;
   sellOnboardingRequest?: SellFirstOnboardingRequest | null;
   onSellOnboardingClose?: () => void;
+  isScanningActive?: boolean;
 };
 
 type RootStackParamList = {
@@ -587,6 +588,7 @@ export default function SellScanScreen({
   cartMode = "SELL",
   sellOnboardingRequest = null,
   onSellOnboardingClose,
+  isScanningActive = false,
 }: SellScanScreenProps) {
   const navigation = useNavigation<Nav>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -606,6 +608,7 @@ export default function SellScanScreen({
     locked,
     updateQuantity,
     updatePrice,
+    updateItemDetails,
     removeItem,
     applyItemDiscount,
     removeItemDiscount,
@@ -658,8 +661,10 @@ export default function SellScanScreen({
   const [stockLimitItemId, setStockLimitItemId] = useState<string | null>(null);
   const [stockLimitPulse, setStockLimitPulse] = useState(0);
   const [editorItem, setEditorItem] = useState<CartItem | null>(null);
+  const [editorName, setEditorName] = useState("");
   const [editorQty, setEditorQty] = useState("");
   const [editorPrice, setEditorPrice] = useState("");
+  const [editorPurchasePrice, setEditorPurchasePrice] = useState("");
   const [editorDiscountType, setEditorDiscountType] = useState<DiscountType>("percentage");
   const [editorDiscountValue, setEditorDiscountValue] = useState("");
   const [detailItem, setDetailItem] = useState<SkuItem | null>(null);
@@ -759,8 +764,12 @@ export default function SellScanScreen({
 
   useEffect(() => {
     if (!editorItem) return;
+    setEditorName(editorItem.name || "");
     setEditorQty(String(editorItem.quantity));
     setEditorPrice(formatPriceInput(editorItem.priceMinor));
+    // Get purchase price from metadata if available
+    const purchasePrice = editorItem.metadata?.purchasePriceMinor;
+    setEditorPurchasePrice(purchasePrice ? formatPriceInput(purchasePrice) : "");
     if (editorItem.itemDiscount) {
       const discountType = editorItem.itemDiscount.type === "fixed" ? "fixed" : "percentage";
       const discountValue =
@@ -775,13 +784,14 @@ export default function SellScanScreen({
     }
   }, [editorItem]);
 
+  // "Keep scanning" only shows when camera/HID scanner is actively in use
   const cartHint = locked
     ? "Cart locked"
     : itemCount === 0
       ? "Ready"
-      : itemCount <= 2
+      : isScanningActive
         ? "Keep scanning"
-        : "Review cart";
+        : "Tap to review cart";
 
   const collapsedRatio = isSmallScreen ? CART_SHEET_COLLAPSED_RATIO_SMALL : CART_SHEET_COLLAPSED_RATIO;
   const collapsedHeight = Math.round(screenHeight * collapsedRatio);
@@ -1395,13 +1405,31 @@ export default function SellScanScreen({
       return;
     }
 
+    // Update quantity
     updateQuantity(editorItem.id, nextQty);
 
-    const parsedPrice = parsePriceInput(editorPrice);
-    if (parsedPrice !== null && parsedPrice > 0) {
-      updatePrice(editorItem.id, parsedPrice);
-      void handleSaveDefaultPrice(editorItem, parsedPrice);
+    // Update sell price
+    const parsedSellPrice = parsePriceInput(editorPrice);
+    if (parsedSellPrice !== null && parsedSellPrice > 0) {
+      updatePrice(editorItem.id, parsedSellPrice);
+      void handleSaveDefaultPrice(editorItem, parsedSellPrice);
     }
+
+    // Update name and purchase price in metadata
+    const parsedPurchasePrice = parsePriceInput(editorPurchasePrice);
+    const trimmedName = editorName.trim();
+    const nameChanged = trimmedName && trimmedName !== editorItem.name;
+    const purchasePriceChanged = parsedPurchasePrice !== null && parsedPurchasePrice > 0;
+
+    if (nameChanged || purchasePriceChanged) {
+      updateItemDetails(editorItem.id, {
+        name: nameChanged ? trimmedName : undefined,
+        metadata: purchasePriceChanged ? { purchasePriceMinor: parsedPurchasePrice } : undefined
+      });
+    }
+
+    // Log to ledger for accounting/tracking
+    console.log(`ledger_item_edit:${editorItem.id},qty=${nextQty},sellPrice=${parsedSellPrice ?? editorItem.priceMinor},purchasePrice=${parsedPurchasePrice ?? 0},name=${trimmedName || editorItem.name}`);
 
     const parsedDiscount = parseDiscountInput(editorDiscountValue);
     if (parsedDiscount <= 0) {
@@ -1423,19 +1451,27 @@ export default function SellScanScreen({
     editorDiscountType,
     editorDiscountValue,
     editorItem,
+    editorName,
     editorPrice,
+    editorPurchasePrice,
     editorQty,
     handleSaveDefaultPrice,
     removeItemDiscount,
+    updateItemDetails,
     updatePrice,
     updateQuantity
   ]);
 
   const handleMakeFree = useCallback(() => {
-    // Set 100% discount to make item free (stock still deducted on checkout)
-    setEditorDiscountType("percentage");
-    setEditorDiscountValue("100");
-  }, []);
+    // Toggle FREE state - if already free (100% percentage), clear it
+    if (editorDiscountType === "percentage" && editorDiscountValue === "100") {
+      setEditorDiscountValue("");
+    } else {
+      // Set 100% discount to make item free (stock still deducted on checkout)
+      setEditorDiscountType("percentage");
+      setEditorDiscountValue("100");
+    }
+  }, [editorDiscountType, editorDiscountValue]);
 
   const editorTotalLabel = useMemo(() => {
     if (!editorItem) return "";
@@ -1891,28 +1927,39 @@ export default function SellScanScreen({
           onPress={handleOpenCart}
           accessibilityLabel="View cart"
         >
-          <View style={styles.cartBarTop}>
-            <Text style={styles.cartBarCount}>
-              {itemCount} {itemCount === 1 ? "item" : "items"}
-            </Text>
-            <View style={styles.cartBarTopRight}>
+          <View style={styles.cartBarLeft}>
+            <View style={styles.cartBarIconWrap}>
+              <MaterialCommunityIcons name="cart" size={20} color={theme.colors.surface} />
+              <View style={styles.cartBarBadge}>
+                <Text style={styles.cartBarBadgeText}>{itemCount}</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.cartBarCenter}>
+            <View style={styles.cartBarTop}>
+              <Text style={styles.cartBarCount}>
+                {itemCount} {itemCount === 1 ? "item" : "items"}
+              </Text>
               {locked ? (
                 <View style={styles.cartBarLocked}>
                   <Text style={styles.cartBarLockedText}>Locked</Text>
                 </View>
               ) : null}
-              <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+            </View>
+            <View style={styles.cartBarBottom}>
+              <Text style={styles.cartBarHint} numberOfLines={1}>
+                {lastAddMessage ?? cartHint}
+              </Text>
+              {undoVisible && !locked ? (
+                <Pressable onPress={handleUndo} hitSlop={8}>
+                  <Text style={styles.cartBarUndo}>Undo</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
-          <View style={styles.cartBarBottom}>
-            <Text style={styles.cartBarHint} numberOfLines={1}>
-              {lastAddMessage ?? cartHint}
-            </Text>
-            {undoVisible && !locked ? (
-              <Pressable onPress={handleUndo} hitSlop={8}>
-                <Text style={styles.cartBarUndo}>Undo</Text>
-              </Pressable>
-            ) : null}
+          <View style={styles.cartBarRight}>
+            <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.primary} />
           </View>
         </Pressable>
       ) : null}
@@ -2261,124 +2308,161 @@ export default function SellScanScreen({
             testID="sell-lineitem-editor"
           >
             <View style={styles.editHandle} />
-            <Text style={styles.editTitle}>Edit Product</Text>
+            <Text style={styles.editTitle}>Edit Item</Text>
             {editorItem ? (
               <View style={styles.editContent}>
-                <Text style={styles.editName} numberOfLines={2}>
-                  {editorItem.name}
-                </Text>
+                {/* Product name - only editable for new products not from ledger */}
+                {(() => {
+                  const isFromLedger = Boolean(
+                    editorItem.metadata?.globalProductId ||
+                    editorItem.metadata?.storeDisplayName
+                  );
+                  return (
+                    <View style={styles.editFieldFull}>
+                      <Text style={styles.editLabel}>
+                        Product Name {isFromLedger ? "(from catalog)" : "(editable)"}
+                      </Text>
+                      {isFromLedger ? (
+                        <Text style={styles.editNameReadonly} numberOfLines={2}>
+                          {editorName}
+                        </Text>
+                      ) : (
+                        <TextInput
+                          style={styles.editInputCompact}
+                          value={editorName}
+                          onChangeText={setEditorName}
+                          placeholder="Product name"
+                          placeholderTextColor={theme.colors.textTertiary}
+                          editable={!editorDisabled}
+                        />
+                      )}
+                    </View>
+                  );
+                })()}
                 {editorItem.barcode ? (
                   <Text style={styles.editBarcode} numberOfLines={1}>
-                    {editorItem.barcode}
+                    Barcode: {editorItem.barcode}
                   </Text>
                 ) : null}
                 <Text style={[styles.editStock, editorQtyExceedsStock && styles.editStockError]} numberOfLines={1}>
                   In stock: {editorStockLabel}{editorQtyExceedsStock ? " (exceeded!)" : ""}
                 </Text>
                 <View style={styles.editFields}>
-                  <View style={styles.editField}>
-                    <Text style={[styles.editLabel, editorQtyExceedsStock && styles.editLabelError]}>Qty</Text>
-                    <TextInput
-                      style={[styles.editInput, editorQtyExceedsStock && styles.editInputError]}
-                      value={editorQty}
-                      onChangeText={setEditorQty}
-                      keyboardType="number-pad"
-                      editable={!editorDisabled}
-                    />
+                  {/* Row 1: Qty and Sell Price side by side */}
+                  <View style={styles.editFieldsRow}>
+                    <View style={styles.editFieldCompact}>
+                      <Text style={[styles.editLabel, editorQtyExceedsStock && styles.editLabelError]}>Qty</Text>
+                      <TextInput
+                        style={[styles.editInputCompact, editorQtyExceedsStock && styles.editInputError]}
+                        value={editorQty}
+                        onChangeText={setEditorQty}
+                        keyboardType="number-pad"
+                        editable={!editorDisabled}
+                      />
+                    </View>
+                    <View style={styles.editFieldCompact}>
+                      <Text style={styles.editLabel}>Sell Price</Text>
+                      <TextInput
+                        style={styles.editInputCompact}
+                        value={editorPrice}
+                        onChangeText={setEditorPrice}
+                        keyboardType="decimal-pad"
+                        editable={!editorDisabled}
+                      />
+                    </View>
+                    <View style={styles.editFieldCompact}>
+                      <Text style={styles.editLabel}>Purchase Price</Text>
+                      <TextInput
+                        style={styles.editInputCompact}
+                        value={editorPurchasePrice}
+                        onChangeText={setEditorPurchasePrice}
+                        placeholder="Optional"
+                        placeholderTextColor={theme.colors.textTertiary}
+                        keyboardType="decimal-pad"
+                        editable={!editorDisabled}
+                      />
+                    </View>
                   </View>
-                  <View style={styles.editField}>
-                    <Text style={styles.editLabel}>Unit price</Text>
-                    <TextInput
-                      style={styles.editInput}
-                      value={editorPrice}
-                      onChangeText={setEditorPrice}
-                      keyboardType="decimal-pad"
-                      editable={!editorDisabled}
-                    />
-                  </View>
-                  <View style={styles.editField}>
-                    <Text style={[styles.editLabel, editorDiscountExceeds100 && styles.editLabelError]}>
-                      Discount{editorDiscountExceeds100 ? " (max 100%)" : ""}
-                    </Text>
-                    <View style={styles.editDiscountRow}>
-                      <View style={styles.editDiscountToggle}>
-                        <Pressable
-                          style={[
-                            styles.editDiscountChip,
-                            editorDiscountType === "percentage" && editorDiscountValue !== "100" && styles.editDiscountChipActive
-                          ]}
-                          onPress={() => {
-                            setEditorDiscountType("percentage");
-                            if (editorDiscountValue === "100") setEditorDiscountValue("");
-                          }}
-                          disabled={editorDisabled}
-                        >
-                          <Text
-                            style={[
-                              styles.editDiscountChipText,
-                              editorDiscountType === "percentage" && editorDiscountValue !== "100" && styles.editDiscountChipTextActive
-                            ]}
-                          >
-                            %
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          style={[
-                            styles.editDiscountChip,
-                            editorDiscountType === "fixed" && styles.editDiscountChipActive
-                          ]}
-                          onPress={() => {
-                            setEditorDiscountType("fixed");
-                            if (editorDiscountValue === "100") setEditorDiscountValue("");
-                          }}
-                          disabled={editorDisabled}
-                        >
-                          <Text
-                            style={[
-                              styles.editDiscountChipText,
-                              editorDiscountType === "fixed" && styles.editDiscountChipTextActive
-                            ]}
-                          >
-                            Flat
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          style={[
-                            styles.editDiscountChip,
-                            editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editDiscountChipFree
-                          ]}
-                          onPress={handleMakeFree}
-                          disabled={editorDisabled}
-                        >
-                          <Text
-                            style={[
-                              styles.editDiscountChipText,
-                              editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editDiscountChipTextFree
-                            ]}
-                          >
-                            Free
-                          </Text>
-                        </Pressable>
-                      </View>
-                      {editorDiscountType === "percentage" && editorDiscountValue === "100" ? (
-                        <Text style={styles.freeMarkedText}>Free item</Text>
-                      ) : (
+
+                  {/* Discount row - matching other field design */}
+                  <View style={styles.editFieldsRow}>
+                    <View style={styles.editFieldCompact}>
+                      <Text style={[styles.editLabel, editorDiscountExceeds100 && styles.editLabelError]}>
+                        Discount {editorDiscountType === "percentage" ? "%" : "₹"}
+                      </Text>
+                      <View style={styles.editDiscountInputRow}>
                         <TextInput
-                          style={[styles.editInput, styles.editDiscountInput, editorDiscountExceeds100 && styles.editInputError]}
+                          style={[
+                            styles.editInputCompact,
+                            styles.editDiscountInputField,
+                            editorDiscountExceeds100 && styles.editInputError
+                          ]}
                           value={editorDiscountValue}
                           onChangeText={setEditorDiscountValue}
-                          placeholder={editorDiscountType === "percentage" ? "%" : "₹"}
+                          placeholder="0"
                           placeholderTextColor={theme.colors.textTertiary}
                           keyboardType="decimal-pad"
                           editable={!editorDisabled}
                         />
-                      )}
+                        <View style={styles.editDiscountTypeToggle}>
+                          <Pressable
+                            style={[
+                              styles.editDiscountTypeBtn,
+                              editorDiscountType === "percentage" && styles.editDiscountTypeBtnActive
+                            ]}
+                            onPress={() => {
+                              setEditorDiscountType("percentage");
+                              if (editorDiscountValue === "100") setEditorDiscountValue("");
+                            }}
+                            disabled={editorDisabled}
+                          >
+                            <Text style={[
+                              styles.editDiscountTypeBtnText,
+                              editorDiscountType === "percentage" && styles.editDiscountTypeBtnTextActive
+                            ]}>%</Text>
+                          </Pressable>
+                          <Pressable
+                            style={[
+                              styles.editDiscountTypeBtn,
+                              editorDiscountType === "fixed" && styles.editDiscountTypeBtnActive
+                            ]}
+                            onPress={() => {
+                              setEditorDiscountType("fixed");
+                              if (editorDiscountValue === "100") setEditorDiscountValue("");
+                            }}
+                            disabled={editorDisabled}
+                          >
+                            <Text style={[
+                              styles.editDiscountTypeBtnText,
+                              editorDiscountType === "fixed" && styles.editDiscountTypeBtnTextActive
+                            ]}>₹</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.editFieldCompact}>
+                      <Text style={styles.editLabel}>Quick</Text>
+                      <Pressable
+                        style={[
+                          styles.editFreeBtn,
+                          editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editFreeBtnActive
+                        ]}
+                        onPress={handleMakeFree}
+                        disabled={editorDisabled}
+                      >
+                        <Text style={[
+                          styles.editFreeBtnText,
+                          editorDiscountType === "percentage" && editorDiscountValue === "100" && styles.editFreeBtnTextActive
+                        ]}>
+                          {editorDiscountType === "percentage" && editorDiscountValue === "100" ? "FREE ✓" : "Make Free"}
+                        </Text>
+                      </Pressable>
                     </View>
                   </View>
                 </View>
 
                 <View style={styles.editTotalRow}>
-                  <Text style={styles.editTotalLabel}>Line total</Text>
+                  <Text style={styles.editTotalLabel}>Item Total</Text>
                   <Text style={styles.editTotalValue}>{editorTotalLabel || "--"}</Text>
                 </View>
 
@@ -2386,7 +2470,6 @@ export default function SellScanScreen({
                   <Pressable
                     style={[styles.editButton, styles.editButtonGhost]}
                     onPress={closeEditor}
-                    disabled={editorDisabled}
                   >
                     <Text style={styles.editButtonText}>Cancel</Text>
                   </Pressable>
@@ -3264,25 +3347,55 @@ const styles = StyleSheet.create({
     right: 12,
     bottom: 12,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
     borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 6,
-    ...theme.shadows.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    ...theme.shadows.md,
     zIndex: 3,
   },
   cartBarFlash: {
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.accentSoft,
   },
-  cartBarTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  cartBarLeft: {
+    justifyContent: "center",
     alignItems: "center",
   },
-  cartBarTopRight: {
+  cartBarIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cartBarBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: theme.colors.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  cartBarBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: theme.colors.surface,
+  },
+  cartBarCenter: {
+    flex: 1,
+    gap: 2,
+  },
+  cartBarTop: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -3291,12 +3404,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.warning,
     backgroundColor: theme.colors.warningSoft,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 999,
   },
   cartBarLockedText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     color: theme.colors.warning,
   },
@@ -3305,28 +3418,32 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
+  cartBarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   cartBarTotal: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "800",
-    color: theme.colors.primaryDark,
+    color: theme.colors.primary,
     fontVariant: ["tabular-nums"],
   },
   cartBarBottom: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     gap: 10,
   },
   cartBarHint: {
     flex: 1,
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "500",
     color: theme.colors.textSecondary,
   },
   cartBarUndo: {
     fontSize: 12,
     fontWeight: "700",
-    color: theme.colors.primary,
+    color: theme.colors.accent,
   },
   detailOverlay: {
     flex: 1,
@@ -3473,10 +3590,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   editFields: {
+    gap: 8,
+  },
+  editFieldsRow: {
+    flexDirection: "row",
     gap: 10,
   },
+  editFieldCompact: {
+    flex: 1,
+    gap: 3,
+  },
+  editFieldFull: {
+    gap: 3,
+  },
   editField: {
-    gap: 6,
+    gap: 3,
   },
   editLabel: {
     fontSize: 11,
@@ -3486,12 +3614,86 @@ const styles = StyleSheet.create({
   editInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: theme.colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 8,
     fontSize: 13,
     color: theme.colors.textPrimary,
+  },
+  editInputCompact: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  editNameReadonly: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+  },
+  editDiscountSection: {
+    gap: 4,
+  },
+  editDiscountInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  editDiscountInputField: {
+    flex: 1,
+  },
+  editDiscountTypeToggle: {
+    flexDirection: "row",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  editDiscountTypeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: theme.colors.surface,
+  },
+  editDiscountTypeBtnActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  editDiscountTypeBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  editDiscountTypeBtnTextActive: {
+    color: theme.colors.textInverse,
+  },
+  editFreeBtn: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surface,
+  },
+  editFreeBtnActive: {
+    borderColor: theme.colors.warning,
+    backgroundColor: theme.colors.warningSoft,
+  },
+  editFreeBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  editFreeBtnTextActive: {
+    color: theme.colors.warning,
   },
   editInputError: {
     borderColor: theme.colors.error,
@@ -3519,8 +3721,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   editDiscountChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
   editDiscountChipActive: {
     backgroundColor: theme.colors.primary,

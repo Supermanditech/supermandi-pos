@@ -1,0 +1,8 @@
+.githooks/pre-commit
+.release-status.json
+QUICK_RELEASE_GUIDE.md
+RELEASE_CHECKLIST.md
+package.json
+scripts/build-release.js
+scripts/deploy-vm.js
+scripts/pre-commit-check.js

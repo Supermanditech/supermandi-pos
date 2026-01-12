@@ -1,0 +1,685 @@
+{
+  "project": "SuperMandi POS - REORDER System V2",
+  "version": "2.0.0",
+  "created": "2026-01-12",
+  "totalTickets": 27,
+  "estimatedDuration": "12 weeks",
+  "architecture": "Microservices + Event-Driven",
+  "sprints": [
+    {
+      "id": "sprint-1-2",
+      "name": "Foundation + Auth",
+      "duration": "2 weeks",
+      "focus": "Database, Auth Service, RBAC",
+      "tickets": ["TICKET-001", "TICKET-020"]
+    },
+    {
+      "id": "sprint-3-4",
+      "name": "Core Services",
+      "duration": "2 weeks",
+      "focus": "Supplier, Catalog, Inventory Services",
+      "tickets": ["TICKET-002", "TICKET-003", "TICKET-021"]
+    },
+    {
+      "id": "sprint-5-6",
+      "name": "Order + Reorder + Events",
+      "duration": "2 weeks",
+      "focus": "Order Service, Reorder Service, Event Bus",
+      "tickets": ["TICKET-010", "TICKET-022", "TICKET-023", "TICKET-025"]
+    },
+    {
+      "id": "sprint-7-8",
+      "name": "POS App UI",
+      "duration": "2 weeks",
+      "focus": "REORDER Tab, BUY Tab, Cart",
+      "tickets": ["TICKET-004", "TICKET-005", "TICKET-006", "TICKET-007", "TICKET-008"]
+    },
+    {
+      "id": "sprint-9-10",
+      "name": "Admin Surfaces + Automation",
+      "duration": "2 weeks",
+      "focus": "Store Admin, Supplier App, Cron Jobs",
+      "tickets": ["TICKET-009", "TICKET-014", "TICKET-017", "TICKET-018"]
+    },
+    {
+      "id": "sprint-11-12",
+      "name": "Superadmin + Polish",
+      "duration": "2 weeks",
+      "focus": "Superadmin Portal, Notifications, Audit, Testing",
+      "tickets": ["TICKET-024", "TICKET-026", "TICKET-027", "TICKET-016", "TICKET-019"]
+    }
+  ],
+  "tickets": [
+    {
+      "id": "TICKET-001",
+      "title": "Database Schema Setup (All Services)",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 4,
+      "sprint": "sprint-1-2",
+      "status": "todo",
+      "labels": ["database", "foundation", "backend"],
+      "dependsOn": [],
+      "description": "Create all database tables across all microservices with proper indexes and constraints.",
+      "acceptanceCriteria": [
+        "Auth tables: users, roles, user_roles, device_tokens",
+        "Supplier tables: suppliers, supplier_sources, supplier_store_links, supplier_requests, supplier_merge_log",
+        "Catalog tables: products, store_products, supplier_products, supplier_product_map, catalog_mapping_log",
+        "Inventory tables: inventory_ledger, inventory_snapshots",
+        "Order tables: purchase_orders, purchase_order_items, order_events",
+        "Reorder tables: reorder_policies, store_reorder_settings, pending_reorders, reorder_runs",
+        "Event outbox table template for all services",
+        "All indexes created for performance",
+        "Migration scripts with up/down",
+        "Default roles seeded"
+      ],
+      "files": [
+        "backend/migrations/001_auth_tables.sql",
+        "backend/migrations/002_supplier_tables.sql",
+        "backend/migrations/003_catalog_tables.sql",
+        "backend/migrations/004_inventory_tables.sql",
+        "backend/migrations/005_order_tables.sql",
+        "backend/migrations/006_reorder_tables.sql",
+        "backend/migrations/007_event_outbox.sql"
+      ]
+    },
+    {
+      "id": "TICKET-020",
+      "title": "Auth Service + RBAC Middleware",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-1-2",
+      "status": "todo",
+      "labels": ["auth", "rbac", "security", "backend"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Implement authentication service with JWT and role-based access control middleware.",
+      "acceptanceCriteria": [
+        "POST /auth/login - Login with email/phone + password",
+        "POST /auth/refresh - Refresh access token",
+        "GET /auth/me - Get current user with permissions",
+        "POST /auth/device-token - Register push notification token",
+        "JWT payload includes: actorType, actorId, permissions array",
+        "RBAC middleware: requirePermission(permission)",
+        "Default 5 roles seeded with correct permissions",
+        "Password hashing with bcrypt",
+        "Token expiry: access=15min, refresh=7days",
+        "Unit tests for all endpoints"
+      ],
+      "apiEndpoints": [
+        { "method": "POST", "path": "/api/v1/auth/login" },
+        { "method": "POST", "path": "/api/v1/auth/refresh" },
+        { "method": "GET", "path": "/api/v1/auth/me" },
+        { "method": "POST", "path": "/api/v1/auth/device-token" },
+        { "method": "POST", "path": "/api/v1/auth/users/{userId}/roles" }
+      ],
+      "technicalNotes": "JWT claims must include actorType (store|supplier|platform), actorId, and permissions array. Gateway extracts and forwards as headers."
+    },
+    {
+      "id": "TICKET-002",
+      "title": "Supplier Service - Core APIs",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "labels": ["api", "supplier", "backend"],
+      "dependsOn": ["TICKET-001", "TICKET-020"],
+      "description": "Implement supplier registry with GSTIN-based deduplication and store linking.",
+      "acceptanceCriteria": [
+        "GET /suppliers/search - Global supplier search by GSTIN/name",
+        "GET /stores/{storeId}/suppliers - List linked suppliers for store",
+        "POST /stores/{storeId}/suppliers/link - Link existing supplier",
+        "POST /stores/{storeId}/suppliers/request - Request new supplier (creates pending request)",
+        "PUT /stores/{storeId}/suppliers/{id} - Update link settings (priority, preferred)",
+        "DELETE /stores/{storeId}/suppliers/{id}/unlink - Unlink supplier",
+        "GSTIN validation (regex + checksum)",
+        "GSTIN-based deduplication on create",
+        "Publish SUPPLIER_LINKED_TO_STORE event",
+        "Unit tests with 80% coverage"
+      ],
+      "apiEndpoints": [
+        { "method": "GET", "path": "/api/v1/suppliers/search", "permission": "store.suppliers.read" },
+        { "method": "GET", "path": "/api/v1/stores/{storeId}/suppliers", "permission": "store.suppliers.read" },
+        { "method": "POST", "path": "/api/v1/stores/{storeId}/suppliers/link", "permission": "store.suppliers.write" },
+        { "method": "POST", "path": "/api/v1/stores/{storeId}/suppliers/request", "permission": "store.suppliers.write" },
+        { "method": "PUT", "path": "/api/v1/stores/{storeId}/suppliers/{id}", "permission": "store.suppliers.write" },
+        { "method": "DELETE", "path": "/api/v1/stores/{storeId}/suppliers/{id}/unlink", "permission": "store.suppliers.write" }
+      ]
+    },
+    {
+      "id": "TICKET-003",
+      "title": "Catalog Service - Core APIs",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "labels": ["api", "catalog", "backend"],
+      "dependsOn": ["TICKET-001", "TICKET-020"],
+      "description": "Implement unified catalog with supplier mapping, search, and caching.",
+      "acceptanceCriteria": [
+        "GET /stores/{storeId}/catalog - Unified catalog with best prices (only mapped products)",
+        "GET /stores/{storeId}/catalog/{productId}/suppliers - All suppliers for a product",
+        "GET /stores/{storeId}/catalog/unmatched - Unmatched products queue",
+        "POST /stores/{storeId}/catalog/map - Manual map supplier product to unified product",
+        "POST /stores/{storeId}/catalog/products - Create new unified product",
+        "POST /stores/{storeId}/catalog/sync - Trigger background sync",
+        "Full-text search using pg_trgm",
+        "Redis caching with 5min TTL",
+        "Pagination support",
+        "Response time < 500ms for 1000 products"
+      ],
+      "apiEndpoints": [
+        { "method": "GET", "path": "/api/v1/stores/{storeId}/catalog", "permission": "store.catalog.read" },
+        { "method": "GET", "path": "/api/v1/stores/{storeId}/catalog/{productId}/suppliers", "permission": "store.catalog.read" },
+        { "method": "GET", "path": "/api/v1/stores/{storeId}/catalog/unmatched", "permission": "store.catalog.write" },
+        { "method": "POST", "path": "/api/v1/stores/{storeId}/catalog/map", "permission": "store.catalog.write" },
+        { "method": "POST", "path": "/api/v1/stores/{storeId}/catalog/products", "permission": "store.catalog.write" }
+      ],
+      "technicalNotes": "Only products in supplier_product_map appear in catalog. Auto-mapping happens when supplier adds product with matching barcode."
+    },
+    {
+      "id": "TICKET-021",
+      "title": "Inventory Ledger Service",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "labels": ["api", "inventory", "ledger", "backend"],
+      "dependsOn": ["TICKET-001", "TICKET-020"],
+      "description": "Implement ledger-based inventory service where stock = SUM(delta_qty).",
+      "acceptanceCriteria": [
+        "GET /stores/{storeId}/inventory - Get stock levels for all products",
+        "GET /stores/{storeId}/inventory/{productId} - Get stock + recent ledger entries",
+        "GET /stores/{storeId}/inventory/{productId}/ledger - Full ledger history",
+        "POST /stores/{storeId}/inventory/adjust - Manual stock adjustment",
+        "Internal: createLedgerEntry() for sales and GRN",
+        "Stock computation: SUM(delta_qty) per store+product",
+        "Publish INVENTORY_CHANGED event on every change",
+        "Optional: Daily snapshot generation",
+        "get_current_stock() SQL function"
+      ],
+      "apiEndpoints": [
+        { "method": "GET", "path": "/api/v1/stores/{storeId}/inventory", "permission": "store.inventory.read" },
+        { "method": "GET", "path": "/api/v1/stores/{storeId}/inventory/{productId}", "permission": "store.inventory.read" },
+        { "method": "POST", "path": "/api/v1/stores/{storeId}/inventory/adjust", "permission": "store.inventory.write" }
+      ],
+      "technicalNotes": "inventory_ledger is append-only. Never update/delete rows. Stock shown anywhere must come from this service."
+    },
+    {
+      "id": "TICKET-010",
+      "title": "Purchase Order Service",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "labels": ["api", "orders", "backend"],
+      "dependsOn": ["TICKET-001", "TICKET-020", "TICKET-021"],
+      "description": "Implement purchase order CRUD, status management, and GRN receiving.",
+      "acceptanceCriteria": [
+        "POST /stores/{storeId}/purchase-orders - Create from cart",
+        "POST /stores/{storeId}/purchase-orders/from-reorders - Create from approved reorders",
+        "GET /stores/{storeId}/purchase-orders - List with filters",
+        "GET /stores/{storeId}/purchase-orders/{id} - Order detail with items and events",
+        "POST /stores/{storeId}/purchase-orders/{id}/submit - Send to supplier",
+        "POST /stores/{storeId}/purchase-orders/{id}/cancel - Cancel order",
+        "POST /stores/{storeId}/purchase-orders/{id}/receive - GRN receiving",
+        "Order number auto-generation (PO-{storeId}-{year}-{seq})",
+        "Status transitions with validation (state machine)",
+        "order_events logging for all status changes",
+        "Publish PO_CREATED, PO_STATUS_CHANGED, PO_RECEIVED events",
+        "GRN creates inventory ledger entries"
+      ],
+      "statusFlow": "draft → submitted → confirmed → shipped → delivered | cancelled | partial_received"
+    },
+    {
+      "id": "TICKET-022",
+      "title": "Supplier Product Mapping (Auto + Manual)",
+      "type": "Backend + Frontend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "labels": ["catalog", "mapping", "backend", "frontend"],
+      "dependsOn": ["TICKET-003"],
+      "description": "Implement auto-mapping by barcode and manual mapping queue for store admins.",
+      "acceptanceCriteria": [
+        "Auto-map on supplier_product insert when barcode matches products.primary_barcode",
+        "Confidence scoring for auto-matches (1.0 for exact barcode match)",
+        "GET /catalog/unmatched - Returns unmatched supplier products for linked suppliers",
+        "POST /catalog/map - Manual map with audit logging",
+        "DELETE /catalog/map/{mapId} - Unmap",
+        "Store Admin UI: Mapping queue screen",
+        "UI: Show suggested matches with confidence",
+        "UI: Create new product option",
+        "catalog_mapping_log entries for all actions",
+        "Only mapped products appear in BUY catalog"
+      ],
+      "technicalNotes": "This is the BUYABILITY GATE. If a supplier product is not mapped, it cannot be purchased via BUY or suggested via REORDER."
+    },
+    {
+      "id": "TICKET-023",
+      "title": "Reorder Policies + Draft PO Flow",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "labels": ["reorder", "policies", "backend"],
+      "dependsOn": ["TICKET-001", "TICKET-021", "TICKET-010"],
+      "description": "Implement reorder policy management and draft PO generation from approved reorders.",
+      "acceptanceCriteria": [
+        "GET /stores/{storeId}/reorder/settings - Store reorder settings",
+        "PUT /stores/{storeId}/reorder/settings - Update settings (reorderEnabled, requireApproval)",
+        "GET /stores/{storeId}/reorder/policies - List all policies with current stock",
+        "PUT /stores/{storeId}/reorder/policies/{productId} - Set/update policy (min, target, preferredSupplier)",
+        "PUT /stores/{storeId}/reorder/policies/bulk - Bulk update policies",
+        "GET /stores/{storeId}/reorder/pending - List pending reorders",
+        "POST /stores/{storeId}/reorder/pending/approve - Approve selected → creates draft POs grouped by supplier",
+        "POST /stores/{storeId}/reorder/pending/{id}/dismiss - Dismiss with reason",
+        "Draft POs have status='draft' and appear in BUY tab",
+        "Generate deep link to BUY tab with draft filter",
+        "Consume INVENTORY_CHANGED events to check thresholds"
+      ],
+      "technicalNotes": "Policies replace the confusing auto_reorder_enabled fields. Clear separation: policy defines rules, pending_reorder is the suggestion, draft PO is in order-service."
+    },
+    {
+      "id": "TICKET-025",
+      "title": "Outbox + Event Bus Integration",
+      "type": "Backend",
+      "priority": "P1-High",
+      "estimateDays": 5,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "labels": ["events", "outbox", "backend"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Implement reliable event delivery using outbox pattern with Redis/Bull.",
+      "acceptanceCriteria": [
+        "event_outbox table in each service schema",
+        "writeToOutbox() helper function (same transaction as business data)",
+        "Outbox worker: polls pending events, publishes to Redis queue",
+        "Bull queue setup for event consumers",
+        "Retry logic for failed publishes (max 3 retries)",
+        "Dead letter queue for failed events",
+        "Mark events as published with timestamp",
+        "Correlation-ID propagation through events",
+        "Consumer registration pattern",
+        "Event schema validation"
+      ],
+      "events": [
+        "PO_CREATED",
+        "PO_STATUS_CHANGED",
+        "PO_RECEIVED",
+        "INVENTORY_CHANGED",
+        "SUPPLIER_CATALOG_UPDATED",
+        "REORDER_DRAFT_CREATED",
+        "SUPPLIER_LINKED_TO_STORE",
+        "SUPPLIER_VERIFIED",
+        "SUPPLIER_MERGED"
+      ]
+    },
+    {
+      "id": "TICKET-004",
+      "title": "Purchase Cart Store (Frontend)",
+      "type": "Frontend",
+      "priority": "P0-Critical",
+      "estimateDays": 3,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "labels": ["frontend", "state-management", "zustand"],
+      "dependsOn": [],
+      "description": "Create Zustand store for purchase cart, separate from sell cart.",
+      "acceptanceCriteria": [
+        "Add/remove items",
+        "Update quantities (respect MOQ)",
+        "Group items by supplier",
+        "Calculate totals per supplier",
+        "Calculate grand total",
+        "Load draft POs from reorder approval",
+        "Persist to AsyncStorage",
+        "Clear cart on successful order",
+        "Clear single supplier's items"
+      ],
+      "files": ["src/stores/purchaseCartStore.ts"],
+      "interface": {
+        "PurchaseCartItem": {
+          "supplierProductId": "string",
+          "productId": "string",
+          "supplierId": "string",
+          "supplierName": "string",
+          "productName": "string",
+          "barcode": "string | undefined",
+          "quantity": "number",
+          "unitPrice": "number",
+          "mrp": "number | undefined",
+          "moq": "number"
+        }
+      }
+    },
+    {
+      "id": "TICKET-005",
+      "title": "REORDER Screen - Main UI",
+      "type": "Frontend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "labels": ["frontend", "screen", "ui"],
+      "dependsOn": ["TICKET-023"],
+      "description": "Build REORDER tab in POS app with pending reorders and policy link.",
+      "acceptanceCriteria": [
+        "Show store reorder settings (enabled, require approval)",
+        "List pending reorders with selection checkboxes",
+        "Each reorder card shows: product, stock, threshold, suggested qty, supplier, price",
+        "Edit button opens edit modal (change qty, supplier)",
+        "Dismiss button with reason prompt",
+        "Select all / deselect all",
+        "Approve Selected → creates draft POs",
+        "After approval, navigate to BUY tab with draft filter",
+        "Link to Reorder Settings / Policies",
+        "Pull to refresh",
+        "Empty state when no pending reorders"
+      ],
+      "files": ["src/screens/ReorderScreen.tsx"]
+    },
+    {
+      "id": "TICKET-006",
+      "title": "BUY Screen - Catalog + Cart",
+      "type": "Frontend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "labels": ["frontend", "screen", "ui"],
+      "dependsOn": ["TICKET-004", "TICKET-003"],
+      "description": "Build BUY tab with catalog browse, product details, and cart.",
+      "acceptanceCriteria": [
+        "Draft orders banner (from reorder approval) with 'Review & Submit' action",
+        "Search bar with barcode scan button",
+        "Category filter chips (horizontal scroll)",
+        "Product grid (2 columns) with: name, best price, stock status, supplier count",
+        "Tap product → Product Detail Modal with all suppliers",
+        "Add to cart with quantity picker (respect MOQ)",
+        "Cart footer showing: item count, supplier count, total",
+        "Cart modal showing items grouped by supplier",
+        "Place order per supplier or place all",
+        "Order confirmation screen",
+        "Navigation to Order History"
+      ],
+      "files": ["src/screens/BuyScreen.tsx", "src/components/ProductDetailModal.tsx", "src/components/PurchaseCartModal.tsx"]
+    },
+    {
+      "id": "TICKET-007",
+      "title": "Catalog Product Card Component",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 2,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "labels": ["frontend", "component"],
+      "dependsOn": ["TICKET-006"],
+      "description": "Create product card component for catalog grid in BUY tab.",
+      "files": ["src/components/CatalogProductCard.tsx"]
+    },
+    {
+      "id": "TICKET-008",
+      "title": "Purchase Cart Modal",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "labels": ["frontend", "component", "modal"],
+      "dependsOn": ["TICKET-004"],
+      "description": "Cart modal showing items grouped by supplier with order actions.",
+      "files": ["src/components/PurchaseCartModal.tsx"]
+    },
+    {
+      "id": "TICKET-009",
+      "title": "Reorder Settings Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "labels": ["frontend", "screen", "settings"],
+      "dependsOn": ["TICKET-023"],
+      "description": "Screen to configure reorder policies per product.",
+      "files": ["src/screens/ReorderSettingsScreen.tsx"]
+    },
+    {
+      "id": "TICKET-014",
+      "title": "Stock Monitor Cron Job",
+      "type": "Backend",
+      "priority": "P1-High",
+      "estimateDays": 3,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "labels": ["backend", "automation", "cron"],
+      "dependsOn": ["TICKET-023"],
+      "description": "Background job to check stock levels and create pending reorders.",
+      "acceptanceCriteria": [
+        "Run every hour OR triggered by INVENTORY_CHANGED event",
+        "Get stores with reorder_enabled = true",
+        "For each store, get products where stock <= min_threshold",
+        "Skip if pending reorder already exists for product",
+        "Find best supplier (priority, then price, then stock)",
+        "Create pending_reorder with suggested_quantity = target - current",
+        "Publish REORDER_DRAFT_CREATED event",
+        "Log run stats to reorder_runs table"
+      ],
+      "cronSchedule": "0 * * * *"
+    },
+    {
+      "id": "TICKET-017",
+      "title": "Supplier App - Order Inbox",
+      "type": "Supplier App",
+      "priority": "P2-Medium",
+      "estimateDays": 5,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "labels": ["supplier-app", "frontend"],
+      "dependsOn": ["TICKET-010"],
+      "description": "Supplier app screen to view and manage incoming orders.",
+      "files": ["supplier-app/src/screens/OrderInboxScreen.tsx"]
+    },
+    {
+      "id": "TICKET-018",
+      "title": "Supplier App - Catalog Management",
+      "type": "Supplier App",
+      "priority": "P2-Medium",
+      "estimateDays": 5,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "labels": ["supplier-app", "frontend"],
+      "dependsOn": ["TICKET-003"],
+      "description": "Supplier app screens for catalog management.",
+      "files": ["supplier-app/src/screens/CatalogScreen.tsx"]
+    },
+    {
+      "id": "TICKET-024",
+      "title": "Superadmin Portal MVP",
+      "type": "Web Frontend",
+      "priority": "P1-High",
+      "estimateDays": 5,
+      "sprint": "sprint-11-12",
+      "status": "todo",
+      "labels": ["web", "admin", "frontend"],
+      "dependsOn": ["TICKET-002"],
+      "description": "Build superadmin portal for supplier management and platform administration.",
+      "acceptanceCriteria": [
+        "Login with superadmin credentials",
+        "Dashboard with key metrics",
+        "Pending supplier requests list",
+        "Approve/reject supplier request",
+        "Verify existing supplier",
+        "Merge duplicate suppliers (select source + target)",
+        "Feature flags toggle per store",
+        "Basic audit log view (recent actions)",
+        "Supplier search and detail view"
+      ],
+      "files": ["admin-portal/src/"]
+    },
+    {
+      "id": "TICKET-026",
+      "title": "Supplier Web Dashboard MVP",
+      "type": "Web Frontend",
+      "priority": "P1-High",
+      "estimateDays": 5,
+      "sprint": "sprint-11-12",
+      "status": "todo",
+      "labels": ["web", "supplier", "frontend"],
+      "dependsOn": ["TICKET-003", "TICKET-010"],
+      "description": "Supplier web dashboard for catalog and staff management.",
+      "acceptanceCriteria": [
+        "Login with supplier admin credentials",
+        "Order inbox with filters",
+        "Confirm/ship orders",
+        "Catalog list view",
+        "Edit product (price, stock)",
+        "Bulk CSV upload for catalog",
+        "Staff account management (create supplier_staff users)",
+        "Basic analytics (orders received, revenue)"
+      ]
+    },
+    {
+      "id": "TICKET-027",
+      "title": "Audit Logs",
+      "type": "Backend",
+      "priority": "P1-High",
+      "estimateDays": 3,
+      "sprint": "sprint-11-12",
+      "status": "todo",
+      "labels": ["backend", "audit"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Comprehensive audit logging for admin actions.",
+      "acceptanceCriteria": [
+        "order_events table logs all order status changes",
+        "supplier_merge_log captures all merges",
+        "catalog_mapping_log captures all mapping actions",
+        "admin_actions table for general admin actions",
+        "GET /admin/audit endpoint with filters",
+        "Include actor info (user_id, user_name, actor_type)"
+      ]
+    },
+    {
+      "id": "TICKET-016",
+      "title": "Push Notifications",
+      "type": "Backend + Frontend",
+      "priority": "P1-High",
+      "estimateDays": 4,
+      "sprint": "sprint-11-12",
+      "status": "todo",
+      "labels": ["backend", "frontend", "notifications"],
+      "dependsOn": ["TICKET-020", "TICKET-025"],
+      "description": "Push notifications for key events to store and supplier.",
+      "acceptanceCriteria": [
+        "Expo Push Notifications integration",
+        "Device token storage and management",
+        "notification-service consumes events from queue",
+        "REORDER_DRAFT_CREATED → push to store",
+        "PO_CREATED → push to supplier",
+        "PO_CONFIRMED → push to store",
+        "PO_SHIPPED → push to store",
+        "Deep link handling in POS app",
+        "In-app notification badge"
+      ]
+    },
+    {
+      "id": "TICKET-019",
+      "title": "Real-time Stock Sync (WebSocket)",
+      "type": "Backend",
+      "priority": "P2-Medium",
+      "estimateDays": 5,
+      "sprint": "sprint-11-12",
+      "status": "todo",
+      "labels": ["backend", "websocket", "advanced"],
+      "dependsOn": ["TICKET-003", "TICKET-021"],
+      "description": "Optional: WebSocket for real-time stock updates from supplier.",
+      "technicalNotes": "This is OPTIONAL. Start with polling (every 5 min). Only implement WS if real-time is critical."
+    },
+    {
+      "id": "TICKET-011",
+      "title": "Order Confirmation Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 2,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "labels": ["frontend", "screen"],
+      "dependsOn": ["TICKET-006"],
+      "description": "Order summary screen before placing order."
+    },
+    {
+      "id": "TICKET-012",
+      "title": "Order History Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "labels": ["frontend", "screen"],
+      "dependsOn": ["TICKET-010"],
+      "description": "View past purchase orders with status."
+    },
+    {
+      "id": "TICKET-013",
+      "title": "Order Detail + GRN Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "labels": ["frontend", "screen"],
+      "dependsOn": ["TICKET-012"],
+      "description": "Order detail with GRN receiving functionality."
+    },
+    {
+      "id": "TICKET-015",
+      "title": "Auto-Order Cron (No Approval)",
+      "type": "Backend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-11-12",
+      "status": "todo",
+      "labels": ["backend", "automation"],
+      "dependsOn": ["TICKET-014"],
+      "description": "For stores with require_approval=false, auto-convert pending reorders to orders."
+    }
+  ],
+  "dependencies": {
+    "criticalPath": [
+      "TICKET-001",
+      "TICKET-020",
+      "TICKET-002 + TICKET-003 + TICKET-021 (parallel)",
+      "TICKET-010 + TICKET-022 + TICKET-023 + TICKET-025 (parallel)",
+      "TICKET-004 + TICKET-005 + TICKET-006 (parallel)",
+      "Launch"
+    ]
+  },
+  "riskAreas": [
+    {
+      "area": "Event Consistency",
+      "risk": "Events lost or processed out of order",
+      "mitigation": "Outbox pattern with retry and dead letter queue"
+    },
+    {
+      "area": "Mapping Gate",
+      "risk": "Products not appearing in catalog",
+      "mitigation": "Clear unmatched queue UI, auto-map by barcode"
+    },
+    {
+      "area": "Inventory Accuracy",
+      "risk": "Stock mismatch between ledger and reality",
+      "mitigation": "Ledger is source of truth, manual adjustment endpoint"
+    },
+    {
+      "area": "Multi-service Complexity",
+      "risk": "Debugging distributed issues",
+      "mitigation": "Correlation-ID through all requests, centralized logging"
+    }
+  ]
+}

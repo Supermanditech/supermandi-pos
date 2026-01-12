@@ -1,0 +1,1 @@
+2026-01-11 20:19:44 +0400	ed51de8c724da8686a77a4c78244913f649ed258	feat(release): add mandatory release checklist system

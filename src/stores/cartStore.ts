@@ -75,6 +75,7 @@ interface CartState {
   removeItem: (itemId: string, force?: boolean) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   updatePrice: (itemId: string, priceMinor: number) => void;
+  updateItemDetails: (itemId: string, details: { name?: string; metadata?: Record<string, any> }) => void;
   applyItemDiscount: (itemId: string, discount: ItemDiscount) => void;
   removeItemDiscount: (itemId: string) => void;
   clearCart: (force?: boolean) => void;
@@ -452,6 +453,44 @@ export const useCartStore = create<CartState>()(
     eventLogger.log('CART_UPDATE_PRICE', {
       itemId,
       priceMinor: nextItem.priceMinor
+    });
+  },
+
+  updateItemDetails: (itemId, details) => {
+    if (get().locked) return;
+    const state = get();
+    const existingIndex = state.items.findIndex(i => i.id === itemId);
+    const existingItem = existingIndex >= 0 ? state.items[existingIndex] : null;
+    if (!existingItem) return;
+
+    const nextItem: CartItem = {
+      ...existingItem,
+      name: details.name ?? existingItem.name,
+      metadata: details.metadata
+        ? { ...existingItem.metadata, ...details.metadata }
+        : existingItem.metadata
+    };
+
+    const newItems = [...state.items];
+    newItems[existingIndex] = nextItem;
+
+    set({
+      items: newItems,
+      mutationHistory: [
+        ...state.mutationHistory,
+        {
+          type: "UPSERT_ITEM",
+          itemId,
+          previousItem: cloneItem(existingItem),
+          previousIndex: existingIndex
+        }
+      ]
+    });
+
+    eventLogger.log('CART_UPDATE_DETAILS', {
+      itemId,
+      name: nextItem.name,
+      metadata: nextItem.metadata
     });
   },
 

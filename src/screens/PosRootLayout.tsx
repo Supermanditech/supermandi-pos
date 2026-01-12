@@ -858,6 +858,7 @@ export default function PosRootLayout() {
             cartMode={cartMode}
             sellOnboardingRequest={sellOnboardingRequest}
             onSellOnboardingClose={closeSellOnboarding}
+            isScanningActive={scannerOpen || hidConnected}
           />
         ) : null}
         {selectedMode === "PURCHASE" ? (

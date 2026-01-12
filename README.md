@@ -173,12 +173,51 @@ Implementation:
 
 ## Running the App
 
-```bash
-# Start Expo development server
-npm start
+### Option 1: Expo Go (Development)
 
-# Run on Android device/emulator
+Use Expo Go app on your phone for quick development testing.
+
+#### Setup EXPO_TOKEN (Required)
+
+Expo requires authentication for certain features. Use a Personal Access Token (NOT password auth).
+
+1. Go to: https://expo.dev/accounts/supermanditech/settings/access-tokens
+2. Click "Create token"
+3. Copy the token (you won't see it again!)
+
+**In PowerShell (run once per session):**
+```powershell
+$env:EXPO_TOKEN = "your-token-here"
+```
+
+> **WARNING: Never commit your token to git!**
+> Do NOT add EXPO_TOKEN to .env, app.json, or any committed file.
+
+#### Start Expo Go Server
+
+**LAN Mode** (phone and laptop on same WiFi):
+```powershell
+.\tools\expo\start-go.ps1
+```
+
+**USB Mode** (phone connected via USB):
+```powershell
+.\tools\expo\start-go-usb.ps1
+```
+Then enter in Expo Go: `exp://127.0.0.1:8081`
+
+### Option 2: Development Build (Recommended for POS devices)
+
+```bash
+# Build and run on connected device
 npm run android
+```
+
+### Option 3: Release APK
+
+```bash
+npx expo prebuild -p android --clean
+cd android && ./gradlew assembleRelease
 ```
 
 ## Project Structure

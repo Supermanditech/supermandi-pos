@@ -1,0 +1,9 @@
+ .githooks/pre-commit        |  34 ++++++++
+ .release-status.json        |  17 ++++
+ QUICK_RELEASE_GUIDE.md      | 137 +++++++++++++++++++++++++++++++++
+ RELEASE_CHECKLIST.md        | 143 ++++++++++++++++++++++++++++++++++
+ package.json                |   7 +-
+ scripts/build-release.js    | 182 +++++++++++++++++++++++++++++++++++++++++++
+ scripts/deploy-vm.js        | 170 ++++++++++++++++++++++++++++++++++++++++
+ scripts/pre-commit-check.js | 183 ++++++++++++++++++++++++++++++++++++++++++++
+ 8 files changed, 872 insertions(+), 1 deletion(-)

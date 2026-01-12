@@ -1,0 +1,721 @@
+{
+  "project": "SuperMandi POS - REORDER System",
+  "version": "1.0.0",
+  "created": "2026-01-12",
+  "totalTickets": 19,
+  "estimatedDuration": "10 weeks",
+  "sprints": [
+    {
+      "id": "sprint-1-2",
+      "name": "Foundation",
+      "duration": "2 weeks",
+      "focus": "Database, Core APIs, Frontend Store",
+      "tickets": ["TICKET-001", "TICKET-002", "TICKET-003", "TICKET-004"]
+    },
+    {
+      "id": "sprint-3-4",
+      "name": "REORDER UI",
+      "duration": "2 weeks",
+      "focus": "POS App Screens and Components",
+      "tickets": ["TICKET-005", "TICKET-006", "TICKET-007", "TICKET-008", "TICKET-009"]
+    },
+    {
+      "id": "sprint-5-6",
+      "name": "Order Management",
+      "duration": "2 weeks",
+      "focus": "Purchase Order Flow",
+      "tickets": ["TICKET-010", "TICKET-011", "TICKET-012", "TICKET-013"]
+    },
+    {
+      "id": "sprint-7-8",
+      "name": "Auto-Reorder Engine",
+      "duration": "2 weeks",
+      "focus": "Automation and Notifications",
+      "tickets": ["TICKET-014", "TICKET-015", "TICKET-016"]
+    },
+    {
+      "id": "sprint-9-10",
+      "name": "Supplier Integration",
+      "duration": "2 weeks",
+      "focus": "Supplier App and Real-time Sync",
+      "tickets": ["TICKET-017", "TICKET-018", "TICKET-019"]
+    }
+  ],
+  "tickets": [
+    {
+      "id": "TICKET-001",
+      "title": "Database Schema Setup",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 3,
+      "sprint": "sprint-1-2",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["database", "foundation", "backend"],
+      "dependsOn": [],
+      "description": "Create all database tables for supplier, catalog, and order management.",
+      "acceptanceCriteria": [
+        "All tables created as per schema in design doc",
+        "Indexes created for performance",
+        "Foreign key constraints working",
+        "Migration scripts ready",
+        "Seed data for testing"
+      ],
+      "files": [
+        "backend/migrations/001_suppliers.sql",
+        "backend/migrations/002_supplier_products.sql",
+        "backend/migrations/003_purchase_orders.sql",
+        "backend/migrations/004_reorder_rules.sql"
+      ],
+      "technicalNotes": "Use PostgreSQL gen_random_uuid() for UUID generation. Create indexes on frequently queried columns."
+    },
+    {
+      "id": "TICKET-002",
+      "title": "Supplier Service - Core APIs",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-1-2",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["api", "supplier", "backend"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Implement supplier management APIs including GSTIN-based deduplication.",
+      "acceptanceCriteria": [
+        "GET /suppliers - List linked suppliers",
+        "POST /suppliers/link - Link supplier (with dedup by GSTIN)",
+        "PUT /suppliers/{id} - Update supplier settings",
+        "DELETE /suppliers/{id}/unlink - Unlink from store",
+        "GSTIN validation working (regex + checksum)",
+        "Unit tests with 80% coverage"
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v1/stores/{storeId}/suppliers",
+          "description": "List all suppliers linked to store"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/stores/{storeId}/suppliers/link",
+          "description": "Link supplier to store (creates if new, links if exists)"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/v1/stores/{storeId}/suppliers/{supplierId}",
+          "description": "Update supplier link settings (priority, auto-reorder, etc.)"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/v1/stores/{storeId}/suppliers/{supplierId}/unlink",
+          "description": "Unlink supplier from store (doesn't delete supplier)"
+        }
+      ],
+      "technicalNotes": "GSTIN is the primary dedup key. When linking, always check if GSTIN exists first. Use transaction for creating supplier + link atomically."
+    },
+    {
+      "id": "TICKET-003",
+      "title": "Catalog Service - Core APIs",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-1-2",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["api", "catalog", "backend"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Implement catalog APIs for browsing supplier products with unified view.",
+      "acceptanceCriteria": [
+        "GET /catalog - Unified catalog with best prices across suppliers",
+        "GET /catalog/{productId}/suppliers - All suppliers for a specific product",
+        "POST /catalog/sync - Trigger catalog sync from suppliers",
+        "Search by name, barcode working",
+        "Category filter working",
+        "Pagination working (cursor-based preferred)",
+        "Response time < 500ms for 1000 products"
+      ],
+      "apiEndpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v1/stores/{storeId}/catalog",
+          "description": "Get unified product catalog",
+          "queryParams": ["search", "category", "supplierId", "page", "limit"]
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/stores/{storeId}/catalog/{productId}/suppliers",
+          "description": "Get all suppliers offering a specific product"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/stores/{storeId}/catalog/sync",
+          "description": "Trigger background catalog sync"
+        }
+      ],
+      "technicalNotes": "Use Redis caching for catalog (5 min TTL). Unified view should aggregate products by barcode/globalSkuId and show best price. Consider full-text search with pg_trgm extension."
+    },
+    {
+      "id": "TICKET-004",
+      "title": "Purchase Cart Store (Frontend)",
+      "type": "Frontend",
+      "priority": "P0-Critical",
+      "estimateDays": 3,
+      "sprint": "sprint-1-2",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "state-management", "zustand"],
+      "dependsOn": [],
+      "description": "Create Zustand store for purchase cart, separate from sell cart.",
+      "acceptanceCriteria": [
+        "Add/remove items working",
+        "Update quantities working",
+        "Items grouped by supplier",
+        "Calculate totals per supplier",
+        "Calculate grand total",
+        "Persist to AsyncStorage",
+        "Clear cart on order submit",
+        "Clear single supplier's items"
+      ],
+      "files": [
+        "src/stores/purchaseCartStore.ts"
+      ],
+      "codeStructure": {
+        "interface": "PurchaseCartItem",
+        "fields": ["supplierProductId", "supplierId", "supplierName", "productName", "barcode", "quantity", "unitPrice", "mrp"],
+        "actions": ["addItem", "removeItem", "updateQuantity", "clearCart", "clearSupplierItems"],
+        "computed": ["getItemsBySupplier", "getTotalBySupplier", "getGrandTotal", "getItemCount"]
+      },
+      "technicalNotes": "Use Zustand persist middleware with AsyncStorage. Separate from sellCartStore to avoid conflicts. Key items by supplierProductId for uniqueness."
+    },
+    {
+      "id": "TICKET-005",
+      "title": "REORDER Screen - Main UI",
+      "type": "Frontend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "ui", "screen"],
+      "dependsOn": ["TICKET-004"],
+      "description": "Build the main REORDER screen with pending reorders section and catalog browse section.",
+      "acceptanceCriteria": [
+        "Pending reorders section at top with count badge",
+        "Browse catalog section below with search",
+        "Category filter chips (horizontal scroll)",
+        "Product grid (2 columns)",
+        "Pull-to-refresh working",
+        "Loading states with skeleton",
+        "Empty states with helpful message",
+        "Error handling with retry",
+        "Cart footer bar visible when items in cart"
+      ],
+      "files": [
+        "src/screens/ReorderScreen.tsx"
+      ],
+      "uiSections": [
+        {
+          "name": "Header",
+          "elements": ["Tab navigation", "Settings icon"]
+        },
+        {
+          "name": "Pending Reorders",
+          "elements": ["Count badge", "Reorder cards", "Select all", "Approve button", "Dismiss all"]
+        },
+        {
+          "name": "Browse Catalog",
+          "elements": ["Search input", "Category chips", "Product grid", "Load more"]
+        },
+        {
+          "name": "Cart Footer",
+          "elements": ["Item count", "Total amount", "View cart button"]
+        }
+      ],
+      "technicalNotes": "Use FlatList with numColumns=2 for product grid. SectionList might work better for combining pending + catalog. Consider virtualization for performance."
+    },
+    {
+      "id": "TICKET-006",
+      "title": "Pending Reorder Card Component",
+      "type": "Frontend",
+      "priority": "P1-High",
+      "estimateDays": 2,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "component"],
+      "dependsOn": ["TICKET-005"],
+      "description": "Create reusable card component for pending reorder items.",
+      "acceptanceCriteria": [
+        "Shows product name and barcode",
+        "Shows current stock vs threshold",
+        "Shows suggested quantity and price",
+        "Shows supplier name",
+        "Checkbox for selection",
+        "Edit button (opens edit modal)",
+        "Dismiss button with confirmation",
+        "Visual indication when selected"
+      ],
+      "files": [
+        "src/components/PendingReorderCard.tsx"
+      ],
+      "props": {
+        "reorder": "PendingReorder object",
+        "isSelected": "boolean",
+        "onSelect": "(id: string) => void",
+        "onEdit": "(id: string) => void",
+        "onDismiss": "(id: string) => void"
+      },
+      "technicalNotes": "Use Pressable for the whole card. Checkbox can be react-native-paper or custom. Consider swipe-to-dismiss gesture."
+    },
+    {
+      "id": "TICKET-007",
+      "title": "Catalog Product Card Component",
+      "type": "Frontend",
+      "priority": "P1-High",
+      "estimateDays": 2,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "component"],
+      "dependsOn": ["TICKET-005"],
+      "description": "Create product card for catalog browse with add-to-cart functionality.",
+      "acceptanceCriteria": [
+        "Product image placeholder (gray box with icon)",
+        "Product name (max 2 lines, ellipsis)",
+        "Best price prominently displayed",
+        "MRP with strikethrough if different",
+        "Stock status indicator (green/orange/red dot)",
+        "MOQ badge if > 1",
+        "Quick add button (+)",
+        "Tap card to open detail modal",
+        "Quantity badge if already in cart"
+      ],
+      "files": [
+        "src/components/CatalogProductCard.tsx"
+      ],
+      "technicalNotes": "Card should be ~160px wide for 2-column grid. Use memo for performance. Consider FastImage for product images if/when added."
+    },
+    {
+      "id": "TICKET-008",
+      "title": "Purchase Cart Modal",
+      "type": "Frontend",
+      "priority": "P1-High",
+      "estimateDays": 3,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "component", "modal"],
+      "dependsOn": ["TICKET-004"],
+      "description": "Create purchase cart modal showing items grouped by supplier with order actions.",
+      "acceptanceCriteria": [
+        "Items grouped by supplier",
+        "Supplier section header with name and item count",
+        "Line items with quantity controls",
+        "Subtotal per supplier",
+        "Min order value warning if not met",
+        "Place order button per supplier",
+        "Grand total at bottom",
+        "Place all orders button",
+        "Swipe or button to remove items",
+        "Empty cart state"
+      ],
+      "files": [
+        "src/components/PurchaseCartModal.tsx"
+      ],
+      "technicalNotes": "Use SectionList for grouped display. Each section = supplier. Place order should call API and clear that supplier's items only. Handle partial success (one supplier fails, others succeed)."
+    },
+    {
+      "id": "TICKET-009",
+      "title": "Reorder Settings Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-3-4",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "screen", "settings"],
+      "dependsOn": [],
+      "description": "Screen to configure auto-reorder rules per product.",
+      "acceptanceCriteria": [
+        "Global toggle for auto-reorder mode",
+        "Global toggle for require approval",
+        "List of products with stock levels",
+        "Search products",
+        "Per-product settings: threshold, reorder qty, max stock",
+        "Per-product preferred supplier dropdown",
+        "Enable/disable per product",
+        "Save changes with confirmation",
+        "Bulk enable/disable"
+      ],
+      "files": [
+        "src/screens/ReorderSettingsScreen.tsx"
+      ],
+      "technicalNotes": "Consider using a form library for validation. Settings should be saved to backend, not just local. Debounce input changes before API call."
+    },
+    {
+      "id": "TICKET-010",
+      "title": "Purchase Order Service",
+      "type": "Backend",
+      "priority": "P0-Critical",
+      "estimateDays": 5,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["backend", "api", "orders"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Implement purchase order creation, status management, and goods receipt (GRN).",
+      "acceptanceCriteria": [
+        "POST /purchase-orders - Create from cart",
+        "POST /purchase-orders/from-reorders - Create from approved reorders",
+        "GET /purchase-orders - List with filters",
+        "GET /purchase-orders/{id} - Order detail",
+        "PUT /purchase-orders/{id}/status - Update status",
+        "POST /purchase-orders/{id}/receive - GRN",
+        "Order number auto-generation",
+        "Status transitions validated",
+        "Notifications triggered on status change"
+      ],
+      "apiEndpoints": [
+        {
+          "method": "POST",
+          "path": "/api/v1/stores/{storeId}/purchase-orders",
+          "description": "Create order from cart items"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/stores/{storeId}/purchase-orders/from-reorders",
+          "description": "Create orders from approved pending reorders"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/stores/{storeId}/purchase-orders",
+          "description": "List orders with status, date, supplier filters"
+        },
+        {
+          "method": "GET",
+          "path": "/api/v1/stores/{storeId}/purchase-orders/{orderId}",
+          "description": "Get order details with items"
+        },
+        {
+          "method": "PUT",
+          "path": "/api/v1/stores/{storeId}/purchase-orders/{orderId}/status",
+          "description": "Update order status"
+        },
+        {
+          "method": "POST",
+          "path": "/api/v1/stores/{storeId}/purchase-orders/{orderId}/receive",
+          "description": "Record goods receipt (GRN)"
+        }
+      ],
+      "technicalNotes": "Use state machine pattern for order status. Valid transitions: draft->pending->sent->confirmed->shipped->delivered. On GRN, update store inventory automatically."
+    },
+    {
+      "id": "TICKET-011",
+      "title": "Order Confirmation Screen",
+      "type": "Frontend",
+      "priority": "P1-High",
+      "estimateDays": 2,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "screen"],
+      "dependsOn": ["TICKET-008", "TICKET-010"],
+      "description": "Order summary screen shown before final order submission.",
+      "acceptanceCriteria": [
+        "Summary of items being ordered",
+        "Supplier details",
+        "Delivery address (editable)",
+        "Expected delivery date",
+        "Total breakdown (subtotal, tax, delivery, total)",
+        "Notes field",
+        "Confirm order button",
+        "Back to edit cart",
+        "Loading state during submission",
+        "Success screen with order number"
+      ],
+      "files": [
+        "src/screens/OrderConfirmationScreen.tsx"
+      ],
+      "technicalNotes": "Navigate here from cart modal when placing order. On success, clear cart for that supplier and show success. On error, show retry option."
+    },
+    {
+      "id": "TICKET-012",
+      "title": "Order History Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "screen"],
+      "dependsOn": ["TICKET-010"],
+      "description": "View past purchase orders with status and filtering.",
+      "acceptanceCriteria": [
+        "List of orders (newest first)",
+        "Status filter tabs (All, Pending, Confirmed, Delivered)",
+        "Date range filter",
+        "Supplier filter",
+        "Order card: number, date, supplier, items count, total, status",
+        "Tap to open detail",
+        "Pull to refresh",
+        "Infinite scroll pagination",
+        "Empty state"
+      ],
+      "files": [
+        "src/screens/OrderHistoryScreen.tsx"
+      ],
+      "technicalNotes": "Use cursor-based pagination for infinite scroll. Cache recent orders locally. Consider offline viewing of order history."
+    },
+    {
+      "id": "TICKET-013",
+      "title": "Order Detail Screen",
+      "type": "Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 2,
+      "sprint": "sprint-5-6",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["frontend", "screen"],
+      "dependsOn": ["TICKET-012"],
+      "description": "Detailed view of a single purchase order with items and status timeline.",
+      "acceptanceCriteria": [
+        "Order header: number, date, status badge",
+        "Supplier info section",
+        "Status timeline (visual)",
+        "Items list with quantities and prices",
+        "Received quantities (if GRN done)",
+        "Total breakdown",
+        "Actions: Receive (GRN), Cancel (if allowed), Reorder",
+        "Notes display"
+      ],
+      "files": [
+        "src/screens/OrderDetailScreen.tsx"
+      ],
+      "technicalNotes": "Status timeline can be vertical stepper component. GRN action should open modal to input received quantities."
+    },
+    {
+      "id": "TICKET-014",
+      "title": "Stock Monitor Service",
+      "type": "Backend",
+      "priority": "P1-High",
+      "estimateDays": 5,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["backend", "automation", "cron"],
+      "dependsOn": ["TICKET-001"],
+      "description": "Background service that monitors stock levels and creates pending reorders.",
+      "acceptanceCriteria": [
+        "Cron job runs every hour",
+        "Gets all stores with auto-reorder enabled",
+        "For each store, checks products against thresholds",
+        "Creates pending reorder if stock < threshold",
+        "Skips if pending reorder already exists",
+        "Finds best supplier based on priority/price/stock",
+        "Sends notification to store",
+        "Logs all actions for debugging"
+      ],
+      "cronSchedule": "0 * * * *",
+      "algorithm": [
+        "1. Get stores where auto_reorder_enabled = true",
+        "2. For each store:",
+        "   a. Get products where current_stock < threshold",
+        "   b. Filter out products with existing pending reorders",
+        "   c. For each low-stock product:",
+        "      - Get linked suppliers with this product",
+        "      - Sort by: priority ASC, price ASC, stock DESC",
+        "      - Create pending_reorder with top supplier",
+        "3. Send batch notification per store"
+      ],
+      "technicalNotes": "Use Bull queue for reliable job processing. Process stores in parallel (with concurrency limit). Add circuit breaker for notification service."
+    },
+    {
+      "id": "TICKET-015",
+      "title": "Auto-Order Cron Job",
+      "type": "Backend",
+      "priority": "P2-Medium",
+      "estimateDays": 3,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["backend", "automation", "cron"],
+      "dependsOn": ["TICKET-014"],
+      "description": "For stores with auto-order enabled (no approval required), automatically convert pending reorders to orders.",
+      "acceptanceCriteria": [
+        "Cron runs every 2 hours",
+        "Only processes stores with require_approval = false",
+        "Converts pending reorders to purchase orders",
+        "Groups by supplier to minimize orders",
+        "Sends order to supplier",
+        "Updates pending reorder status to 'ordered'",
+        "Sends confirmation to store"
+      ],
+      "cronSchedule": "0 */2 * * *",
+      "technicalNotes": "This is optional/advanced feature. Start with require_approval = true for all stores. Only enable after stores explicitly opt-in."
+    },
+    {
+      "id": "TICKET-016",
+      "title": "Push Notifications",
+      "type": "Backend + Frontend",
+      "priority": "P2-Medium",
+      "estimateDays": 4,
+      "sprint": "sprint-7-8",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["backend", "frontend", "notifications"],
+      "dependsOn": ["TICKET-014"],
+      "description": "Send push notifications for reorder and order events.",
+      "acceptanceCriteria": [
+        "Backend: Send notification on new pending reorders",
+        "Backend: Send notification on order status change",
+        "Backend: Send low stock alerts",
+        "Frontend: Handle notification tap (deep link)",
+        "Frontend: In-app notification badge",
+        "Frontend: Notification preferences",
+        "Expo Push Notifications integration"
+      ],
+      "notificationTypes": [
+        {
+          "type": "NEW_PENDING_REORDERS",
+          "title": "Stock Alert",
+          "body": "3 items need restocking",
+          "deepLink": "/reorder"
+        },
+        {
+          "type": "ORDER_CONFIRMED",
+          "title": "Order Confirmed",
+          "body": "PO-2026-0001 confirmed by ABC Traders",
+          "deepLink": "/orders/{orderId}"
+        },
+        {
+          "type": "ORDER_SHIPPED",
+          "title": "Order Shipped",
+          "body": "PO-2026-0001 is on the way",
+          "deepLink": "/orders/{orderId}"
+        },
+        {
+          "type": "ORDER_DELIVERED",
+          "title": "Order Delivered",
+          "body": "PO-2026-0001 delivered. Please verify.",
+          "deepLink": "/orders/{orderId}"
+        }
+      ],
+      "technicalNotes": "Use Expo Push Notifications. Store push tokens in database. Consider FCM for Android reliability. Implement notification preferences per store."
+    },
+    {
+      "id": "TICKET-017",
+      "title": "Supplier App - Order Inbox",
+      "type": "Supplier App",
+      "priority": "P1-High",
+      "estimateDays": 5,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["supplier-app", "frontend"],
+      "dependsOn": ["TICKET-010"],
+      "description": "Supplier app screen to view and manage incoming purchase orders.",
+      "acceptanceCriteria": [
+        "List of incoming orders",
+        "Filter by status (New, Confirmed, Shipped)",
+        "Order details view",
+        "Confirm order action",
+        "Update shipped status",
+        "Add notes",
+        "Print packing slip",
+        "Push notifications for new orders"
+      ],
+      "technicalNotes": "This is for the SEPARATE Supplier app. API endpoints are shared but UI is different. Supplier sees orders from their perspective."
+    },
+    {
+      "id": "TICKET-018",
+      "title": "Supplier App - Catalog Management",
+      "type": "Supplier App",
+      "priority": "P1-High",
+      "estimateDays": 5,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["supplier-app", "frontend"],
+      "dependsOn": [],
+      "description": "Supplier app screens to manage product catalog and stock.",
+      "acceptanceCriteria": [
+        "View all products",
+        "Add new product",
+        "Edit product (name, price, description)",
+        "Update stock quantity",
+        "Set MOQ and max quantity",
+        "Enable/disable product",
+        "Bulk stock update (CSV import)",
+        "Barcode scanner for quick lookup"
+      ],
+      "technicalNotes": "Supplier's view of their catalog. Changes here propagate to retailer POS catalog. Consider audit log for price changes."
+    },
+    {
+      "id": "TICKET-019",
+      "title": "Real-time Stock Sync",
+      "type": "Backend",
+      "priority": "P2-Medium",
+      "estimateDays": 5,
+      "sprint": "sprint-9-10",
+      "status": "todo",
+      "assignee": null,
+      "labels": ["backend", "websocket", "advanced"],
+      "dependsOn": ["TICKET-003"],
+      "description": "WebSocket-based real-time stock updates from supplier to retailer POS.",
+      "acceptanceCriteria": [
+        "WebSocket server setup",
+        "Supplier stock change triggers broadcast",
+        "Retailer POS receives real-time update",
+        "Catalog UI reflects new stock",
+        "Fallback to polling if WS disconnects",
+        "Connection status indicator"
+      ],
+      "technicalNotes": "Use Socket.io for WebSocket. This is OPTIONAL/ADVANCED feature. Basic implementation can use periodic polling (every 5 min). Only implement WS if real-time is critical."
+    }
+  ],
+  "dependencies": {
+    "graph": {
+      "TICKET-001": [],
+      "TICKET-002": ["TICKET-001"],
+      "TICKET-003": ["TICKET-001"],
+      "TICKET-004": [],
+      "TICKET-005": ["TICKET-004"],
+      "TICKET-006": ["TICKET-005"],
+      "TICKET-007": ["TICKET-005"],
+      "TICKET-008": ["TICKET-004"],
+      "TICKET-009": [],
+      "TICKET-010": ["TICKET-001"],
+      "TICKET-011": ["TICKET-008", "TICKET-010"],
+      "TICKET-012": ["TICKET-010"],
+      "TICKET-013": ["TICKET-012"],
+      "TICKET-014": ["TICKET-001"],
+      "TICKET-015": ["TICKET-014"],
+      "TICKET-016": ["TICKET-014"],
+      "TICKET-017": ["TICKET-010"],
+      "TICKET-018": [],
+      "TICKET-019": ["TICKET-003"]
+    }
+  },
+  "riskAreas": [
+    {
+      "area": "Supplier Deduplication",
+      "risk": "GSTIN validation edge cases",
+      "mitigation": "Implement robust validation + manual merge for duplicates"
+    },
+    {
+      "area": "Real-time Stock",
+      "risk": "WebSocket complexity and reliability",
+      "mitigation": "Start with polling, add WS later as enhancement"
+    },
+    {
+      "area": "Multi-supplier Orders",
+      "risk": "Partial failures (one supplier fails)",
+      "mitigation": "Process orders independently, show partial success"
+    },
+    {
+      "area": "Auto-Reorder",
+      "risk": "Over-ordering or incorrect quantities",
+      "mitigation": "Start with require_approval=true, add safeguards"
+    }
+  ]
+}
