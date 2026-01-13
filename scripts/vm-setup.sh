@@ -9,10 +9,10 @@ echo "SuperMandi Backend Setup - V3.0.9"
 echo "=========================================="
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+RED='[0;31m'
+GREEN='[0;32m'
+YELLOW='[1;33m'
+NC='[0m'
 
 # Variables
 INSTALL_DIR="/var/supermandi"
@@ -67,7 +67,6 @@ echo -e "${YELLOW}[4/7] Setting up environment...${NC}"
 cd $INSTALL_DIR/backend
 
 if [ ! -f ".env.prod" ]; then
-    # Generate secure passwords
     POSTGRES_PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
     REDIS_PASS=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
     JWT_SECRET=$(openssl rand -base64 48 | tr -dc 'a-zA-Z0-9' | head -c 48)
@@ -94,7 +93,7 @@ DATA_DIR=/var/supermandi/data
 LOG_LEVEL=info
 NODE_ENV=production
 EOF
-    echo -e "${GREEN}.env.prod created with secure passwords${NC}"
+    echo -e "${GREEN}.env.prod created${NC}"
 else
     echo -e "${GREEN}.env.prod already exists${NC}"
 fi
@@ -113,15 +112,13 @@ sleep 10
 echo -e "${YELLOW}[7/7] Checking health...${NC}"
 echo ""
 echo "Container status:"
-sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+sudo docker ps --format "table {{.Names}}	{{.Status}}	{{.Ports}}"
 echo ""
 
-# Test API health
 if curl -s http://localhost:3000/health > /dev/null 2>&1; then
     echo -e "${GREEN}API Gateway: HEALTHY${NC}"
 else
     echo -e "${RED}API Gateway: NOT RESPONDING${NC}"
-    echo "Checking logs..."
     sudo docker logs backend-api-gateway-1 --tail 20 2>/dev/null || true
 fi
 
@@ -131,11 +128,4 @@ echo -e "${GREEN}Setup Complete!${NC}"
 echo "=========================================="
 echo ""
 echo "API URL: http://$(curl -s ifconfig.me):3000"
-echo "Health:  http://$(curl -s ifconfig.me):3000/health"
-echo ""
-echo "To check logs:"
-echo "  sudo docker logs backend-api-gateway-1 -f"
-echo ""
-echo "To restart:"
-echo "  cd $INSTALL_DIR/backend && sudo docker compose -f docker-compose.prod.yml restart"
 echo ""
