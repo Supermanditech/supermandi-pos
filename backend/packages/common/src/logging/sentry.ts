@@ -2,7 +2,7 @@
 // Error tracking and performance monitoring
 
 import * as Sentry from '@sentry/node';
-import { Request, Response, NextFunction, ErrorRequestHandler, RequestHandler } from 'express';
+import { ErrorRequestHandler, RequestHandler } from 'express';
 
 // =============================================================================
 // TYPES

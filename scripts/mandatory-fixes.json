@@ -1,7 +1,7 @@
 {
-  "version": "2.0.0",
+  "version": "3.0.9",
   "description": "Tracks all fixes, changes, and WIP tasks. APK build is BLOCKED if any WIP tasks remain incomplete.",
-  "lastUpdated": "2026-01-11",
+  "lastUpdated": "2026-01-13",
   "wip": {
     "description": "Work-in-progress tasks that MUST be completed before APK build. APK check will FAIL if any WIP tasks exist.",
     "tasks": []
@@ -246,6 +246,22 @@
     }
   ],
   "changelog": [
+    {
+      "date": "2026-01-13",
+      "changes": [
+        "DEV-001 to DEV-008: Backend infrastructure + database schemas",
+        "DEV-009 to DEV-016: Auth, platform, supplier, catalog services",
+        "DEV-017 to DEV-027: Inventory, order, reorder services + events",
+        "DEV-028 to DEV-037: BUY + REORDER frontend screens",
+        "DEV-038 to DEV-042: GRN frontend screens",
+        "DEV-043 to DEV-047: API client layer + integration",
+        "DEV-048: Backend integration tests (Golden Path + unit tests)",
+        "DEV-049: Frontend E2E tests (Maestro + Jest)",
+        "DEV-050: Docker production configuration",
+        "DEV-051: Observability (Pino logging + Sentry)",
+        "DEV-052: Launch checklist + verification script"
+      ]
+    },
     {
       "date": "2025-01-12",
       "changes": [

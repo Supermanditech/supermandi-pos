@@ -22,7 +22,9 @@
     "install:devices": "adb devices && adb install -r android/app/build/outputs/apk/release/app-release.apk",
     "wip": "node scripts/wip.js",
     "wip:list": "node scripts/wip.js list",
-    "wip:add": "node scripts/wip.js add"
+    "wip:add": "node scripts/wip.js add",
+    "verify": "node scripts/verify-launch.js",
+    "verify:launch": "node scripts/verify-launch.js"
   },
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",
