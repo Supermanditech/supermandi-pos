@@ -198,7 +198,7 @@ export interface GetReceiveResponse {
 // API FUNCTIONS
 // =============================================================================
 
-const ORDER_BASE = "/api/order";
+const ORDER_BASE = "/api/v1/orders";
 
 /**
  * List purchase orders for a store.

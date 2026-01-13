@@ -1,0 +1,58 @@
+# Main Backend Dockerfile - POS Routes
+# This serves the legacy POS API routes (/api/v1/pos/*)
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+# Copy workspace files
+COPY pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
+COPY backend/package.json ./backend/
+COPY backend/packages/common/package.json ./backend/packages/common/
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY backend/packages/common ./backend/packages/common
+COPY backend/src ./backend/src
+COPY backend/tsconfig.json ./backend/
+
+# Build common package first
+WORKDIR /app/backend/packages/common
+RUN pnpm run build
+
+# Build main backend
+WORKDIR /app/backend
+RUN pnpm exec tsc -p tsconfig.json
+
+# Production stage
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+
+COPY pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml ./
+COPY backend/package.json ./backend/
+COPY backend/packages/common/package.json ./backend/packages/common/
+
+RUN pnpm install --frozen-lockfile --prod
+
+# Copy built artifacts
+COPY --from=builder /app/backend/packages/common/dist ./backend/packages/common/dist
+COPY --from=builder /app/backend/dist ./backend/dist
+
+WORKDIR /app/backend
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+EXPOSE 3001
+
+CMD ["node", "dist/server.js"]

@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, Pressable, View } from "react-native";
+import { ScrollView, StyleSheet, Text, Pressable, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -9,6 +9,9 @@ import { theme } from "../theme";
 type RootStackParamList = {
   SalesHistory: undefined;
   BarcodeSheet: undefined;
+  OrderHistory: undefined;
+  ReorderSettings: undefined;
+  ReorderPolicies: undefined;
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -16,9 +19,12 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function MenuScreen() {
   const navigation = useNavigation<Nav>();
   const goToBills = () => navigation.navigate("SalesHistory");
+  const goToOrders = () => navigation.navigate("OrderHistory");
+  const goToReorderSettings = () => navigation.navigate("ReorderSettings");
+  const goToReorderPolicies = () => navigation.navigate("ReorderPolicies");
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu</Text>
       </View>
@@ -59,7 +65,45 @@ export default function MenuScreen() {
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>
-    </View>
+
+      {/* V3.0.9 Menu Items */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Purchasing</Text>
+      </View>
+
+      <Pressable style={styles.menuItem} onPress={goToOrders}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"clipboard-list" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Purchase Orders</Text>
+          <Text style={styles.menuSubtitle}>View and manage purchase orders</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      <Pressable style={styles.menuItem} onPress={goToReorderSettings}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"cog" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Reorder Settings</Text>
+          <Text style={styles.menuSubtitle}>Configure auto-reorder preferences</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      <Pressable style={styles.menuItem} onPress={goToReorderPolicies}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"format-list-checks" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Reorder Policies</Text>
+          <Text style={styles.menuSubtitle}>Set min/max stock levels per product</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+    </ScrollView>
   );
 }
 
@@ -67,7 +111,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    padding: 16
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
   },
   header: {
     paddingVertical: 8,
@@ -131,5 +178,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.textSecondary
+  },
+  sectionHeader: {
+    marginTop: 24,
+    marginBottom: 4,
+    paddingHorizontal: 4
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5
   }
 });

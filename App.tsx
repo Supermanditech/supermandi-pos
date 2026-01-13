@@ -15,7 +15,68 @@ import DeviceBlockedScreen from "./src/screens/DeviceBlockedScreen";
 import SalesHistoryScreen from "./src/screens/SalesHistoryScreen";
 import BillDetailScreen from "./src/screens/BillDetailScreen";
 import BarcodeSheetScreen from "./src/screens/BarcodeSheetScreen";
+// V3.0.9 Screens
+import OrderHistoryScreen from "./src/screens/OrderHistoryScreen";
+import OrderDetailScreen from "./src/screens/OrderDetailScreen";
+import ReorderSettingsScreen from "./src/screens/ReorderSettingsScreen";
+import ReorderPoliciesScreen from "./src/screens/ReorderPoliciesScreen";
+import GRNScreen from "./src/screens/GRNScreen";
 import { theme } from "./src/theme";
+import { useRoute, useNavigation } from "@react-navigation/native";
+
+// Wrapper components for screens that need route params
+function OrderHistoryWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <OrderHistoryScreen
+      onSelectOrder={(order) => navigation.navigate("OrderDetail", { orderId: order.id })}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+function OrderDetailWrapper() {
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  return (
+    <OrderDetailScreen
+      orderId={route.params?.orderId}
+      onBack={() => navigation.goBack()}
+      onNavigateToGRN={(orderId) => navigation.navigate("GRN", { orderId })}
+    />
+  );
+}
+
+function ReorderSettingsWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <ReorderSettingsScreen
+      onNavigateToPolicies={() => navigation.navigate("ReorderPolicies")}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+function ReorderPoliciesWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <ReorderPoliciesScreen
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+function GRNWrapper() {
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  return (
+    <GRNScreen
+      orderId={route.params?.orderId}
+      onBack={() => navigation.goBack()}
+      onSuccess={() => navigation.goBack()}
+    />
+  );
+}
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 
 const Stack = createNativeStackNavigator();
@@ -74,6 +135,12 @@ export default function App() {
           <Stack.Screen name="SalesHistory" component={SalesHistoryScreen} />
           <Stack.Screen name="BillDetail" component={BillDetailScreen} />
           <Stack.Screen name="BarcodeSheet" component={BarcodeSheetScreen} />
+          {/* V3.0.9 Screens */}
+          <Stack.Screen name="OrderHistory" component={OrderHistoryWrapper} />
+          <Stack.Screen name="OrderDetail" component={OrderDetailWrapper} />
+          <Stack.Screen name="ReorderSettings" component={ReorderSettingsWrapper} />
+          <Stack.Screen name="ReorderPolicies" component={ReorderPoliciesWrapper} />
+          <Stack.Screen name="GRN" component={GRNWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>

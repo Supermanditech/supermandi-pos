@@ -1,4 +1,5 @@
-import { apiClient } from "./api/apiClient";
+import { POS_API_URL } from "../config/api";
+import { getDeviceToken } from "./deviceSession";
 import { storeScopedStorage } from "./storeScope";
 
 const DEVICE_INFO_KEY = "supermandi.pos.device.info.v1";
@@ -20,7 +21,16 @@ function normalizeDeviceInfo(raw: unknown): DeviceInfo | null {
 }
 
 export async function fetchDeviceInfo(): Promise<DeviceInfo> {
-  return apiClient.get<DeviceInfo>("/api/v1/pos/devices/me");
+  const token = await getDeviceToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["X-Device-Token"] = token;
+  }
+  const response = await fetch(`${POS_API_URL}/api/v1/pos/devices/me`, { headers });
+  if (!response.ok) {
+    throw new Error(`Device info fetch failed: ${response.status}`);
+  }
+  return response.json();
 }
 
 export async function getCachedDeviceInfo(): Promise<DeviceInfo | null> {

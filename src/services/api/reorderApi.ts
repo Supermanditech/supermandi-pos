@@ -176,7 +176,7 @@ export interface BulkUpdatePoliciesResponse {
 // API FUNCTIONS
 // =============================================================================
 
-const REORDER_BASE = "/api/reorder";
+const REORDER_BASE = "/api/v1/reorder";
 
 /**
  * List pending reorders for a store.

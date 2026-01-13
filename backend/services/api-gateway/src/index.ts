@@ -20,9 +20,6 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// Parse JSON bodies
-app.use(express.json());
-
 // Correlation ID (must be first for logging)
 app.use(correlationIdMiddleware);
 

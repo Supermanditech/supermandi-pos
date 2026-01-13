@@ -1,4 +1,6 @@
 import { ApiError, apiClient } from "./apiClient";
+import { POS_API_URL } from "../../config/api";
+import { getDeviceToken } from "../deviceSession";
 
 const PRODUCTS_BASE = "/api/v2/products";
 
@@ -48,13 +50,27 @@ export type PriceResolution = {
   mrp: number | null;
 };
 
-export async function listProducts(params?: { barcode?: string; q?: string }): Promise<ApiProduct[]> {
+export async function listProducts(params?: { barcode?: string; q?: string; storeId?: string }): Promise<ApiProduct[]> {
   const query = new URLSearchParams();
   if (params?.barcode) query.set("barcode", params.barcode);
   if (params?.q) query.set("q", params.q);
+  if (params?.storeId) query.set("storeId", params.storeId);
   const suffix = query.toString() ? `?${query.toString()}` : "";
-  const res = await apiClient.get<{ products: ApiProduct[] }>(`${PRODUCTS_BASE}${suffix}`);
-  return res.products;
+
+  try {
+    const token = await getDeviceToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["X-Device-Token"] = token;
+
+    const response = await fetch(`${POS_API_URL}${PRODUCTS_BASE}${suffix}`, { headers });
+    if (!response.ok) {
+      return [];
+    }
+    const res = await response.json();
+    return res.products || [];
+  } catch {
+    return [];
+  }
 }
 
 export async function lookupStoreProductByScan(input: {

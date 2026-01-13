@@ -13,7 +13,8 @@
       "package": "com.supermanditech.supermandipos"
     },
     "extra": {
-      "API_URL": "https://34.14.150.183.nip.io"
+      "API_URL": "http://34.14.220.171:3000",
+      "POS_API_URL": "http://34.14.220.171:3009"
     },
     "plugins": [
       "expo-secure-store",

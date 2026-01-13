@@ -1,14 +1,34 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/common" },
-    { "path": "services/api-gateway" },
-    { "path": "services/auth-service" },
-    { "path": "services/platform-service" },
-    { "path": "services/supplier-service" },
-    { "path": "services/catalog-service" },
-    { "path": "services/inventory-service" },
-    { "path": "services/order-service" },
-    { "path": "services/reorder-service" }
-  ]
+    {
+      "path": "packages/common"
+    },
+    {
+      "path": "services/api-gateway"
+    },
+    {
+      "path": "services/auth-service"
+    },
+    {
+      "path": "services/platform-service"
+    },
+    {
+      "path": "services/supplier-service"
+    },
+    {
+      "path": "services/catalog-service"
+    },
+    {
+      "path": "services/inventory-service"
+    },
+    {
+      "path": "services/order-service"
+    },
+    {
+      "path": "services/reorder-service"
+    }
+  ],
+  "compilerOptions": {},
+  "extends": "expo/tsconfig.base"
 }

@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NetInfo from "@react-native-community/netinfo";
 import Constants from "expo-constants";
-import { API_BASE_URL } from "../config/api";
+import { POS_API_URL } from "../config/api";
 import { getDeviceSession, getDeviceToken } from "./deviceSession";
 import { getStoreScopedKey, storeScopedStorage } from "./storeScope";
 
@@ -98,7 +98,7 @@ async function sendToBackend(ev: QueuedPosEvent): Promise<boolean> {
   const timeout = setTimeout(() => controller.abort(), 2500);
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/pos/events`, {
+    const res = await fetch(`${POS_API_URL}/api/v1/pos/events`, {
       method: "POST",
       headers: {
         Accept: "application/json",

@@ -82,7 +82,7 @@ export interface GetCategoriesResponse {
 // API FUNCTIONS
 // =============================================================================
 
-const CATALOG_BASE = "/api/catalog";
+const CATALOG_BASE = "/api/v1/catalog";
 
 /**
  * Get paginated catalog for a store.

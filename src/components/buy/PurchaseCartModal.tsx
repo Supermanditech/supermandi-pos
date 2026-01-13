@@ -19,6 +19,8 @@ import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { SupplierCartSection } from "./SupplierCartSection";
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
+import * as orderApi from "../../services/api/orderApi";
+import { getDeviceStoreId } from "../../services/deviceSession";
 
 // =============================================================================
 // TYPES
@@ -104,11 +106,27 @@ export function PurchaseCartModal({
       setPlacingOrderFor(supplierId);
 
       try {
-        // TODO: Call API to place order
-        // const response = await purchaseOrderApi.createOrder({ supplierId, items: ... });
+        const storeId = await getDeviceStoreId();
+        if (!storeId) {
+          throw new Error("Store not found");
+        }
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        // Get items for this supplier from the groups
+        const supplierGroup = supplierGroups.find((g) => g.supplierId === supplierId);
+        if (!supplierGroup || supplierGroup.items.length === 0) {
+          throw new Error("No items found for supplier");
+        }
+
+        // Create the order via API
+        await orderApi.createOrder(storeId, {
+          supplierId,
+          orderType: "manual",
+          items: supplierGroup.items.map((item) => ({
+            supplierProductId: item.supplierProductId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+        });
 
         // Remove items for this supplier from cart
         removeSupplierItems(supplierId);
@@ -119,7 +137,7 @@ export function PurchaseCartModal({
         // Show success
         Alert.alert(
           "Order Placed",
-          "Your purchase order has been submitted successfully.",
+          "Your purchase order has been created as a draft. Go to Orders to review and submit.",
           [{ text: "OK" }]
         );
       } catch (error) {
@@ -133,7 +151,7 @@ export function PurchaseCartModal({
         setPlacingOrderFor(null);
       }
     },
-    [removeSupplierItems, onOrderPlaced]
+    [removeSupplierItems, onOrderPlaced, supplierGroups]
   );
 
   // Handle place all orders
@@ -151,13 +169,22 @@ export function PurchaseCartModal({
             setPlacingAllOrders(true);
 
             try {
+              const storeId = await getDeviceStoreId();
+              if (!storeId) {
+                throw new Error("Store not found");
+              }
+
               // Place orders sequentially
               for (const group of supplierGroups) {
-                // TODO: Call API to place order
-                // await purchaseOrderApi.createOrder({ supplierId: group.supplierId, items: group.items });
-
-                // Simulate API call
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+                await orderApi.createOrder(storeId, {
+                  supplierId: group.supplierId,
+                  orderType: "manual",
+                  items: group.items.map((item) => ({
+                    supplierProductId: item.supplierProductId,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice,
+                  })),
+                });
               }
 
               // Clear all items
@@ -169,7 +196,7 @@ export function PurchaseCartModal({
               // Show success
               Alert.alert(
                 "All Orders Placed",
-                `Successfully placed ${supplierGroups.length} purchase orders.`,
+                `Successfully created ${supplierGroups.length} draft purchase orders. Go to Orders to review and submit.`,
                 [{ text: "OK", onPress: onClose }]
               );
             } catch (error) {

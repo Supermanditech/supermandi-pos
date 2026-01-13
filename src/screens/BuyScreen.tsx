@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../theme";
 import { CatalogProductCard } from "../components/buy/CatalogProductCard";
 import { CategoryFilter } from "../components/buy/CategoryFilter";
+import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
 import * as catalogApi from "../services/api/catalogApi";
 import type { CatalogProduct } from "../services/api/catalogApi";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
@@ -66,8 +67,9 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Cart store for quantity badges
+  // Cart store for quantity badges and cart modal
   const cartItems = usePurchaseCartStore((state) => state.items);
+  const [cartModalVisible, setCartModalVisible] = useState(false);
 
   // Get cart quantity for a product
   const getCartQuantity = useCallback(
@@ -371,7 +373,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           numColumns={NUM_COLUMNS}
           contentContainerStyle={[
             styles.gridContent,
-            { paddingBottom: insets.bottom + theme.spacing.lg },
+            { paddingBottom: insets.bottom + theme.spacing.lg + 80 },
           ]}
           columnWrapperStyle={styles.row}
           getItemLayout={getItemLayout}
@@ -394,6 +396,31 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           removeClippedSubviews
         />
       )}
+
+      {/* Floating Cart Button */}
+      {cartItems.length > 0 && (
+        <Pressable
+          style={[styles.cartFab, { bottom: insets.bottom + 16 }]}
+          onPress={() => setCartModalVisible(true)}
+        >
+          <MaterialCommunityIcons
+            name="cart"
+            size={24}
+            color={theme.colors.textInverse}
+          />
+          <View style={styles.cartBadge}>
+            <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
+          </View>
+        </Pressable>
+      )}
+
+      {/* Purchase Cart Modal */}
+      <PurchaseCartModal
+        visible={cartModalVisible}
+        onClose={() => setCartModalVisible(false)}
+        onOrderPlaced={() => handleRefresh()}
+        onAllOrdersPlaced={() => setCartModalVisible(false)}
+      />
     </View>
   );
 }
@@ -493,6 +520,34 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 13,
     color: theme.colors.textTertiary,
+  },
+  cartFab: {
+    position: "absolute",
+    right: 16,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.lg,
+  },
+  cartBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
 });
 

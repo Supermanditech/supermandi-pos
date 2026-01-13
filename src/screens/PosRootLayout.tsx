@@ -28,7 +28,7 @@ import ScanNoticeBanner from "../components/ScanNoticeBanner";
 import { TabBadge } from "../components/TabBadge";
 import MenuScreen from "./MenuScreen";
 import SellScanScreen from "./SellScanScreen";
-import PurchaseScreen from "./PurchaseScreen";
+import BuyScreen from "./BuyScreen";
 import ReorderScreen from "./ReorderScreen";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import * as reorderApi from "../services/api/reorderApi";
@@ -918,13 +918,13 @@ export default function PosRootLayout() {
           />
         ) : null}
         {selectedMode === "PURCHASE" ? (
-          <PurchaseScreen
-            storeActive={storeActive}
-            scanDisabled={scanDisabled}
+          <BuyScreen
             onOpenScanner={handleOpenCamera}
           />
         ) : null}
-        {selectedMode === "REORDER" ? <ReorderScreen /> : null}
+        {selectedMode === "REORDER" ? (
+          <ReorderScreen onNavigateToBuy={() => setSelectedMode("PURCHASE")} />
+        ) : null}
       </View>
 
       <Modal
