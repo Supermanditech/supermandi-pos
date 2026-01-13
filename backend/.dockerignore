@@ -9,6 +9,10 @@ node_modules
 dist
 **/dist
 
+# TypeScript build cache (causes stale .d.ts issues)
+*.tsbuildinfo
+**/tsconfig.tsbuildinfo
+
 # Test files
 **/*.test.ts
 **/*.spec.ts
