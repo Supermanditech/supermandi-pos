@@ -49,17 +49,52 @@ const PRINTING_MODES: Array<{ value: PrintingMode; label: string }> = [
   { value: "NONE", label: "None" }
 ];
 
-const ENROLL_ERROR_MESSAGES: Record<string, string> = {
-  enrollment_invalid: "Enrollment code is invalid or expired.",
-  device_already_enrolled: "This label is already active. Ask Superadmin to reset the token.",
-  "label is required": "Enter a device label (e.g., Counter-1).",
-  "deviceType is required": "Select a valid device type.",
-  "deviceType invalid": "Select a valid device type.",
-  "printingMode invalid": "Select a valid printing mode.",
-  "code is required": "Enter or scan an enrollment code.",
-  "store not found": "Store not found for this enrollment code.",
-  "database unavailable": "Server database unavailable. Try again in a minute.",
-  enrollment_failed: "Server could not enroll the device. Try again."
+const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> = {
+  enrollment_invalid: {
+    message: "Enrollment code is invalid or expired.",
+    hint: "Contact your SuperAdmin for a new enrollment code."
+  },
+  enrollment_expired: {
+    message: "This enrollment code has expired.",
+    hint: "Contact your SuperAdmin for a new enrollment code."
+  },
+  enrollment_used: {
+    message: "This enrollment code has already been used.",
+    hint: "Contact your SuperAdmin for a new enrollment code."
+  },
+  enrollment_revoked: {
+    message: "This enrollment code has been revoked.",
+    hint: "Contact your SuperAdmin for a new enrollment code."
+  },
+  device_already_enrolled: {
+    message: "This label is already active.",
+    hint: "Ask your SuperAdmin to reset the device token or use a different label."
+  },
+  "label is required": { message: "Enter a device label (e.g., Counter-1)." },
+  "deviceType is required": { message: "Select a valid device type." },
+  "deviceType invalid": { message: "Select a valid device type." },
+  "printingMode invalid": { message: "Select a valid printing mode." },
+  "code is required": { message: "Enter or scan an enrollment code." },
+  "store not found": {
+    message: "Store not found for this enrollment code.",
+    hint: "Verify the code with your SuperAdmin."
+  },
+  "database unavailable": {
+    message: "Server database unavailable.",
+    hint: "Wait a minute and try again."
+  },
+  enrollment_failed: {
+    message: "Server could not enroll the device.",
+    hint: "Try again. If the problem persists, contact support."
+  },
+  network_error: {
+    message: "Could not connect to the server.",
+    hint: "Check your internet connection and try again."
+  },
+  timeout: {
+    message: "Request timed out.",
+    hint: "Check your connection and try again."
+  }
 };
 
 function parseEnrollmentCode(raw: string): string | null {
@@ -144,8 +179,8 @@ export default function EnrollDeviceScreen() {
   }, []);
 
   const handleEnroll = async () => {
-    const code = parseEnrollmentCode(codeInput);
-    if (!code) {
+    const enrollmentCode = parseEnrollmentCode(codeInput);
+    if (!enrollmentCode) {
       Alert.alert("Missing Code", "Enter or scan an enrollment code.");
       return;
     }
@@ -158,7 +193,7 @@ export default function EnrollDeviceScreen() {
     try {
       const previousSession = await getDeviceSession();
       const previousStoreId = previousSession?.storeId ?? null;
-      const res = await enrollDevice({ code, deviceMeta });
+      const res = await enrollDevice({ enrollmentCode, deviceMeta });
       const storeChanged = previousStoreId !== res.storeId;
       if (storeChanged) {
         useCartStore.getState().resetForStore();
@@ -183,26 +218,39 @@ export default function EnrollDeviceScreen() {
       }
       navigation.replace("SellScan");
     } catch (error) {
-      if (error instanceof ApiError) {
-        const raw = error.message || "unknown_error";
-        const friendly = ENROLL_ERROR_MESSAGES[raw];
-        const extra: string[] = [];
-        if (error.status) extra.push(`status: ${error.status}`);
-        extra.push(`code: ${raw}`);
-        extra.push(`api: ${API_BASE_URL}`);
-        if (Updates.channel) extra.push(`channel: ${Updates.channel}`);
-        Alert.alert(
-          "Enrollment Failed",
-          `${friendly ?? "Unable to enroll device. Try again."} (${extra.join(", ")})`
-        );
-        return;
+      let errorKey = "enrollment_failed";
+      let rawMessage = "";
+
+      // Detect network errors
+      if (error instanceof TypeError && error.message?.includes("Network")) {
+        errorKey = "network_error";
+        rawMessage = error.message;
+      } else if (error instanceof Error && error.message?.toLowerCase().includes("timeout")) {
+        errorKey = "timeout";
+        rawMessage = error.message;
+      } else if (error instanceof ApiError) {
+        rawMessage = error.message || "unknown_error";
+        errorKey = rawMessage;
+      } else {
+        rawMessage = formatUnknownError(error);
       }
-      const fallback = formatUnknownError(error) || "Unable to enroll device. Try again.";
-      const details: string[] = [`api: ${API_BASE_URL}`];
-      if (Updates.channel) details.push(`channel: ${Updates.channel}`);
+
+      const errorInfo = ENROLL_ERROR_MESSAGES[errorKey];
+      const message = errorInfo?.message ?? "Unable to enroll device.";
+      const hint = errorInfo?.hint ?? "Try again or contact your SuperAdmin.";
+
+      // Build debug info for dev troubleshooting
+      const debugParts: string[] = [];
+      if (error instanceof ApiError && error.status) {
+        debugParts.push(`status: ${error.status}`);
+      }
+      debugParts.push(`code: ${rawMessage || errorKey}`);
+      debugParts.push(`api: ${API_BASE_URL}`);
+      if (Updates.channel) debugParts.push(`channel: ${Updates.channel}`);
+
       Alert.alert(
         "Enrollment Failed",
-        `${fallback}${details.length ? ` (${details.join(", ")})` : ""}`
+        `${message}\n\n${hint}\n\n(${debugParts.join(", ")})`
       );
     } finally {
       setLoading(false);
@@ -318,8 +366,12 @@ export default function EnrollDeviceScreen() {
           </Text>
         </Pressable>
 
-        <Pressable style={styles.primaryButton} onPress={handleEnroll} disabled={loading}>
-          <Text style={styles.primaryButtonText}>
+        <Pressable
+          style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+          onPress={handleEnroll}
+          disabled={loading}
+        >
+          <Text style={[styles.primaryButtonText, loading && styles.primaryButtonTextDisabled]}>
             {loading ? "Enrolling..." : "Enroll Device"}
           </Text>
         </Pressable>
@@ -347,7 +399,7 @@ export default function EnrollDeviceScreen() {
                   // Just show info that test credentials are loaded
                   Alert.alert(
                     "Test Store Ready",
-                    `Phone: ${TEST_STORE_CONFIG.phone}\nPIN: ${TEST_STORE_CONFIG.pin}\n\nUse these credentials after enrollment for quick login.`
+                    `Phone: ${TEST_STORE_CONFIG?.phone}\nPIN: ${TEST_STORE_CONFIG?.pin}\n\nUse these credentials after enrollment for quick login.`
                   );
                 }}
               >
@@ -453,9 +505,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center"
   },
+  primaryButtonDisabled: {
+    backgroundColor: theme.colors.border,
+    opacity: 0.7
+  },
   primaryButtonText: {
     color: theme.colors.textInverse,
     fontWeight: "700"
+  },
+  primaryButtonTextDisabled: {
+    color: theme.colors.textSecondary
   },
   secondaryButton: {
     borderWidth: 1,

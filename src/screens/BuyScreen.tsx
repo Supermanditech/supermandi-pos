@@ -1,5 +1,6 @@
-// BuyScreen - V3.0.9 compliant
+// BuyScreen - V3.0.10 compliant
 // Product catalog grid with search, category filter, and infinite scroll
+// DEV-065: Added ProductDetailModal for explicit add-to-buy flow
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -15,11 +16,13 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { CatalogProductCard } from "../components/buy/CatalogProductCard";
 import { CategoryFilter } from "../components/buy/CategoryFilter";
 import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
+import { ProductDetailModal } from "../components/buy/ProductDetailModal";
 import * as catalogApi from "../services/api/catalogApi";
 import type { CatalogProduct } from "../services/api/catalogApi";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
@@ -47,6 +50,7 @@ const SEARCH_DEBOUNCE_MS = 400;
 // =============================================================================
 
 export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const searchInputRef = useRef<TextInput>(null);
@@ -70,6 +74,10 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   // Cart store for quantity badges and cart modal
   const cartItems = usePurchaseCartStore((state) => state.items);
   const [cartModalVisible, setCartModalVisible] = useState(false);
+
+  // DEV-065: Product detail modal for explicit add-to-buy flow
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   // Get cart quantity for a product
   const getCartQuantity = useCallback(
@@ -203,13 +211,30 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     loadProducts(page + 1, false);
   }, [loadingMore, hasMore, loading, page, loadProducts]);
 
-  // Handle product press
+  // DEV-065: Handle product press - opens detail modal for explicit add-to-buy
   const handleProductPress = useCallback(
     (product: CatalogProduct) => {
+      // Open the product detail modal where user can explicitly add to cart
+      setSelectedProduct(product);
+      setDetailModalVisible(true);
+      // Also trigger external callback if provided
       onProductPress?.(product);
     },
     [onProductPress]
   );
+
+  // DEV-065: Close detail modal
+  const handleCloseDetailModal = useCallback(() => {
+    setDetailModalVisible(false);
+    setSelectedProduct(null);
+  }, []);
+
+  // DEV-065: Handle view cart from detail modal
+  const handleViewCartFromDetail = useCallback(() => {
+    setDetailModalVisible(false);
+    setSelectedProduct(null);
+    setCartModalVisible(true);
+  }, []);
 
   // Handle category select
   const handleCategorySelect = useCallback((category: string | null) => {
@@ -282,12 +307,12 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         />
         <Text style={styles.emptyText}>
           {debouncedQuery || selectedCategory
-            ? "No products found"
-            : "No products available"}
+            ? t('buy.noProducts')
+            : t('buy.noProductsAvailable')}
         </Text>
         {(debouncedQuery || selectedCategory) && (
           <Pressable style={styles.clearButton} onPress={handleClearSearch}>
-            <Text style={styles.clearButtonText}>Clear filters</Text>
+            <Text style={styles.clearButtonText}>{t('buy.clearFilters')}</Text>
           </Pressable>
         )}
       </View>
@@ -321,7 +346,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           <TextInput
             ref={searchInputRef}
             style={styles.searchInput}
-            placeholder="Search products..."
+            placeholder={t('buy.searchProducts')}
             placeholderTextColor={theme.colors.textTertiary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -420,6 +445,14 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         onClose={() => setCartModalVisible(false)}
         onOrderPlaced={() => handleRefresh()}
         onAllOrdersPlaced={() => setCartModalVisible(false)}
+      />
+
+      {/* DEV-065: Product Detail Modal for explicit add-to-buy flow */}
+      <ProductDetailModal
+        visible={detailModalVisible}
+        product={selectedProduct}
+        onClose={handleCloseDetailModal}
+        onViewCart={handleViewCartFromDetail}
       />
     </View>
   );

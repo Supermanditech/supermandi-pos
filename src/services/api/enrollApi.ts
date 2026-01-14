@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { apiClient, ApiError } from "./apiClient";
 import { API_BASE_URL } from "../../config/api";
 import { Platform } from "react-native";
 
@@ -25,40 +25,29 @@ function generateDeviceId(): string {
 }
 
 export async function enrollDevice(input: {
-  code: string;
+  enrollmentCode: string;
   deviceMeta?: DeviceMeta;
 }): Promise<DeviceEnrollResponse> {
-  // Try the main API first
+  // Build request body - field names match backend exactly
+  const requestBody = {
+    enrollmentCode: input.enrollmentCode,
+    deviceId: generateDeviceId(),
+    deviceType: input.deviceMeta?.deviceType || Platform.OS || "android",
+    deviceLabel: input.deviceMeta?.label || "POS Device",
+  };
+
   try {
-    return await apiClient.post<DeviceEnrollResponse>("/api/v1/pos/enroll", input);
-  } catch (mainError) {
-    console.log("[enrollDevice] Main API failed, trying enrollment service on port 3009");
-
-    // Fallback to enrollment service on port 3009
-    const enrollmentUrl = API_BASE_URL.replace(":3000", ":3009").replace(/\/$/, "");
-    const deviceId = generateDeviceId();
-
-    const response = await fetch(`${enrollmentUrl}/api/v1/pos/enroll`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        enrollmentCode: input.code,
-        deviceId,
-        deviceType: input.deviceMeta?.deviceType || Platform.OS || "android",
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Enrollment failed: ${response.status}`);
+    console.log("[enrollDevice] Calling gateway:", API_BASE_URL);
+    const response = await apiClient.post<DeviceEnrollResponse>("/api/v1/pos/enroll", requestBody);
+    console.log("[enrollDevice] Success:", response.deviceId, response.storeId);
+    return response;
+  } catch (error) {
+    // Log detailed error for debugging
+    if (error instanceof ApiError) {
+      console.error("[enrollDevice] Failed:", error.status, error.message, error.payload);
+    } else {
+      console.error("[enrollDevice] Failed:", error);
     }
-
-    const data = await response.json();
-    return {
-      deviceId: data.deviceId,
-      storeId: data.storeId,
-      deviceToken: data.deviceToken,
-      storeActive: true,
-    };
+    throw error;
   }
 }

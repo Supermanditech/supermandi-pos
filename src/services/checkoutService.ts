@@ -120,3 +120,62 @@ export function buildInventoryItems(
     unitCost: item.priceMinor,
   }));
 }
+
+// =============================================================================
+// STOCK VALIDATION - GO-LIVE-009
+// =============================================================================
+
+export interface StockValidationIssue {
+  productId: string;
+  productName: string;
+  requestedQty: number;
+  availableStock: number;
+}
+
+export interface StockValidationResult {
+  valid: boolean;
+  issues: StockValidationIssue[];
+}
+
+/**
+ * Validate that cart items won't cause negative stock.
+ * Returns list of items that would go below 0.
+ * GO-LIVE-009: Data consistency rule
+ */
+export function validateCartStock(
+  cartItems: CartItem[],
+  stockLevels: Record<string, number>
+): StockValidationResult {
+  const issues: StockValidationIssue[] = [];
+
+  for (const item of cartItems) {
+    const available = stockLevels[item.id] ?? 0;
+    if (item.quantity > available) {
+      issues.push({
+        productId: item.id,
+        productName: item.name,
+        requestedQty: item.quantity,
+        availableStock: available,
+      });
+    }
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+  };
+}
+
+/**
+ * Format stock validation issues for display.
+ */
+export function formatStockValidationWarning(issues: StockValidationIssue[]): string {
+  if (issues.length === 0) return "";
+
+  const lines = issues.map(
+    (issue) =>
+      `${issue.productName}: need ${issue.requestedQty}, have ${issue.availableStock}`
+  );
+
+  return `Low stock warning:\n${lines.join("\n")}`;
+}

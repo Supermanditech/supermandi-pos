@@ -1,0 +1,72 @@
+================================================================================
+RELEASE REFERENCE SNAPSHOT
+================================================================================
+
+Tag Name: pos-build-2026-01-14_2129IST
+Commit SHA: dd8562a45a87320cb0042912598e17e8295f0a4f
+Date/Time: 2026-01-14 21:30 IST
+
+--------------------------------------------------------------------------------
+COMMIT DETAILS (via git show -s --format=fuller)
+--------------------------------------------------------------------------------
+commit dd8562a45a87320cb0042912598e17e8295f0a4f
+Author:     Supermandi Tech <supermanditech@gmail.com>
+AuthorDate: Wed Jan 14 21:30:34 2026 +0530
+Commit:     Supermandi Tech <supermanditech@gmail.com>
+CommitDate: Wed Jan 14 21:31:34 2026 +0530
+
+    feat(pos): go-live hardening complete (DEV-053..DEV-070)
+    
+    Cart/Checkout:
+    - DEV-061: Cart bottom sheet height + snap points
+    - DEV-062: Cart row controls visibility
+    - DEV-063: Stock enforcement unified
+    
+    BUY/INWARD/Ledger:
+    - DEV-064: BUY categories routing regression fix
+    - DEV-065: BUY search + add flow with ProductDetailModal
+    - DEV-066: INWARD ledger correspondence verified
+    
+    SuperAdmin/Deployment:
+    - DEV-067: Admin audit logging
+    - DEV-068: QA seed gated to dev/staging
+    - DEV-069: Release gating + tag-only APK build
+    
+    SELL Flow:
+    - DEV-070: Sell-first onboarding for unknown barcodes
+    
+    95 files changed, ~16k lines
+    
+    Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+
+--------------------------------------------------------------------------------
+DIFF STAT (from v3.0.9 to HEAD)
+--------------------------------------------------------------------------------
+ src/services/api/enrollApi.ts                      |  34 +-
+ src/services/api/inventoryApi.ts                   | 130 +++
+ src/services/api/orderApi.ts                       |   2 +-
+ src/services/api/productsApi.ts                    |  28 +-
+ src/services/api/reorderApi.ts                     |   2 +-
+ src/services/api/sellSearchApi.ts                  | 190 +++++
+ src/services/api/uiStatusApi.ts                    |  38 +-
+ src/services/checkoutService.ts                    |  59 ++
+ src/services/cloudEventLogger.ts                   | 342 ++++----
+ src/services/dataConsistencyCheck.ts               | 138 ++++
+ src/services/deviceInfo.ts                         |  14 +-
+ src/services/logger.ts                             | 174 ++++
+ src/services/scan/handleScan.ts                    |   3 +-
+ src/stores/inwardStore.ts                          | 115 +++
+ src/stores/settingsStore.ts                        |  11 +-
+ src/utils/money.ts                                 |  20 +-
+ tools/dev/redmi-snapshot.ps1                       | 139 ++++
+ tools/dev/redmi.ps1                                | 351 ++++++++
+ tsconfig.json                                      |   2 +-
+ 106 files changed, 17427 insertions(+), 647 deletions(-)
+
+================================================================================
+BUILD COMMAND
+================================================================================
+git checkout pos-build-2026-01-14_2129IST
+eas build --platform android --profile production
+git checkout main
+================================================================================

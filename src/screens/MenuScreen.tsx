@@ -1,17 +1,24 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, Pressable, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, Pressable, View, Alert } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { isQaMenuEnabled } from "./UiShowcaseScreen";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useCartStore } from "../stores/cartStore";
+import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
+import { useProductsStore } from "../stores/productsStore";
 import { LANGUAGE_NAMES, type SupportedLanguage } from "../i18n";
 import { BUILD_INFO, API_BASE_URL } from "../config/api";
+import { getDeviceToken, clearDeviceSession } from "../services/deviceSession";
+import { fetchUiStatus, type UiStatusResponse } from "../services/api/uiStatusApi";
+import { logPosEvent } from "../services/cloudEventLogger";
 
 type RootStackParamList = {
+  EnrollDevice: undefined;
   SalesHistory: undefined;
   BarcodeSheet: undefined;
   OrderHistory: undefined;
@@ -40,9 +47,95 @@ export default function MenuScreen() {
   const language = useSettingsStore((state) => state.language);
   const setLanguage = useSettingsStore((state) => state.setLanguage);
 
+  // DEV-057: Operational status for status panel
+  const [opStatus, setOpStatus] = useState<{
+    tokenSuffix: string;
+    storeId: string | null;
+    storeName: string | null;
+    storeActive: boolean | null;
+    deviceActive: boolean | null;
+    pendingOutboxCount: number;
+    deviceLabel: string | null;
+  }>({
+    tokenSuffix: "...",
+    storeId: null,
+    storeName: null,
+    storeActive: null,
+    deviceActive: null,
+    pendingOutboxCount: 0,
+    deviceLabel: null,
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await getDeviceToken();
+        const tokenSuffix = token ? token.slice(-6) : "none";
+        const uiStatus = await fetchUiStatus();
+        setOpStatus({
+          tokenSuffix,
+          storeId: uiStatus.storeId ?? null,
+          storeName: uiStatus.storeName ?? null,
+          storeActive: uiStatus.storeActive ?? null,
+          deviceActive: uiStatus.deviceActive ?? null,
+          pendingOutboxCount: uiStatus.pendingOutboxCount ?? 0,
+          deviceLabel: uiStatus.deviceId ?? null,
+        });
+      } catch (e) {
+        console.error("[MenuScreen] opStatus fetch failed:", e);
+      }
+    })();
+  }, []);
+
+  // Alias for devInfo used in switch store handler
+  const devInfo = opStatus;
+
   const toggleLanguage = () => {
     const nextLang: SupportedLanguage = language === 'en' ? 'hi' : 'en';
     setLanguage(nextLang);
+  };
+
+  const handleSwitchStore = () => {
+    Alert.alert(
+      t('menu.switchStoreConfirm'),
+      t('menu.switchStoreWarning'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('menu.switchStoreButton'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Log the switch event before clearing
+              void logPosEvent("STORE_SWITCH", {
+                previousStoreId: devInfo.storeId,
+                nextStoreId: null,
+                reason: "manual_switch"
+              });
+
+              // Clear all local state
+              useCartStore.getState().resetForStore();
+              usePurchaseDraftStore.getState().resetForStore();
+              useProductsStore.getState().resetForStore();
+
+              // Clear device session
+              await clearDeviceSession();
+
+              // Navigate to EnrollDevice and reset navigation stack
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'EnrollDevice' }],
+                })
+              );
+            } catch (error) {
+              console.error('[MenuScreen] Switch store failed:', error);
+              Alert.alert(t('common.error'), t('errors.unknownError'));
+            }
+          }
+        }
+      ]
+    );
   };
 
   const goToBills = () => navigation.navigate("SalesHistory");
@@ -61,9 +154,81 @@ export default function MenuScreen() {
         <Text style={styles.title}>{t('menu.title')}</Text>
       </View>
 
+      {/* DEV-057: Operational Status Panel */}
+      <View style={styles.statusPanel}>
+        <View style={styles.statusHeader}>
+          <MaterialCommunityIcons name="chart-donut" size={16} color={theme.colors.primary} />
+          <Text style={styles.statusHeaderText}>{t('menu.operationalStatus')}</Text>
+        </View>
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>
+            {opStatus.storeName || t('menu.statusLoading')}
+          </Text>
+          <View style={[
+            styles.statusBadge,
+            opStatus.storeActive === true && styles.statusBadgeActive,
+            opStatus.storeActive === false && styles.statusBadgeInactive
+          ]}>
+            <Text style={[
+              styles.statusBadgeText,
+              opStatus.storeActive === true && styles.statusBadgeTextActive,
+              opStatus.storeActive === false && styles.statusBadgeTextInactive
+            ]}>
+              {opStatus.storeActive === null
+                ? t('menu.statusLoading')
+                : opStatus.storeActive
+                  ? t('menu.statusActive')
+                  : t('menu.statusInactive')}
+            </Text>
+          </View>
+        </View>
+        {opStatus.deviceLabel && (
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>
+              {t('menu.deviceLabel')}: {opStatus.deviceLabel}
+            </Text>
+            <View style={[
+              styles.statusBadge,
+              opStatus.deviceActive === true && styles.statusBadgeActive,
+              opStatus.deviceActive === false && styles.statusBadgeInactive
+            ]}>
+              <Text style={[
+                styles.statusBadgeText,
+                opStatus.deviceActive === true && styles.statusBadgeTextActive,
+                opStatus.deviceActive === false && styles.statusBadgeTextInactive
+              ]}>
+                {opStatus.deviceActive === null
+                  ? t('menu.statusLoading')
+                  : opStatus.deviceActive
+                    ? t('menu.statusActive')
+                    : t('menu.statusBlocked')}
+              </Text>
+            </View>
+          </View>
+        )}
+        <View style={styles.statusRow}>
+          <Text style={styles.statusLabel}>Sync</Text>
+          <View style={[
+            styles.statusBadge,
+            opStatus.pendingOutboxCount === 0 && styles.statusBadgeActive,
+            opStatus.pendingOutboxCount > 0 && styles.statusBadgeWarning
+          ]}>
+            <Text style={[
+              styles.statusBadgeText,
+              opStatus.pendingOutboxCount === 0 && styles.statusBadgeTextActive,
+              opStatus.pendingOutboxCount > 0 && styles.statusBadgeTextWarning
+            ]}>
+              {opStatus.pendingOutboxCount > 0
+                ? t('menu.syncPending', { count: opStatus.pendingOutboxCount })
+                : t('menu.syncOk')}
+            </Text>
+          </View>
+        </View>
+      </View>
+
       <Pressable style={styles.menuItem} onPress={goToBills}>
         <View style={styles.menuIcon}>
-          <MaterialCommunityIcons name={"receipt-text" as any} size={20} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="receipt" size={20} color={theme.colors.primary} />
         </View>
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>{t('menu.salesHistory')}</Text>
@@ -229,6 +394,17 @@ export default function MenuScreen() {
         </View>
       </Pressable>
 
+      <Pressable style={styles.menuItem} onPress={handleSwitchStore}>
+        <View style={[styles.menuIcon, styles.menuIconDanger]}>
+          <MaterialCommunityIcons name={"swap-horizontal" as any} size={20} color={theme.colors.error} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>{t('menu.switchStore')}</Text>
+          <Text style={styles.menuSubtitle}>{t('menu.switchStoreSubtitle')}</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
       {/* Developer/QA Section - Only visible in dev or with QA flag */}
       {showQaMenu && (
         <>
@@ -251,11 +427,29 @@ export default function MenuScreen() {
 
       {/* Build Info - DEV only */}
       {__DEV__ && (
-        <View style={styles.buildInfo}>
-          <Text style={styles.buildInfoLabel}>Build Info (DEV)</Text>
-          <Text style={styles.buildInfoText}>SHA: {BUILD_INFO.gitSha}</Text>
+        <View style={[styles.buildInfo, BUILD_INFO.isDirty && styles.buildInfoDirty]}>
+          <Text style={styles.buildInfoLabel}>
+            Build Info {BUILD_INFO.isDirty ? "(DIRTY)" : "(CLEAN)"}
+          </Text>
+          <Text style={[styles.buildInfoText, styles.buildInfoFingerprint]}>
+            {BUILD_INFO.fingerprint}
+          </Text>
+          <Text style={styles.buildInfoText}>
+            Branch: {BUILD_INFO.branch} | SHA: {BUILD_INFO.gitSha}
+          </Text>
+          {BUILD_INFO.isDirty && (
+            <Text style={styles.buildInfoDirtyText}>
+              {BUILD_INFO.modifiedCount} modified, {BUILD_INFO.untrackedCount} untracked
+            </Text>
+          )}
           <Text style={styles.buildInfoText}>Built: {BUILD_INFO.buildTime}</Text>
           <Text style={styles.buildInfoText}>API: {API_BASE_URL}</Text>
+          <View style={styles.devInfoSection}>
+            <Text style={styles.devInfoLabel}>Device Info</Text>
+            <Text style={styles.buildInfoText}>Token: ...{devInfo.tokenSuffix}</Text>
+            <Text style={styles.buildInfoText}>Store: {devInfo.storeName ?? "null"}</Text>
+            <Text style={styles.buildInfoText}>StoreId: {devInfo.storeId ?? "null"}</Text>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -279,6 +473,67 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  statusPanel: {
+    marginTop: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+  },
+  statusHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  statusHeaderText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.primary,
+    textTransform: "uppercase",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  statusBadgeActive: {
+    backgroundColor: theme.colors.successSoft,
+  },
+  statusBadgeInactive: {
+    backgroundColor: theme.colors.errorSoft,
+  },
+  statusBadgeWarning: {
+    backgroundColor: theme.colors.warningSoft,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  statusBadgeTextActive: {
+    color: theme.colors.success,
+  },
+  statusBadgeTextInactive: {
+    color: theme.colors.error,
+  },
+  statusBadgeTextWarning: {
+    color: theme.colors.warning,
   },
   menuItem: {
     marginTop: 16,
@@ -350,6 +605,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.warning,
     backgroundColor: theme.colors.warning + "15"
   },
+  menuIconDanger: {
+    borderColor: theme.colors.error,
+    backgroundColor: theme.colors.error + "15"
+  },
   languageToggle: {
     flexDirection: "row",
     alignItems: "center",
@@ -381,6 +640,10 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderStyle: "dashed"
   },
+  buildInfoDirty: {
+    borderColor: theme.colors.warning,
+    backgroundColor: theme.colors.warning + "10"
+  },
   buildInfoLabel: {
     fontSize: 11,
     fontWeight: "700",
@@ -388,10 +651,35 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textTransform: "uppercase"
   },
+  buildInfoFingerprint: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginBottom: 4
+  },
   buildInfoText: {
     fontSize: 11,
     fontFamily: "monospace",
     color: theme.colors.textSecondary,
     marginTop: 2
+  },
+  buildInfoDirtyText: {
+    fontSize: 11,
+    fontFamily: "monospace",
+    color: theme.colors.warning,
+    marginTop: 2
+  },
+  devInfoSection: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  devInfoLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.primary,
+    marginBottom: 4,
+    textTransform: "uppercase"
   }
 });

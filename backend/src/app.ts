@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
+import { getTranslationHealth } from "./services/translationService";
 
 // Always load backend env from `backend/.env` (not repo root `/.env`).
 // This prevents Prisma errors like missing DATABASE_URL when the process is started with a different CWD (e.g. pm2/systemd).
@@ -17,6 +18,12 @@ app.use(express.json());
 app.get("/health", (_req, res) => {
   // Cloud health-check contract: must be JSON { status: "ok" }
   res.json({ status: "ok" });
+});
+
+// TR-PEND-003: Translation service health check
+app.get("/health/translation", (_req, res) => {
+  const health = getTranslationHealth();
+  res.json(health);
 });
 
 app.use("/api", apiRouter);

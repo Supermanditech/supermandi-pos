@@ -22,6 +22,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { useTranslation } from "react-i18next";
 
 import PosStatusBar from "../components/PosStatusBar";
 import ScanNoticeBanner from "../components/ScanNoticeBanner";
@@ -81,6 +82,7 @@ const POS_DEVICE_HINTS = ["sunmi", "pax", "urovo", "newland", "zebra", "honeywel
 const TAB_PILL_ANIMATION_MS = 200;
 
 export default function PosRootLayout() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
   const hidInputRef = useRef<TextInput>(null);
@@ -89,7 +91,7 @@ export default function PosRootLayout() {
   const cameraIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cameraScanCooldownRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [selectedMode, setSelectedMode] = useState<PosTab>("SELL");
+  const [selectedMode, setSelectedModeInternal] = useState<PosTab>("SELL");
   const [lastModeLoaded, setLastModeLoaded] = useState(false);
   const [scanNotice, setScanNotice] = useState<ScanNotice | null>(null);
   const [tabLayouts, setTabLayouts] = useState<Partial<Record<PosTab, TabLayout>>>({});
@@ -105,6 +107,17 @@ export default function PosRootLayout() {
   const reorderPulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
+
+  // DEV-055: Restrict to MENU when store is inactive
+  const effectiveMode = storeActive === false ? "MENU" : selectedMode;
+  const setSelectedMode = useCallback((mode: PosTab) => {
+    // Block navigation to other tabs if store is inactive
+    if (storeActive === false && mode !== "MENU") {
+      return; // Silently block - the UI will show disabled state
+    }
+    setSelectedModeInternal(mode);
+  }, [storeActive]);
+
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
   const [deviceType, setDeviceType] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
@@ -122,9 +135,9 @@ export default function PosRootLayout() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const { width: screenWidth } = useWindowDimensions();
 
-  const sellOnboardingActive = sellOnboardingRequest !== null && selectedMode === "SELL";
+  const sellOnboardingActive = sellOnboardingRequest !== null && effectiveMode === "SELL";
   const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive;
-  const cartMode = selectedMode === "PURCHASE" ? "PURCHASE" : "SELL";
+  const cartMode = effectiveMode === "PURCHASE" ? "PURCHASE" : "SELL";
   const statusMode = "SELL";
   const hidConnected = scannerOk;
   const cameraAvailable = cameraPermission?.granted !== false;
@@ -142,8 +155,14 @@ export default function PosRootLayout() {
   const showCameraTimeoutNote = !isMobileDevice && !hidConnected;
   // Lowered threshold from 360 to 280 so Menu text shows on handheld POS devices
   const compactTabs = screenWidth <= 280;
-  const reorderLabel = reorderEnabled ? "REORDER • ON" : "REORDER • OFF";
+  const reorderLabel = reorderEnabled ? t('tabs.reorderOn') : t('tabs.reorderOff');
   const reorderStatusLabel = reorderEnabled ? "ON" : "OFF";
+  const tabLabels: Record<PosTab, string> = {
+    MENU: t('tabs.menu'),
+    SELL: t('tabs.sell'),
+    PURCHASE: t('tabs.buy'),
+    REORDER: reorderLabel,
+  };
   // Always show Menu text on handheld POS devices for better usability
   const showMenuText = true;
   const reorderTabColor = reorderEnabled ? theme.colors.success : theme.colors.error;
@@ -179,7 +198,7 @@ export default function PosRootLayout() {
   );
 
   useEffect(() => {
-    const layout = tabLayouts[selectedMode];
+    const layout = tabLayouts[effectiveMode];
     if (!layout) return;
     if (!tabIndicatorReadyRef.current) {
       tabIndicatorX.setValue(layout.x);
@@ -201,7 +220,7 @@ export default function PosRootLayout() {
         useNativeDriver: false,
       }),
     ]).start();
-  }, [selectedMode, tabIndicatorWidth, tabIndicatorX, tabLayouts]);
+  }, [effectiveMode, tabIndicatorWidth, tabIndicatorX, tabLayouts]);
 
   useEffect(() => {
     let mounted = true;
@@ -279,7 +298,7 @@ export default function PosRootLayout() {
   }, [navigation]);
 
   useEffect(() => {
-    const intent = selectedMode === "PURCHASE" ? "PURCHASE" : "SELL";
+    const intent = effectiveMode === "PURCHASE" ? "PURCHASE" : "SELL";
     const runtimeMode = "SELL";
     setScanRuntime({
       intent,
@@ -288,14 +307,14 @@ export default function PosRootLayout() {
       scanLookupV2Enabled,
       onNotice: setScanNotice,
       onSellFirstOnboarding: (request) => {
-        if (selectedMode !== "SELL") return;
+        if (effectiveMode !== "SELL") return;
         setSellOnboardingRequest((current) => current ?? request);
       },
       sellFirstOnboardingActive: sellOnboardingActive,
       onDeviceAuthError: handleDeviceAuthError,
       onStoreInactive: () => setStoreActive(false),
     });
-  }, [handleDeviceAuthError, scanLookupV2Enabled, selectedMode, sellOnboardingActive, storeActive]);
+  }, [effectiveMode, handleDeviceAuthError, scanLookupV2Enabled, sellOnboardingActive, storeActive]);
 
   useEffect(() => {
     let cancelled = false;
@@ -320,7 +339,7 @@ export default function PosRootLayout() {
 
   useEffect(() => {
     setScanNotice(null);
-  }, [selectedMode]);
+  }, [effectiveMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,6 +356,15 @@ export default function PosRootLayout() {
           setScanLookupV2Enabled(Boolean(status.features?.scan_lookup_v2));
           if (status.storeName) {
             setStoreName((prev) => status.storeName ?? prev);
+          }
+          // GO-LIVE-002: Sync feature flags to settingsStore
+          if (status.features) {
+            const { setBuyEnabled, setReorderEnabled } = useSettingsStore.getState();
+            // buyEnabled defaults to ordersEnabled if not explicitly set
+            const buyFlag = status.features.buyEnabled ?? status.features.ordersEnabled ?? true;
+            const reorderFlag = status.features.reorderEnabled ?? false;
+            setBuyEnabled(buyFlag);
+            setReorderEnabled(reorderFlag);
           }
         if (status.deviceActive === false) {
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
@@ -440,9 +468,9 @@ export default function PosRootLayout() {
   }, [deviceStoreId]);
 
   useEffect(() => {
-    if (selectedMode !== "SELL") return;
+    if (effectiveMode !== "SELL") return;
     void refreshStockSnapshot();
-  }, [deviceStoreId, selectedMode]);
+  }, [deviceStoreId, effectiveMode]);
 
   // Fetch pending reorder count for badge
   useEffect(() => {
@@ -756,9 +784,9 @@ export default function PosRootLayout() {
     }
   }, [hidConnected, isDedicatedPosDevice, scannerOpen]);
 
-  const indicatorLayout = tabLayouts[selectedMode];
+  const indicatorLayout = tabLayouts[effectiveMode];
   const indicatorColor =
-    selectedMode === "REORDER" ? reorderTabColor : theme.colors.primary;
+    effectiveMode === "REORDER" ? reorderTabColor : theme.colors.primary;
 
   return (
     <View
@@ -780,6 +808,16 @@ export default function PosRootLayout() {
         cameraAvailable={cameraAvailable}
       />
 
+      {/* DEV-055: Store inactive banner */}
+      {storeActive === false && (
+        <View style={styles.storeInactiveBanner}>
+          <MaterialCommunityIcons name="alert-circle" size={16} color={theme.colors.error} />
+          <Text style={styles.storeInactiveBannerText}>
+            {POS_MESSAGES.storeInactive}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.tabs}>
         {indicatorLayout ? (
           <Animated.View
@@ -799,17 +837,27 @@ export default function PosRootLayout() {
         {TABS.filter((tab) => {
           // Feature flag checks: hide tabs if not enabled
           if (tab.id === "PURCHASE" && !buyEnabled) return false;
+          // GO-LIVE-002: Hide REORDER tab when reorderEnabled=false
+          if (tab.id === "REORDER" && !reorderEnabled) return false;
           return true;
         }).map((tab) => {
-          const active = selectedMode === tab.id;
+          const active = effectiveMode === tab.id;
           const isReorder = tab.id === "REORDER";
           const isPurchase = tab.id === "PURCHASE";
-          const iconColor = active ? theme.colors.textInverse : theme.colors.textPrimary;
-          const tabTextColor = isReorder
-            ? reorderTextColor
+          // DEV-055: Disable non-MENU tabs when store is inactive
+          const isDisabled = storeActive === false && tab.id !== "MENU";
+          const iconColor = isDisabled
+            ? theme.colors.textTertiary
             : active
               ? theme.colors.textInverse
               : theme.colors.textPrimary;
+          const tabTextColor = isDisabled
+            ? theme.colors.textTertiary
+            : isReorder
+              ? reorderTextColor
+              : active
+                ? theme.colors.textInverse
+                : theme.colors.textPrimary;
           // Badge counts
           const badgeCount = isPurchase ? cartItemCount : isReorder && reorderEnabled ? pendingReorderCount : 0;
           return (
@@ -821,9 +869,11 @@ export default function PosRootLayout() {
                 isReorder && styles.reorderTab,
                 isReorder && (reorderEnabled ? styles.reorderTabOn : styles.reorderTabOff),
                 active && styles.tabButtonActive,
-                pressed && styles.tabPressed,
+                pressed && !isDisabled && styles.tabPressed,
+                isDisabled && styles.tabButtonDisabled,
               ]}
               onPress={() => setSelectedMode(tab.id)}
+              disabled={isDisabled}
               testID={isReorder ? "tab-reorder" : isPurchase ? "tab-buy" : undefined}
               accessibilityLabel={
                 isReorder ? `Reorder ${reorderStatusLabel}` : tab.id === "MENU" ? "Menu" : undefined
@@ -836,9 +886,9 @@ export default function PosRootLayout() {
                     <Text
                       style={[styles.tabText, compactTabs && styles.tabTextCompact, active && styles.tabTextActive]}
                       numberOfLines={1}
-                      ellipsizeMode="clip"
+                      ellipsizeMode="tail"
                     >
-                      {tab.label}
+                      {tabLabels[tab.id]}
                     </Text>
                   ) : null}
                 </View>
@@ -851,7 +901,7 @@ export default function PosRootLayout() {
                       { color: tabTextColor }
                     ]}
                     numberOfLines={1}
-                    ellipsizeMode="clip"
+                    ellipsizeMode="tail"
                     testID={reorderEnabled ? "tab-reorder-status-on" : "tab-reorder-status-off"}
                   >
                     {reorderLabel}
@@ -880,9 +930,9 @@ export default function PosRootLayout() {
                       !active && { color: tabTextColor },
                     ]}
                     numberOfLines={1}
-                    ellipsizeMode="clip"
+                    ellipsizeMode="tail"
                   >
-                    {tab.label}
+                    {tabLabels[tab.id]}
                   </Text>
                   {badgeCount > 0 ? (
                     <TabBadge
@@ -905,8 +955,8 @@ export default function PosRootLayout() {
       ) : null}
 
       <View style={styles.content}>
-        {selectedMode === "MENU" ? <MenuScreen /> : null}
-        {selectedMode === "SELL" ? (
+        {effectiveMode === "MENU" ? <MenuScreen /> : null}
+        {effectiveMode === "SELL" ? (
           <SellScanScreen
             storeActive={storeActive}
             scanDisabled={scanDisabled}
@@ -917,13 +967,13 @@ export default function PosRootLayout() {
             isScanningActive={scannerOpen || hidConnected}
           />
         ) : null}
-        {selectedMode === "PURCHASE" ? (
+        {effectiveMode === "PURCHASE" ? (
           <BuyScreen
             onOpenScanner={handleOpenCamera}
           />
         ) : null}
-        {selectedMode === "REORDER" ? (
-          <ReorderScreen onNavigateToBuy={() => setSelectedMode("PURCHASE")} />
+        {effectiveMode === "REORDER" ? (
+          <ReorderScreen onNavigateToBuy={() => setSelectedModeInternal("PURCHASE")} />
         ) : null}
       </View>
 
@@ -1010,6 +1060,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  storeInactiveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.errorSoft,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.error,
+  },
+  storeInactiveBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.error,
+  },
   tabs: {
     flexDirection: "row",
     alignItems: "center",
@@ -1043,6 +1109,10 @@ const styles = StyleSheet.create({
   },
   tabButtonActive: {
     borderColor: "transparent",
+  },
+  tabButtonDisabled: {
+    opacity: 0.5,
+    borderColor: theme.colors.border,
   },
   tabMenuContent: {
     flexDirection: "row",

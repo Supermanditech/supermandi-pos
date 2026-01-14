@@ -178,3 +178,133 @@ export async function recordSaleReturnTransaction(
   );
   return response.data;
 }
+
+/**
+ * Record a manual stock inward transaction (increments stock).
+ * GO-LIVE-004: For stock-in without a PO.
+ */
+export async function recordManualInward(
+  items: InventoryTransactionItem[],
+  notes?: string
+): Promise<InventoryTransactionResponse> {
+  if (!(await isOnline())) {
+    throw new Error("Offline mode not supported for stock inward");
+  }
+
+  // Generate a unique reference ID for this inward batch
+  const referenceId = `INWARD-${Date.now()}`;
+
+  const response = await apiClient.post<{ data: InventoryTransactionResponse }>(
+    `/api/v1/pos/inventory/transactions`,
+    {
+      items,
+      transactionType: "purchase_received",
+      referenceType: "manual",
+      referenceId,
+      notes,
+    }
+  );
+  return response.data;
+}
+
+// =============================================================================
+// REPORTS - GO-LIVE-006/007/008
+// =============================================================================
+
+export interface LedgerQueryParams {
+  transactionType?: string;
+  referenceType?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface LedgerQueryResponse {
+  entries: LedgerEntry[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+/**
+ * Get ledger entries for reports.
+ * GO-LIVE-006: Purchase History, GO-LIVE-007: Sales Statement
+ */
+export async function getLedgerEntries(
+  params?: LedgerQueryParams
+): Promise<LedgerQueryResponse> {
+  const storeId = await getDeviceStoreId();
+  if (!storeId) {
+    throw new Error("Store not configured");
+  }
+
+  if (!(await isOnline())) {
+    return { entries: [], pagination: { total: 0, limit: 50, offset: 0, hasMore: false } };
+  }
+
+  const query = new URLSearchParams();
+  if (params?.transactionType) query.set("transactionType", params.transactionType);
+  if (params?.referenceType) query.set("referenceType", params.referenceType);
+  if (params?.startDate) query.set("startDate", params.startDate);
+  if (params?.endDate) query.set("endDate", params.endDate);
+  if (params?.limit) query.set("limit", String(params.limit));
+  if (params?.offset) query.set("offset", String(params.offset));
+
+  const queryString = query.toString();
+  const path = `/api/v1/pos/inventory/ledger${queryString ? `?${queryString}` : ""}`;
+
+  try {
+    const response = await apiClient.get<{ data: LedgerEntry[]; pagination?: any }>(path);
+    return {
+      entries: response.data,
+      pagination: response.pagination ?? {
+        total: response.data.length,
+        limit: params?.limit ?? 50,
+        offset: params?.offset ?? 0,
+        hasMore: false,
+      },
+    };
+  } catch (error) {
+    // If endpoint doesn't exist, return empty
+    console.warn("Ledger endpoint not available:", error);
+    return { entries: [], pagination: { total: 0, limit: 50, offset: 0, hasMore: false } };
+  }
+}
+
+/**
+ * Get purchase history (purchase_received transactions).
+ * GO-LIVE-006
+ */
+export async function getPurchaseHistory(
+  startDate?: string,
+  endDate?: string
+): Promise<LedgerEntry[]> {
+  const result = await getLedgerEntries({
+    transactionType: "purchase_received",
+    startDate,
+    endDate,
+    limit: 100,
+  });
+  return result.entries;
+}
+
+/**
+ * Get sales history (sale transactions).
+ * GO-LIVE-007
+ */
+export async function getSalesHistory(
+  startDate?: string,
+  endDate?: string
+): Promise<LedgerEntry[]> {
+  const result = await getLedgerEntries({
+    transactionType: "sale",
+    startDate,
+    endDate,
+    limit: 100,
+  });
+  return result.entries;
+}

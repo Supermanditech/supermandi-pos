@@ -1,0 +1,390 @@
+// Reorder Routes - V3.0.10 compliant
+// Store reorder settings and policies endpoints
+
+import { Router } from "express";
+import { getPool } from "../../db/client";
+
+export const reorderRouter = Router();
+
+// =============================================================================
+// SETTINGS ENDPOINTS
+// =============================================================================
+
+/**
+ * GET /api/v1/reorder/stores/:storeId/reorder/settings
+ * Get or initialize reorder settings for a store.
+ * Returns default settings if none exist.
+ */
+reorderRouter.get("/stores/:storeId/reorder/settings", async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = req.params;
+
+  try {
+    // Check if settings exist
+    let result = await pool.query(
+      `SELECT
+        store_id as "storeId",
+        reorder_enabled as "reorderEnabled",
+        require_approval as "requireApproval",
+        auto_approve_threshold as "autoApproveThreshold",
+        default_lead_days as "defaultLeadDays",
+        created_at as "createdAt",
+        updated_at as "updatedAt"
+      FROM reorder.store_settings
+      WHERE store_id = $1`,
+      [storeId]
+    );
+
+    if (result.rows.length === 0) {
+      // Create default settings for this store
+      result = await pool.query(
+        `INSERT INTO reorder.store_settings (store_id, reorder_enabled, require_approval, default_lead_days)
+         VALUES ($1, true, true, 3)
+         ON CONFLICT (store_id) DO UPDATE SET updated_at = NOW()
+         RETURNING
+           store_id as "storeId",
+           reorder_enabled as "reorderEnabled",
+           require_approval as "requireApproval",
+           auto_approve_threshold as "autoApproveThreshold",
+           default_lead_days as "defaultLeadDays",
+           created_at as "createdAt",
+           updated_at as "updatedAt"`,
+        [storeId]
+      );
+    }
+
+    return res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    console.error("[ReorderSettings] Error:", error.message);
+
+    // If table doesn't exist, return default settings
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: {
+          storeId,
+          reorderEnabled: true,
+          requireApproval: true,
+          autoApproveThreshold: null,
+          defaultLeadDays: 3,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load settings",
+    });
+  }
+});
+
+/**
+ * PATCH /api/v1/reorder/stores/:storeId/reorder/settings
+ * Update reorder settings for a store.
+ */
+reorderRouter.patch("/stores/:storeId/reorder/settings", async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = req.params;
+  const { reorderEnabled, requireApproval, autoApproveThreshold, defaultLeadDays } = req.body;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO reorder.store_settings (store_id, reorder_enabled, require_approval, auto_approve_threshold, default_lead_days)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (store_id) DO UPDATE SET
+         reorder_enabled = COALESCE($2, reorder.store_settings.reorder_enabled),
+         require_approval = COALESCE($3, reorder.store_settings.require_approval),
+         auto_approve_threshold = COALESCE($4, reorder.store_settings.auto_approve_threshold),
+         default_lead_days = COALESCE($5, reorder.store_settings.default_lead_days),
+         updated_at = NOW()
+       RETURNING
+         store_id as "storeId",
+         reorder_enabled as "reorderEnabled",
+         require_approval as "requireApproval",
+         auto_approve_threshold as "autoApproveThreshold",
+         default_lead_days as "defaultLeadDays",
+         created_at as "createdAt",
+         updated_at as "updatedAt"`,
+      [storeId, reorderEnabled, requireApproval, autoApproveThreshold, defaultLeadDays]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Settings updated successfully",
+    });
+  } catch (error: any) {
+    console.error("[ReorderSettings] Update error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update settings",
+    });
+  }
+});
+
+// =============================================================================
+// POLICIES ENDPOINTS
+// =============================================================================
+
+/**
+ * GET /api/v1/reorder/stores/:storeId/reorder/policies
+ * List reorder policies for a store.
+ */
+reorderRouter.get("/stores/:storeId/reorder/policies", async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = req.params;
+  const { search, isEnabled, limit = "50", offset = "0" } = req.query;
+
+  try {
+    let whereClause = "WHERE rp.store_id = $1";
+    const params: any[] = [storeId];
+    let paramIndex = 2;
+
+    if (search && typeof search === "string" && search.trim().length > 0) {
+      whereClause += ` AND (sp.name ILIKE $${paramIndex} OR sp.barcode ILIKE $${paramIndex})`;
+      params.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    if (isEnabled !== undefined) {
+      whereClause += ` AND rp.is_enabled = $${paramIndex}`;
+      params.push(isEnabled === "true");
+      paramIndex++;
+    }
+
+    // First get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM reorder.product_policies rp
+       JOIN catalog.store_products sp ON sp.store_id = rp.store_id AND sp.product_id = rp.product_id
+       ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    // Then get paginated results
+    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
+    const offsetNum = parseInt(offset as string, 10) || 0;
+
+    const result = await pool.query(
+      `SELECT
+        rp.id,
+        rp.store_id as "storeId",
+        rp.product_id as "productId",
+        sp.name as "productName",
+        sp.barcode,
+        rp.min_threshold as "minThreshold",
+        rp.target_stock as "targetStock",
+        rp.preferred_supplier_id as "preferredSupplierId",
+        NULL as "preferredSupplierName",
+        rp.is_enabled as "isEnabled",
+        sp.stock_on_hand as "currentStock",
+        rp.created_at as "createdAt",
+        rp.updated_at as "updatedAt"
+      FROM reorder.product_policies rp
+      JOIN catalog.store_products sp ON sp.store_id = rp.store_id AND sp.product_id = rp.product_id
+      ${whereClause}
+      ORDER BY sp.name ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limitNum, offsetNum]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        limit: limitNum,
+        offset: offsetNum,
+        total,
+        hasMore: offsetNum + result.rows.length < total,
+      },
+    });
+  } catch (error: any) {
+    console.error("[ReorderPolicies] Error:", error.message);
+
+    // If table doesn't exist, return empty list
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          total: 0,
+          hasMore: false,
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load policies",
+    });
+  }
+});
+
+/**
+ * PATCH /api/v1/reorder/stores/:storeId/reorder/policies/:productId
+ * Update a reorder policy for a specific product.
+ */
+reorderRouter.patch("/stores/:storeId/reorder/policies/:productId", async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId, productId } = req.params;
+  const { minThreshold, targetStock, preferredSupplierId, isEnabled } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE reorder.product_policies
+       SET
+         min_threshold = COALESCE($3, min_threshold),
+         target_stock = COALESCE($4, target_stock),
+         preferred_supplier_id = COALESCE($5, preferred_supplier_id),
+         is_enabled = COALESCE($6, is_enabled),
+         updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2
+       RETURNING
+         id,
+         store_id as "storeId",
+         product_id as "productId",
+         min_threshold as "minThreshold",
+         target_stock as "targetStock",
+         preferred_supplier_id as "preferredSupplierId",
+         is_enabled as "isEnabled",
+         created_at as "createdAt",
+         updated_at as "updatedAt"`,
+      [storeId, productId, minThreshold, targetStock, preferredSupplierId, isEnabled]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Policy not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Policy updated successfully",
+    });
+  } catch (error: any) {
+    console.error("[ReorderPolicies] Update error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to update policy",
+    });
+  }
+});
+
+// =============================================================================
+// PENDING REORDERS ENDPOINTS
+// =============================================================================
+
+/**
+ * GET /api/v1/reorder/stores/:storeId/reorder/pending
+ * List pending reorders for a store.
+ */
+reorderRouter.get("/stores/:storeId/reorder/pending", async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = req.params;
+  const { status, limit = "50", offset = "0" } = req.query;
+
+  try {
+    let whereClause = "WHERE pr.store_id = $1";
+    const params: any[] = [storeId];
+    let paramIndex = 2;
+
+    if (status && typeof status === "string") {
+      whereClause += ` AND pr.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
+    const offsetNum = parseInt(offset as string, 10) || 0;
+
+    const result = await pool.query(
+      `SELECT
+        pr.id,
+        pr.store_id as "storeId",
+        pr.product_id as "productId",
+        sp.name as "productName",
+        sp.barcode,
+        sp.stock_on_hand as "currentStock",
+        rp.min_threshold as "minThreshold",
+        rp.target_stock as "targetStock",
+        pr.suggested_quantity as "suggestedQuantity",
+        pr.suggested_supplier_id as "suggestedSupplierId",
+        NULL as "suggestedSupplierName",
+        pr.suggested_unit_price as "suggestedUnitPrice",
+        pr.supplier_product_id as "supplierProductId",
+        pr.status,
+        pr.dismissed_reason as "dismissedReason",
+        pr.purchase_order_id as "purchaseOrderId",
+        pr.expires_at as "expiresAt",
+        pr.created_at as "createdAt",
+        pr.updated_at as "updatedAt"
+      FROM reorder.pending_reorders pr
+      LEFT JOIN catalog.store_products sp ON sp.store_id = pr.store_id AND sp.product_id = pr.product_id
+      LEFT JOIN reorder.product_policies rp ON rp.store_id = pr.store_id AND rp.product_id = pr.product_id
+      ${whereClause}
+      ORDER BY pr.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limitNum, offsetNum]
+    );
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM reorder.pending_reorders pr ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    return res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        limit: limitNum,
+        offset: offsetNum,
+        total,
+        hasMore: offsetNum + result.rows.length < total,
+      },
+    });
+  } catch (error: any) {
+    console.error("[PendingReorders] Error:", error.message);
+
+    // If table doesn't exist, return empty list
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: {
+          limit: 50,
+          offset: 0,
+          total: 0,
+          hasMore: false,
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load pending reorders",
+    });
+  }
+});

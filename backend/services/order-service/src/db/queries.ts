@@ -830,7 +830,7 @@ export async function createOrderEvent(
   const result = await client.query<OrderEvent>(
     `INSERT INTO orders.order_events (
       order_id, event_type, from_status, to_status,
-      actor_id, actor_type, metadata
+      actor_id, actor_type, details
     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING
       id,
@@ -840,9 +840,8 @@ export async function createOrderEvent(
       to_status as "toStatus",
       actor_id as "actorId",
       actor_type as "actorType",
-      metadata,
-      created_at as "createdAt",
-      updated_at as "updatedAt"`,
+      details as "metadata",
+      created_at as "createdAt"`,
     [
       input.orderId,
       input.eventType,
@@ -872,9 +871,8 @@ export async function getOrderEvents(
       to_status as "toStatus",
       actor_id as "actorId",
       actor_type as "actorType",
-      metadata,
-      created_at as "createdAt",
-      updated_at as "updatedAt"
+      details as "metadata",
+      created_at as "createdAt"
     FROM orders.order_events
     WHERE order_id = $1
     ORDER BY created_at ASC`,

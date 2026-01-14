@@ -491,3 +491,249 @@ export async function getProductMappings(
 
 // Re-export getClient for transaction support
 export { getClient };
+
+// =============================================================================
+// SEARCH-SELL-001: Store Product Search (SELL context only)
+// =============================================================================
+
+/**
+ * Search group type for 2-step SELL UX
+ * Groups products by normalized name+brand for SKU picker
+ * GO-LIVE-TR-006: Includes Hindi translations for bilingual display
+ */
+export interface StoreSearchGroup {
+  groupId: string;
+  displayName: string;
+  /** Hindi translation of display name (if available) */
+  displayNameHi?: string;
+  brand?: string;
+  /** Hindi translation of brand (if available) */
+  brandHi?: string;
+  category?: string;
+  matches: Array<{
+    productId: string;
+    storeProductId: string;
+    sku?: string;
+    barcode?: string;
+    sellPrice?: number | null;
+    currentStock: number;
+    displayName?: string;
+  }>;
+}
+
+/**
+ * SEARCH-SELL-001: Search store products for SELL context
+ *
+ * CRITICAL: Only searches products that exist in catalog.store_products
+ * (i.e., products the store has actually onboarded/received)
+ *
+ * Returns grouped results for 2-step add UX:
+ * - First tap: Show groups (product families)
+ * - Second tap: Select specific SKU from group
+ *
+ * @param storeId - Store ID (REQUIRED for tenant isolation)
+ * @param searchQuery - Search term
+ * @param options - Search options
+ */
+export async function searchStoreProducts(
+  storeId: string,
+  searchQuery: string,
+  options: {
+    limit?: number;
+    includeZeroStock?: boolean;
+  } = {}
+): Promise<{ groups: StoreSearchGroup[]; total: number }> {
+  const { limit = 30, includeZeroStock = true } = options;
+
+  // TENANT-001: storeId is ALWAYS the first filter
+  const params: unknown[] = [storeId, searchQuery];
+
+  // Build stock filter
+  const stockFilter = includeZeroStock ? '' : 'AND sp.current_stock > 0';
+
+  // GO-LIVE-TR-006: Search query with Hindi + English parity
+  // Priority ordering:
+  // 1. Exact barcode/SKU match (highest priority)
+  // 2. Prefix match on name (English or Hindi)
+  // 3. Trigram similarity (English or Hindi)
+  const searchSql = `
+    WITH ranked_products AS (
+      SELECT
+        sp.id as store_product_id,
+        sp.product_id,
+        sp.sell_price,
+        sp.mrp,
+        sp.display_name as sp_display_name,
+        sp.current_stock,
+        p.name,
+        p.brand,
+        p.category,
+        p.primary_barcode,
+        pt.name as hindi_name,
+        pt.brand as hindi_brand,
+        -- Grouping key: normalized name + brand
+        LOWER(TRIM(COALESCE(p.name, ''))) || '::' || LOWER(TRIM(COALESCE(p.brand, ''))) as group_key,
+        -- Priority scoring (includes Hindi translations)
+        CASE
+          WHEN p.primary_barcode = $2 THEN 1000
+          WHEN EXISTS (
+            SELECT 1 FROM catalog.product_barcodes pb
+            WHERE pb.product_id = p.id AND pb.barcode = $2
+          ) THEN 900
+          WHEN LOWER(p.name) = LOWER($2) THEN 800
+          WHEN pt.name IS NOT NULL AND LOWER(pt.name) = LOWER($2) THEN 795
+          WHEN LOWER(p.name) LIKE LOWER($2) || '%' THEN 700
+          WHEN pt.name IS NOT NULL AND LOWER(pt.name) LIKE LOWER($2) || '%' THEN 695
+          WHEN similarity(p.name, $2) > 0.5 THEN 500 + similarity(p.name, $2) * 100
+          WHEN pt.name IS NOT NULL AND similarity(pt.name, $2) > 0.5 THEN 490 + similarity(pt.name, $2) * 100
+          WHEN similarity(COALESCE(p.brand, ''), $2) > 0.5 THEN 400 + similarity(p.brand, $2) * 100
+          WHEN pt.brand IS NOT NULL AND similarity(pt.brand, $2) > 0.5 THEN 395 + similarity(pt.brand, $2) * 100
+          WHEN p.name ILIKE '%' || $2 || '%' THEN 300
+          WHEN pt.name IS NOT NULL AND pt.name ILIKE '%' || $2 || '%' THEN 295
+          WHEN similarity(p.name, $2) > 0.3 THEN 200 + similarity(p.name, $2) * 100
+          WHEN pt.name IS NOT NULL AND similarity(pt.name, $2) > 0.3 THEN 195 + similarity(pt.name, $2) * 100
+          ELSE 100 + GREATEST(similarity(p.name, $2), COALESCE(similarity(pt.name, $2), 0)) * 100
+        END as priority_score
+      FROM catalog.store_products sp
+      JOIN catalog.products p ON p.id = sp.product_id
+      LEFT JOIN catalog.product_translations pt ON pt.product_id = p.id AND pt.locale = 'hi'
+      WHERE sp.store_id = $1
+        AND sp.is_active = true
+        AND p.is_active = true
+        ${stockFilter}
+        AND (
+          p.primary_barcode = $2
+          OR EXISTS (
+            SELECT 1 FROM catalog.product_barcodes pb
+            WHERE pb.product_id = p.id AND pb.barcode = $2
+          )
+          OR p.name ILIKE '%' || $2 || '%'
+          OR similarity(p.name, $2) > 0.3
+          OR similarity(COALESCE(p.brand, ''), $2) > 0.3
+          -- GO-LIVE-TR-006: Hindi translation matching
+          OR (pt.name IS NOT NULL AND pt.name ILIKE '%' || $2 || '%')
+          OR (pt.name IS NOT NULL AND similarity(pt.name, $2) > 0.3)
+          OR (pt.brand IS NOT NULL AND similarity(pt.brand, $2) > 0.3)
+        )
+      ORDER BY priority_score DESC
+      LIMIT $3
+    )
+    SELECT * FROM ranked_products
+    ORDER BY priority_score DESC, name ASC
+  `;
+
+  const rows = await query<{
+    store_product_id: string;
+    product_id: string;
+    sell_price: number | null;
+    mrp: number | null;
+    sp_display_name: string | null;
+    current_stock: number;
+    name: string;
+    brand: string | null;
+    category: string | null;
+    primary_barcode: string | null;
+    hindi_name: string | null;
+    hindi_brand: string | null;
+    group_key: string;
+    priority_score: number;
+  }>(searchSql, [...params, limit]);
+
+  // Group results by group_key for 2-step UX
+  // GO-LIVE-TR-006: Include Hindi translations in response
+  const groupsMap = new Map<string, StoreSearchGroup>();
+
+  for (const row of rows) {
+    let group = groupsMap.get(row.group_key);
+    if (!group) {
+      group = {
+        groupId: row.group_key,
+        displayName: row.name,
+        displayNameHi: row.hindi_name ?? undefined,
+        brand: row.brand ?? undefined,
+        brandHi: row.hindi_brand ?? undefined,
+        category: row.category ?? undefined,
+        matches: [],
+      };
+      groupsMap.set(row.group_key, group);
+    }
+
+    group.matches.push({
+      productId: row.product_id,
+      storeProductId: row.store_product_id,
+      barcode: row.primary_barcode ?? undefined,
+      sellPrice: row.sell_price,
+      currentStock: row.current_stock,
+      displayName: row.sp_display_name ?? undefined,
+    });
+  }
+
+  const groups = Array.from(groupsMap.values());
+
+  return {
+    groups,
+    total: rows.length,
+  };
+}
+
+/**
+ * SEARCH-SELL-001: Get single store product for direct barcode scan
+ * Used when scanner returns a specific barcode - can add directly
+ */
+export async function getStoreProductByBarcode(
+  storeId: string,
+  barcode: string
+): Promise<{
+  productId: string;
+  storeProductId: string;
+  name: string;
+  brand?: string;
+  barcode?: string;
+  sellPrice?: number | null;
+  currentStock: number;
+} | null> {
+  const row = await queryOne<{
+    store_product_id: string;
+    product_id: string;
+    name: string;
+    brand: string | null;
+    primary_barcode: string | null;
+    sell_price: number | null;
+    current_stock: number;
+  }>(
+    `SELECT
+      sp.id as store_product_id,
+      sp.product_id,
+      p.name,
+      p.brand,
+      p.primary_barcode,
+      sp.sell_price,
+      sp.current_stock
+    FROM catalog.store_products sp
+    JOIN catalog.products p ON p.id = sp.product_id
+    WHERE sp.store_id = $1
+      AND sp.is_active = true
+      AND p.is_active = true
+      AND (
+        p.primary_barcode = $2
+        OR EXISTS (
+          SELECT 1 FROM catalog.product_barcodes pb
+          WHERE pb.product_id = p.id AND pb.barcode = $2
+        )
+      )
+    LIMIT 1`,
+    [storeId, barcode]
+  );
+
+  if (!row) return null;
+
+  return {
+    productId: row.product_id,
+    storeProductId: row.store_product_id,
+    name: row.name,
+    brand: row.brand ?? undefined,
+    barcode: row.primary_barcode ?? undefined,
+    sellPrice: row.sell_price,
+    currentStock: row.current_stock,
+  };
+}

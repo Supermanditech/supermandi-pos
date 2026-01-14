@@ -20,11 +20,16 @@ export interface CatalogSupplier {
   isPreferred: boolean;
 }
 
+/**
+ * TR-PEND-006: Added displayNameHi/brandHi for Hindi localization
+ */
 export interface CatalogProduct {
   id: string;
   name: string;
+  displayNameHi?: string;
   description?: string;
   brand?: string;
+  brandHi?: string;
   category?: string;
   unit?: string;
   packSize?: number;
@@ -236,4 +241,32 @@ export function getPreferredOrBestSupplier(
   const preferred = product.suppliers.find((s) => s.isPreferred);
   if (preferred) return preferred;
   return getBestSupplier(product);
+}
+
+// =============================================================================
+// TR-PEND-006: Localized Display Names
+// =============================================================================
+
+import i18n from "../../i18n";
+
+/**
+ * Get localized product name.
+ * Returns Hindi name when locale=hi and available, otherwise English.
+ */
+export function getLocalizedProductName(product: CatalogProduct): string {
+  if (i18n.language === "hi" && product.displayNameHi) {
+    return product.displayNameHi;
+  }
+  return product.name;
+}
+
+/**
+ * Get localized brand name.
+ * Returns Hindi brand when locale=hi and available, otherwise English.
+ */
+export function getLocalizedProductBrand(product: CatalogProduct): string | undefined {
+  if (i18n.language === "hi" && product.brandHi) {
+    return product.brandHi;
+  }
+  return product.brand;
 }

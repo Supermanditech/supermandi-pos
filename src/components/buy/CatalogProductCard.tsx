@@ -8,7 +8,11 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import type { CatalogProduct } from "../../services/api/catalogApi";
-import { getStockStatusColor } from "../../services/api/catalogApi";
+import {
+  getStockStatusColor,
+  getLocalizedProductName,
+  getLocalizedProductBrand,
+} from "../../services/api/catalogApi";
 
 // =============================================================================
 // TYPES
@@ -32,6 +36,10 @@ export function CatalogProductCard({
   const stockColor = getStockStatusColor(product.stockStatus);
   const isOutOfStock = product.stockStatus === "out_of_stock";
 
+  // TR-PEND-006: Use localized display names for Hindi UX parity
+  const displayName = getLocalizedProductName(product);
+  const displayBrand = getLocalizedProductBrand(product);
+
   return (
     <Pressable
       style={({ pressed }) => [
@@ -49,12 +57,12 @@ export function CatalogProductCard({
 
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={2}>
-          {product.name}
+          {displayName}
         </Text>
 
-        {product.brand && (
+        {displayBrand && (
           <Text style={styles.brand} numberOfLines={1}>
-            {product.brand}
+            {displayBrand}
           </Text>
         )}
 

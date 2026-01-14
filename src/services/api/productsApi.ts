@@ -1,5 +1,5 @@
 import { ApiError, apiClient } from "./apiClient";
-import { POS_API_URL } from "../../config/api";
+import { API_BASE_URL } from "../../config/api";
 import { getDeviceToken } from "../deviceSession";
 
 const PRODUCTS_BASE = "/api/v2/products";
@@ -62,7 +62,7 @@ export async function listProducts(params?: { barcode?: string; q?: string; stor
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["X-Device-Token"] = token;
 
-    const response = await fetch(`${POS_API_URL}${PRODUCTS_BASE}${suffix}`, { headers });
+    const response = await fetch(`${API_BASE_URL}${PRODUCTS_BASE}${suffix}`, { headers });
     if (!response.ok) {
       return [];
     }

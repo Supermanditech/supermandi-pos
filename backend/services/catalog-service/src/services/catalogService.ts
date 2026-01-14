@@ -175,12 +175,22 @@ async function fetchStoreCatalog(
   let paramIndex = 3;
 
   if (search && search.trim().length >= 2) {
+    // GO-LIVE-TR-006: Hindi + English search parity for BUY catalog
     whereClauses.push(`(
       similarity(p.name, $${paramIndex}) > 0.3
       OR similarity(COALESCE(p.brand, ''), $${paramIndex}) > 0.3
       OR p.name ILIKE $${paramIndex + 1}
       OR p.brand ILIKE $${paramIndex + 1}
       OR p.primary_barcode = $${paramIndex + 2}
+      OR EXISTS (
+        SELECT 1 FROM catalog.product_translations pt
+        WHERE pt.product_id = p.id AND pt.locale = 'hi'
+        AND (
+          similarity(pt.name, $${paramIndex}) > 0.3
+          OR pt.name ILIKE $${paramIndex + 1}
+          OR similarity(COALESCE(pt.brand, ''), $${paramIndex}) > 0.3
+        )
+      )
     )`);
     params.push(search, `%${search}%`, search);
     paramIndex += 3;

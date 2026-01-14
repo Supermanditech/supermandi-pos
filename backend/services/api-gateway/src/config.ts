@@ -68,6 +68,11 @@ export const config: GatewayConfig = {
       url: getEnvOrDefault('REORDER_SERVICE_URL', 'http://localhost:3007'),
       pathPrefix: '/api/v1/reorder',
     },
+    {
+      name: 'pos',
+      url: getEnvOrDefault('POS_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
+      pathPrefix: '/api/v1/pos',
+    },
   ],
 };
 

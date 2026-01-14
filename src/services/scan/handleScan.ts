@@ -41,7 +41,8 @@ type ScanRuntime = {
 };
 
 const DUPLICATE_WINDOW_MS = 1200;
-const DEFAULT_DUPLICATE_GUARD_MS = 1000;
+// DEV-060: Debounce rapid scans at 500ms per ticket
+const DEFAULT_DUPLICATE_GUARD_MS = 500;
 const STORM_WINDOW_MS = 3000;
 const STORM_MAX_SCANS = 8;
 const STORM_COOLDOWN_MS = 2000;

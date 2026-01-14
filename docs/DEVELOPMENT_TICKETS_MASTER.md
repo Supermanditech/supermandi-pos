@@ -1,9 +1,9 @@
 # SuperMandi REORDER System - Master Development Tickets
 
-**Version**: 1.1.0 (V3.0.9 Critical Fixes Applied)
-**Date**: 2026-01-12
-**Total Tickets**: 53 (MVP: 39, Post-MVP: 14)
-**Estimated Duration**: 12 weeks (6 sprints)
+**Version**: 1.2.0 (Go-Live Hardening Pack Added)
+**Date**: 2026-01-14
+**Total Tickets**: 71 (MVP: 39, Post-MVP: 14, Go-Live Hardening: 18)
+**Estimated Duration**: 18 weeks (12 sprints)
 
 ---
 
@@ -40,6 +40,12 @@
 | 4 | Reorder + Events + Cron | DEV-027 to DEV-034 | 2 weeks |
 | 5 | POS Frontend (BUY + REORDER) | DEV-035 to DEV-042 | 2 weeks |
 | 6 | GRN + Polish + Testing | DEV-043 to DEV-052 | 2 weeks |
+| 7 | Go-Live: Onboarding + Identity | DEV-053 to DEV-055 | 1 week |
+| 8 | Go-Live: Menu + Feature Flag Gating | DEV-056 to DEV-057 | 1 week |
+| 9 | Go-Live: SELL Screen Fixes | DEV-058 to DEV-060 | 1 week |
+| 10 | Go-Live: Sell Cart + Checkout | DEV-061 to DEV-063 | 1 week |
+| 11 | Go-Live: BUY + INWARD + Ledger | DEV-064 to DEV-066 | 1 week |
+| 12 | Go-Live: SuperAdmin + Deployment | DEV-067 to DEV-070 | 1 week |
 
 ---
 
@@ -2410,6 +2416,516 @@ backend/packages/common/src/logging/
 
 ---
 
+## GO-LIVE HARDENING PACK (DEV-053 → DEV-070)
+
+### SPRINT 7: Onboarding + Identity
+
+---
+
+### DEV-053: Enroll Device Flow Hardening (UX + Error States)
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 4 hours
+**Depends On**: /api/v1/pos/enroll stable via gateway
+
+**Scope**:
+- EnrollDeviceScreen: validation + clean error mapping
+  - Invalid code, expired code, used code, network timeout, backend down
+- Add Retry + "Contact SuperAdmin for new code" hint
+- Prevent double-submit (disable button on loading)
+
+**Error Mapping**:
+```typescript
+const ENROLL_ERROR_MESSAGES = {
+  enrollment_invalid: "Enrollment code is invalid or expired.",
+  device_already_enrolled: "This label is already active. Ask Superadmin to reset.",
+  network_error: "Cannot reach server. Check your connection.",
+  timeout: "Request timed out. Try again.",
+  server_error: "Server error. Try again in a moment."
+};
+```
+
+**Files to Modify**:
+```
+src/screens/EnrollDeviceScreen.tsx
+```
+
+**Acceptance Criteria**:
+- [ ] User always gets actionable message
+- [ ] No duplicate enrolls (button disabled during loading)
+- [ ] Retry button works
+
+**Verify**:
+- [ ] Invalid code shows correct error
+- [ ] Airplane mode shows network error + retry
+
+---
+
+### DEV-054: Add "Re-enroll / Switch Store" (Clear Device Session)
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 2 hours
+**Depends On**: deviceSession persistence
+
+**Scope**:
+- Menu action: "Re-enroll / Switch store"
+- Clears stored device token/session
+- Returns to EnrollDeviceScreen
+- Confirm dialog before action
+
+**Files to Modify**:
+```
+src/screens/MenuScreen.tsx
+src/services/deviceSession.ts
+```
+
+**Acceptance Criteria**:
+- [ ] No reinstall needed to switch store/device
+- [ ] Confirm dialog prevents accidental reset
+
+**Verify**:
+- [ ] Enroll → Switch → Enroll again works
+
+---
+
+### DEV-055: Startup Routing Hardening Using ui-status
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 3 hours
+**Depends On**: /api/v1/pos/ui-status via gateway
+
+**Scope**:
+- App bootstrap rules:
+  - No token → Enroll screen
+  - Token invalid/unauthorized (401/403) → clear session → Enroll
+  - Server down (500/timeout) → banner + retry (no blank store state)
+- Never show null store/ID state silently
+
+**Files to Modify**:
+```
+src/screens/PosRootLayout.tsx (or App.tsx bootstrap)
+src/services/api/uiStatusApi.ts
+```
+
+**Acceptance Criteria**:
+- [ ] App never shows null store/ID state silently
+- [ ] Server down shows banner with retry
+
+**Verify**:
+- [ ] Corrupt token → auto reset to enroll
+- [ ] Server down → retry banner appears
+
+---
+
+### SPRINT 8: Menu + Feature Flag Gating
+
+---
+
+### DEV-056: Feature-Flag Gate All Tabs/Routes
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 4 hours
+**Depends On**: uiStatus feature flags wired to UI
+
+**Scope**:
+- Hide SELL/BUY/REORDER/INWARD/REPORTS tabs if disabled from ui-status features
+- Add route guard (deep links can't open disabled screens)
+- Read feature flags: reorderEnabled, buyEnabled, inventoryEnabled, suppliersEnabled, ordersEnabled
+
+**Files to Modify**:
+```
+src/screens/PosRootLayout.tsx
+src/stores/settingsStore.ts
+```
+
+**Acceptance Criteria**:
+- [ ] Disabled features are not visible or reachable
+- [ ] Deep link to disabled screen redirects to SELL
+
+**Verify**:
+- [ ] reorderEnabled=false → REORDER tab hidden
+
+---
+
+### DEV-057: Menu Operational Status Panel (Store/Device Health)
+**Type**: Frontend
+**Priority**: P1-High
+**Estimate**: 3 hours
+**Depends On**: ui-status fields stable
+
+**Scope**:
+- Menu shows: storeName, storeId, deviceId, deviceActive, pendingOutboxCount, lastSyncAt
+- Dev-only shows: API URL + token suffix (already partially done)
+- Format for support diagnostics
+
+**Files to Modify**:
+```
+src/screens/MenuScreen.tsx
+```
+
+**Acceptance Criteria**:
+- [ ] Retailer and support can diagnose quickly
+- [ ] All fields visible in Menu settings section
+
+**Verify**:
+- [ ] Block device → visible state shows deviceActive=false
+
+---
+
+### SPRINT 9: SELL Screen Fixes
+
+---
+
+### DEV-058: SELL Default SKU List on Load (Fix "No SKUs")
+**Type**: Frontend + Backend
+**Priority**: P0-Critical
+**Estimate**: 5 hours
+**Depends On**: Either search endpoint supports q="" OR add GET /store-products?limit=50
+
+**Scope**:
+- On SELL open, show default list (Top/Recent 50 store products)
+- Search replaces list with results
+- Add Loading/Empty/Error states + Retry button
+
+**Files to Modify**:
+```
+src/screens/SellScanScreen.tsx
+src/services/api/productsApi.ts (or new endpoint)
+```
+
+**Acceptance Criteria**:
+- [ ] Store with products never shows "No SKUs" on first open
+- [ ] Empty store shows guided empty-state
+
+**Verify**:
+- [ ] Demo store shows items without typing
+- [ ] Empty store shows guided empty-state
+
+---
+
+### DEV-059: Scanner Readiness Split: HID vs Camera
+**Type**: Frontend
+**Priority**: P1-High
+**Estimate**: 3 hours
+**Depends On**: scanner services status hooks
+
+**Scope**:
+- Replace single "Scanner not ready" with:
+  - "Camera ready" (permission + init)
+  - "HID ready" (connected/handler ready)
+- Don't block camera if HID not ready and vice versa
+
+**Files to Modify**:
+```
+src/screens/SellScanScreen.tsx
+src/services/scanner/ (or similar)
+```
+
+**Acceptance Criteria**:
+- [ ] Accurate status across Redmi + iMin + Sunmi
+
+**Verify**:
+- [ ] Deny camera permission → camera not ready only
+- [ ] HID unplugged → HID not ready only (camera still works)
+
+---
+
+### DEV-060: Single Scan Routing + Duplicate Guard (Camera + HID)
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 4 hours
+**Depends On**: existing scan handlers
+
+**Scope**:
+- One normalized barcode handler for all sources (camera, HID)
+- Duplicate debounce window (e.g., 500ms)
+- Log duplicates in dev mode
+- Consume HID ENTER properly to avoid triggering UI actions
+
+**Files to Modify**:
+```
+src/screens/SellScanScreen.tsx
+src/hooks/useScanner.ts (or similar)
+```
+
+**Acceptance Criteria**:
+- [ ] Continuous camera scan doesn't spam-add
+- [ ] HID behaves same as camera
+
+**Verify**:
+- [ ] Hold camera on barcode → single add within debounce window
+
+---
+
+### SPRINT 10: Sell Cart + Checkout Regressions (Handheld-Proof)
+
+---
+
+### DEV-061: Cart Bottom Sheet Open Height + Snap Points (All Devices)
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 4 hours
+**Depends On**: BottomSheet implementation
+
+**Scope**:
+- Fix default open state so totals/checkout visible on iMin/Sunmi
+- Smooth drag expand
+- Safe-area/footer padding
+
+**Files to Modify**:
+```
+src/screens/SellScanScreen.tsx
+src/components/sell/CartBottomSheet.tsx (or similar)
+```
+
+**Acceptance Criteria**:
+- [ ] Cart opens usable by default everywhere
+
+**Verify**:
+- [ ] Add product → totals visible without manual drag
+
+---
+
+### DEV-062: Cart Row Controls Visibility (Trash, +/-) + Back Navigation
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 3 hours
+**Depends On**: icon/font setup + styles
+
+**Scope**:
+- Fix icon rendering + layout constraints
+- Restore cart back navigation (if broken)
+- Ensure font scaling doesn't break controls
+
+**Files to Modify**:
+```
+src/components/sell/CartItem.tsx (or similar)
+```
+
+**Acceptance Criteria**:
+- [ ] Trash/+/- always visible and tappable
+
+**Verify**:
+- [ ] Compare Expo vs APK on Redmi/iMin/Sunmi
+
+---
+
+### DEV-063: Stock Enforcement Across Add/Tap/+ and Qty Edits
+**Type**: Frontend
+**Priority**: P0-Critical
+**Estimate**: 4 hours
+**Depends On**: stockCap + inventory availability
+
+**Scope**:
+- Enforce stock cap everywhere:
+  - Scan add, tap add, + button, qty edit
+- Unified UX: toast + red highlight when capped
+
+**Files to Modify**:
+```
+src/stores/cartStore.ts
+src/components/sell/CartItem.tsx
+src/screens/SellScanScreen.tsx
+```
+
+**Acceptance Criteria**:
+- [ ] qty can't exceed known stock (e.g., stock=1 can't become 20)
+
+**Verify**:
+- [ ] Tap 20 times on stock=1 → stays 1 with toast
+
+---
+
+### SPRINT 11: BUY + INWARD + Ledger Correctness
+
+---
+
+### DEV-064: BUY Categories Routing Regression Fix + Test
+**Type**: Backend
+**Priority**: P0-Critical
+**Estimate**: 2 hours
+**Depends On**: catalog-service routes
+
+**Scope**:
+- Ensure /categories route not captured by /:productId (route ordering)
+- Add minimal regression test calling categories → expects 200
+
+**Files to Modify**:
+```
+backend/services/catalog-service/src/routes/catalog.ts
+backend/services/catalog-service/src/__tests__/categories.test.ts
+```
+
+**Acceptance Criteria**:
+- [ ] No "invalid uuid: categories" in logs
+
+**Verify**:
+- [ ] BUY opens categories on VM without 500
+
+---
+
+### DEV-065: BUY Search + Explicit Add-to-Buy Flow
+**Type**: Frontend
+**Priority**: P1-High
+**Estimate**: 4 hours
+**Depends On**: supplier_product_map endpoints
+
+**Scope**:
+- Ensure BUY search uses supplier datasets (read-only)
+- Explicit add-to-buy action
+- Clear empty states
+
+**Files to Modify**:
+```
+src/screens/BuyScreen.tsx
+src/services/api/catalogApi.ts
+```
+
+**Acceptance Criteria**:
+- [ ] BUY flow stable; no accidental cart pollution
+
+**Verify**:
+- [ ] Search/add/remove works
+
+---
+
+### DEV-066: INWARD Receive Flow + Inventory Ledger Correspondence
+**Type**: Frontend + Backend
+**Priority**: P0-Critical
+**Estimate**: 6 hours
+**Depends On**: inventory ledger + inward endpoints
+
+**Scope**:
+- GRN/receive quantities (partial allowed)
+- Write ledger entries correctly
+- Ensure SELL deducts only sold items; INWARD increases stock
+
+**Files to Modify**:
+```
+src/screens/InwardScreen.tsx
+src/screens/GRNScreen.tsx
+backend/services/inventory-service/src/routes/transactions.ts
+```
+
+**Acceptance Criteria**:
+- [ ] Ledger matches stock statements
+
+**Verify**:
+- [ ] Receive 10 → stock +10 → sell 2 → stock 8
+
+---
+
+### SPRINT 12: SuperAdmin Go-Live + Deployment Durability
+
+---
+
+### DEV-067: Production-Safe Provisioning Workflow (No Seed)
+**Type**: Backend
+**Priority**: P0-Critical
+**Estimate**: 5 hours
+**Depends On**: platform-service admin endpoints
+
+**Scope**:
+- SuperAdmin creates:
+  - Store (empty)
+  - Store user (phone+PIN)
+  - Enrollment code(s)
+  - Block/unblock devices
+- Audit logs for admin actions
+
+**Files to Modify**:
+```
+backend/services/platform-service/src/routes/admin.ts
+backend/services/auth-service/src/routes/admin.ts
+```
+
+**Acceptance Criteria**:
+- [ ] New store goes live with zero demo data
+
+**Verify**:
+- [ ] Create store → enroll → SELL shows empty-state not demo SKUs
+
+---
+
+### DEV-068: QA Seed Tooling Gated to Dev/Staging Only
+**Type**: Backend
+**Priority**: P0-Critical
+**Estimate**: 3 hours
+**Depends On**: env gating + flags
+
+**Scope**:
+- Optional QA seed endpoint/script for testing only
+- Hard block in production env + feature flag
+
+**Files to Create/Modify**:
+```
+backend/scripts/seed-qa-data.ts
+backend/src/middleware/devOnly.ts
+```
+
+**Acceptance Criteria**:
+- [ ] Impossible to seed demo data in prod
+
+**Verify**:
+- [ ] Prod → endpoint missing/404
+
+---
+
+### DEV-069: Release Gating + Tag-Only APK Build Enforcement
+**Type**: DevOps
+**Priority**: P0-Critical
+**Estimate**: 4 hours
+**Depends On**: existing release scripts
+
+**Scope**:
+- Require: pnpm release:gate + release note + clean git status + annotated tag
+- Build APK only from tag
+
+**Files to Modify**:
+```
+scripts/release-gate.js
+scripts/release-tag.js
+.github/workflows/build-apk.yml (if exists)
+```
+
+**Acceptance Criteria**:
+- [ ] No missing fixes due to wrong branch/commit/tag
+
+**Verify**:
+- [ ] Dirty repo blocks tagging
+- [ ] APK references tag SHA
+
+---
+
+### DEV-070: Sell-First Onboarding: Unknown Barcode → Create SKU + Price + Initial Stock
+**Type**: Frontend + Backend
+**Priority**: P1-High (Optional, High Value)
+**Estimate**: 8 hours
+**Depends On**: catalog create + inventory initial stock
+
+**Scope**:
+- Unknown barcode in SELL:
+  - Prompt: name + sell price + optional purchase price + initial stock
+  - Create store product + ledger entry
+  - Add to cart immediately
+- Enables retailer to start selling immediately without back office setup
+
+**Files to Create/Modify**:
+```
+src/screens/SellScanScreen.tsx
+src/components/sell/CreateProductModal.tsx
+src/services/api/productsApi.ts
+backend/services/catalog-service/src/routes/catalog.ts
+```
+
+**Acceptance Criteria**:
+- [ ] Retailer can start selling immediately without back office setup
+
+**Verify**:
+- [ ] Scan unknown → create → appears in search → stock correct
+
+---
+
 ## POST-MVP TICKETS
 
 ### DEV-P01: Supplier Mobile App - Login + Orders
@@ -2654,6 +3170,24 @@ backend/packages/common/src/logging/
 | DEV-050 | Docker Production Setup | 6 | Infra | P0 |
 | DEV-051 | Observability Setup | 6 | Infra | P1 |
 | DEV-052 | Launch Checklist Verification | 6 | QA | P0 |
+| DEV-053 | Enroll Device Flow Hardening | 7 | Frontend | P0 |
+| DEV-054 | Re-enroll / Switch Store | 7 | Frontend | P0 |
+| DEV-055 | Startup Routing Hardening | 7 | Frontend | P0 |
+| DEV-056 | Feature-Flag Gate All Tabs | 8 | Frontend | P0 |
+| DEV-057 | Menu Operational Status Panel | 8 | Frontend | P1 |
+| DEV-058 | SELL Default SKU List | 9 | Full | P0 |
+| DEV-059 | Scanner Readiness Split | 9 | Frontend | P1 |
+| DEV-060 | Single Scan Routing + Duplicate Guard | 9 | Frontend | P0 |
+| DEV-061 | Cart Bottom Sheet Height | 10 | Frontend | P0 |
+| DEV-062 | Cart Row Controls Visibility | 10 | Frontend | P0 |
+| DEV-063 | Stock Enforcement All Actions | 10 | Frontend | P0 |
+| DEV-064 | BUY Categories Routing Fix | 11 | Backend | P0 |
+| DEV-065 | BUY Search + Add-to-Buy Flow | 11 | Frontend | P1 |
+| DEV-066 | INWARD Receive + Ledger | 11 | Full | P0 |
+| DEV-067 | Production-Safe Provisioning | 12 | Backend | P0 |
+| DEV-068 | QA Seed Tooling Gated | 12 | Backend | P0 |
+| DEV-069 | Release Gating + Tag-Only APK | 12 | DevOps | P0 |
+| DEV-070 | Sell-First Onboarding (Unknown Barcode) | 12 | Full | P1 |
 
 ---
 
@@ -2676,8 +3210,9 @@ Claude will:
 |---------|------|---------|
 | 1.0.0 | 2026-01-12 | Initial version with 53 tickets |
 | 1.1.0 | 2026-01-12 | V3.0.9 Critical Fixes Applied: Bull fanout (DEV-027, DEV-029, DEV-032), platform-service (DEV-013), idempotency PROCESSING state (DEV-017), multi-status filter (DEV-019), submit endpoint (DEV-020), Golden Path test (DEV-048) |
+| 1.2.0 | 2026-01-14 | Go-Live Hardening Pack Added: DEV-053 to DEV-070 (18 tickets across 6 sprints) - Onboarding/Identity, Feature Flags, SELL fixes, Cart/Checkout, BUY/INWARD/Ledger, SuperAdmin/Deployment |
 
 ---
 
-**Document Version**: 1.1.0
-**Last Updated**: 2026-01-12
+**Document Version**: 1.2.0
+**Last Updated**: 2026-01-14

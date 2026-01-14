@@ -7,6 +7,7 @@ import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
 import { config } from './config';
 import internalRoutes from './routes/internal';
 import authRoutes from './routes/auth';
+import adminRoutes from './routes/admin';
 
 const app = express();
 
@@ -54,6 +55,9 @@ app.get('/healthz', (_req: Request, res: Response) => {
 
 // Public auth routes (login, logout)
 app.use('/auth', authRoutes);
+
+// Admin routes (SUPERADMIN only - enforced by gateway)
+app.use('/admin', adminRoutes);
 
 // Internal routes (service-to-service)
 app.use('/internal', internalRoutes);

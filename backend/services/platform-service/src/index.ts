@@ -8,6 +8,7 @@ import { config } from './config.js';
 import storeRoutes from './routes/stores.js';
 import flagRoutes from './routes/flags.js';
 import internalRoutes from './routes/internal.js';
+import adminRoutes from './routes/admin.js';
 
 const app = express();
 
@@ -55,6 +56,9 @@ app.get('/healthz', (_req: Request, res: Response) => {
 
 // Store routes (public + admin)
 app.use('/stores', storeRoutes);
+
+// Admin routes (SUPERADMIN only - enforced by gateway)
+app.use('/admin', adminRoutes);
 
 // Admin flag routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin/flags', flagRoutes);

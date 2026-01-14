@@ -1,0 +1,190 @@
+// SEARCH-SELL-001: SELL Search API Client
+// Searches store products only (NOT BUY/purchase catalog)
+
+import { apiClient } from "./apiClient";
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+/**
+ * SKU match within a product group
+ */
+export interface StoreSkuMatch {
+  productId: string;
+  storeProductId: string;
+  sku?: string;
+  barcode?: string;
+  sellPrice?: number | null;
+  currentStock: number;
+  displayName?: string;
+}
+
+/**
+ * Product group for 2-step SELL add UX
+ * First tap shows groups, second tap picks specific SKU
+ *
+ * TR-PEND-006: displayNameHi/brandHi available when locale=hi
+ */
+export interface StoreSearchGroup {
+  groupId: string;
+  displayName: string;
+  displayNameHi?: string;
+  brand?: string;
+  brandHi?: string;
+  category?: string;
+  matches: StoreSkuMatch[];
+}
+
+export interface StoreSearchResponse {
+  success: boolean;
+  data: StoreSearchGroup[];
+  total: number;
+  context: "SELL";
+}
+
+export interface StoreLookupResponse {
+  success: boolean;
+  data: {
+    productId: string;
+    storeProductId: string;
+    name: string;
+    brand?: string;
+    barcode?: string;
+    sellPrice?: number | null;
+    currentStock: number;
+  };
+  context: "SELL";
+}
+
+export interface StoreLookupNotFoundResponse {
+  success: false;
+  error: "PRODUCT_NOT_IN_STORE_CATALOG";
+  message: string;
+  barcode: string;
+}
+
+// =============================================================================
+// SEARCH-SELL-001: Store Product Search
+// =============================================================================
+
+/**
+ * Search store products for SELL context.
+ *
+ * CRITICAL BOUNDARY: This only searches products the store has
+ * onboarded/received (catalog.store_products). It does NOT search
+ * the BUY/purchase catalog (catalog.products + product_map tables).
+ *
+ * Returns grouped results for 2-step add UX:
+ * - First tap: Show group (product family)
+ * - Second tap: Pick specific SKU from group
+ *
+ * @param storeId - Store ID
+ * @param query - Search term (min 2 chars)
+ * @param options - Search options
+ */
+export async function searchStoreProducts(
+  storeId: string,
+  query: string,
+  options: {
+    limit?: number;
+    includeZeroStock?: boolean;
+  } = {}
+): Promise<StoreSearchGroup[]> {
+  const { limit = 30, includeZeroStock = true } = options;
+
+  const params = new URLSearchParams({
+    q: query,
+    limit: String(limit),
+    includeZeroStock: String(includeZeroStock),
+  });
+
+  const response = await apiClient.get<StoreSearchResponse>(
+    `/api/v1/catalog/stores/${storeId}/store-products/search?${params}`
+  );
+
+  return response.data;
+}
+
+/**
+ * Direct barcode lookup for SELL context.
+ *
+ * Used when scanner returns a specific barcode.
+ * Returns null if product not in store catalog
+ * (triggers sell-first onboarding flow).
+ *
+ * @param storeId - Store ID
+ * @param barcode - Barcode to look up
+ */
+export async function lookupStoreProductByBarcode(
+  storeId: string,
+  barcode: string
+): Promise<StoreLookupResponse["data"] | null> {
+  try {
+    const response = await apiClient.get<StoreLookupResponse>(
+      `/api/v1/catalog/stores/${storeId}/store-products/lookup?barcode=${encodeURIComponent(barcode)}`
+    );
+    return response.data;
+  } catch (error: any) {
+    // 404 means product not in store catalog
+    if (error?.status === 404 || error?.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+// =============================================================================
+// HELPER: Flatten groups for simple list display
+// =============================================================================
+
+/**
+ * Flatten grouped results into a simple list.
+ * Use this if you want to display all SKUs in a flat list
+ * instead of grouped view.
+ */
+export function flattenSearchGroups(
+  groups: StoreSearchGroup[]
+): Array<StoreSkuMatch & { groupDisplayName: string; brand?: string }> {
+  const results: Array<StoreSkuMatch & { groupDisplayName: string; brand?: string }> = [];
+
+  for (const group of groups) {
+    for (const match of group.matches) {
+      results.push({
+        ...match,
+        groupDisplayName: group.displayName,
+        brand: group.brand,
+      });
+    }
+  }
+
+  return results;
+}
+
+// =============================================================================
+// TR-PEND-006: Localized Display Names
+// =============================================================================
+
+import i18n from "../../i18n";
+
+/**
+ * Get localized display name for a search group.
+ * Returns Hindi name when locale=hi and available, otherwise English.
+ */
+export function getLocalizedGroupName(group: StoreSearchGroup): string {
+  if (i18n.language === "hi" && group.displayNameHi) {
+    return group.displayNameHi;
+  }
+  return group.displayName;
+}
+
+/**
+ * Get localized brand name for a search group.
+ * Returns Hindi brand when locale=hi and available, otherwise English.
+ */
+export function getLocalizedBrand(group: StoreSearchGroup): string | undefined {
+  if (i18n.language === "hi" && group.brandHi) {
+    return group.brandHi;
+  }
+  return group.brand;
+}

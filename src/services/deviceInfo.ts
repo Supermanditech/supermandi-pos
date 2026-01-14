@@ -1,4 +1,4 @@
-import { POS_API_URL } from "../config/api";
+import { API_BASE_URL } from "../config/api";
 import { getDeviceToken } from "./deviceSession";
 import { storeScopedStorage } from "./storeScope";
 
@@ -26,7 +26,7 @@ export async function fetchDeviceInfo(): Promise<DeviceInfo> {
   if (token) {
     headers["X-Device-Token"] = token;
   }
-  const response = await fetch(`${POS_API_URL}/api/v1/pos/devices/me`, { headers });
+  const response = await fetch(`${API_BASE_URL}/api/v1/pos/devices/me`, { headers });
   if (!response.ok) {
     throw new Error(`Device info fetch failed: ${response.status}`);
   }

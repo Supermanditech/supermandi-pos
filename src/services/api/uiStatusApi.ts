@@ -1,4 +1,5 @@
-import { POS_API_URL } from "../../config/api";
+import { API_BASE_URL } from "../../config/api";
+import { getDeviceToken } from "../deviceSession";
 
 export type UiStatusResponse = {
   storeId?: string | null;
@@ -15,6 +16,7 @@ export type UiStatusResponse = {
   features?: {
     scan_lookup_v2?: boolean;
     reorderEnabled?: boolean;
+    buyEnabled?: boolean;
     inventoryEnabled?: boolean;
     suppliersEnabled?: boolean;
     ordersEnabled?: boolean;
@@ -22,8 +24,18 @@ export type UiStatusResponse = {
 };
 
 export async function fetchUiStatus(): Promise<UiStatusResponse> {
-  const response = await fetch(`${POS_API_URL}/api/v1/pos/ui-status`);
+  const deviceToken = await getDeviceToken();
+  const tokenSuffix = deviceToken ? deviceToken.slice(-6) : "none";
+  console.log("[uiStatus] Fetching with token:", tokenSuffix);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
+    headers: {
+      ...(deviceToken ? { "X-Device-Token": deviceToken } : {}),
+    },
+  });
+
   if (!response.ok) {
+    console.log("[uiStatus] Failed:", response.status);
     // Return default status if service unavailable
     return {
       storeActive: true,
@@ -37,5 +49,8 @@ export async function fetchUiStatus(): Promise<UiStatusResponse> {
       },
     };
   }
-  return response.json();
+
+  const data = await response.json();
+  console.log("[uiStatus] Response:", data.storeId, data.storeName);
+  return data;
 }

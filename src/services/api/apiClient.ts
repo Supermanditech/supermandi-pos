@@ -1,6 +1,7 @@
 import { API_BASE_URL } from "../../config/api";
 import { getAuthToken } from "./storage";
 import { clearDeviceSession, getDeviceToken } from "../deviceSession";
+import i18n from "../../i18n";
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -18,11 +19,15 @@ type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken();
   const deviceToken = await getDeviceToken();
+  // I18N-008: Include locale in Accept-Language header
+  const locale = i18n.language || "en";
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      "Accept-Language": locale,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(deviceToken ? { "x-device-token": deviceToken } : {})
     },

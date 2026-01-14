@@ -97,3 +97,14 @@ COMMIT_STATUS_SUMMARY.txt
 
 # Claude Code
 .claude/
+# Claude temp files/folders (cover both patterns)
+tmpclaude-*-cwd
+tmpclaude-*-cwd/
+backend/tmpclaude-*-cwd
+backend/tmpclaude-*-cwd/
+
+# TS incremental build artifacts
+*.tsbuildinfo
+
+# Node lockfiles - pick ONE package manager (pnpm)
+package-lock.json

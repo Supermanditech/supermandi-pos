@@ -1,5 +1,6 @@
-// Transaction Service - V3.0.9 compliant
+// Transaction Service - V3.0.10 compliant
 // Inventory transaction operations with event outbox integration
+// DEV-066: Sign application verified - sale=-qty, purchase_received=+qty
 
 import { ApiError, getClient } from '@supermandi/common';
 import { PoolClient } from 'pg';

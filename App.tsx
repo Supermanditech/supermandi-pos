@@ -5,6 +5,15 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Font from "expo-font";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { I18nextProvider } from "react-i18next";
+
+// GO-LIVE-010: Logger and crash handling
+import { installGlobalErrorHandler, logAppStartup } from "./src/services/logger";
+installGlobalErrorHandler();
+logAppStartup();
+
+// I18N: Internationalization
+import i18n, { initI18n } from "./src/i18n";
 
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
@@ -21,6 +30,12 @@ import OrderDetailScreen from "./src/screens/OrderDetailScreen";
 import ReorderSettingsScreen from "./src/screens/ReorderSettingsScreen";
 import ReorderPoliciesScreen from "./src/screens/ReorderPoliciesScreen";
 import GRNScreen from "./src/screens/GRNScreen";
+// V3.0.10 Screens
+import InwardScreen from "./src/screens/InwardScreen";
+import UiShowcaseScreen, { isQaMenuEnabled } from "./src/screens/UiShowcaseScreen";
+import PurchaseHistoryScreen from "./src/screens/PurchaseHistoryScreen";
+import SalesStatementScreen from "./src/screens/SalesStatementScreen";
+import StockStatementScreen from "./src/screens/StockStatementScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -77,32 +92,74 @@ function GRNWrapper() {
     />
   );
 }
+
+// V3.0.10 Wrapper components
+function InwardWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <InwardScreen
+      storeActive={true}
+      scanDisabled={false}
+      onOpenScanner={() => {}}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+function UiShowcaseWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <UiShowcaseScreen
+      onNavigateTo={(screen, params) => navigation.navigate(screen, params)}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+function PurchaseHistoryWrapper() {
+  const navigation = useNavigation<any>();
+  return <PurchaseHistoryScreen onBack={() => navigation.goBack()} />;
+}
+
+function SalesStatementWrapper() {
+  const navigation = useNavigation<any>();
+  return <SalesStatementScreen onBack={() => navigation.goBack()} />;
+}
+
+function StockStatementWrapper() {
+  const navigation = useNavigation<any>();
+  return <StockStatementScreen onBack={() => navigation.goBack()} />;
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [appReady, setAppReady] = useState(false);
 
-  const loadFonts = useCallback(async () => {
+  const initializeApp = useCallback(async () => {
     try {
-      // Load MaterialCommunityIcons font for APK builds
-      await Font.loadAsync(MaterialCommunityIcons.font);
-      setFontsLoaded(true);
+      // Load fonts and initialize i18n in parallel
+      await Promise.all([
+        Font.loadAsync(MaterialCommunityIcons.font),
+        initI18n(),
+      ]);
+      setAppReady(true);
     } catch (error) {
-      console.error("Error loading fonts:", error);
-      // Still allow app to render even if fonts fail
-      setFontsLoaded(true);
+      console.error("Error initializing app:", error);
+      // Still allow app to render even if initialization fails
+      setAppReady(true);
     }
   }, []);
 
   useEffect(() => {
-    loadFonts();
+    initializeApp();
     startScanIntentListener();
-  }, [loadFonts]);
+  }, [initializeApp]);
 
-  // Show loading indicator while fonts are loading
-  if (!fontsLoaded) {
+  // Show loading indicator while app is initializing
+  if (!appReady) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background }}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -111,13 +168,14 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar
-        backgroundColor={theme.colors.background}
-        barStyle={Platform.OS === "android" ? "dark-content" : "default"}
-      />
+    <I18nextProvider i18n={i18n}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <StatusBar
+          backgroundColor={theme.colors.background}
+          barStyle={Platform.OS === "android" ? "dark-content" : "default"}
+        />
 
-      <NavigationContainer>
+        <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{
@@ -141,8 +199,17 @@ export default function App() {
           <Stack.Screen name="ReorderSettings" component={ReorderSettingsWrapper} />
           <Stack.Screen name="ReorderPolicies" component={ReorderPoliciesWrapper} />
           <Stack.Screen name="GRN" component={GRNWrapper} />
+          {/* V3.0.10 Screens */}
+          <Stack.Screen name="Inward" component={InwardWrapper} />
+          {isQaMenuEnabled() && (
+            <Stack.Screen name="UiShowcase" component={UiShowcaseWrapper} />
+          )}
+          <Stack.Screen name="PurchaseHistory" component={PurchaseHistoryWrapper} />
+          <Stack.Screen name="SalesStatement" component={SalesStatementWrapper} />
+          <Stack.Screen name="StockStatement" component={StockStatementWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </I18nextProvider>
   );
 }

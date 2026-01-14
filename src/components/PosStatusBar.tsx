@@ -26,7 +26,7 @@ type PosStatusBarProps = {
 };
 
 type StatusPopover = {
-  type: "network" | "printer" | "scanner";
+  type: "network" | "printer" | "scanner" | "camera";
   anchor: { x: number; y: number; width: number; height: number };
 };
 
@@ -59,6 +59,7 @@ export default function PosStatusBar({
   const networkRef = useRef<View>(null);
   const printerRef = useRef<View>(null);
   const scannerRef = useRef<View>(null);
+  const cameraRef = useRef<View>(null);
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
@@ -136,6 +137,11 @@ export default function PosStatusBar({
   const scannerIcon = scannerDetected ? "barcode-scan" : "barcode-off";
   const scannerLabel = scannerDetected ? "HID scanner connected" : "HID scanner not detected";
 
+  // DEV-059: Camera status split from scanner
+  const cameraReady = cameraAvailable === true;
+  const cameraIcon = cameraReady ? "camera" : "camera-off";
+  const cameraLabel = cameraReady ? "Camera available" : "Camera not available";
+
   const closePopover = useCallback(() => {
     setPopover(null);
   }, []);
@@ -148,7 +154,7 @@ export default function PosStatusBar({
       }
       setPopoverSize(null);
       const ref =
-        type === "network" ? networkRef : type === "printer" ? printerRef : scannerRef;
+        type === "network" ? networkRef : type === "printer" ? printerRef : type === "scanner" ? scannerRef : cameraRef;
       if (!ref.current) {
         setPopover({ type, anchor: { x: POPOVER_MARGIN, y: 0, width: 16, height: 16 } });
         return;
@@ -220,8 +226,17 @@ export default function PosStatusBar({
         icon: scannerIcon,
         tone: scannerDetected ? theme.colors.success : theme.colors.warning,
       },
+      {
+        id: "camera",
+        label: "Camera",
+        ok: cameraReady,
+        okLabel: "Available",
+        badLabel: "Not available",
+        icon: cameraIcon,
+        tone: cameraReady ? theme.colors.success : theme.colors.warning,
+      },
     ];
-  }, [networkConnected, networkIcon, printerReady, printerIcon, scannerDetected, scannerIcon]);
+  }, [networkConnected, networkIcon, printerReady, printerIcon, scannerDetected, scannerIcon, cameraReady, cameraIcon]);
 
   const popoverItem = useMemo(() => {
     if (!popover) return null;
@@ -314,6 +329,27 @@ export default function PosStatusBar({
               name={scannerIcon}
               size={iconSize}
               color={scannerDetected ? iconActiveColor : iconInactiveColor}
+            />
+          </Pressable>
+
+          <Pressable
+            ref={cameraRef}
+            collapsable={false}
+            focusable={false}
+            accessible
+            accessibilityLabel={cameraLabel}
+            accessibilityRole="button"
+            onPress={(e) => {
+              e.stopPropagation();
+              openPopover("camera");
+            }}
+            hitSlop={8}
+            style={styles.iconSlot}
+          >
+            <MaterialCommunityIcons
+              name={cameraIcon as any}
+              size={iconSize}
+              color={cameraReady ? iconActiveColor : iconInactiveColor}
             />
           </Pressable>
         </View>

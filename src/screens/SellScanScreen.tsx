@@ -20,7 +20,9 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
+import { AppText, ButtonText, PriceText, LabelText } from "../components/ui/AppText";
 import { useCartStore } from "../stores/cartStore";
 import type { CartItem } from "../stores/cartStore";
 import { useProductsStore } from "../stores/productsStore";
@@ -123,9 +125,10 @@ const NUM_COLUMNS = 2;
 const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
-const CART_SHEET_COLLAPSED_RATIO = 0.50;
-const CART_SHEET_COLLAPSED_RATIO_SMALL = 0.70;
-const CART_SHEET_EXPANDED_RATIO = 0.92;
+// DEV-061: Adjusted ratios for better visibility on handhelds
+const CART_SHEET_COLLAPSED_RATIO = 0.55;
+const CART_SHEET_COLLAPSED_RATIO_SMALL = 0.75;
+const CART_SHEET_EXPANDED_RATIO = 0.95;
 const CART_SHEET_SNAP_DURATION_MS = 180;
 const CART_LIST_FOOTER_SPACER = 100;
 const SMALL_SCREEN_WIDTH = 400;
@@ -458,7 +461,7 @@ function CartItemRow({
       {/* Row 1: Product name + badges + delete button */}
       <View style={styles.cartItemNameRow}>
         <View style={styles.cartItemNameSection}>
-          <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.cartItemName, isCompactRow && styles.cartItemNameCompact]} numberOfLines={1} ellipsizeMode="tail" maxFontSizeMultiplier={1.3}>
             {item.name}
           </Text>
           {enableRowPress ? (
@@ -481,12 +484,13 @@ function CartItemRow({
           style={[styles.removeItemButton, removeDisabled && styles.removeItemButtonDisabled]}
           onPress={handleRemove}
           disabled={removeDisabled}
+          hitSlop={6}
           accessibilityLabel={`Remove ${item.name}`}
         >
           <MaterialCommunityIcons
             name="trash-can-outline"
-            size={18}
-            color={theme.colors.error}
+            size={20}
+            color={removeDisabled ? theme.colors.textTertiary : theme.colors.error}
           />
         </Pressable>
       </View>
@@ -509,7 +513,7 @@ function CartItemRow({
               editable={canEdit}
             />
           ) : (
-            <Text style={styles.cartItemPriceText}>{unitPriceLabel}</Text>
+            <Text style={styles.cartItemPriceText} maxFontSizeMultiplier={1.2}>{unitPriceLabel}</Text>
           )}
         </View>
 
@@ -524,20 +528,22 @@ function CartItemRow({
             style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
             onPress={handleQtyDecrease}
             disabled={controlsDisabled}
+            hitSlop={8}
             accessibilityLabel={`Decrease ${item.name}`}
           >
-            <MaterialCommunityIcons name="minus" size={16} color={theme.colors.primary} />
+            <MaterialCommunityIcons name="minus" size={18} color={controlsDisabled ? theme.colors.textTertiary : theme.colors.primary} />
           </Pressable>
-          <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]}>
+          <Animated.Text style={[styles.qtyValue, { transform: [{ scale: qtyScale }] }]} maxFontSizeMultiplier={1.2}>
             {item.quantity}
           </Animated.Text>
           <Pressable
             style={[styles.qtyButton, controlsDisabled && styles.qtyButtonDisabled]}
             onPress={handleQtyIncrease}
             disabled={controlsDisabled}
+            hitSlop={8}
             accessibilityLabel={`Increase ${item.name}`}
           >
-            <MaterialCommunityIcons name="plus" size={16} color={theme.colors.primary} />
+            <MaterialCommunityIcons name="plus" size={18} color={controlsDisabled ? theme.colors.textTertiary : theme.colors.primary} />
           </Pressable>
         </Animated.View>
 
@@ -545,15 +551,15 @@ function CartItemRow({
         <View style={styles.cartItemTotalBox}>
           {hasItemDiscount ? (
             <>
-              <Text style={styles.cartItemOriginalPrice}>
+              <Text style={styles.cartItemOriginalPrice} maxFontSizeMultiplier={1.2}>
                 {formatMoney(lineSubtotal, currency)}
               </Text>
-              <Text style={[styles.cartItemDiscountedPrice, isFreeItem && styles.cartItemFreePrice]}>
+              <Text style={[styles.cartItemDiscountedPrice, isFreeItem && styles.cartItemFreePrice]} maxFontSizeMultiplier={1.2}>
                 {isFreeItem ? "FREE" : lineTotalLabel}
               </Text>
             </>
           ) : (
-            <Text style={styles.cartItemTotalText}>{lineTotalLabel}</Text>
+            <Text style={styles.cartItemTotalText} maxFontSizeMultiplier={1.2}>{lineTotalLabel}</Text>
           )}
         </View>
       </View>
@@ -590,6 +596,7 @@ export default function SellScanScreen({
   onSellOnboardingClose,
   isScanningActive = false,
 }: SellScanScreenProps) {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isSmallScreen = screenWidth <= SMALL_SCREEN_WIDTH || screenHeight <= SMALL_SCREEN_HEIGHT;
@@ -655,6 +662,7 @@ export default function SellScanScreen({
   const [sellOnboardingPrice, setSellOnboardingPrice] = useState("");
   const [sellOnboardingPurchasePrice, setSellOnboardingPurchasePrice] = useState("");
   const [sellOnboardingStock, setSellOnboardingStock] = useState("1");
+  const [sellOnboardingNameInput, setSellOnboardingNameInput] = useState("");
   const [sellOnboardingBusy, setSellOnboardingBusy] = useState(false);
   const [sellOnboardingError, setSellOnboardingError] = useState<string | null>(null);
   const [autoFocusItemId, setAutoFocusItemId] = useState<string | null>(null);
@@ -682,11 +690,13 @@ export default function SellScanScreen({
   const priceLogRef = useRef<Set<string>>(new Set());
   const sellOnboarding = sellOnboardingRequest ?? null;
   const sellOnboardingVisible = cartMode === "SELL" && Boolean(sellOnboarding);
-  const sellOnboardingName =
+  // DEV-070: Use editable name input, fallback to product data for display
+  const sellOnboardingDefaultName =
     sellOnboarding?.product.store_display_name?.trim() ||
     sellOnboarding?.product.global_name?.trim() ||
     sellOnboarding?.barcode ||
     "";
+  const sellOnboardingName = sellOnboardingNameInput.trim() || sellOnboardingDefaultName;
   const sellOnboardingPriceMinor = parsePriceInput(sellOnboardingPrice);
   const sellOnboardingPurchaseProvided = sellOnboardingPurchasePrice.trim().length > 0;
   const sellOnboardingPurchaseMinor = parsePriceInput(sellOnboardingPurchasePrice);
@@ -734,6 +744,12 @@ export default function SellScanScreen({
       sellOnboarding.product.purchase_price > 0
         ? sellOnboarding.product.purchase_price
         : null;
+    // DEV-070: Initialize editable name from product data
+    const existingName =
+      sellOnboarding.product.store_display_name?.trim() ||
+      sellOnboarding.product.global_name?.trim() ||
+      "";
+    setSellOnboardingNameInput(existingName);
     setSellOnboardingPrice(formatPriceInput(existingPrice));
     setSellOnboardingPurchasePrice(formatPriceInput(existingPurchase));
     setSellOnboardingStock("1");
@@ -931,6 +947,7 @@ export default function SellScanScreen({
     (force = false) => {
       if (sellOnboardingBusy && !force) return;
       setSellOnboardingError(null);
+      setSellOnboardingNameInput("");
       setSellOnboardingPrice("");
       setSellOnboardingPurchasePrice("");
       setSellOnboardingStock("1");
@@ -1004,6 +1021,17 @@ export default function SellScanScreen({
   const handleSellOnboardingPurchasePriceChange = useCallback(
     (value: string) => {
       setSellOnboardingPurchasePrice(value);
+      if (sellOnboardingError) {
+        setSellOnboardingError(null);
+      }
+    },
+    [sellOnboardingError]
+  );
+
+  // DEV-070: Handler for editable product name
+  const handleSellOnboardingNameChange = useCallback(
+    (value: string) => {
+      setSellOnboardingNameInput(value);
       if (sellOnboardingError) {
         setSellOnboardingError(null);
       }
@@ -1285,8 +1313,12 @@ export default function SellScanScreen({
     if (stockLimitEvent.itemId) {
       setStockLimitItemId(stockLimitEvent.itemId);
       setStockLimitPulse((prev) => prev + 1);
+      // DEV-063: Close editor if stock limit hit on edited item so user sees highlight
+      if (editorItem && editorItem.id === stockLimitEvent.itemId) {
+        setEditorItem(null);
+      }
     }
-  }, [stockLimitEvent]);
+  }, [stockLimitEvent, editorItem]);
 
     useEffect(() => {
       const lastMutation = mutationHistory[mutationHistory.length - 1];
@@ -1392,20 +1424,9 @@ export default function SellScanScreen({
     if (!editorItem) return;
     const nextQty = parseQuantityInput(editorQty);
 
-    // Validate stock - prevent saving qty that exceeds available stock
-    const maxStock = resolveStockForCartItem({
-      id: editorItem.id,
-      barcode: editorItem.barcode ?? null
-    });
-    if (maxStock !== null && nextQty > maxStock) {
-      ToastAndroid.show(
-        `Cannot exceed stock (${maxStock} available)`,
-        ToastAndroid.SHORT
-      );
-      return;
-    }
-
-    // Update quantity
+    // DEV-063: Let cartStore handle stock enforcement uniformly
+    // Stock cap check happens in updateQuantity via capRequestedQuantity
+    // This triggers stockLimitEvent which shows unified toast + red highlight
     updateQuantity(editorItem.id, nextQty);
 
     // Update sell price
@@ -1772,7 +1793,7 @@ export default function SellScanScreen({
           }}
           onKeyPress={handleAddKeyPress}
           onSubmitEditing={handleAddSubmitEditing}
-          placeholder="Search product"
+          placeholder={t('sell.searchProducts')}
           placeholderTextColor="#000000"
           autoCapitalize="none"
           autoCorrect={false}
@@ -1809,7 +1830,7 @@ export default function SellScanScreen({
         <MaterialCommunityIcons name="camera" size={18} color={theme.colors.textInverse} />
         {variant === "collapsed" ? (
           <Text style={styles.scanSegmentText} numberOfLines={1}>
-            Scan product here
+            {t('sell.scanProduct')}
           </Text>
         ) : null}
       </Pressable>
@@ -1825,7 +1846,7 @@ export default function SellScanScreen({
         onTouchStart={() => markAddInteraction()}
       >
         <Text style={styles.searchPanelTitle}>
-          {addQuery.trim() ? "Search results" : "Recent products"}
+          {addQuery.trim() ? t('sell.searchResults') : t('sell.recentProducts')}
         </Text>
         <FlatList
           data={addResults}
@@ -1837,7 +1858,7 @@ export default function SellScanScreen({
             !addLoading ? (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>
-                  {addQuery.trim() ? "No matches found." : "No recent products."}
+                  {addQuery.trim() ? t('common.noResults') : t('sell.noRecentProducts')}
                 </Text>
               </View>
             ) : null
@@ -1892,7 +1913,7 @@ export default function SellScanScreen({
         ListEmptyComponent={
           !catalogLoading ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No SKUs</Text>
+              <Text style={styles.emptyText}>{t('sell.noRecentProducts')}</Text>
             </View>
           ) : null
         }
@@ -1942,7 +1963,7 @@ export default function SellScanScreen({
               </Text>
               {locked ? (
                 <View style={styles.cartBarLocked}>
-                  <Text style={styles.cartBarLockedText}>Locked</Text>
+                  <LabelText style={styles.cartBarLockedText}>{t("sell.cartLocked", "Locked")}</LabelText>
                 </View>
               ) : null}
             </View>
@@ -1952,13 +1973,13 @@ export default function SellScanScreen({
               </Text>
               {undoVisible && !locked ? (
                 <Pressable onPress={handleUndo} hitSlop={8}>
-                  <Text style={styles.cartBarUndo}>Undo</Text>
+                  <ButtonText style={styles.cartBarUndo}>{t("common.undo", "Undo")}</ButtonText>
                 </Pressable>
               ) : null}
             </View>
           </View>
           <View style={styles.cartBarRight}>
-            <Text style={styles.cartBarTotal}>{totalLabel}</Text>
+            <PriceText style={styles.cartBarTotal}>{totalLabel}</PriceText>
             <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.primary} />
           </View>
         </Pressable>
@@ -2010,9 +2031,9 @@ export default function SellScanScreen({
                     clearCart();
                   }}
                   hitSlop={8}
-                  accessibilityLabel="Clear cart"
+                  accessibilityLabel={t("sell.clearCart", "Clear cart")}
                 >
-                  <Text style={styles.clearCartText}>Clear</Text>
+                  <ButtonText style={styles.clearCartText}>{t("common.clear", "Clear")}</ButtonText>
                 </Pressable>
               ) : null}
             </View>
@@ -2029,7 +2050,7 @@ export default function SellScanScreen({
               }
               ListEmptyComponent={
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyText}>Cart empty</Text>
+                  <AppText style={styles.emptyText}>{t("sell.cartEmpty", "Cart empty")}</AppText>
                 </View>
               }
               removeClippedSubviews
@@ -2040,7 +2061,7 @@ export default function SellScanScreen({
               keyboardShouldPersistTaps="handled"
             />
 
-            <View style={[styles.cartFooter, isSmallScreen && styles.cartFooterCompact]}>
+            <View style={[styles.cartFooter, isSmallScreen && styles.cartFooterCompact, { paddingBottom: 8 + insets.bottom }]}>
               <View style={[styles.discountSection, isSmallScreen && styles.discountSectionCompact]}>
                 <View style={styles.discountHeader}>
                   <Text style={styles.discountTitle}>Discount</Text>
@@ -2107,18 +2128,18 @@ export default function SellScanScreen({
 
               <View style={[styles.cartTotals, isSmallScreen && styles.cartTotalsCompact]}>
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Subtotal</Text>
-                  <Text style={styles.totalValue}>{subtotalLabel}</Text>
+                  <AppText style={styles.totalLabel}>{t("sell.subtotal", "Subtotal")}</AppText>
+                  <PriceText style={styles.totalValue}>{subtotalLabel}</PriceText>
                 </View>
                 {discountTotal ? (
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Discount</Text>
-                    <Text style={styles.totalValue}>-{discountAmountLabel}</Text>
+                    <AppText style={styles.totalLabel}>{t("sell.discount", "Discount")}</AppText>
+                    <PriceText style={styles.totalValue}>-{discountAmountLabel}</PriceText>
                   </View>
                 ) : null}
                 <View style={[styles.totalRow, styles.totalRowEmphasis]}>
-                  <Text style={styles.totalLabelStrong}>Total</Text>
-                  <Text style={styles.totalValueStrong}>{totalLabel}</Text>
+                  <AppText style={styles.totalLabelStrong} bold>{t("sell.total", "Total")}</AppText>
+                  <PriceText style={styles.totalValueStrong}>{totalLabel}</PriceText>
                 </View>
               </View>
 
@@ -2126,10 +2147,10 @@ export default function SellScanScreen({
                 style={[styles.totalCta, isSmallScreen && styles.totalCtaCompact, !canPay && styles.ctaDisabled]}
                 onPress={handleCheckout}
                 disabled={!canPay}
-                accessibilityLabel="Total bill"
+                accessibilityLabel={t("sell.checkout", "Checkout")}
               >
-                <Text style={styles.totalCtaText}>Checkout</Text>
-                <Text style={styles.totalCtaAmount}>{totalLabel}</Text>
+                <ButtonText style={styles.totalCtaText}>{t("sell.checkout", "Checkout")}</ButtonText>
+                <PriceText style={styles.totalCtaAmount}>{totalLabel}</PriceText>
               </Pressable>
             </View>
           </Animated.View>
@@ -2152,21 +2173,26 @@ export default function SellScanScreen({
             <View style={styles.onboardingHandle} />
             <View style={styles.onboardingHeader}>
               <Text style={styles.onboardingTitle}>New product</Text>
-              {sellOnboardingName ? (
-                <Text
-                  style={styles.onboardingSubtitle}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {sellOnboardingName}
-                </Text>
-              ) : null}
               {sellOnboarding?.barcode ? (
                 <Text style={styles.onboardingBarcode}>{sellOnboarding.barcode}</Text>
               ) : null}
             </View>
 
             <View style={styles.onboardingFields}>
+              {/* DEV-070: Editable product name field */}
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Product name</Text>
+                <TextInput
+                  style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
+                  value={sellOnboardingNameInput}
+                  onChangeText={handleSellOnboardingNameChange}
+                  placeholder="Enter product name"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!sellOnboardingBusy}
+                />
+              </View>
               <View style={styles.onboardingField}>
                 <Text style={styles.onboardingLabel}>Sell price</Text>
                 <TextInput
@@ -3066,8 +3092,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   qtyButton: {
-    width: 30,
-    height: 30,
+    width: 34,
+    height: 34,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: theme.colors.primary,
@@ -3080,9 +3106,9 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   qtyValue: {
-    minWidth: 18,
+    minWidth: 24,
     textAlign: "center",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
@@ -3126,7 +3152,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.errorSoft,
     backgroundColor: theme.colors.errorSoft,
-    padding: 6,
+    padding: 8,
   },
   removeItemButtonDisabled: {
     opacity: 0.4,

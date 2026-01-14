@@ -1,9 +1,23 @@
+import i18n from '../i18n';
+
 export type MoneyCurrency = string;
 
 export function minorToMajor(minor: number, fractionDigits = 2): number {
   const parsed = Number(minor);
   if (!Number.isFinite(parsed)) return 0;
   return parsed / Math.pow(10, fractionDigits);
+}
+
+/**
+ * Get the locale for formatting based on currency and i18n language
+ * For INR, we always use Indian locale (en-IN or hi-IN) for proper lakhs/crores grouping
+ */
+function getFormattingLocale(currency: string): string {
+  const lang = i18n.language || 'en';
+  if (currency === 'INR') {
+    return lang === 'hi' ? 'hi-IN' : 'en-IN';
+  }
+  return lang === 'hi' ? 'hi' : 'en-US';
 }
 
 const formatGrouped = (value: string): string => {
@@ -32,7 +46,7 @@ export function formatMoney(minor: number, currency: MoneyCurrency = "INR", frac
   const major = minorToMajor(safeMinor, fractionDigits);
   if (typeof Intl !== "undefined" && typeof Intl.NumberFormat === "function") {
     try {
-      const locale = currency === "INR" ? "en-IN" : "en-US";
+      const locale = getFormattingLocale(currency);
       return new Intl.NumberFormat(locale, {
         style: "currency",
         currency,

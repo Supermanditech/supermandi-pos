@@ -1,3 +1,17 @@
+/**
+ * @deprecated UIVIS-005 - This screen is DEPRECATED and no longer in use.
+ * Superseded by BuyScreen.tsx which uses the supplier catalog (V3.0.9 compliant).
+ *
+ * This file is kept for reference only. DO NOT import or use this component.
+ *
+ * Reason for deprecation:
+ * - PurchaseScreen was the old purchase draft flow
+ * - BuyScreen is the new V3 flow that reads from supplier catalog
+ * - BOUNDARY-001 compliance: BUY must not create store_products until GRN
+ *
+ * Quarantined: 2026-01-14
+ */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
