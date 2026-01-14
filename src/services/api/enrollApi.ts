@@ -1,12 +1,15 @@
 import { apiClient, ApiError } from "./apiClient";
 import { API_BASE_URL } from "../../config/api";
-import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// DEV-071: Device enrollment with multi-use codes and idempotent enrollment support
 
 export type DeviceEnrollResponse = {
   deviceId: string;
   storeId: string;
   deviceToken: string;
   storeActive: boolean;
+  reEnrolled?: boolean;
 };
 
 export type DeviceMeta = {
@@ -17,29 +20,46 @@ export type DeviceMeta = {
   label?: string | null;
   printingMode?: string | null;
   deviceType?: string | null;
+  deviceFingerprint?: string | null;
 };
 
-// Generate a unique device ID
-function generateDeviceId(): string {
-  return "dev_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+// DEV-071: Generate or retrieve persistent device fingerprint for idempotent enrollment
+const FINGERPRINT_KEY = "supermandi.device_fingerprint";
+
+async function getOrCreateDeviceFingerprint(): Promise<string> {
+  let fingerprint = await AsyncStorage.getItem(FINGERPRINT_KEY);
+  if (!fingerprint) {
+    // Generate a stable fingerprint (UUID-like)
+    fingerprint = "fp_" + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    await AsyncStorage.setItem(FINGERPRINT_KEY, fingerprint);
+  }
+  return fingerprint;
 }
 
 export async function enrollDevice(input: {
   enrollmentCode: string;
   deviceMeta?: DeviceMeta;
 }): Promise<DeviceEnrollResponse> {
-  // Build request body - field names match backend exactly
+  // DEV-071: Get persistent device fingerprint for idempotent enrollment
+  const deviceFingerprint = await getOrCreateDeviceFingerprint();
+
+  // Build request body with BOTH field names for backward/forward compatibility
+  // - Old servers expect: enrollmentCode
+  // - New servers expect: code
+  // Send both until all servers are upgraded (safe to remove enrollmentCode after v3.1)
   const requestBody = {
-    enrollmentCode: input.enrollmentCode,
-    deviceId: generateDeviceId(),
-    deviceType: input.deviceMeta?.deviceType || Platform.OS || "android",
-    deviceLabel: input.deviceMeta?.label || "POS Device",
+    code: input.enrollmentCode,
+    enrollmentCode: input.enrollmentCode, // backward compat with old servers
+    deviceMeta: {
+      ...input.deviceMeta,
+      deviceFingerprint,
+    },
   };
 
   try {
     console.log("[enrollDevice] Calling gateway:", API_BASE_URL);
     const response = await apiClient.post<DeviceEnrollResponse>("/api/v1/pos/enroll", requestBody);
-    console.log("[enrollDevice] Success:", response.deviceId, response.storeId);
+    console.log("[enrollDevice] Success:", response.deviceId, response.storeId, response.reEnrolled ? "(re-enrolled)" : "");
     return response;
   } catch (error) {
     // Log detailed error for debugging

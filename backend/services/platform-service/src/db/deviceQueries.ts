@@ -34,6 +34,9 @@ export interface DeviceEnrollment extends BaseEntity {
   usedAt?: string;
   usedDeviceId?: string;
   revokedAt?: string;
+  // DEV-071: Multi-use support
+  maxUses: number;
+  usesCount: number;
 }
 
 // =============================================================================
@@ -127,28 +130,47 @@ export function hashEnrollmentCode(code: string): string {
   return crypto.createHash('sha256').update(code.toUpperCase()).digest('hex');
 }
 
+// DEV-071: Check if demo mode is enabled
+function isDemoMultiUseAllowed(): boolean {
+  return process.env.ALLOW_DEMO_MULTIUSE === 'true';
+}
+
 export async function createEnrollment(input: {
   storeId: string;
   expiresInMinutes?: number;
   label?: string;
+  maxUses?: number;
+  isDemo?: boolean;
 }): Promise<DeviceEnrollment & { code: string }> {
-  const code = generateEnrollmentCode();
+  // DEV-071: Demo codes get SM-DEMO prefix and can have higher max_uses
+  const isDemo = input.isDemo === true;
+  const code = isDemo ? `SM-DEMO${generateEnrollmentCode().slice(3)}` : generateEnrollmentCode();
   const codeHash = hashEnrollmentCode(code);
   const expiresInMinutes = Math.min(input.expiresInMinutes || 10, 60); // Max 60 minutes
 
+  // DEV-071: Multi-use logic
+  // - Demo codes can have max_uses up to 100 when ALLOW_DEMO_MULTIUSE=true
+  // - Regular codes are always single-use (max_uses=1)
+  let maxUses = 1;
+  if (isDemo && isDemoMultiUseAllowed()) {
+    maxUses = Math.min(input.maxUses || 10, 100); // Default 10, max 100 for demo
+  }
+
   const rows = await query<DeviceEnrollment>(
     `INSERT INTO public.pos_device_enrollments (
-      store_id, code, enrollment_code_hash, label, expires_at
-    ) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '${expiresInMinutes} minutes')
+      store_id, code, enrollment_code_hash, label, expires_at, max_uses, uses_count
+    ) VALUES ($1, $2, $3, $4, NOW() + INTERVAL '${expiresInMinutes} minutes', $5, 0)
     RETURNING
       id, store_id as "storeId", code, label,
       enrollment_code_hash as "enrollmentCodeHash",
       expires_at as "expiresAt",
       used_at as "usedAt",
       used_device_id as "usedDeviceId",
+      COALESCE(max_uses, 1) as "maxUses",
+      COALESCE(uses_count, 0) as "usesCount",
       created_at as "createdAt",
       updated_at as "updatedAt"`,
-    [input.storeId, code, codeHash, input.label || null]
+    [input.storeId, code, codeHash, input.label || null, maxUses]
   );
 
   return { ...rows[0], code };
@@ -163,6 +185,8 @@ export async function getEnrollmentsForStore(storeId: string): Promise<DeviceEnr
       used_at as "usedAt",
       used_device_id as "usedDeviceId",
       revoked_at as "revokedAt",
+      COALESCE(max_uses, 1) as "maxUses",
+      COALESCE(uses_count, 0) as "usesCount",
       created_at as "createdAt",
       updated_at as "updatedAt"
     FROM public.pos_device_enrollments
@@ -182,6 +206,8 @@ export async function getEnrollmentById(id: string): Promise<DeviceEnrollment | 
       used_at as "usedAt",
       used_device_id as "usedDeviceId",
       revoked_at as "revokedAt",
+      COALESCE(max_uses, 1) as "maxUses",
+      COALESCE(uses_count, 0) as "usesCount",
       created_at as "createdAt",
       updated_at as "updatedAt"
     FROM public.pos_device_enrollments

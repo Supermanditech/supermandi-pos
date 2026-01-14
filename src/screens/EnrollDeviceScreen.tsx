@@ -49,7 +49,58 @@ const PRINTING_MODES: Array<{ value: PrintingMode; label: string }> = [
   { value: "NONE", label: "None" }
 ];
 
+// DEV-071: Error codes from backend (uppercase with underscores)
 const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> = {
+  // 400 Bad Request errors
+  CODE_REQUIRED: { message: "Enter or scan an enrollment code." },
+  LABEL_REQUIRED: { message: "Enter a device label (e.g., Counter-1)." },
+  DEVICE_TYPE_REQUIRED: { message: "Select a valid device type." },
+  DEVICE_TYPE_INVALID: { message: "Select a valid device type." },
+  PRINTING_MODE_INVALID: { message: "Select a valid printing mode." },
+  ENROLLMENT_CODE_INVALID: {
+    message: "Enrollment code is invalid.",
+    hint: "Check the code and try again, or ask your SuperAdmin for a new code."
+  },
+
+  // 409 Conflict errors (code state issues)
+  ENROLLMENT_CODE_EXPIRED: {
+    message: "This enrollment code has expired.",
+    hint: "Ask your SuperAdmin to generate a new enrollment code."
+  },
+  ENROLLMENT_CODE_USED: {
+    message: "This enrollment code has already been used.",
+    hint: "Ask your SuperAdmin to generate a new enrollment code."
+  },
+  ENROLLMENT_CODE_REVOKED: {
+    message: "This enrollment code has been revoked.",
+    hint: "Ask your SuperAdmin to generate a new enrollment code."
+  },
+
+  // 404 Not Found errors
+  STORE_NOT_FOUND: {
+    message: "Store not found for this enrollment code.",
+    hint: "Verify the code with your SuperAdmin."
+  },
+
+  // 503 Service Unavailable
+  DATABASE_UNAVAILABLE: {
+    message: "Server database unavailable.",
+    hint: "Wait a minute and try again."
+  },
+
+  // 500 Internal Server Error
+  ENROLLMENT_FAILED: {
+    message: "Server could not enroll the device.",
+    hint: "Try again. If the problem persists, contact support."
+  },
+
+  // Rate limiting (429)
+  ENROLLMENT_RATE_LIMITED: {
+    message: "Too many enrollment attempts.",
+    hint: "Please wait 15 minutes before trying again."
+  },
+
+  // Legacy error codes (for backwards compatibility)
   enrollment_invalid: {
     message: "Enrollment code is invalid or expired.",
     hint: "Contact your SuperAdmin for a new enrollment code."
@@ -70,23 +121,8 @@ const ENROLL_ERROR_MESSAGES: Record<string, { message: string; hint?: string }> 
     message: "This label is already active.",
     hint: "Ask your SuperAdmin to reset the device token or use a different label."
   },
-  "label is required": { message: "Enter a device label (e.g., Counter-1)." },
-  "deviceType is required": { message: "Select a valid device type." },
-  "deviceType invalid": { message: "Select a valid device type." },
-  "printingMode invalid": { message: "Select a valid printing mode." },
-  "code is required": { message: "Enter or scan an enrollment code." },
-  "store not found": {
-    message: "Store not found for this enrollment code.",
-    hint: "Verify the code with your SuperAdmin."
-  },
-  "database unavailable": {
-    message: "Server database unavailable.",
-    hint: "Wait a minute and try again."
-  },
-  enrollment_failed: {
-    message: "Server could not enroll the device.",
-    hint: "Try again. If the problem persists, contact support."
-  },
+
+  // Network errors
   network_error: {
     message: "Could not connect to the server.",
     hint: "Check your internet connection and try again."
@@ -191,6 +227,11 @@ export default function EnrollDeviceScreen() {
 
     setLoading(true);
     try {
+      // DEV-071: Debug logging for enrollment payload
+      if (__DEV__) {
+        console.log("[Enroll] Payload:", { enrollmentCode, deviceMeta });
+      }
+
       const previousSession = await getDeviceSession();
       const previousStoreId = previousSession?.storeId ?? null;
       const res = await enrollDevice({ enrollmentCode, deviceMeta });

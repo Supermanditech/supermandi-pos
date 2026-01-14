@@ -279,6 +279,7 @@ router.post(
 /**
  * POST /admin/stores/:storeId/device-enrollments
  * Create a new enrollment code for a store
+ * DEV-071: Support isDemo and maxUses for multi-use enrollment codes
  */
 router.post(
   '/stores/:storeId/device-enrollments',
@@ -297,15 +298,19 @@ router.post(
       );
     }
 
-    const { expiresInMinutes, label } = req.body as {
+    const { expiresInMinutes, label, isDemo, maxUses } = req.body as {
       expiresInMinutes?: number;
       label?: string;
+      isDemo?: boolean;
+      maxUses?: number;
     };
 
     const enrollment = await createEnrollment({
       storeId: req.params.storeId,
       expiresInMinutes,
       label,
+      isDemo,
+      maxUses,
     });
 
     res.status(201).json({
@@ -315,6 +320,8 @@ router.post(
         code: enrollment.code,
         storeId: enrollment.storeId,
         expiresAt: enrollment.expiresAt,
+        maxUses: enrollment.maxUses,
+        usesCount: enrollment.usesCount,
         qrPayload: `supermandi://enroll?code=${enrollment.code}`,
       },
     });
@@ -324,6 +331,7 @@ router.post(
 /**
  * GET /admin/stores/:storeId/device-enrollments
  * List enrollment codes for a store
+ * DEV-071: Include maxUses, usesCount for multi-use code visibility
  */
 router.get(
   '/stores/:storeId/device-enrollments',
@@ -337,22 +345,36 @@ router.get(
 
     res.json({
       success: true,
-      data: enrollments.map((e) => ({
-        id: e.id,
-        code: e.code,
-        label: e.label,
-        expiresAt: e.expiresAt,
-        usedAt: e.usedAt,
-        revokedAt: e.revokedAt,
-        status: e.usedAt
-          ? 'used'
-          : e.revokedAt
-            ? 'revoked'
-            : new Date(e.expiresAt) < new Date()
-              ? 'expired'
-              : 'pending',
-        createdAt: e.createdAt,
-      })),
+      data: enrollments.map((e) => {
+        // DEV-071: Status calculation for multi-use codes
+        const isExpired = new Date(e.expiresAt) < new Date();
+        const isFullyUsed = e.usesCount >= e.maxUses;
+        let status: string;
+        if (e.revokedAt) {
+          status = 'revoked';
+        } else if (isFullyUsed) {
+          status = 'used';
+        } else if (isExpired) {
+          status = 'expired';
+        } else if (e.usesCount > 0) {
+          status = 'partially_used';
+        } else {
+          status = 'pending';
+        }
+
+        return {
+          id: e.id,
+          code: e.code,
+          label: e.label,
+          expiresAt: e.expiresAt,
+          usedAt: e.usedAt,
+          revokedAt: e.revokedAt,
+          maxUses: e.maxUses,
+          usesCount: e.usesCount,
+          status,
+          createdAt: e.createdAt,
+        };
+      }),
     });
   })
 );

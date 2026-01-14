@@ -38,10 +38,18 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   const parsed = text ? (JSON.parse(text) as unknown) : undefined;
 
   if (!res.ok) {
-    const message =
-      (parsed && typeof parsed === "object" && parsed !== null && "error" in parsed && typeof (parsed as any).error === "string"
-        ? (parsed as any).error
-        : `Request failed (${res.status})`);
+    // DEV-071: Handle structured error format { error: { code, message } } or { error: "string" }
+    let message = `Request failed (${res.status})`;
+    if (parsed && typeof parsed === "object" && parsed !== null && "error" in parsed) {
+      const errorField = (parsed as any).error;
+      if (typeof errorField === "string") {
+        // Legacy format: { error: "string" }
+        message = errorField;
+      } else if (typeof errorField === "object" && errorField !== null && "code" in errorField) {
+        // New format: { error: { code: "...", message: "..." } }
+        message = errorField.code;
+      }
+    }
     if (message === "device_unauthorized") {
       await clearDeviceSession();
     }

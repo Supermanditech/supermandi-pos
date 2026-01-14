@@ -3,13 +3,15 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 
+// DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
+
 // Rate limiter for enrollment endpoint to prevent brute force attacks
 const enrollmentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Maximum 10 enrollment attempts per IP
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "enrollment_rate_limited", message: "Too many enrollment attempts. Please try again in 15 minutes." }
+  message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please try again in 15 minutes." } }
 });
 
 export const posEnrollRouter = Router();
@@ -22,6 +24,7 @@ type DeviceMeta = {
   label?: unknown;
   printingMode?: unknown;
   deviceType?: unknown;
+  deviceFingerprint?: unknown;
 };
 
 function asTrimmedString(value: unknown): string | null {
@@ -39,11 +42,31 @@ function normalizeEnum(value: string | null): string | null {
   return value ? value.trim().toUpperCase() : null;
 }
 
+// Check if code is a demo code (SM-DEMO prefix)
+function isDemoCode(code: string): boolean {
+  return code.toUpperCase().startsWith("SM-DEMO");
+}
+
+// Check if multi-use demo codes are allowed
+function isMultiUseDemoAllowed(): boolean {
+  return process.env.ALLOW_DEMO_MULTIUSE === "true";
+}
+
 // POST /api/v1/pos/enroll (with rate limiting to prevent brute force)
 posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
-  const code = asTrimmedString(req.body?.code)?.toUpperCase();
+  // DEV-071: Accept both field names for backward/forward compatibility during rollout
+  // - Old clients send: enrollmentCode
+  // - New clients send: code
+  const rawCode = req.body?.code ?? req.body?.enrollmentCode ?? req.body?.enrollment_code;
+  const code = asTrimmedString(rawCode)?.toUpperCase();
+
+  // Dev logging to debug field name issues
+  if (process.env.NODE_ENV !== "production" && !code) {
+    console.log("[Enroll] Request body keys:", Object.keys(req.body || {}));
+  }
+
   if (!code) {
-    return res.status(400).json({ error: "code is required" });
+    return res.status(400).json({ error: { code: "CODE_REQUIRED", message: "Enrollment code is required" } });
   }
 
   const meta = (req.body?.deviceMeta ?? {}) as DeviceMeta;
@@ -54,32 +77,43 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
   const model = asTrimmedString(meta.model);
   const androidVersion = asTrimmedString(meta.androidVersion);
   const printingMode = normalizeEnum(asTrimmedString(meta.printingMode)) ?? "NONE";
+  const deviceFingerprint = asTrimmedString(meta.deviceFingerprint);
 
   if (!label) {
-    return res.status(400).json({ error: "label is required" });
+    return res.status(400).json({ error: { code: "LABEL_REQUIRED", message: "Device label is required" } });
   }
   if (!deviceType) {
-    return res.status(400).json({ error: "deviceType is required" });
+    return res.status(400).json({ error: { code: "DEVICE_TYPE_REQUIRED", message: "Device type is required" } });
   }
   if (!DEVICE_TYPES.has(deviceType)) {
-    return res.status(400).json({ error: "deviceType invalid" });
+    return res.status(400).json({ error: { code: "DEVICE_TYPE_INVALID", message: "Device type must be OEM_HANDHELD, SUPMANDI_PHONE, or RETAILER_PHONE" } });
   }
   if (!PRINTING_MODES.has(printingMode)) {
-    return res.status(400).json({ error: "printingMode invalid" });
+    return res.status(400).json({ error: { code: "PRINTING_MODE_INVALID", message: "Printing mode must be DIRECT_ESC_POS, SHARE_TO_PRINTER_APP, or NONE" } });
   }
 
   const pool = getPool();
-  if (!pool) return res.status(503).json({ error: "database unavailable" });
+  if (!pool) return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Database service unavailable" } });
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
+    // Fetch enrollment with row lock, including multi-use columns
     const enrollmentRes = await client.query(
       `
-      SELECT code, store_id, expires_at, used_at
-      FROM pos_device_enrollments
-      WHERE code = $1
+      SELECT
+        e.id as enrollment_id,
+        e.code,
+        e.store_id,
+        e.expires_at,
+        e.used_at,
+        e.used_device_id,
+        e.revoked_at,
+        COALESCE(e.max_uses, 1) as max_uses,
+        COALESCE(e.uses_count, CASE WHEN e.used_at IS NOT NULL THEN 1 ELSE 0 END) as uses_count
+      FROM pos_device_enrollments e
+      WHERE e.code = $1
       FOR UPDATE
       `,
       [code]
@@ -88,19 +122,26 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
     const enrollment = enrollmentRes.rows[0];
     if (!enrollment) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ error: "enrollment_invalid" });
+      return res.status(400).json({ error: { code: "ENROLLMENT_CODE_INVALID", message: "Enrollment code not found" } });
     }
 
-    const storeRes = await client.query(`SELECT id, active FROM stores WHERE id = $1`, [enrollment.store_id]);
+    // Check if code is revoked
+    if (enrollment.revoked_at) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ error: { code: "ENROLLMENT_CODE_REVOKED", message: "This enrollment code has been revoked" } });
+    }
+
+    const storeRes = await client.query(`SELECT id, active, is_demo FROM stores WHERE id = $1`, [enrollment.store_id]);
     const store = storeRes.rows[0];
     if (!store) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ error: "store not found" });
+      return res.status(404).json({ error: { code: "STORE_NOT_FOUND", message: "Store not found" } });
     }
 
+    // Check for existing device by label (same store)
     const existingDeviceRes = await client.query(
       `
-      SELECT id, device_token
+      SELECT id, device_token, device_fingerprint, enrollment_id
       FROM pos_devices
       WHERE store_id = $1
         AND lower(label) = lower($2)
@@ -108,18 +149,71 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
       `,
       [enrollment.store_id, label]
     );
+    const existingDeviceByLabel = existingDeviceRes.rows[0];
 
-    const existingDevice = existingDeviceRes.rows[0];
-    const wasUsed = Boolean(enrollment.used_at);
-    const expiresAt = new Date(enrollment.expires_at);
-    const isExpired = !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
-
-    // Allow re-enrollment for existing devices even if the code was used or expired.
-    if ((wasUsed || isExpired) && !existingDevice) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ error: "enrollment_invalid" });
+    // DEV-071: Check for existing device by fingerprint (idempotent enrollment)
+    let existingDeviceByFingerprint = null;
+    if (deviceFingerprint) {
+      const fingerprintRes = await client.query(
+        `
+        SELECT id, device_token, label, enrollment_id
+        FROM pos_devices
+        WHERE store_id = $1
+          AND device_fingerprint = $2
+        LIMIT 1
+        `,
+        [enrollment.store_id, deviceFingerprint]
+      );
+      existingDeviceByFingerprint = fingerprintRes.rows[0];
     }
 
+    const expiresAt = new Date(enrollment.expires_at);
+    const isExpired = !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
+    const maxUses = enrollment.max_uses;
+    const usesCount = enrollment.uses_count;
+    const usesExhausted = usesCount >= maxUses;
+
+    // Determine if this is a re-enrollment scenario
+    const existingDevice = existingDeviceByLabel || existingDeviceByFingerprint;
+
+    // DEV-071: Idempotent enrollment - if same device (by fingerprint) used this code before, return success
+    if (existingDeviceByFingerprint && existingDeviceByFingerprint.enrollment_id === enrollment.enrollment_id) {
+      // Same device re-enrolling with same code - idempotent success
+      await client.query("COMMIT");
+      console.log(`[Enroll] Idempotent re-enrollment for device ${existingDeviceByFingerprint.id}`);
+      return res.json({
+        deviceId: existingDeviceByFingerprint.id,
+        storeId: store.id,
+        deviceToken: existingDeviceByFingerprint.device_token,
+        storeActive: Boolean(store.active),
+        reEnrolled: true
+      });
+    }
+
+    // Check if code can be used
+    if (usesExhausted && !existingDevice) {
+      // Code fully used by other device(s), and this is a new device
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: {
+          code: "ENROLLMENT_CODE_USED",
+          message: "This enrollment code has already been used. Ask your SuperAdmin to generate a new code."
+        }
+      });
+    }
+
+    if (isExpired && !existingDevice) {
+      // Code expired and this is a new device
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: {
+          code: "ENROLLMENT_CODE_EXPIRED",
+          message: "This enrollment code has expired. Ask your SuperAdmin to generate a new code."
+        }
+      });
+    }
+
+    // Allow re-enrollment for existing devices even with expired/used code (for device recovery)
     const deviceId = existingDevice?.id ?? randomUUID();
     let deviceToken = generateDeviceToken();
     let inserted = false;
@@ -127,6 +221,7 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
         if (existingDevice) {
+          // Update existing device with new token and metadata
           await client.query(
             `
             UPDATE pos_devices
@@ -138,9 +233,11 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
                 android_version = $6,
                 app_version = $7,
                 printing_mode = $8,
+                device_fingerprint = COALESCE($9, device_fingerprint),
+                enrollment_id = COALESCE(enrollment_id, $10),
                 last_seen_online = NOW(),
                 updated_at = NOW()
-            WHERE id = $9
+            WHERE id = $11
             `,
             [
               deviceToken,
@@ -151,10 +248,13 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
               androidVersion,
               appVersion,
               printingMode,
+              deviceFingerprint,
+              enrollment.enrollment_id,
               deviceId
             ]
           );
         } else {
+          // Insert new device
           await client.query(
             `
             INSERT INTO pos_devices (
@@ -168,10 +268,12 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
               android_version,
               app_version,
               printing_mode,
+              device_fingerprint,
+              enrollment_id,
               last_seen_online,
               updated_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
             `,
             [
               deviceId,
@@ -183,7 +285,9 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
               model,
               androidVersion,
               appVersion,
-              printingMode
+              printingMode,
+              deviceFingerprint,
+              enrollment.enrollment_id
             ]
           );
         }
@@ -191,6 +295,7 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
         break;
       } catch (error: any) {
         if (error?.code === "23505") {
+          // Token collision, retry with new token
           deviceToken = generateDeviceToken();
           continue;
         }
@@ -202,24 +307,37 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
       throw new Error("device insert failed");
     }
 
-    if (!wasUsed) {
+    // DEV-071: Atomically increment uses_count for new enrollments (not re-enrollments)
+    if (!existingDevice) {
       await client.query(
-        `UPDATE pos_device_enrollments SET used_at = NOW() WHERE code = $1`,
-        [code]
+        `
+        UPDATE pos_device_enrollments
+        SET
+          used_at = COALESCE(used_at, NOW()),
+          used_device_id = COALESCE(used_device_id, $2),
+          uses_count = COALESCE(uses_count, 0) + 1,
+          updated_at = NOW()
+        WHERE code = $1
+        `,
+        [code, deviceId]
       );
     }
 
     await client.query("COMMIT");
 
+    console.log(`[Enroll] Device ${deviceId} enrolled with code ${code} (uses: ${usesCount + 1}/${maxUses})`);
+
     return res.json({
       deviceId,
       storeId: store.id,
       deviceToken,
-      storeActive: Boolean(store.active)
+      storeActive: Boolean(store.active),
+      reEnrolled: Boolean(existingDevice)
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    return res.status(500).json({ error: "enrollment_failed" });
+    console.error("[Enroll] Error:", error);
+    return res.status(500).json({ error: { code: "ENROLLMENT_FAILED", message: "Enrollment failed. Please try again." } });
   } finally {
     client.release();
   }
