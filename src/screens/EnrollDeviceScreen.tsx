@@ -21,7 +21,7 @@ import { getDeviceSession, saveDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme } from "../theme";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
 import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
@@ -323,6 +323,44 @@ export default function EnrollDeviceScreen() {
             {loading ? "Enrolling..." : "Enroll Device"}
           </Text>
         </Pressable>
+
+        {/* DEV-only Test Store Shortcuts */}
+        {__DEV__ && (
+          <View style={styles.devSection}>
+            <Text style={styles.devSectionLabel}>DEV MODE</Text>
+
+            <View style={styles.devInfoRow}>
+              <Text style={styles.devInfoLabel}>API:</Text>
+              <Text style={styles.devInfoValue} numberOfLines={1}>{API_BASE_URL}</Text>
+            </View>
+
+            <View style={styles.devInfoRow}>
+              <Text style={styles.devInfoLabel}>Build:</Text>
+              <Text style={styles.devInfoValue}>{BUILD_INFO.gitSha} @ {BUILD_INFO.buildTime}</Text>
+            </View>
+
+            {TEST_STORE_CONFIG?.phone && TEST_STORE_CONFIG?.pin ? (
+              <Pressable
+                style={styles.devButton}
+                onPress={() => {
+                  // For enrollment, we can't auto-fill phone/PIN since enrollment uses code
+                  // Just show info that test credentials are loaded
+                  Alert.alert(
+                    "Test Store Ready",
+                    `Phone: ${TEST_STORE_CONFIG.phone}\nPIN: ${TEST_STORE_CONFIG.pin}\n\nUse these credentials after enrollment for quick login.`
+                  );
+                }}
+              >
+                <Text style={styles.devButtonText}>View Test Credentials</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.devWarning}>
+                Test credentials not set.{"\n"}
+                Set EXPO_PUBLIC_TEST_PHONE and EXPO_PUBLIC_TEST_PIN in .env.local
+              </Text>
+            )}
+          </View>
+        )}
       </View>
     </View>
   );
@@ -429,5 +467,57 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: theme.colors.primary,
     fontWeight: "600"
+  },
+  devSection: {
+    marginTop: 24,
+    padding: 12,
+    backgroundColor: theme.colors.warning + "15",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+    borderStyle: "dashed"
+  },
+  devSectionLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: theme.colors.warning,
+    textTransform: "uppercase",
+    marginBottom: 8
+  },
+  devInfoRow: {
+    flexDirection: "row",
+    marginBottom: 4
+  },
+  devInfoLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    width: 45
+  },
+  devInfoValue: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "monospace",
+    color: theme.colors.textPrimary
+  },
+  devButton: {
+    marginTop: 8,
+    backgroundColor: theme.colors.warning,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: "center"
+  },
+  devButtonText: {
+    color: "#000",
+    fontWeight: "700",
+    fontSize: 12
+  },
+  devWarning: {
+    marginTop: 8,
+    fontSize: 10,
+    color: theme.colors.textSecondary,
+    fontStyle: "italic",
+    lineHeight: 14
   }
 });
