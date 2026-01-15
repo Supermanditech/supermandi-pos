@@ -1,0 +1,71 @@
+# =============================================================================
+# VM DEPLOYMENT COMMANDS - Copy-Paste Ready
+# Date: 2026-01-16
+# Fixes: DEV-072 (UUID validation + barcode resolution)
+# =============================================================================
+
+# First, transfer the patch files to VM (run from local machine):
+# Option A: Use SCP from Git Bash / PowerShell
+scp -i ~/.ssh/supermandi-vm vm-patches/sales.js supermandi@34.14.220.171:~/
+scp -i ~/.ssh/supermandi-vm vm-patches/policies.js supermandi@34.14.220.171:~/
+
+# Option B: Or create files directly on VM (see INLINE sections below)
+
+# =============================================================================
+# ON VM - RUN THESE COMMANDS
+# =============================================================================
+
+# 1. Check container names
+docker ps --format "{{.Names}}"
+
+# 2. Find path inside container (adjust container name as needed)
+docker exec supermandi-enroll-service ls -la /app/dist/routes/v1/pos/ 2>/dev/null || \
+docker exec supermandi-main ls -la /app/dist/routes/v1/pos/ 2>/dev/null || \
+echo "Try different container name"
+
+# 3. Backup existing files
+docker exec supermandi-enroll-service cp /app/dist/routes/v1/pos/sales.js /app/dist/routes/v1/pos/sales.js.bak
+
+# 4. Copy patched sales.js into container
+docker cp ~/sales.js supermandi-enroll-service:/app/dist/routes/v1/pos/sales.js
+
+# 5. For reorder-service policies.js
+docker exec supermandi-reorder-service cp /app/dist/routes/policies.js /app/dist/routes/policies.js.bak
+docker cp ~/policies.js supermandi-reorder-service:/app/dist/routes/policies.js
+
+# 6. Restart containers
+docker restart supermandi-enroll-service supermandi-reorder-service
+
+# 7. Verify containers are running
+docker ps
+
+# 8. Check logs for errors
+docker logs supermandi-enroll-service --tail 20
+docker logs supermandi-reorder-service --tail 20
+
+# =============================================================================
+# ALTERNATIVE: Create sales.js inline on VM (if SCP fails)
+# =============================================================================
+
+# Create directory if needed
+mkdir -p ~/vm-patches
+
+# Then paste the entire sales.js content:
+cat > ~/sales.js << 'SALES_EOF'
+# ... (paste contents of vm-patches/sales.js here)
+SALES_EOF
+
+# Then copy to container:
+docker cp ~/sales.js supermandi-enroll-service:/app/dist/routes/v1/pos/sales.js
+
+# =============================================================================
+# ROLLBACK COMMANDS (if needed)
+# =============================================================================
+
+# Restore sales.js backup
+docker exec supermandi-enroll-service cp /app/dist/routes/v1/pos/sales.js.bak /app/dist/routes/v1/pos/sales.js
+docker restart supermandi-enroll-service
+
+# Restore policies.js backup
+docker exec supermandi-reorder-service cp /app/dist/routes/policies.js.bak /app/dist/routes/policies.js
+docker restart supermandi-reorder-service
