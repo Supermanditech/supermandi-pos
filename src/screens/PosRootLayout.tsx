@@ -121,6 +121,7 @@ export default function PosRootLayout() {
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
   const [deviceType, setDeviceType] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
+  const [storeCode, setStoreCode] = useState<string | null>(null); // GO-LIVE: Human-readable store code
   const [deviceStoreId, setDeviceStoreId] = useState<string | null>(null);
   const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
   const [printerOk, setPrinterOk] = useState<boolean | null>(null);
@@ -354,8 +355,18 @@ export default function PosRootLayout() {
           setPendingOutboxCount(status.pendingOutboxCount ?? 0);
           setPrinterOk(status.printerOk ?? null);
           setScanLookupV2Enabled(Boolean(status.features?.scan_lookup_v2));
+          // GO-LIVE: Update local storeName/storeCode state and persist to settingsStore
           if (status.storeName) {
             setStoreName((prev) => status.storeName ?? prev);
+          }
+          if (status.storeCode) {
+            setStoreCode((prev) => status.storeCode ?? prev);
+          }
+          // Persist to settingsStore for offline display
+          if (status.storeName || status.storeCode) {
+            const { setStoreName: persistStoreName, setStoreCode: persistStoreCode } = useSettingsStore.getState();
+            if (status.storeName) persistStoreName(status.storeName);
+            if (status.storeCode) persistStoreCode(status.storeCode);
           }
           // GO-LIVE-002: Sync feature flags to settingsStore
           if (status.features) {
@@ -417,10 +428,11 @@ export default function PosRootLayout() {
   useEffect(() => {
     let cancelled = false;
 
-    const applyInfo = (info: { storeId: string | null; storeName: string | null }) => {
+    const applyInfo = (info: { storeId: string | null; storeName: string | null; storeCode?: string | null }) => {
       if (cancelled) return;
       setDeviceStoreId(info.storeId ?? null);
       setStoreName(info.storeName ?? null);
+      if (info.storeCode) setStoreCode(info.storeCode);
     };
 
     const loadCached = async () => {
@@ -803,6 +815,7 @@ export default function PosRootLayout() {
         mode={statusMode}
         storeName={storeName}
         storeId={deviceStoreId}
+        storeCode={storeCode}
         printerOk={printerOk}
         scannerOk={scannerOk}
         cameraAvailable={cameraAvailable}

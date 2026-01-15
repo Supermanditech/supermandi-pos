@@ -28,15 +28,17 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   const nowIso = new Date().toISOString();
 
   let storeName: string | null = null;
+  let storeCode: string | null = null; // STORECODE-003
   let upiVpa: string | null = null;
   let storeScanLookupV2Enabled = false;
   if (status.storeId) {
     const storeRes = await pool.query(
-      `SELECT name, upi_vpa, scan_lookup_v2_enabled FROM stores WHERE id = $1`,
+      `SELECT name, store_code, upi_vpa, scan_lookup_v2_enabled FROM stores WHERE id = $1`,
       [status.storeId]
     );
     const storeRow = storeRes.rows[0];
     storeName = storeRow?.name ? String(storeRow.name) : null;
+    storeCode = storeRow?.store_code ? String(storeRow.store_code) : null; // STORECODE-003
     upiVpa = storeRow?.upi_vpa ? String(storeRow.upi_vpa) : null;
     storeScanLookupV2Enabled = Boolean(storeRow?.scan_lookup_v2_enabled);
   }
@@ -79,6 +81,7 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   return res.json({
     storeId: status.storeId,
     storeName,
+    storeCode, // STORECODE-003: Human-readable store code
     deviceId: status.deviceId,
     storeActive: status.storeActive,
     deviceActive: status.deviceActive,

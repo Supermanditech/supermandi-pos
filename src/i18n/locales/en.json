@@ -65,6 +65,9 @@
     "switchStoreConfirm": "Switch Store?",
     "switchStoreWarning": "This will sign you out and clear all local data (cart, drafts). You'll need a new enrollment code from your SuperAdmin.",
     "switchStoreButton": "Switch Store",
+    "unsyncedData": "Unsynced Data",
+    "unsyncedDataWarning": "You have {{count}} unsynced transactions. Switching stores will lose this data. Please wait for sync to complete or proceed with caution.",
+    "switchAnyway": "Switch Anyway",
     "operationalStatus": "System Status",
     "statusActive": "Active",
     "statusInactive": "Inactive",
@@ -337,5 +340,12 @@
     "inStock": "In Stock",
     "lowStock": "Low Stock",
     "outOfStock": "Out of Stock"
+  },
+  "barcodeSheet": {
+    "emptyTitle": "No Products Yet",
+    "emptyDescription": "Add products by scanning barcodes in the SELL tab. Once added, you can generate barcode sheets here.",
+    "addProducts": "Add Products",
+    "loadError": "Unable to load products for barcode sheets.",
+    "generatePrompt": "Generate a sheet to preview."
   }
 }

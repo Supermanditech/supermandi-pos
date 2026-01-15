@@ -28,6 +28,7 @@ import { getDeviceStoreId } from "../services/deviceSession";
 export interface OrderHistoryScreenProps {
   onSelectOrder?: (order: PurchaseOrder) => void;
   onBack?: () => void;
+  onNavigateToBuy?: () => void;
 }
 
 type FilterOption = "all" | "active" | "completed" | "cancelled";
@@ -39,6 +40,7 @@ type FilterOption = "all" | "active" | "completed" | "cancelled";
 export default function OrderHistoryScreen({
   onSelectOrder,
   onBack,
+  onNavigateToBuy,
 }: OrderHistoryScreenProps) {
   const insets = useSafeAreaInsets();
 
@@ -201,9 +203,15 @@ export default function OrderHistoryScreen({
             ? "You haven't placed any orders yet."
             : `No ${filter} orders to display.`}
         </Text>
+        {filter === "all" && onNavigateToBuy && (
+          <Pressable style={styles.ctaButton} onPress={onNavigateToBuy}>
+            <MaterialCommunityIcons name="cart-plus" size={18} color={theme.colors.textInverse} />
+            <Text style={styles.ctaButtonText}>Create First Order</Text>
+          </Pressable>
+        )}
       </View>
     );
-  }, [loading, error, filter, loadOrders]);
+  }, [loading, error, filter, loadOrders, onNavigateToBuy]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -425,6 +433,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: theme.colors.textTertiary,
     textAlign: "center",
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: theme.spacing.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+  },
+  ctaButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
   retryButton: {
     marginTop: theme.spacing.md,

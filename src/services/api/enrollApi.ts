@@ -7,6 +7,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export type DeviceEnrollResponse = {
   deviceId: string;
   storeId: string;
+  storeName?: string;  // GO-LIVE: Store name from SuperAdmin
+  storeCode?: string;  // GO-LIVE: Human-readable store code
   deviceToken: string;
   storeActive: boolean;
   reEnrolled?: boolean;

@@ -39,7 +39,8 @@
     "dev:redmi:teststore:usb": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi.ps1 -TestStore -Usb",
     "dev:redmi:snapshot": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1",
     "dev:redmi:snapshot:usb": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1 -Usb",
-    "dev:redmi:snapshot:teststore": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1 -TestStore"
+    "dev:redmi:snapshot:teststore": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1 -TestStore",
+    "dev:demo-code": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File tools/dev/get-demo-code.ps1"
   },
   "dependencies": {
     "@expo/vector-icons": "~14.0.4",

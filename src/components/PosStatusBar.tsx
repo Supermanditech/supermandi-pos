@@ -20,6 +20,7 @@ type PosStatusBarProps = {
   mode?: "SELL" | "DIGITISE";
   storeName?: string | null;
   storeId?: string | null;
+  storeCode?: string | null; // GO-LIVE: Human-readable store code (e.g., "MUM-ANH-001")
   printerOk?: boolean | null;
   scannerOk?: boolean | null;
   cameraAvailable?: boolean | null;
@@ -46,6 +47,7 @@ export default function PosStatusBar({
   mode,
   storeName,
   storeId,
+  storeCode,
   printerOk,
   scannerOk,
   cameraAvailable
@@ -118,7 +120,8 @@ export default function PosStatusBar({
   const statusMessage = composePosMessage(status);
   const statusTone = tones[getPrimaryTone(status)];
   const storeLabel = formatStoreName(storeName) ?? "Store";
-  const storeIdLabel = storeId ?? "--";
+  // GO-LIVE: Show storeCode (human-readable) if available, otherwise truncated UUID
+  const storeIdLabel = storeCode || (storeId ? storeId.slice(-8) : "--");
 
   const iconActiveColor = theme.colors.textSecondary;
   const iconInactiveColor = theme.colors.textTertiary;

@@ -20,6 +20,7 @@ import { theme } from "../theme";
 
 interface SalesStatementScreenProps {
   onBack: () => void;
+  onNavigateToSell?: () => void;
 }
 
 interface DailySales {
@@ -111,7 +112,7 @@ function SalesDayCard({ day }: { day: DailySales }) {
   );
 }
 
-export default function SalesStatementScreen({ onBack }: SalesStatementScreenProps) {
+export default function SalesStatementScreen({ onBack, onNavigateToSell }: SalesStatementScreenProps) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -198,6 +199,12 @@ export default function SalesStatementScreen({ onBack }: SalesStatementScreenPro
           <Text style={styles.emptyText}>
             Sales transactions will appear here after you make sales.
           </Text>
+          {onNavigateToSell && (
+            <Pressable style={styles.ctaButton} onPress={onNavigateToSell}>
+              <MaterialCommunityIcons name="cart-outline" size={18} color={theme.colors.textInverse} />
+              <Text style={styles.ctaButtonText}>Make Your First Sale</Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         <FlatList
@@ -315,6 +322,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 4,
     textAlign: "center",
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+  },
+  ctaButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
   listContent: {
     padding: 16,

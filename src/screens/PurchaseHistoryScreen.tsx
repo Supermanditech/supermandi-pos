@@ -20,6 +20,7 @@ import { theme } from "../theme";
 
 interface PurchaseHistoryScreenProps {
   onBack: () => void;
+  onNavigateToInward?: () => void;
 }
 
 interface GroupedPurchase {
@@ -119,7 +120,7 @@ function PurchaseCard({ purchase }: { purchase: GroupedPurchase }) {
   );
 }
 
-export default function PurchaseHistoryScreen({ onBack }: PurchaseHistoryScreenProps) {
+export default function PurchaseHistoryScreen({ onBack, onNavigateToInward }: PurchaseHistoryScreenProps) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -200,6 +201,12 @@ export default function PurchaseHistoryScreen({ onBack }: PurchaseHistoryScreenP
           <Text style={styles.emptyText}>
             Stock inward transactions will appear here.
           </Text>
+          {onNavigateToInward && (
+            <Pressable style={styles.ctaButton} onPress={onNavigateToInward}>
+              <MaterialCommunityIcons name="package-down" size={18} color={theme.colors.textInverse} />
+              <Text style={styles.ctaButtonText}>Add Stock Inward</Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         <FlatList
@@ -317,6 +324,21 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginTop: 4,
     textAlign: "center",
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+  },
+  ctaButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
   listContent: {
     padding: 16,

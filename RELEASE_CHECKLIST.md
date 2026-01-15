@@ -11,6 +11,7 @@
 - [ ] No console.log statements in production code (except intentional debug)
 - [ ] All imports are used (no unused imports)
 - [ ] No hardcoded device-specific values (screen sizes, etc.)
+- [ ] **UI Reachability gate passed**: `node scripts/ui-audit.js`
 
 ### 2. UI/Layout Verification (Test on ANY 3 different screen sizes)
 - [ ] Sell Cart opens **fully expanded** showing discount + total + checkout button

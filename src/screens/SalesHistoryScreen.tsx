@@ -12,6 +12,7 @@ import type { BillSummary } from "../services/billing/billTypes";
 type RootStackParamList = {
   SalesHistory: undefined;
   BillDetail: { saleId: string; billRef?: string };
+  SellScan: undefined;
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "SalesHistory">;
@@ -88,7 +89,16 @@ export default function SalesHistoryScreen() {
 
       {bills.length === 0 && !loading ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No bills yet.</Text>
+          <MaterialCommunityIcons name="receipt" size={48} color={theme.colors.textTertiary} />
+          <Text style={styles.emptyTitle}>No bills yet</Text>
+          <Text style={styles.emptyText}>Bills will appear here after you make sales.</Text>
+          <Pressable
+            style={styles.ctaButton}
+            onPress={() => (navigation as any).navigate("SellScan")}
+          >
+            <MaterialCommunityIcons name="cart-outline" size={18} color={theme.colors.textInverse} />
+            <Text style={styles.ctaButtonText}>Make Your First Sale</Text>
+          </Pressable>
         </View>
       ) : (
         <FlatList
@@ -210,9 +220,33 @@ const styles = StyleSheet.create({
   empty: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    padding: 24
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginTop: 16
   },
   emptyText: {
-    color: theme.colors.textSecondary
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+    textAlign: "center"
+  },
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10
+  },
+  ctaButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textInverse
   }
 });

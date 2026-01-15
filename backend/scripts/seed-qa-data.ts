@@ -16,6 +16,7 @@
 
 import { assertNotProductionWithConfirm } from '../src/middleware/devOnly.js';
 import { query, getClient } from '@supermandi/common';
+import { isDemoStoreCode, DEMO_PREFIXES } from '../src/services/storeCodeService.js';
 
 // =============================================================================
 // GUARD: BLOCK PRODUCTION
@@ -82,6 +83,14 @@ async function seedQAData() {
     const storeIds: string[] = [];
 
     for (const store of DEMO_STORES) {
+      // STORECODE-004: Verify store code is a demo prefix
+      if (!isDemoStoreCode(store.code)) {
+        throw new Error(
+          `[BLOCKED] Store code "${store.code}" is not a demo store. ` +
+          `Demo stores must use prefixes: ${DEMO_PREFIXES.join(', ')}`
+        );
+      }
+
       const result = await client.query(
         `INSERT INTO platform.stores (code, name, address, phone, status, settings)
          VALUES ($1, $2, $3, $4, $5, '{}')

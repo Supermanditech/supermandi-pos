@@ -4,6 +4,7 @@ import { getDeviceToken } from "../deviceSession";
 export type UiStatusResponse = {
   storeId?: string | null;
   storeName?: string | null;
+  storeCode?: string | null; // STORECODE-003: Human-readable store code
   deviceId?: string | null;
   storeActive: boolean | null;
   deviceActive: boolean | null;

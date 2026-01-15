@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
+import { useTranslation } from "react-i18next";
 
 import {
   fetchBarcodeSheetItems,
@@ -12,11 +14,15 @@ import {
 import { theme } from "../theme";
 
 export default function BarcodeSheetScreen() {
+  const { t } = useTranslation();
+  const navigation = useNavigation();
   const [activeTier, setActiveTier] = useState<BarcodeSheetTier | null>(null);
   const [items, setItems] = useState<BarcodeSheetItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<"download" | "whatsapp" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // GL-BARCODE-001: Track if we've tried fetching (to distinguish initial vs empty state)
+  const [hasFetched, setHasFetched] = useState(false);
 
   const handleGenerate = async (tier: BarcodeSheetTier) => {
     setActiveTier(tier);
@@ -24,16 +30,22 @@ export default function BarcodeSheetScreen() {
     setError(null);
     try {
       const results = await fetchBarcodeSheetItems(tier);
-      if (results.length === 0) {
-        setError("No products available for barcode sheets.");
-      }
       setItems(results);
+      setHasFetched(true);
+      // GL-BARCODE-001: Don't set error for empty results - show empty state CTA instead
     } catch {
       setItems([]);
-      setError("Unable to load products for barcode sheets.");
+      setHasFetched(true);
+      setError(t("barcodeSheet.loadError", "Unable to load products for barcode sheets."));
     } finally {
       setLoading(false);
     }
+  };
+
+  // GL-BARCODE-001: Navigate to SELL tab to add products
+  const handleAddProducts = () => {
+    // Go back to POS root which shows SELL tab
+    navigation.goBack();
   };
 
   const handleDownload = async () => {
@@ -146,10 +158,29 @@ export default function BarcodeSheetScreen() {
                 ) : null}
               </View>
             </View>
+          ) : hasFetched ? (
+            /* GL-BARCODE-001: Empty state with CTA for stores with no products */
+            <View style={styles.previewEmpty}>
+              <MaterialCommunityIcons name="package-variant" size={32} color={theme.colors.textTertiary} />
+              <Text style={styles.emptyTitle}>
+                {t("barcodeSheet.emptyTitle", "No Products Yet")}
+              </Text>
+              <Text style={styles.emptyDescription}>
+                {t("barcodeSheet.emptyDescription", "Add products by scanning barcodes in the SELL tab. Once added, you can generate barcode sheets here.")}
+              </Text>
+              <Pressable style={styles.addProductsButton} onPress={handleAddProducts}>
+                <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textInverse} />
+                <Text style={styles.addProductsText}>
+                  {t("barcodeSheet.addProducts", "Add Products")}
+                </Text>
+              </Pressable>
+            </View>
           ) : (
             <View style={styles.previewEmpty}>
               <MaterialCommunityIcons name="file-outline" size={26} color={theme.colors.textTertiary} />
-              <Text style={styles.previewEmptyText}>Generate a sheet to preview.</Text>
+              <Text style={styles.previewEmptyText}>
+                {t("barcodeSheet.generatePrompt", "Generate a sheet to preview.")}
+              </Text>
             </View>
           )}
         </View>
@@ -330,5 +361,35 @@ const styles = StyleSheet.create({
   },
   actionTextDisabled: {
     color: theme.colors.textSecondary,
+  },
+  // GL-BARCODE-001: Empty state styles
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginTop: 4,
+  },
+  emptyDescription: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 16,
+  },
+  addProductsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+  },
+  addProductsText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
 });

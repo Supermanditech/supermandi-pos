@@ -1,7 +1,7 @@
 // Order API Service - V3.0.9 compliant
 // Frontend API client for purchase order operations
 
-import { apiClient } from "./apiClient";
+import { ApiError, apiClient } from "./apiClient";
 
 // =============================================================================
 // TYPES
@@ -105,6 +105,17 @@ export interface TransitionResponse {
   success: boolean;
   data: PurchaseOrder;
   transition: {
+    from: OrderStatus;
+    to: OrderStatus;
+  };
+}
+
+// GL-PO-001: Cancel response with idempotent handling
+export interface CancelOrderResponse {
+  success: boolean;
+  alreadyDeleted?: boolean;
+  data?: PurchaseOrder;
+  transition?: {
     from: OrderStatus;
     to: OrderStatus;
   };
@@ -287,14 +298,31 @@ export async function submitOrder(
 
 /**
  * Cancel an order.
+ * GL-PO-001: Idempotent - absorbs 404/410 without throwing.
+ * Returns { success: true, alreadyDeleted: true } if order was already deleted/cancelled.
  */
 export async function cancelOrder(
   storeId: string,
   orderId: string,
   reason?: string
-): Promise<TransitionResponse> {
+): Promise<CancelOrderResponse> {
   const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/cancel`;
-  return apiClient.post<TransitionResponse>(path, { reason });
+  try {
+    const response = await apiClient.post<TransitionResponse>(path, { reason });
+    return {
+      success: true,
+      alreadyDeleted: false,
+      data: response.data,
+      transition: response.transition,
+    };
+  } catch (error) {
+    // GL-PO-001: Handle 404 (not found) and 410 (gone) as successful idempotent delete
+    if (error instanceof ApiError && (error.status === 404 || error.status === 410)) {
+      console.log(`[OrderApi] cancelOrder idempotent: orderId=${orderId} already deleted (status=${error.status})`);
+      return { success: true, alreadyDeleted: true };
+    }
+    throw error;
+  }
 }
 
 /**

@@ -33,6 +33,7 @@ import GRNScreen from "./src/screens/GRNScreen";
 // V3.0.10 Screens
 import InwardScreen from "./src/screens/InwardScreen";
 import UiShowcaseScreen, { isQaMenuEnabled } from "./src/screens/UiShowcaseScreen";
+import { FeatureGate } from "./src/components/FeatureGate";
 import PurchaseHistoryScreen from "./src/screens/PurchaseHistoryScreen";
 import SalesStatementScreen from "./src/screens/SalesStatementScreen";
 import StockStatementScreen from "./src/screens/StockStatementScreen";
@@ -40,13 +41,17 @@ import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
 // Wrapper components for screens that need route params
+// UI-AUDIT-003: All feature-gated screens wrapped with FeatureGate for direct access protection
 function OrderHistoryWrapper() {
   const navigation = useNavigation<any>();
   return (
-    <OrderHistoryScreen
-      onSelectOrder={(order) => navigation.navigate("OrderDetail", { orderId: order.id })}
-      onBack={() => navigation.goBack()}
-    />
+    <FeatureGate feature="buy" onBack={() => navigation.goBack()}>
+      <OrderHistoryScreen
+        onSelectOrder={(order) => navigation.navigate("OrderDetail", { orderId: order.id })}
+        onBack={() => navigation.goBack()}
+        onNavigateToBuy={() => navigation.navigate("SellScan", { initialTab: "BUY" })}
+      />
+    </FeatureGate>
   );
 }
 
@@ -54,30 +59,36 @@ function OrderDetailWrapper() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   return (
-    <OrderDetailScreen
-      orderId={route.params?.orderId}
-      onBack={() => navigation.goBack()}
-      onNavigateToGRN={(orderId) => navigation.navigate("GRN", { orderId })}
-    />
+    <FeatureGate feature="buy" onBack={() => navigation.goBack()}>
+      <OrderDetailScreen
+        orderId={route.params?.orderId}
+        onBack={() => navigation.goBack()}
+        onNavigateToGRN={(orderId) => navigation.navigate("GRN", { orderId })}
+      />
+    </FeatureGate>
   );
 }
 
 function ReorderSettingsWrapper() {
   const navigation = useNavigation<any>();
   return (
-    <ReorderSettingsScreen
-      onNavigateToPolicies={() => navigation.navigate("ReorderPolicies")}
-      onBack={() => navigation.goBack()}
-    />
+    <FeatureGate feature="reorder" onBack={() => navigation.goBack()}>
+      <ReorderSettingsScreen
+        onNavigateToPolicies={() => navigation.navigate("ReorderPolicies")}
+        onBack={() => navigation.goBack()}
+      />
+    </FeatureGate>
   );
 }
 
 function ReorderPoliciesWrapper() {
   const navigation = useNavigation<any>();
   return (
-    <ReorderPoliciesScreen
-      onBack={() => navigation.goBack()}
-    />
+    <FeatureGate feature="reorder" onBack={() => navigation.goBack()}>
+      <ReorderPoliciesScreen
+        onBack={() => navigation.goBack()}
+      />
+    </FeatureGate>
   );
 }
 
@@ -85,11 +96,13 @@ function GRNWrapper() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   return (
-    <GRNScreen
-      orderId={route.params?.orderId}
-      onBack={() => navigation.goBack()}
-      onSuccess={() => navigation.goBack()}
-    />
+    <FeatureGate feature="buy" onBack={() => navigation.goBack()}>
+      <GRNScreen
+        orderId={route.params?.orderId}
+        onBack={() => navigation.goBack()}
+        onSuccess={() => navigation.goBack()}
+      />
+    </FeatureGate>
   );
 }
 
@@ -118,12 +131,22 @@ function UiShowcaseWrapper() {
 
 function PurchaseHistoryWrapper() {
   const navigation = useNavigation<any>();
-  return <PurchaseHistoryScreen onBack={() => navigation.goBack()} />;
+  return (
+    <PurchaseHistoryScreen
+      onBack={() => navigation.goBack()}
+      onNavigateToInward={() => navigation.navigate("Inward")}
+    />
+  );
 }
 
 function SalesStatementWrapper() {
   const navigation = useNavigation<any>();
-  return <SalesStatementScreen onBack={() => navigation.goBack()} />;
+  return (
+    <SalesStatementScreen
+      onBack={() => navigation.goBack()}
+      onNavigateToSell={() => navigation.navigate("SellScan")}
+    />
+  );
 }
 
 function StockStatementWrapper() {

@@ -19,7 +19,7 @@ const path = require('path');
 // =============================================================================
 
 const ROOT_DIR = path.join(__dirname, '..');
-const CHECKS = ['git', 'branch', 'urls', 'flags', 'boundaries', 'build'];
+const CHECKS = ['git', 'branch', 'fingerprint', 'urls', 'flags', 'boundaries', 'build', 'ui-reachability'];
 
 // Colors
 const COLORS = {
@@ -65,7 +65,7 @@ function readFile(filePath) {
 // =============================================================================
 
 function checkGit(verbose) {
-  console.log(colorize('\n[1/6] Git Status Check', 'blue'));
+  console.log(colorize('\n[1/8] Git Status Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -107,8 +107,92 @@ function checkGit(verbose) {
   return results;
 }
 
+function checkFingerprint(verbose) {
+  console.log(colorize('\n[3/8] Build Fingerprint Check', 'blue'));
+
+  const results = { pass: true, messages: [] };
+
+  // Load and execute app.config.js to get computed build info
+  try {
+    // Clear require cache to get fresh values
+    const configPath = path.join(ROOT_DIR, 'app.config.js');
+    delete require.cache[require.resolve(configPath)];
+
+    const appConfig = require(configPath);
+    const appJson = JSON.parse(readFile('app.json') || '{}');
+
+    // Execute the config function
+    const config = appConfig({ config: appJson.expo || {} });
+    const extra = config.extra || {};
+
+    // Check for required build info
+    const gitSha = extra.BUILD_GIT_SHA;
+    const fingerprint = extra.BUILD_FINGERPRINT;
+    const branch = extra.BUILD_BRANCH;
+    const buildTime = extra.BUILD_TIME;
+    const buildId = extra.BUILD_ID;
+
+    // Helper to check if value is a fallback ID (starts with B or F)
+    const isFallbackId = (val) => val && (val.startsWith('B') || val.startsWith('F'));
+
+    // Validate SHA - FAIL only if literally "unknown"
+    if (!gitSha || gitSha === 'unknown') {
+      results.pass = false;
+      results.messages.push(colorize(`FAIL: BUILD_GIT_SHA is "unknown"`, 'red'));
+      results.messages.push('  Git must be available and have commits');
+    } else if (isFallbackId(gitSha)) {
+      // Warn but don't fail for fallback IDs (git not available)
+      results.messages.push(colorize(`WARN: BUILD_GIT_SHA is fallback ID: ${gitSha}`, 'yellow'));
+      results.messages.push('  Git was not available during config generation');
+    } else {
+      results.messages.push(`SHA: ${gitSha}`);
+    }
+
+    // Validate fingerprint - FAIL only if literally "unknown"
+    if (!fingerprint || fingerprint === 'unknown') {
+      results.pass = false;
+      results.messages.push(colorize(`FAIL: BUILD_FINGERPRINT is "unknown"`, 'red'));
+    } else if (isFallbackId(fingerprint)) {
+      results.messages.push(colorize(`WARN: BUILD_FINGERPRINT is fallback: ${fingerprint}`, 'yellow'));
+    } else {
+      results.messages.push(`Fingerprint: ${fingerprint}`);
+    }
+
+    // Validate branch - WARN only, don't fail
+    if (!branch || branch === 'unknown') {
+      results.messages.push(colorize(`WARN: BUILD_BRANCH is unknown`, 'yellow'));
+    } else {
+      results.messages.push(`Branch: ${branch}`);
+    }
+
+    // Build time and ID (informational)
+    results.messages.push(`Build Time: ${buildTime || 'not set'}`);
+    if (buildId) {
+      results.messages.push(`Build ID: ${buildId}`);
+    }
+
+    // Check for dirty worktree (warning only)
+    const isDirty = extra.BUILD_IS_DIRTY;
+    if (isDirty) {
+      results.messages.push(colorize('WARN: Worktree is dirty - commit changes before release', 'yellow'));
+    }
+
+    // Summary
+    if (results.pass) {
+      results.messages.push(colorize('Build info computed from git successfully', 'green'));
+    }
+
+  } catch (err) {
+    results.pass = false;
+    results.messages.push(colorize(`FAIL: Could not load app.config.js: ${err.message}`, 'red'));
+    results.messages.push('  Ensure app.config.js exists and exports a function');
+  }
+
+  return results;
+}
+
 function checkBranch(verbose) {
-  console.log(colorize('\n[2/6] Branch & Tag Check', 'blue'));
+  console.log(colorize('\n[2/8] Branch & Tag Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -141,7 +225,7 @@ function checkBranch(verbose) {
 }
 
 function checkUrls(verbose) {
-  console.log(colorize('\n[3/6] Backend URL Check', 'blue'));
+  console.log(colorize('\n[4/8] Backend URL Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -189,7 +273,7 @@ function checkUrls(verbose) {
 }
 
 function checkFlags(verbose) {
-  console.log(colorize('\n[4/6] Feature Flags Check', 'blue'));
+  console.log(colorize('\n[5/8] Feature Flags Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -219,7 +303,7 @@ function checkFlags(verbose) {
 }
 
 function checkBoundaries(verbose) {
-  console.log(colorize('\n[5/6] SELL/BUY Boundary Check', 'blue'));
+  console.log(colorize('\n[6/8] SELL/BUY Boundary Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -276,8 +360,35 @@ function checkBoundaries(verbose) {
   return results;
 }
 
+function checkUiReachability(verbose) {
+  console.log(colorize('\n[8/8] UI Reachability Check', 'blue'));
+
+  const results = { pass: true, messages: [] };
+
+  // Run the ui-audit.js script
+  try {
+    const output = exec('node scripts/ui-audit.js', { silent: true, stdio: 'pipe' });
+    results.messages.push('UI reachability audit passed');
+    if (verbose && output) {
+      output.split('\n').slice(-5).forEach(line => {
+        if (line.trim()) results.messages.push(`  ${line}`);
+      });
+    }
+  } catch (err) {
+    results.pass = false;
+    results.messages.push('UI reachability audit failed');
+    if (err.stdout) {
+      err.stdout.split('\n').filter(l => l.includes('ORPHAN') || l.includes('FAIL')).forEach(line => {
+        results.messages.push(`  ${line}`);
+      });
+    }
+  }
+
+  return results;
+}
+
 function checkBuild(verbose) {
-  console.log(colorize('\n[6/6] Build Readiness Check', 'blue'));
+  console.log(colorize('\n[7/8] Build Readiness Check', 'blue'));
 
   const results = { pass: true, messages: [] };
 
@@ -348,6 +459,9 @@ async function main() {
       case 'branch':
         result = checkBranch(verbose);
         break;
+      case 'fingerprint':
+        result = checkFingerprint(verbose);
+        break;
       case 'urls':
         result = checkUrls(verbose);
         break;
@@ -359,6 +473,9 @@ async function main() {
         break;
       case 'build':
         result = checkBuild(verbose);
+        break;
+      case 'ui-reachability':
+        result = checkUiReachability(verbose);
         break;
       default:
         console.log(colorize(`Unknown check: ${check}`, 'yellow'));

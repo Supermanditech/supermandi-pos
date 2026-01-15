@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { Router } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { generateStoreCode } from "../../../services/storeCodeService";
 
 export const adminStoresRouter = Router();
 
@@ -57,7 +58,7 @@ async function ensureUniqueStoreId(pool: ReturnType<typeof getPool>, preferredId
   throw new Error("store_id_unavailable");
 }
 
-// POST /api/v1/admin/stores
+// POST /api/v1/admin/stores - STORECODE-002: Now generates store_code automatically
 adminStoresRouter.post("/stores", async (req, res) => {
   const storeNameInput = normalizeStoreNameInput((req.body as any)?.storeName ?? (req.body as any)?.name);
   if (storeNameInput.error || !storeNameInput.value) {
@@ -84,12 +85,23 @@ adminStoresRouter.post("/stores", async (req, res) => {
     return res.status(500).json({ error: "store_id_unavailable" });
   }
 
+  // STORECODE-002: Generate human-readable store code from store name
+  let storeCode: string;
+  try {
+    storeCode = await generateStoreCode(storeNameInput.value);
+  } catch (error: any) {
+    console.error("[stores] Failed to generate store code:", error);
+    // Fallback to simple code if generator fails
+    storeCode = `ST${Date.now().toString(36).toUpperCase()}`;
+  }
+
   const result = await pool.query(
     `
-      INSERT INTO stores (id, name, active, created_at, updated_at)
-      VALUES ($1, $2, FALSE, NOW(), NOW())
+      INSERT INTO stores (id, name, store_code, active, created_at, updated_at)
+      VALUES ($1, $2, $3, FALSE, NOW(), NOW())
       RETURNING id,
         name,
+        store_code,
         upi_vpa,
         active,
         address,
@@ -105,11 +117,11 @@ adminStoresRouter.post("/stores", async (req, res) => {
         created_at,
         updated_at
     `,
-    [storeId, storeNameInput.value]
+    [storeId, storeNameInput.value, storeCode]
   );
 
   const store = result.rows[0];
-  return res.status(201).json({ store: { ...store, storeName: store?.name } });
+  return res.status(201).json({ store: { ...store, storeName: store?.name, storeCode: store?.store_code } });
 });
 
 // GET /api/v1/admin/stores
@@ -121,6 +133,7 @@ adminStoresRouter.get("/stores", async (_req, res) => {
     `
       SELECT id,
         name,
+        store_code,
         upi_vpa,
         active,
         address,
@@ -142,65 +155,11 @@ adminStoresRouter.get("/stores", async (_req, res) => {
 
   const stores = result.rows.map((row) => ({
     ...row,
-    storeName: row.name
+    storeName: row.name,
+    storeCode: row.store_code // STORECODE-003
   }));
 
   return res.json({ stores });
-});
-
-// POST /api/v1/admin/stores
-adminStoresRouter.post("/stores", async (req, res) => {
-  const storeNameInput = normalizeStoreNameInput((req.body as any)?.storeName ?? (req.body as any)?.name);
-  if (storeNameInput.error || !storeNameInput.value) {
-    return res.status(400).json({ error: storeNameInput.error ?? "storeName_required" });
-  }
-
-  const storeIdInput = normalizeStoreIdInput(
-    (req.body as any)?.storeId ?? (req.body as any)?.store_id ?? (req.body as any)?.id
-  );
-  if (storeIdInput.error) {
-    return res.status(400).json({ error: storeIdInput.error });
-  }
-
-  const pool = getPool();
-  if (!pool) return res.status(503).json({ error: "database unavailable" });
-
-  let storeId = "";
-  try {
-    storeId = await ensureUniqueStoreId(pool, storeIdInput.value);
-  } catch (error: any) {
-    if (error?.message === "store_exists") {
-      return res.status(409).json({ error: "store_exists" });
-    }
-    return res.status(500).json({ error: "store_id_unavailable" });
-  }
-
-  const result = await pool.query(
-    `
-      INSERT INTO stores (id, name, active, created_at, updated_at)
-      VALUES ($1, $2, FALSE, NOW(), NOW())
-      RETURNING id,
-        name,
-        upi_vpa,
-        active,
-        address,
-        contact_name,
-        contact_phone,
-        contact_email,
-        location,
-        pos_device_id,
-        kyc_status,
-        scan_lookup_v2_enabled,
-        upi_vpa_updated_at,
-        upi_vpa_updated_by,
-        created_at,
-        updated_at
-    `,
-    [storeId, storeNameInput.value]
-  );
-
-  const store = result.rows[0];
-  return res.status(201).json({ store: { ...store, storeName: store?.name } });
 });
 
 // GET /api/v1/admin/stores/:storeId
@@ -217,6 +176,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
     `
       SELECT id,
         name,
+        store_code,
         upi_vpa,
         active,
         address,
@@ -242,7 +202,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
     return res.status(404).json({ error: "store not found" });
   }
 
-  return res.json({ store: { ...store, storeName: store.name } });
+  return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code } });
 });
 
 // PATCH /api/v1/admin/stores/:storeId
@@ -320,7 +280,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     UPDATE stores
     SET ${updates.join(", ")}
     WHERE id = $${values.length + 1}
-    RETURNING id, name, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, scan_lookup_v2_enabled, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
+    RETURNING id, name, store_code, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, scan_lookup_v2_enabled, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
   `;
   values.push(storeId);
 
@@ -330,5 +290,5 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     return res.status(404).json({ error: "store not found" });
   }
 
-  return res.json({ store: { ...store, storeName: store.name } });
+  return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code } });
 });

@@ -7,7 +7,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { fetchBillSnapshot } from "../services/api/billingApi";
 import type { BillSnapshot } from "../services/billing/billTypes";
 import { buildBillText } from "../services/billing/billFormatter";
-import { shareBillPdf } from "../services/billing/billShare";
+import { shareBillPdf, shareBillWhatsApp } from "../services/billing/billShare";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
@@ -29,6 +29,7 @@ export default function BillDetailScreen() {
   const [error, setError] = useState("");
   const [sharing, setSharing] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [whatsapping, setWhatsapping] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -96,6 +97,23 @@ export default function BillDetailScreen() {
     }
   };
 
+  const handleWhatsApp = async () => {
+    if (!snapshot || whatsapping) return;
+    setWhatsapping(true);
+    try {
+      await shareBillWhatsApp(snapshot);
+    } catch (e: any) {
+      const message = e?.message ? String(e.message) : "whatsapp_failed";
+      if (message === "whatsapp_not_installed") {
+        Alert.alert("WhatsApp not found", "Please install WhatsApp to share bills.");
+      } else {
+        Alert.alert("Share failed", "Unable to share via WhatsApp.");
+      }
+    } finally {
+      setWhatsapping(false);
+    }
+  };
+
   const header = snapshot ? (
     <View style={styles.summaryCard}>
       <View style={styles.summaryRow}>
@@ -123,7 +141,15 @@ export default function BillDetailScreen() {
           disabled={printing}
         >
           <MaterialCommunityIcons name="printer-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.actionText}>{printing ? "Printing..." : "Print Bill"}</Text>
+          <Text style={styles.actionText}>{printing ? "..." : "Print"}</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.actionButton, styles.actionWhatsApp, whatsapping && styles.actionButtonDisabled]}
+          onPress={handleWhatsApp}
+          disabled={whatsapping}
+        >
+          <MaterialCommunityIcons name="whatsapp" size={18} color="#fff" />
+          <Text style={styles.actionTextPrimary}>{whatsapping ? "..." : "WhatsApp"}</Text>
         </Pressable>
         <Pressable
           style={[styles.actionButton, styles.actionPrimary, sharing && styles.actionButtonDisabled]}
@@ -131,7 +157,7 @@ export default function BillDetailScreen() {
           disabled={sharing}
         >
           <MaterialCommunityIcons name="share-variant" size={18} color={theme.colors.textInverse} />
-          <Text style={styles.actionTextPrimary}>{sharing ? "Sharing..." : "Share Bill"}</Text>
+          <Text style={styles.actionTextPrimary}>{sharing ? "..." : "Share"}</Text>
         </Pressable>
       </View>
 
@@ -332,6 +358,10 @@ const styles = StyleSheet.create({
   actionPrimary: {
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
+  },
+  actionWhatsApp: {
+    backgroundColor: "#25D366",
+    borderColor: "#25D366",
   },
   actionButtonDisabled: {
     opacity: 0.6,

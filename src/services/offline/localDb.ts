@@ -10,8 +10,15 @@ const schemaInFlight = new Map<string, Promise<void>>();
 let currentDb: Db | null = null;
 let currentScope: string | null = null;
 
+// Current schema version - increment when adding migrations
+const SCHEMA_VERSION = 2;
+
 function buildDbName(scope: string): string {
   return `supermandi_offline_${scope}.db`;
+}
+
+function log(message: string, ...args: unknown[]): void {
+  console.log(`[DB] ${message}`, ...args);
 }
 
 async function runOnDb(db: Db, sql: string, params: (string | number | null)[] = []): Promise<void> {
@@ -22,139 +29,252 @@ async function allOnDb<T = any>(db: Db, sql: string, params: (string | number | 
   return (await db.getAllAsync(sql, ...params)) as T[];
 }
 
+// Get current schema version from PRAGMA user_version
+async function getSchemaVersion(db: Db): Promise<number> {
+  const result = await allOnDb<{ user_version: number }>(db, "PRAGMA user_version");
+  return result[0]?.user_version ?? 0;
+}
+
+// Set schema version
+async function setSchemaVersion(db: Db, version: number): Promise<void> {
+  await runOnDb(db, `PRAGMA user_version = ${version}`);
+}
+
+// Check if a column exists in a table
+async function columnExists(db: Db, table: string, column: string): Promise<boolean> {
+  const info = await allOnDb<{ name: string }>(db, `PRAGMA table_info(${table})`);
+  return info.some(col => col.name === column);
+}
+
+// Self-heal: add missing column if it doesn't exist
+async function ensureColumn(
+  db: Db,
+  table: string,
+  column: string,
+  definition: string
+): Promise<boolean> {
+  const exists = await columnExists(db, table, column);
+  if (exists) return false;
+
+  log(`Self-heal: adding missing column ${table}.${column}`);
+  try {
+    await runOnDb(db, `ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    return true;
+  } catch (e) {
+    log(`Self-heal failed for ${table}.${column}:`, e);
+    return false;
+  }
+}
+
+// Migration definitions - each migration runs once based on version number
+type Migration = {
+  version: number;
+  name: string;
+  up: (db: Db) => Promise<void>;
+};
+
+const migrations: Migration[] = [
+  {
+    version: 1,
+    name: "initial_schema",
+    up: async (db: Db) => {
+      // Create all base tables
+      await runOnDb(
+        db,
+        `
+        CREATE TABLE IF NOT EXISTS offline_products (
+          barcode TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          category TEXT NULL,
+          currency TEXT NOT NULL DEFAULT 'INR',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+        `
+      );
+
+      await runOnDb(
+        db,
+        `
+        CREATE TABLE IF NOT EXISTS offline_prices (
+          barcode TEXT PRIMARY KEY,
+          price_minor INTEGER NULL,
+          updated_at TEXT NOT NULL
+        );
+        `
+      );
+
+      await runOnDb(
+        db,
+        `
+        CREATE TABLE IF NOT EXISTS offline_sales (
+          id TEXT PRIMARY KEY,
+          bill_ref TEXT NOT NULL,
+          subtotal_minor INTEGER NOT NULL,
+          item_discount_minor INTEGER NOT NULL DEFAULT 0,
+          cart_discount_minor INTEGER NOT NULL DEFAULT 0,
+          cart_discount_type TEXT NULL,
+          cart_discount_value REAL NULL,
+          discount_minor INTEGER NOT NULL,
+          total_minor INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL DEFAULT '',
+          synced_at TEXT NULL,
+          server_sale_id TEXT NULL,
+          currency TEXT NOT NULL DEFAULT 'INR'
+        );
+        `
+      );
+
+      await runOnDb(
+        db,
+        `
+        CREATE TABLE IF NOT EXISTS offline_sale_items (
+          id TEXT PRIMARY KEY,
+          sale_id TEXT NOT NULL,
+          barcode TEXT NOT NULL,
+          name TEXT NOT NULL,
+          price_minor INTEGER NOT NULL,
+          quantity INTEGER NOT NULL,
+          line_subtotal_minor INTEGER NOT NULL DEFAULT 0,
+          discount_type TEXT NULL,
+          discount_value REAL NULL,
+          discount_minor INTEGER NOT NULL DEFAULT 0,
+          line_total_minor INTEGER NOT NULL DEFAULT 0
+        );
+        `
+      );
+
+      await runOnDb(
+        db,
+        `
+        CREATE TABLE IF NOT EXISTS offline_collections (
+          id TEXT PRIMARY KEY,
+          amount_minor INTEGER NOT NULL,
+          mode TEXT NOT NULL,
+          reference TEXT NULL,
+          status TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL DEFAULT '',
+          synced_at TEXT NULL,
+          server_collection_id TEXT NULL
+        );
+        `
+      );
+
+      await runOnDb(
+        db,
+        `
+        CREATE TABLE IF NOT EXISTS offline_outbox (
+          event_id TEXT PRIMARY KEY,
+          event_type TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          attempts INTEGER NOT NULL DEFAULT 0,
+          synced_at TEXT NULL
+        );
+        `
+      );
+    }
+  },
+  {
+    version: 2,
+    name: "add_currency_column",
+    up: async (db: Db) => {
+      // Add currency column to offline_sales if missing (for upgraded installs)
+      await ensureColumn(db, "offline_sales", "currency", "TEXT NOT NULL DEFAULT 'INR'");
+    }
+  }
+];
+
+// Run self-heal checks for critical columns (runs every startup)
+async function selfHealSchema(db: Db): Promise<void> {
+  log("Running self-heal checks...");
+
+  // Critical columns that must exist for app to function
+  const criticalColumns = [
+    { table: "offline_sales", column: "currency", definition: "TEXT NOT NULL DEFAULT 'INR'" },
+    { table: "offline_sales", column: "updated_at", definition: "TEXT NOT NULL DEFAULT ''" },
+    { table: "offline_sales", column: "synced_at", definition: "TEXT NULL" },
+    { table: "offline_sales", column: "server_sale_id", definition: "TEXT NULL" },
+    { table: "offline_sales", column: "item_discount_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
+    { table: "offline_sales", column: "cart_discount_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
+    { table: "offline_sales", column: "cart_discount_type", definition: "TEXT NULL" },
+    { table: "offline_sales", column: "cart_discount_value", definition: "REAL NULL" },
+    { table: "offline_collections", column: "updated_at", definition: "TEXT NOT NULL DEFAULT ''" },
+    { table: "offline_collections", column: "synced_at", definition: "TEXT NULL" },
+    { table: "offline_collections", column: "server_collection_id", definition: "TEXT NULL" },
+    { table: "offline_products", column: "category", definition: "TEXT NULL" },
+    { table: "offline_sale_items", column: "line_subtotal_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
+    { table: "offline_sale_items", column: "discount_type", definition: "TEXT NULL" },
+    { table: "offline_sale_items", column: "discount_value", definition: "REAL NULL" },
+    { table: "offline_sale_items", column: "discount_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
+    { table: "offline_sale_items", column: "line_total_minor", definition: "INTEGER NOT NULL DEFAULT 0" }
+  ];
+
+  let healed = 0;
+  for (const { table, column, definition } of criticalColumns) {
+    const wasHealed = await ensureColumn(db, table, column, definition);
+    if (wasHealed) healed++;
+  }
+
+  if (healed > 0) {
+    log(`Self-heal completed: ${healed} column(s) added`);
+  }
+}
+
+// Run migrations sequentially
+async function runMigrations(db: Db): Promise<void> {
+  const currentVersion = await getSchemaVersion(db);
+  log(`schemaVersion before: ${currentVersion}`);
+
+  if (currentVersion >= SCHEMA_VERSION) {
+    log(`Schema is up to date (v${currentVersion})`);
+    // Still run self-heal for safety
+    await selfHealSchema(db);
+    return;
+  }
+
+  // Run pending migrations
+  const pendingMigrations = migrations.filter(m => m.version > currentVersion);
+  pendingMigrations.sort((a, b) => a.version - b.version);
+
+  for (const migration of pendingMigrations) {
+    log(`migration ${migration.version} (${migration.name}) start`);
+    try {
+      await migration.up(db);
+      await setSchemaVersion(db, migration.version);
+      log(`migration ${migration.version} (${migration.name}) end`);
+    } catch (error) {
+      log(`migration ${migration.version} (${migration.name}) FAILED:`, error);
+      // Don't throw - continue with self-heal which may fix the issue
+      break;
+    }
+  }
+
+  // Always run self-heal after migrations
+  await selfHealSchema(db);
+
+  const finalVersion = await getSchemaVersion(db);
+  log(`schemaVersion after: ${finalVersion}`);
+}
+
 async function ensureSchema(db: Db, scope: string): Promise<void> {
   if (schemaReady.has(scope)) return;
   const inFlight = schemaInFlight.get(scope);
   if (inFlight) return inFlight;
 
   const initPromise = (async () => {
-    await runOnDb(
-      db,
-      `
-      CREATE TABLE IF NOT EXISTS offline_products (
-        barcode TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        category TEXT NULL,
-        currency TEXT NOT NULL DEFAULT 'INR',
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-      `
-    );
-
-    await runOnDb(
-      db,
-      `
-      CREATE TABLE IF NOT EXISTS offline_prices (
-        barcode TEXT PRIMARY KEY,
-        price_minor INTEGER NULL,
-        updated_at TEXT NOT NULL
-      );
-      `
-    );
-
-    await runOnDb(
-      db,
-      `
-      CREATE TABLE IF NOT EXISTS offline_sales (
-        id TEXT PRIMARY KEY,
-        bill_ref TEXT NOT NULL,
-        subtotal_minor INTEGER NOT NULL,
-        item_discount_minor INTEGER NOT NULL DEFAULT 0,
-        cart_discount_minor INTEGER NOT NULL DEFAULT 0,
-        cart_discount_type TEXT NULL,
-        cart_discount_value REAL NULL,
-        discount_minor INTEGER NOT NULL,
-        total_minor INTEGER NOT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT '',
-        synced_at TEXT NULL,
-        server_sale_id TEXT NULL
-      );
-      `
-    );
-
-    await runOnDb(
-      db,
-      `
-      CREATE TABLE IF NOT EXISTS offline_sale_items (
-        id TEXT PRIMARY KEY,
-        sale_id TEXT NOT NULL,
-        barcode TEXT NOT NULL,
-        name TEXT NOT NULL,
-        price_minor INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-        line_subtotal_minor INTEGER NOT NULL DEFAULT 0,
-        discount_type TEXT NULL,
-        discount_value REAL NULL,
-        discount_minor INTEGER NOT NULL DEFAULT 0,
-        line_total_minor INTEGER NOT NULL DEFAULT 0
-      );
-      `
-    );
-
-    await runOnDb(
-      db,
-      `
-      CREATE TABLE IF NOT EXISTS offline_collections (
-        id TEXT PRIMARY KEY,
-        amount_minor INTEGER NOT NULL,
-        mode TEXT NOT NULL,
-        reference TEXT NULL,
-        status TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT '',
-        synced_at TEXT NULL,
-        server_collection_id TEXT NULL
-      );
-      `
-    );
-
-    await runOnDb(
-      db,
-      `
-      CREATE TABLE IF NOT EXISTS offline_outbox (
-        event_id TEXT PRIMARY KEY,
-        event_type TEXT NOT NULL,
-        payload TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        attempts INTEGER NOT NULL DEFAULT 0,
-        synced_at TEXT NULL
-      );
-      `
-    );
-
-    // Best-effort migrations for existing local DBs.
-    const alterStatements = [
-      `ALTER TABLE offline_sales ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
-      `ALTER TABLE offline_sales ADD COLUMN synced_at TEXT NULL`,
-      `ALTER TABLE offline_sales ADD COLUMN server_sale_id TEXT NULL`,
-      `ALTER TABLE offline_sales ADD COLUMN item_discount_minor INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE offline_sales ADD COLUMN cart_discount_minor INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE offline_sales ADD COLUMN cart_discount_type TEXT NULL`,
-      `ALTER TABLE offline_sales ADD COLUMN cart_discount_value REAL NULL`,
-      `ALTER TABLE offline_collections ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
-      `ALTER TABLE offline_collections ADD COLUMN synced_at TEXT NULL`,
-      `ALTER TABLE offline_collections ADD COLUMN server_collection_id TEXT NULL`,
-      `ALTER TABLE offline_products ADD COLUMN category TEXT NULL`,
-      `ALTER TABLE offline_sale_items ADD COLUMN line_subtotal_minor INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE offline_sale_items ADD COLUMN discount_type TEXT NULL`,
-      `ALTER TABLE offline_sale_items ADD COLUMN discount_value REAL NULL`,
-      `ALTER TABLE offline_sale_items ADD COLUMN discount_minor INTEGER NOT NULL DEFAULT 0`,
-      `ALTER TABLE offline_sale_items ADD COLUMN line_total_minor INTEGER NOT NULL DEFAULT 0`
-    ];
-
-    for (const stmt of alterStatements) {
-      try {
-        await runOnDb(db, stmt);
-      } catch {
-        // Ignore if column already exists.
-      }
+    try {
+      await runMigrations(db);
+      schemaReady.add(scope);
+    } catch (error) {
+      log("Schema initialization failed:", error);
+      throw new Error(`Database initialization failed: ${error}`);
+    } finally {
+      schemaInFlight.delete(scope);
     }
-
-    schemaReady.add(scope);
-    schemaInFlight.delete(scope);
   })();
 
   schemaInFlight.set(scope, initPromise);

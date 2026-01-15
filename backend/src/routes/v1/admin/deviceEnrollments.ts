@@ -2,8 +2,14 @@ import { randomBytes } from "crypto";
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";
+import { isDemoStoreCode } from "../../../services/storeCodeService";
 
 export const adminDeviceEnrollmentRouter = Router();
+
+// Demo stores get unlimited multi-use enrollment codes
+const DEMO_MAX_USES = 9999;
+// Production stores get single-use enrollment codes
+const PRODUCTION_MAX_USES = 1;
 
 const ENROLLMENT_TTL_MINUTES = 30;
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -39,25 +45,44 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const storeRes = await pool.query(`SELECT id FROM stores WHERE id = $1`, [storeId]);
+  // BUG-FIX: Fetch store details to determine if demo store (for multi-use enrollments)
+  const storeRes = await pool.query(
+    `SELECT id, store_code, code, is_demo FROM stores WHERE id = $1`,
+    [storeId]
+  );
   if (storeRes.rowCount === 0) {
     return res.status(404).json({ error: "store not found" });
   }
 
+  const store = storeRes.rows[0];
+  const storeCode = store.store_code ?? store.code ?? "";
+  const isDemo = Boolean(store.is_demo) || isDemoStoreCode(storeCode);
+
+  // Demo stores get unlimited multi-use enrollment codes
+  // Production stores get single-use codes
+  const maxUses = isDemo ? DEMO_MAX_USES : PRODUCTION_MAX_USES;
+  // Demo codes don't expire (set far future)
+  const expiresAt = isDemo
+    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year for demo
+    : new Date(Date.now() + ENROLLMENT_TTL_MINUTES * 60_000).toISOString();
+
   const code = await generateUniqueCode(pool);
-  const expiresAt = new Date(Date.now() + ENROLLMENT_TTL_MINUTES * 60_000).toISOString();
 
   await pool.query(
     `
-    INSERT INTO pos_device_enrollments (code, store_id, expires_at, created_by)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO pos_device_enrollments (code, store_id, expires_at, max_uses, created_by)
+    VALUES ($1, $2, $3, $4, $5)
     `,
-    [code, storeId, expiresAt, "superadmin"]
+    [code, storeId, expiresAt, maxUses, "superadmin"]
   );
+
+  console.log(`[AdminEnrollment] Created code=${code} store=${storeCode} isDemo=${isDemo} maxUses=${maxUses}`);
 
   return res.json({
     code,
     expiresAt,
+    maxUses,
+    isDemo,
     qrPayload: `supermandi://enroll?code=${encodeURIComponent(code)}`
   });
 });

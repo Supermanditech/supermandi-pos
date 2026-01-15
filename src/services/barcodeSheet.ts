@@ -2,8 +2,13 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
 import { offlineDb } from "./offline/localDb";
+import * as productsApi from "./api/productsApi";
 
 export type BarcodeSheetTier = "TIER_1" | "TIER_2";
+
+function log(message: string, ...args: unknown[]): void {
+  console.log(`[BarcodeSheet] ${message}`, ...args);
+}
 
 export type BarcodeSheetItem = {
   barcode: string;
@@ -317,11 +322,35 @@ export function getBarcodeSheetCapacity(tier: BarcodeSheetTier): number {
   return layout.columns * layout.rows;
 }
 
+/**
+ * GL-BARCODE-001: Fetch products with barcodes from API first, fall back to offline cache.
+ * Returns only products that have valid barcodes for sheet generation.
+ */
 export async function fetchBarcodeSheetItems(
   tier: BarcodeSheetTier,
   limit = DEFAULT_MAX_ITEMS
 ): Promise<BarcodeSheetItem[]> {
   const safeLimit = Math.max(getBarcodeSheetCapacity(tier), Math.min(limit, 500));
+
+  // 1) Try API first (real source-of-truth)
+  try {
+    log("Fetching products from API...");
+    const apiProducts = await productsApi.listProducts();
+    const withBarcodes = apiProducts
+      .filter((p) => p.barcode && p.barcode.trim().length > 0)
+      .map((p) => ({ barcode: p.barcode!, name: p.name }))
+      .slice(0, safeLimit);
+
+    if (withBarcodes.length > 0) {
+      log(`API returned ${withBarcodes.length} products with barcodes`);
+      return withBarcodes;
+    }
+    log("API returned no products with barcodes, trying offline cache...");
+  } catch (error) {
+    log("API fetch failed, falling back to offline cache:", error);
+  }
+
+  // 2) Fallback to offline_products cache
   const sql = `
     SELECT barcode as barcode, name as name
     FROM offline_products
@@ -329,7 +358,9 @@ export async function fetchBarcodeSheetItems(
     LIMIT ?
   `;
   const rows = await offlineDb.all<BarcodeSheetItem>(sql, [safeLimit]);
-  return rows.filter((item) => item.barcode);
+  const filtered = rows.filter((item) => item.barcode && item.barcode.trim().length > 0);
+  log(`Offline cache returned ${filtered.length} products with barcodes`);
+  return filtered;
 }
 
 export async function generateBarcodeSheetPdf(

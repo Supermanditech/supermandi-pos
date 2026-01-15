@@ -26,6 +26,7 @@ import { logPosEvent } from "../services/cloudEventLogger";
 import { useCartStore } from "../stores/cartStore";
 import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
+import { useSettingsStore } from "../stores/settingsStore";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -247,6 +248,16 @@ export default function EnrollDeviceScreen() {
         deviceToken: res.deviceToken,
         deviceType
       });
+
+      // GO-LIVE: Persist store name for offline display (SuperAdmin source of truth)
+      const { setStoreName, setStoreCode } = useSettingsStore.getState();
+      if (res.storeName) {
+        setStoreName(res.storeName);
+      }
+      if (res.storeCode) {
+        setStoreCode(res.storeCode);
+      }
+
       if (storeChanged) {
         void logPosEvent("STORE_SWITCH", {
           previousStoreId,

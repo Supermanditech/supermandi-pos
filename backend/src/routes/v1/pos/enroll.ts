@@ -2,8 +2,10 @@ import { randomBytes, randomUUID } from "crypto";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+import { isDemoStoreCode } from "../../../services/storeCodeService";
 
 // DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
+// BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
 
 // Rate limiter for enrollment endpoint to prevent brute force attacks
 const enrollmentLimiter = rateLimit({
@@ -131,7 +133,11 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
       return res.status(409).json({ error: { code: "ENROLLMENT_CODE_REVOKED", message: "This enrollment code has been revoked" } });
     }
 
-    const storeRes = await client.query(`SELECT id, active, is_demo FROM stores WHERE id = $1`, [enrollment.store_id]);
+    // GO-LIVE: Fetch store name and code for enrollment response
+    const storeRes = await client.query(
+      `SELECT id, name, store_code, active, is_demo FROM stores WHERE id = $1`,
+      [enrollment.store_id]
+    );
     const store = storeRes.rows[0];
     if (!store) {
       await client.query("ROLLBACK");
@@ -167,11 +173,32 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
       existingDeviceByFingerprint = fingerprintRes.rows[0];
     }
 
+    // BUG-FIX: Detect demo FIRST - they get unlimited multi-use enrollment
+    // Detection (3 layers):
+    //   1. store.is_demo flag
+    //   2. store_code matches demo pattern (DM*, QA*, %demo%, etc.)
+    //   3. enrollment CODE itself is demo pattern (SM-DEMO*)
+    const storeCode = store.store_code ?? store.code ?? "";
+    const isDemo = Boolean(store.is_demo) || isDemoStoreCode(storeCode) || isDemoCode(code);
+
+    // Parse enrollment state
     const expiresAt = new Date(enrollment.expires_at);
     const isExpired = !Number.isFinite(expiresAt.getTime()) || expiresAt.getTime() <= Date.now();
     const maxUses = enrollment.max_uses;
     const usesCount = enrollment.uses_count;
-    const usesExhausted = usesCount >= maxUses;
+
+    // CRITICAL: Handle legacy single-use vs multi-use logic
+    // - If max_uses > 1: multi-use mode, IGNORE used_device_id, check uses_count vs max_uses
+    // - If max_uses <= 1: single-use mode, check BOTH used_device_id AND uses_count
+    const isMultiUseMode = maxUses > 1;
+    let usesExhausted: boolean;
+    if (isMultiUseMode) {
+      // Multi-use: only check uses_count vs max_uses (ignore legacy used_device_id)
+      usesExhausted = usesCount >= maxUses;
+    } else {
+      // Single-use: exhausted if used_device_id is set OR uses_count >= 1
+      usesExhausted = enrollment.used_device_id != null || usesCount >= 1;
+    }
 
     // Determine if this is a re-enrollment scenario
     const existingDevice = existingDeviceByLabel || existingDeviceByFingerprint;
@@ -184,33 +211,54 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
       return res.json({
         deviceId: existingDeviceByFingerprint.id,
         storeId: store.id,
+        storeName: store.name ?? null,       // GO-LIVE: Store name from SuperAdmin
+        storeCode: store.store_code ?? null, // GO-LIVE: Human-readable store code
         deviceToken: existingDeviceByFingerprint.device_token,
         storeActive: Boolean(store.active),
         reEnrolled: true
       });
     }
 
-    // Check if code can be used
-    if (usesExhausted && !existingDevice) {
-      // Code fully used by other device(s), and this is a new device
-      await client.query("ROLLBACK");
-      return res.status(409).json({
-        error: {
-          code: "ENROLLMENT_CODE_USED",
-          message: "This enrollment code has already been used. Ask your SuperAdmin to generate a new code."
-        }
-      });
+    // =========================================================================
+    // ENROLLMENT ENFORCEMENT RULES
+    // =========================================================================
+    // Demo stores: BYPASS all restrictions (used, exhausted, expired)
+    // Production stores: ENFORCE single-use (used/exhausted -> 409, expired -> 409)
+    // Re-enrollment (existingDevice): ALWAYS allowed (device recovery scenario)
+    // =========================================================================
+
+    if (!isDemo && !existingDevice) {
+      // PRODUCTION store with NEW device - enforce restrictions
+
+      // Check if code is already used/exhausted
+      if (usesExhausted) {
+        await client.query("ROLLBACK");
+        const hasLegacyMarker = enrollment.used_device_id != null;
+        console.log(`[Enroll] REJECT 409: Production code ${code} already used (maxUses=${maxUses}, usesCount=${usesCount}, used_device_id=${hasLegacyMarker ? 'SET' : 'NULL'}, isMultiUse=${isMultiUseMode})`);
+        return res.status(409).json({
+          error: {
+            code: "ENROLLMENT_CODE_USED",
+            message: "This enrollment code has already been used. Ask your SuperAdmin to generate a new code."
+          }
+        });
+      }
+
+      // Check if code is expired
+      if (isExpired) {
+        await client.query("ROLLBACK");
+        console.log(`[Enroll] REJECT 409: Production code ${code} expired at ${enrollment.expires_at}`);
+        return res.status(409).json({
+          error: {
+            code: "ENROLLMENT_CODE_EXPIRED",
+            message: "This enrollment code has expired. Ask your SuperAdmin to generate a new code."
+          }
+        });
+      }
     }
 
-    if (isExpired && !existingDevice) {
-      // Code expired and this is a new device
-      await client.query("ROLLBACK");
-      return res.status(409).json({
-        error: {
-          code: "ENROLLMENT_CODE_EXPIRED",
-          message: "This enrollment code has expired. Ask your SuperAdmin to generate a new code."
-        }
-      });
+    // Log demo multi-use enrollment (for monitoring)
+    if (isDemo && (usesExhausted || isExpired)) {
+      console.log(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
     }
 
     // Allow re-enrollment for existing devices even with expired/used code (for device recovery)
@@ -308,6 +356,7 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
     }
 
     // DEV-071: Atomically increment uses_count for new enrollments (not re-enrollments)
+    // Also update last_used_at for tracking (useful for monitoring demo usage)
     if (!existingDevice) {
       await client.query(
         `
@@ -316,6 +365,7 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
           used_at = COALESCE(used_at, NOW()),
           used_device_id = COALESCE(used_device_id, $2),
           uses_count = COALESCE(uses_count, 0) + 1,
+          last_used_at = NOW(),
           updated_at = NOW()
         WHERE code = $1
         `,
@@ -330,6 +380,8 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
     return res.json({
       deviceId,
       storeId: store.id,
+      storeName: store.name ?? null,       // GO-LIVE: Store name from SuperAdmin
+      storeCode: store.store_code ?? null, // GO-LIVE: Human-readable store code
       deviceToken,
       storeActive: Boolean(store.active),
       reEnrolled: Boolean(existingDevice)

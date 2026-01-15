@@ -16,6 +16,7 @@ import { BUILD_INFO, API_BASE_URL } from "../config/api";
 import { getDeviceToken, clearDeviceSession } from "../services/deviceSession";
 import { fetchUiStatus, type UiStatusResponse } from "../services/api/uiStatusApi";
 import { logPosEvent } from "../services/cloudEventLogger";
+import { pendingOutboxCount } from "../services/offline/outbox";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -48,10 +49,12 @@ export default function MenuScreen() {
   const setLanguage = useSettingsStore((state) => state.setLanguage);
 
   // DEV-057: Operational status for status panel
+  // STORECODE-003: Added storeCode for display
   const [opStatus, setOpStatus] = useState<{
     tokenSuffix: string;
     storeId: string | null;
     storeName: string | null;
+    storeCode: string | null;
     storeActive: boolean | null;
     deviceActive: boolean | null;
     pendingOutboxCount: number;
@@ -60,6 +63,7 @@ export default function MenuScreen() {
     tokenSuffix: "...",
     storeId: null,
     storeName: null,
+    storeCode: null,
     storeActive: null,
     deviceActive: null,
     pendingOutboxCount: 0,
@@ -76,6 +80,7 @@ export default function MenuScreen() {
           tokenSuffix,
           storeId: uiStatus.storeId ?? null,
           storeName: uiStatus.storeName ?? null,
+          storeCode: uiStatus.storeCode ?? null, // STORECODE-003
           storeActive: uiStatus.storeActive ?? null,
           deviceActive: uiStatus.deviceActive ?? null,
           pendingOutboxCount: uiStatus.pendingOutboxCount ?? 0,
@@ -95,47 +100,67 @@ export default function MenuScreen() {
     setLanguage(nextLang);
   };
 
-  const handleSwitchStore = () => {
-    Alert.alert(
-      t('menu.switchStoreConfirm'),
-      t('menu.switchStoreWarning'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('menu.switchStoreButton'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Log the switch event before clearing
-              void logPosEvent("STORE_SWITCH", {
-                previousStoreId: devInfo.storeId,
-                nextStoreId: null,
-                reason: "manual_switch"
-              });
+  const handleSwitchStore = async () => {
+    // Check for pending offline data before allowing switch
+    const pendingCount = await pendingOutboxCount();
 
-              // Clear all local state
-              useCartStore.getState().resetForStore();
-              usePurchaseDraftStore.getState().resetForStore();
-              useProductsStore.getState().resetForStore();
-
-              // Clear device session
-              await clearDeviceSession();
-
-              // Navigate to EnrollDevice and reset navigation stack
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'EnrollDevice' }],
-                })
-              );
-            } catch (error) {
-              console.error('[MenuScreen] Switch store failed:', error);
-              Alert.alert(t('common.error'), t('errors.unknownError'));
-            }
+    if (pendingCount > 0) {
+      Alert.alert(
+        t('menu.unsyncedData'),
+        t('menu.unsyncedDataWarning', { count: pendingCount }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('menu.switchAnyway'),
+            style: 'destructive',
+            onPress: () => proceedWithSwitchStore()
           }
-        }
-      ]
-    );
+        ]
+      );
+    } else {
+      Alert.alert(
+        t('menu.switchStoreConfirm'),
+        t('menu.switchStoreWarning'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('menu.switchStoreButton'),
+            style: 'destructive',
+            onPress: () => proceedWithSwitchStore()
+          }
+        ]
+      );
+    }
+  };
+
+  const proceedWithSwitchStore = async () => {
+    try {
+      // Log the switch event before clearing
+      void logPosEvent("STORE_SWITCH", {
+        previousStoreId: devInfo.storeId,
+        nextStoreId: null,
+        reason: "manual_switch"
+      });
+
+      // Clear all local state
+      useCartStore.getState().resetForStore();
+      usePurchaseDraftStore.getState().resetForStore();
+      useProductsStore.getState().resetForStore();
+
+      // Clear device session
+      await clearDeviceSession();
+
+      // Navigate to EnrollDevice and reset navigation stack
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'EnrollDevice' }],
+        })
+      );
+    } catch (error) {
+      console.error('[MenuScreen] Switch store failed:', error);
+      Alert.alert(t('common.error'), t('errors.unknownError'));
+    }
   };
 
   const goToBills = () => navigation.navigate("SalesHistory");
@@ -163,6 +188,7 @@ export default function MenuScreen() {
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>
             {opStatus.storeName || t('menu.statusLoading')}
+            {opStatus.storeCode ? ` (${opStatus.storeCode})` : ''}
           </Text>
           <View style={[
             styles.statusBadge,

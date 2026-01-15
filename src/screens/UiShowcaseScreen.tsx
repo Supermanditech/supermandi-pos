@@ -20,6 +20,8 @@ import { theme } from "../theme";
 import { ProductDetailModal } from "../components/buy/ProductDetailModal";
 import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
 import type { CatalogProduct } from "../services/api/catalogApi";
+import { seedDemoStore } from "../services/api/demoApi";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // =============================================================================
 // QA GATE CHECK
@@ -197,10 +199,42 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
     }
   };
 
-  const handleLoadDemoData = async () => {
-    showToast("Demo data loaded from existing seed");
-    // The seed data was already loaded via SSH commands
-    // This just confirms it's available
+  const [seeding, setSeeding] = useState(false);
+
+  const handleSeedDemoData = async () => {
+    try {
+      // Get current store ID from AsyncStorage
+      const storeId = await AsyncStorage.getItem("supermandi.store_id");
+      if (!storeId) {
+        Alert.alert("Error", "No store ID found. Please enroll device first.");
+        return;
+      }
+
+      setSeeding(true);
+      showToast("Seeding demo data...");
+
+      const result = await seedDemoStore(storeId);
+
+      if (result.success) {
+        const { seeded } = result;
+        Alert.alert(
+          "Demo Data Seeded",
+          `Store: ${result.storeName} (${result.storeCode})\n\n` +
+          `Products: ${seeded.products}\n` +
+          `Store Products: ${seeded.store_products}\n` +
+          `Barcodes: ${seeded.barcodes}\n` +
+          `Suppliers: ${seeded.suppliers}\n` +
+          `Purchase Orders: ${seeded.purchase_orders}\n` +
+          `Bills: ${seeded.bills}\n` +
+          `Reorder Policies: ${seeded.reorder_policies}`
+        );
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Seed Failed", message);
+    } finally {
+      setSeeding(false);
+    }
   };
 
   const renderItem = (item: UiItem) => {
@@ -269,10 +303,24 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
         {/* QA Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>QA Actions</Text>
-          <Pressable style={styles.actionButton} onPress={handleLoadDemoData}>
-            <MaterialCommunityIcons name="database-import" size={18} color={theme.colors.textInverse} />
-            <Text style={styles.actionButtonText}>Verify Demo Data</Text>
+          <Pressable
+            style={[styles.actionButton, seeding && styles.actionButtonDisabled]}
+            onPress={handleSeedDemoData}
+            disabled={seeding}
+          >
+            <MaterialCommunityIcons
+              name={seeding ? "loading" : "database-import"}
+              size={18}
+              color={theme.colors.textInverse}
+            />
+            <Text style={styles.actionButtonText}>
+              {seeding ? "Seeding..." : "Seed Demo Data"}
+            </Text>
           </Pressable>
+          <Text style={styles.actionHint}>
+            Creates products, suppliers, orders, bills, and reorder policies for testing all screens.
+            Only works for demo stores (DM*, QA*, TS*, ST* codes).
+          </Text>
         </View>
 
         {/* Stack Screens */}
@@ -428,5 +476,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: theme.colors.textInverse,
+  },
+  actionButtonDisabled: {
+    opacity: 0.6,
+  },
+  actionHint: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+    marginTop: 8,
+    textAlign: "center",
   },
 });
