@@ -22,7 +22,12 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   // I18N-008: Include locale in Accept-Language header
   const locale = i18n.language || "en";
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const fullUrl = `${API_BASE_URL}${path}`;
+  console.log(`[api_debug] ${method} ${fullUrl}`);
+  console.log(`[api_debug] X-Device-Token: ${deviceToken ? deviceToken.slice(0, 8) + "..." : "none"}`);
+  if (body) console.log(`[api_debug] body: ${JSON.stringify(body).slice(0, 200)}`);
+
+  const res = await fetch(fullUrl, {
     method,
     headers: {
       Accept: "application/json",
@@ -35,6 +40,7 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   });
 
   const text = await res.text();
+  console.log(`[api_debug] status: ${res.status}, body: ${text.slice(0, 300)}`);
   const parsed = text ? (JSON.parse(text) as unknown) : undefined;
 
   if (!res.ok) {

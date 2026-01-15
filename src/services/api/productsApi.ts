@@ -106,12 +106,14 @@ export async function lookupStoreProductPreviewByScan(input: {
   if (input.format) {
     query.set("format", input.format);
   }
+  const url = `${PRODUCTS_BASE}/lookup?${query.toString()}`;
+  console.log(`[scan_debug] GET ${url}`);
   try {
-    const res = await apiClient.get<{ product: StoreLookupProduct }>(
-      `${PRODUCTS_BASE}/lookup?${query.toString()}`
-    );
+    const res = await apiClient.get<{ product: StoreLookupProduct }>(url);
+    console.log(`[scan_debug] response:`, JSON.stringify(res).slice(0, 300));
     return res.product;
   } catch (error) {
+    console.log(`[scan_debug] error:`, error instanceof ApiError ? `ApiError(${error.status}): ${error.message}` : String(error));
     if (error instanceof ApiError && error.message === "product_not_found") {
       return null;
     }
