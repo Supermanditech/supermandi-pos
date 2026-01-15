@@ -55,7 +55,7 @@ ON CONFLICT (barcode) DO NOTHING;
 -- =============================================================================
 -- 4. SEED RETAILER_VARIANTS (public.retailer_variants)
 -- Links variants to demo store with pricing
--- Demo store ID: a0000000-0000-0000-0000-000000000001
+-- Demo store ID: a0000000-0000-0000-0000-000000000001 (from platform.stores via view)
 -- =============================================================================
 INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer, created_at)
 VALUES
