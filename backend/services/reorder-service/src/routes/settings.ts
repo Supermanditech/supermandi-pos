@@ -21,6 +21,20 @@ const router: RouterType = Router();
  * Get reorder settings for a store.
  * Returns 404 if settings don't exist.
  */
+// Alias route for POS compatibility: /stores/:storeId/reorder/settings
+router.get(
+  '/stores/:storeId/reorder/settings',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId } = req.params;
+      const settings = await getOrCreateSettings(storeId);
+      res.json({ success: true, data: settings });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 router.get(
   '/stores/:storeId/settings',
   async (req: Request, res: Response, next: NextFunction) => {

@@ -56,6 +56,12 @@ function asTrimmedString(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+// Check if string is a valid UUID format (prevents PostgreSQL cast errors)
+function isValidUUID(value: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(value);
+}
+
 function parseVariantSize(variantRaw: string | null | undefined): { baseUnit: BaseUnit; sizeBase: number } | null {
   if (!variantRaw) return null;
   const trimmed = variantRaw.trim().toLowerCase();
@@ -270,6 +276,61 @@ async function variantExists(client: PoolClient, variantId: string): Promise<boo
     [variantId]
   );
   return (res.rowCount ?? 0) > 0;
+}
+
+// Resolve variant ID from barcode (for offline-to-online sales with barcode as productId)
+async function resolveVariantByBarcode(
+  client: PoolClient,
+  storeId: string,
+  barcode: string,
+  fallbackName: string | null,
+  currency: string
+): Promise<string | null> {
+  const trimmed = barcode.trim();
+  if (!trimmed) return null;
+
+  // First try to find existing variant by barcode
+  const barcodeRes = await client.query(
+    `
+    SELECT v.id
+    FROM barcodes b
+    JOIN variants v ON v.id = b.variant_id
+    WHERE b.barcode = $1
+    LIMIT 1
+    `,
+    [trimmed]
+  );
+
+  if (barcodeRes.rows[0]?.id) {
+    const variantId = String(barcodeRes.rows[0].id);
+    await ensureRetailerVariantLink(client, storeId, variantId);
+    return variantId;
+  }
+
+  // Try to find global product by barcode identifier
+  const globalRes = await client.query(
+    `
+    SELECT gpi.global_product_id
+    FROM global_product_identifiers gpi
+    WHERE gpi.normalized_value = $1
+       OR gpi.raw_value = $1
+    LIMIT 1
+    `,
+    [trimmed]
+  );
+
+  if (globalRes.rows[0]?.global_product_id) {
+    const globalProductId = String(globalRes.rows[0].global_product_id);
+    return resolveVariantForGlobalProduct({
+      client,
+      storeId,
+      globalProductId,
+      fallbackName,
+      currency
+    });
+  }
+
+  return null;
 }
 
 async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
@@ -564,7 +625,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       let variantId: string | null = null;
       if (item.explicitVariantId) {
         variantId = item.explicitVariantId;
-      } else if (item.globalProductId) {
+      } else if (item.globalProductId && isValidUUID(item.globalProductId)) {
         variantId = await resolveVariantForGlobalProduct({
           client,
           storeId,
@@ -572,7 +633,8 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
           fallbackName: item.name ?? null,
           currency: saleCurrency
         });
-      } else if (item.productId) {
+      } else if (item.productId && isValidUUID(item.productId)) {
+        // productId is a valid UUID - try as variant or global product
         if (await variantExists(client, item.productId)) {
           variantId = item.productId;
         } else {
@@ -584,6 +646,25 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
             currency: saleCurrency
           });
         }
+      } else if (item.barcode) {
+        // productId is not a valid UUID (e.g., offline sale with barcode as ID)
+        // Fall back to resolving by barcode
+        variantId = await resolveVariantByBarcode(
+          client,
+          storeId,
+          item.barcode,
+          item.name ?? null,
+          saleCurrency
+        );
+      } else if (item.productId) {
+        // Last resort: try productId as barcode (for offline items where barcode was used as id)
+        variantId = await resolveVariantByBarcode(
+          client,
+          storeId,
+          item.productId,
+          item.name ?? null,
+          saleCurrency
+        );
       }
 
       if (!variantId) {

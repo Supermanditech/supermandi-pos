@@ -29,6 +29,38 @@ const router: RouterType = Router();
  * - offset: Pagination offset (default 0)
  * - enabledOnly: Only return enabled policies (default false)
  */
+// Alias route for POS compatibility: /stores/:storeId/reorder/policies
+router.get(
+  '/stores/:storeId/reorder/policies',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId } = req.params;
+      const limit = parseInt(req.query.limit as string) || config.reorder.defaultLimit;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const enabledOnly = req.query.enabledOnly === 'true';
+
+      const result = await listStorePolicies(storeId, {
+        limit,
+        offset,
+        enabledOnly,
+      });
+
+      res.json({
+        success: true,
+        data: result.policies,
+        pagination: {
+          limit,
+          offset,
+          total: result.total,
+          hasMore: offset + result.policies.length < result.total,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 router.get(
   '/stores/:storeId/policies',
   async (req: Request, res: Response, next: NextFunction) => {
@@ -229,6 +261,64 @@ router.delete(
       res.json({
         success: true,
         message: 'Policy deleted',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * PATCH /stores/:storeId/reorder/policies/:identifier
+ * Update a reorder policy by productId (POS compatibility).
+ * The identifier is expected to be a productId, not policyId.
+ *
+ * Body:
+ * - minThreshold: number >= 0 (optional, mapped to minStock)
+ * - targetStock: number >= minStock (optional)
+ * - preferredSupplierId: UUID or null (optional)
+ * - isEnabled: boolean (optional)
+ */
+router.patch(
+  '/stores/:storeId/reorder/policies/:identifier',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId, identifier } = req.params;
+      const { minThreshold, minStock, targetStock, preferredSupplierId, isEnabled } = req.body;
+
+      // First try to find by productId (expected case from POS)
+      let policy = await getPolicyByProduct(storeId, identifier);
+
+      // If not found, try to find by policyId
+      if (!policy) {
+        policy = await getPolicyByIdService(identifier);
+        // Verify the policy belongs to this store
+        if (policy && policy.storeId !== storeId) {
+          policy = null;
+        }
+      }
+
+      if (!policy) {
+        throw new ApiError(
+          404,
+          'POLICY_NOT_FOUND',
+          `Policy ${identifier} not found`
+        );
+      }
+
+      // Map minThreshold to minStock for API compatibility
+      const updates: { minStock?: number; targetStock?: number; preferredSupplierId?: string | null; isEnabled?: boolean } = {};
+      if (minThreshold !== undefined) updates.minStock = minThreshold;
+      if (minStock !== undefined) updates.minStock = minStock;
+      if (targetStock !== undefined) updates.targetStock = targetStock;
+      if (preferredSupplierId !== undefined) updates.preferredSupplierId = preferredSupplierId;
+      if (isEnabled !== undefined) updates.isEnabled = isEnabled;
+
+      const updated = await updatePolicyService(policy.id, updates);
+
+      res.json({
+        success: true,
+        data: updated,
       });
     } catch (error) {
       next(error);
