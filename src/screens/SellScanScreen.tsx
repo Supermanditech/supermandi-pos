@@ -28,6 +28,8 @@ import type { CartItem } from "../stores/cartStore";
 import { useProductsStore } from "../stores/productsStore";
 import { formatMoney } from "../utils/money";
 import * as productsApi from "../services/api/productsApi";
+import * as sellSearchApi from "../services/api/sellSearchApi";
+import { getDeviceStoreId } from "../services/deviceSession";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { offlineDb } from "../services/offline/localDb";
 import { onBarcodeScanned, type SellFirstOnboardingRequest } from "../services/scan/handleScan";
@@ -85,37 +87,80 @@ const resolveSkuPrice = (item: SkuItem) => {
 type DiscountType = "percentage" | "fixed";
 
 async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
-  const trimmedQuery = query?.trim();
+  const trimmedQuery = query?.trim() || "";
   try {
-    const remote = await productsApi.listProducts(trimmedQuery ? { q: trimmedQuery } : undefined);
     const items: SkuItem[] = [];
 
-    for (const product of remote) {
-      const barcode = typeof product.barcode === "string" ? product.barcode.trim() : "";
-      if (!barcode) continue;
-      const currency = product.currency ?? "INR";
-      const priceSources = productsApi.getProductPriceSources(product);
-      const resolved = productsApi.resolvePriceMinorFromSources(priceSources);
-      const resolvedPriceMinor = resolved.priceMinor > 0 ? resolved.priceMinor : null;
+    // SD-ONBOARD-002C: Use list endpoint for initial load, search for queries
+    if (trimmedQuery.length < 2) {
+      // No query or short query - use list endpoint for tap-and-add grid
+      console.log("[syncProductsToOffline] Using list endpoint for tap-and-add");
+      const products = await sellSearchApi.listStoreProducts({ limit: 50 });
 
-      items.push({
-        productId: product.id,
-        barcode,
-        name: product.name,
-        currency,
-        inventoryPriceMinor: priceSources.inventoryPrice ?? null,
-        variantPriceMinor: priceSources.variantPrice ?? null,
-        variantMrpMinor: priceSources.variantMrp ?? null
+      for (const product of products) {
+        const barcode = product.barcode?.trim() || "";
+
+        items.push({
+          productId: product.productId,
+          barcode,
+          name: product.name,
+          currency: "INR",
+          inventoryPriceMinor: product.sellPrice,
+          variantPriceMinor: null,
+          variantMrpMinor: null,
+        });
+
+        // Store in offline DB for offline search
+        if (barcode) {
+          await upsertLocalProduct(barcode, product.name, "INR", null);
+          if (product.sellPrice !== null) {
+            await setLocalPrice(barcode, product.sellPrice);
+          }
+        }
+      }
+    } else {
+      // Query provided - use search endpoint
+      const storeId = await getDeviceStoreId();
+      if (!storeId) {
+        console.log("[syncProductsToOffline] No storeId, skipping sync");
+        return [];
+      }
+
+      const groups = await sellSearchApi.searchStoreProducts(storeId, trimmedQuery, {
+        limit: 50,
+        includeZeroStock: true,
       });
 
-      await upsertLocalProduct(barcode, product.name, currency, null);
-      if (resolvedPriceMinor !== null) {
-        await setLocalPrice(barcode, resolvedPriceMinor);
+      for (const group of groups) {
+        for (const match of group.matches) {
+          const barcode = match.barcode?.trim() || "";
+          const displayName = match.displayName || group.displayName;
+          const sellPrice = match.sellPrice ?? null;
+
+          items.push({
+            productId: match.productId,
+            barcode,
+            name: displayName,
+            currency: "INR",
+            inventoryPriceMinor: sellPrice,
+            variantPriceMinor: null,
+            variantMrpMinor: null,
+          });
+
+          // Store in offline DB for offline search
+          if (barcode) {
+            await upsertLocalProduct(barcode, displayName, "INR", null);
+            if (sellPrice !== null) {
+              await setLocalPrice(barcode, sellPrice);
+            }
+          }
+        }
       }
     }
 
     return items;
-  } catch {
+  } catch (error) {
+    console.log("[syncProductsToOffline] Error:", error);
     return [];
   }
 }

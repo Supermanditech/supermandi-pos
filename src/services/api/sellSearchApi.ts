@@ -84,7 +84,7 @@ export interface StoreLookupNotFoundResponse {
  * @param options - Search options
  */
 export async function searchStoreProducts(
-  storeId: string,
+  _storeId: string, // Deprecated: storeId derived from device token on server
   query: string,
   options: {
     limit?: number;
@@ -99,8 +99,62 @@ export async function searchStoreProducts(
     includeZeroStock: String(includeZeroStock),
   });
 
+  // SD-ONBOARD-002C: Use POS endpoint (device token → storeId)
   const response = await apiClient.get<StoreSearchResponse>(
-    `/api/v1/catalog/stores/${storeId}/store-products/search?${params}`
+    `/api/v1/pos/store-products/search?${params}`
+  );
+
+  return response.data;
+}
+
+// =============================================================================
+// SD-ONBOARD-002C: Store Product List (Tap-and-Add)
+// =============================================================================
+
+/**
+ * Store product item from list endpoint
+ */
+export interface StoreProductListItem {
+  storeProductId: string;
+  productId: string;
+  name: string;
+  barcode: string | null;
+  sellPrice: number | null;
+  currentStock: number;
+  brand: string | null;
+  unit: string;
+}
+
+export interface StoreProductListResponse {
+  success: boolean;
+  data: StoreProductListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  context: "SELL";
+}
+
+/**
+ * List store products for tap-and-add SELL grid.
+ * Does NOT require a search query - returns recent products.
+ *
+ * @param options - List options (limit, offset)
+ */
+export async function listStoreProducts(
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {}
+): Promise<StoreProductListItem[]> {
+  const { limit = 50, offset = 0 } = options;
+
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+
+  const response = await apiClient.get<StoreProductListResponse>(
+    `/api/v1/pos/store-products/list?${params}`
   );
 
   return response.data;
@@ -113,16 +167,17 @@ export async function searchStoreProducts(
  * Returns null if product not in store catalog
  * (triggers sell-first onboarding flow).
  *
- * @param storeId - Store ID
+ * @param _storeId - Deprecated: storeId derived from device token on server
  * @param barcode - Barcode to look up
  */
 export async function lookupStoreProductByBarcode(
-  storeId: string,
+  _storeId: string, // Deprecated: storeId derived from device token on server
   barcode: string
 ): Promise<StoreLookupResponse["data"] | null> {
   try {
+    // SD-ONBOARD-002C: Use POS endpoint (device token → storeId)
     const response = await apiClient.get<StoreLookupResponse>(
-      `/api/v1/catalog/stores/${storeId}/store-products/lookup?barcode=${encodeURIComponent(barcode)}`
+      `/api/v1/pos/store-products/lookup?barcode=${encodeURIComponent(barcode)}`
     );
     return response.data;
   } catch (error: any) {

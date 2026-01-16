@@ -60,6 +60,27 @@ async function resolveProductId(db, storeId, rawId, barcode) {
 }
 // ============================================================================
 
+function buildBarcodeVariants(rawBarcode) {
+  const raw = typeof rawBarcode === "string" ? rawBarcode.trim() : "";
+  if (!raw) return { normalized: "", variants: [] };
+
+  const normalized = raw.replace(/[#\s]/g, "");
+  const variants = new Set();
+
+  if (normalized) variants.add(normalized);
+  if (raw && raw !== normalized) variants.add(raw);
+
+  if (/^\d+$/.test(normalized)) {
+    const stripped = normalized.replace(/^0+/, "");
+    if (stripped && stripped !== normalized) variants.add(stripped);
+    if (/^\d{12}$/.test(normalized)) variants.add(`0${normalized}`);
+    if (/^0\d{12}$/.test(normalized)) variants.add(normalized.slice(1));
+    if (stripped && /^\d{12}$/.test(stripped)) variants.add(`0${stripped}`);
+  }
+
+  return { normalized, variants: Array.from(variants) };
+}
+
 // Helper to get device info from token
 async function getDeviceFromToken(db, token) {
   if (!token) return null;
@@ -129,7 +150,7 @@ const server = http.createServer(async (req, res) => {
       storeActive: true, deviceActive: true, pendingOutboxCount: 0,
       lastSyncAt: null, lastSeenOnline: new Date().toISOString(),
       upiVpa: null, printerOk: null, scannerOk: null,
-      features: { reorderEnabled: true, buyEnabled: true, inventoryEnabled: true, suppliersEnabled: true, ordersEnabled: true }
+      features: { scan_lookup_v2: false, reorderEnabled: true, buyEnabled: true, inventoryEnabled: true, suppliersEnabled: true, ordersEnabled: true }
     };
 
     if (!token) {
@@ -1181,12 +1202,20 @@ const server = http.createServer(async (req, res) => {
     let db;
     try {
       const data = await parseBody(req);
-      const barcode = (data.barcode || "").trim();
+      const rawBarcode = (data.barcode || "").trim();
 
-      if (!barcode) {
+      if (!rawBarcode) {
         res.writeHead(200, { "Content-Type": "application/json" });
         return res.end(JSON.stringify({ status: "NOT_FOUND", barcode: "" }));
       }
+
+      const { normalized, variants } = buildBarcodeVariants(rawBarcode);
+      if (!normalized) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ status: "NOT_FOUND", barcode: "" }));
+      }
+      const barcode = normalized;
+      const barcodeVariants = variants.length > 0 ? variants : [normalized];
 
       db = await getDb();
       const device = await getDeviceFromToken(db, token);
@@ -1197,7 +1226,8 @@ const server = http.createServer(async (req, res) => {
 
       const storeId = device.store_id;
 
-      // Step 1: Check store_product_barcodes (store-scoped mapping)
+      // Step 1: Check store_product_barcodes (store-scoped mapping) with variants
+      const placeholders = barcodeVariants.map((_, i) => `$${i + 2}`).join(", ");
       const barcodeResult = await db.query(`
         SELECT sp.id AS store_product_id, COALESCE(sp.display_name, p.name) AS name,
                spb.barcode, sp.sell_price, sp.mrp, sp.current_stock,
@@ -1205,9 +1235,9 @@ const server = http.createServer(async (req, res) => {
         FROM catalog.store_product_barcodes spb
         JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
         JOIN catalog.products p ON p.id = sp.product_id
-        WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
+        WHERE spb.store_id = $1 AND spb.barcode IN (${placeholders}) AND sp.is_active = true
         LIMIT 1
-      `, [storeId, barcode]);
+      `, [storeId, ...barcodeVariants]);
 
       if (barcodeResult.rows.length > 0) {
         const row = barcodeResult.rows[0];
@@ -1230,16 +1260,16 @@ const server = http.createServer(async (req, res) => {
         }));
       }
 
-      // Step 2: Check catalog.products with primary_barcode
+      // Step 2: Check catalog.products with primary_barcode (using variants)
       const primaryResult = await db.query(`
         SELECT sp.id AS store_product_id, COALESCE(sp.display_name, p.name) AS name,
                p.primary_barcode AS barcode, sp.sell_price, sp.mrp, sp.current_stock,
                p.unit, p.brand, p.description
         FROM catalog.products p
         JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
-        WHERE p.primary_barcode = $2 AND sp.is_active = true
+        WHERE p.primary_barcode IN (${placeholders}) AND sp.is_active = true
         LIMIT 1
-      `, [storeId, barcode]);
+      `, [storeId, ...barcodeVariants]);
 
       if (primaryResult.rows.length > 0) {
         const row = primaryResult.rows[0];
@@ -1262,14 +1292,15 @@ const server = http.createServer(async (req, res) => {
         }));
       }
 
-      // Step 3: Check platform catalog for prefill (SD-ONBOARD-002)
+      // Step 3: Check platform catalog for prefill (SD-ONBOARD-002) using variants
+      const platformPlaceholders = barcodeVariants.map((_, i) => `$${i + 1}`).join(", ");
       const platformResult = await db.query(`
         SELECT p.id AS product_id, p.name, p.description, p.unit, p.brand, p.variant, p.pack_size, pb.barcode
         FROM catalog.product_barcodes pb
         JOIN catalog.products p ON p.id = pb.product_id
-        WHERE pb.barcode = $1 AND p.is_active = true
+        WHERE pb.barcode IN (${platformPlaceholders}) AND p.is_active = true
         LIMIT 1
-      `, [barcode]);
+      `, barcodeVariants);
 
       if (platformResult.rows.length > 0) {
         const row = platformResult.rows[0];
@@ -1294,13 +1325,13 @@ const server = http.createServer(async (req, res) => {
         }));
       }
 
-      // Step 4: Also check primary_barcode in catalog.products
+      // Step 4: Also check primary_barcode in catalog.products using variants
       const primaryCatalogResult = await db.query(`
         SELECT id AS product_id, name, description, unit, brand, variant, pack_size, primary_barcode AS barcode
         FROM catalog.products
-        WHERE primary_barcode = $1 AND is_active = true
+        WHERE primary_barcode IN (${platformPlaceholders}) AND is_active = true
         LIMIT 1
-      `, [barcode]);
+      `, barcodeVariants);
 
       if (primaryCatalogResult.rows.length > 0) {
         const row = primaryCatalogResult.rows[0];
@@ -1325,8 +1356,9 @@ const server = http.createServer(async (req, res) => {
         }));
       }
 
-      // Step 5: Cross-store prefill (SD-ONBOARD-002C)
+      // Step 5: Cross-store prefill (SD-ONBOARD-002C) using variants
       // Search other stores' digitised inventory for metadata (no prices/stock)
+      const crossStorePlaceholders = barcodeVariants.map((_, i) => `$${i + 1}`).join(", ");
       const crossStoreResult = await db.query(`
         SELECT DISTINCT ON (spb.barcode)
           p.id AS product_id,
@@ -1340,12 +1372,12 @@ const server = http.createServer(async (req, res) => {
         FROM catalog.store_product_barcodes spb
         JOIN catalog.store_products sp ON sp.id = spb.store_product_id
         JOIN catalog.products p ON p.id = sp.product_id
-        WHERE spb.barcode = $1
-          AND spb.store_id != $2
+        WHERE spb.barcode IN (${crossStorePlaceholders})
+          AND spb.store_id != $${barcodeVariants.length + 1}
           AND sp.is_active = true
         ORDER BY spb.barcode, sp.updated_at DESC
         LIMIT 1
-      `, [barcode, storeId]);
+      `, [...barcodeVariants, storeId]);
 
       if (crossStoreResult.rows.length > 0) {
         const row = crossStoreResult.rows[0];
@@ -1379,6 +1411,255 @@ const server = http.createServer(async (req, res) => {
       console.error("[scan/resolve] Error:", error);
       res.writeHead(500, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ error: { code: "SCAN_RESOLVE_FAILED", message: error.message } }));
+    } finally {
+      if (db) await db.end();
+    }
+  }
+
+  // ============================================================================
+  // SD-ONBOARD-002C: LIST STORE PRODUCTS (TAP-AND-ADD)
+  // Returns store products for initial SELL screen grid without requiring search
+  // ============================================================================
+  if (req.method === "GET" && (url.pathname === "/api/v1/pos/store-products/list" || url.pathname === "/store-products/list")) {
+    let db;
+    try {
+      const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 10), 100);
+      const offset = parseInt(url.searchParams.get("offset") || "0", 10);
+
+      db = await getDb();
+      const device = await getDeviceFromToken(db, token);
+      if (!device || !device.store_id) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Invalid device token" } }));
+      }
+
+      const storeId = device.store_id;
+
+      // Fetch store products with barcode, ordered by recent activity
+      const result = await db.query(`
+        SELECT
+          sp.id as store_product_id,
+          sp.product_id,
+          COALESCE(sp.display_name, p.name) as name,
+          sp.sell_price,
+          sp.current_stock,
+          spb.barcode,
+          p.brand,
+          p.unit
+        FROM catalog.store_products sp
+        JOIN catalog.products p ON p.id = sp.product_id
+        LEFT JOIN catalog.store_product_barcodes spb
+          ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
+        WHERE sp.store_id = $1
+        ORDER BY sp.updated_at DESC NULLS LAST, sp.created_at DESC
+        LIMIT $2 OFFSET $3
+      `, [storeId, limit, offset]);
+
+      // Count total for pagination
+      const countResult = await db.query(`
+        SELECT COUNT(*) as total FROM catalog.store_products WHERE store_id = $1
+      `, [storeId]);
+
+      const products = result.rows.map(row => ({
+        storeProductId: row.store_product_id,
+        productId: row.product_id,
+        name: row.name,
+        barcode: row.barcode || null,
+        sellPrice: row.sell_price,
+        currentStock: row.current_stock || 0,
+        brand: row.brand || null,
+        unit: row.unit || "pcs",
+      }));
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({
+        success: true,
+        data: products,
+        total: parseInt(countResult.rows[0].total, 10),
+        limit,
+        offset,
+        context: "SELL"
+      }));
+    } catch (error) {
+      console.error("[store-products/list] Error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: { code: "LIST_FAILED", message: error.message } }));
+    } finally {
+      if (db) await db.end();
+    }
+  }
+
+  // ============================================================================
+  // SD-ONBOARD-002C: SEARCH STORE PRODUCTS (POS endpoint)
+  // Returns grouped search results matching catalog service format
+  // ============================================================================
+  if (req.method === "GET" && (url.pathname === "/api/v1/pos/store-products/search" || url.pathname === "/store-products/search")) {
+    let db;
+    try {
+      const query = (url.searchParams.get("q") || "").trim();
+      const limit = Math.min(parseInt(url.searchParams.get("limit") || "30", 10), 100);
+      const includeZeroStock = url.searchParams.get("includeZeroStock") !== "false";
+
+      if (query.length < 2) {
+        res.writeHead(422, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "VALIDATION_ERROR", message: "Search query (q) is required and must be at least 2 characters" } }));
+      }
+
+      db = await getDb();
+      const device = await getDeviceFromToken(db, token);
+      if (!device || !device.store_id) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Invalid device token" } }));
+      }
+
+      const storeId = device.store_id;
+      const likePattern = `%${query.toLowerCase()}%`;
+
+      // Search store products by name, brand, or barcode
+      const stockFilter = includeZeroStock ? "" : "AND sp.current_stock > 0";
+      const result = await db.query(`
+        SELECT
+          sp.id as store_product_id,
+          sp.product_id,
+          COALESCE(sp.display_name, p.name) as name,
+          sp.sell_price,
+          sp.current_stock,
+          spb.barcode,
+          p.brand,
+          p.unit,
+          p.category
+        FROM catalog.store_products sp
+        JOIN catalog.products p ON p.id = sp.product_id
+        LEFT JOIN catalog.store_product_barcodes spb
+          ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
+        WHERE sp.store_id = $1
+          AND (
+            LOWER(COALESCE(sp.display_name, p.name)) LIKE $2
+            OR LOWER(p.brand) LIKE $2
+            OR spb.barcode LIKE $2
+          )
+          ${stockFilter}
+        ORDER BY sp.updated_at DESC NULLS LAST
+        LIMIT $3
+      `, [storeId, likePattern, limit]);
+
+      // Group by product name + brand for 2-step UX
+      const groups = new Map();
+      for (const row of result.rows) {
+        const groupKey = `${row.name.toLowerCase()}::${(row.brand || "").toLowerCase()}`;
+        if (!groups.has(groupKey)) {
+          groups.set(groupKey, {
+            groupId: groupKey,
+            displayName: row.name,
+            brand: row.brand || undefined,
+            category: row.category || undefined,
+            matches: []
+          });
+        }
+        groups.get(groupKey).matches.push({
+          productId: row.product_id,
+          storeProductId: row.store_product_id,
+          barcode: row.barcode || undefined,
+          sellPrice: row.sell_price,
+          currentStock: row.current_stock || 0,
+          displayName: row.name
+        });
+      }
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({
+        success: true,
+        data: Array.from(groups.values()),
+        total: groups.size,
+        context: "SELL"
+      }));
+    } catch (error) {
+      console.error("[store-products/search] Error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: { code: "SEARCH_FAILED", message: error.message } }));
+    } finally {
+      if (db) await db.end();
+    }
+  }
+
+  // ============================================================================
+  // SD-ONBOARD-002C: LOOKUP STORE PRODUCT BY BARCODE (POS endpoint)
+  // Returns single product for direct cart add
+  // ============================================================================
+  if (req.method === "GET" && (url.pathname === "/api/v1/pos/store-products/lookup" || url.pathname === "/store-products/lookup")) {
+    let db;
+    try {
+      const rawBarcode = (url.searchParams.get("barcode") || "").trim();
+
+      if (!rawBarcode) {
+        res.writeHead(422, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "VALIDATION_ERROR", message: "Barcode is required" } }));
+      }
+
+      const { normalized, variants } = buildBarcodeVariants(rawBarcode);
+      if (!normalized) {
+        res.writeHead(422, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "VALIDATION_ERROR", message: "Barcode is required" } }));
+      }
+      const barcode = normalized;
+      const barcodeVariants = variants.length > 0 ? variants : [normalized];
+
+      db = await getDb();
+      const device = await getDeviceFromToken(db, token);
+      if (!device || !device.store_id) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Invalid device token" } }));
+      }
+
+      const storeId = device.store_id;
+
+      // Look up by barcode variants in store_product_barcodes
+      const placeholders = barcodeVariants.map((_, i) => `$${i + 2}`).join(", ");
+      const result = await db.query(`
+        SELECT
+          sp.id as store_product_id,
+          sp.product_id,
+          COALESCE(sp.display_name, p.name) as name,
+          sp.sell_price,
+          sp.current_stock,
+          spb.barcode,
+          p.brand
+        FROM catalog.store_product_barcodes spb
+        JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+        JOIN catalog.products p ON p.id = sp.product_id
+        WHERE spb.store_id = $1 AND spb.barcode IN (${placeholders})
+        LIMIT 1
+      `, [storeId, ...barcodeVariants]);
+
+      if (result.rows.length === 0) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({
+          success: false,
+          error: "PRODUCT_NOT_IN_STORE_CATALOG",
+          message: "Product not found in store catalog",
+          barcode
+        }));
+      }
+
+      const row = result.rows[0];
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({
+        success: true,
+        data: {
+          productId: row.product_id,
+          storeProductId: row.store_product_id,
+          name: row.name,
+          brand: row.brand || undefined,
+          barcode: row.barcode,
+          sellPrice: row.sell_price,
+          currentStock: row.current_stock || 0
+        },
+        context: "SELL"
+      }));
+    } catch (error) {
+      console.error("[store-products/lookup] Error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: { code: "LOOKUP_FAILED", message: error.message } }));
     } finally {
       if (db) await db.end();
     }

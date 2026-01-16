@@ -3,6 +3,7 @@ import { API_BASE_URL } from "../../config/api";
 import { getDeviceToken } from "../deviceSession";
 
 const PRODUCTS_BASE = "/api/v2/products";
+const STORE_PRODUCTS_BASE = "/api/v1/pos/store-products";
 
 type ApiProductInventory = {
   selling_price?: number | null;
@@ -23,6 +24,16 @@ export type ApiProduct = {
   stock: number;
   inventory?: ApiProductInventory | null;
   variant?: ApiProductVariant | null;
+};
+
+type StoreProductsListItem = {
+  productId: string;
+  name: string;
+  barcode?: string | null;
+  sellPrice?: number | null;
+  currentStock?: number | null;
+  brand?: string | null;
+  unit?: string | null;
 };
 
 export type StoreLookupProduct = {
@@ -50,24 +61,83 @@ export type PriceResolution = {
   mrp: number | null;
 };
 
-export async function listProducts(params?: { barcode?: string; q?: string; storeId?: string }): Promise<ApiProduct[]> {
-  const query = new URLSearchParams();
-  if (params?.barcode) query.set("barcode", params.barcode);
-  if (params?.q) query.set("q", params.q);
-  if (params?.storeId) query.set("storeId", params.storeId);
-  const suffix = query.toString() ? `?${query.toString()}` : "";
+const mapStoreProductToApiProduct = (item: StoreProductsListItem): ApiProduct => {
+  const price = typeof item.sellPrice === "number" ? item.sellPrice : null;
+  return {
+    id: item.productId,
+    name: item.name,
+    barcode: item.barcode ?? null,
+    sku: null,
+    price,
+    currency: "INR",
+    stock: typeof item.currentStock === "number" ? item.currentStock : 0,
+    inventory: price !== null ? { selling_price: price } : null
+  };
+};
 
+export async function listProducts(params?: { barcode?: string; q?: string; storeId?: string }): Promise<ApiProduct[]> {
   try {
     const token = await getDeviceToken();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["X-Device-Token"] = token;
 
-    const response = await fetch(`${API_BASE_URL}${PRODUCTS_BASE}${suffix}`, { headers });
-    if (!response.ok) {
-      return [];
+    const trimmedQuery = params?.q?.trim();
+    if (params?.barcode) {
+      const lookup = new URLSearchParams({ barcode: params.barcode });
+      const response = await fetch(`${API_BASE_URL}${STORE_PRODUCTS_BASE}/lookup?${lookup.toString()}`, { headers });
+      if (!response.ok) return [];
+      const res = await response.json();
+      if (!res?.data) return [];
+      return [mapStoreProductToApiProduct({
+        productId: res.data.productId,
+        name: res.data.name,
+        barcode: res.data.barcode ?? null,
+        sellPrice: res.data.sellPrice ?? null,
+        currentStock: res.data.currentStock ?? null
+      })];
     }
-    const res = await response.json();
-    return res.products || [];
+
+    if (trimmedQuery && trimmedQuery.length >= 2) {
+      const searchParams = new URLSearchParams({ q: trimmedQuery, limit: "100", includeZeroStock: "true" });
+      const response = await fetch(`${API_BASE_URL}${STORE_PRODUCTS_BASE}/search?${searchParams.toString()}`, { headers });
+      if (!response.ok) return [];
+      const res = await response.json();
+      const groups = Array.isArray(res?.data) ? res.data : [];
+      const byProductId = new Map<string, ApiProduct>();
+      for (const group of groups) {
+        const matches = Array.isArray(group?.matches) ? group.matches : [];
+        for (const match of matches) {
+          const productId = match?.productId;
+          if (!productId || byProductId.has(productId)) continue;
+          byProductId.set(productId, mapStoreProductToApiProduct({
+            productId,
+            name: match?.displayName || group?.displayName || "",
+            barcode: match?.barcode ?? null,
+            sellPrice: match?.sellPrice ?? null,
+            currentStock: match?.currentStock ?? null
+          }));
+        }
+      }
+      return Array.from(byProductId.values());
+    }
+
+    const limit = 100;
+    let offset = 0;
+    const items: StoreProductsListItem[] = [];
+    for (;;) {
+      const listParams = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      const response = await fetch(`${API_BASE_URL}${STORE_PRODUCTS_BASE}/list?${listParams.toString()}`, { headers });
+      if (!response.ok) break;
+      const res = await response.json();
+      const page = Array.isArray(res?.data) ? res.data : [];
+      items.push(...page);
+
+      if (page.length < limit) break;
+      const total = typeof res?.total === "number" ? res.total : null;
+      if (total !== null && items.length >= total) break;
+      offset += limit;
+    }
+    return items.map(mapStoreProductToApiProduct);
   } catch {
     return [];
   }
@@ -227,4 +297,3 @@ export function resolvePriceMinorFromSources(sources: PriceSources): PriceResolu
 export function resolveProductPriceMinor(product: ApiProduct): number {
   return resolvePriceMinorFromSources(getProductPriceSources(product)).priceMinor;
 }
-

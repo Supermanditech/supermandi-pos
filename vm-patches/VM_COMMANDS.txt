@@ -82,16 +82,17 @@ docker restart supermandi-reorder-service
 # PREREQUISITE: Migration 023_store_product_barcodes.sql must be applied first
 # =============================================================================
 
-# Step 1: Pull latest code (includes migration and patched service file)
+# Step 1: Pull latest code (includes migration + updated enroll-service-v6.js)
 cd /home/supermandi/repos/supermandi-pos
 git fetch origin && git pull origin wip/trace-2026-01-15
 
 # Step 2: Apply migration (if not already done)
 docker exec -i supermandi-db psql -U postgres -d supermandi < backend/migrations/023_store_product_barcodes.sql
 
-# Step 3: Backup and deploy patched enroll-service
+# Step 3: Backup and deploy enroll-service-v6.js from repo
+# NOTE: vm-patches/enroll-service-v6-patched.js is retired to avoid drift.
 cp /var/supermandi/scripts/enroll-service-v6.js /var/supermandi/scripts/enroll-service-v6.js.bak
-cp vm-patches/enroll-service-v6-patched.js /var/supermandi/scripts/enroll-service-v6.js
+docker run --rm -v /var/supermandi/scripts:/scripts -v /home/supermandi/repos/supermandi-pos/scripts:/repo-scripts alpine cp /repo-scripts/enroll-service-v6.js /scripts/enroll-service-v6.js
 
 # Step 4: Restart the enroll-service container
 docker restart supermandi-enroll-service
@@ -124,6 +125,21 @@ curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
   -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
   -d '{"barcode":"8901063010017"}'
 # Expected: {"status":"FOUND","storeProduct":{...,"stock":{"isKnown":true,"qty":48}}}
+
+# Test 4: List store products (tap-and-add grid)
+curl -X GET "http://localhost:3000/api/v1/pos/store-products/list?limit=50&offset=0" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN"
+# Expected: 200 with data array + total
+
+# Test 5: Search store products
+curl -X GET "http://localhost:3000/api/v1/pos/store-products/search?q=Parle&limit=30" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN"
+# Expected: 200 with grouped matches
+
+# Test 6: Lookup by barcode
+curl -X GET "http://localhost:3000/api/v1/pos/store-products/lookup?barcode=8901063010017" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN"
+# Expected: 200 with product
 
 # =============================================================================
 # SD-ONBOARD-001B: ROLLBACK

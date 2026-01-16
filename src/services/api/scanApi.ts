@@ -21,12 +21,98 @@ export type ScanResolveResponse =
       product_not_found_for_store?: boolean;
     };
 
+// Backend response types (SD-ONBOARD-002 digitisation format)
+type BackendStoreProduct = {
+  storeProductId: string;
+  name: string;
+  barcode: string;
+  sellPrice: number | null;
+  mrp: number | null;
+  purchasePrice: number | null;
+  stock: { isKnown: boolean; qty: number };
+  unit: string;
+  brand: string;
+  description: string;
+  imageUrl: string;
+  variant: string;
+  packSize: string;
+};
+
+type BackendPrefill = {
+  barcode: string;
+  name: string;
+  description: string;
+  unit: string;
+  imageUrl: string;
+  brand: string;
+  variant: string;
+  packSize: string;
+  source: string;
+  confidence: string;
+  productId: string | null;
+};
+
+type BackendScanResponse =
+  | { status: "FOUND"; storeProduct: BackendStoreProduct }
+  | { status: "NEEDS_CREATE"; barcode: string; prefill?: BackendPrefill };
+
 export async function resolveScan(input: {
   scanValue: string;
   mode: ScanMode;
 }): Promise<ScanResolveResponse> {
   if (await isOnline()) {
-    return apiClient.post<ScanResolveResponse>("/api/v1/pos/scan/resolve", input);
+    // SD-ONBOARD-002C: Backend expects { barcode } not { scanValue }
+    const backendResponse = await apiClient.post<BackendScanResponse>("/api/v1/pos/scan/resolve", {
+      barcode: input.scanValue
+    });
+
+    // Transform new format to legacy format expected by handleScan.ts
+    if (backendResponse.status === "FOUND") {
+      const sp = backendResponse.storeProduct;
+      const hasSellPrice = typeof sp.sellPrice === "number" && sp.sellPrice > 0;
+
+      if (hasSellPrice) {
+        return {
+          action: "ADD_TO_CART",
+          product: {
+            id: sp.storeProductId,
+            name: sp.name,
+            barcode: sp.barcode,
+            priceMinor: sp.sellPrice,
+            currency: "INR"
+          },
+          product_not_found_for_store: false
+        };
+      } else {
+        // Product exists but no sell price - prompt for price
+        return {
+          action: "PROMPT_PRICE",
+          product: {
+            id: sp.storeProductId,
+            name: sp.name,
+            barcode: sp.barcode,
+            priceMinor: null,
+            currency: "INR"
+          },
+          product_not_found_for_store: false
+        };
+      }
+    } else {
+      // status === "NEEDS_CREATE" - product not in store catalog
+      const prefill = backendResponse.prefill;
+      const name = prefill?.name || "";
+      return {
+        action: "PROMPT_PRICE",
+        product: {
+          id: backendResponse.barcode,
+          name: name,
+          barcode: backendResponse.barcode,
+          priceMinor: null,
+          currency: "INR"
+        },
+        product_not_found_for_store: true
+      };
+    }
   }
 
   const offline = await resolveOfflineScan(input.scanValue, input.mode);
