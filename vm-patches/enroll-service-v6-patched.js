@@ -1175,6 +1175,302 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ============================================================================
+  // SD-ONBOARD-001B: SCAN/RESOLVE FOR DIGITISATION
+  // ============================================================================
+  if (req.method === "POST" && (url.pathname === "/api/v1/pos/scan/resolve" || url.pathname === "/scan/resolve")) {
+    let db;
+    try {
+      const data = await parseBody(req);
+      const barcode = (data.barcode || "").trim();
+
+      if (!barcode) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ status: "NOT_FOUND", barcode: "" }));
+      }
+
+      db = await getDb();
+      const device = await getDeviceFromToken(db, token);
+      if (!device || !device.store_id) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Invalid device token" } }));
+      }
+
+      const storeId = device.store_id;
+
+      // Step 1: Check store_product_barcodes (store-scoped mapping)
+      const barcodeResult = await db.query(`
+        SELECT sp.id AS store_product_id, COALESCE(sp.display_name, p.name) AS name,
+               spb.barcode, sp.sell_price, sp.mrp, sp.current_stock,
+               p.unit, p.brand, p.description
+        FROM catalog.store_product_barcodes spb
+        JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+        JOIN catalog.products p ON p.id = sp.product_id
+        WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
+        LIMIT 1
+      `, [storeId, barcode]);
+
+      if (barcodeResult.rows.length > 0) {
+        const row = barcodeResult.rows[0];
+        console.log(`[scan/resolve] FOUND via store_product_barcodes: ${barcode}`);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({
+          status: "FOUND",
+          storeProduct: {
+            storeProductId: row.store_product_id,
+            name: row.name || "",
+            barcode: row.barcode,
+            sellPrice: row.sell_price,
+            mrp: row.mrp,
+            stock: { isKnown: row.current_stock !== null && row.current_stock >= 0, qty: row.current_stock || 0 },
+            unit: row.unit || "pcs",
+            brand: row.brand || "",
+            description: row.description || "",
+            imageUrl: ""
+          }
+        }));
+      }
+
+      // Step 2: Check catalog.products with primary_barcode
+      const primaryResult = await db.query(`
+        SELECT sp.id AS store_product_id, COALESCE(sp.display_name, p.name) AS name,
+               p.primary_barcode AS barcode, sp.sell_price, sp.mrp, sp.current_stock,
+               p.unit, p.brand, p.description
+        FROM catalog.products p
+        JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
+        WHERE p.primary_barcode = $2 AND sp.is_active = true
+        LIMIT 1
+      `, [storeId, barcode]);
+
+      if (primaryResult.rows.length > 0) {
+        const row = primaryResult.rows[0];
+        console.log(`[scan/resolve] FOUND via primary_barcode: ${barcode}`);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({
+          status: "FOUND",
+          storeProduct: {
+            storeProductId: row.store_product_id,
+            name: row.name || "",
+            barcode: row.barcode,
+            sellPrice: row.sell_price,
+            mrp: row.mrp,
+            stock: { isKnown: row.current_stock !== null && row.current_stock >= 0, qty: row.current_stock || 0 },
+            unit: row.unit || "pcs",
+            brand: row.brand || "",
+            description: row.description || "",
+            imageUrl: ""
+          }
+        }));
+      }
+
+      // Step 3: Not found in store - return NOT_FOUND (external lookup deferred to client)
+      console.log(`[scan/resolve] NOT_FOUND: ${barcode}`);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ status: "NOT_FOUND", barcode: barcode }));
+
+    } catch (error) {
+      console.error("[scan/resolve] Error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: { code: "SCAN_RESOLVE_FAILED", message: error.message } }));
+    } finally {
+      if (db) await db.end();
+    }
+  }
+
+  // ============================================================================
+  // SD-ONBOARD-001B: CREATE STORE PRODUCT (DIGITISATION)
+  // ============================================================================
+  if (req.method === "POST" && (url.pathname === "/api/v1/pos/store-products" || url.pathname === "/store-products")) {
+    let db;
+    try {
+      const data = await parseBody(req);
+      const barcode = (data.barcode || "").trim();
+      const name = (data.name || "").trim() || `Item ${barcode.slice(-4)}`;
+      const sellPrice = data.sellPrice;
+      const mrp = data.mrp || sellPrice;
+      const initialStockQty = data.initialStockQty;
+      const unit = data.unit || "pcs";
+      const description = data.description || "";
+      const brand = data.brand || "";
+
+      // Validation
+      if (!barcode) {
+        res.writeHead(422, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "VALIDATION_ERROR", message: "Barcode is required" }));
+      }
+      if (typeof sellPrice !== "number" || !Number.isFinite(sellPrice) || sellPrice <= 0) {
+        res.writeHead(422, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "VALIDATION_ERROR", message: "Sell price must be a positive number" }));
+      }
+      if (typeof initialStockQty !== "number" || !Number.isFinite(initialStockQty) || initialStockQty < 0) {
+        res.writeHead(422, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: "VALIDATION_ERROR", message: "Initial stock quantity must be >= 0" }));
+      }
+
+      db = await getDb();
+      const device = await getDeviceFromToken(db, token);
+      if (!device || !device.store_id) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Invalid device token" } }));
+      }
+
+      const storeId = device.store_id;
+      const sellPriceMinor = Math.round(sellPrice);
+      const mrpMinor = Math.round(mrp);
+
+      // Check if barcode already exists for this store
+      const existingCheck = await db.query(`
+        SELECT sp.id FROM catalog.store_product_barcodes spb
+        JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+        WHERE spb.store_id = $1 AND spb.barcode = $2
+        LIMIT 1
+      `, [storeId, barcode]);
+
+      if (existingCheck.rows.length > 0) {
+        // Fetch existing product details for conflict response
+        const existingResult = await db.query(`
+          SELECT sp.id AS store_product_id, COALESCE(sp.display_name, p.name) AS name,
+                 spb.barcode, sp.sell_price, sp.mrp, sp.current_stock,
+                 p.unit, p.brand, p.description
+          FROM catalog.store_product_barcodes spb
+          JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+          JOIN catalog.products p ON p.id = sp.product_id
+          WHERE spb.store_id = $1 AND spb.barcode = $2
+          LIMIT 1
+        `, [storeId, barcode]);
+
+        const row = existingResult.rows[0];
+        res.writeHead(409, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({
+          error: "BARCODE_ALREADY_MAPPED",
+          message: "Barcode already exists for this store",
+          storeProduct: {
+            storeProductId: row.store_product_id,
+            name: row.name || "",
+            barcode: row.barcode,
+            sellPrice: row.sell_price,
+            mrp: row.mrp,
+            stock: { isKnown: row.current_stock !== null, qty: row.current_stock || 0 },
+            unit: row.unit || "pcs",
+            brand: row.brand || "",
+            description: row.description || "",
+            imageUrl: ""
+          }
+        }));
+      }
+
+      // Begin transaction
+      await db.query("BEGIN");
+
+      // Step 1: Find or create catalog.products
+      let productId;
+      const existingProduct = await db.query(`
+        SELECT id FROM catalog.products WHERE primary_barcode = $1 LIMIT 1
+      `, [barcode]);
+
+      if (existingProduct.rows.length > 0) {
+        productId = existingProduct.rows[0].id;
+        console.log(`[store-products] Using existing catalog product: ${productId}`);
+      } else {
+        const { randomUUID } = require("crypto");
+        productId = randomUUID();
+        await db.query(`
+          INSERT INTO catalog.products (id, name, brand, description, unit, primary_barcode, is_active)
+          VALUES ($1, $2, $3, $4, $5, $6, true)
+        `, [productId, name, brand || null, description || null, unit, barcode]);
+        console.log(`[store-products] Created new catalog product: ${productId}`);
+      }
+
+      // Step 2: Create or update store_products
+      const { randomUUID } = require("crypto");
+      const storeProductId = randomUUID();
+      await db.query(`
+        INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, display_name, is_active, current_stock)
+        VALUES ($1, $2, $3, $4, $5, $6, true, $7)
+        ON CONFLICT (store_id, product_id) DO UPDATE SET
+          sell_price = EXCLUDED.sell_price,
+          mrp = EXCLUDED.mrp,
+          display_name = EXCLUDED.display_name,
+          current_stock = EXCLUDED.current_stock,
+          is_active = true,
+          updated_at = NOW()
+      `, [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, name, initialStockQty]);
+
+      // Get actual store_product_id
+      const spResult = await db.query(`
+        SELECT id FROM catalog.store_products WHERE store_id = $1 AND product_id = $2
+      `, [storeId, productId]);
+      const actualStoreProductId = spResult.rows[0]?.id || storeProductId;
+
+      // Step 3: Create store-scoped barcode binding
+      await db.query(`
+        INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+        VALUES ($1, $2, $3, 'retailer_digitisation')
+        ON CONFLICT (store_id, barcode) DO NOTHING
+      `, [storeId, actualStoreProductId, barcode]);
+
+      // Step 4: Create INWARD ledger entry
+      if (initialStockQty > 0) {
+        const ledgerId = randomUUID();
+        await db.query(`
+          INSERT INTO inventory.inventory_ledger (
+            id, store_id, product_id, delta_qty, transaction_type,
+            reference_type, reference_id, stock_before, stock_after, notes
+          )
+          VALUES ($1, $2, $3, $4, 'adjustment', 'manual', $5, 0, $4, 'Initial stock from digitisation')
+        `, [ledgerId, storeId, productId, initialStockQty, `digitisation:${actualStoreProductId}`]);
+
+        // Step 5: Create/update stock balance
+        await db.query(`
+          INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (store_id, product_id) DO UPDATE SET
+            current_qty = EXCLUDED.current_qty,
+            last_ledger_id = EXCLUDED.last_ledger_id,
+            updated_at = NOW()
+        `, [storeId, productId, initialStockQty, ledgerId]);
+      }
+
+      await db.query("COMMIT");
+
+      console.log(`[store-products] Created store product ${actualStoreProductId} for store ${storeId}`);
+
+      res.writeHead(201, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({
+        storeProduct: {
+          storeProductId: actualStoreProductId,
+          name: name,
+          barcode: barcode,
+          sellPrice: sellPriceMinor,
+          mrp: mrpMinor,
+          stock: { isKnown: true, qty: initialStockQty },
+          unit: unit,
+          brand: brand,
+          description: description,
+          imageUrl: ""
+        }
+      }));
+
+    } catch (error) {
+      if (db) await db.query("ROLLBACK").catch(() => {});
+      console.error("[store-products] Error:", error);
+
+      // Check for unique constraint violation (race condition)
+      if (error.code === "23505") {
+        res.writeHead(409, { "Content-Type": "application/json" });
+        return res.end(JSON.stringify({
+          error: "BARCODE_ALREADY_MAPPED",
+          message: "Barcode was just mapped by another request"
+        }));
+      }
+
+      res.writeHead(500, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ error: { code: "CREATE_FAILED", message: error.message } }));
+    } finally {
+      if (db) await db.end();
+    }
+  }
+
+  // ============================================================================
   // DEFAULT: 404
   // ============================================================================
   res.writeHead(404, { "Content-Type": "application/json" });
