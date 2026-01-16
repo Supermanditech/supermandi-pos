@@ -108,3 +108,5 @@ backend/tmpclaude-*-cwd/
 
 # Node lockfiles - pick ONE package manager (pnpm)
 package-lock.json
+**/*.tsbuildinfo
+**/*.d.ts.map
