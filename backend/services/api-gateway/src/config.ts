@@ -73,6 +73,11 @@ export const config: GatewayConfig = {
       url: getEnvOrDefault('POS_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
       pathPrefix: '/api/v1/pos',
     },
+    {
+      name: 'voice',
+      url: getEnvOrDefault('VOICE_SERVICE_URL', 'http://localhost:3008'),
+      pathPrefix: '/api/v1/voice',
+    },
   ],
 };
 

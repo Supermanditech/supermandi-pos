@@ -164,6 +164,235 @@ router.get(
 );
 
 // =============================================================================
+// CAT-003: FMCG Taxonomy-based Category Browsing
+// =============================================================================
+
+/**
+ * GET /stores/:storeId/categories
+ * Get FMCG taxonomy categories that have products in this store.
+ *
+ * Returns only categories where store has count > 0 sellable SKUs.
+ * Includes "Sab" (all) category with total count.
+ *
+ * Response: Array sorted by sort_order with:
+ * - id, label_en, label_hi, icon_key, sort_order, product_count
+ */
+router.get(
+  '/stores/:storeId/categories',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId } = req.params;
+
+      if (!storeId) {
+        throw new ApiError(
+          400,
+          ERROR_CODES.VALIDATION_ERROR,
+          'storeId is required'
+        );
+      }
+
+      const { query } = await import('@supermandi/common');
+
+      // Get categories with product counts for this store
+      // Include "Sab" (all) category with total count
+      const categoriesSql = `
+        WITH store_counts AS (
+          SELECT
+            sp.taxonomy_id,
+            COUNT(*) AS product_count
+          FROM catalog.store_products sp
+          WHERE sp.store_id = $1
+            AND sp.is_active = true
+          GROUP BY sp.taxonomy_id
+        ),
+        total_count AS (
+          SELECT COUNT(*) AS total
+          FROM catalog.store_products sp
+          WHERE sp.store_id = $1
+            AND sp.is_active = true
+        )
+        SELECT
+          ft.id,
+          ft.label_en,
+          ft.label_hi,
+          ft.icon_key,
+          ft.sort_order,
+          CASE
+            WHEN ft.label_en = 'Sab' THEN (SELECT total FROM total_count)
+            ELSE COALESCE(sc.product_count, 0)
+          END AS product_count
+        FROM catalog.fmcg_taxonomy ft
+        LEFT JOIN store_counts sc ON sc.taxonomy_id = ft.id
+        WHERE ft.is_active = true
+          AND (
+            ft.label_en = 'Sab'  -- Always include "All" category
+            OR sc.product_count > 0  -- Include categories with products
+          )
+        ORDER BY ft.sort_order ASC
+      `;
+
+      const rows = await query<{
+        id: string;
+        label_en: string;
+        label_hi: string | null;
+        icon_key: string;
+        sort_order: number;
+        product_count: number;
+      }>(categoriesSql, [storeId]);
+
+      res.json({
+        success: true,
+        data: rows.map(r => ({
+          id: r.id,
+          labelEn: r.label_en,
+          labelHi: r.label_hi,
+          iconKey: r.icon_key,
+          sortOrder: r.sort_order,
+          productCount: Number(r.product_count),
+        })),
+        count: rows.length,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /stores/:storeId/categories/:taxonomyId/products
+ * Get products in a specific FMCG category for this store.
+ *
+ * Query params:
+ * - limit: Max results (default 50, max 100)
+ * - cursor: Pagination cursor (base64 encoded created_at)
+ * - includeZeroStock: Include out-of-stock items (default true)
+ *
+ * Special case: taxonomyId = "all" returns all products
+ */
+router.get(
+  '/stores/:storeId/categories/:taxonomyId/products',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { storeId, taxonomyId } = req.params;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const cursor = req.query.cursor as string | undefined;
+      const includeZeroStock = req.query.includeZeroStock !== 'false';
+
+      if (!storeId) {
+        throw new ApiError(
+          400,
+          ERROR_CODES.VALIDATION_ERROR,
+          'storeId is required'
+        );
+      }
+
+      const { query } = await import('@supermandi/common');
+
+      // Decode cursor (base64 encoded timestamp)
+      let cursorTimestamp: Date | null = null;
+      if (cursor) {
+        try {
+          const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
+          cursorTimestamp = new Date(decoded);
+          if (isNaN(cursorTimestamp.getTime())) {
+            cursorTimestamp = null;
+          }
+        } catch {
+          // Invalid cursor, ignore
+        }
+      }
+
+      // Build query based on whether it's "all" or a specific category
+      const isAllCategory = taxonomyId.toLowerCase() === 'all' ||
+                           taxonomyId === 'f0000000-0000-0000-0000-000000000001';
+
+      const productsSql = `
+        SELECT
+          sp.id,
+          sp.product_id,
+          sp.display_name,
+          sp.sell_price,
+          sp.mrp,
+          sp.current_stock,
+          sp.taxonomy_id,
+          sp.created_at,
+          p.brand,
+          COALESCE(
+            (SELECT pb.barcode FROM catalog.product_barcodes pb WHERE pb.product_id = sp.product_id LIMIT 1),
+            NULL
+          ) AS barcode
+        FROM catalog.store_products sp
+        LEFT JOIN catalog.products p ON p.id = sp.product_id
+        WHERE sp.store_id = $1
+          AND sp.is_active = true
+          ${!includeZeroStock ? 'AND sp.current_stock > 0' : ''}
+          ${!isAllCategory ? 'AND sp.taxonomy_id = $2' : ''}
+          ${cursorTimestamp ? `AND sp.created_at < $${isAllCategory ? 2 : 3}` : ''}
+        ORDER BY sp.created_at DESC
+        LIMIT $${isAllCategory ? (cursorTimestamp ? 3 : 2) : (cursorTimestamp ? 4 : 3)}
+      `;
+
+      // Build params array
+      const params: (string | number | Date)[] = [storeId];
+      if (!isAllCategory) {
+        params.push(taxonomyId);
+      }
+      if (cursorTimestamp) {
+        params.push(cursorTimestamp);
+      }
+      params.push(limit + 1); // Fetch one extra to check hasMore
+
+      const rows = await query<{
+        id: string;
+        product_id: string;
+        display_name: string;
+        sell_price: number;
+        mrp: number;
+        current_stock: number;
+        taxonomy_id: string | null;
+        created_at: Date;
+        brand: string | null;
+        barcode: string | null;
+      }>(productsSql, params);
+
+      // Check if there are more results
+      const hasMore = rows.length > limit;
+      const products = hasMore ? rows.slice(0, limit) : rows;
+
+      // Generate next cursor
+      let nextCursor: string | null = null;
+      if (hasMore && products.length > 0) {
+        const lastProduct = products[products.length - 1];
+        nextCursor = Buffer.from(lastProduct.created_at.toISOString()).toString('base64');
+      }
+
+      res.json({
+        success: true,
+        data: products.map(p => ({
+          id: p.id,
+          productId: p.product_id,
+          displayName: p.display_name,
+          sellPrice: p.sell_price,
+          mrp: p.mrp,
+          currentStock: p.current_stock,
+          taxonomyId: p.taxonomy_id,
+          brand: p.brand,
+          barcode: p.barcode,
+        })),
+        pagination: {
+          limit,
+          hasMore,
+          nextCursor,
+        },
+        context: 'SELL',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// =============================================================================
 // SEARCH-SELL-001: Store Product Search (SELL context only)
 // =============================================================================
 

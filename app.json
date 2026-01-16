@@ -9,8 +9,14 @@
       "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0
     },
+    "ios": {
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SuperMandi uses your microphone for voice commands to quickly add products to your cart"
+      }
+    },
     "android": {
-      "package": "com.supermanditech.supermandipos"
+      "package": "com.supermanditech.supermandipos",
+      "permissions": ["RECORD_AUDIO"]
     },
     "extra": {
       "API_URL": "http://34.14.220.171:3000",
@@ -19,7 +25,13 @@
     "plugins": [
       "expo-secure-store",
       "expo-sqlite",
-      "./plugins/withCleartextTraffic"
+      "./plugins/withCleartextTraffic",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "SuperMandi uses your microphone for voice commands to quickly add products to your cart"
+        }
+      ]
     ]
   }
 }

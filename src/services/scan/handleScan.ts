@@ -523,6 +523,15 @@ async function handleScan(
     if (result.action === "ADD_TO_CART") {
       await cacheLocalProduct(result.product);
       const priceMinor = result.product.priceMinor ?? 0;
+
+      // SD-ONBOARD-002C: Upsert stock for cart cap check
+      if (result.availableStock !== undefined && result.availableStock !== null) {
+        upsertStockEntries([
+          { key: result.product.id, stock: result.availableStock },
+          { key: result.product.barcode, stock: result.availableStock }
+        ]);
+      }
+
       addToSellCart(result.product, priceMinor);
 
       const warningKey = trimmed.toUpperCase();

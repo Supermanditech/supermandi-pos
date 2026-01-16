@@ -364,25 +364,33 @@ export async function createStoreProductFromDigitisation(
       console.log("[digitisation] Created new catalog product:", productId);
     }
 
-    // Step 2: Create or update catalog.store_products
+    // Step 2: Auto-assign taxonomy based on product name (CAT-002)
+    const taxonomyResult = await client.query(
+      `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
+      [productName]
+    );
+    const taxonomyId = taxonomyResult.rows[0]?.taxonomy_id || null;
+
+    // Step 3: Create or update catalog.store_products
     const storeProductId = randomUUID();
     const sellPriceMinor = Math.round(input.sellPrice);
     const mrpMinor = input.mrp ? Math.round(input.mrp) : sellPriceMinor;
 
     await client.query(
       `
-      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, display_name, is_active, current_stock)
-      VALUES ($1, $2, $3, $4, $5, $6, true, $7)
+      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, display_name, is_active, current_stock, taxonomy_id)
+      VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8)
       ON CONFLICT (store_id, product_id) DO UPDATE SET
         sell_price = EXCLUDED.sell_price,
         mrp = EXCLUDED.mrp,
         display_name = EXCLUDED.display_name,
         current_stock = EXCLUDED.current_stock,
+        taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
         is_active = true,
         updated_at = NOW()
       RETURNING id
       `,
-      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, productName, input.initialStockQty]
+      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, productName, input.initialStockQty, taxonomyId]
     );
 
     // Get the actual store_product_id (might be existing if ON CONFLICT triggered)

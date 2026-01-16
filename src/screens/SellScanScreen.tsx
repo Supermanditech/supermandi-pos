@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Animated,
+  BackHandler,
   Easing,
   FlatList,
   Modal,
@@ -47,6 +48,12 @@ import {
   wasHidCommitRecent,
 } from "../services/hidScannerService";
 import { theme } from "../theme";
+import { CategoryRail, DEMO_CATEGORIES, fmcgCategoryToItem, type CategoryItem } from "../components/sell/CategoryRail";
+import { useSettingsStore } from "../stores/settingsStore";
+import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "../services/api/catalogApi";
+import { useFeatureEnabled } from "../utils/featureFlags";
+import { VoiceSheet, type VoiceButtonState, type VoiceSheetState } from "../components/voice";
+import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } from "../services/voice";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -722,6 +729,112 @@ export default function SellScanScreen({
   const [editorDiscountValue, setEditorDiscountValue] = useState("");
   const [detailItem, setDetailItem] = useState<SkuItem | null>(null);
 
+  // SD-CATEGORY: Category rail state (Demo Store only)
+  const storeCode = useSettingsStore((s) => s.storeCode);
+  const isDemoStore = storeCode === "DEMO001";
+  const categoryBrowsingEnabled = useFeatureEnabled("category_browsing"); // CAT-005
+  const showCategoryRail = isDemoStore && categoryBrowsingEnabled;
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categoryRailExpanded, setCategoryRailExpanded] = useState(false);
+
+  // CAT-004: API-driven categories for Demo Store
+  const [apiCategories, setApiCategories] = useState<CategoryItem[]>([]);
+  const [apiCategoriesLoading, setApiCategoriesLoading] = useState(false);
+  const [categoryProducts, setCategoryProducts] = useState<CategoryProduct[]>([]);
+  const [categoryProductsLoading, setCategoryProductsLoading] = useState(false);
+  const [categoryProductsCursor, setCategoryProductsCursor] = useState<string | null>(null);
+  const [categoryProductsHasMore, setCategoryProductsHasMore] = useState(true);
+
+  // VOICE-001: Voice assistant state
+  const [voiceButtonState, setVoiceButtonState] = useState<VoiceButtonState>("idle");
+  const [voiceSheetState, setVoiceSheetState] = useState<VoiceSheetState>("hidden");
+  const [voiceTranscript, setVoiceTranscript] = useState<string | undefined>();
+  const [voiceMessage, setVoiceMessage] = useState<string | undefined>();
+  const [voiceErrorMessage, setVoiceErrorMessage] = useState<string | undefined>();
+  // Voice recording mode: "none" = idle, "tap" = tap-to-record, "hold" = press-and-hold
+  const [voiceRecordingMode, setVoiceRecordingMode] = useState<"none" | "tap" | "hold">("none");
+  const [voiceRecordingDuration, setVoiceRecordingDuration] = useState(0);
+  const voiceHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const voiceDurationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // SD-CATEGORY: Back button collapses rail if expanded
+  useEffect(() => {
+    if (!showCategoryRail || !categoryRailExpanded) return;
+    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
+      setCategoryRailExpanded(false);
+      return true; // Prevent default back behavior
+    });
+    return () => handler.remove();
+  }, [showCategoryRail, categoryRailExpanded]);
+
+  // CAT-004: Fetch FMCG categories on mount (Demo Store only)
+  useEffect(() => {
+    if (!showCategoryRail) return;
+
+    let cancelled = false;
+    const fetchCategories = async () => {
+      setApiCategoriesLoading(true);
+      try {
+        const storeId = await getDeviceStoreId();
+        if (!storeId || cancelled) return;
+
+        const cats = await getFmcgCategories(storeId);
+        if (!cancelled) {
+          setApiCategories(cats.map(fmcgCategoryToItem));
+        }
+      } catch (error) {
+        console.warn("[CAT-004] Failed to fetch categories:", error);
+        // Fallback to DEMO_CATEGORIES handled by CategoryRail
+      } finally {
+        if (!cancelled) {
+          setApiCategoriesLoading(false);
+        }
+      }
+    };
+
+    void fetchCategories();
+    return () => { cancelled = true; };
+  }, [showCategoryRail]);
+
+  // CAT-004: Fetch products by category when selected (Demo Store only)
+  useEffect(() => {
+    if (!showCategoryRail) return;
+    if (selectedCategory === "all") {
+      // "all" category - clear category products, use normal catalog
+      setCategoryProducts([]);
+      setCategoryProductsCursor(null);
+      setCategoryProductsHasMore(true);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchCategoryProducts = async () => {
+      setCategoryProductsLoading(true);
+      setCategoryProducts([]); // Reset on category change
+      setCategoryProductsCursor(null);
+      try {
+        const storeId = await getDeviceStoreId();
+        if (!storeId || cancelled) return;
+
+        const response = await getCategoryProducts(storeId, selectedCategory, { limit: 50 });
+        if (!cancelled) {
+          setCategoryProducts(response.data);
+          setCategoryProductsCursor(response.pagination.nextCursor);
+          setCategoryProductsHasMore(response.pagination.hasMore);
+        }
+      } catch (error) {
+        console.warn("[CAT-004] Failed to fetch category products:", error);
+      } finally {
+        if (!cancelled) {
+          setCategoryProductsLoading(false);
+        }
+      }
+    };
+
+    void fetchCategoryProducts();
+    return () => { cancelled = true; };
+  }, [showCategoryRail, selectedCategory]);
+
   useEffect(() => {
     return subscribeStockUpdates(() => {
       setStockRefreshTick((prev) => prev + 1);
@@ -1164,6 +1277,8 @@ export default function SellScanScreen({
     const raw = event?.nativeEvent?.text ?? addQuery;
     const trimmed = raw.trim();
     if (!trimmed) return;
+    // SD-CATEGORY: Auto-collapse rail on scan
+    setCategoryRailExpanded(false);
     void onBarcodeScanned(trimmed);
     setAddQuery("");
     setAddExpanded(true);
@@ -1426,6 +1541,8 @@ export default function SellScanScreen({
     addFocusedBeforeCartRef.current = addFocusedRef.current;
     cartOpeningRef.current = true;
     setCartExpanded(true);
+    // SD-CATEGORY: Auto-collapse rail when cart opens
+    setCategoryRailExpanded(false);
   };
 
   const closeCart = () => {
@@ -1641,6 +1758,8 @@ export default function SellScanScreen({
 
   const handleAddSku = (item: SkuItem) => {
     if (storeActive === false) return;
+    // SD-CATEGORY: Auto-collapse rail when product tapped
+    setCategoryRailExpanded(false);
     const resolved = resolveSkuPrice(item);
 
     // Get fresh cart state to avoid stale data
@@ -1939,6 +2058,157 @@ export default function SellScanScreen({
     navigation.navigate("Payment");
   };
 
+  // VOICE-001: Voice recording helpers
+  const startVoiceRecording = useCallback(async (mode: "tap" | "hold") => {
+    setVoiceButtonState("recording");
+    setVoiceRecordingMode(mode);
+    setVoiceRecordingDuration(0);
+    setVoiceTranscript(undefined);
+    setVoiceMessage(undefined);
+    setVoiceErrorMessage(undefined);
+
+    const started = await startRecording();
+    if (!started) {
+      setVoiceButtonState("idle");
+      setVoiceRecordingMode("none");
+      return false;
+    }
+
+    // Start duration timer
+    voiceDurationIntervalRef.current = setInterval(() => {
+      setVoiceRecordingDuration((prev) => prev + 1);
+    }, 1000);
+
+    return true;
+  }, []);
+
+  const stopAndSubmitVoice = useCallback(async () => {
+    // Clear timers
+    if (voiceHoldTimerRef.current) {
+      clearTimeout(voiceHoldTimerRef.current);
+      voiceHoldTimerRef.current = null;
+    }
+    if (voiceDurationIntervalRef.current) {
+      clearInterval(voiceDurationIntervalRef.current);
+      voiceDurationIntervalRef.current = null;
+    }
+
+    if (voiceButtonState !== "recording") return;
+
+    setVoiceButtonState("processing");
+    setVoiceRecordingMode("none");
+    setVoiceSheetState("processing");
+
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) {
+        throw new Error("Store not configured");
+      }
+
+      const result = await submitVoiceCommand(storeId);
+      setVoiceTranscript(result.transcript);
+
+      if (result.success) {
+        setVoiceMessage(result.message);
+        setVoiceSheetState("success");
+      } else {
+        setVoiceErrorMessage(result.message);
+        setVoiceSheetState("error");
+      }
+    } catch (error) {
+      console.error("[VOICE-001] Voice command failed:", error);
+      setVoiceErrorMessage(
+        error instanceof Error ? error.message : "Voice command failed"
+      );
+      setVoiceSheetState("error");
+    } finally {
+      setVoiceButtonState("idle");
+      setVoiceRecordingDuration(0);
+    }
+  }, [voiceButtonState]);
+
+  const cancelVoiceRecording = useCallback(async () => {
+    // Clear timers
+    if (voiceHoldTimerRef.current) {
+      clearTimeout(voiceHoldTimerRef.current);
+      voiceHoldTimerRef.current = null;
+    }
+    if (voiceDurationIntervalRef.current) {
+      clearInterval(voiceDurationIntervalRef.current);
+      voiceDurationIntervalRef.current = null;
+    }
+
+    await cancelRecording();
+    setVoiceButtonState("idle");
+    setVoiceRecordingMode("none");
+    setVoiceRecordingDuration(0);
+    setVoiceSheetState("hidden");
+  }, []);
+
+  // VOICE-001: Voice button handlers
+  const handleVoicePressIn = useCallback(async () => {
+    if (voiceButtonState === "processing") return;
+
+    // If already recording in tap mode, this press will be handled by onPress
+    if (voiceRecordingMode === "tap") return;
+
+    // Start a timer to detect hold vs tap
+    voiceHoldTimerRef.current = setTimeout(async () => {
+      // This is a hold - start recording in hold mode
+      await startVoiceRecording("hold");
+    }, 200); // 200ms threshold for hold detection
+  }, [voiceButtonState, voiceRecordingMode, startVoiceRecording]);
+
+  const handleVoicePressOut = useCallback(async () => {
+    // Clear hold timer if still pending
+    if (voiceHoldTimerRef.current) {
+      clearTimeout(voiceHoldTimerRef.current);
+      voiceHoldTimerRef.current = null;
+    }
+
+    // If in hold mode and recording, stop and submit
+    if (voiceRecordingMode === "hold" && voiceButtonState === "recording") {
+      await stopAndSubmitVoice();
+    }
+  }, [voiceRecordingMode, voiceButtonState, stopAndSubmitVoice]);
+
+  const handleVoiceTap = useCallback(async () => {
+    if (voiceButtonState === "processing") return;
+
+    // Clear hold timer
+    if (voiceHoldTimerRef.current) {
+      clearTimeout(voiceHoldTimerRef.current);
+      voiceHoldTimerRef.current = null;
+    }
+
+    if (voiceRecordingMode === "none" && voiceButtonState === "idle") {
+      // Start recording in tap mode
+      await startVoiceRecording("tap");
+    } else if (voiceRecordingMode === "tap" && voiceButtonState === "recording") {
+      // Stop and submit in tap mode
+      await stopAndSubmitVoice();
+    }
+  }, [voiceButtonState, voiceRecordingMode, startVoiceRecording, stopAndSubmitVoice]);
+
+  const handleVoiceSheetDismiss = useCallback(() => {
+    setVoiceSheetState("hidden");
+    setVoiceTranscript(undefined);
+    setVoiceMessage(undefined);
+    setVoiceErrorMessage(undefined);
+    // Cancel any in-progress recording
+    if (voiceButtonState === "recording") {
+      void cancelVoiceRecording();
+    }
+  }, [voiceButtonState, cancelVoiceRecording]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (voiceHoldTimerRef.current) clearTimeout(voiceHoldTimerRef.current);
+      if (voiceDurationIntervalRef.current) clearInterval(voiceDurationIntervalRef.current);
+    };
+  }, []);
+
   return (
     <View style={styles.container}>
       {searchHeader}
@@ -1949,40 +2219,75 @@ export default function SellScanScreen({
           accessibilityLabel="Close search"
         />
       ) : null}
-      <FlatList
-        data={catalogItems}
-        keyExtractor={(item) => item.barcode}
-        renderItem={renderSkuItem}
-        numColumns={NUM_COLUMNS}
-        columnWrapperStyle={styles.skuRow}
-        ListEmptyComponent={
-          !catalogLoading ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>{t('sell.noRecentProducts')}</Text>
+
+      {/* SD-CATEGORY: Main content area with optional category rail */}
+      <View style={styles.mainContentRow}>
+        {/* Category Rail - Demo Store Only, controlled by feature flag (CAT-005) */}
+        {showCategoryRail && !addExpanded && (
+          <CategoryRail
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            expanded={categoryRailExpanded}
+            onToggleExpanded={() => setCategoryRailExpanded((prev) => !prev)}
+            onCollapse={() => setCategoryRailExpanded(false)}
+            categories={apiCategories.length > 0 ? apiCategories : undefined}
+            loading={apiCategoriesLoading}
+          />
+        )}
+
+        {/* Product Grid */}
+        <View style={styles.productGridContainer}>
+          {/* Category filter label (Demo Store only) */}
+          {showCategoryRail && selectedCategory !== "all" && (
+            <View style={styles.categoryFilterLabel}>
+              <Text style={styles.categoryFilterText}>
+                Category: {(apiCategories.length > 0 ? apiCategories : DEMO_CATEGORIES).find((c) => c.id === selectedCategory)?.label ?? selectedCategory}
+              </Text>
+              <Pressable
+                onPress={() => setSelectedCategory("all")}
+                hitSlop={8}
+                accessibilityLabel="Clear category filter"
+              >
+                <MaterialCommunityIcons name="close-circle" size={16} color={theme.colors.textTertiary} />
+              </Pressable>
             </View>
-          ) : null
-        }
-        ListFooterComponent={
-          catalogLoading ? (
-            <View style={styles.footerLoading}>
-              <ActivityIndicator color={theme.colors.primary} />
-            </View>
-          ) : null
-        }
-        onEndReached={() => {
-          if (!catalogLoading && catalogHasMore) {
-            void loadCatalog(false);
+          )}
+          <FlatList
+            data={catalogItems}
+          keyExtractor={(item) => item.barcode}
+          renderItem={renderSkuItem}
+          numColumns={NUM_COLUMNS}
+          columnWrapperStyle={styles.skuRow}
+          ListEmptyComponent={
+            !catalogLoading ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>{t('sell.noRecentProducts')}</Text>
+              </View>
+            ) : null
           }
-        }}
-        onEndReachedThreshold={0.3}
-        contentContainerStyle={styles.listContent}
-        style={styles.list}
-        removeClippedSubviews
-        windowSize={7}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        updateCellsBatchingPeriod={50}
-      />
+          ListFooterComponent={
+            catalogLoading ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color={theme.colors.primary} />
+              </View>
+            ) : null
+          }
+          onEndReached={() => {
+            if (!catalogLoading && catalogHasMore) {
+              void loadCatalog(false);
+            }
+          }}
+          onEndReachedThreshold={0.3}
+          contentContainerStyle={styles.listContent}
+          style={styles.list}
+          removeClippedSubviews
+          windowSize={7}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          updateCellsBatchingPeriod={50}
+        />
+        </View>
+      </View>
 
       {itemCount > 0 ? (
         <Pressable
@@ -2565,6 +2870,73 @@ export default function SellScanScreen({
           </View>
         </View>
       </Modal>
+
+      {/* VOICE-001: Floating voice button / Recording panel */}
+      {voiceButtonState === "recording" ? (
+        // Expanded recording panel
+        <View style={[styles.voiceRecordingPanel, itemCount > 0 && styles.voiceRecordingPanelWithCart]}>
+          {/* Cancel button */}
+          <Pressable
+            style={styles.voiceCancelButton}
+            onPress={cancelVoiceRecording}
+            hitSlop={8}
+            accessibilityLabel="Cancel recording"
+          >
+            <MaterialCommunityIcons name="close" size={20} color={theme.colors.error} />
+          </Pressable>
+
+          {/* Recording indicator with duration */}
+          <View style={styles.voiceRecordingInfo}>
+            <View style={styles.voiceRecordingDot} />
+            <Text style={styles.voiceRecordingText}>
+              {Math.floor(voiceRecordingDuration / 60)}:{(voiceRecordingDuration % 60).toString().padStart(2, "0")}
+            </Text>
+          </View>
+
+          {/* Stop/Submit button */}
+          <Pressable
+            style={styles.voiceStopButton}
+            onPress={stopAndSubmitVoice}
+            accessibilityLabel="Stop and submit"
+          >
+            <MaterialCommunityIcons name="send" size={20} color={theme.colors.textInverse} />
+          </Pressable>
+        </View>
+      ) : (
+        // Normal FAB
+        <Pressable
+          style={[
+            styles.voiceFab,
+            itemCount > 0 && styles.voiceFabWithCart,
+            (!storeActive || scanDisabled) && styles.ctaDisabled,
+          ]}
+          onPressIn={handleVoicePressIn}
+          onPressOut={handleVoicePressOut}
+          onPress={handleVoiceTap}
+          disabled={!storeActive || scanDisabled || voiceButtonState === "processing"}
+          accessibilityLabel="Tap or hold to speak"
+        >
+          {voiceButtonState === "processing" ? (
+            <ActivityIndicator size={22} color={theme.colors.textInverse} />
+          ) : (
+            <MaterialCommunityIcons
+              name="microphone-outline"
+              size={22}
+              color={theme.colors.textInverse}
+            />
+          )}
+        </Pressable>
+      )}
+
+      {/* VOICE-001: Voice sheet modal */}
+      <VoiceSheet
+        state={voiceSheetState}
+        transcript={voiceTranscript}
+        message={voiceMessage}
+        errorMessage={voiceErrorMessage}
+        onDismiss={handleVoiceSheetDismiss}
+        testID="sell-voice-sheet"
+      />
     </View>
   );
 }
@@ -2574,7 +2946,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  // SD-CATEGORY: Row container for rail + product grid
+  mainContentRow: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  productGridContainer: {
+    flex: 1,
+  },
+  categoryFilterLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  categoryFilterText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
   list: {
+    flex: 1,
     position: "relative",
     zIndex: 0,
   },
@@ -2626,6 +3018,90 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000000",
     paddingVertical: 0,
+  },
+  // VOICE-001: Floating voice button (FAB)
+  voiceFab: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    zIndex: 100,
+  },
+  voiceFabRecording: {
+    backgroundColor: theme.colors.error,
+    transform: [{ scale: 1.1 }],
+  },
+  voiceFabWithCart: {
+    bottom: 76,
+  },
+  // VOICE-001: Expanded recording panel
+  voiceRecordingPanel: {
+    position: "absolute",
+    right: 16,
+    bottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 28,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    gap: 12,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    zIndex: 100,
+    borderWidth: 2,
+    borderColor: theme.colors.error,
+  },
+  voiceRecordingPanelWithCart: {
+    bottom: 76,
+  },
+  voiceCancelButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.errorSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voiceRecordingInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 8,
+  },
+  voiceRecordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: theme.colors.error,
+  },
+  voiceRecordingText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+    fontVariant: ["tabular-nums"],
+    minWidth: 40,
+  },
+  voiceStopButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
   },
   scanSegment: {
     flexDirection: "row",

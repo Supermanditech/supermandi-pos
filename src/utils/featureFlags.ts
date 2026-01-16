@@ -8,9 +8,10 @@ import { useSettingsStore } from "../stores/settingsStore";
  * Maps to settingsStore state and backend ui-status response.
  */
 export type FeatureKey =
-  | "buy"           // BUY tab, Purchase Orders, GRN
-  | "reorder"       // REORDER tab, Reorder Settings/Policies
-  | "qa_menu";      // UI Showcase (QA/dev only)
+  | "buy"               // BUY tab, Purchase Orders, GRN
+  | "reorder"           // REORDER tab, Reorder Settings/Policies
+  | "category_browsing" // CAT-005: Category rail in SELL screen
+  | "qa_menu";          // UI Showcase (QA/dev only)
 
 /**
  * Check if a feature is enabled.
@@ -32,6 +33,8 @@ export function isFeatureEnabled(key: FeatureKey): boolean {
       return state.buyEnabled;
     case "reorder":
       return state.reorderEnabled;
+    case "category_browsing":
+      return state.categoryBrowsingEnabled;
     case "qa_menu":
       // QA menu has its own check in UiShowcaseScreen
       return __DEV__ || Boolean(process.env.EXPO_PUBLIC_QA_ENABLED);
@@ -54,12 +57,15 @@ export function isFeatureEnabled(key: FeatureKey): boolean {
 export function useFeatureEnabled(key: FeatureKey): boolean {
   const buyEnabled = useSettingsStore((s) => s.buyEnabled);
   const reorderEnabled = useSettingsStore((s) => s.reorderEnabled);
+  const categoryBrowsingEnabled = useSettingsStore((s) => s.categoryBrowsingEnabled);
 
   switch (key) {
     case "buy":
       return buyEnabled;
     case "reorder":
       return reorderEnabled;
+    case "category_browsing":
+      return categoryBrowsingEnabled;
     case "qa_menu":
       return __DEV__ || Boolean(process.env.EXPO_PUBLIC_QA_ENABLED);
     default:
@@ -81,6 +87,7 @@ export const FEATURE_GATED_SCREENS: Record<FeatureKey, string[]> = {
     "ReorderSettings",
     "ReorderPolicies",
   ],
+  category_browsing: [], // CAT-005: UI feature toggle, not route-gated
   qa_menu: [
     "UiShowcase",
   ],

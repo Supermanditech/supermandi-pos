@@ -84,6 +84,54 @@ export interface GetCategoriesResponse {
 }
 
 // =============================================================================
+// CAT-003: FMCG Taxonomy Types
+// =============================================================================
+
+export interface FmcgCategory {
+  id: string;
+  labelEn: string;
+  labelHi: string | null;
+  iconKey: string;
+  sortOrder: number;
+  productCount: number;
+}
+
+export interface GetFmcgCategoriesResponse {
+  success: boolean;
+  data: FmcgCategory[];
+  count: number;
+}
+
+export interface CategoryProduct {
+  id: string;
+  productId: string;
+  displayName: string;
+  sellPrice: number;
+  mrp: number;
+  currentStock: number;
+  taxonomyId: string | null;
+  brand: string | null;
+  barcode: string | null;
+}
+
+export interface GetCategoryProductsParams {
+  limit?: number;
+  cursor?: string;
+  includeZeroStock?: boolean;
+}
+
+export interface GetCategoryProductsResponse {
+  success: boolean;
+  data: CategoryProduct[];
+  pagination: {
+    limit: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+  context: string;
+}
+
+// =============================================================================
 // API FUNCTIONS
 // =============================================================================
 
@@ -170,11 +218,54 @@ export async function getProductSuppliers(
 
 /**
  * Get all categories available in the store's catalog.
+ * @deprecated Use getFmcgCategories for taxonomy-based categories
  */
 export async function getCategories(storeId: string): Promise<string[]> {
   const path = `${CATALOG_BASE}/stores/${storeId}/catalog/categories`;
   const response = await apiClient.get<GetCategoriesResponse>(path);
   return response.data;
+}
+
+// =============================================================================
+// CAT-003: FMCG Taxonomy Category Endpoints
+// =============================================================================
+
+/**
+ * Get FMCG taxonomy categories that have products in this store.
+ * Returns categories with product counts, sorted by sort_order.
+ */
+export async function getFmcgCategories(storeId: string): Promise<FmcgCategory[]> {
+  const path = `${CATALOG_BASE}/stores/${storeId}/categories`;
+  const response = await apiClient.get<GetFmcgCategoriesResponse>(path);
+  return response.data;
+}
+
+/**
+ * Get products in a specific FMCG category for this store.
+ * Supports cursor-based pagination.
+ * Use taxonomyId = "all" or the Sab category ID for all products.
+ */
+export async function getCategoryProducts(
+  storeId: string,
+  taxonomyId: string,
+  params?: GetCategoryProductsParams
+): Promise<GetCategoryProductsResponse> {
+  const query = new URLSearchParams();
+
+  if (params?.limit && params.limit > 0) {
+    query.set("limit", String(params.limit));
+  }
+  if (params?.cursor) {
+    query.set("cursor", params.cursor);
+  }
+  if (params?.includeZeroStock === false) {
+    query.set("includeZeroStock", "false");
+  }
+
+  const queryString = query.toString();
+  const path = `${CATALOG_BASE}/stores/${storeId}/categories/${taxonomyId}/products${queryString ? `?${queryString}` : ""}`;
+
+  return apiClient.get<GetCategoryProductsResponse>(path);
 }
 
 // =============================================================================

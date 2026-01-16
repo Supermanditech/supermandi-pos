@@ -6,11 +6,13 @@ import { setLanguage as setI18nLanguage, type SupportedLanguage } from '../i18n'
 type SettingsState = {
   buyEnabled: boolean;
   reorderEnabled: boolean;
+  categoryBrowsingEnabled: boolean; // CAT-005: Category browsing for SELL screen
   language: SupportedLanguage;
   storeName: string | null; // GO-LIVE: Store name from SuperAdmin (read-only, persisted for offline)
   storeCode: string | null; // GO-LIVE: Human-readable store code
   setBuyEnabled: (enabled: boolean) => void;
   setReorderEnabled: (enabled: boolean) => void;
+  setCategoryBrowsingEnabled: (enabled: boolean) => void;
   setLanguage: (lang: SupportedLanguage) => void;
   setStoreName: (name: string | null) => void;
   setStoreCode: (code: string | null) => void;
@@ -21,11 +23,13 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       buyEnabled: true, // BUY tab enabled by default
       reorderEnabled: false,
+      categoryBrowsingEnabled: true, // CAT-005: Category browsing enabled by default for Demo Store
       language: 'en', // Default language
       storeName: null, // GO-LIVE: Persisted for offline display
       storeCode: null, // GO-LIVE: Human-readable store code
       setBuyEnabled: (enabled) => set({ buyEnabled: Boolean(enabled) }),
       setReorderEnabled: (enabled) => set({ reorderEnabled: Boolean(enabled) }),
+      setCategoryBrowsingEnabled: (enabled) => set({ categoryBrowsingEnabled: Boolean(enabled) }),
       setLanguage: (lang) => {
         set({ language: lang });
         // Also update i18n instance
@@ -35,7 +39,7 @@ export const useSettingsStore = create<SettingsState>()(
       setStoreCode: (code) => set({ storeCode: code }),
     }),
     {
-      name: 'supermandi.settings.v2', // Bumped version for new fields
+      name: 'supermandi.settings.v3', // CAT-005: Bumped version for categoryBrowsingEnabled
       storage: createJSONStorage(() => AsyncStorage)
     }
   )

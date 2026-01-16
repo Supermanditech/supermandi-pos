@@ -19,6 +19,7 @@ export type ScanResolveResponse =
       action: "ADD_TO_CART" | "PROMPT_PRICE" | "DIGITISED" | "ALREADY_DIGITISED";
       product: ScanProduct;
       product_not_found_for_store?: boolean;
+      availableStock?: number | null; // SD-ONBOARD-002C: Stock for cart cap check
     };
 
 // Backend response types (SD-ONBOARD-002 digitisation format)
@@ -72,6 +73,8 @@ export async function resolveScan(input: {
       const hasSellPrice = typeof sp.sellPrice === "number" && sp.sellPrice > 0;
 
       if (hasSellPrice) {
+        // SD-ONBOARD-002C: Include stock for cart cap check
+        const stockQty = sp.stock?.isKnown ? sp.stock.qty : null;
         return {
           action: "ADD_TO_CART",
           product: {
@@ -81,7 +84,8 @@ export async function resolveScan(input: {
             priceMinor: sp.sellPrice,
             currency: "INR"
           },
-          product_not_found_for_store: false
+          product_not_found_for_store: false,
+          availableStock: stockQty
         };
       } else {
         // Product exists but no sell price - prompt for price
