@@ -13,6 +13,7 @@
 # 4. Inventory Ledger
 # 5. Orders List
 # 6. Store Health
+# 7. Store Digitisation (SD-ONBOARD-001B)
 # =============================================================================
 
 set -e
@@ -262,6 +263,24 @@ test_orders() {
     "" "200"
 }
 
+test_digitisation() {
+  echo ""
+  echo "=========================================="
+  echo "7. Store Digitisation (SD-ONBOARD-001B)"
+  echo "=========================================="
+
+  # Test scan/resolve with new contract format (barcode only)
+  # This should return NEEDS_CREATE or NOT_FOUND for unknown barcode
+  run_test "Scan Resolve (Digitisation Contract)" "POST" "/api/v1/pos/scan/resolve" \
+    "{\"barcode\":\"TEST_UNKNOWN_99999\"}" \
+    "200" "status"
+
+  # Test store-products endpoint exists (should return 422 without required fields)
+  run_test "Store Products Endpoint Exists" "POST" "/api/v1/pos/store-products" \
+    "{}" \
+    "422" "error"
+}
+
 # =============================================================================
 # SUMMARY
 # =============================================================================
@@ -330,6 +349,7 @@ main() {
   test_reorder
   test_inventory
   test_orders
+  test_digitisation
 
   # Print summary
   print_summary

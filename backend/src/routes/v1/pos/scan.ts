@@ -5,17 +5,58 @@ import {
   updateProductPrice,
   type ScanMode
 } from "../../../services/posScanStore";
+import { resolveScanForDigitisation } from "../../../services/storeProductDigitisationService";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 
 export const posScanRouter = Router();
 
-// POST /api/v1/pos/scan/resolve
+/**
+ * POST /api/v1/pos/scan/resolve
+ *
+ * Supports TWO request formats:
+ *
+ * 1. NEW FORMAT (SD-ONBOARD-001B digitisation contract):
+ *    Body: { "barcode": "8901030000000" }
+ *    Response: { status: "FOUND" | "NEEDS_CREATE" | "NOT_FOUND", ... }
+ *
+ * 2. LEGACY FORMAT (backward compatibility):
+ *    Body: { "scanValue": "...", "mode": "SELL" | "DIGITISE" }
+ *    Response: { action: "ADD_TO_CART" | "PROMPT_PRICE" | ..., product: {...} }
+ */
 posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
-  const { scanValue, mode } = req.body as {
+  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
+
+  // Detect request format
+  const { barcode, scanValue, mode } = req.body as {
+    barcode?: string;
     scanValue?: string;
     mode?: ScanMode;
   };
 
+  // NEW FORMAT: { barcode } - SD-ONBOARD-001B digitisation contract
+  if (typeof barcode === "string") {
+    const trimmedBarcode = barcode.trim();
+
+    if (trimmedBarcode.length === 0) {
+      return res.status(422).json({
+        error: "VALIDATION_ERROR",
+        message: "Barcode is required"
+      });
+    }
+
+    try {
+      const result = await resolveScanForDigitisation(storeId, trimmedBarcode);
+      return res.json(result);
+    } catch (error) {
+      console.error("[scan/resolve] Error resolving barcode:", error);
+      return res.status(503).json({
+        error: "SERVICE_UNAVAILABLE",
+        message: "Database unavailable"
+      });
+    }
+  }
+
+  // LEGACY FORMAT: { scanValue, mode }
   if (typeof scanValue !== "string" || scanValue.trim().length === 0) {
     return res.status(400).json({ error: "scanValue is required" });
   }
@@ -23,8 +64,6 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
   if (mode !== "SELL" && mode !== "DIGITISE") {
     return res.status(400).json({ error: "mode must be SELL or DIGITISE" });
   }
-
-  const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
 
   try {
     const result = await resolveScan(scanValue, mode, storeId, deviceId);

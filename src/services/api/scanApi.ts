@@ -106,3 +106,95 @@ export async function lookupProductByBarcode(barcode: string): Promise<ScanProdu
     currency: local.currency
   };
 }
+
+// =============================================================================
+// SD-ONBOARD-001B: New Digitisation Contract Types & Functions
+// =============================================================================
+
+export interface StoreProductStock {
+  isKnown: boolean;
+  qty: number;
+}
+
+export interface StoreProductResponse {
+  storeProductId: string;
+  name: string;
+  barcode: string;
+  sellPrice: number | null;
+  mrp: number | null;
+  stock: StoreProductStock;
+  unit: string;
+  brand: string;
+  description: string;
+  imageUrl: string;
+}
+
+export interface ScanResolvePrefill {
+  barcode: string;
+  name: string;
+  description: string;
+  unit: string;
+  imageUrl: string;
+  brand: string;
+}
+
+export type DigitisationScanResolveResponse =
+  | { status: "FOUND"; storeProduct: StoreProductResponse }
+  | { status: "NEEDS_CREATE"; prefill: ScanResolvePrefill }
+  | { status: "NOT_FOUND"; barcode: string };
+
+/**
+ * Resolve barcode using new digitisation contract (SD-ONBOARD-001B)
+ * Returns FOUND/NEEDS_CREATE/NOT_FOUND status
+ */
+export async function resolveScanForDigitisation(barcode: string): Promise<DigitisationScanResolveResponse> {
+  const trimmed = barcode.trim();
+  if (!trimmed) {
+    return { status: "NOT_FOUND", barcode: "" };
+  }
+
+  return apiClient.post<DigitisationScanResolveResponse>("/api/v1/pos/scan/resolve", {
+    barcode: trimmed
+  });
+}
+
+export interface CreateStoreProductInput {
+  barcode: string;
+  name: string;
+  sellPrice: number; // Minor units (paise)
+  mrp?: number;
+  initialStockQty: number;
+  unit?: string;
+  description?: string;
+  brand?: string;
+}
+
+export interface CreateStoreProductResponse {
+  storeProduct: StoreProductResponse;
+}
+
+export interface CreateStoreProductConflictResponse {
+  error: "BARCODE_ALREADY_MAPPED";
+  message: string;
+  storeProduct: StoreProductResponse;
+}
+
+/**
+ * Create store product during digitisation flow (SD-ONBOARD-001B)
+ * Creates product + store-scoped barcode binding + initial INWARD ledger
+ */
+export async function createStoreProduct(
+  input: CreateStoreProductInput
+): Promise<{ success: true; storeProduct: StoreProductResponse } | { success: false; existingProduct: StoreProductResponse }> {
+  try {
+    const res = await apiClient.post<CreateStoreProductResponse>("/api/v1/pos/store-products", input);
+    return { success: true, storeProduct: res.storeProduct };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 409) {
+      // Conflict - barcode already mapped
+      const conflictData = error.payload as CreateStoreProductConflictResponse;
+      return { success: false, existingProduct: conflictData.storeProduct };
+    }
+    throw error;
+  }
+}
