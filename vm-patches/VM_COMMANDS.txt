@@ -1,7 +1,9 @@
 # =============================================================================
 # VM DEPLOYMENT COMMANDS - Copy-Paste Ready
 # Date: 2026-01-16
-# Fixes: DEV-072 (UUID validation + barcode resolution)
+# Fixes:
+#   - DEV-072 (UUID validation + barcode resolution)
+#   - SD-ONBOARD-001B (Brand barcode digitisation - scan/resolve + store-products)
 # =============================================================================
 
 # First, transfer the patch files to VM (run from local machine):
@@ -69,3 +71,62 @@ docker restart supermandi-enroll-service
 # Restore policies.js backup
 docker exec supermandi-reorder-service cp /app/dist/routes/policies.js.bak /app/dist/routes/policies.js
 docker restart supermandi-reorder-service
+
+# =============================================================================
+# SD-ONBOARD-001B: BRAND BARCODE DIGITISATION
+# =============================================================================
+# This adds two new endpoints to enroll-service-v6.js:
+#   POST /api/v1/pos/scan/resolve - Returns FOUND/NOT_FOUND with store-scoped lookup
+#   POST /api/v1/pos/store-products - Creates product + barcode binding + INWARD ledger
+#
+# PREREQUISITE: Migration 023_store_product_barcodes.sql must be applied first
+# =============================================================================
+
+# Step 1: Pull latest code (includes migration and patched service file)
+cd /home/supermandi/repos/supermandi-pos
+git fetch origin && git pull origin wip/trace-2026-01-15
+
+# Step 2: Apply migration (if not already done)
+docker exec -i supermandi-db psql -U postgres -d supermandi < backend/migrations/023_store_product_barcodes.sql
+
+# Step 3: Backup and deploy patched enroll-service
+cp /var/supermandi/scripts/enroll-service-v6.js /var/supermandi/scripts/enroll-service-v6.js.bak
+cp vm-patches/enroll-service-v6-patched.js /var/supermandi/scripts/enroll-service-v6.js
+
+# Step 4: Restart the enroll-service container
+docker restart supermandi-enroll-service
+
+# Step 5: Verify service is running
+docker logs supermandi-enroll-service --tail 10
+
+# =============================================================================
+# SD-ONBOARD-001B: CURL PROOF TESTS (via gateway :3000)
+# =============================================================================
+# Get a valid device token first from the DB or use existing one
+
+# Test 1: Scan unknown barcode -> NOT_FOUND
+curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063010017"}'
+# Expected: {"status":"NOT_FOUND","barcode":"8901063010017"}
+
+# Test 2: Create store product with initial stock
+curl -X POST http://localhost:3000/api/v1/pos/store-products \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063010017","name":"Test Biscuit","sellPrice":2500,"initialStockQty":48}'
+# Expected: 201 with storeProduct object
+
+# Test 3: Scan same barcode -> FOUND
+curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063010017"}'
+# Expected: {"status":"FOUND","storeProduct":{...,"stock":{"isKnown":true,"qty":48}}}
+
+# =============================================================================
+# SD-ONBOARD-001B: ROLLBACK
+# =============================================================================
+cp /var/supermandi/scripts/enroll-service-v6.js.bak /var/supermandi/scripts/enroll-service-v6.js
+docker restart supermandi-enroll-service
