@@ -45,11 +45,14 @@ import {
   submitHidBuffer,
 } from "../services/hidScannerService";
 import {
+  addStoreProductToCart,
   onBarcodeScanned,
   setScanRuntime,
+  type AddStoreProductRequest,
   type ScanNotice,
   type SellFirstOnboardingRequest
 } from "../services/scan/handleScan";
+import { AddStoreProductModal } from "../components/sell/AddStoreProductModal";
 import { getLastPosMode, setLastPosMode } from "../services/posMode";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/stockCache";
@@ -129,6 +132,9 @@ export default function PosRootLayout() {
   const [scanLookupV2Enabled, setScanLookupV2Enabled] = useState(false);
   const [sellOnboardingRequest, setSellOnboardingRequest] =
     useState<SellFirstOnboardingRequest | null>(null);
+  // SD-ONBOARD-001B: Add store product modal state for digitisation flow
+  const [addStoreProductRequest, setAddStoreProductRequest] =
+    useState<AddStoreProductRequest | null>(null);
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanLocked, setCameraScanLocked] = useState(false);
@@ -137,7 +143,9 @@ export default function PosRootLayout() {
   const { width: screenWidth } = useWindowDimensions();
 
   const sellOnboardingActive = sellOnboardingRequest !== null && effectiveMode === "SELL";
-  const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive;
+  // SD-ONBOARD-001B: Block scans while add store product modal is open
+  const addStoreProductActive = addStoreProductRequest !== null && effectiveMode === "SELL";
+  const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive || addStoreProductActive;
   const cartMode = effectiveMode === "PURCHASE" ? "PURCHASE" : "SELL";
   const statusMode = "SELL";
   const hidConnected = scannerOk;
@@ -314,8 +322,15 @@ export default function PosRootLayout() {
       sellFirstOnboardingActive: sellOnboardingActive,
       onDeviceAuthError: handleDeviceAuthError,
       onStoreInactive: () => setStoreActive(false),
+      // SD-ONBOARD-001B: Digitisation flow callbacks
+      digitisationFlowEnabled: true,
+      onAddStoreProduct: (request) => {
+        if (effectiveMode !== "SELL") return;
+        setAddStoreProductRequest((current) => current ?? request);
+      },
+      addStoreProductActive,
     });
-  }, [effectiveMode, handleDeviceAuthError, scanLookupV2Enabled, sellOnboardingActive, storeActive]);
+  }, [addStoreProductActive, effectiveMode, handleDeviceAuthError, scanLookupV2Enabled, sellOnboardingActive, storeActive]);
 
   useEffect(() => {
     let cancelled = false;
@@ -665,6 +680,14 @@ export default function PosRootLayout() {
         }
         return;
       }
+      // SD-ONBOARD-001B: Block scans when add store product modal is open
+      if (addStoreProductActive) {
+        console.log("hid_scan_blocked:add_store_product_active");
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Complete adding product first", ToastAndroid.SHORT);
+        }
+        return;
+      }
       if (scannerOpen) {
         console.log("hid_scan_blocked:camera_open");
         if (Platform.OS === "android") {
@@ -696,7 +719,7 @@ export default function PosRootLayout() {
     return () => {
       setHidScanHandler(null);
     };
-  }, [isFocused, markHidActive, scannerOpen, sellOnboardingActive, storeActive]);
+  }, [addStoreProductActive, isFocused, markHidActive, scannerOpen, sellOnboardingActive, storeActive]);
 
   useEffect(() => {
     if (!scanDisabled) return;
@@ -719,6 +742,10 @@ export default function PosRootLayout() {
       if (sellOnboardingActive) {
         if (Platform.OS === "android") {
           ToastAndroid.show("Complete price setup first", ToastAndroid.SHORT);
+        }
+      } else if (addStoreProductActive) {
+        if (Platform.OS === "android") {
+          ToastAndroid.show("Complete adding product first", ToastAndroid.SHORT);
         }
       } else if (scannerOpen) {
         if (Platform.OS === "android") {
@@ -744,6 +771,11 @@ export default function PosRootLayout() {
 
   const closeSellOnboarding = useCallback(() => {
     setSellOnboardingRequest(null);
+  }, []);
+
+  // SD-ONBOARD-001B: Close handler for add store product modal
+  const closeAddStoreProduct = useCallback(() => {
+    setAddStoreProductRequest(null);
   }, []);
 
   const handleOpenCamera = async () => {
@@ -1045,6 +1077,19 @@ export default function PosRootLayout() {
           </View>
         </View>
       </Modal>
+
+      {/* SD-ONBOARD-001B: Add Store Product Modal */}
+      <AddStoreProductModal
+        visible={addStoreProductActive}
+        request={addStoreProductRequest}
+        onClose={closeAddStoreProduct}
+        onSuccess={(storeProduct, shouldAddToCart) => {
+          closeAddStoreProduct();
+          if (shouldAddToCart) {
+            addStoreProductToCart(storeProduct);
+          }
+        }}
+      />
 
       <TextInput
         ref={hidInputRef}

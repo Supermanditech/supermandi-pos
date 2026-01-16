@@ -108,8 +108,14 @@ export async function lookupProductByBarcode(barcode: string): Promise<ScanProdu
 }
 
 // =============================================================================
-// SD-ONBOARD-001B: New Digitisation Contract Types & Functions
+// SD-ONBOARD-002: Two-Speed Product Capture + Internal Prefill
 // =============================================================================
+
+export type DigitisationMode = "FAST_SELL" | "DIGITISATION";
+
+// SD-ONBOARD-002C: Added "other_store" for cross-store prefill
+export type PrefillSource = "platform_catalog" | "external_lookup" | "other_store";
+export type PrefillConfidence = "high" | "medium" | "low";
 
 export interface StoreProductStock {
   isKnown: boolean;
@@ -122,11 +128,14 @@ export interface StoreProductResponse {
   barcode: string;
   sellPrice: number | null;
   mrp: number | null;
+  purchasePrice: number | null;
   stock: StoreProductStock;
   unit: string;
   brand: string;
   description: string;
   imageUrl: string;
+  variant: string;
+  packSize: string;
 }
 
 export interface ScanResolvePrefill {
@@ -136,21 +145,26 @@ export interface ScanResolvePrefill {
   unit: string;
   imageUrl: string;
   brand: string;
+  variant: string;
+  packSize: string;
+  source: PrefillSource;
+  confidence: PrefillConfidence;
+  productId: string | null;
 }
 
+// SD-ONBOARD-002: No more NOT_FOUND - unknown barcodes always get NEEDS_CREATE
 export type DigitisationScanResolveResponse =
   | { status: "FOUND"; storeProduct: StoreProductResponse }
-  | { status: "NEEDS_CREATE"; prefill: ScanResolvePrefill }
-  | { status: "NOT_FOUND"; barcode: string };
+  | { status: "NEEDS_CREATE"; barcode: string; prefill?: ScanResolvePrefill };
 
 /**
- * Resolve barcode using new digitisation contract (SD-ONBOARD-001B)
- * Returns FOUND/NEEDS_CREATE/NOT_FOUND status
+ * Resolve barcode using new digitisation contract (SD-ONBOARD-002)
+ * Returns FOUND/NEEDS_CREATE status (no more NOT_FOUND)
  */
 export async function resolveScanForDigitisation(barcode: string): Promise<DigitisationScanResolveResponse> {
   const trimmed = barcode.trim();
   if (!trimmed) {
-    return { status: "NOT_FOUND", barcode: "" };
+    return { status: "NEEDS_CREATE", barcode: "" };
   }
 
   return apiClient.post<DigitisationScanResolveResponse>("/api/v1/pos/scan/resolve", {
@@ -160,11 +174,15 @@ export async function resolveScanForDigitisation(barcode: string): Promise<Digit
 
 export interface CreateStoreProductInput {
   barcode: string;
-  name: string;
+  mode: DigitisationMode;
+  name?: string;
   sellPrice: number; // Minor units (paise)
   mrp?: number;
+  purchasePrice?: number;
   initialStockQty: number;
   unit?: string;
+  variant?: string;
+  packSize?: string;
   description?: string;
   brand?: string;
 }

@@ -130,3 +130,243 @@ curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
 # =============================================================================
 cp /var/supermandi/scripts/enroll-service-v6.js.bak /var/supermandi/scripts/enroll-service-v6.js
 docker restart supermandi-enroll-service
+
+# =============================================================================
+# SD-ONBOARD-002: TWO-SPEED PRODUCT CAPTURE + INTERNAL PREFILL
+# =============================================================================
+# Updates:
+#   - scan/resolve now returns FOUND/NEEDS_CREATE (no more NOT_FOUND)
+#   - NEEDS_CREATE includes prefill from platform catalog when available
+#   - store-products accepts mode: FAST_SELL or DIGITISATION
+#   - FAST_SELL: minimal fields (name, sellPrice, initialStockQty)
+#   - DIGITISATION: full fields (includes purchasePrice, variant, packSize)
+#
+# PREREQUISITE: Migration 024_sd_onboard_002_two_speed_capture.sql must be applied
+# =============================================================================
+
+# Step 1: Pull latest code
+cd /home/supermandi/repos/supermandi-pos
+git fetch origin && git pull origin wip/trace-2026-01-15
+
+# Step 2: Apply migrations
+docker exec -i supermandi-db psql -U postgres -d supermandi < backend/migrations/024_sd_onboard_002_two_speed_capture.sql
+docker exec -i supermandi-db psql -U postgres -d supermandi < backend/migrations/025_seed_demo_digitised_inventory.sql
+
+# Step 3: Restart services
+docker restart supermandi-enroll-service
+
+# =============================================================================
+# SD-ONBOARD-002: CURL PROOF TESTS (via gateway :3000)
+# =============================================================================
+# Get a valid device token first from the DB or use existing one
+
+# Test 1: Scan unknown barcode (not in platform catalog) -> NEEDS_CREATE without prefill
+curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"9999999999999"}'
+# Expected: {"status":"NEEDS_CREATE","barcode":"9999999999999"}
+# (no prefill field = platform doesn't know this barcode)
+
+# Test 2: Scan barcode from platform catalog -> NEEDS_CREATE with prefill
+curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901030000000"}'
+# Expected: {"status":"NEEDS_CREATE","barcode":"8901030000000","prefill":{...,"source":"platform_catalog"}}
+# (has prefill = found in platform catalog)
+
+# Test 3: Create store product via FAST_SELL mode
+curl -X POST http://localhost:3000/api/v1/pos/store-products \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063020027","mode":"FAST_SELL","name":"Fast Sell Test","sellPrice":2500,"initialStockQty":48}'
+# Expected: 201 with storeProduct including mode=FAST_SELL
+
+# Test 4: Create store product via DIGITISATION mode
+curl -X POST http://localhost:3000/api/v1/pos/store-products \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063030037","mode":"DIGITISATION","name":"Digitised Product","sellPrice":3500,"purchasePrice":3000,"mrp":4000,"initialStockQty":24,"unit":"pcs","variant":"Large","packSize":"500g"}'
+# Expected: 201 with full storeProduct including purchasePrice, variant, packSize
+
+# Test 5: Rescan created barcode -> FOUND
+curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063020027"}'
+# Expected: {"status":"FOUND","storeProduct":{...,"stock":{"isKnown":true,"qty":48}}}
+
+# Test 6: Scan seeded barcode (from demo seed 025) -> FOUND immediately
+curl -X POST http://localhost:3000/api/v1/pos/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901003000001"}'
+# Expected: {"status":"FOUND","storeProduct":{"name":"Parle-G Biscuits 110g",...}}
+# (No modal should open - product already in store)
+
+# Test 7: Duplicate create -> 409 CONFLICT
+curl -X POST http://localhost:3000/api/v1/pos/store-products \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: YOUR_DEVICE_TOKEN" \
+  -d '{"barcode":"8901063020027","mode":"FAST_SELL","name":"Duplicate Test","sellPrice":9999,"initialStockQty":1}'
+# Expected: 409 {"error":"BARCODE_ALREADY_MAPPED","message":"Barcode already exists for this store","storeProduct":{...}}
+
+# =============================================================================
+# SD-ONBOARD-002: SQL PROOF QUERIES
+# =============================================================================
+
+# Check global barcode mapping created
+docker exec supermandi-db psql -U postgres -d supermandi -c "
+  SELECT barcode, product_id, source, created_by_store_id
+  FROM catalog.product_barcodes
+  WHERE source = 'retailer_digitisation'
+  ORDER BY created_at DESC
+  LIMIT 5;
+"
+
+# Check store-scoped barcode mapping created
+docker exec supermandi-db psql -U postgres -d supermandi -c "
+  SELECT spb.barcode, spb.store_id, sp.display_name, sp.sell_price, sp.purchase_price, sp.digitisation_mode
+  FROM catalog.store_product_barcodes spb
+  JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+  ORDER BY spb.created_at DESC
+  LIMIT 5;
+"
+
+# Check inventory ledger entry created
+docker exec supermandi-db psql -U postgres -d supermandi -c "
+  SELECT il.store_id, p.name, il.delta_qty, il.notes
+  FROM inventory.inventory_ledger il
+  JOIN catalog.products p ON p.id = il.product_id
+  WHERE il.notes LIKE 'Initial stock from%'
+  ORDER BY il.created_at DESC
+  LIMIT 5;
+"
+
+# Check stock balances are correct
+docker exec supermandi-db psql -U postgres -d supermandi -c "
+  SELECT sb.store_id, p.name, sb.current_qty
+  FROM inventory.stock_balances sb
+  JOIN catalog.products p ON p.id = sb.product_id
+  WHERE sb.store_id = 'a0000000-0000-0000-0000-000000000001'
+  ORDER BY sb.updated_at DESC
+  LIMIT 10;
+"
+
+# Verify seeded barcodes are in store_product_barcodes
+docker exec supermandi-db psql -U postgres -d supermandi -c "
+  SELECT spb.barcode, sp.display_name, sp.sell_price, sp.current_stock
+  FROM catalog.store_product_barcodes spb
+  JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+  WHERE spb.store_id = 'a0000000-0000-0000-0000-000000000001'
+  AND spb.barcode LIKE '890100300%'
+  ORDER BY spb.barcode
+  LIMIT 10;
+"
+
+# =============================================================================
+# SD-ONBOARD-002: ROLLBACK
+# =============================================================================
+# The migration is additive (adds columns) so rollback is not necessary.
+# If you need to remove demo seed data:
+docker exec supermandi-db psql -U postgres -d supermandi -c "
+  DELETE FROM catalog.store_product_barcodes
+  WHERE store_id = 'a0000000-0000-0000-0000-000000000001'
+  AND barcode LIKE '890100300%';
+"
+
+# =============================================================================
+# SD-ONBOARD-002C: CROSS-STORE PREFILL + DURABLE DEPLOY
+# =============================================================================
+# Updates:
+#   - Version banner: "Enroll service v6 (SD-ONBOARD-002C)"
+#   - Cross-store prefill: search other stores' store_product_barcodes for metadata
+#   - Prefill includes name, unit, brand, variant, packSize (no prices/stock)
+#   - source: "other_store", confidence: "medium"
+#
+# The lookup order is:
+#   1. store_product_barcodes (current store) -> FOUND
+#   2. product_barcodes (global) -> NEEDS_CREATE with platform_catalog prefill
+#   3. products.primary_barcode -> NEEDS_CREATE with platform_catalog prefill
+#   4. store_product_barcodes (other stores) -> NEEDS_CREATE with other_store prefill
+#   5. No match -> NEEDS_CREATE without prefill
+# =============================================================================
+
+# Step 1: Copy patch files to VM
+scp -i ~/.ssh/supermandi_vm_key vm-patches/patch_sd_onboard_002c_v2.py claude@34.14.220.171:/tmp/
+
+# Step 2: On VM - Apply the patch
+ssh -i ~/.ssh/supermandi_vm_key claude@34.14.220.171 << 'EOF'
+# Backup current file
+cp /var/supermandi/scripts/enroll-service-v6.js /var/supermandi/scripts/enroll-service-v6.js.bak.sd002c
+
+# Copy to /tmp for patching
+cp /var/supermandi/scripts/enroll-service-v6.js /tmp/enroll-index.js
+
+# Apply patch
+python3 /tmp/patch_sd_onboard_002c_v2.py
+
+# Copy patched file back using docker (handles permissions)
+docker run --rm -v /var/supermandi/scripts:/scripts -v /tmp:/tmp alpine cp /tmp/enroll-index.js /scripts/enroll-service-v6.js
+
+# Restart service
+docker restart supermandi-enroll-service
+
+# Verify version banner
+docker logs supermandi-enroll-service --tail 5 2>&1 | grep "SD-ONBOARD-002C"
+EOF
+
+# =============================================================================
+# SD-ONBOARD-002C: CURL PROOF TESTS
+# =============================================================================
+# Use device token from DEMO001 store: tok_glt4vk4ermcmke1x6jj (or get from DB)
+TOKEN="tok_glt4vk4ermcmke1x6jj"
+
+# Test 1: Unknown barcode -> NEEDS_CREATE (no prefill)
+curl -s -X POST http://localhost:3009/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: $TOKEN" \
+  -d '{"barcode": "9999999999999"}'
+# Expected: {"status":"NEEDS_CREATE","barcode":"9999999999999"}
+
+# Test 2: Seeded barcode -> FOUND with price and stock
+curl -s -X POST http://localhost:3009/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: $TOKEN" \
+  -d '{"barcode": "8901003000001"}'
+# Expected: {"status":"FOUND","storeProduct":{"name":"Parle-G Biscuits 110g",...,"sellPrice":1050,"stock":{"isKnown":true,"qty":49}}}
+
+# Test 3: Cross-store prefill (barcode exists ONLY in other store's digitised inventory)
+# First, create test data in another store (run these SQL commands):
+#   INSERT INTO platform.stores (id, name, code) VALUES ('c0000000-0000-0000-0000-000000000099', 'CrossStoreTest', 'CROSSTEST99');
+#   INSERT INTO catalog.products (id, name, brand, unit) VALUES ('c0000000-0000-0000-0000-000000000097', 'Other Store Product', 'OtherBrand', 'pcs');
+#   INSERT INTO catalog.store_products (id, store_id, product_id, display_name) VALUES ('d0000000-0000-0000-0000-000000000097', 'c0000000-0000-0000-0000-000000000099', 'c0000000-0000-0000-0000-000000000097', 'Other Store Exclusive');
+#   INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source) VALUES ('c0000000-0000-0000-0000-000000000099', 'd0000000-0000-0000-0000-000000000097', '7777777777777', 'manual');
+
+curl -s -X POST http://localhost:3009/scan/resolve \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: $TOKEN" \
+  -d '{"barcode": "7777777777777"}'
+# Expected: {"status":"NEEDS_CREATE","barcode":"7777777777777","prefill":{"name":"Other Store Exclusive","source":"other_store","confidence":"medium",...}}
+
+# =============================================================================
+# SD-ONBOARD-002C: VERIFY DEPLOYMENT
+# =============================================================================
+
+# Check version banner
+docker logs supermandi-enroll-service 2>&1 | grep "running on port" | tail -1
+# Expected: Enroll service v6 (SD-ONBOARD-002C) running on port 3009
+
+# Check cross-store prefill code is present
+grep -c "Cross-store prefill" /var/supermandi/scripts/enroll-service-v6.js
+# Expected: 1
+
+grep -c "other_store" /var/supermandi/scripts/enroll-service-v6.js
+# Expected: 2
+
+# =============================================================================
+# SD-ONBOARD-002C: ROLLBACK
+# =============================================================================
+cp /var/supermandi/scripts/enroll-service-v6.js.bak.sd002c /var/supermandi/scripts/enroll-service-v6.js
+docker restart supermandi-enroll-service
