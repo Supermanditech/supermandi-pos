@@ -95,7 +95,7 @@ router.get(
       phone: string | null;
       status: string;
     }>(
-      `SELECT id, code, name, address, phone, status
+      `SELECT id, code, name, CONCAT_WS(', ', address_line1, address_line2, city, state, pincode) AS address, phone, status
        FROM platform.stores WHERE id = $1`,
       [storeId]
     );

@@ -10,9 +10,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.7.0",
+    "@sentry/node": "^7.91.0",
     "pino": "^8.17.0",
     "pino-pretty": "^10.3.0",
-    "@sentry/node": "^7.91.0",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },
@@ -20,10 +21,10 @@
     "@types/uuid": "^9.0.7"
   },
   "peerDependencies": {
-    "express": "^4.18.2",
-    "pg": "^8.11.3",
     "bullmq": "^4.14.0",
+    "express": "^4.18.2",
     "ioredis": "^5.3.2",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
   }
 }
