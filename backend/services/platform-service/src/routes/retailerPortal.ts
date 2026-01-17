@@ -149,12 +149,12 @@ router.get(
 
     if (search) {
       params.push(`%${search}%`);
-      whereClause += ` AND (p.name ILIKE $${params.length} OR p.barcode ILIKE $${params.length})`;
+      whereClause += ` AND (p.name ILIKE $${params.length} OR p.primary_barcode ILIKE $${params.length})`;
     }
 
     // Get products with current stock
     const result = await query<StoreProduct>(
-      `SELECT p.id, p.barcode, p.name, p.description, p.type, p.unit,
+      `SELECT p.id, p.primary_barcode, p.name, p.description, p.type, p.unit,
               sp.purchase_price, sp.sell_price, sp.mrp,
               COALESCE(i.quantity, 0) as current_stock,
               sp.created_at
@@ -237,7 +237,7 @@ router.post(
       const existing = await query(
         `SELECT sp.id FROM catalog.store_products sp
          JOIN catalog.products p ON sp.product_id = p.id
-         WHERE sp.store_id = $1 AND p.barcode = $2`,
+         WHERE sp.store_id = $1 AND p.primary_barcode = $2`,
         [storeId, barcode]
       );
       if (existing.length > 0) {
@@ -248,14 +248,14 @@ router.post(
     // Create product and store_product in transaction
     const productResult = await query<{ id: string }>(
       `WITH new_product AS (
-         INSERT INTO catalog.products (barcode, name, description, type, unit)
-         VALUES ($1, $2, $3, $4, $5)
+         INSERT INTO catalog.products (primary_barcode, name, description, unit)
+         VALUES ($1, $2, $3, $4)
          RETURNING id
        )
        INSERT INTO catalog.store_products (store_id, product_id, purchase_price, sell_price, mrp)
-       SELECT $6, id, $7, $8, $9 FROM new_product
+       SELECT $5, id, $6, $7, $8 FROM new_product
        RETURNING product_id as id`,
-      [barcode || null, name, description || null, type, unit, storeId, purchasePrice, sellPrice, mrp || null]
+      [barcode || null, name, description || null, unit, storeId, purchasePrice, sellPrice, mrp || null]
     );
 
     const productId = productResult[0]!.id;
@@ -998,7 +998,7 @@ router.post(
           const existing = await query<{ product_id: string }>(
             `SELECT sp.product_id FROM catalog.store_products sp
              JOIN catalog.products p ON sp.product_id = p.id
-             WHERE sp.store_id = $1 AND p.barcode = $2`,
+             WHERE sp.store_id = $1 AND p.primary_barcode = $2`,
             [storeId, barcode]
           );
           if (existing[0]) {
