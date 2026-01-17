@@ -101,7 +101,7 @@ export async function getStoreUser(
      WHERE store_id = $1 AND user_id = $2`,
     [storeId, userId]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -115,7 +115,7 @@ export async function getStoreUserByUserId(userId: string): Promise<StoreUser | 
      LIMIT 1`,
     [userId]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -128,7 +128,7 @@ export async function getStoreUsers(storeId: string): Promise<StoreUser[]> {
      ORDER BY is_owner DESC, created_at ASC`,
     [storeId]
   );
-  return result.rows;
+  return result;
 }
 
 /**
@@ -147,7 +147,7 @@ export async function createStoreUser(params: {
      RETURNING *`,
     [params.storeId, params.userId, params.role, params.isOwner, params.createdBy || null]
   );
-  return result.rows[0]!;
+  return result[0]!;
 }
 
 /**
@@ -164,7 +164,7 @@ export async function updateStoreUserStatus(
      RETURNING *`,
     [id, isActive]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -175,7 +175,7 @@ export async function deleteStoreUser(storeId: string, userId: string): Promise<
     `DELETE FROM auth.store_users WHERE store_id = $1 AND user_id = $2`,
     [storeId, userId]
   );
-  return (result.rowCount ?? 0) > 0;
+  return result.length > 0;
 }
 
 // =============================================================================
@@ -193,7 +193,7 @@ export async function getRetailerPortalInfo(storeId: string): Promise<RetailerPo
      WHERE id = $1`,
     [storeId]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -278,7 +278,7 @@ export async function createComplianceDocument(params: {
       params.uploadedByUserId,
     ]
   );
-  return result.rows[0]!;
+  return result[0]!;
 }
 
 /**
@@ -292,7 +292,7 @@ export async function confirmComplianceDocumentUpload(id: string): Promise<Compl
      RETURNING *`,
     [id]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -305,7 +305,7 @@ export async function getComplianceDocuments(storeId: string): Promise<Complianc
      ORDER BY created_at DESC`,
     [storeId]
   );
-  return result.rows;
+  return result;
 }
 
 /**
@@ -316,7 +316,7 @@ export async function getComplianceDocumentById(id: string): Promise<ComplianceD
     `SELECT * FROM platform.compliance_documents WHERE id = $1`,
     [id]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -338,7 +338,7 @@ export async function updateComplianceDocumentStatus(params: {
      RETURNING *`,
     [params.id, params.status, params.rejectionReason || null, params.verifiedByUserId]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 // =============================================================================
@@ -373,7 +373,7 @@ export async function createCsvImport(params: {
       params.uploadedByUserId,
     ]
   );
-  return result.rows[0]!;
+  return result[0]!;
 }
 
 /**
@@ -390,7 +390,7 @@ export async function checkDuplicateCsvImport(
      LIMIT 1`,
     [storeId, fileSha256]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -401,7 +401,7 @@ export async function getCsvImportById(id: string): Promise<CsvImport | null> {
     `SELECT * FROM platform.csv_imports WHERE id = $1`,
     [id]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -415,7 +415,7 @@ export async function getCsvImports(storeId: string, limit = 20): Promise<CsvImp
      LIMIT $2`,
     [storeId, limit]
   );
-  return result.rows;
+  return result;
 }
 
 /**
@@ -429,7 +429,7 @@ export async function startCsvValidation(id: string): Promise<CsvImport | null> 
      RETURNING *`,
     [id]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -458,7 +458,7 @@ export async function completeCsvValidation(params: {
       params.validationErrors ? JSON.stringify(params.validationErrors) : null,
     ]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -472,7 +472,7 @@ export async function startCsvCommit(id: string): Promise<CsvImport | null> {
      RETURNING *`,
     [id]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -495,7 +495,7 @@ export async function completeCsvCommit(params: {
      RETURNING *`,
     [params.id, params.productsCreated, params.productsUpdated, params.suppliersCreated]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 /**
@@ -509,7 +509,7 @@ export async function failCsvImport(id: string, errors: ValidationError[]): Prom
      RETURNING *`,
     [id, JSON.stringify(errors)]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 // =============================================================================
@@ -539,7 +539,7 @@ export async function createImpersonationLog(params: {
       params.tokenExpiresAt,
     ]
   );
-  return result.rows[0]!;
+  return result[0]!;
 }
 
 /**
@@ -556,7 +556,7 @@ export async function getImpersonationLogs(
      LIMIT $2`,
     [storeId, limit]
   );
-  return result.rows;
+  return result;
 }
 
 /**
@@ -573,5 +573,5 @@ export async function getImpersonationLogsByAdmin(
      LIMIT $2`,
     [adminUserId, limit]
   );
-  return result.rows;
+  return result;
 }
