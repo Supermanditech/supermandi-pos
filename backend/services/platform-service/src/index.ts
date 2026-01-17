@@ -9,6 +9,8 @@ import storeRoutes from './routes/stores.js';
 import flagRoutes from './routes/flags.js';
 import internalRoutes from './routes/internal.js';
 import adminRoutes from './routes/admin.js';
+import retailerAdminRoutes from './routes/retailerAdmin.js';
+import retailerPortalRoutes from './routes/retailerPortal.js';
 
 const app = express();
 
@@ -60,8 +62,14 @@ app.use('/stores', storeRoutes);
 // Admin routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin', adminRoutes);
 
+// Retailer admin management routes (SUPERADMIN only)
+app.use('/admin', retailerAdminRoutes);
+
 // Admin flag routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin/flags', flagRoutes);
+
+// Retailer portal routes (JWT auth with store_id - enforced by gateway)
+app.use('/retailer-admin', retailerPortalRoutes);
 
 // Internal routes (service-to-service)
 app.use('/internal', internalRoutes);

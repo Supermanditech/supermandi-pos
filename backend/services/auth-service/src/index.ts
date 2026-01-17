@@ -8,6 +8,7 @@ import { config } from './config';
 import internalRoutes from './routes/internal';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
+import retailerAuthRoutes from './routes/retailerAuth';
 
 const app = express();
 
@@ -55,6 +56,9 @@ app.get('/healthz', (_req: Request, res: Response) => {
 
 // Public auth routes (login, logout)
 app.use('/auth', authRoutes);
+
+// Retailer admin auth routes (Firebase token exchange)
+app.use('/retailer-admin/auth', retailerAuthRoutes);
 
 // Admin routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin', adminRoutes);

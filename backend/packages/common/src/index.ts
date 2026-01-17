@@ -24,3 +24,14 @@ export * from './idempotency';
 
 // Logging (structured logging, request tracking, health checks)
 export * from './logging';
+
+// Auth (JWT types)
+export * from './auth';
+
+// Storage (GCS operations) - requires @google-cloud/storage
+// Note: Initialize with initializeGcs() before use
+export * from './storage';
+
+// Firebase (ID token verification) - requires firebase-admin
+// Note: Initialize with initializeFirebase() before use
+export * from './firebase';

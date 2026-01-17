@@ -78,6 +78,19 @@ export const config: GatewayConfig = {
       url: getEnvOrDefault('VOICE_SERVICE_URL', 'http://localhost:3008'),
       pathPrefix: '/api/v1/voice',
     },
+    // Retailer Admin Portal routes
+    // Auth routes go to auth-service (Firebase token exchange)
+    {
+      name: 'retailer-auth',
+      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/retailer-admin/auth',
+    },
+    // Portal API routes go to platform-service
+    {
+      name: 'retailer-portal',
+      url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),
+      pathPrefix: '/api/v1/retailer-admin',
+    },
   ],
 };
 

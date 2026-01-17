@@ -1,0 +1,250 @@
+// Firebase Admin Service - Retailer Admin Portal
+// Handles Firebase ID token verification for phone OTP authentication
+
+import * as admin from 'firebase-admin';
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+export interface FirebaseConfig {
+  serviceAccountPath?: string;
+  projectId?: string;
+}
+
+let firebaseApp: admin.app.App | null = null;
+
+/**
+ * Initialize Firebase Admin SDK
+ */
+export function initializeFirebase(config: FirebaseConfig): void {
+  if (firebaseApp) {
+    console.log('[Firebase] Already initialized, skipping...');
+    return;
+  }
+
+  const initOptions: admin.AppOptions = {};
+
+  if (config.serviceAccountPath) {
+    // Use service account file
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const serviceAccount = require(config.serviceAccountPath);
+    initOptions.credential = admin.credential.cert(serviceAccount);
+    initOptions.projectId = serviceAccount.project_id;
+  } else if (config.projectId) {
+    // Use Application Default Credentials (for GCE/Cloud Run)
+    initOptions.credential = admin.credential.applicationDefault();
+    initOptions.projectId = config.projectId;
+  } else {
+    throw new Error('Firebase config requires either serviceAccountPath or projectId');
+  }
+
+  firebaseApp = admin.initializeApp(initOptions);
+  console.log(`[Firebase] Initialized with project: ${initOptions.projectId}`);
+}
+
+/**
+ * Get Firebase app (throws if not initialized)
+ */
+function getApp(): admin.app.App {
+  if (!firebaseApp) {
+    throw new Error('Firebase not initialized. Call initializeFirebase() first.');
+  }
+  return firebaseApp;
+}
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export interface FirebaseTokenPayload {
+  uid: string;
+  phone_number?: string;
+  email?: string;
+  name?: string;
+  sign_in_provider: string;
+  auth_time: number;
+}
+
+export interface VerifyTokenResult {
+  success: true;
+  payload: FirebaseTokenPayload;
+}
+
+export interface VerifyTokenError {
+  success: false;
+  error: string;
+  code: 'TOKEN_EXPIRED' | 'TOKEN_INVALID' | 'TOKEN_REVOKED' | 'UNKNOWN';
+}
+
+export type VerifyTokenResponse = VerifyTokenResult | VerifyTokenError;
+
+// =============================================================================
+// TOKEN VERIFICATION
+// =============================================================================
+
+/**
+ * Verify a Firebase ID token
+ * Returns the decoded token payload if valid
+ */
+export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyTokenResponse> {
+  const app = getApp();
+  const auth = app.auth();
+
+  try {
+    const decodedToken = await auth.verifyIdToken(idToken, true); // checkRevoked = true
+
+    // Extract sign-in provider
+    const signInProvider = decodedToken.firebase?.sign_in_provider || 'unknown';
+
+    return {
+      success: true,
+      payload: {
+        uid: decodedToken.uid,
+        phone_number: decodedToken.phone_number,
+        email: decodedToken.email,
+        name: decodedToken.name,
+        sign_in_provider: signInProvider,
+        auth_time: decodedToken.auth_time,
+      },
+    };
+  } catch (error: unknown) {
+    const firebaseError = error as { code?: string; message?: string };
+
+    if (firebaseError.code === 'auth/id-token-expired') {
+      return {
+        success: false,
+        error: 'Token has expired',
+        code: 'TOKEN_EXPIRED',
+      };
+    }
+
+    if (firebaseError.code === 'auth/id-token-revoked') {
+      return {
+        success: false,
+        error: 'Token has been revoked',
+        code: 'TOKEN_REVOKED',
+      };
+    }
+
+    if (
+      firebaseError.code === 'auth/argument-error' ||
+      firebaseError.code === 'auth/invalid-id-token'
+    ) {
+      return {
+        success: false,
+        error: 'Invalid token format',
+        code: 'TOKEN_INVALID',
+      };
+    }
+
+    console.error('[Firebase] Token verification failed:', firebaseError.message);
+    return {
+      success: false,
+      error: firebaseError.message || 'Token verification failed',
+      code: 'UNKNOWN',
+    };
+  }
+}
+
+/**
+ * Get user by phone number
+ */
+export async function getUserByPhone(
+  phoneNumber: string
+): Promise<admin.auth.UserRecord | null> {
+  const app = getApp();
+  const auth = app.auth();
+
+  try {
+    const user = await auth.getUserByPhoneNumber(phoneNumber);
+    return user;
+  } catch (error: unknown) {
+    const firebaseError = error as { code?: string };
+    if (firebaseError.code === 'auth/user-not-found') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Get user by UID
+ */
+export async function getUserByUid(uid: string): Promise<admin.auth.UserRecord | null> {
+  const app = getApp();
+  const auth = app.auth();
+
+  try {
+    const user = await auth.getUser(uid);
+    return user;
+  } catch (error: unknown) {
+    const firebaseError = error as { code?: string };
+    if (firebaseError.code === 'auth/user-not-found') {
+      return null;
+    }
+    throw error;
+  }
+}
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+/**
+ * Normalize phone number to E.164 format
+ * Assumes Indian numbers if no country code provided
+ */
+export function normalizePhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, '');
+
+  // If starts with 91 and has 12 digits, add +
+  if (digits.startsWith('91') && digits.length === 12) {
+    return `+${digits}`;
+  }
+
+  // If 10 digits, assume Indian number
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+
+  // If already has country code (starts with 91 or other)
+  if (digits.length > 10) {
+    return `+${digits}`;
+  }
+
+  // Return as-is with + prefix
+  return `+${digits}`;
+}
+
+/**
+ * Validate phone number format
+ */
+export function isValidPhoneNumber(phone: string): boolean {
+  const normalized = normalizePhoneNumber(phone);
+  // Indian phone number: +91 followed by 10 digits
+  return /^\+91[6-9]\d{9}$/.test(normalized);
+}
+
+/**
+ * Mask phone number for display
+ * "9876543210" -> "98765****10"
+ */
+export function maskPhoneNumber(phone: string): string {
+  // Get digits only
+  const digits = phone.replace(/\D/g, '');
+
+  // Take last 10 digits (phone without country code)
+  const phoneDigits = digits.slice(-10);
+
+  if (phoneDigits.length <= 7) {
+    return phoneDigits;
+  }
+
+  const first = phoneDigits.slice(0, 5);
+  const last = phoneDigits.slice(-2);
+  const masked = '*'.repeat(phoneDigits.length - 7);
+
+  return `${first}${masked}${last}`;
+}
