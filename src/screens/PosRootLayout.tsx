@@ -16,7 +16,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import type { LayoutChangeEvent } from "react-native";
+import type { AppStateStatus, LayoutChangeEvent } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -108,6 +108,12 @@ export default function PosRootLayout() {
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
   const reorderPulse = useRef(new Animated.Value(0)).current;
   const reorderPulseAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const uiStatusIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const uiStatusInFlightRef = useRef(false);
+  const uiStatusAppStateRef = useRef(AppState.currentState);
+  const reorderIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reorderInFlightRef = useRef(false);
+  const reorderAppStateRef = useRef(AppState.currentState);
 
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
 
@@ -361,37 +367,41 @@ export default function PosRootLayout() {
     let cancelled = false;
 
     const loadStatus = async () => {
-        try {
-          const status = await fetchUiStatus();
-          if (cancelled) return;
-          setStoreActive(status.storeActive ?? null);
-          setDeviceActive(status.deviceActive ?? null);
-          setDeviceStoreId(status.storeId ?? null);
-          setPendingOutboxCount(status.pendingOutboxCount ?? 0);
-          setPrinterOk(status.printerOk ?? null);
-          setScanLookupV2Enabled(Boolean(status.features?.scan_lookup_v2));
-          // GO-LIVE: Update local storeName/storeCode state and persist to settingsStore
-          if (status.storeName) {
-            setStoreName((prev) => status.storeName ?? prev);
-          }
-          if (status.storeCode) {
-            setStoreCode((prev) => status.storeCode ?? prev);
-          }
-          // Persist to settingsStore for offline display
-          if (status.storeName || status.storeCode) {
-            const { setStoreName: persistStoreName, setStoreCode: persistStoreCode } = useSettingsStore.getState();
-            if (status.storeName) persistStoreName(status.storeName);
-            if (status.storeCode) persistStoreCode(status.storeCode);
-          }
-          // GO-LIVE-002: Sync feature flags to settingsStore
-          if (status.features) {
-            const { setBuyEnabled, setReorderEnabled } = useSettingsStore.getState();
-            // buyEnabled defaults to ordersEnabled if not explicitly set
-            const buyFlag = status.features.buyEnabled ?? status.features.ordersEnabled ?? true;
-            const reorderFlag = status.features.reorderEnabled ?? false;
-            setBuyEnabled(buyFlag);
-            setReorderEnabled(reorderFlag);
-          }
+      if (cancelled) return;
+      if (uiStatusInFlightRef.current) return;
+      if (uiStatusAppStateRef.current !== "active") return;
+      uiStatusInFlightRef.current = true;
+      try {
+        const status = await fetchUiStatus();
+        if (cancelled) return;
+        setStoreActive(status.storeActive ?? null);
+        setDeviceActive(status.deviceActive ?? null);
+        setDeviceStoreId(status.storeId ?? null);
+        setPendingOutboxCount(status.pendingOutboxCount ?? 0);
+        setPrinterOk(status.printerOk ?? null);
+        setScanLookupV2Enabled(Boolean(status.features?.scan_lookup_v2));
+        // GO-LIVE: Update local storeName/storeCode state and persist to settingsStore
+        if (status.storeName) {
+          setStoreName((prev) => status.storeName ?? prev);
+        }
+        if (status.storeCode) {
+          setStoreCode((prev) => status.storeCode ?? prev);
+        }
+        // Persist to settingsStore for offline display
+        if (status.storeName || status.storeCode) {
+          const { setStoreName: persistStoreName, setStoreCode: persistStoreCode } = useSettingsStore.getState();
+          if (status.storeName) persistStoreName(status.storeName);
+          if (status.storeCode) persistStoreCode(status.storeCode);
+        }
+        // GO-LIVE-002: Sync feature flags to settingsStore
+        if (status.features) {
+          const { setBuyEnabled, setReorderEnabled } = useSettingsStore.getState();
+          // buyEnabled defaults to ordersEnabled if not explicitly set
+          const buyFlag = status.features.buyEnabled ?? status.features.ordersEnabled ?? true;
+          const reorderFlag = status.features.reorderEnabled ?? false;
+          setBuyEnabled(buyFlag);
+          setReorderEnabled(reorderFlag);
+        }
         if (status.deviceActive === false) {
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
           return;
@@ -410,15 +420,41 @@ export default function PosRootLayout() {
             return;
           }
         }
+      } finally {
+        uiStatusInFlightRef.current = false;
       }
     };
 
-    loadStatus();
-    const interval = setInterval(loadStatus, 15000);
+    const startPolling = () => {
+      if (uiStatusIntervalRef.current) return;
+      void loadStatus();
+      uiStatusIntervalRef.current = setInterval(() => {
+        void loadStatus();
+      }, 15000);
+    };
+
+    const stopPolling = () => {
+      if (!uiStatusIntervalRef.current) return;
+      clearInterval(uiStatusIntervalRef.current);
+      uiStatusIntervalRef.current = null;
+    };
+
+    const handleAppStateChange = (state: AppStateStatus) => {
+      uiStatusAppStateRef.current = state;
+      if (state === "active") {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    handleAppStateChange(AppState.currentState);
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stopPolling();
+      subscription.remove();
     };
   }, [handleDeviceAuthError, navigation]);
 
@@ -509,6 +545,10 @@ export default function PosRootLayout() {
     let cancelled = false;
 
     const fetchCount = async () => {
+      if (cancelled) return;
+      if (reorderInFlightRef.current) return;
+      if (reorderAppStateRef.current !== "active") return;
+      reorderInFlightRef.current = true;
       try {
         const response = await reorderApi.listPendingReorders(deviceStoreId, {
           status: "pending",
@@ -519,15 +559,41 @@ export default function PosRootLayout() {
         }
       } catch (error) {
         console.error("[PosRootLayout] Failed to fetch pending reorder count:", error);
+      } finally {
+        reorderInFlightRef.current = false;
       }
     };
 
-    void fetchCount();
-    const interval = setInterval(fetchCount, 60000); // Refresh every minute
+    const startPolling = () => {
+      if (reorderIntervalRef.current) return;
+      void fetchCount();
+      reorderIntervalRef.current = setInterval(() => {
+        void fetchCount();
+      }, 60000);
+    };
+
+    const stopPolling = () => {
+      if (!reorderIntervalRef.current) return;
+      clearInterval(reorderIntervalRef.current);
+      reorderIntervalRef.current = null;
+    };
+
+    const handleAppStateChange = (state: AppStateStatus) => {
+      reorderAppStateRef.current = state;
+      if (state === "active") {
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    };
+
+    handleAppStateChange(AppState.currentState);
+    const subscription = AppState.addEventListener("change", handleAppStateChange);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stopPolling();
+      subscription.remove();
     };
   }, [deviceStoreId, reorderEnabled]);
 

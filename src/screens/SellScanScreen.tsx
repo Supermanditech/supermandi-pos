@@ -174,6 +174,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
 const PAGE_SIZE = 40;
 const NUM_COLUMNS = 2;
+const CATEGORY_AUTO_COLLAPSE_MS = 30000;
 const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
@@ -737,6 +738,7 @@ export default function SellScanScreen({
   const showCategoryRail = isDemoStore && categoryBrowsingEnabled;
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categoryRailExpanded, setCategoryRailExpanded] = useState(false);
+  const categoryAutoCollapseRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // CAT-004: API-driven categories for Demo Store
   const [apiCategories, setApiCategories] = useState<CategoryItem[]>([]);
@@ -757,6 +759,34 @@ export default function SellScanScreen({
   const [voiceRecordingDuration, setVoiceRecordingDuration] = useState(0);
   const voiceHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const voiceDurationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const resetCategoryAutoCollapse = useCallback(() => {
+    if (!categoryRailExpanded) return;
+    if (categoryAutoCollapseRef.current) {
+      clearTimeout(categoryAutoCollapseRef.current);
+    }
+    categoryAutoCollapseRef.current = setTimeout(() => {
+      setCategoryRailExpanded(false);
+    }, CATEGORY_AUTO_COLLAPSE_MS);
+  }, [categoryRailExpanded]);
+
+  useEffect(() => {
+    if (!categoryRailExpanded) {
+      if (categoryAutoCollapseRef.current) {
+        clearTimeout(categoryAutoCollapseRef.current);
+        categoryAutoCollapseRef.current = null;
+      }
+      return;
+    }
+
+    resetCategoryAutoCollapse();
+    return () => {
+      if (categoryAutoCollapseRef.current) {
+        clearTimeout(categoryAutoCollapseRef.current);
+        categoryAutoCollapseRef.current = null;
+      }
+    };
+  }, [categoryRailExpanded, resetCategoryAutoCollapse]);
 
   // SD-CATEGORY: Back button collapses rail if expanded
   useEffect(() => {
@@ -785,7 +815,7 @@ export default function SellScanScreen({
         }
       } catch (error) {
         console.warn("[CAT-004] Failed to fetch categories:", error);
-        // Fallback to DEMO_CATEGORIES handled by CategoryRail
+        // Fallback to DEMO_CATEGORIES handled by category dropdown
       } finally {
         if (!cancelled) {
           setApiCategoriesLoading(false);
@@ -1851,6 +1881,54 @@ export default function SellScanScreen({
     );
   };
 
+  const renderFeaturedSkuCard = (item: SkuItem) => {
+    const resolved = resolveSkuPrice(item);
+    logPriceDebug(item, resolved);
+    const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
+
+    return (
+      <Pressable
+        style={[styles.skuCardFirstRow, storeActive === false && styles.skuCardDisabled]}
+        onPressIn={() => {
+          detailPressRef.current = false;
+        }}
+        onLongPress={() => {
+          detailPressRef.current = true;
+          setDetailItem(item);
+        }}
+        delayLongPress={250}
+        onPress={() => {
+          if (detailPressRef.current) {
+            detailPressRef.current = false;
+            return;
+          }
+          handleAddSku(item);
+        }}
+        disabled={storeActive === false}
+      >
+        <Text style={styles.skuName} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <View style={styles.pricePill}>
+          <Text style={styles.priceText}>{priceLabel}</Text>
+        </View>
+      </Pressable>
+    );
+  };
+
+  const renderCategoryPill = () => (
+    <Pressable
+      style={styles.categoryPillCard}
+      onPress={() => setCategoryRailExpanded(true)}
+      accessibilityLabel="Expand categories"
+    >
+      <View style={styles.categoryPillIconWrap}>
+        <MaterialCommunityIcons name="view-grid" size={22} color={theme.colors.textInverse} />
+      </View>
+      <MaterialCommunityIcons name="chevron-down" size={18} color={theme.colors.textSecondary} />
+    </Pressable>
+  );
+
   const renderAddRow = ({ item }: { item: SkuItem }) => {
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
@@ -2001,6 +2079,21 @@ export default function SellScanScreen({
       </Pressable>
     </View>
   );
+
+  const showCategoryPill = showCategoryRail && !addExpanded && !categoryRailExpanded;
+  const displayCategories = apiCategories.length > 0 ? apiCategories : DEMO_CATEGORIES;
+  const featuredSku =
+    showCategoryPill && selectedCategory === "all" && catalogItems.length > 0
+      ? catalogItems[0]
+      : null;
+  const gridItems = featuredSku ? catalogItems.slice(1) : catalogItems;
+
+  const catalogHeader = showCategoryPill ? (
+    <View style={styles.firstRowWithPill}>
+      {renderCategoryPill()}
+      {featuredSku ? renderFeaturedSkuCard(featuredSku) : null}
+    </View>
+  ) : null;
 
   const searchHeader = (
     <View style={styles.searchHeader}>
@@ -2223,18 +2316,23 @@ export default function SellScanScreen({
 
       {/* SD-CATEGORY: Main content area with optional category rail */}
       <View style={styles.mainContentRow}>
-        {/* Category Rail - Demo Store Only, controlled by feature flag (CAT-005) */}
-        {showCategoryRail && !addExpanded && (
-          <CategoryRail
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            expanded={categoryRailExpanded}
-            onToggleExpanded={() => setCategoryRailExpanded((prev) => !prev)}
-            onCollapse={() => setCategoryRailExpanded(false)}
-            categories={apiCategories.length > 0 ? apiCategories : undefined}
-            loading={apiCategoriesLoading}
-          />
-        )}
+        {showCategoryRail && !addExpanded && categoryRailExpanded ? (
+          <View style={styles.categoryRailWrap} onTouchStart={resetCategoryAutoCollapse}>
+            <CategoryRail
+              selectedCategory={selectedCategory}
+              onSelectCategory={(categoryId) => {
+                setSelectedCategory(categoryId);
+                resetCategoryAutoCollapse();
+              }}
+              expanded={categoryRailExpanded}
+              compact
+              onToggleExpanded={() => setCategoryRailExpanded(false)}
+              onCollapse={() => setCategoryRailExpanded(false)}
+              categories={apiCategories.length > 0 ? apiCategories : undefined}
+              loading={apiCategoriesLoading}
+            />
+          </View>
+        ) : null}
 
         {/* Product Grid */}
         <View style={styles.productGridContainer}>
@@ -2242,7 +2340,7 @@ export default function SellScanScreen({
           {showCategoryRail && selectedCategory !== "all" && (
             <View style={styles.categoryFilterLabel}>
               <Text style={styles.categoryFilterText}>
-                Category: {(apiCategories.length > 0 ? apiCategories : DEMO_CATEGORIES).find((c) => c.id === selectedCategory)?.label ?? selectedCategory}
+                Category: {displayCategories.find((c) => c.id === selectedCategory)?.label ?? selectedCategory}
               </Text>
               <Pressable
                 onPress={() => setSelectedCategory("all")}
@@ -2254,30 +2352,33 @@ export default function SellScanScreen({
             </View>
           )}
           <FlatList
-            data={catalogItems}
-          keyExtractor={(item) => item.barcode}
-          renderItem={renderSkuItem}
-          numColumns={NUM_COLUMNS}
-          columnWrapperStyle={styles.skuRow}
-          ListEmptyComponent={
-            !catalogLoading ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>{t('sell.noRecentProducts')}</Text>
-              </View>
-            ) : null
-          }
-          ListFooterComponent={
-            catalogLoading ? (
-              <View style={styles.footerLoading}>
-                <ActivityIndicator color={theme.colors.primary} />
-              </View>
-            ) : null
-          }
-          onEndReached={() => {
-            if (!catalogLoading && catalogHasMore) {
-              void loadCatalog(false);
+            data={gridItems}
+            keyExtractor={(item) => item.barcode}
+            renderItem={renderSkuItem}
+            numColumns={NUM_COLUMNS}
+            columnWrapperStyle={styles.skuRow}
+            ListHeaderComponent={catalogHeader}
+            ListEmptyComponent={
+              !catalogLoading && gridItems.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>{t('sell.noRecentProducts')}</Text>
+                </View>
+              ) : null
             }
-          }}
+            ListFooterComponent={
+              catalogLoading ? (
+                <View style={styles.footerLoading}>
+                  <ActivityIndicator color={theme.colors.primary} />
+                </View>
+              ) : null
+            }
+            onTouchStart={resetCategoryAutoCollapse}
+            onScrollBeginDrag={resetCategoryAutoCollapse}
+            onEndReached={() => {
+              if (!catalogLoading && catalogHasMore) {
+                void loadCatalog(false);
+              }
+            }}
           onEndReachedThreshold={0.3}
           contentContainerStyle={styles.listContent}
           style={styles.list}
@@ -2952,6 +3053,9 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
   },
+  categoryRailWrap: {
+    flexShrink: 0,
+  },
   productGridContainer: {
     flex: 1,
   },
@@ -2972,7 +3076,6 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   listContent: {
-    paddingHorizontal: 12,
     paddingBottom: 130,
   },
   searchHeader: {
@@ -3827,8 +3930,53 @@ const styles = StyleSheet.create({
     color: theme.colors.textInverse,
     fontVariant: ["tabular-nums"],
   },
+  categoryPillCard: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    ...theme.shadows.sm,
+  },
+  categoryPillIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: theme.colors.success,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // CAT-006: First row with pill + first SKU
+  firstRowWithPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 4,
+    gap: 8,
+  },
+  // CAT-006: First SKU card - fills remaining space
+  skuCardFirstRow: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   skuRow: {
     gap: 12,
+    paddingHorizontal: 12,
   },
   skuCard: {
     flex: 1,

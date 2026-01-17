@@ -8,6 +8,8 @@ import {
   correlationIdMiddleware,
   requestLoggerMiddleware,
   rateLimiterMiddleware,
+  stripClientAuthHeaders,
+  jwtAuthMiddleware,
 } from './middleware';
 import { setupProxyRoutes } from './routes/proxy';
 
@@ -28,6 +30,12 @@ app.use(requestLoggerMiddleware);
 
 // Rate limiting
 app.use(rateLimiterMiddleware);
+
+// Strip any client-provided auth headers (prevents spoofing)
+app.use(stripClientAuthHeaders);
+
+// JWT authentication for protected routes
+app.use(jwtAuthMiddleware);
 
 // =============================================================================
 // HEALTH CHECK ENDPOINTS

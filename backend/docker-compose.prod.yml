@@ -90,6 +90,7 @@ services:
       ORDER_SERVICE_URL: http://order-service:3006
       REORDER_SERVICE_URL: http://reorder-service:3007
       POS_SERVICE_URL: http://supermandi-enroll-service:3009
+      VOICE_SERVICE_URL: http://voice-service:3008
       JWT_SECRET: ${JWT_SECRET}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
@@ -343,6 +344,37 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - supermandi-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # VOICE SERVICE
+  # ---------------------------------------------------------------------------
+  voice-service:
+    build:
+      context: .
+      dockerfile: services/voice-service/Dockerfile
+    container_name: supermandi-voice-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      VOICE_SERVICE_PORT: 3008
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-whisper-1}
+      OPENAI_STT_LANGUAGE: ${OPENAI_STT_LANGUAGE:-hi}
+      VOICE_MAX_FILE_SIZE_MB: ${VOICE_MAX_FILE_SIZE_MB:-10}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
       interval: 30s
       timeout: 10s
       retries: 3

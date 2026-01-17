@@ -22,6 +22,7 @@ declare -A SERVICES=(
   ["inventory-service"]="3005"
   ["order-service"]="3006"
   ["reorder-service"]="3007"
+  ["voice-service"]="3008"
 )
 
 # Colors

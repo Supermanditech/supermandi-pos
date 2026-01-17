@@ -56,7 +56,7 @@ interface StoreUser {
 interface AuthUser {
   id: string;
   phone: string;
-  role_name: string;
+  name: string;
 }
 
 // =============================================================================
@@ -70,18 +70,17 @@ async function getStoreByCode(code: string): Promise<StoreWithPortal | null> {
      WHERE code = $1`,
     [code]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 async function getUserByPhone(phone: string): Promise<AuthUser | null> {
   const result = await query<AuthUser>(
-    `SELECT u.id, u.phone, r.name as role_name
-     FROM auth.users u
-     JOIN auth.roles r ON u.role_id = r.id
-     WHERE u.phone = $1 AND u.is_active = true`,
+    `SELECT id, phone, name
+     FROM auth.users
+     WHERE phone = $1 AND status = 'active'`,
     [phone]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 async function getStoreUser(storeId: string, userId: string): Promise<StoreUser | null> {
@@ -90,12 +89,12 @@ async function getStoreUser(storeId: string, userId: string): Promise<StoreUser 
      WHERE store_id = $1 AND user_id = $2 AND is_active = true`,
     [storeId, userId]
   );
-  return result.rows[0] || null;
+  return result[0] || null;
 }
 
 async function createUserIfNotExists(params: {
   phone: string;
-  roleId: string;
+  storeId: string;
 }): Promise<AuthUser> {
   // First try to get existing user
   const existing = await getUserByPhone(params.phone);
@@ -103,14 +102,14 @@ async function createUserIfNotExists(params: {
     return existing;
   }
 
-  // Create new user with RETAILER_ADMIN role
+  // Create new user - auth.users uses actor_type/actor_id, not role_id
   const result = await query<AuthUser>(
-    `INSERT INTO auth.users (phone, role_id, is_active)
-     VALUES ($1, $2, true)
-     RETURNING id, phone, (SELECT name FROM auth.roles WHERE id = $2) as role_name`,
-    [params.phone, params.roleId]
+    `INSERT INTO auth.users (phone, name, actor_type, actor_id, status)
+     VALUES ($1, 'Retailer Admin', 'store', $2, 'active')
+     RETURNING id, phone, name`,
+    [params.phone, params.storeId]
   );
-  return result.rows[0]!;
+  return result[0]!;
 }
 
 async function createStoreUserIfNotExists(params: {
@@ -133,18 +132,7 @@ async function createStoreUserIfNotExists(params: {
      RETURNING *`,
     [params.storeId, params.userId, params.role, params.isOwner]
   );
-  return result.rows[0]!;
-}
-
-async function getRetailerAdminRoleId(): Promise<string> {
-  const result = await query<{ id: string }>(
-    `SELECT id FROM auth.roles WHERE name = 'RETAILER_ADMIN'`,
-    []
-  );
-  if (!result.rows[0]) {
-    throw new Error('RETAILER_ADMIN role not found. Run migration 028.');
-  }
-  return result.rows[0].id;
+  return result[0]!;
 }
 
 async function getRolePermissions(roleName: string): Promise<string[]> {
@@ -152,7 +140,7 @@ async function getRolePermissions(roleName: string): Promise<string[]> {
     `SELECT permissions FROM auth.roles WHERE name = $1`,
     [roleName]
   );
-  return result.rows[0]?.permissions || [];
+  return result[0]?.permissions || [];
 }
 
 // =============================================================================
@@ -220,10 +208,9 @@ router.post(
     }
 
     // 5. Create/get user and store_user records
-    const roleId = await getRetailerAdminRoleId();
     const user = await createUserIfNotExists({
       phone: phoneFromToken,
-      roleId,
+      storeId: store.id,
     });
 
     await createStoreUserIfNotExists({
@@ -239,7 +226,7 @@ router.post(
     // 7. Generate app JWT with store-scoped claims
     const tokenPair = generateTokenPair(
       user.id,
-      'STORE', // actorType
+      'store', // actorType (lowercase as per ActorType definition)
       store.id, // actorId (storeId)
       permissions
     );
@@ -284,15 +271,12 @@ router.get(
     const userResult = await query<{
       id: string;
       phone: string;
-      role_name: string;
+      name: string;
     }>(
-      `SELECT u.id, u.phone, r.name as role_name
-       FROM auth.users u
-       JOIN auth.roles r ON u.role_id = r.id
-       WHERE u.id = $1`,
+      `SELECT id, phone, name FROM auth.users WHERE id = $1`,
       [userId]
     );
-    const user = userResult.rows[0];
+    const user = userResult[0];
     if (!user) {
       throw ApiError.notFound('User not found');
     }
@@ -306,7 +290,7 @@ router.get(
       `SELECT id, code, name FROM platform.stores WHERE id = $1`,
       [storeId]
     );
-    const store = storeResult.rows[0];
+    const store = storeResult[0];
     if (!store) {
       throw ApiError.notFound('Store not found');
     }
@@ -320,7 +304,8 @@ router.get(
         user: {
           id: user.id,
           phone: user.phone,
-          role: storeUser?.role || user.role_name,
+          name: user.name,
+          role: storeUser?.role || 'RETAILER_ADMIN',
           isOwner: storeUser?.is_owner || false,
         },
         store: {

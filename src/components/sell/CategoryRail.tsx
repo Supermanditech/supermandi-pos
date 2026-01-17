@@ -106,6 +106,7 @@ export interface CategoryRailProps {
   expanded: boolean;
   onToggleExpanded: () => void;
   onCollapse: () => void;
+  compact?: boolean;
   /** Optional API-driven categories. If provided, uses these instead of DEMO_CATEGORIES */
   categories?: CategoryItem[];
   /** Loading state for API categories */
@@ -117,11 +118,13 @@ function CategoryItemButton({
   category,
   isSelected,
   expanded,
+  compact,
   onPress,
 }: {
   category: CategoryItem;
   isSelected: boolean;
   expanded: boolean;
+  compact: boolean;
   onPress: () => void;
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -159,6 +162,7 @@ function CategoryItemButton({
     inputRange: [0, 1],
     outputRange: [0, 0.3],
   });
+  const iconSize = expanded ? 22 : compact ? 24 : 26;
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -166,6 +170,7 @@ function CategoryItemButton({
         style={[
           styles.categoryItem,
           expanded ? styles.categoryItemExpanded : styles.categoryItemCollapsed,
+          compact && styles.categoryItemCompact,
         ]}
         onPress={onPress}
         onPressIn={handlePressIn}
@@ -194,12 +199,13 @@ function CategoryItemButton({
             end={{ x: 1, y: 1 }}
             style={[
               styles.iconContainer,
+              compact && styles.iconContainerCompact,
               isSelected && styles.iconContainerSelected,
             ]}
           >
             <MaterialCommunityIcons
               name={category.icon}
-              size={expanded ? 22 : 26}
+              size={iconSize}
               color={colorScheme.icon}
             />
           </LinearGradient>
@@ -212,6 +218,7 @@ function CategoryItemButton({
         <AppText
           style={[
             expanded ? styles.categoryLabel : styles.categoryLabelCollapsed,
+            compact && !expanded && styles.categoryLabelCollapsedCompact,
             isSelected && [styles.categoryLabelSelected, { color: colorScheme.glow }],
           ]}
           numberOfLines={1}
@@ -234,11 +241,15 @@ export function CategoryRail({
   expanded,
   onToggleExpanded,
   onCollapse,
+  compact,
   categories,
   loading,
 }: CategoryRailProps) {
   const widthAnim = useRef(new Animated.Value(COLLAPSED_WIDTH)).current;
   const headerRotateAnim = useRef(new Animated.Value(0)).current;
+  const isCompact = compact === true;
+  const showExpandedLayout = expanded && !isCompact;
+  const isOpen = expanded;
 
   // CAT-004: Use API categories if provided, otherwise fallback to demo
   const displayCategories = categories && categories.length > 0 ? categories : DEMO_CATEGORIES;
@@ -246,26 +257,26 @@ export function CategoryRail({
   useEffect(() => {
     Animated.parallel([
       Animated.timing(widthAnim, {
-        toValue: expanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
+        toValue: showExpandedLayout ? EXPANDED_WIDTH : COLLAPSED_WIDTH,
         duration: ANIMATION_DURATION,
         useNativeDriver: false,
       }),
       Animated.timing(headerRotateAnim, {
-        toValue: expanded ? 1 : 0,
+        toValue: showExpandedLayout ? 1 : 0,
         duration: ANIMATION_DURATION,
         useNativeDriver: true,
       }),
     ]).start();
-  }, [expanded, widthAnim, headerRotateAnim]);
+  }, [showExpandedLayout, widthAnim, headerRotateAnim]);
 
   const handleCategoryPress = useCallback(
     (categoryId: string) => {
       onSelectCategory(categoryId);
-      if (expanded) {
+      if (showExpandedLayout) {
         onCollapse();
       }
     },
-    [onSelectCategory, expanded, onCollapse]
+    [onSelectCategory, showExpandedLayout, onCollapse]
   );
 
   const headerRotate = headerRotateAnim.interpolate({
@@ -277,23 +288,24 @@ export function CategoryRail({
     <Animated.View style={[styles.container, { width: widthAnim }]}>
       {/* Header with animated toggle */}
       <Pressable
-        style={styles.header}
+        style={[styles.header, isCompact && styles.headerCompact]}
         onPress={onToggleExpanded}
-        accessibilityLabel={expanded ? "Collapse categories" : "Expand categories"}
+        accessibilityLabel={isOpen ? "Collapse categories" : "Expand categories"}
       >
         <Animated.View
           style={[
             styles.headerIconWrap,
+            isCompact && styles.headerIconWrapCompact,
             { transform: [{ rotate: headerRotate }] },
           ]}
         >
           <MaterialCommunityIcons
             name="chevron-right"
-            size={22}
+            size={isCompact ? 20 : 22}
             color={theme.colors.primary}
           />
         </Animated.View>
-        {expanded && (
+        {showExpandedLayout && (
           <LabelText style={styles.headerLabel}>Categories</LabelText>
         )}
       </Pressable>
@@ -301,7 +313,10 @@ export function CategoryRail({
       {/* Category list */}
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isCompact && styles.scrollContentCompact,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
@@ -314,7 +329,8 @@ export function CategoryRail({
               key={category.id}
               category={category}
               isSelected={selectedCategory === category.id}
-              expanded={expanded}
+              expanded={showExpandedLayout}
+              compact={isCompact}
               onPress={() => handleCategoryPress(category.id)}
             />
           ))
@@ -340,6 +356,11 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
     minHeight: 52,
   },
+  headerCompact: {
+    justifyContent: "center",
+    paddingHorizontal: 0,
+    paddingVertical: 10,
+  },
   headerIconWrap: {
     width: 36,
     height: 36,
@@ -347,6 +368,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary + "15",
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerIconWrapCompact: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
   },
   headerLabel: {
     marginLeft: 12,
@@ -363,6 +389,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
   },
+  scrollContentCompact: {
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+  },
   categoryItem: {
     alignItems: "center",
     paddingVertical: 8,
@@ -375,6 +405,10 @@ const styles = StyleSheet.create({
   categoryItemCollapsed: {
     flexDirection: "column",
     justifyContent: "center",
+  },
+  categoryItemCompact: {
+    paddingVertical: 6,
+    marginVertical: 2,
   },
   categoryItemExpanded: {
     flexDirection: "row",
@@ -408,6 +442,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  iconContainerCompact: {
+    width: 44,
+    height: 44,
+    borderRadius: 13,
+  },
   iconContainerSelected: {
     shadowOpacity: 0.35,
     shadowRadius: 6,
@@ -436,6 +475,10 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontWeight: "700",
     color: theme.colors.textSecondary,
+  },
+  categoryLabelCollapsedCompact: {
+    marginTop: 4,
+    fontSize: 9,
   },
   categoryLabelSelected: {
     fontWeight: "800",
