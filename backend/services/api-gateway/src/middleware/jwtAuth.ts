@@ -91,6 +91,18 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     // Store decoded payload on request for logging/debugging
     req.jwtPayload = decoded;
 
+    // Validate required claims
+    if (!decoded.sub || !decoded.actorId || !decoded.actorType) {
+      res.status(401).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Token missing required claims (sub, actorId, actorType).',
+        },
+        requestId: req.correlationId,
+      });
+      return;
+    }
+
     // Set headers for downstream services
     // These headers are trusted because they come from the gateway
     req.headers['x-user-id'] = decoded.sub;

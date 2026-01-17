@@ -3,12 +3,31 @@
 
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
-import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
+import { ApiError, ERROR_CODES, healthCheck, initializeFirebase } from '@supermandi/common';
 import { config } from './config';
 import internalRoutes from './routes/internal';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import retailerAuthRoutes from './routes/retailerAuth';
+
+// =============================================================================
+// FIREBASE INITIALIZATION
+// =============================================================================
+
+if (config.firebase.enabled) {
+  try {
+    initializeFirebase({
+      serviceAccountPath: config.firebase.serviceAccountPath,
+      projectId: config.firebase.projectId,
+    });
+    console.log('[Auth Service] Firebase Admin SDK initialized');
+  } catch (error) {
+    console.error('[Auth Service] Failed to initialize Firebase:', error);
+    // Don't crash the service - retailer auth will fail gracefully
+  }
+} else {
+  console.log('[Auth Service] Firebase disabled (FIREBASE_ENABLED != true)');
+}
 
 const app = express();
 

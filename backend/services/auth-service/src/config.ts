@@ -11,6 +11,11 @@ export interface AuthServiceConfig {
     refreshTokenExpiresInDays: number;
     issuer: string;
   };
+  firebase: {
+    serviceAccountPath?: string;
+    projectId?: string;
+    enabled: boolean;
+  };
 }
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
@@ -44,6 +49,11 @@ export const config: AuthServiceConfig = {
     accessTokenExpiresIn: getEnvOrDefault('JWT_ACCESS_TOKEN_EXPIRES_IN', '15m'),
     refreshTokenExpiresInDays: getEnvIntOrDefault('JWT_REFRESH_TOKEN_EXPIRES_DAYS', 7),
     issuer: getEnvOrDefault('JWT_ISSUER', 'supermandi-auth'),
+  },
+  firebase: {
+    serviceAccountPath: process.env['FIREBASE_SERVICE_ACCOUNT_PATH'],
+    projectId: process.env['FIREBASE_PROJECT_ID'],
+    enabled: process.env['FIREBASE_ENABLED'] === 'true',
   },
 };
 

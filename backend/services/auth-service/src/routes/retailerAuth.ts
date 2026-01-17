@@ -173,7 +173,16 @@ router.post(
     }
 
     // 1. Verify Firebase ID token
-    const verifyResult = await verifyFirebaseIdToken(idToken);
+    let verifyResult;
+    try {
+      verifyResult = await verifyFirebaseIdToken(idToken);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Firebase not initialized')) {
+        throw ApiError.internal('Firebase authentication is not configured. Contact administrator.');
+      }
+      throw ApiError.internal(`Firebase verification failed: ${errorMessage}`);
+    }
     if (!verifyResult.success) {
       throw ApiError.unauthorized(`Firebase token invalid: ${verifyResult.error}`);
     }
