@@ -327,4 +327,109 @@ router.get(
   })
 );
 
+// =============================================================================
+// DEV BYPASS - DEVELOPMENT ONLY
+// =============================================================================
+
+const DEV_BYPASS_KEY = 'supermandi2026';
+
+/**
+ * POST /retailer-admin/auth/dev-bypass
+ * Development-only endpoint to bypass OTP authentication
+ * Issues a real JWT token for testing the portal
+ *
+ * CRITICAL: Only works when NODE_ENV !== 'production'
+ */
+router.post(
+  '/dev-bypass',
+  asyncHandler(async (req, res) => {
+    // CRITICAL: Block in production
+    if (process.env.NODE_ENV === 'production') {
+      throw ApiError.notFound('Not found');
+    }
+
+    const { bypassKey, storeCode } = req.body as {
+      bypassKey: string;
+      storeCode: string;
+    };
+
+    // Validate bypass key
+    if (bypassKey !== DEV_BYPASS_KEY) {
+      throw ApiError.unauthorized('Invalid bypass key');
+    }
+
+    if (!storeCode) {
+      throw ApiError.badRequest('Store code is required', 'storeCode');
+    }
+
+    // Get store (create demo store if DEMO001 doesn't exist)
+    let store = await getStoreByCode(storeCode.toUpperCase());
+
+    if (!store) {
+      // For DEMO001, auto-create if it doesn't exist
+      if (storeCode.toUpperCase() === 'DEMO001') {
+        const storeResult = await query<StoreWithPortal>(
+          `INSERT INTO platform.stores (code, name, status, retailer_portal_enabled, retailer_portal_phone)
+           VALUES ('DEMO001', 'SuperMandi Demo Store', 'active', true, '+917737914383')
+           ON CONFLICT (code) DO UPDATE SET retailer_portal_enabled = true
+           RETURNING id, code, name, retailer_portal_enabled, retailer_portal_phone`,
+          []
+        );
+        store = storeResult[0]!;
+      } else {
+        throw ApiError.notFound('Store not found');
+      }
+    }
+
+    // Use a fixed demo phone for bypass
+    const bypassPhone = '+917737914383';
+
+    // Create/get user
+    const user = await createUserIfNotExists({
+      phone: bypassPhone,
+      storeId: store.id,
+    });
+
+    // Create store_user mapping
+    await createStoreUserIfNotExists({
+      storeId: store.id,
+      userId: user.id,
+      role: 'RETAILER_ADMIN',
+      isOwner: true,
+    });
+
+    // Get permissions for role
+    const permissions = await getRolePermissions('RETAILER_ADMIN');
+
+    // Generate real JWT
+    const tokenPair = generateTokenPair(
+      user.id,
+      'store',
+      store.id,
+      permissions
+    );
+
+    console.log(`[DEV-BYPASS] Issued token for store ${storeCode}, user ${user.id}`);
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: tokenPair.accessToken,
+        refreshToken: tokenPair.refreshToken,
+        expiresIn: tokenPair.expiresIn,
+        user: {
+          id: user.id,
+          phone: bypassPhone,
+          role: 'RETAILER_ADMIN',
+        },
+        store: {
+          id: store.id,
+          code: store.code,
+          name: store.name,
+        },
+      },
+    });
+  })
+);
+
 export default router;

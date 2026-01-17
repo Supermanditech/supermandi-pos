@@ -36,6 +36,7 @@ const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
 // Routes that don't require JWT authentication
 const PUBLIC_PATHS = [
   '/api/v1/retailer-admin/auth/firebase-login',
+  '/api/v1/retailer-admin/auth/dev-bypass',
   '/api/v1/retailer-admin/auth/refresh',
   '/health',
   '/healthz',
