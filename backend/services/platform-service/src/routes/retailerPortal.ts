@@ -100,7 +100,7 @@ router.get(
       [storeId]
     );
 
-    const store = result.rows[0];
+    const store = result[0];
     if (!store) {
       throw ApiError.notFound('Store');
     }
@@ -176,11 +176,11 @@ router.get(
       params
     );
 
-    const total = parseInt(countResult.rows[0]?.count || '0', 10);
+    const total = parseInt(countResult[0]?.count || '0', 10);
 
     res.json({
       success: true,
-      data: result.rows,
+      data: result,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -240,7 +240,7 @@ router.post(
          WHERE sp.store_id = $1 AND p.barcode = $2`,
         [storeId, barcode]
       );
-      if (existing.rows.length > 0) {
+      if (existing.length > 0) {
         throw ApiError.conflict('DUPLICATE_BARCODE', `Product with barcode ${barcode} already exists`);
       }
     }
@@ -258,7 +258,7 @@ router.post(
       [barcode || null, name, description || null, type, unit, storeId, purchasePrice, sellPrice, mrp || null]
     );
 
-    const productId = productResult.rows[0]!.id;
+    const productId = productResult[0]!.id;
 
     // Add opening stock if provided
     if (openingStock > 0) {
@@ -314,7 +314,7 @@ router.patch(
       [storeId, id]
     );
 
-    if (existing.rows.length === 0) {
+    if (existing.length === 0) {
       throw ApiError.notFound('Product');
     }
 
@@ -404,7 +404,7 @@ router.get(
 
     res.json({
       success: true,
-      data: result.rows,
+      data: result,
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -443,7 +443,7 @@ router.get(
 
     res.json({
       success: true,
-      data: result.rows,
+      data: result,
     });
   })
 );
@@ -475,7 +475,7 @@ router.post(
         `SELECT id FROM supplier.suppliers WHERE phone = $1`,
         [phone]
       );
-      existingSupplier = byPhone.rows[0] || null;
+      existingSupplier = byPhone[0] || null;
     }
 
     if (!existingSupplier && gstin) {
@@ -483,7 +483,7 @@ router.post(
         `SELECT id FROM supplier.suppliers WHERE gstin = $1`,
         [gstin]
       );
-      existingSupplier = byGstin.rows[0] || null;
+      existingSupplier = byGstin[0] || null;
     }
 
     let supplierId: string;
@@ -498,7 +498,7 @@ router.post(
          RETURNING id`,
         [name, phone || null, gstin || null, address || null]
       );
-      supplierId = result.rows[0]!.id;
+      supplierId = result[0]!.id;
     }
 
     // Link supplier to store
@@ -1001,8 +1001,8 @@ router.post(
              WHERE sp.store_id = $1 AND p.barcode = $2`,
             [storeId, barcode]
           );
-          if (existing.rows[0]) {
-            productId = existing.rows[0].product_id;
+          if (existing[0]) {
+            productId = existing[0].product_id;
             isUpdate = true;
           }
         }
@@ -1031,7 +1031,7 @@ router.post(
              RETURNING product_id as id`,
             [barcode, name, description, type, unit, storeId, purchasePrice, sellPrice, mrp]
           );
-          productId = result.rows[0]!.id;
+          productId = result[0]!.id;
           productsCreated++;
         }
 
@@ -1039,7 +1039,7 @@ router.post(
         // CRITICAL: Ledger entry must succeed before updating inventory to ensure retry-safety
         if (stock > 0 && productId) {
           // Try to insert ledger entry first (idempotent via unique index)
-          const ledgerResult = await query(
+          const ledgerResult = await query<{ id: string }>(
             `INSERT INTO inventory.inventory_ledger
              (store_id, product_id, movement_type, quantity, source, source_id, notes)
              VALUES ($1, $2, 'INWARD', $3, 'CSV_IMPORT', $4, $5)
@@ -1049,7 +1049,7 @@ router.post(
           );
 
           // Only update inventory if ledger entry was actually inserted (not a retry)
-          if (ledgerResult.rowCount && ledgerResult.rowCount > 0) {
+          if (ledgerResult.length > 0) {
             await query(
               `INSERT INTO inventory.inventory (store_id, product_id, quantity)
                VALUES ($1, $2, $3)
@@ -1073,7 +1073,7 @@ router.post(
               `SELECT id FROM supplier.suppliers WHERE phone = $1`,
               [supplierPhone]
             );
-            supplierId = existing.rows[0]?.id || null;
+            supplierId = existing[0]?.id || null;
           }
 
           if (!supplierId && supplierGstin) {
@@ -1081,7 +1081,7 @@ router.post(
               `SELECT id FROM supplier.suppliers WHERE gstin = $1`,
               [supplierGstin]
             );
-            supplierId = existing.rows[0]?.id || null;
+            supplierId = existing[0]?.id || null;
           }
 
           if (!supplierId) {
@@ -1092,7 +1092,7 @@ router.post(
                RETURNING id`,
               [supplierName, supplierPhone || null, supplierGstin || null]
             );
-            supplierId = result.rows[0]!.id;
+            supplierId = result[0]!.id;
             suppliersCreated++;
           }
 
