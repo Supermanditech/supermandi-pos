@@ -58,7 +58,8 @@ app.get('/healthz', (_req: Request, res: Response) => {
 app.use('/auth', authRoutes);
 
 // Retailer admin auth routes (Firebase token exchange)
-app.use('/retailer-admin/auth', retailerAuthRoutes);
+// Mounted at root because gateway strips /api/v1/retailer-admin/auth prefix
+app.use('/', retailerAuthRoutes);
 
 // Admin routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin', adminRoutes);
