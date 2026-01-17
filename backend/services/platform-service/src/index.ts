@@ -69,7 +69,8 @@ app.use('/admin', retailerAdminRoutes);
 app.use('/admin/flags', flagRoutes);
 
 // Retailer portal routes (JWT auth with store_id - enforced by gateway)
-app.use('/retailer-admin', retailerPortalRoutes);
+// Routes are mounted at root because gateway strips /api/v1/retailer-admin prefix
+app.use('/', retailerPortalRoutes);
 
 // Internal routes (service-to-service)
 app.use('/internal', internalRoutes);
