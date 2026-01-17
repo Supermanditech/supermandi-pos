@@ -733,6 +733,7 @@ export default function SellScanScreen({
   const storeCode = useSettingsStore((s) => s.storeCode);
   const isDemoStore = storeCode === "DEMO001";
   const categoryBrowsingEnabled = useFeatureEnabled("category_browsing"); // CAT-005
+  const voiceEnabled = useFeatureEnabled("voice"); // VOICE-009
   const showCategoryRail = isDemoStore && categoryBrowsingEnabled;
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [categoryRailExpanded, setCategoryRailExpanded] = useState(false);
@@ -2871,8 +2872,8 @@ export default function SellScanScreen({
         </View>
       </Modal>
 
-      {/* VOICE-001: Floating voice button / Recording panel */}
-      {voiceButtonState === "recording" ? (
+      {/* VOICE-001/009: Floating voice button / Recording panel (feature-gated) */}
+      {voiceEnabled && voiceButtonState === "recording" ? (
         // Expanded recording panel
         <View style={[styles.voiceRecordingPanel, itemCount > 0 && styles.voiceRecordingPanelWithCart]}>
           {/* Cancel button */}
@@ -2902,8 +2903,8 @@ export default function SellScanScreen({
             <MaterialCommunityIcons name="send" size={20} color={theme.colors.textInverse} />
           </Pressable>
         </View>
-      ) : (
-        // Normal FAB
+      ) : voiceEnabled ? (
+        // Normal FAB (only shown when voice feature is enabled)
         <Pressable
           style={[
             styles.voiceFab,
@@ -2926,7 +2927,7 @@ export default function SellScanScreen({
             />
           )}
         </Pressable>
-      )}
+      ) : null}
 
       {/* VOICE-001: Voice sheet modal */}
       <VoiceSheet

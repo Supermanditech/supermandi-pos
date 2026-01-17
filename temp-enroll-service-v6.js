@@ -10,6 +10,7 @@ const PORT = 3009;
 // OpenAI API Configuration for Whisper STT
 // Set OPENAI_API_KEY environment variable in production
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const VOICE_DEBUG = process.env.VOICE_DEBUG === "true"; // Enable transcript logging
 const dbConfig = {
   host: "postgres",
   port: 5432,
@@ -68,7 +69,12 @@ async function transcribeWithWhisper(audioBuffer, filename) {
         try {
           const result = JSON.parse(data);
           if (res.statusCode === 200 && result.text) {
-            console.log('[Whisper] Transcribed:', result.text);
+            // VOICE-008: Only log transcript in debug mode (truncated)
+            if (VOICE_DEBUG) {
+              console.log('[Whisper] Transcribed:', result.text.substring(0, 50) + (result.text.length > 50 ? '...' : ''));
+            } else {
+              console.log('[Whisper] Transcription complete, length:', result.text.length);
+            }
             resolve(result.text);
           } else {
             console.error('[Whisper] API error:', res.statusCode, data);
@@ -147,38 +153,77 @@ function isDemoStoreCode(storeCode) {
 }
 
 // ============================================================================
-// VOICE-003: Voice request storage and intent parsing
+// VOICE-003/004/006: Voice request storage and intent parsing
 // ============================================================================
 const voiceRequests = new Map();
 
+// Hindi number words
 const HINDI_NUMBERS = {
   'ek': 1, 'do': 2, 'teen': 3, 'char': 4, 'paanch': 5, 'panch': 5,
   'chhe': 6, 'saat': 7, 'aath': 8, 'nau': 9, 'das': 10,
+  'gyarah': 11, 'barah': 12, 'terah': 13, 'chaudah': 14, 'pandrah': 15,
+  'solah': 16, 'satrah': 17, 'athrah': 18, 'unnis': 19, 'bees': 20,
+  'aadha': 0.5, 'dedh': 1.5, 'dhai': 2.5, 'paune': 0.75, 'sava': 1.25,
 };
 
+// Unit patterns (Hindi/English)
 const UNIT_PATTERNS = {
   'kg': 'kg', 'kilo': 'kg', 'kilogram': 'kg',
   'g': 'g', 'gram': 'g', 'grams': 'g',
   'l': 'l', 'litre': 'l', 'liter': 'l',
   'ml': 'ml',
   'pcs': 'pcs', 'piece': 'pcs', 'pieces': 'pcs', 'packet': 'pcs', 'pack': 'pcs',
+  'dana': 'pcs', 'bottle': 'pcs', 'box': 'pcs', 'dabba': 'pcs',
 };
 
-const ADD_KEYWORDS = ['add', 'chahiye', 'dedo', 'de do', 'dena', 'lagao', 'laga do', 'rakh do'];
-const STOCK_KEYWORDS = ['stock', 'kitna', 'available', 'hai kya', 'check'];
+// VOICE-006: Marwadi/Hinglish synonym mapping
+const VOICE_SYNONYMS = {
+  // ADD_TO_CART verbs
+  add: ['add', 'chahiye', 'dedo', 'de do', 'dena', 'lagao', 'laga do', 'rakh do',
+        'jodo', 'mukyo', 'dal do', 'daal do', 'bhar do', 'le lo', 'lelo'],
+  // REMOVE_FROM_CART verbs
+  remove: ['remove', 'hatao', 'hata do', 'nikalo', 'nikal do', 'kam karo', 'minus'],
+  // CLEAR_CART verbs
+  clear: ['clear', 'saaf', 'khaali', 'khali karo', 'sab hatao', 'reset'],
+  // CHECK_STOCK verbs
+  stock: ['stock', 'kitna', 'available', 'hai kya', 'check', 'maal', 'kitro', 'ketlo'],
+  // TOTAL verbs
+  total: ['total', 'kitna hua', 'bill', 'amount', 'paisa', 'jod', 'jama'],
+  // CHECKOUT verbs
+  checkout: ['checkout', 'payment', 'bill karo', 'bill bana', 'done', 'ho gaya', 'pakka'],
+  // SEARCH verbs
+  search: ['search', 'dhundho', 'dhundo', 'kahan', 'find', 'dikhao', 'dikha do'],
+  // HELP verbs
+  help: ['help', 'madad', 'kya kar sakta', 'kaise', 'how to'],
+};
 
+// Build keyword lists from synonyms
+const ADD_KEYWORDS = VOICE_SYNONYMS.add;
+const REMOVE_KEYWORDS = VOICE_SYNONYMS.remove;
+const CLEAR_KEYWORDS = VOICE_SYNONYMS.clear;
+const STOCK_KEYWORDS = VOICE_SYNONYMS.stock;
+const TOTAL_KEYWORDS = VOICE_SYNONYMS.total;
+const CHECKOUT_KEYWORDS = VOICE_SYNONYMS.checkout;
+const SEARCH_KEYWORDS = VOICE_SYNONYMS.search;
+const HELP_KEYWORDS = VOICE_SYNONYMS.help;
+
+// VOICE-004: Deterministic intent parser
 function parseVoiceIntent(text) {
   const normalizedText = text.toLowerCase().trim();
   let quantity = null;
   let unit = null;
   let remainingText = normalizedText;
+  let confidence = 0.5; // Base confidence
 
-  // Extract numeric quantity
-  const numericMatch = remainingText.match(/(\d+(?:\.\d+)?)\s*(kg|kilo|gram|g|litre|l|ml|pcs|piece|packet|pack)?/i);
+  // Extract numeric quantity (e.g., "2 kg", "1.5 litre")
+  const numericMatch = remainingText.match(/(\d+(?:\.\d+)?)\s*(kg|kilo|gram|g|litre|l|ml|pcs|piece|packet|pack|bottle|box|dabba|dana)?/i);
   if (numericMatch) {
     quantity = parseFloat(numericMatch[1]);
-    if (numericMatch[2]) unit = UNIT_PATTERNS[numericMatch[2].toLowerCase()] || numericMatch[2].toLowerCase();
+    if (numericMatch[2]) {
+      unit = UNIT_PATTERNS[numericMatch[2].toLowerCase()] || numericMatch[2].toLowerCase();
+    }
     remainingText = remainingText.replace(numericMatch[0], '').trim();
+    confidence += 0.1;
   }
 
   // Try Hindi number words
@@ -188,6 +233,7 @@ function parseVoiceIntent(text) {
       if (regex.test(remainingText)) {
         quantity = num;
         remainingText = remainingText.replace(regex, '').trim();
+        confidence += 0.1;
         break;
       }
     }
@@ -205,29 +251,92 @@ function parseVoiceIntent(text) {
     }
   }
 
-  // Determine action
-  let action = 'search';
-  if (STOCK_KEYWORDS.some(kw => normalizedText.includes(kw))) {
-    action = 'check_stock';
-  } else if (ADD_KEYWORDS.some(kw => normalizedText.includes(kw)) || quantity) {
-    action = 'add_to_cart';
+  // VOICE-004: Determine intent with priority order (most specific first)
+  let action = 'UNKNOWN';
+
+  // Check for HELP first (highest priority for safety)
+  if (HELP_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'HELP';
+    confidence = 0.9;
+  }
+  // CHECKOUT (requires confirmation - VOICE-007)
+  else if (CHECKOUT_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'CHECKOUT_CONFIRM';
+    confidence = 0.8;
+  }
+  // CLEAR_CART (destructive action)
+  else if (CLEAR_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'CLEAR_CART';
+    confidence = 0.8;
+  }
+  // TOTAL
+  else if (TOTAL_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'TOTAL';
+    confidence = 0.85;
+  }
+  // REMOVE_FROM_CART
+  else if (REMOVE_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'REMOVE_FROM_CART';
+    confidence += 0.2;
+  }
+  // CHECK_STOCK
+  else if (STOCK_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'CHECK_STOCK';
+    confidence += 0.2;
+  }
+  // ADD_TO_CART (explicit keyword or has quantity)
+  else if (ADD_KEYWORDS.some(kw => normalizedText.includes(kw)) || quantity) {
+    action = 'ADD_TO_CART';
+    confidence += 0.2;
+  }
+  // SEARCH (explicit keyword or just a product name)
+  else if (SEARCH_KEYWORDS.some(kw => normalizedText.includes(kw))) {
+    action = 'SEARCH';
+    confidence += 0.15;
+  }
+  // Default to SEARCH if we have text but no clear action
+  else if (remainingText.length > 2) {
+    action = 'SEARCH';
+    confidence = 0.5;
   }
 
-  // Extract product name
-  const allKeywords = [...ADD_KEYWORDS, ...STOCK_KEYWORDS];
+  // Extract product/query name (remove all action keywords)
+  const allKeywords = [
+    ...ADD_KEYWORDS, ...REMOVE_KEYWORDS, ...CLEAR_KEYWORDS,
+    ...STOCK_KEYWORDS, ...TOTAL_KEYWORDS, ...CHECKOUT_KEYWORDS,
+    ...SEARCH_KEYWORDS, ...HELP_KEYWORDS
+  ];
   let productName = remainingText;
   for (const keyword of allKeywords) {
     productName = productName.replace(new RegExp(`\\b${keyword}\\b`, 'gi'), '');
   }
-  productName = productName.replace(/\b(ka|ki|ke|ko|se|mein|me)\b/gi, '').replace(/\s+/g, ' ').trim();
+  // Remove Hindi connectors
+  productName = productName.replace(/\b(ka|ki|ke|ko|se|mein|me|hai|ho|karo|kar)\b/gi, '').replace(/\s+/g, ' ').trim();
 
+  // Boost confidence if we have a product name
+  if (productName && productName.length > 1) {
+    confidence += 0.1;
+  }
+
+  // Cap confidence at 0.95
+  confidence = Math.min(confidence, 0.95);
+
+  // VOICE-004: Return standardized schema
   return {
-    action,
+    intent: action,
+    slots: {
+      query: productName || null,
+      quantity: quantity || (action === 'ADD_TO_CART' ? 1 : null),
+      unit: unit || (action === 'ADD_TO_CART' ? 'pcs' : null),
+      barcode: null, // Will be resolved later if needed
+    },
+    // Legacy fields for backward compatibility
+    action: action.toLowerCase(),
     productName: productName || null,
-    quantity: quantity || (action === 'add_to_cart' ? 1 : null),
-    unit: unit || (action === 'add_to_cart' ? 'pcs' : null),
+    quantity: quantity || (action === 'ADD_TO_CART' ? 1 : null),
+    unit: unit || (action === 'ADD_TO_CART' ? 'pcs' : null),
     rawQuery: text,
-    confidence: (action !== 'unknown' ? 0.7 : 0.3) + (productName ? 0.2 : 0),
+    confidence,
   };
 }
 
@@ -2061,10 +2170,37 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ============================================================================
+  // VOICE-002: Voice Health Check Endpoint
+  // ============================================================================
+  if (req.method === "GET" && (url.pathname === "/voice/health" || url.pathname === "/health")) {
+    const configured = Boolean(OPENAI_API_KEY && OPENAI_API_KEY.trim());
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({
+      success: true,
+      data: {
+        service: "voice",
+        status: configured ? "ready" : "not_configured",
+        configured,
+        version: "1.0.0",
+      }
+    }));
+  }
+
+  // ============================================================================
   // VOICE-003: Voice Interpret Endpoint (OpenAI Whisper STT)
   // ============================================================================
   if (req.method === "POST" && (url.pathname.startsWith("/voice/interpret") || url.pathname.startsWith("/interpret"))) {
     console.log("[voice] POST /interpret");
+
+    // VOICE-001: Check if OpenAI API key is configured
+    if (!OPENAI_API_KEY || OPENAI_API_KEY.trim() === "") {
+      console.error("[voice] OPENAI_API_KEY not configured");
+      res.writeHead(503, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({
+        success: false,
+        error: { code: "VOICE_NOT_CONFIGURED", message: "Voice service is not configured" }
+      }));
+    }
 
     try {
       // Parse multipart form data to get audio file
@@ -2131,14 +2267,30 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ============================================================================
-  // VOICE-003: Voice Execute Endpoint
+  // VOICE-005: Voice Execute Endpoint (Store-scoped + Ledger-safe)
   // ============================================================================
   if (req.method === "POST" && (url.pathname.startsWith("/voice/execute") || url.pathname.startsWith("/execute"))) {
     console.log("[voice] POST /execute");
 
+    let db;
     try {
       const data = await parseBody(req);
-      const { requestId } = data;
+      const { requestId, confirmed } = data;
+
+      // VOICE-005: Get storeId from device token (not from client)
+      const deviceToken = req.headers["x-device-token"];
+      let storeId = null;
+
+      if (deviceToken) {
+        db = await getDb();
+        const deviceResult = await db.query(
+          "SELECT store_id FROM platform.device_sessions WHERE token = $1",
+          [deviceToken]
+        );
+        if (deviceResult.rows[0]) {
+          storeId = deviceResult.rows[0].store_id;
+        }
+      }
 
       const voiceRequest = voiceRequests.get(requestId);
       if (!voiceRequest) {
@@ -2151,34 +2303,153 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ success: false, error: "Request already executed" }));
       }
 
-      voiceRequest.executed = true;
-      const { intent } = voiceRequest;
+      const { intent, transcript } = voiceRequest;
+      const intentAction = intent.intent || intent.action?.toUpperCase() || 'UNKNOWN';
+      const query = intent.slots?.query || intent.productName;
+      const quantity = intent.slots?.quantity || intent.quantity;
+      const unit = intent.slots?.unit || intent.unit;
 
       let message;
-      switch (intent.action) {
-        case "add_to_cart":
-          message = `Added ${intent.quantity || 1} ${intent.unit || "pcs"} ${intent.productName || "item"} to cart`;
-          break;
-        case "search":
-          message = `Searching for "${intent.productName || intent.rawQuery}"`;
-          break;
-        case "check_stock":
-          message = `Checking stock for "${intent.productName || intent.rawQuery}"`;
-          break;
-        default:
-          message = "I didn't understand that command.";
+      let actionData = { query, quantity, unit };
+      let requiresConfirmation = false;
+      let products = [];
+
+      // VOICE-007: Check if action requires confirmation
+      if (['CHECKOUT_CONFIRM', 'CLEAR_CART'].includes(intentAction)) {
+        requiresConfirmation = true;
+        if (!confirmed) {
+          // Ask for confirmation
+          let confirmMessage;
+          if (intentAction === 'CHECKOUT_CONFIRM') {
+            confirmMessage = 'Confirm checkout? Say "YES" or "HAAN" to proceed.';
+          } else if (intentAction === 'CLEAR_CART') {
+            confirmMessage = 'Clear entire cart? Say "YES" or "HAAN" to confirm.';
+          }
+          res.writeHead(200, { "Content-Type": "application/json" });
+          return res.end(JSON.stringify({
+            success: true,
+            requiresConfirmation: true,
+            message: confirmMessage,
+            intent: intentAction,
+            data: actionData,
+          }));
+        }
       }
+
+      // Mark as executed only after confirmation check
+      voiceRequest.executed = true;
+
+      // VOICE-005: Execute action based on intent
+      switch (intentAction) {
+        case 'ADD_TO_CART':
+          // Search for product and return match
+          if (query && storeId && db) {
+            const searchResult = await db.query(
+              `SELECT sp.id, sp.display_name, sp.mrp, sp.selling_price
+               FROM catalog.store_products sp
+               WHERE sp.store_id = $1
+                 AND (sp.display_name ILIKE $2 OR sp.display_name ILIKE $3)
+               LIMIT 5`,
+              [storeId, `%${query}%`, `${query}%`]
+            );
+            products = searchResult.rows;
+          }
+          if (products.length === 1) {
+            message = `Adding ${quantity || 1} ${unit || 'pcs'} ${products[0].display_name} to cart`;
+            actionData = { ...actionData, product: products[0], resolved: true };
+          } else if (products.length > 1) {
+            message = `Found ${products.length} products matching "${query}". Please select one.`;
+            actionData = { ...actionData, products, disambiguation: true };
+          } else {
+            message = `Adding ${quantity || 1} ${unit || 'pcs'} "${query || 'item'}" to cart`;
+            actionData = { ...actionData, resolved: false };
+          }
+          break;
+
+        case 'SEARCH':
+          if (query && storeId && db) {
+            const searchResult = await db.query(
+              `SELECT sp.id, sp.display_name, sp.mrp, sp.selling_price
+               FROM catalog.store_products sp
+               WHERE sp.store_id = $1
+                 AND (sp.display_name ILIKE $2 OR sp.display_name ILIKE $3)
+               LIMIT 10`,
+              [storeId, `%${query}%`, `${query}%`]
+            );
+            products = searchResult.rows;
+          }
+          message = products.length > 0
+            ? `Found ${products.length} products for "${query}"`
+            : `No products found for "${query}"`;
+          actionData = { ...actionData, products };
+          break;
+
+        case 'CHECK_STOCK':
+          if (query && storeId && db) {
+            const stockResult = await db.query(
+              `SELECT sp.id, sp.display_name, sp.current_stock, sp.stock_unit
+               FROM catalog.store_products sp
+               WHERE sp.store_id = $1
+                 AND sp.display_name ILIKE $2
+               LIMIT 1`,
+              [storeId, `%${query}%`]
+            );
+            if (stockResult.rows[0]) {
+              const p = stockResult.rows[0];
+              message = `${p.display_name}: ${p.current_stock ?? 'Unknown'} ${p.stock_unit || 'pcs'} in stock`;
+              actionData = { ...actionData, product: p, stock: p.current_stock };
+            } else {
+              message = `Could not find "${query}" to check stock`;
+            }
+          } else {
+            message = `Stock check for "${query || 'item'}"`;
+          }
+          break;
+
+        case 'REMOVE_FROM_CART':
+          message = `Removing "${query || 'item'}" from cart`;
+          break;
+
+        case 'CLEAR_CART':
+          message = confirmed ? 'Cart cleared' : 'Cart clear cancelled';
+          break;
+
+        case 'TOTAL':
+          message = 'Showing cart total';
+          actionData = { showTotal: true };
+          break;
+
+        case 'CHECKOUT_CONFIRM':
+          message = confirmed ? 'Proceeding to checkout' : 'Checkout cancelled';
+          actionData = { checkout: confirmed };
+          break;
+
+        case 'HELP':
+          message = 'Try: "Add 2 kg rice", "Stock check sugar", "Total", "Checkout"';
+          break;
+
+        case 'UNKNOWN':
+        default:
+          message = "I didn't understand. Try: Add [qty] [item], Stock [item], Total";
+          break;
+      }
+
+      // VOICE-008: Log execution (no sensitive data)
+      console.log(`[voice] Execute: intent=${intentAction}, storeId=${storeId || 'unknown'}, success=true`);
 
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({
-        success: intent.action !== "unknown",
+        success: intentAction !== 'UNKNOWN',
         message,
-        data: { productName: intent.productName, quantity: intent.quantity, unit: intent.unit },
+        intent: intentAction,
+        data: actionData,
       }));
     } catch (error) {
-      console.error("[voice] Execute error:", error);
+      console.error("[voice] Execute error:", error.message);
       res.writeHead(500, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ success: false, error: error.message }));
+    } finally {
+      if (db) await db.end();
     }
   }
 

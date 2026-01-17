@@ -24,12 +24,38 @@ export interface VoiceInterpretResponse {
   };
 }
 
+// VOICE-004: Intent types for retail-safe operations
+export type VoiceAction =
+  | "ADD_TO_CART"
+  | "SEARCH"
+  | "CHECK_STOCK"
+  | "REMOVE_FROM_CART"
+  | "CLEAR_CART"
+  | "TOTAL"
+  | "CHECKOUT_CONFIRM"
+  | "HELP"
+  | "UNKNOWN"
+  // Legacy lowercase support
+  | "add_to_cart"
+  | "search"
+  | "check_stock"
+  | "info"
+  | "unknown";
+
 export interface VoiceIntent {
-  action: "add_to_cart" | "search" | "check_stock" | "info" | "unknown";
+  action: VoiceAction;
+  slots?: {
+    query?: string;
+    quantity?: number;
+    unit?: "pcs" | "kg" | "g" | "l" | "ml";
+    barcode?: string | null;
+  };
+  // Legacy fields for backward compatibility
   productName?: string;
   quantity?: number;
   unit?: string;
   rawQuery?: string;
+  confidence?: number;
 }
 
 export interface VoiceActionResult {
@@ -221,11 +247,15 @@ export async function interpretVoice(
 
   if (!response.ok) {
     let errorMessage = `Voice interpret failed (${response.status})`;
+    let errorCode = "";
     try {
       const parsed = text ? JSON.parse(text) : {};
       // Handle different error formats
       if (typeof parsed.error === "string") {
         errorMessage = parsed.error;
+      } else if (parsed.error?.code) {
+        errorCode = parsed.error.code;
+        errorMessage = parsed.error.message || errorCode;
       } else if (parsed.error?.message) {
         errorMessage = parsed.error.message;
       } else if (parsed.message) {
@@ -233,12 +263,19 @@ export async function interpretVoice(
       }
     } catch {
       // JSON parse failed, use status-based message
-      if (response.status === 404) {
-        errorMessage = "Voice service not available";
-      } else if (response.status >= 500) {
-        errorMessage = "Server error. Please try again.";
-      }
     }
+
+    // VOICE-001: Handle specific error codes with user-friendly messages
+    if (response.status === 503 || errorCode === "VOICE_NOT_CONFIGURED") {
+      errorMessage = "Voice service is not available. Please try again later.";
+    } else if (response.status === 404) {
+      errorMessage = "Voice service not found. Please update the app.";
+    } else if (response.status === 429) {
+      errorMessage = "Too many requests. Please wait a moment.";
+    } else if (response.status >= 500) {
+      errorMessage = "Server error. Please try again.";
+    }
+
     throw new Error(errorMessage);
   }
 

@@ -11,6 +11,7 @@ export type FeatureKey =
   | "buy"               // BUY tab, Purchase Orders, GRN
   | "reorder"           // REORDER tab, Reorder Settings/Policies
   | "category_browsing" // CAT-005: Category rail in SELL screen
+  | "voice"             // VOICE-009: Voice assistant feature
   | "qa_menu";          // UI Showcase (QA/dev only)
 
 /**
@@ -35,6 +36,8 @@ export function isFeatureEnabled(key: FeatureKey): boolean {
       return state.reorderEnabled;
     case "category_browsing":
       return state.categoryBrowsingEnabled;
+    case "voice":
+      return state.voiceEnabled;
     case "qa_menu":
       // QA menu has its own check in UiShowcaseScreen
       return __DEV__ || Boolean(process.env.EXPO_PUBLIC_QA_ENABLED);
@@ -58,6 +61,7 @@ export function useFeatureEnabled(key: FeatureKey): boolean {
   const buyEnabled = useSettingsStore((s) => s.buyEnabled);
   const reorderEnabled = useSettingsStore((s) => s.reorderEnabled);
   const categoryBrowsingEnabled = useSettingsStore((s) => s.categoryBrowsingEnabled);
+  const voiceEnabled = useSettingsStore((s) => s.voiceEnabled);
 
   switch (key) {
     case "buy":
@@ -66,6 +70,8 @@ export function useFeatureEnabled(key: FeatureKey): boolean {
       return reorderEnabled;
     case "category_browsing":
       return categoryBrowsingEnabled;
+    case "voice":
+      return voiceEnabled;
     case "qa_menu":
       return __DEV__ || Boolean(process.env.EXPO_PUBLIC_QA_ENABLED);
     default:
@@ -88,6 +94,7 @@ export const FEATURE_GATED_SCREENS: Record<FeatureKey, string[]> = {
     "ReorderPolicies",
   ],
   category_browsing: [], // CAT-005: UI feature toggle, not route-gated
+  voice: [], // VOICE-009: UI feature toggle (mic button), not route-gated
   qa_menu: [
     "UiShowcase",
   ],
