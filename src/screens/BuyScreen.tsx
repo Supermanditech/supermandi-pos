@@ -37,6 +37,9 @@ export interface BuyScreenProps {
   onProductPress?: (product: CatalogProduct) => void;
 }
 
+// TICKET-003: Stock status filter type
+type StockStatusFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -70,6 +73,9 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // TICKET-003: Stock status filter
+  const [selectedStockStatus, setSelectedStockStatus] = useState<StockStatusFilter>("all");
 
   // Cart store for quantity badges and cart modal
   const cartItems = usePurchaseCartStore((state) => state.items);
@@ -241,6 +247,27 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     setSelectedCategory(category);
   }, []);
 
+  // TICKET-003: Handle stock status filter
+  const handleStockStatusSelect = useCallback((status: StockStatusFilter) => {
+    setSelectedStockStatus(status);
+  }, []);
+
+  // TICKET-003: Clear all filters
+  const handleClearAllFilters = useCallback(() => {
+    setSearchQuery("");
+    setSelectedCategory(null);
+    setSelectedStockStatus("all");
+    searchInputRef.current?.clear();
+  }, []);
+
+  // TICKET-003: Client-side filtering for stock status
+  const filteredProducts = useMemo(() => {
+    if (selectedStockStatus === "all") {
+      return products;
+    }
+    return products.filter((p) => p.stockStatus === selectedStockStatus);
+  }, [products, selectedStockStatus]);
+
   // Handle search clear
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
@@ -271,7 +298,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         </View>
       );
     }
-    if (!hasMore && products.length > 0) {
+    if (!hasMore && filteredProducts.length > 0) {
       return (
         <View style={styles.footer}>
           <Text style={styles.footerText}>No more products</Text>
@@ -279,9 +306,10 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       );
     }
     return null;
-  }, [loadingMore, hasMore, products.length]);
+  }, [loadingMore, hasMore, filteredProducts.length]);
 
-  // Empty state
+  // Empty state - TICKET-003: Updated to include stock filter
+  const hasActiveFilters = debouncedQuery || selectedCategory || selectedStockStatus !== "all";
   const ListEmpty = useMemo(() => {
     if (loading) return null;
 
@@ -306,18 +334,18 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           color={theme.colors.textTertiary}
         />
         <Text style={styles.emptyText}>
-          {debouncedQuery || selectedCategory
+          {hasActiveFilters
             ? t('buy.noProducts')
             : t('buy.noProductsAvailable')}
         </Text>
-        {(debouncedQuery || selectedCategory) && (
-          <Pressable style={styles.clearButton} onPress={handleClearSearch}>
+        {hasActiveFilters && (
+          <Pressable style={styles.clearButton} onPress={handleClearAllFilters}>
             <Text style={styles.clearButtonText}>{t('buy.clearFilters')}</Text>
           </Pressable>
         )}
       </View>
     );
-  }, [loading, error, debouncedQuery, selectedCategory, handleClearSearch]);
+  }, [loading, error, hasActiveFilters, handleClearAllFilters, t]);
 
   // Calculate item layout for performance
   const getItemLayout = useCallback(
@@ -384,15 +412,119 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
         loading={categoriesLoading}
       />
 
+      {/* TICKET-003: Stock Status Filter */}
+      <View style={styles.stockFilterContainer}>
+        <Pressable
+          style={[
+            styles.stockChip,
+            selectedStockStatus === "all" && styles.stockChipActive,
+          ]}
+          onPress={() => handleStockStatusSelect("all")}
+        >
+          <Text
+            style={[
+              styles.stockChipText,
+              selectedStockStatus === "all" && styles.stockChipTextActive,
+            ]}
+          >
+            {t('buy.stockAll', { defaultValue: 'All' })}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.stockChip,
+            selectedStockStatus === "in_stock" && styles.stockChipActive,
+          ]}
+          onPress={() => handleStockStatusSelect("in_stock")}
+        >
+          <Text
+            style={[
+              styles.stockChipText,
+              selectedStockStatus === "in_stock" && styles.stockChipTextActive,
+            ]}
+          >
+            {t('buy.stockInStock', { defaultValue: 'In Stock' })}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.stockChip,
+            selectedStockStatus === "low_stock" && styles.stockChipActive,
+            selectedStockStatus === "low_stock" && styles.stockChipLow,
+          ]}
+          onPress={() => handleStockStatusSelect("low_stock")}
+        >
+          <Text
+            style={[
+              styles.stockChipText,
+              selectedStockStatus === "low_stock" && styles.stockChipTextLow,
+            ]}
+          >
+            {t('buy.stockLow', { defaultValue: 'Low' })}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.stockChip,
+            selectedStockStatus === "out_of_stock" && styles.stockChipActive,
+            selectedStockStatus === "out_of_stock" && styles.stockChipOut,
+          ]}
+          onPress={() => handleStockStatusSelect("out_of_stock")}
+        >
+          <Text
+            style={[
+              styles.stockChipText,
+              selectedStockStatus === "out_of_stock" && styles.stockChipTextOut,
+            ]}
+          >
+            {t('buy.stockOut', { defaultValue: 'Out' })}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* TICKET-003: Active Filters Display */}
+      {hasActiveFilters && (
+        <View style={styles.activeFiltersContainer}>
+          <Text style={styles.activeFiltersLabel}>{t('buy.activeFilters', { defaultValue: 'Filters:' })}</Text>
+          {debouncedQuery && (
+            <View style={styles.activeFilterChip}>
+              <Text style={styles.activeFilterText}>"{debouncedQuery}"</Text>
+              <Pressable onPress={handleClearSearch}>
+                <MaterialCommunityIcons name="close" size={14} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+          {selectedCategory && (
+            <View style={styles.activeFilterChip}>
+              <Text style={styles.activeFilterText}>{selectedCategory}</Text>
+              <Pressable onPress={() => setSelectedCategory(null)}>
+                <MaterialCommunityIcons name="close" size={14} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+          {selectedStockStatus !== "all" && (
+            <View style={styles.activeFilterChip}>
+              <Text style={styles.activeFilterText}>{selectedStockStatus.replace("_", " ")}</Text>
+              <Pressable onPress={() => setSelectedStockStatus("all")}>
+                <MaterialCommunityIcons name="close" size={14} color={theme.colors.textSecondary} />
+              </Pressable>
+            </View>
+          )}
+          <Pressable style={styles.clearAllButton} onPress={handleClearAllFilters}>
+            <Text style={styles.clearAllText}>{t('buy.clearAll', { defaultValue: 'Clear All' })}</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* Product Grid */}
-      {loading && products.length === 0 ? (
+      {loading && filteredProducts.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading catalog...</Text>
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={filteredProducts}
           renderItem={renderProduct}
           keyExtractor={keyExtractor}
           numColumns={NUM_COLUMNS}
@@ -581,6 +713,86 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: theme.colors.textInverse,
+  },
+  // TICKET-003: Stock Filter Styles
+  stockFilterContainer: {
+    flexDirection: "row",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  stockChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  stockChipActive: {
+    backgroundColor: theme.colors.primaryLight,
+    borderColor: theme.colors.primary,
+  },
+  stockChipLow: {
+    backgroundColor: theme.colors.warningSoft,
+    borderColor: theme.colors.warning,
+  },
+  stockChipOut: {
+    backgroundColor: theme.colors.errorSoft,
+    borderColor: theme.colors.error,
+  },
+  stockChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  stockChipTextActive: {
+    color: theme.colors.textInverse,
+  },
+  stockChipTextLow: {
+    color: theme.colors.warning,
+  },
+  stockChipTextOut: {
+    color: theme.colors.error,
+  },
+  activeFiltersContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.background,
+    gap: theme.spacing.xs,
+  },
+  activeFiltersLabel: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    marginRight: theme.spacing.xs,
+  },
+  activeFilterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: theme.borderRadius.sm,
+    gap: 4,
+  },
+  activeFilterText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+  },
+  clearAllButton: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+  },
+  clearAllText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.error,
   },
 });
 

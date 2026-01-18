@@ -29,7 +29,7 @@ import ScanNoticeBanner from "../components/ScanNoticeBanner";
 import { TabBadge } from "../components/TabBadge";
 import MenuScreen from "./MenuScreen";
 import SellScanScreen from "./SellScanScreen";
-import BuyScreen from "./BuyScreen";
+import PurchaseScreen from "./PurchaseScreen";
 import ReorderScreen from "./ReorderScreen";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import * as reorderApi from "../services/api/reorderApi";
@@ -74,7 +74,7 @@ type TabLayout = { x: number; y: number; width: number; height: number };
 const TABS: Array<{ id: PosTab; label: string }> = [
   { id: "MENU", label: "MENU" },
   { id: "SELL", label: "SELL" },
-  { id: "PURCHASE", label: "BUY" },
+  { id: "PURCHASE", label: "PURCHASE" },
   { id: "REORDER", label: "REORDER" },
 ];
 
@@ -175,7 +175,7 @@ export default function PosRootLayout() {
   const tabLabels: Record<PosTab, string> = {
     MENU: t('tabs.menu'),
     SELL: t('tabs.sell'),
-    PURCHASE: t('tabs.buy'),
+    PURCHASE: t('tabs.purchase', { defaultValue: 'PURCHASE' }),
     REORDER: reorderLabel,
   };
   // Always show Menu text on handheld POS devices for better usability
@@ -1079,7 +1079,7 @@ export default function PosRootLayout() {
           />
         ) : null}
         {effectiveMode === "PURCHASE" ? (
-          <BuyScreen
+          <PurchaseScreen
             onOpenScanner={handleOpenCamera}
           />
         ) : null}
@@ -1247,18 +1247,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    minWidth: 0,
-    flexShrink: 1,
+    overflow: "visible",
   },
   tabPressed: {
     transform: [{ scale: 0.98 }],
     opacity: 0.9,
   },
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     color: theme.colors.textPrimary,
-    flexShrink: 1,
     textAlign: "center",
   },
   tabTextCompact: {

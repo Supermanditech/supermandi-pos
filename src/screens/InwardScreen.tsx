@@ -21,6 +21,7 @@ import { useTranslation } from "react-i18next";
 import { useInwardStore, type InwardItem, type InwardSupplier } from "../stores/inwardStore";
 import { recordManualInward, type InventoryTransactionItem } from "../services/api/inventoryApi";
 import { getCatalog, type CatalogProduct } from "../services/api/catalogApi";
+import { getSuppliers, type Supplier } from "../services/api/suppliersApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
@@ -32,23 +33,21 @@ interface InwardScreenProps {
   onBack?: () => void;
 }
 
-// Mock suppliers - in production, fetch from API
-const MOCK_SUPPLIERS: InwardSupplier[] = [
-  { id: "b0000000-0000-0000-0000-000000000001", name: "Fresh Farms Wholesale" },
-  { id: "b0000000-0000-0000-0000-000000000002", name: "Organic Valley Traders" },
-  { id: "b0000000-0000-0000-0000-000000000003", name: "Metro Grocers Ltd" },
-];
-
+// TICKET-001: SupplierPicker now uses API-fetched suppliers
 function SupplierPicker({
   selectedSupplier,
   onSelect,
   visible,
   onClose,
+  suppliers,
+  suppliersLoading,
 }: {
   selectedSupplier: InwardSupplier | null;
   onSelect: (supplier: InwardSupplier | null) => void;
   visible: boolean;
   onClose: () => void;
+  suppliers: InwardSupplier[];
+  suppliersLoading: boolean;
 }) {
   const insets = useSafeAreaInsets();
 
@@ -72,24 +71,33 @@ function SupplierPicker({
             )}
           </Pressable>
 
-          {MOCK_SUPPLIERS.map((supplier) => (
-            <Pressable
-              key={supplier.id}
-              style={[
-                styles.pickerOption,
-                selectedSupplier?.id === supplier.id && styles.pickerOptionSelected,
-              ]}
-              onPress={() => {
-                onSelect(supplier);
-                onClose();
-              }}
-            >
-              <Text style={styles.pickerOptionText}>{supplier.name}</Text>
-              {selectedSupplier?.id === supplier.id && (
-                <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
-              )}
-            </Pressable>
-          ))}
+          {suppliersLoading ? (
+            <View style={styles.suppliersLoading}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={styles.suppliersLoadingText}>Loading suppliers...</Text>
+            </View>
+          ) : suppliers.length === 0 ? (
+            <Text style={styles.noSuppliersText}>No suppliers linked to this store</Text>
+          ) : (
+            suppliers.map((supplier) => (
+              <Pressable
+                key={supplier.id}
+                style={[
+                  styles.pickerOption,
+                  selectedSupplier?.id === supplier.id && styles.pickerOptionSelected,
+                ]}
+                onPress={() => {
+                  onSelect(supplier);
+                  onClose();
+                }}
+              >
+                <Text style={styles.pickerOptionText}>{supplier.name}</Text>
+                {selectedSupplier?.id === supplier.id && (
+                  <MaterialCommunityIcons name="check" size={20} color={theme.colors.primary} />
+                )}
+              </Pressable>
+            ))
+          )}
         </View>
       </Pressable>
     </Modal>
@@ -217,6 +225,31 @@ export default function InwardScreen({
   const [submitting, setSubmitting] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // TICKET-001: Fetch suppliers from API
+  const [suppliers, setSuppliers] = useState<InwardSupplier[]>([]);
+  const [suppliersLoading, setSuppliersLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const apiSuppliers = await getSuppliers();
+        console.log("[InwardScreen] Suppliers fetched:", apiSuppliers?.length ?? 0);
+        if (mounted && Array.isArray(apiSuppliers)) {
+          // Map API Supplier to InwardSupplier format
+          setSuppliers(apiSuppliers.map(s => ({ id: s.id, name: s.name })));
+        }
+      } catch (error) {
+        console.error("[InwardScreen] Failed to fetch suppliers:", error);
+      } finally {
+        if (mounted) {
+          setSuppliersLoading(false);
+        }
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const total = getTotal();
   const itemCount = getItemCount();
@@ -492,12 +525,14 @@ export default function InwardScreen({
         </Pressable>
       </View>
 
-      {/* Supplier Picker Modal */}
+      {/* Supplier Picker Modal - TICKET-001: Using API suppliers */}
       <SupplierPicker
         selectedSupplier={selectedSupplier}
         onSelect={setSupplier}
         visible={showSupplierPicker}
         onClose={() => setShowSupplierPicker(false)}
+        suppliers={suppliers}
+        suppliersLoading={suppliersLoading}
       />
     </View>
   );
@@ -850,5 +885,23 @@ const styles = StyleSheet.create({
   pickerOptionText: {
     fontSize: 14,
     color: theme.colors.textPrimary,
+  },
+  // TICKET-001: Supplier loading styles
+  suppliersLoading: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 20,
+    gap: 10,
+  },
+  suppliersLoadingText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+  },
+  noSuppliersText: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+    textAlign: "center",
+    paddingVertical: 16,
   },
 });

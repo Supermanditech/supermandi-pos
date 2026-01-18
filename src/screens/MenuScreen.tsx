@@ -15,8 +15,10 @@ import { LANGUAGE_NAMES, type SupportedLanguage } from "../i18n";
 import { BUILD_INFO, API_BASE_URL } from "../config/api";
 import { getDeviceToken, clearDeviceSession } from "../services/deviceSession";
 import { fetchUiStatus, type UiStatusResponse } from "../services/api/uiStatusApi";
+import { getDailySummary, type DailySummary } from "../services/api/dailySummaryApi";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { pendingOutboxCount } from "../services/offline/outbox";
+import { formatMoney } from "../utils/money";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -90,6 +92,29 @@ export default function MenuScreen() {
         console.error("[MenuScreen] opStatus fetch failed:", e);
       }
     })();
+  }, []);
+
+  // TICKET-002: Daily Summary state
+  const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const summary = await getDailySummary();
+        if (mounted) {
+          setDailySummary(summary);
+        }
+      } catch (e) {
+        console.error("[MenuScreen] dailySummary fetch failed:", e);
+      } finally {
+        if (mounted) {
+          setSummaryLoading(false);
+        }
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   // Alias for devInfo used in switch store handler
@@ -250,6 +275,54 @@ export default function MenuScreen() {
             </Text>
           </View>
         </View>
+      </View>
+
+      {/* TICKET-002: Daily Summary Card */}
+      <View style={styles.summaryCard}>
+        <View style={styles.statusHeader}>
+          <MaterialCommunityIcons name="chart-bar" size={16} color={theme.colors.primary} />
+          <Text style={styles.statusHeaderText}>{t('menu.todaysSales', { defaultValue: "Today's Sales" })}</Text>
+        </View>
+        {summaryLoading ? (
+          <Text style={styles.summaryLoading}>{t('common.loading', { defaultValue: 'Loading...' })}</Text>
+        ) : dailySummary ? (
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{formatMoney(dailySummary.totalSales)}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.totalSales', { defaultValue: 'Total Sales' })}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{dailySummary.totalBills}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.bills', { defaultValue: 'Bills' })}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{formatMoney(dailySummary.averageBillValue)}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.avgBill', { defaultValue: 'Avg Bill' })}</Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryValue}>{dailySummary.itemsSold}</Text>
+              <Text style={styles.summaryLabel}>{t('menu.itemsSold', { defaultValue: 'Items Sold' })}</Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={styles.summaryLoading}>{t('menu.noSalesYet', { defaultValue: 'No sales yet today' })}</Text>
+        )}
+        {dailySummary && dailySummary.totalSales > 0 && (
+          <View style={styles.paymentBreakdown}>
+            <Text style={styles.breakdownTitle}>{t('menu.paymentModes', { defaultValue: 'Payment Modes' })}</Text>
+            <View style={styles.breakdownRow}>
+              {dailySummary.paymentBreakdown.cash > 0 && (
+                <Text style={styles.breakdownItem}>Cash: {formatMoney(dailySummary.paymentBreakdown.cash)}</Text>
+              )}
+              {dailySummary.paymentBreakdown.upi > 0 && (
+                <Text style={styles.breakdownItem}>UPI: {formatMoney(dailySummary.paymentBreakdown.upi)}</Text>
+              )}
+              {dailySummary.paymentBreakdown.card > 0 && (
+                <Text style={styles.breakdownItem}>Card: {formatMoney(dailySummary.paymentBreakdown.card)}</Text>
+              )}
+            </View>
+          </View>
+        )}
       </View>
 
       <Pressable style={styles.menuItem} onPress={goToBills}>
@@ -708,5 +781,61 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     marginBottom: 4,
     textTransform: "uppercase"
-  }
+  },
+  // TICKET-002: Daily Summary Card styles
+  summaryCard: {
+    marginTop: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 4,
+  },
+  summaryItem: {
+    width: "50%",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  summaryLoading: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+    paddingVertical: 16,
+    textAlign: "center",
+  },
+  paymentBreakdown: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  breakdownTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginBottom: 6,
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  breakdownItem: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
 });

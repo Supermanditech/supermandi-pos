@@ -6,7 +6,7 @@ import {
   lookupStoreProductPreviewByScan,
   type StoreLookupProduct
 } from "../api/productsApi";
-import { lookupProductByBarcode, resolveScan, type ScanProduct } from "../api/scanApi";
+import { lookupProductByBarcode, resolveScan, type ScanProduct, type StoreProductResponse } from "../api/scanApi";
 import { isOnline } from "../networkStatus";
 import { resolveOfflineScan, setLocalPrice, upsertLocalProduct } from "../offline/scan";
 import { useCartStore } from "../../stores/cartStore";
@@ -28,14 +28,24 @@ export type SellFirstOnboardingRequest = {
   product: StoreLookupProduct;
 };
 
-type ScanRuntime = {
+export type AddStoreProductRequest = {
+  barcode: string;
+  format?: string;
+  product: StoreLookupProduct;
+  priceMinor: number;
+};
+
+export type ScanRuntime = {
   intent: ScanIntent;
   mode: ScanMode;
   storeActive?: boolean | null;
   scanLookupV2Enabled?: boolean;
+  digitisationFlowEnabled?: boolean;
   onNotice?: (notice: ScanNotice | null) => void;
   onSellFirstOnboarding?: (request: SellFirstOnboardingRequest) => void;
+  onAddStoreProduct?: (request: AddStoreProductRequest) => void;
   sellFirstOnboardingActive?: boolean;
+  addStoreProductActive?: boolean;
   onDeviceAuthError?: (error: ApiError) => Promise<boolean> | boolean;
   onStoreInactive?: () => void;
 };
@@ -186,6 +196,50 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
     }
     return false;
   }
+}
+
+export function addStoreProductToCart(product: StoreLookupProduct | StoreProductResponse): boolean {
+  // Handle StoreProductResponse type
+  if ('storeProductId' in product) {
+    const priceMinor = product.sellPrice ?? 0;
+    return addToSellCart(
+      {
+        id: product.storeProductId,
+        name: product.name,
+        barcode: product.barcode,
+        priceMinor,
+        currency: "INR",
+        metadata: {
+          storeProductId: product.storeProductId,
+          brand: product.brand,
+          variant: product.variant,
+          availableQty: product.stock?.qty ?? 0
+        }
+      },
+      priceMinor
+    );
+  }
+
+  // Handle StoreLookupProduct type
+  const displayName = resolveDisplayName(product) || product.global_product_id;
+  const priceMinor = product.sell_price ?? 0;
+
+  return addToSellCart(
+    {
+      id: product.global_product_id,
+      name: displayName,
+      barcode: product.global_product_id,
+      priceMinor,
+      currency: "INR",
+      metadata: {
+        globalProductId: product.global_product_id,
+        globalName: product.global_name,
+        storeDisplayName: product.store_display_name,
+        availableQty: product.available_qty
+      }
+    },
+    priceMinor
+  );
 }
 
 async function cacheLocalProduct(product: {

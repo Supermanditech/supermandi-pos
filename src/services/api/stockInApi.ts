@@ -1,0 +1,145 @@
+// Stock-In API for Counter Purchase / Ledger Entry
+// Records stock received at the counter from suppliers
+
+import { apiClient } from "./apiClient";
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export interface StockInItem {
+  barcode: string;
+  productName: string;
+  quantity: number;
+  buyPrice: number;      // Cost price per unit
+  sellPrice: number;     // Retail price per unit
+  isNewProduct?: boolean; // Flag for products not yet in catalog
+}
+
+export interface StockInPayload {
+  supplierId?: string;    // Optional - may be walk-in/unknown supplier
+  supplierName?: string;  // For display/reference
+  items: StockInItem[];
+  notes?: string;
+  totalAmount: number;    // Sum of (qty * buyPrice) for all items
+}
+
+interface StockInResponse {
+  success: boolean;
+  data: {
+    ledgerEntryId: string;
+    itemsProcessed: number;
+    totalAmount: number;
+    createdAt: string;
+  };
+}
+
+interface StockInListResponse {
+  success: boolean;
+  data: {
+    entries: StockInEntry[];
+  };
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+}
+
+export interface StockInEntry {
+  id: string;
+  supplierId?: string;
+  supplierName?: string;
+  itemCount: number;
+  totalAmount: number;
+  createdAt: string;
+  status: "pending" | "completed" | "cancelled";
+}
+
+// =============================================================================
+// API FUNCTIONS
+// =============================================================================
+
+const STOCK_IN_BASE = "/api/v1/pos/stock-in";
+
+// Demo mode flag - set to true to use mock responses for testing
+const DEMO_MODE = true;
+
+/**
+ * Submit a stock-in ledger entry.
+ * Records products received from supplier at the counter.
+ * In demo mode, returns a mock success response.
+ */
+export async function submitStockIn(payload: StockInPayload): Promise<{
+  ledgerEntryId: string;
+  itemsProcessed: number;
+  totalAmount: number;
+  createdAt: string;
+}> {
+  // Demo mode: return mock success without calling API
+  if (DEMO_MODE) {
+    console.log("[stockInApi] DEMO MODE - Mock stock-in submission:", payload);
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return {
+      ledgerEntryId: `DEMO-${Date.now()}`,
+      itemsProcessed: payload.items.length,
+      totalAmount: payload.totalAmount,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  try {
+    const response = await apiClient.post<StockInResponse>(STOCK_IN_BASE, payload);
+    return response.data;
+  } catch (error) {
+    console.error("[stockInApi] submitStockIn failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get recent stock-in entries for the current store.
+ */
+export async function getStockInHistory(options?: {
+  limit?: number;
+  offset?: number;
+  status?: "pending" | "completed" | "cancelled";
+}): Promise<{
+  entries: StockInEntry[];
+  pagination: { total: number; limit: number; offset: number };
+}> {
+  try {
+    const params = new URLSearchParams();
+    if (options?.limit) params.set("limit", String(options.limit));
+    if (options?.offset) params.set("offset", String(options.offset));
+    if (options?.status) params.set("status", options.status);
+
+    const queryString = params.toString();
+    const url = queryString ? `${STOCK_IN_BASE}?${queryString}` : STOCK_IN_BASE;
+
+    const response = await apiClient.get<StockInListResponse>(url);
+    return {
+      entries: response.data?.entries ?? [],
+      pagination: response.pagination ?? { total: 0, limit: 20, offset: 0 },
+    };
+  } catch (error) {
+    console.error("[stockInApi] getStockInHistory failed:", error);
+    return {
+      entries: [],
+      pagination: { total: 0, limit: 20, offset: 0 },
+    };
+  }
+}
+
+/**
+ * Cancel a pending stock-in entry.
+ */
+export async function cancelStockIn(entryId: string): Promise<void> {
+  try {
+    await apiClient.del(`${STOCK_IN_BASE}/${entryId}`);
+  } catch (error) {
+    console.error("[stockInApi] cancelStockIn failed:", error);
+    throw error;
+  }
+}
