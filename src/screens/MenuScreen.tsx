@@ -475,6 +475,7 @@ export default function MenuScreen() {
             <Text style={styles.buildInfoText}>Token: ...{devInfo.tokenSuffix}</Text>
             <Text style={styles.buildInfoText}>Store: {devInfo.storeName ?? "null"}</Text>
             <Text style={styles.buildInfoText}>StoreId: {devInfo.storeId ?? "null"}</Text>
+            <Text style={styles.buildInfoText}>StoreCode: {devInfo.storeCode ?? "null"}</Text>
           </View>
         </View>
       )}
