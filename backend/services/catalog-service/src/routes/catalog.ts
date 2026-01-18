@@ -8,7 +8,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
-import { ApiError, ERROR_CODES } from '@supermandi/common';
+import { ApiError, ERROR_CODES, query } from '@supermandi/common';
 import { getStoreCatalog, getStoreCatalogProduct } from '../services/catalogService.js';
 import { searchStoreProducts, getStoreProductByBarcode, type StoreSearchGroup } from '../db/queries.js';
 import { config } from '../config.js';
@@ -106,9 +106,6 @@ router.get(
     try {
       const { storeId } = req.params;
 
-      // Import query function for this endpoint
-      const { query } = await import('@supermandi/common');
-
       const categoriesSql = `
         SELECT DISTINCT p.category
         FROM catalog.products p
@@ -190,8 +187,6 @@ router.get(
           'storeId is required'
         );
       }
-
-      const { query } = await import('@supermandi/common');
 
       // Get categories with product counts for this store
       // Include "Sab" (all) category with total count
@@ -285,8 +280,6 @@ router.get(
           'storeId is required'
         );
       }
-
-      const { query } = await import('@supermandi/common');
 
       // Decode cursor (base64 encoded timestamp)
       let cursorTimestamp: Date | null = null;

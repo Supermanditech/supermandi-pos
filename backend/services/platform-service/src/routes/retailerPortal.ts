@@ -121,7 +121,6 @@ interface StoreProduct {
   barcode: string | null;
   name: string;
   description: string | null;
-  type: string;
   unit: string;
   purchase_price: number;
   sell_price: number;
@@ -153,14 +152,15 @@ router.get(
     }
 
     // Get products with current stock
+    // FIX: Use stock_balances instead of inventory.inventory, remove p.type (doesn't exist)
     const result = await query<StoreProduct>(
-      `SELECT p.id, p.primary_barcode, p.name, p.description, p.type, p.unit,
+      `SELECT p.id, p.primary_barcode AS barcode, p.name, p.description, p.unit,
               sp.purchase_price, sp.sell_price, sp.mrp,
-              COALESCE(i.quantity, 0) as current_stock,
+              COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
               sp.created_at
        FROM catalog.store_products sp
        JOIN catalog.products p ON sp.product_id = p.id
-       LEFT JOIN inventory.inventory i ON i.product_id = p.id AND i.store_id = sp.store_id
+       LEFT JOIN inventory.stock_balances sb ON sb.product_id = sp.product_id AND sb.store_id = sp.store_id
        WHERE ${whereClause}
        ORDER BY sp.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -261,19 +261,27 @@ router.post(
     const productId = productResult[0]!.id;
 
     // Add opening stock if provided
+    // FIX: Use stock_balances table and correct ledger columns
     if (openingStock > 0) {
+      // Create ledger entry first (idempotent)
       await query(
-        `INSERT INTO inventory.inventory (store_id, product_id, quantity)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (store_id, product_id) DO UPDATE SET quantity = $3`,
+        `INSERT INTO inventory.inventory_ledger
+         (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, source, notes)
+         VALUES ($1, $2, $3, 'adjustment', 0, $3, 'RETAILER_PORTAL', 'Opening stock from retailer portal')`,
         [storeId, productId, openingStock]
       );
 
-      // Create ledger entry for opening stock
+      // Update stock_balances
       await query(
-        `INSERT INTO inventory.inventory_ledger
-         (store_id, product_id, movement_type, quantity, source, source_id, notes)
-         VALUES ($1, $2, 'INWARD', $3, 'RETAILER_PORTAL', NULL, 'Opening stock from retailer portal')`,
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+        [storeId, productId, openingStock]
+      );
+
+      // Also update store_products.current_stock for denormalized access
+      await query(
+        `UPDATE catalog.store_products SET current_stock = $3 WHERE store_id = $1 AND product_id = $2`,
         [storeId, productId, openingStock]
       );
     }
@@ -382,18 +390,19 @@ router.get(
       whereClause += ` AND il.product_id = $${params.length}`;
     }
 
+    // FIX: Use correct column names (transaction_type, delta_qty instead of movement_type, quantity)
     const result = await query<{
       id: string;
       product_id: string;
       product_name: string;
-      movement_type: string;
-      quantity: number;
+      transaction_type: string;
+      delta_qty: number;
       source: string | null;
       notes: string | null;
       created_at: Date;
     }>(
       `SELECT il.id, il.product_id, p.name as product_name,
-              il.movement_type, il.quantity, il.source, il.notes, il.created_at
+              il.transaction_type, il.delta_qty, il.source, il.notes, il.created_at
        FROM inventory.inventory_ledger il
        JOIN catalog.products p ON il.product_id = p.id
        WHERE ${whereClause}
@@ -1020,16 +1029,17 @@ router.post(
           }
         } else {
           // Create new product
+          // FIX: Use primary_barcode instead of barcode, remove type column (doesn't exist)
           const result = await query<{ id: string }>(
             `WITH new_product AS (
-               INSERT INTO catalog.products (barcode, name, description, type, unit)
-               VALUES ($1, $2, $3, $4, $5)
+               INSERT INTO catalog.products (primary_barcode, name, description, unit)
+               VALUES ($1, $2, $3, $4)
                RETURNING id
              )
              INSERT INTO catalog.store_products (store_id, product_id, purchase_price, sell_price, mrp)
-             SELECT $6, id, $7, $8, $9 FROM new_product
+             SELECT $5, id, $6, $7, $8 FROM new_product
              RETURNING product_id as id`,
-            [barcode, name, description, type, unit, storeId, purchasePrice, sellPrice, mrp]
+            [barcode, name, description, unit, storeId, purchasePrice, sellPrice, mrp]
           );
           productId = result[0]!.id;
           productsCreated++;
@@ -1037,23 +1047,38 @@ router.post(
 
         // Add stock if provided (idempotent with source tracking)
         // CRITICAL: Ledger entry must succeed before updating inventory to ensure retry-safety
+        // FIX: Use correct columns and stock_balances table
         if (stock > 0 && productId) {
+          // Get current stock for ledger entry
+          const currentStockResult = await query<{ current_qty: number }>(
+            `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+            [storeId, productId]
+          );
+          const stockBefore = currentStockResult[0]?.current_qty || 0;
+          const stockAfter = stockBefore + stock;
+
           // Try to insert ledger entry first (idempotent via unique index)
           const ledgerResult = await query<{ id: string }>(
             `INSERT INTO inventory.inventory_ledger
-             (store_id, product_id, movement_type, quantity, source, source_id, notes)
-             VALUES ($1, $2, 'INWARD', $3, 'CSV_IMPORT', $4, $5)
+             (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, source, source_id, notes)
+             VALUES ($1, $2, $3, 'adjustment', $4, $5, 'CSV_IMPORT', $6, $7)
              ON CONFLICT DO NOTHING
              RETURNING id`,
-            [storeId, productId, stock, id, `Import: ${importJob.file_name}`]
+            [storeId, productId, stock, stockBefore, stockAfter, id, `Import: ${importJob.file_name}`]
           );
 
-          // Only update inventory if ledger entry was actually inserted (not a retry)
+          // Only update stock if ledger entry was actually inserted (not a retry)
           if (ledgerResult.length > 0) {
             await query(
-              `INSERT INTO inventory.inventory (store_id, product_id, quantity)
+              `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
                VALUES ($1, $2, $3)
-               ON CONFLICT (store_id, product_id) DO UPDATE SET quantity = inventory.inventory.quantity + $3`,
+               ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = stock_balances.current_qty + $3, updated_at = NOW()`,
+              [storeId, productId, stock]
+            );
+
+            // Also update denormalized stock
+            await query(
+              `UPDATE catalog.store_products SET current_stock = current_stock + $3 WHERE store_id = $1 AND product_id = $2`,
               [storeId, productId, stock]
             );
           }

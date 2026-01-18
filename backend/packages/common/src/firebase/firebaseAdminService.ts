@@ -88,11 +88,18 @@ export type VerifyTokenResponse = VerifyTokenResult | VerifyTokenError;
  * Returns the decoded token payload if valid
  */
 export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyTokenResponse> {
+  // Debug logging
+  const tokenPreview = idToken
+    ? `${idToken.substring(0, 20)}...${idToken.substring(idToken.length - 10)} (len=${idToken.length})`
+    : 'EMPTY/NULL';
+  console.log(`[Firebase] Verifying token: ${tokenPreview}`);
+
   const app = getApp();
   const auth = app.auth();
 
   try {
     const decodedToken = await auth.verifyIdToken(idToken, true); // checkRevoked = true
+    console.log(`[Firebase] Token verified! UID: ${decodedToken.uid}, phone: ${decodedToken.phone_number}`);
 
     // Extract sign-in provider
     const signInProvider = decodedToken.firebase?.sign_in_provider || 'unknown';
@@ -110,6 +117,7 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
     };
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
+    console.error(`[Firebase] Token verification error - code: ${firebaseError.code}, message: ${firebaseError.message}`);
 
     if (firebaseError.code === 'auth/id-token-expired') {
       return {
@@ -133,12 +141,11 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
     ) {
       return {
         success: false,
-        error: 'Invalid token format',
+        error: `Invalid token format (${firebaseError.code})`,
         code: 'TOKEN_INVALID',
       };
     }
 
-    console.error('[Firebase] Token verification failed:', firebaseError.message);
     return {
       success: false,
       error: firebaseError.message || 'Token verification failed',

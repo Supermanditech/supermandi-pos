@@ -91,8 +91,10 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
 
   try {
+    console.log('[Firebase] Calling signInWithPhoneNumber for:', normalizedPhone);
     confirmationResult = await signInWithPhoneNumber(auth, normalizedPhone, recaptchaVerifier);
     console.log('[Firebase] OTP sent to', normalizedPhone);
+    console.log('[Firebase] confirmationResult set:', !!confirmationResult);
     return true;
   } catch (error: unknown) {
     console.error('[Firebase] Failed to send OTP:', error);
@@ -111,14 +113,22 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
  * Returns the ID token that should be sent to backend
  */
 export async function verifyOtp(otp: string): Promise<string> {
+  console.log('[Firebase] verifyOtp called with otp length:', otp.length);
+  console.log('[Firebase] confirmationResult exists:', !!confirmationResult);
+
   if (!confirmationResult) {
+    console.error('[Firebase] No confirmationResult - OTP was not sent');
     throw new Error('No OTP pending. Send OTP first.');
   }
 
   try {
+    console.log('[Firebase] Calling confirmationResult.confirm()...');
     const userCredential = await confirmationResult.confirm(otp);
+    console.log('[Firebase] confirm() succeeded, user:', userCredential.user?.uid);
+
+    console.log('[Firebase] Calling user.getIdToken()...');
     const idToken = await userCredential.user.getIdToken();
-    console.log('[Firebase] OTP verified, got ID token');
+    console.log('[Firebase] Got ID token, length:', idToken?.length);
 
     // Clear confirmation result after successful verification
     confirmationResult = null;
@@ -178,7 +188,8 @@ export function cleanup(): void {
     recaptchaVerifier.clear();
     recaptchaVerifier = null;
   }
-  confirmationResult = null;
+  // NOTE: Don't clear confirmationResult here - it's needed for OTP verification
+  // confirmationResult is cleared after successful verification in verifyOtp()
 }
 
 export { auth };

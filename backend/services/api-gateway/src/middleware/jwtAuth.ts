@@ -32,6 +32,7 @@ declare global {
 // =============================================================================
 
 const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
+const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // Routes that don't require JWT authentication
 const PUBLIC_PATHS = [
@@ -70,7 +71,10 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
 
   // Get token from Authorization header
   const authHeader = req.headers.authorization;
+  console.log(`[JWT-DEBUG] ${req.method} ${req.path} - Auth header: ${authHeader ? `"${authHeader.substring(0, 50)}..."` : 'MISSING'}`);
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    console.log(`[JWT-DEBUG] Rejecting: No valid Bearer token`);
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
@@ -84,9 +88,11 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
   const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
   try {
+    console.log(`[JWT-DEBUG] Verifying token (len=${token.length}), secret preview: ${JWT_SECRET.substring(0, 10)}..., issuer: ${JWT_ISSUER}`);
+
     // Verify and decode the token
     const decoded = jwt.verify(token, JWT_SECRET, {
-      issuer: 'supermandi',
+      issuer: JWT_ISSUER,
     }) as JwtPayload;
 
     // Store decoded payload on request for logging/debugging
@@ -118,7 +124,10 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
 
     next();
   } catch (error) {
+    console.log(`[JWT-DEBUG] Verification FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
     if (error instanceof jwt.TokenExpiredError) {
+      console.log(`[JWT-DEBUG] Token expired at: ${error.expiredAt}`);
       res.status(401).json({
         error: {
           code: 'TOKEN_EXPIRED',
@@ -130,6 +139,7 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     }
 
     if (error instanceof jwt.JsonWebTokenError) {
+      console.log(`[JWT-DEBUG] JsonWebTokenError: ${error.message}`);
       res.status(401).json({
         error: {
           code: 'INVALID_TOKEN',

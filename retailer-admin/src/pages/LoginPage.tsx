@@ -124,10 +124,13 @@ export default function LoginPage() {
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[OTP] handleVerifyOtp called');
     setError('');
     setIsLoading(true);
 
     try {
+      console.log('[OTP] Starting OTP verification, otp length:', otp.length);
+
       // Demo mode: bypass Firebase with mock data (dev only)
       if (DEMO_MODE_AVAILABLE && demoMode) {
         if (phone !== DEMO_PHONE) {
@@ -161,9 +164,12 @@ export default function LoginPage() {
       }
 
       // Production: verify OTP with Firebase and get ID token
+      console.log('[OTP] Calling firebaseVerifyOtp...');
       const idToken = await firebaseVerifyOtp(otp);
+      console.log('[OTP] Got idToken, length:', idToken?.length || 'NULL');
 
       // Exchange Firebase ID token for app JWT via backend
+      console.log('[OTP] Calling backend /firebase-login...');
       const response = await fetch('/api/v1/retailer-admin/auth/firebase-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,8 +194,12 @@ export default function LoginPage() {
 
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      console.error('[OTP] Error in handleVerifyOtp:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Login failed. Please try again.';
+      console.log('[OTP] Setting error message:', errorMsg);
+      setError(errorMsg);
     } finally {
+      console.log('[OTP] Finally block - setting isLoading false');
       setIsLoading(false);
     }
   };
@@ -272,10 +282,14 @@ export default function LoginPage() {
             </div>
 
             <button
-              type="submit"
+              type="button"
               className="btn btn-primary"
               style={{ width: '100%', marginBottom: '0.75rem' }}
               disabled={isLoading}
+              onClick={(e) => {
+                console.log('[BUTTON] Verify OTP clicked via onClick!');
+                handleVerifyOtp(e as unknown as React.FormEvent);
+              }}
             >
               {isLoading ? 'Verifying...' : 'Verify OTP'}
             </button>
