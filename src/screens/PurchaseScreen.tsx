@@ -1,8 +1,10 @@
 // PurchaseScreen - Unified Purchase Hub
 // Segmented bar: Quick Purchase (scanner) | Live Suppliers (SKU grid)
+// GATE-000: Uses ReadinessGate for runtime endpoint detection
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
@@ -16,6 +18,9 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+
+// GATE-000: ReadinessGate for runtime endpoint detection
+import { useFeatureReadiness, useProbeOnFocus } from "../hooks/useReadinessGate";
 
 // =============================================================================
 // ROTATING HINTS
@@ -34,7 +39,7 @@ const ROTATING_HINTS = [
 
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
-import { submitStockIn, type StockInPayload } from "../services/api/stockInApi";
+import { submitStockIn, submitStockInDemo, type StockInPayload } from "../services/api/stockInApi";
 
 // =============================================================================
 // TYPES
@@ -80,20 +85,10 @@ export interface PurchaseScreenProps {
 }
 
 // =============================================================================
-// FEATURE FLAGS - UI-005: Live Suppliers Real Reveal Rule
+// FEATURE FLAGS - GATE-000: Replaced by ReadinessGate runtime probe
 // =============================================================================
-
-// UI-005: Set to true ONLY when real supplier products API exists
-// Endpoints required:
-// - GET /api/v1/pos/suppliers/:id/products OR
-// - GET /api/v1/pos/products/search?supplierId=...
-// Currently: Both return 404, so this must be false
-const LIVE_SUPPLIERS_ENABLED = false;
-
-// UI-006: Stock In API availability
-// Set to true ONLY when POST /api/v1/pos/stock-in returns 401 (auth required) not 404
-// Currently: Returns 404, so this must be false
-const STOCK_IN_API_AVAILABLE = false;
+// NOTE: The old LIVE_SUPPLIERS_ENABLED and STOCK_IN_API_AVAILABLE flags have been
+// replaced by useFeatureReadiness() hooks that probe actual endpoint availability.
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const NUM_COLUMNS = 3;
@@ -112,6 +107,24 @@ export default function PurchaseScreen({
 }: PurchaseScreenProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  // GATE-000: Runtime endpoint readiness detection
+  const {
+    isReady: liveSuppliersReady,
+    blocker: liveSuppliersBlocker,
+    isChecking: isCheckingLiveSuppliers,
+    retry: retryLiveSuppliers,
+  } = useFeatureReadiness("liveSuppliers");
+
+  const {
+    isReady: stockInReady,
+    blocker: stockInBlocker,
+    isChecking: isCheckingStockIn,
+    retry: retryStockIn,
+  } = useFeatureReadiness("stockIn");
+
+  // Probe endpoints when Purchase tab is focused
+  useProbeOnFocus();
 
   // Quick Purchase state
   const [quickItems, setQuickItems] = useState<QuickPurchaseItem[]>([]);
@@ -218,8 +231,8 @@ export default function PurchaseScreen({
   }, [scannedBarcode, markUserActive, onBarcodeProcessed]);
 
   // UI-005: Live Suppliers - only show real data, never mock
-  // When LIVE_SUPPLIERS_ENABLED is false, filteredSKUs will be empty array
-  const filteredSKUs: SKUItem[] = LIVE_SUPPLIERS_ENABLED ? [] : []; // TODO: Fetch from real API when enabled
+  // GATE-000: When liveSuppliersReady is false, filteredSKUs will be empty array
+  const filteredSKUs: SKUItem[] = liveSuppliersReady ? [] : []; // TODO: Fetch from real API when enabled
 
   // =============================================================================
   // QUICK PURCHASE HANDLERS
@@ -236,13 +249,17 @@ export default function PurchaseScreen({
   }, []);
 
   const handleQuickSubmit = useCallback(async () => {
-    // UI-006: Gate Stock In when API not available
-    if (!STOCK_IN_API_AVAILABLE) {
+    // GATE-000: Gate Stock In when API not available
+    if (!stockInReady) {
       Alert.alert(
         "Backend Pending",
-        "Stock In API is not deployed yet. Your data will be saved locally but not synced to backend.\n\nBlocked by: API-003",
+        `Stock In API is not deployed yet. Your data will be saved locally but not synced to backend.\n\n${stockInBlocker || "Blocked by: API-003"}`,
         [
           { text: "Cancel", style: "cancel" },
+          {
+            text: "Retry Check",
+            onPress: () => retryStockIn(),
+          },
           {
             text: "Save Locally (Demo)",
             onPress: () => proceedWithSubmit(),
@@ -252,7 +269,7 @@ export default function PurchaseScreen({
       return;
     }
     proceedWithSubmit();
-  }, []);
+  }, [stockInReady, stockInBlocker, retryStockIn]);
 
   const proceedWithSubmit = useCallback(async () => {
     if (quickItems.length === 0) {
@@ -278,10 +295,13 @@ export default function PurchaseScreen({
         })),
         totalAmount: quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0),
       };
-      const result = await submitStockIn(payload);
+      // GATE-000: Use real API or demo based on readiness
+      const result = stockInReady
+        ? await submitStockIn(payload)
+        : await submitStockInDemo(payload);
       Alert.alert(
-        STOCK_IN_API_AVAILABLE ? "Done" : "Demo Mode",
-        `${result.itemsProcessed} items ${STOCK_IN_API_AVAILABLE ? "added to ledger" : "saved locally (not synced)"}.`
+        stockInReady ? "Done" : "Demo Mode",
+        `${result.itemsProcessed} items ${stockInReady ? "added to ledger" : "saved locally (not synced)"}.`
       );
       setQuickItems([]);
     } catch (error) {
@@ -289,7 +309,7 @@ export default function PurchaseScreen({
     } finally {
       setSubmitting(false);
     }
-  }, [quickItems]);
+  }, [quickItems, stockInReady]);
 
   const quickTotal = quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0);
 
@@ -566,8 +586,8 @@ export default function PurchaseScreen({
             <View style={styles.actionSummary}>
               <Text style={styles.actionText}>{quickItems.length} items</Text>
               <Text style={styles.actionTotal}>{formatMoney(quickTotal)}</Text>
-              {/* UI-006: Show demo mode indicator */}
-              {!STOCK_IN_API_AVAILABLE && (
+              {/* GATE-000: Show demo mode indicator when API not ready */}
+              {!stockInReady && (
                 <Text style={styles.demoModeIndicator}>Demo Mode</Text>
               )}
             </View>
@@ -575,13 +595,13 @@ export default function PurchaseScreen({
               style={[
                 styles.actionBtn,
                 submitting && styles.actionBtnDisabled,
-                !STOCK_IN_API_AVAILABLE && styles.actionBtnDemo,
+                !stockInReady && styles.actionBtnDemo,
               ]}
               onPress={handleQuickSubmit}
               disabled={submitting}
             >
               <Text style={styles.actionBtnText}>
-                {STOCK_IN_API_AVAILABLE ? "Stock In" : "Stock In (Demo)"}
+                {stockInReady ? "Stock In" : "Stock In (Draft)"}
               </Text>
             </Pressable>
           </View>
@@ -589,27 +609,40 @@ export default function PurchaseScreen({
       ) : (
         // Live Suppliers Content - SKU Grid directly (no separate search bar)
         <View style={styles.suppliersContent}>
-          {/* UI-005: Empty state when Live Suppliers API not available */}
-          {!LIVE_SUPPLIERS_ENABLED ? (
+          {/* GATE-000: Empty state when Live Suppliers API not available */}
+          {!liveSuppliersReady ? (
             <View style={styles.emptyStateContainer}>
-              <MaterialCommunityIcons
-                name="store-off-outline"
-                size={64}
-                color={theme.colors.textTertiary}
-              />
-              <Text style={styles.emptyStateTitle}>Supplier Catalog Coming Soon</Text>
-              <Text style={styles.emptyStateMessage}>
-                Live supplier product catalog is not enabled yet.
-              </Text>
-              <View style={styles.emptyStateBlocker}>
-                <Text style={styles.emptyStateBlockerLabel}>Requires:</Text>
-                <Text style={styles.emptyStateBlockerText}>
-                  API-001 (supplier-product mapping)
-                </Text>
-              </View>
-              <Text style={styles.emptyStateHint}>
-                Use Quick Purchase to scan and add stock manually.
-              </Text>
+              {isCheckingLiveSuppliers ? (
+                <>
+                  <ActivityIndicator size="large" color={theme.colors.primary} />
+                  <Text style={styles.emptyStateTitle}>Checking Backend...</Text>
+                </>
+              ) : (
+                <>
+                  <MaterialCommunityIcons
+                    name="store-off-outline"
+                    size={64}
+                    color={theme.colors.textTertiary}
+                  />
+                  <Text style={styles.emptyStateTitle}>Supplier Catalog Coming Soon</Text>
+                  <Text style={styles.emptyStateMessage}>
+                    Live supplier product catalog is not enabled yet.
+                  </Text>
+                  <View style={styles.emptyStateBlocker}>
+                    <Text style={styles.emptyStateBlockerLabel}>Requires:</Text>
+                    <Text style={styles.emptyStateBlockerText}>
+                      {liveSuppliersBlocker || "/api/v1/pos/suppliers/:id/products"}
+                    </Text>
+                  </View>
+                  <Pressable style={styles.retryButton} onPress={retryLiveSuppliers}>
+                    <MaterialCommunityIcons name="refresh" size={16} color={theme.colors.primary} />
+                    <Text style={styles.retryButtonText}>Retry</Text>
+                  </Pressable>
+                  <Text style={styles.emptyStateHint}>
+                    Use Quick Purchase to scan and add stock manually.
+                  </Text>
+                </>
+              )}
             </View>
           ) : filteredSKUs.length === 0 ? (
             <View style={styles.emptyStateContainer}>
@@ -1007,6 +1040,24 @@ const styles = StyleSheet.create({
   emptyStateBlockerText: {
     fontSize: 12,
     color: theme.colors.textPrimary,
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primaryLight,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.primary,
   },
   emptyStateHint: {
     fontSize: 12,

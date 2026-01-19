@@ -1,3 +1,5 @@
+import { authFetch } from '../lib/api';
+
 const API_BASE = '/api/v1/retailer-admin';
 
 interface Store {
@@ -15,11 +17,12 @@ interface ApiResponse<T> {
 }
 
 export async function fetchStore(accessToken: string): Promise<ApiResponse<Store>> {
-  const response = await fetch(`${API_BASE}/store`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const response = await authFetch(`${API_BASE}/store`, accessToken);
+
+  // 401 handled by authFetch (triggers logout)
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     throw new Error('Failed to fetch store');
@@ -29,11 +32,12 @@ export async function fetchStore(accessToken: string): Promise<ApiResponse<Store
 }
 
 export async function fetchProducts(accessToken: string): Promise<ApiResponse<unknown[]>> {
-  const response = await fetch(`${API_BASE}/products`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const response = await authFetch(`${API_BASE}/products`, accessToken);
+
+  // 401 handled by authFetch (triggers logout)
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     throw new Error('Failed to fetch products');
@@ -43,11 +47,12 @@ export async function fetchProducts(accessToken: string): Promise<ApiResponse<un
 }
 
 export async function fetchInventory(accessToken: string): Promise<ApiResponse<unknown[]>> {
-  const response = await fetch(`${API_BASE}/inventory`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const response = await authFetch(`${API_BASE}/inventory`, accessToken);
+
+  // 401 handled by authFetch (triggers logout)
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     throw new Error('Failed to fetch inventory');
@@ -57,11 +62,12 @@ export async function fetchInventory(accessToken: string): Promise<ApiResponse<u
 }
 
 export async function fetchSuppliers(accessToken: string): Promise<ApiResponse<unknown[]>> {
-  const response = await fetch(`${API_BASE}/suppliers`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const response = await authFetch(`${API_BASE}/suppliers`, accessToken);
+
+  // 401 handled by authFetch (triggers logout)
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     throw new Error('Failed to fetch suppliers');
@@ -71,11 +77,12 @@ export async function fetchSuppliers(accessToken: string): Promise<ApiResponse<u
 }
 
 export async function fetchCompliance(accessToken: string): Promise<ApiResponse<unknown[]>> {
-  const response = await fetch(`${API_BASE}/compliance`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  const response = await authFetch(`${API_BASE}/compliance`, accessToken);
+
+  // 401 handled by authFetch (triggers logout)
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     throw new Error('Failed to fetch compliance documents');

@@ -59,6 +59,8 @@ import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/sto
 import { refreshStockSnapshot } from "../services/stockService";
 import { useSettingsStore } from "../stores/settingsStore";
 import { theme } from "../theme";
+// GATE-000: Import probeReadiness for startup endpoint check
+import { probeReadiness } from "../services/api/readinessGate";
 
 type RootStackParamList = {
   SellScan: undefined;
@@ -402,6 +404,10 @@ export default function PosRootLayout() {
           setBuyEnabled(buyFlag);
           setReorderEnabled(reorderFlag);
         }
+        // GATE-000: Probe Phase-1 endpoints on startup (after ui-status succeeds)
+        // This runs asynchronously and caches results for 5 minutes
+        void probeReadiness();
+
         if (status.deviceActive === false) {
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
           return;

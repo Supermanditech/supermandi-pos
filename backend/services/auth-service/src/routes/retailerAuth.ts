@@ -338,14 +338,22 @@ const DEV_BYPASS_KEY = 'supermandi2026';
  * Development-only endpoint to bypass OTP authentication
  * Issues a real JWT token for testing the portal
  *
- * CRITICAL: Only works when NODE_ENV !== 'production'
+ * CRITICAL: Only works when:
+ * - NODE_ENV !== 'production', OR
+ * - ALLOW_BYPASS_FOR_TESTING === 'true' (for go-live testing)
  */
 router.post(
   '/dev-bypass',
   asyncHandler(async (req, res) => {
-    // CRITICAL: Block in production
-    if (process.env.NODE_ENV === 'production') {
+    // CRITICAL: Block in production unless explicitly allowed for testing
+    const allowBypassForTesting = process.env.ALLOW_BYPASS_FOR_TESTING === 'true';
+    if (process.env.NODE_ENV === 'production' && !allowBypassForTesting) {
       throw ApiError.notFound('Not found');
+    }
+
+    // Log all bypass attempts in production for audit
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[SECURITY] dev-bypass attempted in production mode from IP: ${req.ip || req.headers['x-forwarded-for']}`);
     }
 
     const { bypassKey, storeCode } = req.body as {
@@ -409,7 +417,8 @@ router.post(
       permissions
     );
 
-    console.log(`[DEV-BYPASS] Issued token for store ${storeCode}, user ${user.id}`);
+    const mode = process.env.NODE_ENV === 'production' ? 'PRODUCTION-TESTING' : 'DEV';
+    console.log(`[${mode}-BYPASS] Issued token for store ${storeCode}, user ${user.id}`);
 
     res.json({
       success: true,

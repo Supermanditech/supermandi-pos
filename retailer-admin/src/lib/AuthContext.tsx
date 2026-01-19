@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { onAuthFailure } from './api';
 
 interface User {
   id: string;
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORE_KEY, JSON.stringify(newStore));
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setAccessToken(null);
     setUser(null);
     setStore(null);
@@ -77,7 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(STORE_KEY);
-  };
+  }, []);
+
+  // Subscribe to auth failures (401 responses) - triggers logout
+  useEffect(() => {
+    return onAuthFailure(() => {
+      console.log('[Auth] Received auth failure event - logging out');
+      logout();
+    });
+  }, [logout]);
 
   return (
     <AuthContext.Provider

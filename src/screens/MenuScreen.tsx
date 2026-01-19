@@ -277,11 +277,12 @@ export default function MenuScreen() {
         </View>
       </View>
 
-      {/* TICKET-002: Daily Summary Card */}
-      <View style={styles.summaryCard}>
+      {/* POS-002: Daily Summary Card - Tap navigates to Sales Statement */}
+      <Pressable style={styles.summaryCard} onPress={goToSalesStatement}>
         <View style={styles.statusHeader}>
           <MaterialCommunityIcons name="chart-bar" size={16} color={theme.colors.primary} />
           <Text style={styles.statusHeaderText}>{t('menu.todaysSales', { defaultValue: "Today's Sales" })}</Text>
+          <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.textTertiary} style={{ marginLeft: 'auto' }} />
         </View>
         {summaryLoading ? (
           <Text style={styles.summaryLoading}>{t('common.loading', { defaultValue: 'Loading...' })}</Text>
@@ -323,7 +324,7 @@ export default function MenuScreen() {
             </View>
           </View>
         )}
-      </View>
+      </Pressable>
 
       <Pressable style={styles.menuItem} onPress={goToBills}>
         <View style={styles.menuIcon}>

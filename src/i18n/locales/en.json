@@ -75,7 +75,15 @@
     "statusLoading": "Loading...",
     "syncPending": "{{count}} pending",
     "syncOk": "Synced",
-    "deviceLabel": "Device"
+    "deviceLabel": "Device",
+    "todaysSales": "Today's Sales",
+    "totalSales": "Total Sales",
+    "bills": "Bills",
+    "avgBill": "Avg Bill",
+    "itemsSold": "Items Sold",
+    "paymentModes": "Payment Modes",
+    "noSalesYet": "No sales yet today",
+    "viewFullReport": "View Full Report"
   },
   "tabs": {
     "menu": "MENU",

@@ -75,7 +75,15 @@
     "statusLoading": "लोड हो रहा है...",
     "syncPending": "{{count}} लंबित",
     "syncOk": "सिंक हो गया",
-    "deviceLabel": "डिवाइस"
+    "deviceLabel": "डिवाइस",
+    "todaysSales": "आज की बिक्री",
+    "totalSales": "कुल बिक्री",
+    "bills": "बिल",
+    "avgBill": "औसत बिल",
+    "itemsSold": "बेचे गए आइटम",
+    "paymentModes": "भुगतान विधियां",
+    "noSalesYet": "आज अभी तक कोई बिक्री नहीं",
+    "viewFullReport": "पूरी रिपोर्ट देखें"
   },
   "tabs": {
     "menu": "मेनू",

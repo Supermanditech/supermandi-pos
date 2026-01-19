@@ -442,11 +442,13 @@ router.get(
       gstin: string | null;
       address: string | null;
     }>(
-      `SELECT s.id, s.name, s.phone, s.gstin, s.address
+      `SELECT s.id, s.business_name as name, s.primary_phone as phone,
+              CASE WHEN s.gstin LIKE 'XX%' THEN NULL ELSE s.gstin END as gstin,
+              CONCAT_WS(', ', NULLIF(s.address_line1, ''), NULLIF(s.city, ''), NULLIF(s.state, '')) as address
        FROM supplier.suppliers s
        JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
-       WHERE ssl.store_id = $1 AND ssl.is_active = true
-       ORDER BY s.name`,
+       WHERE ssl.store_id = $1 AND ssl.status = 'active'
+       ORDER BY s.business_name`,
       [storeId]
     );
 
@@ -460,6 +462,7 @@ router.get(
 /**
  * POST /retailer-admin/suppliers
  * Create or link a supplier to the store
+ * Note: For informal suppliers without GSTIN, a placeholder is generated
  */
 router.post(
   '/suppliers',
@@ -481,7 +484,7 @@ router.post(
 
     if (phone) {
       const byPhone = await query<{ id: string }>(
-        `SELECT id FROM supplier.suppliers WHERE phone = $1`,
+        `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
         [phone]
       );
       existingSupplier = byPhone[0] || null;
@@ -501,20 +504,24 @@ router.post(
       supplierId = existingSupplier.id;
     } else {
       // Create new supplier
+      // gstin is NOT NULL and max 15 chars, generate placeholder for informal suppliers
+      // Format: XX + 13 random base36 chars = 15 chars total (like: XX1ABC2DEF3GHI)
+      const effectiveGstin = gstin || `XX${(Date.now().toString(36) + Math.random().toString(36).substring(2)).substring(0, 13)}`.toUpperCase();
+
       const result = await query<{ id: string }>(
-        `INSERT INTO supplier.suppliers (name, phone, gstin, address)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO supplier.suppliers (business_name, primary_phone, gstin, address_line1, verification_status)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id`,
-        [name, phone || null, gstin || null, address || null]
+        [name, phone || null, effectiveGstin, address || null, gstin ? 'pending' : 'pending']
       );
       supplierId = result[0]!.id;
     }
 
     // Link supplier to store
     await query(
-      `INSERT INTO supplier.supplier_store_links (supplier_id, store_id, is_active)
-       VALUES ($1, $2, true)
-       ON CONFLICT (supplier_id, store_id) DO UPDATE SET is_active = true`,
+      `INSERT INTO supplier.supplier_store_links (supplier_id, store_id, status)
+       VALUES ($1, $2, 'active')
+       ON CONFLICT (supplier_id, store_id) DO UPDATE SET status = 'active'`,
       [supplierId, storeId]
     );
 
@@ -524,7 +531,7 @@ router.post(
         id: supplierId,
         name,
         phone,
-        gstin,
+        gstin: gstin || null,
         linked: true,
       },
     });

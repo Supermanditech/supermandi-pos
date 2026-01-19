@@ -62,13 +62,19 @@ export interface StockInEntry {
 
 const STOCK_IN_BASE = "/api/v1/pos/stock-in";
 
-// Demo mode flag - set to true to use mock responses for testing
-const DEMO_MODE = true;
+// GATE-000: DEMO_MODE flag removed - now controlled by ReadinessGate
+// The PurchaseScreen component checks isFeatureReady("stockIn") before calling this API.
+// If the API is not ready, PurchaseScreen shows a warning and uses local demo mode.
 
 /**
  * Submit a stock-in ledger entry.
  * Records products received from supplier at the counter.
- * In demo mode, returns a mock success response.
+ *
+ * GATE-000: This function now always attempts the real API call.
+ * The caller (PurchaseScreen) is responsible for checking endpoint readiness
+ * via ReadinessGate before calling this function.
+ *
+ * If the endpoint is not deployed, this will throw an error that the caller should handle.
  */
 export async function submitStockIn(payload: StockInPayload): Promise<{
   ledgerEntryId: string;
@@ -76,19 +82,6 @@ export async function submitStockIn(payload: StockInPayload): Promise<{
   totalAmount: number;
   createdAt: string;
 }> {
-  // Demo mode: return mock success without calling API
-  if (DEMO_MODE) {
-    console.log("[stockInApi] DEMO MODE - Mock stock-in submission:", payload);
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return {
-      ledgerEntryId: `DEMO-${Date.now()}`,
-      itemsProcessed: payload.items.length,
-      totalAmount: payload.totalAmount,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
   try {
     const response = await apiClient.post<StockInResponse>(STOCK_IN_BASE, payload);
     return response.data;
@@ -96,6 +89,29 @@ export async function submitStockIn(payload: StockInPayload): Promise<{
     console.error("[stockInApi] submitStockIn failed:", error);
     throw error;
   }
+}
+
+/**
+ * Submit a stock-in ledger entry in demo mode (local only, no API call).
+ * Used when ReadinessGate indicates the stock-in API is not available.
+ *
+ * @returns Mock response with demo ledger entry ID
+ */
+export async function submitStockInDemo(payload: StockInPayload): Promise<{
+  ledgerEntryId: string;
+  itemsProcessed: number;
+  totalAmount: number;
+  createdAt: string;
+}> {
+  console.log("[stockInApi] DEMO MODE - Mock stock-in submission:", payload);
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  return {
+    ledgerEntryId: `DEMO-${Date.now()}`,
+    itemsProcessed: payload.items.length,
+    totalAmount: payload.totalAmount,
+    createdAt: new Date().toISOString(),
+  };
 }
 
 /**
