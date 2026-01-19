@@ -534,6 +534,7 @@ export default function PurchaseScreen({
         // Quick Purchase Content - only shows when items exist
         <View style={styles.quickContent}>
           <FlatList
+            key="quick-purchase-list"
             data={quickItems}
             renderItem={renderQuickItem}
             keyExtractor={(item) => item.id}
@@ -561,6 +562,7 @@ export default function PurchaseScreen({
         <View style={styles.suppliersContent}>
           {/* SKU Grid */}
           <FlatList
+            key={`suppliers-grid-${NUM_COLUMNS}`}
             data={filteredSKUs}
             renderItem={renderSKU}
             keyExtractor={(item) => item.id}
