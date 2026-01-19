@@ -18,25 +18,59 @@
 
 ---
 
-## API Endpoint Test Results (2026-01-19)
+## API Endpoint Readiness Matrix (2026-01-19)
 
 **Backend URL:** `http://34.14.220.171:3000`
 
-| Endpoint | HTTP Status | Meaning | Ticket Dependency |
-|----------|-------------|---------|-------------------|
-| `/api/v1/pos/suppliers` | 401 | EXISTS (auth required) | POS-001g ready |
-| `/api/v1/pos/daily-summary` | 401 | EXISTS (auth required) | POS-002c ready |
-| `/api/v1/pos/stock-in` | 404 | MISSING | API-003 blocked |
-| `/api/v1/pos/suppliers/:id/products` | 404 | MISSING | UI-005 blocked |
-| `/api/v1/pos/products/search?supplierId=` | 404 | MISSING | UI-005 blocked |
+> **Addendum Point 1:** 401 ≠ "Ready". A ticket is NOT ✅ unless ALL 4 columns are green.
 
-### Summary
-- **Ready for integration:** suppliers, daily-summary
-- **Blocked by backend:** stock-in, supplier products
-- **Feature flags set:**
+| Endpoint | Exists? | Auth OK? | Contract OK? | Isolation OK? | Status |
+|----------|---------|----------|--------------|---------------|--------|
+| `/api/v1/pos/suppliers` | ✅ (401) | ❌ | ❌ | ❌ | **NOT READY** |
+| `/api/v1/pos/daily-summary` | ✅ (401) | ❌ | ❌ | ❌ | **NOT READY** |
+| `/api/v1/pos/stock-in` | ❌ (404) | ❌ | ❌ | ❌ | **NOT READY** |
+| `/api/v1/pos/suppliers/:id/products` | ❌ (404) | ❌ | ❌ | ❌ | **NOT READY** |
+| `/api/v1/pos/products/search?supplierId=` | ❌ (404) | ❌ | ❌ | ❌ | **NOT READY** |
+
+### Readiness Definitions
+| Column | Definition |
+|--------|------------|
+| **Exists?** | Route returns non-404 (401/200/etc) |
+| **Auth OK?** | Returns 200 with real `X-Device-Token` |
+| **Contract OK?** | JSON matches expected shape in ticket |
+| **Isolation OK?** | Token for Store A cannot access Store B data |
+
+### Current State
+- **Route exists but NOT ready:** suppliers, daily-summary (need auth + contract + isolation verification)
+- **Route missing:** stock-in, supplier products
+- **Feature flags set (POS client gating):**
   - `LIVE_SUPPLIERS_ENABLED = false` (PurchaseScreen.tsx:91)
   - `STOCK_IN_API_AVAILABLE = false` (PurchaseScreen.tsx:96)
   - `DEMO_MODE = true` (stockInApi.ts:66)
+
+---
+
+## Auth Header Contract (Go-Live Rule)
+
+> **Addendum Point 2:** All POS APIs MUST use the same auth header as the POS app.
+
+### POS App Auth Header (CANONICAL)
+```
+X-Device-Token: tok_...
+```
+
+### Rule
+- All Phase-1 POS API tickets MUST specify `X-Device-Token` (not `Authorization: Bearer`)
+- POS app already uses `X-Device-Token` in `apiClient.ts` line 37
+- `Authorization: Bearer` is for Dashboard JWT auth only
+- No split truth: one auth method per platform
+
+### Header Mapping
+| Platform | Auth Header | Token Type |
+|----------|-------------|------------|
+| POS App | `X-Device-Token: tok_...` | Device token from enrollment |
+| Dashboard | `Authorization: Bearer <jwt>` | JWT from Firebase OTP login |
+| SuperAdmin | `Authorization: Bearer <jwt>` | JWT from admin login |
 
 ---
 
@@ -213,6 +247,119 @@ Stock must be derived from ledger, not overwritten.
 
 ---
 
+## Global Precision Rules (ALL Phase-1 Tickets)
+
+> **These rules apply to EVERY Phase-1 ticket. No ticket is ✅ unless all global rules are followed.**
+
+---
+
+### A) Standardized Response Envelope (MANDATORY)
+
+Every new Phase-1 endpoint MUST return this envelope:
+
+**Success:**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "error": null,
+  "meta": { "requestId": "...", "timestamp": "..." }
+}
+```
+
+**Failure:**
+```json
+{
+  "success": false,
+  "data": null,
+  "error": { "code": "VALIDATION_ERROR", "message": "Human-readable message" },
+  "meta": { "requestId": "...", "timestamp": "..." }
+}
+```
+
+**Reason:** Prevents contract drift between POS + Web + Admin. All clients can use same parsing logic.
+
+**Error Codes (canonical):**
+| Code | HTTP | Meaning |
+|------|------|---------|
+| `VALIDATION_ERROR` | 400 | Request body/params invalid |
+| `UNAUTHORIZED` | 401 | Missing or invalid token |
+| `FORBIDDEN` | 403 | Valid token but no permission |
+| `NOT_FOUND` | 404 | Resource doesn't exist |
+| `CONFLICT` | 409 | Duplicate or state conflict |
+| `INTERNAL_ERROR` | 500 | Server error |
+
+---
+
+### B) Idempotency for ALL Write APIs (MANDATORY for POS)
+
+Every `POST` that writes data MUST accept:
+```
+Idempotency-Key: <uuid>
+```
+(header) OR `idempotencyKey` field in request body.
+
+**Behavior:**
+- If same key repeats within 24h window, return the same success response (no duplicate write)
+- Store: `idempotency:{key}` → `{response, createdAt}` with 24h TTL
+
+**Applies to:**
+- `POST /api/v1/pos/stock-in`
+- `POST /api/v1/pos/transactions` (future)
+- `POST /api/v1/stock/adjust` (future)
+- Any other write endpoint
+
+**Reason:** POS operates on flaky networks. Retries without idempotency will double stock or create duplicate transactions.
+
+---
+
+### C) Timezone Day Boundary (MANDATORY)
+
+For any "today" or date-based query:
+- **"Today" = store timezone day, NOT UTC**
+- Store timezone stored in `stores.timezone` (e.g., `Asia/Kolkata`)
+- All date aggregations use `CONVERT_TZ()` or equivalent
+
+**Mandatory Test:**
+- Run daily summary query at 23:59 IST and 00:01 IST
+- Verify correct date boundary (no off-by-one day errors)
+
+**Example:**
+```sql
+-- Correct: uses store timezone
+WHERE DATE(CONVERT_TZ(created_at, 'UTC', 'Asia/Kolkata')) = '2026-01-19'
+
+-- WRONG: UTC date
+WHERE DATE(created_at) = '2026-01-19'
+```
+
+---
+
+### D) Logging Keys (MANDATORY)
+
+Every API log line MUST include these fields:
+```json
+{
+  "storeId": "store_123",
+  "deviceId": "dev_456",      // if present (POS calls)
+  "requestId": "req_789",
+  "route": "POST /api/v1/pos/stock-in",
+  "durationMs": 45,
+  "statusCode": 200,
+  "userId": "user_abc"        // if present (Dashboard/Admin)
+}
+```
+
+**Reason:** Debugging without SSH. Logs must be queryable by storeId + requestId.
+
+**Log prefix convention:**
+- `[pos]` - POS app API calls
+- `[dash]` - Dashboard API calls
+- `[admin]` - SuperAdmin API calls
+- `[api]` - Internal/shared
+
+---
+
 ## Legend
 
 | Status | Meaning |
@@ -250,14 +397,32 @@ Redesign the PURCHASE tab with a 50/50 segmented control showing Quick Purchase 
 
 #### Contract
 ```
-No new API - Uses existing:
-- GET /api/v1/pos/suppliers → Supplier[]
-- GET /api/v1/pos/suppliers/:id/products → Product[] (required for SKU grid)
-- POST /api/v1/pos/stock-in → StockInResponse
+Uses existing APIs with X-Device-Token auth:
+- GET /api/v1/pos/suppliers
+  X-Device-Token: tok_...
+  → { success: true, data: { suppliers: Supplier[] } }
+
+- GET /api/v1/pos/suppliers/:id/products (required for SKU grid)
+  X-Device-Token: tok_...
+  → { success: true, data: { products: Product[] } }
+
+- POST /api/v1/pos/stock-in (Quick Purchase submit)
+  X-Device-Token: tok_...
+  → { success: true, data: { ledgerEntryId, itemsProcessed, ... } }
 ```
 
-#### DB
-No DB changes required.
+#### DB (Backend Truth Dependencies)
+> **Addendum Point 4:** POS-001 depends on backend DB truth, not "no changes"
+
+| Table | Purpose | Required For |
+|-------|---------|--------------|
+| `suppliers` | Store + global supplier list | Suppliers dropdown |
+| `supplier_products` | Supplier → product mapping (store-scoped) | Live Suppliers SKU grid |
+| `stock_in_ledger` | Ledger entries for inward stock | Stock-In history |
+| `stock_in_items` | Line items per ledger entry | Stock-In details |
+| `store_products.stock_qty` | Inventory increment via ledger event | Stock update (NOT client "set stock") |
+
+**Rule:** Stock updates ONLY via ledger events, never direct client overwrites.
 
 #### 50/50 Toggle State Machine (REQUIRED)
 ```
@@ -288,9 +453,9 @@ No DB changes required.
 | POS-001j | Live Suppliers: real data only (no mock) | ⬜ | Blocked by UI-005 |
 
 #### Steps (for POS-001g)
-1. [ ] Verify `GET /api/v1/pos/suppliers` works on VM: `curl -H "Authorization: Bearer <token>" http://34.14.220.171:3009/api/v1/pos/suppliers`
+1. [ ] Verify `GET /api/v1/pos/suppliers` works on VM: `curl -H "X-Device-Token: tok_..." http://34.14.220.171:3000/api/v1/pos/suppliers`
 2. [ ] Test PurchaseScreen.tsx loads suppliers list
-3. [ ] Test SKU grid renders supplier products
+3. [ ] Test SKU grid renders supplier products (requires supplier_products mapping)
 4. [ ] Test Quick Purchase scanner adds items
 
 #### Verification
@@ -306,6 +471,28 @@ git revert <commit-hash>  # Revert UI changes
 # Or set DEMO_MODE = true in suppliersApi.ts
 ```
 
+#### Precision Rules (POS-001)
+
+**State Machine Correctness:**
+- Auto-restore 50/50 ONLY if: no scan input, no typing, no item add/remove, no scroll for 6s
+- If scanning started → NEVER auto-collapse for 15s after last scan (grace period)
+- User interaction resets the 6s timer
+
+**Supplier Selection Persistence:**
+- Persist last selected supplier in local device storage **per storeId**
+- Key: `lastSupplier:{storeId}` → `supplierId`
+- If store changes (device re-enrolled), do NOT reuse previous supplier selection
+
+**Fallback Path When Suppliers API Down:**
+- Live Suppliers tab shows: "Backend unavailable" + Retry button
+- Quick Purchase stays usable (draft-only if stock-in API missing)
+- Do NOT crash or show blank screen
+
+**Strict "No Mock SKUs" Enforcement:**
+- If API missing OR returns empty array: show "Coming soon / No catalog for this supplier"
+- NEVER render fake rows or placeholder products
+- `LIVE_SUPPLIERS_ENABLED = false` gates the entire SKU grid
+
 ---
 
 ### POS-002: Daily Summary Widget on MenuScreen
@@ -318,7 +505,7 @@ Show today's sales summary (total sales, bills, cash, UPI) on the MenuScreen as 
 #### Contract
 ```
 GET /api/v1/pos/daily-summary
-Authorization: Bearer <device-token>
+X-Device-Token: tok_...
 
 Response:
 {
@@ -401,6 +588,27 @@ GROUP BY DATE(created_at);
 # Delete DailySummaryWidget.tsx
 ```
 
+#### Precision Rules (POS-002)
+
+**Exact Money Unit Rule:**
+- `totalSales`, `cash`, `upi`, `card`, `credit` are ALWAYS **paise** from backend
+- Formatting to ₹ happens in UI only (divide by 100, add commas)
+- NEVER mix ₹ values in API responses
+
+**Cache Strategy:**
+- Backend caches per store + date: `daily_summary:{storeId}:{YYYY-MM-DD}` with 60s TTL
+- POS widget refresh: no more than once every 30-60s (rate limit on client)
+- Pull-to-refresh triggers immediate fetch (bypass local throttle)
+
+**Zero-Store Behavior:**
+- MUST render full widget with ₹0 and counts 0
+- No "empty widget" or "no data" state for zero sales
+- Show: "₹0 | 0 bills | ₹0 cash | ₹0 UPI"
+
+**Timezone Rule:**
+- "Today" = store timezone day (see Global Rule C)
+- Widget title should show: "Today's Summary" (not date, unless store timezone differs from device)
+
 ---
 
 ### POS-003: Strong Search in BUY Tab
@@ -467,19 +675,153 @@ No changes - uses existing products table with indexes on `name`, `barcode`, `ca
 #### Rollback
 Revert changes to BuyTab search components.
 
+#### Precision Rules (POS-003)
+
+**Search Priority and Dedupe:**
+- If barcode matches, return that exact product **first** in results
+- If multiple barcodes map to one product, dedupe by `productId`
+- Sort: exact barcode match → name starts with → name contains
+
+**Server-Side Filtering Only:**
+- Category/stock/supplier/price filters MUST be executed server-side
+- UI MUST NOT fetch huge data and filter locally
+- Query params sent to server; server returns filtered results
+
+**Recent Search Storage:**
+- Store recent searches **per storeId** (no cross-store leakage)
+- Key: `recentSearches:{storeId}` → `string[]` (max 10)
+- Clear on store change (device re-enrollment)
+
+**Latency Acceptance:**
+- Search API MUST respond < 300ms p95 on demo store dataset
+- If > 500ms, show loading spinner
+- Debounce search input: 300ms after last keystroke
+
+**Store Isolation Verification:**
+- All search results scoped to store from token (server-side)
+- Test: Store A token cannot see Store B products
+
 ---
 
-### API-001: Suppliers API (Backend)
+### API-000: POS Contract Probe Endpoint (Readiness Checker)
 
-**Priority:** P0 | **Platform:** Backend | **🔴 BLOCKED: Backend team needed**
+**Priority:** P0 | **Platform:** Admin | **Type:** Infrastructure
 
 #### Intent
-Backend API to list suppliers for a store. Returns both SuperMandi global suppliers and retailer's own suppliers.
+A simple admin-accessible route to check Phase-1 API readiness without needing device tokens or SSH. Makes UI-004 (SuperAdmin Probe Panel) much easier to implement.
+
+#### Contract
+```
+GET /admin/probe/store/:storeId/pos-contracts
+Authorization: Bearer <admin-jwt>
+
+Response:
+{
+  "success": true,
+  "data": {
+    "storeId": "store_123",
+    "storeCode": "DEMO001",
+    "timestamp": "2026-01-19T10:30:00Z",
+    "endpoints": [
+      {
+        "endpoint": "/api/v1/pos/suppliers",
+        "exists": true,
+        "authOk": true,
+        "contractOk": true,
+        "isolationOk": true,
+        "status": "READY",
+        "latencyMs": 45
+      },
+      {
+        "endpoint": "/api/v1/pos/daily-summary",
+        "exists": true,
+        "authOk": true,
+        "contractOk": false,
+        "isolationOk": false,
+        "status": "NOT_READY",
+        "error": "paymentBreakdown missing 'card' key"
+      },
+      {
+        "endpoint": "/api/v1/pos/stock-in",
+        "exists": false,
+        "authOk": false,
+        "contractOk": false,
+        "isolationOk": false,
+        "status": "NOT_READY",
+        "error": "404 Not Found"
+      }
+    ],
+    "summary": {
+      "total": 5,
+      "ready": 1,
+      "notReady": 4
+    }
+  }
+}
+```
+
+#### How It Works
+1. Admin calls probe endpoint with admin JWT
+2. Server uses stored device token OR impersonates store to call POS endpoints
+3. Server checks each endpoint for 4-column readiness
+4. Returns aggregated status
+
+#### DB
+None (uses existing tokens/stores tables).
+
+#### Sub-tickets
+
+| ID | Description | Status | Layer |
+|----|-------------|--------|-------|
+| API-000a | Create probe endpoint route | ⬜ | API |
+| API-000b | Implement per-endpoint health check | ⬜ | API |
+| API-000c | Contract validation (check response shape) | ⬜ | API |
+| API-000d | Isolation check (cross-store query test) | ⬜ | API |
+| API-000e | Integrate with UI-004 Admin Probe Panel | ⬜ | Admin |
+
+#### Verification
+- [ ] Admin JWT can call probe endpoint
+- [ ] Response shows accurate readiness for each endpoint
+- [ ] UI-004 can consume this to render pass/fail badges
+
+#### Rollback
+Remove probe endpoint route.
+
+#### Precision Rules (API-000)
+
+**Endpoint List (Phase-1):**
+```typescript
+const PHASE1_ENDPOINTS = [
+  { path: '/api/v1/pos/suppliers', method: 'GET' },
+  { path: '/api/v1/pos/daily-summary', method: 'GET' },
+  { path: '/api/v1/pos/stock-in', method: 'POST' },
+  { path: '/api/v1/pos/stock-in', method: 'GET' },
+  { path: '/api/v1/pos/suppliers/:id/products', method: 'GET' },
+];
+```
+
+**Status Values:**
+| Status | Meaning |
+|--------|---------|
+| `READY` | All 4 columns green |
+| `NOT_READY` | At least one column red |
+| `UNKNOWN` | Probe failed (timeout, network error) |
+
+---
+
+### API-001: Suppliers API (Vertical Slice)
+
+**Priority:** P0 | **Platform:** ALL | **Type:** Vertical Slice
+
+> **Addendum Point 3:** API tickets are vertical slices, not "blocked by backend team"
+
+#### Intent
+Complete end-to-end suppliers feature: DB → API → VM deploy → POS consumes → Dashboard consumes → SuperAdmin verifies
 
 #### Contract
 ```
 GET /api/v1/pos/suppliers
-Authorization: Bearer <device-token>
+X-Device-Token: tok_...
 
 Response:
 {
@@ -511,8 +853,8 @@ Response:
 
 #### DB
 ```sql
--- suppliers table
-CREATE TABLE suppliers (
+-- suppliers table (production-safe, idempotent migration)
+CREATE TABLE IF NOT EXISTS suppliers (
   id VARCHAR(36) PRIMARY KEY,
   store_id VARCHAR(36),           -- NULL for SuperMandi global suppliers
   name VARCHAR(255) NOT NULL,
@@ -530,46 +872,93 @@ CREATE TABLE suppliers (
 );
 ```
 
-#### Sub-tickets
+#### Vertical Slice Sub-tickets
 
-| ID | Description | Status | Notes |
+| ID | Description | Status | Layer |
 |----|-------------|--------|-------|
-| API-001a | GET /api/v1/pos/suppliers | ⬜ | Backend team |
-| API-001b | Database schema for suppliers | ⬜ | Backend team |
-| API-001c | Seed SuperMandi suppliers | ⬜ | Read-only |
-| API-001d | Retailer's own suppliers CRUD | ⬜ | Dashboard only |
+| API-001a | DB migration (idempotent) | ⬜ | DB |
+| API-001b | GET /api/v1/pos/suppliers route | ⬜ | API |
+| API-001c | Seed SuperMandi suppliers | ⬜ | DB |
+| API-001d | Deploy to VM | ⬜ | Deploy |
+| API-001e | POS consumes (PurchaseScreen) | ⬜ | POS |
+| API-001f | Dashboard consumes (WEB-003) | ⬜ | Web |
+| API-001g | SuperAdmin probe verifies | ⬜ | Admin |
+| API-001h | Store isolation test | ⬜ | Security |
 
-#### Steps (Backend Team)
-1. [ ] Create suppliers table with schema above
-2. [ ] Implement GET /api/v1/pos/suppliers endpoint
-3. [ ] Query: `SELECT * FROM suppliers WHERE store_id = ? OR source = 'supermandi'`
-4. [ ] Seed SuperMandi global suppliers (Metro, etc.)
-5. [ ] Test with device token auth
+#### Steps (Vertical Slice)
+1. [ ] **DB:** Run idempotent migration on VM
+2. [ ] **API:** Implement GET endpoint in gateway/pos-service
+3. [ ] **Deploy:** Deploy to VM, verify with curl using real X-Device-Token
+4. [ ] **POS:** PurchaseScreen.tsx calls suppliersApi.ts, displays suppliers
+5. [ ] **Web:** Dashboard SuppliersPage calls same API (via retailer auth proxy if needed)
+6. [ ] **Admin:** SuperAdmin probe panel can fetch suppliers for DEMO001
+7. [ ] **Isolation:** Verify Store A token cannot see Store B suppliers
 
-#### Verification
-- [ ] VM curl: `curl -H "Authorization: Bearer <token>" http://34.14.220.171:3009/api/v1/pos/suppliers`
-- [ ] Response: `{ success: true, data: { suppliers: [...] } }`
-- [ ] Includes both own and supermandi suppliers
+#### Verification (4-Column Readiness)
+| Check | Status |
+|-------|--------|
+| Exists? | ⬜ |
+| Auth OK? (X-Device-Token) | ⬜ |
+| Contract OK? | ⬜ |
+| Isolation OK? | ⬜ |
 
 #### Rollback
 ```sql
 DROP TABLE IF EXISTS suppliers;
 ```
 
+#### Precision Rules (API-001)
+
+**Split Endpoints (POS vs Dashboard):**
+- POS read endpoint: `GET /api/v1/pos/suppliers` (X-Device-Token)
+- Dashboard CRUD endpoints: `GET/POST/PUT/DELETE /api/v1/retailers/suppliers` (JWT)
+- Both MUST return the same `Supplier` DTO shape
+
+**Global + Store Supplier Merge Rule:**
+- Response returns: `supermandi` suppliers + store `own` suppliers
+- Order: own suppliers first, then supermandi (explicit grouping)
+- Both sets in same array with `source` field distinguishing them
+
+**Editability Computed Server-Side:**
+- NEVER let client decide `isEditable`
+- Server sets `isEditable: true` if `source === 'own'` AND request is from Dashboard JWT
+- POS always sees `isEditable: false` (view-only)
+
+**DB Uniqueness:**
+- Prevent duplicate supplier names per store:
+  ```sql
+  UNIQUE INDEX idx_store_name (store_id, LOWER(name)) WHERE source = 'own'
+  ```
+- Allow same name across different stores
+
+**Response DTO:**
+```typescript
+interface Supplier {
+  id: string;
+  name: string;
+  phone: string | null;
+  gstin: string | null;
+  source: 'own' | 'supermandi';
+  isEditable: boolean;  // computed server-side
+  isActive: boolean;
+}
+```
+
 ---
 
-### API-002: Daily Summary API (Backend)
+### API-002: Daily Summary API (Vertical Slice)
 
-**Priority:** P0 | **Platform:** Backend | **🔴 BLOCKED: Backend team needed**
+**Priority:** P0 | **Platform:** ALL | **Type:** Vertical Slice
+
+> **Addendum Point 3:** API tickets are vertical slices, not "blocked by backend team"
 
 #### Intent
-Backend API to return today's sales summary aggregated from transactions.
+Complete end-to-end daily summary feature: DB aggregation → API → VM deploy → POS widget → Dashboard Home → SuperAdmin probe
 
 #### Contract
 ```
-GET /api/v1/pos/daily-summary
-  ?date=2026-01-19   (optional, defaults to today)
-Authorization: Bearer <device-token>
+GET /api/v1/pos/daily-summary?date=2026-01-19
+X-Device-Token: tok_...
 
 Response:
 {
@@ -596,9 +985,9 @@ Response:
 #### DB
 Uses existing `transactions` and `transaction_items` tables:
 ```sql
--- Aggregation query
+-- Aggregation query (store-scoped, timezone-aware)
 SELECT
-  DATE(t.created_at) as date,
+  DATE(CONVERT_TZ(t.created_at, 'UTC', store.timezone)) as date,
   SUM(t.total_amount) as totalSales,
   COUNT(DISTINCT t.id) as totalBills,
   AVG(t.total_amount) as averageBillValue,
@@ -607,54 +996,101 @@ SELECT
   SUM(ti.quantity) as itemsSold
 FROM transactions t
 LEFT JOIN transaction_items ti ON ti.transaction_id = t.id
-WHERE t.store_id = ? AND DATE(t.created_at) = ?
-GROUP BY DATE(t.created_at);
-
--- Top selling items
-SELECT
-  ti.product_id, p.name as productName,
-  SUM(ti.quantity) as quantitySold,
-  SUM(ti.total_amount) as totalAmount
-FROM transaction_items ti
-JOIN products p ON p.id = ti.product_id
-JOIN transactions t ON t.id = ti.transaction_id
-WHERE t.store_id = ? AND DATE(t.created_at) = ?
-GROUP BY ti.product_id
-ORDER BY quantitySold DESC
-LIMIT 5;
+WHERE t.store_id = ? AND DATE(CONVERT_TZ(t.created_at, 'UTC', ?)) = ?
+GROUP BY DATE(CONVERT_TZ(t.created_at, 'UTC', store.timezone));
 ```
 
-#### Sub-tickets
+#### Vertical Slice Sub-tickets
 
-| ID | Description | Status | Notes |
+| ID | Description | Status | Layer |
 |----|-------------|--------|-------|
-| API-002a | GET /api/v1/pos/daily-summary | ⬜ | Backend team |
-| API-002b | Aggregate sales from transactions | ⬜ | |
-| API-002c | Payment breakdown (cash/UPI) | ⬜ | |
-| API-002d | Top selling items query | ⬜ | |
-| API-002e | Cache for performance (Redis) | ⬜ | Optional |
+| API-002a | GET /api/v1/pos/daily-summary route | ⬜ | API |
+| API-002b | Aggregation query (store-scoped) | ⬜ | DB |
+| API-002c | Timezone handling (store.timezone) | ⬜ | API |
+| API-002d | Empty store returns zeros | ⬜ | API |
+| API-002e | Deploy to VM | ⬜ | Deploy |
+| API-002f | POS widget consumes (MenuScreen) | ⬜ | POS |
+| API-002g | Dashboard Home consumes (WEB-002) | ⬜ | Web |
+| API-002h | SuperAdmin probe verifies | ⬜ | Admin |
+| API-002i | POS widget matches Dashboard (SYNC-004) | ⬜ | Sync |
 
-#### Verification
-- [ ] VM curl: `curl -H "Authorization: Bearer <token>" http://34.14.220.171:3009/api/v1/pos/daily-summary`
-- [ ] Response matches contract above
-- [ ] Empty store returns zeros (not error)
+#### Steps (Vertical Slice)
+1. [ ] **API:** Implement GET endpoint with aggregation query
+2. [ ] **Timezone:** Use store timezone (Asia/Kolkata for DEMO001)
+3. [ ] **Empty:** Return zeros for empty store, not error
+4. [ ] **Deploy:** Deploy to VM, verify with curl using real X-Device-Token
+5. [ ] **POS:** MenuScreen widget displays summary via dailySummaryApi.ts
+6. [ ] **Web:** Dashboard Home shows same numbers (WEB-002)
+7. [ ] **Admin:** SuperAdmin probe can fetch for DEMO001
+8. [ ] **Sync:** Verify POS widget = Dashboard report for same date
+
+#### Verification (4-Column Readiness)
+| Check | Status |
+|-------|--------|
+| Exists? | ⬜ |
+| Auth OK? (X-Device-Token) | ⬜ |
+| Contract OK? | ⬜ |
+| Isolation OK? | ⬜ |
 
 #### Rollback
 Remove endpoint from routes.
 
+#### Precision Rules (API-002)
+
+**Payment Method Canonical Keys:**
+- Response `paymentBreakdown` MUST include ALL keys always present:
+  ```json
+  "paymentBreakdown": {
+    "cash": 820000,
+    "upi": 425000,
+    "card": 0,
+    "credit": 0
+  }
+  ```
+- Even if no transactions, all keys present with value `0`
+
+**Top Items Join Definition:**
+- MUST return `productId` + `productName` (name resolved server-side)
+- Never require client to look up product name separately
+- Limit: 5 items by default, configurable via `?topItemsLimit=N`
+
+**Date Parameter:**
+- Contract MUST support `?date=YYYY-MM-DD` for historical queries
+- Default (no param): today in store timezone
+- Admin probe can verify any historical day
+
+**Zero-Store Response:**
+- Empty store returns full response with zeros (not error, not 404):
+  ```json
+  {
+    "success": true,
+    "data": {
+      "date": "2026-01-19",
+      "totalSales": 0,
+      "totalBills": 0,
+      "averageBillValue": 0,
+      "paymentBreakdown": { "cash": 0, "upi": 0, "card": 0, "credit": 0 },
+      "itemsSold": 0,
+      "topSellingItems": []
+    }
+  }
+  ```
+
 ---
 
-### API-003: Stock-In API (Backend)
+### API-003: Stock-In API (Vertical Slice)
 
-**Priority:** P0 | **Platform:** Backend | **🔴 BLOCKED: Backend team needed**
+**Priority:** P0 | **Platform:** ALL | **Type:** Vertical Slice
+
+> **Addendum Point 3:** API tickets are vertical slices, not "blocked by backend team"
 
 #### Intent
-Backend API to record stock received from suppliers (counter purchase ledger entry).
+Complete end-to-end stock-in feature: DB → API → VM deploy → POS Quick Purchase submits → Dashboard sees history → SuperAdmin verifies ledger
 
 #### Contract
 ```
 POST /api/v1/pos/stock-in
-Authorization: Bearer <device-token>
+X-Device-Token: tok_...
 Content-Type: application/json
 
 Request:
@@ -685,12 +1121,24 @@ Response:
     "createdAt": "2026-01-19T10:30:00Z"
   }
 }
+
+GET /api/v1/pos/stock-in (history)
+X-Device-Token: tok_...
+
+Response:
+{
+  "success": true,
+  "data": {
+    "entries": [...]
+  },
+  "pagination": { "total": 10, "limit": 20, "offset": 0 }
+}
 ```
 
 #### DB
 ```sql
--- stock_in_ledger table
-CREATE TABLE stock_in_ledger (
+-- stock_in_ledger table (production-safe, idempotent)
+CREATE TABLE IF NOT EXISTS stock_in_ledger (
   id VARCHAR(36) PRIMARY KEY,
   store_id VARCHAR(36) NOT NULL,
   supplier_id VARCHAR(36),
@@ -706,7 +1154,7 @@ CREATE TABLE stock_in_ledger (
 );
 
 -- stock_in_items table
-CREATE TABLE stock_in_items (
+CREATE TABLE IF NOT EXISTS stock_in_items (
   id VARCHAR(36) PRIMARY KEY,
   ledger_id VARCHAR(36) NOT NULL,
   barcode VARCHAR(50),
@@ -720,21 +1168,38 @@ CREATE TABLE stock_in_items (
 );
 ```
 
-#### Sub-tickets
+#### Vertical Slice Sub-tickets
 
-| ID | Description | Status | Notes |
+| ID | Description | Status | Layer |
 |----|-------------|--------|-------|
-| API-003a | POST /api/v1/pos/stock-in | ⬜ | Backend team |
-| API-003b | Create stock_in_ledger table | ⬜ | |
-| API-003c | Create stock_in_items table | ⬜ | |
-| API-003d | Update product stock on submit | ⬜ | Increment stock_qty |
-| API-003e | GET /api/v1/pos/stock-in (history) | ⬜ | |
+| API-003a | DB migration (idempotent) | ⬜ | DB |
+| API-003b | POST /api/v1/pos/stock-in route | ⬜ | API |
+| API-003c | Increment store_products.stock_qty via ledger event | ⬜ | API |
+| API-003d | GET /api/v1/pos/stock-in (history) route | ⬜ | API |
+| API-003e | Deploy to VM | ⬜ | Deploy |
+| API-003f | POS Quick Purchase submits (remove DEMO_MODE) | ⬜ | POS |
+| API-003g | Dashboard sees stock-in history (future) | ⬜ | Web |
+| API-003h | SuperAdmin probe verifies ledger entries | ⬜ | Admin |
+| API-003i | Store isolation test | ⬜ | Security |
 
-#### Verification
-- [ ] VM curl POST with sample payload
-- [ ] Response: `{ success: true, data: { ledgerEntryId: "..." } }`
-- [ ] Product stock_qty incremented
-- [ ] GET history returns entry
+#### Steps (Vertical Slice)
+1. [ ] **DB:** Run idempotent migration on VM
+2. [ ] **API:** Implement POST endpoint that creates ledger + items + increments stock
+3. [ ] **API:** Implement GET history endpoint (store-scoped)
+4. [ ] **Deploy:** Deploy to VM, verify with curl using real X-Device-Token
+5. [ ] **POS:** Remove `DEMO_MODE = true` from stockInApi.ts:66, test Quick Purchase submit
+6. [ ] **POS:** Set `STOCK_IN_API_AVAILABLE = true` in PurchaseScreen.tsx:96
+7. [ ] **Web:** Dashboard stock-in history (future, not Phase-1)
+8. [ ] **Admin:** SuperAdmin probe can verify ledger entries
+9. [ ] **Isolation:** Verify Store A token cannot create stock-in for Store B
+
+#### Verification (4-Column Readiness)
+| Check | Status |
+|-------|--------|
+| Exists? | ⬜ |
+| Auth OK? (X-Device-Token) | ⬜ |
+| Contract OK? | ⬜ |
+| Isolation OK? | ⬜ |
 
 #### Rollback
 ```sql
@@ -742,7 +1207,52 @@ DROP TABLE IF EXISTS stock_in_items;
 DROP TABLE IF EXISTS stock_in_ledger;
 ```
 
-**POS Blocked:** `stockInApi.ts` has `DEMO_MODE = true` (line 66). Cannot test real flow until backend exists.
+**POS Gating:**
+- `stockInApi.ts` has `DEMO_MODE = true` (line 66) — remove when API deployed
+- `PurchaseScreen.tsx` has `STOCK_IN_API_AVAILABLE = false` (line 96) — set true when API deployed
+
+#### Precision Rules (API-003)
+
+**Mandatory 2-Step Model (Future-Safe):**
+- Phase-1 MVP: single submit OK, but schema supports states: `pending`, `completed`, `cancelled`
+- Future: support draft → submit → complete flow
+- `status` field always present in response
+
+**Inventory Mutation Rule:**
+- Stock update computed **server-side** only:
+  ```sql
+  UPDATE store_products
+  SET current_stock = current_stock + :quantity,
+      last_buy_price = :buyPrice,
+      updated_at = NOW()
+  WHERE store_id = :storeId AND barcode = :barcode;
+  ```
+- NEVER accept `stock = X` from client (only deltas via events)
+
+**Idempotency (CRITICAL):**
+- MUST be idempotent (see Global Rule B)
+- Without idempotency, POS retries will **double stock**
+- Same `Idempotency-Key` returns same response, no duplicate ledger entry
+
+**Validation Rules:**
+| Field | Rule | Error Code |
+|-------|------|------------|
+| `quantity` | Must be > 0 | `INVALID_QUANTITY` |
+| `barcode` | Must be non-empty | `MISSING_BARCODE` |
+| `buyPrice` | Must be >= 0 | `INVALID_PRICE` |
+| `sellPrice` | Must be >= 0 | `INVALID_PRICE` |
+| `isNewProduct` | If true, server creates/attaches product OR rejects with `PRODUCT_NOT_FOUND` | |
+
+**History Endpoint:**
+- `GET /api/v1/pos/stock-in` MUST be store-scoped and paginated
+- Response: `{ entries: [...], pagination: { total, limit, offset } }`
+- Sort: `created_at DESC` (newest first)
+
+**New Product Handling:**
+- If `isNewProduct: true` and product doesn't exist in store catalog:
+  - Option A: Auto-create store product from barcode (if global product exists)
+  - Option B: Reject with `PRODUCT_NOT_FOUND` error (safer for Phase-1)
+- Document which option is implemented
 
 ---
 
@@ -751,43 +1261,76 @@ DROP TABLE IF EXISTS stock_in_ledger;
 **Priority:** P0 | **Platform:** Web
 
 #### Intent
-Login page with phone + OTP, dashboard shell with sidebar navigation, JWT handling, and logout.
+Login page with phone + OTP via Firebase Auth, dashboard shell with sidebar navigation, custom JWT handling, and logout.
 
-#### Contract
+> **Addendum Point 7:** This ticket reflects Firebase phone-OTP auth already deployed (not custom OTP endpoints).
+
+#### Contract (Firebase Auth Flow)
 ```
-POST /api/v1/retailers/auth/send-otp
+1. Client-side: Firebase Auth signInWithPhoneNumber
+   - Firebase handles OTP send/verify directly
+   - Returns Firebase ID token on success
+
+2. Backend: Exchange Firebase token for custom JWT
+POST /api/v1/retailers/auth/firebase-login
+Authorization: Bearer <firebase-id-token>
 { "phone": "9876543210" }
-→ { "success": true, "message": "OTP sent" }
 
-POST /api/v1/retailers/auth/verify-otp
-{ "phone": "9876543210", "otp": "123456" }
-→ { "success": true, "data": { "token": "jwt...", "retailer": {...} } }
+Response:
+{
+  "success": true,
+  "data": {
+    "token": "custom-jwt...",
+    "retailer": {
+      "id": "ret_123",
+      "name": "Sharma Store",
+      "phone": "9876543210",
+      "stores": [{ "id": "store_1", "storeCode": "DEMO001", "name": "Sharma Mart" }]
+    }
+  }
+}
 
+3. Authenticated requests use custom JWT
 GET /api/v1/retailers/me
-Authorization: Bearer <jwt>
+Authorization: Bearer <custom-jwt>
 → { "success": true, "data": { "id": "...", "name": "...", "stores": [...] } }
 ```
 
+#### Auth Flow Diagram
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│ User enters phone → Firebase sends OTP → User enters OTP            │
+│ → Firebase verifies → Firebase ID token returned                    │
+│ → POST /firebase-login with Firebase token                          │
+│ → Backend verifies Firebase token, finds/creates retailer           │
+│ → Returns custom JWT + retailer data                                │
+│ → Dashboard stores JWT, navigates to Home                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
 #### DB
-Uses existing `retailers` and `otp_codes` tables.
+Uses existing `retailers` table. Firebase handles OTP, no `otp_codes` table needed.
 
 #### Sub-tickets
 
 | ID | Description | Status | Notes |
 |----|-------------|--------|-------|
-| WEB-001a | Login page (phone + OTP) | ⬜ | |
-| WEB-001b | Dashboard shell/layout | ⬜ | |
-| WEB-001c | Sidebar navigation | ⬜ | |
-| WEB-001d | Auth context & JWT handling | ⬜ | |
-| WEB-001e | Logout functionality | ⬜ | |
+| WEB-001a | Login page (phone + Firebase OTP) | ⬜ | Firebase Auth SDK |
+| WEB-001b | Firebase → custom JWT exchange | ⬜ | Backend POST /firebase-login |
+| WEB-001c | Dashboard shell/layout | ⬜ | |
+| WEB-001d | Sidebar navigation | ⬜ | |
+| WEB-001e | Auth context & JWT handling | ⬜ | Custom JWT, not Firebase token |
+| WEB-001f | Logout functionality | ⬜ | Clear JWT + Firebase signOut |
 
 #### Steps
 1. [ ] Create `retailer-admin/` Vite + React + Tailwind project
-2. [ ] Create LoginPage with phone input + OTP input
-3. [ ] Call /auth/send-otp and /auth/verify-otp
-4. [ ] Store JWT in localStorage + AuthContext
-5. [ ] Create DashboardLayout with sidebar
-6. [ ] Add logout that clears JWT
+2. [ ] Initialize Firebase Auth with phone provider
+3. [ ] Create LoginPage with phone input + Firebase OTP flow
+4. [ ] Implement RecaptchaVerifier for phone auth
+5. [ ] On Firebase success, call POST /firebase-login with ID token
+6. [ ] Store custom JWT in localStorage + AuthContext
+7. [ ] Create DashboardLayout with sidebar
+8. [ ] Add logout that clears JWT + calls Firebase signOut
 
 #### Verification
 - [ ] Dashboard UI: Can login with phone + OTP
@@ -797,6 +1340,29 @@ Uses existing `retailers` and `otp_codes` tables.
 
 #### Rollback
 Delete `retailer-admin/` folder.
+
+#### Precision Rules (WEB-001)
+
+**Store Scope Lock:**
+- After login, if retailer has multiple stores: show store selector
+- Once selected, ALL API calls include store context server-side
+- Client does NOT pass `storeId` to fetch data — derived from JWT + selected store
+
+**JWT Storage Rule:**
+- Store custom JWT in: memory (primary) + localStorage (persistence)
+- On page reload: restore from localStorage → verify with `/api/v1/retailers/me`
+- If expired/invalid: clear and redirect to login
+- Logout: clear localStorage + call Firebase signOut
+
+**Header Identity (MANDATORY):**
+- Top bar MUST always show: `[StoreCode] StoreName`
+- Example: `[DEMO001] Sharma Mart`
+- Helps ops verify which store context is active
+
+**Session Timeout:**
+- JWT expiry: 24h (configurable)
+- Show warning 5 min before expiry: "Session expiring, click to refresh"
+- On expiry: redirect to login with message
 
 ---
 
@@ -840,6 +1406,26 @@ GET /api/v1/retailers/dashboard/overview
 #### Rollback
 Remove HomePage component.
 
+#### Precision Rules (WEB-002)
+
+**Must Consume Same API-002:**
+- Do NOT build separate "overview" endpoint in Phase-1
+- Use `/api/v1/pos/daily-summary` via JWT route (or retailer equivalent)
+- Same aggregation logic for POS widget and Dashboard Home
+
+**Error Handling:**
+- If API down: show "Backend not ready" banner + Retry button
+- Still render shell/sidebar (don't crash entire page)
+- Skeleton cards while loading
+
+**Data Consistency:**
+- Values on Dashboard Home MUST match POS widget for same store/date
+- Test: curl daily-summary, check POS widget, check Dashboard Home — all match
+
+**Refresh Policy:**
+- Auto-refresh: every 5 minutes when tab is focused
+- Manual refresh: pull-to-refresh or refresh button
+
 ---
 
 ### WEB-003: Suppliers CRUD Page
@@ -877,6 +1463,29 @@ DELETE /api/v1/retailers/suppliers/:id
 
 #### Rollback
 Remove SuppliersPage component.
+
+#### Precision Rules (WEB-003)
+
+**Hard Enforcement (Backend):**
+- Backend MUST reject edits to `source=supermandi` suppliers
+- Even if malicious UI tries `PUT /suppliers/:id` on supermandi supplier → 403 Forbidden
+- Error: `{ "code": "FORBIDDEN", "message": "Cannot edit SuperMandi supplier" }`
+
+**Immediate Reflection to POS:**
+- After creating/editing/deleting supplier on Dashboard:
+  - POS suppliers list shows change on next refresh
+  - Define refresh policy: on Purchase tab open OR pull-to-refresh
+  - No real-time sync required (polling is OK)
+
+**UI Cues:**
+- SuperMandi suppliers: show "SuperMandi" badge + disable Edit/Delete buttons
+- Own suppliers: show "Own" badge or no badge + enable Edit/Delete
+- Sort: own suppliers first, then supermandi
+
+**Validation:**
+- Supplier name: required, max 255 chars
+- Phone: optional, validate format if provided
+- GSTIN: optional, validate format if provided (15-char alphanumeric)
 
 ---
 
@@ -1137,6 +1746,23 @@ None in POS.
 #### Rollback
 Revert gating; but do NOT revert to mock SKUs for go-live builds.
 
+#### Precision Rules (UI-005)
+
+**When `LIVE_SUPPLIERS_ENABLED = false`:**
+- Show clear blocker message: "Supplier Catalog Coming Soon"
+- Show required endpoints: "Requires: /suppliers/:id/products OR /products/search?supplierId="
+- Add **"Retry API Check"** button that triggers lightweight probe call
+  - On success: auto-enable and show SKU grid
+  - On failure: keep disabled, show error
+
+**When Enabled but API Returns Empty:**
+- Show: "No products found for this supplier"
+- NOT the same as "Coming Soon" — this means API works but catalog is empty
+
+**Telemetry (for debugging):**
+- Log on supplier select: `{ supplierId, timestamp }`
+- Log on API call: `{ supplierId, endpoint, status, count, latencyMs }`
+
 ---
 
 ### UI-006: POS "Stock In" Flow Reveal + Gating
@@ -1161,7 +1787,7 @@ None in POS; backend in API-003.
 | ID | Description | Status | Notes |
 |----|-------------|--------|-------|
 | UI-006a | Add visible entry: Purchase tab → "Stock In History" | ✅ | Menu → Stock Management → Stock Inward (existing) |
-| UI-006b | Show disabled button + tooltip if API-003 not deployed | ✅ | "Stock In (Demo)" button + warning alert |
+| UI-006b | Show disabled button + tooltip if API-003 not deployed | ✅ | "Stock In (Draft)" button + warning alert |
 | UI-006c | Enable flow when API exists | ✅ | STOCK_IN_API_AVAILABLE flag gates behavior |
 | UI-006d | Remove DEMO_MODE from stockInApi.ts when ready | ⬜ | Line 66 - blocked by API-003 |
 
@@ -1170,11 +1796,13 @@ None in POS; backend in API-003.
 **File:** `src/screens/PurchaseScreen.tsx`
 **Changes:**
 - Added `STOCK_IN_API_AVAILABLE = false` flag (line 96)
-- Stock In button shows "(Demo)" suffix when API unavailable
-- Button styled with warning color when in demo mode
+- Stock In button shows "(Draft)" suffix when API unavailable
+- Button styled with warning color when in draft mode
 - Alert warns user: "Backend Pending - Stock In API is not deployed yet"
-- User can still save locally but with clear "Demo Mode" messaging
-- "Demo Mode" indicator shown below item count
+- Items remain **draft-only** until submitted; no local persistence
+- "Draft" badge shown below item count (not "Demo Mode")
+
+> **Addendum Point 6:** No "demo local save" — draft-only behavior means scans are draft until submitted. Button disabled + clear blocker reason. No promise of local persistence.
 
 #### Steps
 1. [x] Add a visible entry:
@@ -1191,6 +1819,31 @@ None in POS; backend in API-003.
 
 #### Rollback
 Revert UI reveal; keep backend.
+
+#### Precision Rules (UI-006)
+
+**Draft Behavior (When API Missing):**
+- "Draft only" SHOULD NOT persist across app restart
+- Draft items are session-only (cleared on app close)
+- Reason: avoid false trust that data is "saved somewhere"
+- If explicit "Draft saved locally" feature added later, must be clearly communicated
+
+**Auto-Switch When API Becomes Available:**
+- UI automatically switches from Draft → Submit mode
+- No manual toggle needed
+- Detection: on app start or Purchase tab focus, probe API-003
+- If probe succeeds: set `STOCK_IN_API_AVAILABLE = true` and remove "(Draft)" suffix
+
+**User Messaging:**
+| State | Button Text | Behavior |
+|-------|-------------|----------|
+| API missing | "Stock In (Draft)" | Warning alert on tap, draft-only |
+| API available | "Stock In" | Normal submit flow |
+
+**Clear Blocker Reason:**
+- When disabled, show: "Stock In API not deployed yet"
+- Show "Retry" button to re-probe
+- Link to ticket: "See API-003 for status"
 
 ---
 
@@ -1868,15 +2521,16 @@ Full sales report with period filter, stats, payment breakdown chart, top items 
 
 ## Phase 1 Summary
 
-### Feature Tickets (9)
+### Feature Tickets (10)
 | Ticket | Platform | Status | Blocker |
 |--------|----------|--------|---------|
 | POS-001 | POS | 🧪 a-f done, g-j pending | VM test + state machine |
 | POS-002 | POS | ⬜ | API-002 |
 | POS-003 | POS | 🟡 | None (filters pending) |
-| API-001 | Backend | 🔴 | Backend team |
-| API-002 | Backend | 🔴 | Backend team |
-| API-003 | Backend | 🔴 | Backend team |
+| API-000 | Admin | ⬜ | None (infrastructure) |
+| API-001 | Backend | 🔴 | Vertical slice (not "blocked") |
+| API-002 | Backend | 🔴 | Vertical slice (not "blocked") |
+| API-003 | Backend | 🔴 | Vertical slice (not "blocked") |
 | WEB-001 | Web | ⬜ | None |
 | WEB-002 | Web | ⬜ | API-002 |
 | WEB-003 | Web | ⬜ | API-001 |
@@ -1888,8 +2542,8 @@ Full sales report with period filter, stats, payment breakdown chart, top items 
 | UI-002 | Web | ⬜ | Dashboard reachable from public URL |
 | UI-003 | Web | ⬜ | Sidebar reveals Suppliers + Home |
 | UI-004 | Admin | ⬜ | SuperAdmin probe panel |
-| UI-005 | POS | ⬜ | Live Suppliers real reveal rule |
-| UI-006 | POS | ⬜ | Stock In flow gating |
+| UI-005 | POS | 🧪 | Live Suppliers real reveal rule (implemented, needs demo store verification) |
+| UI-006 | POS | 🧪 | Stock In flow gating (implemented, needs demo store verification) |
 
 ### SYNC Tickets (5) - Go-Live Correctness
 | Ticket | Platform | Status | Purpose |
@@ -1951,14 +2605,129 @@ Full sales report with period filter, stats, payment breakdown chart, top items 
 
 ---
 
-## Next Steps
+## Phase-1 Go/No-Go Gate
 
-**Before starting any ticket:**
-1. Test backend endpoints with curl
-2. Determine which APIs exist vs which need to be built
-3. Update ticket status based on backend availability
-4. Implement UI reveal tickets (UI-001 to UI-006) to enable proper testing
-5. Implement SYNC tickets (SYNC-001 to SYNC-004) for go-live correctness
+> **Phase-1 is currently API-blocked, not UI-blocked.**
+> UI-005/UI-006 are 🧪 (implemented, awaiting demo store verification).
+> Backend work (API-001, API-002, API-003) is the critical path.
+
+---
+
+### ✅ Current Readiness Verdict (Phase-1)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **POS UI (UI-005/006)** | 🧪 Ready for testing | Implemented, needs demo store verification |
+| **API-001 (Suppliers)** | 🔴 NOT READY | Backend may not exist or contract unknown |
+| **API-002 (Daily Summary)** | 🔴 NOT READY | Backend may not exist or contract unknown |
+| **API-003 (Stock In)** | 🔴 NOT READY | DEMO_MODE=true, backend untested |
+| **SYNC-001 (Product refresh)** | ⬜ NOT STARTED | Pre-requisite for supplier products |
+| **WEB-001 (Firebase Auth)** | ✅ READY | Firebase deployed, exchange flow documented |
+| **API-000 (Probe Endpoint)** | ⬜ NOT STARTED | Infrastructure ticket for readiness checking |
+
+**Summary:**
+- ✅ **READY:** UI-005, UI-006, WEB-001 (Firebase deployed)
+- 🔴 **NOT READY:** API-001, API-002, API-003 (backend unknown/untested)
+- ⬜ **NOT STARTED:** SYNC-001, API-000, WEB-002, WEB-003
+
+---
+
+### Step 0 — API Reality Check (MANDATORY before coding)
+
+**Time budget: 20 minutes max**
+
+Run these curl commands against the backend VM (`34.14.220.171:3000`) to determine actual API state:
+
+```bash
+# 1. Get a valid device token (requires store enrollment)
+DEVICE_TOKEN="<from-secure-store-after-enrollment>"
+
+# 2. Test Suppliers endpoint (API-001)
+curl -v -X GET "http://34.14.220.171:3000/api/v1/pos/suppliers" \
+  -H "x-device-token: $DEVICE_TOKEN" \
+  -H "Accept: application/json"
+
+# 3. Test Supplier Products (API-001 sub-route)
+curl -v -X GET "http://34.14.220.171:3000/api/v1/pos/suppliers/1/products" \
+  -H "x-device-token: $DEVICE_TOKEN" \
+  -H "Accept: application/json"
+
+# 4. Test Daily Summary (API-002)
+curl -v -X GET "http://34.14.220.171:3000/api/v1/pos/daily-summary" \
+  -H "x-device-token: $DEVICE_TOKEN" \
+  -H "Accept: application/json"
+
+# 5. Test Stock In POST (API-003)
+curl -v -X POST "http://34.14.220.171:3000/api/v1/pos/stock-in" \
+  -H "x-device-token: $DEVICE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: test-$(date +%s)" \
+  -d '{"supplierId":1,"items":[{"sku":"TEST001","qty":1,"costPrice":100}]}'
+
+# 6. Test Stock In GET (API-003 history)
+curl -v -X GET "http://34.14.220.171:3000/api/v1/pos/stock-in?date=2026-01-19" \
+  -H "x-device-token: $DEVICE_TOKEN" \
+  -H "Accept: application/json"
+```
+
+**For each endpoint, record:**
+| Endpoint | Exists (2xx/404) | Auth OK (no 401) | Contract OK | Isolation OK |
+|----------|------------------|------------------|-------------|--------------|
+| GET /pos/suppliers | ❓ | ❓ | ❓ | ❓ |
+| GET /pos/suppliers/:id/products | ❓ | ❓ | ❓ | ❓ |
+| GET /pos/daily-summary | ❓ | ❓ | ❓ | ❓ |
+| POST /pos/stock-in | ❓ | ❓ | ❓ | ❓ |
+| GET /pos/stock-in | ❓ | ❓ | ❓ | ❓ |
+
+---
+
+### 🎯 Execution Order (Phase-1)
+
+**Correct order prioritizes backend work (critical path):**
+
+```
+SYNC-001 (Product refresh)     ← Foundation for supplier products
+    ↓
+API-001 (Suppliers + Products) ← Unblocks UI-005 real data
+    ↓
+API-002 (Daily Summary)        ← Unblocks MenuScreen metrics
+    ↓
+API-003 (Stock In)             ← Unblocks UI-006 real submission
+    ↓
+Supplier Products Integration  ← Connect UI-005 to real API
+    ↓
+WEB-002/003 (Dashboard)        ← Parallel after APIs exist
+```
+
+**Do NOT start:**
+- WEB-002/003 until API-001/002/003 are ✅
+- POS integration until curl tests pass all 4 columns
+
+---
+
+### Gate + Execute
+
+**Gate Criteria (must pass before executing Phase-1 tickets):**
+
+1. ✅ API Reality Check completed (curl tests above)
+2. ✅ Backend Endpoints Status table updated with actual results
+3. ✅ Device token available for demo store
+4. ✅ Clear understanding of which endpoints exist vs need building
+
+**Execute Plan:**
+
+| Priority | Ticket | Condition | Action |
+|----------|--------|-----------|--------|
+| P0 | API Reality Check | Always | Run curl tests, update status table |
+| P1 | SYNC-001 | If products stale | Implement product refresh before supplier work |
+| P2 | API-001 | If endpoints exist | Wire POS to real suppliers API |
+| P2 | API-001 | If endpoints missing | Document required backend routes |
+| P3 | API-002 | If endpoint exists | Wire MenuScreen to real daily summary |
+| P4 | API-003 | If POST endpoint exists | Remove DEMO_MODE, wire to real API |
+| P5 | UI-005/006 | APIs ready | Verify on demo store, mark ✅ |
+| P6 | WEB-002/003 | APIs ✅ | Implement Dashboard features |
+
+**Next Action:** Run API Reality Check → Update this document → Proceed based on results
 
 ---
 
@@ -1971,4 +2740,4 @@ Full sales report with period filter, stats, payment breakdown chart, top items 
 
 ---
 
-*Last Updated: 2026-01-19 (Platform responsibilities + Sync contract + SYNC tickets added)*
+*Last Updated: 2026-01-19 (Go/No-Go Gate + API Reality Check + Execution Order added)*
