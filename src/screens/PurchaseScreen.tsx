@@ -80,20 +80,20 @@ export interface PurchaseScreenProps {
 }
 
 // =============================================================================
-// MOCK DATA
+// FEATURE FLAGS - UI-005: Live Suppliers Real Reveal Rule
 // =============================================================================
 
-const MOCK_SKUS: SKUItem[] = [
-  { id: "1", sku: "TUR-DAL-1KG", productName: "Toor Dal Premium", packSize: "1 kg", price: 142, moq: 10, supplierName: "Agro Fresh", inStock: true },
-  { id: "2", sku: "RCE-BAS-5KG", productName: "Basmati Rice", packSize: "5 kg", price: 410, moq: 15, supplierName: "RiceKing", inStock: true },
-  { id: "3", sku: "OIL-SUN-1L", productName: "Sunflower Oil", packSize: "1 L", price: 120, moq: 24, supplierName: "OilWorld", inStock: true },
-  { id: "4", sku: "SUG-WHT-1KG", productName: "White Sugar", packSize: "1 kg", price: 42, moq: 25, supplierName: "Agro Fresh", inStock: true },
-  { id: "5", sku: "ATA-CHK-5KG", productName: "Chakki Atta", packSize: "5 kg", price: 248, moq: 10, supplierName: "KisanMart", inStock: true },
-  { id: "6", sku: "SAL-IOD-1KG", productName: "Iodised Salt", packSize: "1 kg", price: 20, moq: 50, supplierName: "Agro Fresh", inStock: true },
-  { id: "7", sku: "TEA-TAT-250", productName: "Tata Tea Gold", packSize: "250 gm", price: 135, moq: 12, supplierName: "BevMart", inStock: true },
-  { id: "8", sku: "MLK-AMU-500", productName: "Amul Milk", packSize: "500 ml", price: 28, moq: 20, supplierName: "DairyFresh", inStock: false },
-  { id: "9", sku: "BIS-PAR-200", productName: "Parle-G Biscuit", packSize: "200 gm", price: 22, moq: 24, supplierName: "SnackHub", inStock: true },
-];
+// UI-005: Set to true ONLY when real supplier products API exists
+// Endpoints required:
+// - GET /api/v1/pos/suppliers/:id/products OR
+// - GET /api/v1/pos/products/search?supplierId=...
+// Currently: Both return 404, so this must be false
+const LIVE_SUPPLIERS_ENABLED = false;
+
+// UI-006: Stock In API availability
+// Set to true ONLY when POST /api/v1/pos/stock-in returns 401 (auth required) not 404
+// Currently: Returns 404, so this must be false
+const STOCK_IN_API_AVAILABLE = false;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const NUM_COLUMNS = 3;
@@ -217,12 +217,9 @@ export default function PurchaseScreen({
     }
   }, [scannedBarcode, markUserActive, onBarcodeProcessed]);
 
-  // Filter SKUs
-  const filteredSKUs = MOCK_SKUS.filter((sku) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return sku.productName.toLowerCase().includes(q) || sku.sku.toLowerCase().includes(q);
-  });
+  // UI-005: Live Suppliers - only show real data, never mock
+  // When LIVE_SUPPLIERS_ENABLED is false, filteredSKUs will be empty array
+  const filteredSKUs: SKUItem[] = LIVE_SUPPLIERS_ENABLED ? [] : []; // TODO: Fetch from real API when enabled
 
   // =============================================================================
   // QUICK PURCHASE HANDLERS
@@ -239,6 +236,25 @@ export default function PurchaseScreen({
   }, []);
 
   const handleQuickSubmit = useCallback(async () => {
+    // UI-006: Gate Stock In when API not available
+    if (!STOCK_IN_API_AVAILABLE) {
+      Alert.alert(
+        "Backend Pending",
+        "Stock In API is not deployed yet. Your data will be saved locally but not synced to backend.\n\nBlocked by: API-003",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Save Locally (Demo)",
+            onPress: () => proceedWithSubmit(),
+          },
+        ]
+      );
+      return;
+    }
+    proceedWithSubmit();
+  }, []);
+
+  const proceedWithSubmit = useCallback(async () => {
     if (quickItems.length === 0) {
       Alert.alert("No Items", "Scan items to add.");
       return;
@@ -263,7 +279,10 @@ export default function PurchaseScreen({
         totalAmount: quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0),
       };
       const result = await submitStockIn(payload);
-      Alert.alert("Done", `${result.itemsProcessed} items added to ledger.`);
+      Alert.alert(
+        STOCK_IN_API_AVAILABLE ? "Done" : "Demo Mode",
+        `${result.itemsProcessed} items ${STOCK_IN_API_AVAILABLE ? "added to ledger" : "saved locally (not synced)"}.`
+      );
       setQuickItems([]);
     } catch (error) {
       Alert.alert("Error", "Failed to submit. Try again.");
@@ -547,42 +566,90 @@ export default function PurchaseScreen({
             <View style={styles.actionSummary}>
               <Text style={styles.actionText}>{quickItems.length} items</Text>
               <Text style={styles.actionTotal}>{formatMoney(quickTotal)}</Text>
+              {/* UI-006: Show demo mode indicator */}
+              {!STOCK_IN_API_AVAILABLE && (
+                <Text style={styles.demoModeIndicator}>Demo Mode</Text>
+              )}
             </View>
             <Pressable
-              style={[styles.actionBtn, submitting && styles.actionBtnDisabled]}
+              style={[
+                styles.actionBtn,
+                submitting && styles.actionBtnDisabled,
+                !STOCK_IN_API_AVAILABLE && styles.actionBtnDemo,
+              ]}
               onPress={handleQuickSubmit}
               disabled={submitting}
             >
-              <Text style={styles.actionBtnText}>Stock In</Text>
+              <Text style={styles.actionBtnText}>
+                {STOCK_IN_API_AVAILABLE ? "Stock In" : "Stock In (Demo)"}
+              </Text>
             </Pressable>
           </View>
         </View>
       ) : (
         // Live Suppliers Content - SKU Grid directly (no separate search bar)
         <View style={styles.suppliersContent}>
-          {/* SKU Grid */}
-          <FlatList
-            key={`suppliers-grid-${NUM_COLUMNS}`}
-            data={filteredSKUs}
-            renderItem={renderSKU}
-            keyExtractor={(item) => item.id}
-            numColumns={NUM_COLUMNS}
-            columnWrapperStyle={styles.skuRow}
-            contentContainerStyle={[styles.skuGrid, { paddingBottom: insets.bottom + (cartQty > 0 ? 90 : 20) }]}
-            showsVerticalScrollIndicator={false}
-          />
-
-          {/* Cart Action Bar */}
-          {cartQty > 0 && (
-            <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
-              <View style={styles.actionSummary}>
-                <Text style={styles.actionText}>{cartQty} items</Text>
-                <Text style={styles.actionTotal}>{formatMoney(cartTotal)}</Text>
+          {/* UI-005: Empty state when Live Suppliers API not available */}
+          {!LIVE_SUPPLIERS_ENABLED ? (
+            <View style={styles.emptyStateContainer}>
+              <MaterialCommunityIcons
+                name="store-off-outline"
+                size={64}
+                color={theme.colors.textTertiary}
+              />
+              <Text style={styles.emptyStateTitle}>Supplier Catalog Coming Soon</Text>
+              <Text style={styles.emptyStateMessage}>
+                Live supplier product catalog is not enabled yet.
+              </Text>
+              <View style={styles.emptyStateBlocker}>
+                <Text style={styles.emptyStateBlockerLabel}>Requires:</Text>
+                <Text style={styles.emptyStateBlockerText}>
+                  API-001 (supplier-product mapping)
+                </Text>
               </View>
-              <Pressable style={styles.actionBtn}>
-                <Text style={styles.actionBtnText}>Place Order</Text>
-              </Pressable>
+              <Text style={styles.emptyStateHint}>
+                Use Quick Purchase to scan and add stock manually.
+              </Text>
             </View>
+          ) : filteredSKUs.length === 0 ? (
+            <View style={styles.emptyStateContainer}>
+              <MaterialCommunityIcons
+                name="magnify"
+                size={48}
+                color={theme.colors.textTertiary}
+              />
+              <Text style={styles.emptyStateTitle}>No Products Found</Text>
+              <Text style={styles.emptyStateMessage}>
+                {searchQuery ? `No products match "${searchQuery}"` : "Search for products to add to cart"}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* SKU Grid */}
+              <FlatList
+                key={`suppliers-grid-${NUM_COLUMNS}`}
+                data={filteredSKUs}
+                renderItem={renderSKU}
+                keyExtractor={(item) => item.id}
+                numColumns={NUM_COLUMNS}
+                columnWrapperStyle={styles.skuRow}
+                contentContainerStyle={[styles.skuGrid, { paddingBottom: insets.bottom + (cartQty > 0 ? 90 : 20) }]}
+                showsVerticalScrollIndicator={false}
+              />
+
+              {/* Cart Action Bar */}
+              {cartQty > 0 && (
+                <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
+                  <View style={styles.actionSummary}>
+                    <Text style={styles.actionText}>{cartQty} items</Text>
+                    <Text style={styles.actionTotal}>{formatMoney(cartTotal)}</Text>
+                  </View>
+                  <Pressable style={styles.actionBtn}>
+                    <Text style={styles.actionBtnText}>Place Order</Text>
+                  </Pressable>
+                </View>
+              )}
+            </>
           )}
         </View>
       )}
@@ -882,9 +949,70 @@ const styles = StyleSheet.create({
   actionBtnDisabled: {
     opacity: 0.6,
   },
+  // UI-006: Demo mode button style
+  actionBtnDemo: {
+    backgroundColor: theme.colors.warning,
+  },
   actionBtnText: {
     fontSize: 14,
     fontWeight: "700",
     color: theme.colors.textInverse,
+  },
+  // UI-006: Demo mode indicator
+  demoModeIndicator: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.warning,
+    marginTop: 2,
+  },
+
+  // UI-005: Empty State for Live Suppliers
+  emptyStateContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    paddingBottom: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    marginTop: 16,
+    textAlign: "center",
+  },
+  emptyStateMessage: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  emptyStateBlocker: {
+    marginTop: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.warningSoft,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.warning,
+  },
+  emptyStateBlockerLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.warning,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  emptyStateBlockerText: {
+    fontSize: 12,
+    color: theme.colors.textPrimary,
+  },
+  emptyStateHint: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    textAlign: "center",
+    marginTop: 20,
+    fontStyle: "italic",
   },
 });

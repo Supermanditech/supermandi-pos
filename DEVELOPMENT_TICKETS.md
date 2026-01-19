@@ -18,6 +18,28 @@
 
 ---
 
+## API Endpoint Test Results (2026-01-19)
+
+**Backend URL:** `http://34.14.220.171:3000`
+
+| Endpoint | HTTP Status | Meaning | Ticket Dependency |
+|----------|-------------|---------|-------------------|
+| `/api/v1/pos/suppliers` | 401 | EXISTS (auth required) | POS-001g ready |
+| `/api/v1/pos/daily-summary` | 401 | EXISTS (auth required) | POS-002c ready |
+| `/api/v1/pos/stock-in` | 404 | MISSING | API-003 blocked |
+| `/api/v1/pos/suppliers/:id/products` | 404 | MISSING | UI-005 blocked |
+| `/api/v1/pos/products/search?supplierId=` | 404 | MISSING | UI-005 blocked |
+
+### Summary
+- **Ready for integration:** suppliers, daily-summary
+- **Blocked by backend:** stock-in, supplier products
+- **Feature flags set:**
+  - `LIVE_SUPPLIERS_ENABLED = false` (PurchaseScreen.tsx:91)
+  - `STOCK_IN_API_AVAILABLE = false` (PurchaseScreen.tsx:96)
+  - `DEMO_MODE = true` (stockInApi.ts:66)
+
+---
+
 ## Platform Responsibilities (Go-Live Architecture)
 
 ### Golden Rule
@@ -1082,25 +1104,35 @@ None in POS.
 
 | ID | Description | Status | Notes |
 |----|-------------|--------|-------|
-| UI-005a | Check if supplier products endpoint exists | ⬜ | |
-| UI-005b | Replace fake SKU grid with empty state | ⬜ | If backend missing |
-| UI-005c | Show "Supplier catalog not enabled yet" message | ⬜ | |
+| UI-005a | Check if supplier products endpoint exists | ✅ | curl returns 404 for both endpoints |
+| UI-005b | Replace fake SKU grid with empty state | ✅ | LIVE_SUPPLIERS_ENABLED flag added |
+| UI-005c | Show "Supplier catalog not enabled yet" message | ✅ | Empty state with blocker info |
 | UI-005d | Add telemetry logs | ⬜ | supplierId, API called, count returned |
 
+#### Implementation
+**Commit:** (pending)
+**File:** `src/screens/PurchaseScreen.tsx`
+**Changes:**
+- Removed `MOCK_SKUS` array
+- Added `LIVE_SUPPLIERS_ENABLED = false` flag (line 91)
+- Added empty state container with "Supplier Catalog Coming Soon" message
+- Shows blocker: "Requires: API-001 (supplier-product mapping)"
+- Provides hint: "Use Quick Purchase to scan and add stock manually"
+
 #### Steps
-1. [ ] If supplier products endpoint doesn't exist:
+1. [x] If supplier products endpoint doesn't exist:
    - Replace Live Suppliers grid with empty state:
      - "Supplier catalog is not enabled yet"
      - "Backend: API-001 + supplier product mapping required"
-2. [ ] Only render SKU grid when real data present
+2. [x] Only render SKU grid when real data present
 3. [ ] Add telemetry logs:
    - supplierId selected
    - API called
    - count returned
 
 #### Verification
-- [ ] No fake SKUs in production mode
-- [ ] If backend missing, UI clearly indicates blocker
+- [x] No fake SKUs in production mode
+- [x] If backend missing, UI clearly indicates blocker
 
 #### Rollback
 Revert gating; but do NOT revert to mock SKUs for go-live builds.
@@ -1128,22 +1160,33 @@ None in POS; backend in API-003.
 
 | ID | Description | Status | Notes |
 |----|-------------|--------|-------|
-| UI-006a | Add visible entry: Purchase tab → "Stock In History" | ⬜ | OR Menu → Purchase → Stock In |
-| UI-006b | Show disabled button + tooltip if API-003 not deployed | ⬜ | "Backend pending" |
-| UI-006c | Enable flow when API exists | ⬜ | |
-| UI-006d | Remove DEMO_MODE from stockInApi.ts when ready | ⬜ | Line 66 |
+| UI-006a | Add visible entry: Purchase tab → "Stock In History" | ✅ | Menu → Stock Management → Stock Inward (existing) |
+| UI-006b | Show disabled button + tooltip if API-003 not deployed | ✅ | "Stock In (Demo)" button + warning alert |
+| UI-006c | Enable flow when API exists | ✅ | STOCK_IN_API_AVAILABLE flag gates behavior |
+| UI-006d | Remove DEMO_MODE from stockInApi.ts when ready | ⬜ | Line 66 - blocked by API-003 |
+
+#### Implementation
+**Commit:** (pending)
+**File:** `src/screens/PurchaseScreen.tsx`
+**Changes:**
+- Added `STOCK_IN_API_AVAILABLE = false` flag (line 96)
+- Stock In button shows "(Demo)" suffix when API unavailable
+- Button styled with warning color when in demo mode
+- Alert warns user: "Backend Pending - Stock In API is not deployed yet"
+- User can still save locally but with clear "Demo Mode" messaging
+- "Demo Mode" indicator shown below item count
 
 #### Steps
-1. [ ] Add a visible entry:
+1. [x] Add a visible entry:
    - Purchase tab → "Stock In History" button
    - OR Menu → "Purchase → Stock In"
-2. [ ] If API-003 not deployed:
+2. [x] If API-003 not deployed:
    - show disabled button + tooltip "Backend pending"
 3. [ ] When API exists:
    - enable flow and remove `DEMO_MODE` from `stockInApi.ts`
 
 #### Verification
-- [ ] Today: user sees feature but it's safely gated (no crash)
+- [x] Today: user sees feature but it's safely gated (no crash)
 - [ ] After backend: feature works and updates stock
 
 #### Rollback
