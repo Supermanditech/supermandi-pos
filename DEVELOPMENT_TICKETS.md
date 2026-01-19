@@ -1110,7 +1110,7 @@ None in POS.
 | UI-005d | Add telemetry logs | ⬜ | supplierId, API called, count returned |
 
 #### Implementation
-**Commit:** (pending)
+**Commit:** b104702
 **File:** `src/screens/PurchaseScreen.tsx`
 **Changes:**
 - Removed `MOCK_SKUS` array
@@ -1166,7 +1166,7 @@ None in POS; backend in API-003.
 | UI-006d | Remove DEMO_MODE from stockInApi.ts when ready | ⬜ | Line 66 - blocked by API-003 |
 
 #### Implementation
-**Commit:** (pending)
+**Commit:** b104702
 **File:** `src/screens/PurchaseScreen.tsx`
 **Changes:**
 - Added `STOCK_IN_API_AVAILABLE = false` flag (line 96)
