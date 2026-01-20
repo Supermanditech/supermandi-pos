@@ -75,6 +75,61 @@ function getRetailerContext(req: Request): RetailerContext {
 }
 
 // =============================================================================
+// 10K STORE SCALE: AUDIT LEDGER (LEDGER-FIRST MUTATIONS)
+// =============================================================================
+
+/**
+ * Write to audit log BEFORE performing mutation.
+ * This ensures all CRUD operations have an audit trail.
+ *
+ * 10K Store Scale Rule: Ledger-first means:
+ * 1. Write intent to audit_log
+ * 2. Perform mutation
+ * 3. If mutation fails, audit_log shows failed attempt
+ *
+ * This provides compliance and debugging trail.
+ */
+async function writeAuditLog(params: {
+  actorUserId: string;
+  storeId: string;
+  action: string;
+  resourceType: string;
+  resourceId?: string;
+  requestBody?: Record<string, unknown>;
+  req?: Request;
+}): Promise<void> {
+  const { actorUserId, storeId, action, resourceType, resourceId, requestBody, req } = params;
+
+  // Sanitize request body - remove sensitive fields
+  let sanitizedBody = requestBody;
+  if (sanitizedBody) {
+    const { password, token, secret, apiKey, ...safe } = sanitizedBody as Record<string, unknown>;
+    sanitizedBody = safe;
+  }
+
+  await query(
+    `INSERT INTO admin.audit_log (
+      actor_user_id, store_id, action, resource_type, resource_id,
+      request_body, actor_ip, actor_user_agent
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [
+      actorUserId,
+      storeId,
+      action,
+      resourceType,
+      resourceId || null,
+      sanitizedBody ? JSON.stringify(sanitizedBody) : null,
+      req?.ip || req?.headers['x-forwarded-for'] || null,
+      req?.headers['user-agent'] || null,
+    ]
+  ).catch((err) => {
+    // Don't fail the main operation if audit logging fails
+    // But do log it for monitoring
+    console.error('[audit_log] Failed to write audit log:', err);
+  });
+}
+
+// =============================================================================
 // STORE INFO
 // =============================================================================
 
@@ -314,6 +369,7 @@ router.post(
       mrp,
       openingStock = 0,
       supplierId,
+      supplierName, // 10K Store Scale: raw supplier name for unverified path
     } = req.body as {
       barcode?: string;
       name: string;
@@ -327,6 +383,7 @@ router.post(
       mrp?: number;
       openingStock?: number;
       supplierId?: string;
+      supplierName?: string; // Raw name when no supplierId
     };
 
     // Validate required fields
@@ -370,6 +427,16 @@ router.post(
         throw ApiError.conflict('DUPLICATE_BARCODE', `Product with barcode ${barcode} already exists`);
       }
     }
+
+    // 10K STORE SCALE: LEDGER-FIRST - write audit log BEFORE mutation
+    await writeAuditLog({
+      actorUserId: userId,
+      storeId,
+      action: 'product.create',
+      resourceType: 'store_product',
+      requestBody: { barcode, name, category, brand, sellPrice, purchasePrice, mrp, supplierId, supplierName },
+      req,
+    });
 
     // Create product and store_product in transaction
     const productResult = await query<{ id: string; store_product_id: string }>(
@@ -423,17 +490,23 @@ router.post(
       );
     }
 
-    // Link product to supplier if provided - check verification status for POS visibility
+    // 10K STORE SCALE: Supplier linking with verified-only enforcement
     let supplierVerified = false;
     let supplierLinked = false;
+    let pendingSupplierRequestId: string | null = null;
+    let supplierNameRaw: string | null = null;
+
     if (supplierId) {
-      // Verify supplier is linked to this store and check verification status
+      // CRITICAL: If supplierId is provided, it MUST be a verified supplier
+      // This enforces the 10K Store Scale rule - no linking to unverified suppliers
       const supplierLink = await query<{
         supplier_id: string;
+        business_name: string;
         verification_status: string;
         is_supermandi: boolean;
       }>(
         `SELECT ssl.supplier_id,
+                s.business_name,
                 COALESCE(s.verification_status, 'unverified') as verification_status,
                 (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as is_supermandi
          FROM supplier.supplier_store_links ssl
@@ -442,19 +515,89 @@ router.post(
         [supplierId, storeId]
       );
 
-      if (supplierLink.length > 0) {
-        supplierLinked = true;
-        supplierVerified = supplierLink[0]!.is_supermandi;
+      if (supplierLink.length === 0) {
+        throw ApiError.badRequest(
+          'Supplier not found or not linked to this store. Add supplier first via Suppliers page.',
+          'supplierId'
+        );
+      }
 
-        // Create supplier-product link (using supplier_products table if it exists, or a mapping table)
+      // 10K STORE SCALE: BLOCK unverified supplier links (not just warn)
+      if (!supplierLink[0]!.is_supermandi) {
+        throw ApiError.badRequest(
+          `Supplier "${supplierLink[0]!.business_name}" is not verified. Only verified suppliers can be linked to products. Request supplier verification first.`,
+          'supplierId'
+        );
+      }
+
+      supplierLinked = true;
+      supplierVerified = true;
+
+      // Update store_product with verified supplier_id
+      await query(
+        `UPDATE catalog.store_products SET supplier_id = $1 WHERE id = $2`,
+        [supplierId, storeProductId]
+      );
+
+      // Create supplier-product link
+      await query(
+        `INSERT INTO catalog.supplier_products (supplier_id, name, category, brand, purchase_price, is_active)
+         VALUES ($1, $2, $3, $4, $5, true)
+         ON CONFLICT DO NOTHING`,
+        [supplierId, name, category || null, brand || null, purchasePrice]
+      ).catch(() => {
+        // Table might not exist yet, silently ignore
+      });
+
+    } else if (supplierName && supplierName.trim()) {
+      // 10K STORE SCALE: Unverified supplier name path
+      // Search for matching verified supplier by name first
+      supplierNameRaw = supplierName.trim();
+
+      const matchingSupplier = await query<{
+        id: string;
+        business_name: string;
+        is_supermandi: boolean;
+      }>(
+        `SELECT s.id, s.business_name,
+                (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as is_supermandi
+         FROM supplier.suppliers s
+         JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
+         WHERE ssl.store_id = $1 AND ssl.status = 'active'
+           AND (s.business_name ILIKE $2 OR s.trade_name ILIKE $2)
+         LIMIT 1`,
+        [storeId, `%${supplierNameRaw}%`]
+      );
+
+      if (matchingSupplier.length > 0 && matchingSupplier[0]!.is_supermandi) {
+        // Found verified supplier - link it
+        supplierLinked = true;
+        supplierVerified = true;
         await query(
-          `INSERT INTO catalog.supplier_products (supplier_id, name, category, brand, purchase_price, is_active)
-           VALUES ($1, $2, $3, $4, $5, true)
-           ON CONFLICT DO NOTHING`,
-          [supplierId, name, category || null, brand || null, purchasePrice]
-        ).catch(() => {
-          // Table might not exist yet, silently ignore
-        });
+          `UPDATE catalog.store_products SET supplier_id = $1, supplier_name_raw = NULL WHERE id = $2`,
+          [matchingSupplier[0]!.id, storeProductId]
+        );
+      } else {
+        // No verified supplier found - create pending enrollment request
+        const pendingResult = await query<{ id: string }>(
+          `INSERT INTO supplier.supplier_requests (store_id, requested_name, status)
+           VALUES ($1, $2, 'pending')
+           RETURNING id`,
+          [storeId, supplierNameRaw]
+        );
+
+        pendingSupplierRequestId = pendingResult[0]?.id || null;
+
+        // Store raw name and pending request ID on product
+        await query(
+          `UPDATE catalog.store_products
+           SET supplier_name_raw = $1, pending_supplier_request_id = $2
+           WHERE id = $3`,
+          [supplierNameRaw, pendingSupplierRequestId, storeProductId]
+        );
+
+        supplierLinked = false;
+        supplierVerified = false;
       }
     }
 
@@ -470,11 +613,17 @@ router.post(
         purchasePrice,
         openingStock,
         supplierId: supplierLinked ? supplierId : undefined,
+        supplierName: supplierNameRaw,
         supplierVerified,
-        // Warning if supplier is linked but not verified - product won't appear on POS
-        posVisibleWarning: supplierId && supplierLinked && !supplierVerified
-          ? 'Product created but will NOT appear on POS - supplier is not verified. Request supplier verification or link to a verified supplier.'
-          : undefined,
+        pendingSupplierRequestId,
+        // 10K Store Scale status message
+        supplierStatus: supplierVerified
+          ? 'verified'
+          : pendingSupplierRequestId
+            ? 'pending_enrollment'
+            : supplierId
+              ? 'invalid'
+              : 'none',
       },
     });
   })
@@ -487,7 +636,7 @@ router.post(
 router.patch(
   '/products/:id',
   asyncHandler(async (req, res) => {
-    const { storeId } = getRetailerContext(req);
+    const { userId, storeId } = getRetailerContext(req);
     const { id } = req.params;
     const { name, description, category, brand, purchasePrice, sellPrice, mrp, supplierId } = req.body as {
       name?: string;
@@ -510,6 +659,17 @@ router.patch(
     if (existing.length === 0) {
       throw ApiError.notFound('Product');
     }
+
+    // 10K STORE SCALE: LEDGER-FIRST - write audit log BEFORE mutation
+    await writeAuditLog({
+      actorUserId: userId,
+      storeId,
+      action: 'product.update',
+      resourceType: 'store_product',
+      resourceId: id,
+      requestBody: { name, description, category, brand, purchasePrice, sellPrice, mrp, supplierId },
+      req,
+    });
 
     // Build update query for store_products (prices)
     const priceUpdates: string[] = [];
@@ -907,7 +1067,7 @@ router.get(
 router.post(
   '/suppliers',
   asyncHandler(async (req, res) => {
-    const { storeId } = getRetailerContext(req);
+    const { userId, storeId } = getRetailerContext(req);
 
     // Full 4-section supplier form fields
     const {
@@ -997,6 +1157,22 @@ router.post(
       throw ApiError.badRequest('Supplier name is required', 'businessName');
     }
 
+    // 10K STORE SCALE: LEDGER-FIRST - write audit log BEFORE mutation
+    await writeAuditLog({
+      actorUserId: userId,
+      storeId,
+      action: 'supplier.create',
+      resourceType: 'supplier_store_link',
+      requestBody: {
+        businessName: effectiveBusinessName,
+        gstin,
+        primaryPhone: effectivePrimaryPhone,
+        city,
+        state,
+      },
+      req,
+    });
+
     // Determine if this is a real GSTIN or informal supplier
     const hasRealGstin = gstin && !gstin.startsWith('XX') && gstin.length >= 10;
     let supplierId: string | null = null;
@@ -1079,17 +1255,18 @@ router.post(
       );
       supplierId = result[0]!.id;
 
-      // STEP 4: If real GSTIN was provided, create pending request for SuperAdmin review
-      if (hasRealGstin) {
-        await query(
-          `INSERT INTO supplier.supplier_requests (
-            store_id, requested_gstin, requested_name, requested_phone, requested_email, status
-          ) VALUES ($1, $2, $3, $4, $5, 'pending')
-           ON CONFLICT DO NOTHING`,
-          [storeId, gstin, effectiveBusinessName, effectivePrimaryPhone || null, email || null]
-        );
-        pendingRequestCreated = true;
-      }
+      // STEP 4: ALWAYS create pending request for SuperAdmin review for new suppliers
+      // This ensures ALL new suppliers (with or without GSTIN) can be verified
+      // The approved_supplier_id links this request to the supplier we just created
+      await query(
+        `INSERT INTO supplier.supplier_requests (
+          store_id, requested_gstin, requested_name, requested_phone, requested_email, status,
+          approved_supplier_id
+        ) VALUES ($1, $2, $3, $4, $5, 'pending', $6)
+         ON CONFLICT DO NOTHING`,
+        [storeId, gstin || null, effectiveBusinessName, effectivePrimaryPhone || null, email || null, supplierId]
+      );
+      pendingRequestCreated = true;
     }
 
     // Link supplier to store with commercial terms and operational metadata
@@ -1167,7 +1344,7 @@ router.post(
 router.patch(
   '/suppliers/:id',
   asyncHandler(async (req, res) => {
-    const { storeId } = getRetailerContext(req);
+    const { userId, storeId } = getRetailerContext(req);
     const { id } = req.params;
 
     // Full 4-section supplier form fields
@@ -1257,6 +1434,17 @@ router.patch(
     if (linkResult.length === 0) {
       throw ApiError.notFound('Supplier');
     }
+
+    // 10K STORE SCALE: LEDGER-FIRST - write audit log BEFORE mutation
+    await writeAuditLog({
+      actorUserId: userId,
+      storeId,
+      action: 'supplier.update',
+      resourceType: 'supplier_store_link',
+      resourceId: id,
+      requestBody: { businessName, tradeName, primaryPhone, city, state, creditDays, minOrderValue },
+      req,
+    });
 
     // Check if this is a SuperMandi supplier (cannot edit supplier base fields)
     const supplierResult = await query<{ verification_status: string }>(

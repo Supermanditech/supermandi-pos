@@ -92,9 +92,15 @@ export async function fetchVerifiedSuppliers(search?: string): Promise<VerifiedS
   return Array.isArray(data?.data) ? (data.data as VerifiedSupplier[]) : [];
 }
 
+/**
+ * Verify a pending supplier request
+ * Two modes:
+ * 1. { supplierId: string } - Link to existing verified supplier
+ * 2. { verifySupplier: true } - Verify the retailer-created supplier directly
+ */
 export async function verifySupplierRequest(
   requestId: string,
-  input: { supplierId: string }
+  input: { supplierId?: string; verifySupplier?: boolean; notes?: string }
 ): Promise<{ success: boolean }> {
   const base = requireApiBase();
   const token = getAdminToken();
@@ -123,6 +129,7 @@ export async function rejectSupplierRequest(
   const base = requireApiBase();
   const token = getAdminToken();
 
+  // Backend expects 'notes', not 'reason'
   const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/reject`, {
     method: "POST",
     headers: {
@@ -130,7 +137,7 @@ export async function rejectSupplierRequest(
       "Content-Type": "application/json",
       ...(token ? { "x-admin-token": token } : {})
     },
-    body: JSON.stringify(input)
+    body: JSON.stringify({ notes: input.reason })
   });
 
   if (!res.ok) {

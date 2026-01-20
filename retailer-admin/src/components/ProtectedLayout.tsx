@@ -1,150 +1,144 @@
-import { Outlet, NavLink, useParams, useNavigate } from 'react-router-dom';
+import { Outlet, useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { fetchStore } from '../api/store';
 
 export default function ProtectedLayout() {
   const { storeCode } = useParams<{ storeCode: string }>();
-  const { logout, accessToken, store: authStore } = useAuth();
+  const { logout, store } = useAuth();
   const navigate = useNavigate();
-
-  // Fetch store info
-  const { data: storeData } = useQuery({
-    queryKey: ['store', storeCode],
-    queryFn: () => fetchStore(accessToken!),
-    enabled: !!accessToken,
-  });
-
-  const store = storeData?.data || authStore;
-
-  // SECURITY: Verify URL storeCode matches authenticated store
-  // This prevents users from accessing other stores by changing the URL
-  const isStoreCodeMismatch = store?.code && storeCode &&
-    store.code.toUpperCase() !== storeCode.toUpperCase();
 
   const handleLogout = () => {
     logout();
     navigate(`/s/${storeCode}/login`);
   };
 
-  const navItems = [
-    { path: '', label: 'Dashboard', icon: '📊' },
-    { path: 'products', label: 'Products', icon: '📦' },
-    { path: 'import', label: 'Import (CSV)', icon: '📥' },
-    { path: 'inventory', label: 'Inventory', icon: '📋' },
-    { path: 'suppliers', label: 'Suppliers', icon: '🏭' },
-    { path: 'compliance', label: 'Compliance', icon: '📄' },
-  ];
-
-  const apiBaseUrl = window.location.hostname === 'localhost'
-    ? 'http://localhost:3000'
-    : `${window.location.protocol}//${window.location.host}`;
-
-  // SECURITY: Show 403 if URL storeCode doesn't match authenticated store
-  if (isStoreCodeMismatch) {
-    return (
-      <div style={{
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
+      {/* Sidebar */}
+      <aside style={{
+        width: '240px',
+        background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+        color: 'white',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100vh',
-        background: '#fef2f2',
-        padding: '2rem',
+        boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
       }}>
+        {/* Brand Header */}
         <div style={{
-          background: 'white',
-          padding: '2.5rem',
-          borderRadius: '1rem',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          maxWidth: '400px',
-          textAlign: 'center',
+          padding: '1.75rem 1.5rem',
+          borderBottom: '1px solid rgba(255,255,255,0.1)',
         }}>
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🚫</div>
-          <h1 style={{ color: '#991b1b', marginBottom: '0.5rem', fontSize: '1.5rem' }}>
-            403 - Access Denied
-          </h1>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-            You do not have access to store <strong>{storeCode}</strong>.
-            <br />
-            Your account is linked to store <strong>{store?.code}</strong>.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-            <button
-              onClick={() => navigate(`/s/${store?.code}`)}
-              className="btn btn-primary"
-            >
-              Go to {store?.code}
-            </button>
-            <button onClick={handleLogout} className="btn btn-secondary">
-              Logout
-            </button>
+          <div style={{
+            fontWeight: '800',
+            fontSize: '1.5rem',
+            background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            letterSpacing: '-0.5px',
+          }}>
+            SuperMandi
+          </div>
+          <div style={{
+            fontSize: '0.8rem',
+            color: '#94a3b8',
+            marginTop: '0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              background: '#22c55e',
+              borderRadius: '50%',
+              display: 'inline-block',
+            }}></span>
+            {store?.name || storeCode}
           </div>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="app-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-logo">SuperMandi</div>
-          <div className="sidebar-store">{store?.name || storeCode}</div>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={`/s/${storeCode}/${item.path}`}
-              end={item.path === ''}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              {item.label}
-            </NavLink>
-          ))}
-
-          {/* QA Pages Link */}
-          <NavLink
-            to={`/s/${storeCode}/_pages`}
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}
+        {/* Navigation */}
+        <nav style={{ flex: 1, padding: '1rem' }}>
+          <a
+            href={`/s/${storeCode}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              padding: '0.875rem 1rem',
+              color: 'white',
+              textDecoration: 'none',
+              borderRadius: '10px',
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              fontWeight: '500',
+              fontSize: '0.95rem',
+              transition: 'all 0.2s',
+            }}
           >
-            <span className="nav-icon">🧪</span>
-            All Pages (QA)
-          </NavLink>
+            <span style={{ fontSize: '1.1rem' }}>📊</span>
+            Dashboard
+          </a>
         </nav>
 
-        <div className="sidebar-footer">
-          <button onClick={handleLogout} className="btn btn-secondary" style={{ width: '100%' }}>
-            🚪 Logout
+        {/* Footer */}
+        <div style={{
+          padding: '1rem 1.5rem',
+          borderTop: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '8px',
+              color: '#fca5a5',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '500',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
+              e.currentTarget.style.color = '#fecaca';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+              e.currentTarget.style.color = '#fca5a5';
+            }}
+          >
+            Logout
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="main-content">
-        <Outlet />
+      {/* Main Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Main Content */}
+        <main style={{ flex: 1, overflow: 'auto' }}>
+          <Outlet />
+        </main>
 
-        {/* Debug Footer */}
-        <footer className="debug-footer">
-          <div className="debug-item">
-            <span className="debug-label">StoreCode:</span>
-            <span className="debug-value">{storeCode}</span>
-          </div>
-          <div className="debug-item">
-            <span className="debug-label">StoreId:</span>
-            <span className="debug-value">{store?.id || 'loading...'}</span>
-          </div>
-          <div className="debug-item">
-            <span className="debug-label">API:</span>
-            <span className="debug-value">{apiBaseUrl}</span>
-          </div>
+        {/* Debug Footer - Fixed at bottom */}
+        <footer style={{
+          padding: '0.6rem 2rem',
+          background: '#0f172a',
+          color: '#64748b',
+          fontSize: '0.7rem',
+          display: 'flex',
+          gap: '2rem',
+          borderTop: '1px solid #1e293b',
+        }}>
+          <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
+          <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
+          <span>API: <strong style={{ color: '#38bdf8' }}>{window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin}</strong></span>
         </footer>
-      </main>
+      </div>
     </div>
   );
 }

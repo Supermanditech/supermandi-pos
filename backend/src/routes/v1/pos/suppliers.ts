@@ -13,7 +13,7 @@ interface PosSupplier {
   supplierCode: string;
   businessName: string;
   tradeName: string | null;
-  gstin: string;
+  gstin: string | null; // Can be null for farmers/informal suppliers
   primaryPhone: string | null;
   email: string | null;
   city: string | null;
@@ -23,19 +23,30 @@ interface PosSupplier {
   minOrderValue: number;
   expectedDeliveryDays: number;
   isPreferred: boolean;
-  // Verification status
+  // 10K Store Scale verification contract (CRITICAL)
+  // These fields PROVE the supplier passed the gate checks
   supplierVerified: true; // Always true for POS (verified-only filter)
-  supplierAccountId: string; // Same as id for verified suppliers
+  supplierAccountId: string; // NOT NULL - proves supplier has platform account
   verificationSource: 'platform';
+  // Explicit verification flags for downstream validation
+  supplierAppRegistered: true; // Has platform account (id exists)
+  superAdminVerified: true; // verification_status = 'verified'
+  hasRealGstin: boolean; // Computed: gstin IS NOT NULL AND NOT LIKE 'XX%'
 }
 
 /**
  * GET /api/v1/pos/suppliers
  * Get all VERIFIED suppliers linked to the store.
  *
- * CRITICAL: Only returns suppliers where:
- * - verification_status = 'verified'
- * - gstin is NOT NULL and does NOT start with 'XX'
+ * 10K STORE SCALE GATE (CRITICAL - enforced in query):
+ * 1. s.id IS NOT NULL (supplier has platform account)
+ * 2. s.verification_status = 'verified' (SuperAdmin verified)
+ * 3. ssl.store_id = $1 (store-scoped mapping)
+ * 4. ssl.status = 'active' (active link)
+ *
+ * NOTE: GSTIN is NOT required for verification - suppliers can be
+ * verified without GSTIN (e.g., farmers, local vendors).
+ * hasRealGstin is computed and returned for informational purposes.
  *
  * This enforces the 10K Store Scale rule that only verified
  * suppliers (isSupermandi=true) are visible on POS.
@@ -47,12 +58,12 @@ posSuppliersRouter.get("/suppliers", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
 
   try {
-    // Only fetch verified suppliers (isSupermandi=true)
+    // Only fetch verified suppliers
     const result = await pool.query<{
       id: string;
       business_name: string;
       trade_name: string | null;
-      gstin: string;
+      gstin: string | null;
       primary_phone: string | null;
       primary_email: string | null;
       city: string | null;
@@ -61,6 +72,7 @@ posSuppliersRouter.get("/suppliers", requireDeviceToken, async (req, res) => {
       min_order_value: number;
       expected_delivery_days: number;
       is_preferred: boolean;
+      has_real_gstin: boolean;
     }>(
       `SELECT
          s.id,
@@ -74,15 +86,20 @@ posSuppliersRouter.get("/suppliers", requireDeviceToken, async (req, res) => {
          COALESCE(ssl.credit_days, 0) as credit_days,
          COALESCE(ssl.min_order_value, 0) as min_order_value,
          COALESCE(ssl.expected_delivery_days, 2) as expected_delivery_days,
-         COALESCE(ssl.is_preferred, false) as is_preferred
+         COALESCE(ssl.is_preferred, false) as is_preferred,
+         -- Computed: has real GSTIN (not NULL, not placeholder)
+         (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%') as has_real_gstin
        FROM supplier.suppliers s
        JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
        WHERE ssl.store_id = $1
-         AND ssl.status = 'active'
-         -- CRITICAL: Only verified suppliers (10K Store Scale rule)
+         -- 10K STORE SCALE GATE:
+         -- 1. supplier has platform account (enforced by JOIN)
+         AND s.id IS NOT NULL
+         -- 2. superAdminVerified = true (THIS IS THE KEY GATE)
          AND s.verification_status = 'verified'
-         AND s.gstin IS NOT NULL
-         AND s.gstin NOT LIKE 'XX%'
+         -- 3. store-scoped mapping (ssl.store_id = $1)
+         -- 4. active link
+         AND ssl.status = 'active'
        ORDER BY
          ssl.is_preferred DESC,
          ssl.priority ASC,
@@ -104,10 +121,15 @@ posSuppliersRouter.get("/suppliers", requireDeviceToken, async (req, res) => {
       minOrderValue: row.min_order_value,
       expectedDeliveryDays: row.expected_delivery_days,
       isPreferred: row.is_preferred,
-      // Always verified for POS
+      // 10K Store Scale verification contract (CRITICAL)
+      // These prove the query enforced all gate checks
       supplierVerified: true,
-      supplierAccountId: row.id,
+      supplierAccountId: row.id, // NOT NULL by query filter + UUID PK constraint
       verificationSource: 'platform',
+      // Explicit verification flags for downstream validation
+      supplierAppRegistered: true, // Has id = has platform account
+      superAdminVerified: true, // Query filters verification_status = 'verified'
+      hasRealGstin: row.has_real_gstin, // Computed from query
     }));
 
     return res.json({
@@ -143,7 +165,7 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
       id: string;
       business_name: string;
       trade_name: string | null;
-      gstin: string;
+      gstin: string | null;
       primary_phone: string | null;
       primary_email: string | null;
       city: string | null;
@@ -152,6 +174,7 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
       min_order_value: number;
       expected_delivery_days: number;
       is_preferred: boolean;
+      has_real_gstin: boolean;
     }>(
       `SELECT
          s.id,
@@ -165,16 +188,16 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
          COALESCE(ssl.credit_days, 0) as credit_days,
          COALESCE(ssl.min_order_value, 0) as min_order_value,
          COALESCE(ssl.expected_delivery_days, 2) as expected_delivery_days,
-         COALESCE(ssl.is_preferred, false) as is_preferred
+         COALESCE(ssl.is_preferred, false) as is_preferred,
+         (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%') as has_real_gstin
        FROM supplier.suppliers s
        JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
        WHERE ssl.store_id = $1
          AND s.id = $2
-         AND ssl.status = 'active'
-         -- CRITICAL: Only verified suppliers
+         -- 10K STORE SCALE GATE:
+         AND s.id IS NOT NULL
          AND s.verification_status = 'verified'
-         AND s.gstin IS NOT NULL
-         AND s.gstin NOT LIKE 'XX%'`,
+         AND ssl.status = 'active'`,
       [storeId, supplierId]
     );
 
@@ -200,9 +223,14 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
       minOrderValue: row.min_order_value,
       expectedDeliveryDays: row.expected_delivery_days,
       isPreferred: row.is_preferred,
+      // 10K Store Scale verification contract (CRITICAL)
       supplierVerified: true,
       supplierAccountId: row.id,
       verificationSource: 'platform',
+      // Explicit verification flags
+      supplierAppRegistered: true,
+      superAdminVerified: true,
+      hasRealGstin: row.has_real_gstin,
     };
 
     return res.json({

@@ -631,7 +631,7 @@ export default function PurchaseScreen({
                   <View style={styles.emptyStateBlocker}>
                     <Text style={styles.emptyStateBlockerLabel}>Requires:</Text>
                     <Text style={styles.emptyStateBlockerText}>
-                      {liveSuppliersBlocker || "/api/v1/pos/suppliers/:id/products"}
+                      {liveSuppliersBlocker || "Supplier Products API not available"}
                     </Text>
                   </View>
                   <Pressable style={styles.retryButton} onPress={retryLiveSuppliers}>

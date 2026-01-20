@@ -614,28 +614,29 @@ router.get(
 
 /**
  * POST /admin/pending-suppliers/:id/verify
- * Verify a pending supplier request and link to existing verified supplier
- * Body: { supplierId: string } - The verified supplier to link to
+ * Verify a pending supplier request
+ *
+ * Two modes:
+ * 1. { supplierId: string } - Link to existing verified supplier
+ * 2. { verifySupplier: true } - Verify the retailer-created supplier directly
  */
 router.post(
   '/pending-suppliers/:id/verify',
   asyncHandler<PendingRequestIdParams>(async (req, res) => {
-    const { supplierId, notes } = req.body as {
-      supplierId: string;
+    const { supplierId, verifySupplier, notes } = req.body as {
+      supplierId?: string;
+      verifySupplier?: boolean;
       notes?: string;
     };
-
-    if (!supplierId) {
-      throw ApiError.badRequest('Supplier ID is required', 'supplierId');
-    }
 
     // Verify the pending request exists and is still pending
     const requestResult = await query<{
       id: string;
       store_id: string;
       status: string;
+      approved_supplier_id: string | null;
     }>(
-      `SELECT id, store_id, status FROM supplier.supplier_requests WHERE id = $1`,
+      `SELECT id, store_id, status, approved_supplier_id FROM supplier.supplier_requests WHERE id = $1`,
       [req.params.id]
     );
 
@@ -645,6 +646,60 @@ router.post(
 
     if (requestResult[0]!.status !== 'pending') {
       throw ApiError.badRequest('Request has already been processed', 'status');
+    }
+
+    const storeId = requestResult[0]!.store_id;
+    const retailerSupplierId = requestResult[0]!.approved_supplier_id;
+
+    // MODE 2: Verify the retailer-created supplier directly
+    if (verifySupplier) {
+      if (!retailerSupplierId) {
+        throw ApiError.badRequest('No supplier linked to this request. Use supplierId to link to existing supplier.', 'verifySupplier');
+      }
+
+      // Update the supplier's verification_status to 'verified'
+      const updateResult = await query<{ id: string; business_name: string }>(
+        `UPDATE supplier.suppliers
+         SET verification_status = 'verified',
+             verified_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, business_name`,
+        [retailerSupplierId]
+      );
+
+      if (updateResult.length === 0) {
+        throw ApiError.notFound('Supplier');
+      }
+
+      const supplierName = updateResult[0]!.business_name;
+
+      // Update the request to approved
+      await query(
+        `UPDATE supplier.supplier_requests
+         SET status = 'approved',
+             review_notes = $1,
+             reviewed_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $2`,
+        [notes || 'Supplier verified by SuperAdmin', req.params.id]
+      );
+
+      return res.json({
+        success: true,
+        data: {
+          id: req.params.id,
+          status: 'approved',
+          linkedSupplierId: retailerSupplierId,
+          linkedSupplierName: supplierName,
+          message: `Successfully verified supplier: ${supplierName}`,
+        },
+      });
+    }
+
+    // MODE 1: Link to existing verified supplier
+    if (!supplierId) {
+      throw ApiError.badRequest('Either supplierId or verifySupplier=true is required', 'supplierId');
     }
 
     // Verify the target supplier exists and is verified
@@ -665,7 +720,6 @@ router.post(
       throw ApiError.badRequest('Can only link to verified suppliers', 'supplierId');
     }
 
-    const storeId = requestResult[0]!.store_id;
     const supplierName = supplierResult[0]!.business_name;
 
     // Update the request to approved

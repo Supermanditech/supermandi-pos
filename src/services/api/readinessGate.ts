@@ -3,7 +3,7 @@
 // Replaces scattered boolean flags with runtime detection.
 
 import { API_BASE_URL } from "../../config/api";
-import { getDeviceToken } from "../deviceSession";
+import { getDeviceToken, getDeviceStoreId } from "../deviceSession";
 
 // =============================================================================
 // TYPES
@@ -39,7 +39,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;  // 5 minute cache
 // Phase-1 endpoints to probe
 const ENDPOINTS = {
   suppliers: "/api/v1/pos/suppliers",
-  supplierProducts: "/api/v1/pos/suppliers/1/products",  // Use dummy ID for probe
+  supplierProducts: (supplierId: string) => `/api/v1/pos/suppliers/${supplierId}/products`,
   dailySummary: "/api/v1/pos/daily-summary",
   stockIn: "/api/v1/pos/stock-in",
 } as const;
@@ -166,8 +166,83 @@ async function probeEndpoint(
 }
 
 /**
+ * Probe endpoint and return both status AND response data.
+ * Used when we need response data to probe dependent endpoints.
+ */
+async function probeEndpointWithResponse(
+  path: string,
+  expectedShape: object
+): Promise<{ status: EndpointStatus; data: any }> {
+  const startTime = Date.now();
+  const deviceToken = await getDeviceToken();
+
+  const status: EndpointStatus = {
+    exists: false,
+    authOk: false,
+    contractOk: false,
+    checkedAt: new Date().toISOString(),
+    latencyMs: 0,
+  };
+
+  let responseData: any = null;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(deviceToken ? { "x-device-token": deviceToken } : {}),
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+    status.latencyMs = Date.now() - startTime;
+
+    if (response.status !== 404) {
+      status.exists = true;
+    }
+
+    if (response.status !== 401 && response.status !== 403) {
+      status.authOk = true;
+    }
+
+    if (response.ok) {
+      status.authOk = true;
+      try {
+        responseData = await response.json();
+        if (responseData && typeof responseData === "object" && "success" in responseData) {
+          status.contractOk = responseData.success === true;
+        }
+      } catch {
+        status.contractOk = false;
+      }
+    }
+
+    console.log(`[readinessGate] Probed ${path}: exists=${status.exists}, authOk=${status.authOk}, contractOk=${status.contractOk}, ${status.latencyMs}ms`);
+  } catch (error: any) {
+    status.latencyMs = Date.now() - startTime;
+    if (error.name === "AbortError") {
+      status.error = "Timeout";
+      console.log(`[readinessGate] Probe ${path} timed out after ${PROBE_TIMEOUT_MS}ms`);
+    } else {
+      status.error = error.message || "Network error";
+      console.log(`[readinessGate] Probe ${path} failed: ${status.error}`);
+    }
+  }
+
+  return { status, data: responseData?.data || null };
+}
+
+/**
  * Probe all Phase-1 endpoints.
  * Results are cached for 5 minutes.
+ *
+ * GO-LIVE FIX: Supplier products now probed with real UUID from suppliers list.
  */
 export async function probeReadiness(): Promise<ReadinessState> {
   console.log("[readinessGate] Starting probe of Phase-1 endpoints...");
@@ -179,13 +254,48 @@ export async function probeReadiness(): Promise<ReadinessState> {
   };
   notifyListeners();
 
-  // Probe all endpoints in parallel
-  const [suppliers, supplierProducts, dailySummary, stockIn] = await Promise.all([
-    probeEndpoint(ENDPOINTS.suppliers, EXPECTED_SHAPES.suppliers),
-    probeEndpoint(ENDPOINTS.supplierProducts, EXPECTED_SHAPES.supplierProducts),
+  // First probe suppliers, dailySummary, stockIn in parallel
+  const [suppliersResult, dailySummary, stockIn] = await Promise.all([
+    probeEndpointWithResponse(ENDPOINTS.suppliers, EXPECTED_SHAPES.suppliers),
     probeEndpoint(ENDPOINTS.dailySummary, EXPECTED_SHAPES.dailySummary),
     probeEndpoint(ENDPOINTS.stockIn, EXPECTED_SHAPES.stockIn),
   ]);
+
+  const suppliers = suppliersResult.status;
+
+  // Probe supplier products using real UUID from suppliers list
+  // GO-LIVE FIX: Pick a supplier linked to the current store, not a global supplier
+  let supplierProducts: EndpointStatus;
+  if (suppliersResult.data?.suppliers?.length > 0) {
+    const suppliersList = suppliersResult.data.suppliers;
+    const currentStoreId = await getDeviceStoreId();
+
+    // Selection priority:
+    // 1. Supplier linked to current store (storeId === currentStoreId)
+    // 2. Any retailer supplier (storeId != null)
+    // 3. First supplier as fallback
+    const linkedSupplier =
+      suppliersList.find((s: any) => s.storeId === currentStoreId) ??
+      suppliersList.find((s: any) => s.storeId != null) ??
+      suppliersList[0];
+
+    console.log(`[readinessGate] Probing supplier products with UUID: ${linkedSupplier.id} (storeId: ${linkedSupplier.storeId || 'global'})`);
+    supplierProducts = await probeEndpoint(
+      ENDPOINTS.supplierProducts(linkedSupplier.id),
+      EXPECTED_SHAPES.supplierProducts
+    );
+  } else {
+    // No suppliers available - mark as exists but contract failed (no data to probe)
+    console.log("[readinessGate] No suppliers found, skipping supplier products probe");
+    supplierProducts = {
+      exists: suppliers.exists,
+      authOk: suppliers.authOk,
+      contractOk: false,
+      checkedAt: new Date().toISOString(),
+      latencyMs: 0,
+      error: "No suppliers available to probe products",
+    };
+  }
 
   cachedState = {
     suppliers,
@@ -318,9 +428,9 @@ export function getFeatureBlocker(feature: ReadinessFeature): string | null {
         blockers.push("/api/v1/pos/suppliers (auth failed)");
       }
       if (!cachedState.supplierProducts.exists) {
-        blockers.push("/api/v1/pos/suppliers/:id/products (404)");
+        blockers.push("Supplier Products API (404)");
       } else if (!cachedState.supplierProducts.authOk) {
-        blockers.push("/api/v1/pos/suppliers/:id/products (auth failed)");
+        blockers.push("Supplier Products API (auth failed)");
       }
       return blockers.length > 0 ? `Missing: ${blockers.join(", ")}` : null;
     }

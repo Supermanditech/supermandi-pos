@@ -376,6 +376,20 @@ export default function App() {
     }
   }
 
+  // Verify the retailer-created supplier directly (no linking to another supplier)
+  async function handleVerifySupplierDirectly(requestId: string) {
+    setSupplierActionError("");
+    setSupplierActionLoading((prev) => ({ ...prev, [requestId]: true }));
+    try {
+      await verifySupplierRequest(requestId, { verifySupplier: true });
+      setPendingSuppliers((prev) => prev.filter((r) => r.id !== requestId));
+    } catch (e: any) {
+      setSupplierActionError(e?.message ? String(e.message) : "Failed to verify supplier");
+    } finally {
+      setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
+    }
+  }
+
   async function handleRejectSupplier(requestId: string) {
     const reason = rejectReason[requestId] || "";
     setSupplierActionError("");
@@ -1708,13 +1722,22 @@ export default function App() {
                       />
                     </div>
 
-                    <div className="deviceActions">
+                    <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <button
+                        onClick={() => handleVerifySupplierDirectly(request.id)}
+                        disabled={supplierActionLoading[request.id]}
+                        style={{ background: "#3b82f6", color: "white" }}
+                        title="Verify the supplier directly without linking to another"
+                      >
+                        {supplierActionLoading[request.id] ? "Verifying..." : "Verify Directly"}
+                      </button>
                       <button
                         onClick={() => handleVerifySupplier(request.id)}
                         disabled={supplierActionLoading[request.id] || !selectedSupplierForLink[request.id]}
                         style={{ background: "#22c55e", color: "white" }}
+                        title="Link to an existing verified supplier"
                       >
-                        {supplierActionLoading[request.id] ? "Verifying..." : "Verify & Link"}
+                        {supplierActionLoading[request.id] ? "Linking..." : "Link to Verified"}
                       </button>
                       <button
                         className="btnGhost"

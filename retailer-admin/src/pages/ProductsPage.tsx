@@ -216,6 +216,15 @@ export default function ProductsPage() {
         throw new Error('Valid sell price is required');
       }
 
+      // CRITICAL: Convert rupees to paise (integer minor units)
+      // Backend enforces integer paise, UI shows rupees
+      const rupeesToPaise = (rupees: string | undefined): number | undefined => {
+        if (!rupees) return undefined;
+        const float = parseFloat(rupees);
+        if (isNaN(float)) return undefined;
+        return Math.round(float * 100); // Round to avoid floating point issues
+      };
+
       const payload = {
         barcode: formData.barcode.trim() || undefined,
         name: formData.name.trim(),
@@ -224,9 +233,9 @@ export default function ProductsPage() {
         category: formData.category || undefined,
         brand: formData.brand.trim() || undefined,
         unit: formData.unit,
-        purchasePrice: formData.purchasePrice ? parseFloat(formData.purchasePrice) : undefined,
-        sellPrice: parseFloat(formData.sellPrice),
-        mrp: formData.mrp ? parseFloat(formData.mrp) : undefined,
+        purchasePrice: rupeesToPaise(formData.purchasePrice),
+        sellPrice: rupeesToPaise(formData.sellPrice)!, // Required field
+        mrp: rupeesToPaise(formData.mrp),
         openingStock: parseInt(formData.openingStock) || 0,
         supplierId: formData.supplierId || undefined,
       };
@@ -269,14 +278,22 @@ export default function ProductsPage() {
       const parts = line.includes('\t') ? line.split('\t') : line.split(',');
       const [name, barcode, category, brand, sellPrice, purchasePrice, mrp, unit, stock] = parts.map(p => p?.trim());
 
+      // CRITICAL: Convert rupees to paise (integer minor units)
+      const rupeesToPaise = (rupees: string | undefined): number | undefined => {
+        if (!rupees) return undefined;
+        const float = parseFloat(rupees);
+        if (isNaN(float)) return undefined;
+        return Math.round(float * 100);
+      };
+
       return {
         name: name || '',
         barcode: barcode || '',
         category: category || '',
         brand: brand || '',
-        sellPrice: sellPrice ? parseFloat(sellPrice) : 0,
-        purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
-        mrp: mrp ? parseFloat(mrp) : undefined,
+        sellPrice: rupeesToPaise(sellPrice) || 0,
+        purchasePrice: rupeesToPaise(purchasePrice),
+        mrp: rupeesToPaise(mrp),
         unit: unit || 'pcs',
         stock: stock ? parseInt(stock) : 0,
         type: barcode ? 'branded' as const : 'loose' as const,

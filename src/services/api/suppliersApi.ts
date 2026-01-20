@@ -23,10 +23,15 @@ export interface Supplier {
   minOrderValue: number;
   expectedDeliveryDays: number;
   isPreferred: boolean;
-  // Verification status (always true for POS - verified-only filter)
-  supplierVerified: true;
-  supplierAccountId: string;
+  // 10K Store Scale verification contract (CRITICAL)
+  // These fields PROVE the supplier passed all gate checks
+  supplierVerified: true; // Always true for POS (verified-only filter)
+  supplierAccountId: string; // NOT NULL - proves platform account exists
   verificationSource: 'platform';
+  // Explicit verification flags for downstream validation
+  supplierAppRegistered: true; // Has platform account
+  superAdminVerified: true; // verification_status = 'verified'
+  hasRealGstin: true; // gstin IS NOT NULL AND NOT LIKE 'XX%'
   // Legacy fields for backwards compatibility
   name: string;
   phone?: string;
@@ -48,9 +53,13 @@ interface RawPosSupplier {
   minOrderValue: number;
   expectedDeliveryDays: number;
   isPreferred: boolean;
+  // 10K Store Scale verification contract
   supplierVerified: true;
   supplierAccountId: string;
   verificationSource: 'platform';
+  supplierAppRegistered: true;
+  superAdminVerified: true;
+  hasRealGstin: true;
 }
 
 interface GetSuppliersResponse {

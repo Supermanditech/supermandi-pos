@@ -21,6 +21,23 @@ const app = express();
 // Security headers
 app.use(helmet());
 
+// CORS for local development (SuperAdmin/Retailer-Admin frontends)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin;
+  // Allow localhost origins for development
+  if (origin && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, x-admin-token, x-store-id, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
 // Parse JSON bodies
 app.use(express.json());
 
@@ -58,19 +75,24 @@ app.get('/healthz', (_req: Request, res: Response) => {
 
 // Store routes (public + admin)
 app.use('/stores', storeRoutes);
+app.use('/api/v1/stores', storeRoutes); // Versioned alias
 
 // Admin routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin', adminRoutes);
+app.use('/api/v1/admin', adminRoutes); // Versioned alias
 
 // Retailer admin management routes (SUPERADMIN only)
 app.use('/admin', retailerAdminRoutes);
+app.use('/api/v1/admin', retailerAdminRoutes); // Versioned alias
 
 // Admin flag routes (SUPERADMIN only - enforced by gateway)
 app.use('/admin/flags', flagRoutes);
+app.use('/api/v1/admin/flags', flagRoutes); // Versioned alias
 
 // Retailer portal routes (JWT auth with store_id - enforced by gateway)
 // Routes are mounted at root because gateway strips /api/v1/retailer-admin prefix
 app.use('/', retailerPortalRoutes);
+app.use('/api/v1/retailer-admin', retailerPortalRoutes); // Versioned alias
 
 // Internal routes (service-to-service)
 app.use('/internal', internalRoutes);

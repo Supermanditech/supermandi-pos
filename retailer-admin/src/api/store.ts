@@ -66,7 +66,17 @@ export async function fetchProducts(accessToken: string): Promise<ApiResponse<un
   return response.json();
 }
 
-export async function fetchInventory(accessToken: string): Promise<ApiResponse<unknown[]>> {
+// Inventory item for dashboard display
+export interface InventoryItem {
+  productId: string;
+  productName: string;
+  barcode?: string | null;
+  totalStockQty: number;
+  totalPurchaseValue: number;  // paise
+  totalSellRevenue: number;    // paise
+}
+
+export async function fetchInventory(accessToken: string): Promise<ApiResponse<InventoryItem[]>> {
   const response = await authFetch(`${API_BASE}/inventory`, accessToken);
 
   // 401 handled by authFetch (triggers logout)
