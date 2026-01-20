@@ -113,6 +113,104 @@ router.get(
 );
 
 // =============================================================================
+// DAILY SUMMARY (WEB-002)
+// =============================================================================
+
+/**
+ * GET /retailer-admin/daily-summary
+ * Get today's sales summary for the store (same data as POS widget)
+ * Query params: date (optional, YYYY-MM-DD format, defaults to today)
+ */
+router.get(
+  '/daily-summary',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+    const { date } = req.query;
+
+    // Default to today in IST timezone
+    const targetDate = date
+      ? new Date(date as string)
+      : new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const dateStr = targetDate.toISOString().split('T')[0];
+
+    // Get sales summary for the date
+    // FIX: Use retailers.sales instead of pos.bills, items_count instead of total_items
+    const salesResult = await query<{
+      total_sales: string;
+      total_bills: string;
+      items_sold: string;
+      cash_total: string;
+      upi_total: string;
+      card_total: string;
+      credit_total: string;
+    }>(
+      `SELECT
+        COALESCE(SUM(total_amount), 0) as total_sales,
+        COUNT(*) as total_bills,
+        COALESCE(SUM(items_count), 0) as items_sold,
+        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_amount ELSE 0 END), 0) as cash_total,
+        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_amount ELSE 0 END), 0) as upi_total,
+        COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_amount ELSE 0 END), 0) as card_total,
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_amount ELSE 0 END), 0) as credit_total
+       FROM retailers.sales
+       WHERE store_id = $1 AND DATE(bill_date AT TIME ZONE 'Asia/Kolkata') = $2`,
+      [storeId, dateStr]
+    );
+
+    const summary = salesResult[0];
+    const totalSales = parseInt(summary?.total_sales || '0', 10);
+    const totalBills = parseInt(summary?.total_bills || '0', 10);
+    const itemsSold = parseInt(summary?.items_sold || '0', 10);
+
+    // Get top selling items
+    // FIX: Use retailers.sale_items and retailers.sales instead of pos.bill_items/pos.bills
+    const topItemsResult = await query<{
+      product_id: string;
+      product_name: string;
+      quantity_sold: string;
+      total_amount: string;
+    }>(
+      `SELECT
+        si.product_id,
+        COALESCE(p.name, si.product_name, 'Unknown Product') as product_name,
+        SUM(si.quantity) as quantity_sold,
+        SUM(si.total_amount) as total_amount
+       FROM retailers.sale_items si
+       JOIN retailers.sales s ON si.sale_id = s.id
+       LEFT JOIN catalog.products p ON si.product_id = p.id
+       WHERE s.store_id = $1 AND DATE(s.bill_date AT TIME ZONE 'Asia/Kolkata') = $2
+       GROUP BY si.product_id, p.name, si.product_name
+       ORDER BY SUM(si.total_amount) DESC
+       LIMIT 5`,
+      [storeId, dateStr]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        date: dateStr,
+        totalSales,
+        totalBills,
+        averageBillValue: totalBills > 0 ? Math.round(totalSales / totalBills) : 0,
+        paymentBreakdown: {
+          cash: parseInt(summary?.cash_total || '0', 10),
+          upi: parseInt(summary?.upi_total || '0', 10),
+          card: parseInt(summary?.card_total || '0', 10),
+          credit: parseInt(summary?.credit_total || '0', 10),
+        },
+        itemsSold,
+        topSellingItems: topItemsResult.map((item) => ({
+          productId: item.product_id,
+          productName: item.product_name,
+          quantitySold: parseInt(item.quantity_sold, 10),
+          totalAmount: parseInt(item.total_amount, 10),
+        })),
+      },
+    });
+  })
+);
+
+// =============================================================================
 // PRODUCTS (Store Catalog)
 // =============================================================================
 
@@ -151,13 +249,16 @@ router.get(
       whereClause += ` AND (p.name ILIKE $${params.length} OR p.primary_barcode ILIKE $${params.length})`;
     }
 
-    // Get products with current stock
-    // FIX: Use stock_balances instead of inventory.inventory, remove p.type (doesn't exist)
+    // Get products with current stock, category, brand, supplier
+    // FIX: Use stock_balances instead of inventory.inventory, return camelCase for frontend
     const result = await query<StoreProduct>(
       `SELECT p.id, p.primary_barcode AS barcode, p.name, p.description, p.unit,
-              sp.purchase_price, sp.sell_price, sp.mrp,
-              COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
-              sp.created_at
+              p.category, p.brand,
+              sp.purchase_price AS "purchasePrice", sp.sell_price AS "sellPrice", sp.mrp,
+              COALESCE(sb.current_qty, sp.current_stock, 0) as stock,
+              CASE WHEN p.primary_barcode IS NOT NULL THEN 'branded' ELSE 'loose' END as type,
+              sp.created_at,
+              NULL as "supplierId", NULL as "supplierName"
        FROM catalog.store_products sp
        JOIN catalog.products p ON sp.product_id = p.id
        LEFT JOIN inventory.stock_balances sb ON sb.product_id = sp.product_id AND sb.store_id = sp.store_id
@@ -194,6 +295,7 @@ router.get(
 /**
  * POST /retailer-admin/products
  * Create a new product for the store
+ * Supports: category, brand, supplierId for linking to suppliers
  */
 router.post(
   '/products',
@@ -204,32 +306,56 @@ router.post(
       name,
       description,
       type = 'branded',
+      category,
+      brand,
       unit = 'pcs',
       purchasePrice,
       sellPrice,
       mrp,
       openingStock = 0,
+      supplierId,
     } = req.body as {
       barcode?: string;
       name: string;
       description?: string;
       type?: string;
+      category?: string;
+      brand?: string;
       unit?: string;
       purchasePrice: number;
       sellPrice: number;
       mrp?: number;
       openingStock?: number;
+      supplierId?: string;
     };
 
     // Validate required fields
     if (!name) {
       throw ApiError.badRequest('Product name is required', 'name');
     }
+    // 10K Store Scale: Category is required for proper taxonomy
+    if (!category) {
+      throw ApiError.badRequest('Category is required', 'category');
+    }
     if (sellPrice === undefined || sellPrice < 0) {
       throw ApiError.badRequest('Valid sell price is required', 'sellPrice');
     }
     if (purchasePrice === undefined || purchasePrice < 0) {
       throw ApiError.badRequest('Valid purchase price is required', 'purchasePrice');
+    }
+    // 10K Store Scale: Prices must be positive integers (paise)
+    // Warn if decimal values detected (should be in minor units)
+    if (!Number.isInteger(sellPrice) || !Number.isInteger(purchasePrice)) {
+      throw ApiError.badRequest(
+        'Prices must be integers in paise (minor units). E.g., ₹10.50 = 1050 paise.',
+        'sellPrice'
+      );
+    }
+    if (mrp !== undefined && !Number.isInteger(mrp)) {
+      throw ApiError.badRequest(
+        'MRP must be an integer in paise (minor units). E.g., ₹10.50 = 1050 paise.',
+        'mrp'
+      );
     }
 
     // Check for duplicate barcode within store
@@ -246,19 +372,30 @@ router.post(
     }
 
     // Create product and store_product in transaction
-    const productResult = await query<{ id: string }>(
+    const productResult = await query<{ id: string; store_product_id: string }>(
       `WITH new_product AS (
-         INSERT INTO catalog.products (primary_barcode, name, description, unit)
-         VALUES ($1, $2, $3, $4)
+         INSERT INTO catalog.products (primary_barcode, name, description, unit, category, brand)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id
        )
        INSERT INTO catalog.store_products (store_id, product_id, purchase_price, sell_price, mrp)
-       SELECT $5, id, $6, $7, $8 FROM new_product
-       RETURNING product_id as id`,
-      [barcode || null, name, description || null, unit, storeId, purchasePrice, sellPrice, mrp || null]
+       SELECT $7, id, $8, $9, $10 FROM new_product
+       RETURNING product_id as id, id as store_product_id`,
+      [barcode || null, name, description || null, unit, category || null, brand || null, storeId, purchasePrice, sellPrice, mrp || null]
     );
 
     const productId = productResult[0]!.id;
+    const storeProductId = productResult[0]!.store_product_id;
+
+    // Insert into store_product_barcodes for POS barcode lookup
+    if (barcode) {
+      await query(
+        `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+         VALUES ($1, $2, $3, 'manual')
+         ON CONFLICT (store_id, barcode) DO NOTHING`,
+        [storeId, storeProductId, barcode]
+      );
+    }
 
     // Add opening stock if provided
     // FIX: Use stock_balances table and correct ledger columns
@@ -286,15 +423,58 @@ router.post(
       );
     }
 
+    // Link product to supplier if provided - check verification status for POS visibility
+    let supplierVerified = false;
+    let supplierLinked = false;
+    if (supplierId) {
+      // Verify supplier is linked to this store and check verification status
+      const supplierLink = await query<{
+        supplier_id: string;
+        verification_status: string;
+        is_supermandi: boolean;
+      }>(
+        `SELECT ssl.supplier_id,
+                COALESCE(s.verification_status, 'unverified') as verification_status,
+                (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as is_supermandi
+         FROM supplier.supplier_store_links ssl
+         JOIN supplier.suppliers s ON ssl.supplier_id = s.id
+         WHERE ssl.supplier_id = $1 AND ssl.store_id = $2 AND ssl.status = 'active'`,
+        [supplierId, storeId]
+      );
+
+      if (supplierLink.length > 0) {
+        supplierLinked = true;
+        supplierVerified = supplierLink[0]!.is_supermandi;
+
+        // Create supplier-product link (using supplier_products table if it exists, or a mapping table)
+        await query(
+          `INSERT INTO catalog.supplier_products (supplier_id, name, category, brand, purchase_price, is_active)
+           VALUES ($1, $2, $3, $4, $5, true)
+           ON CONFLICT DO NOTHING`,
+          [supplierId, name, category || null, brand || null, purchasePrice]
+        ).catch(() => {
+          // Table might not exist yet, silently ignore
+        });
+      }
+    }
+
     res.status(201).json({
       success: true,
       data: {
         id: productId,
         barcode,
         name,
+        category,
+        brand,
         sellPrice,
         purchasePrice,
         openingStock,
+        supplierId: supplierLinked ? supplierId : undefined,
+        supplierVerified,
+        // Warning if supplier is linked but not verified - product won't appear on POS
+        posVisibleWarning: supplierId && supplierLinked && !supplierVerified
+          ? 'Product created but will NOT appear on POS - supplier is not verified. Request supplier verification or link to a verified supplier.'
+          : undefined,
       },
     });
   })
@@ -302,17 +482,22 @@ router.post(
 
 /**
  * PATCH /retailer-admin/products/:id
- * Update a product
+ * Update a product - supports name, description, category, brand, prices
  */
 router.patch(
   '/products/:id',
   asyncHandler(async (req, res) => {
     const { storeId } = getRetailerContext(req);
     const { id } = req.params;
-    const { purchasePrice, sellPrice, mrp } = req.body as {
+    const { name, description, category, brand, purchasePrice, sellPrice, mrp, supplierId } = req.body as {
+      name?: string;
+      description?: string;
+      category?: string;
+      brand?: string;
       purchasePrice?: number;
       sellPrice?: number;
       mrp?: number;
+      supplierId?: string;
     };
 
     // Verify product belongs to store
@@ -326,40 +511,211 @@ router.patch(
       throw ApiError.notFound('Product');
     }
 
-    // Build update query
-    const updates: string[] = [];
-    const params: (number | string)[] = [];
-    let paramIndex = 1;
+    // Build update query for store_products (prices)
+    const priceUpdates: string[] = [];
+    const priceParams: (number | string)[] = [];
+    let priceIndex = 1;
 
     if (purchasePrice !== undefined) {
-      updates.push(`purchase_price = $${paramIndex++}`);
-      params.push(purchasePrice);
+      priceUpdates.push(`purchase_price = $${priceIndex++}`);
+      priceParams.push(purchasePrice);
     }
     if (sellPrice !== undefined) {
-      updates.push(`sell_price = $${paramIndex++}`);
-      params.push(sellPrice);
+      priceUpdates.push(`sell_price = $${priceIndex++}`);
+      priceParams.push(sellPrice);
     }
     if (mrp !== undefined) {
-      updates.push(`mrp = $${paramIndex++}`);
-      params.push(mrp);
+      priceUpdates.push(`mrp = $${priceIndex++}`);
+      priceParams.push(mrp);
     }
 
-    if (updates.length === 0) {
-      res.json({ success: true, data: { id, message: 'No changes made' } });
-      return;
+    if (priceUpdates.length > 0) {
+      priceParams.push(storeId, id);
+      await query(
+        `UPDATE catalog.store_products
+         SET ${priceUpdates.join(', ')}, updated_at = NOW()
+         WHERE store_id = $${priceIndex++} AND product_id = $${priceIndex}`,
+        priceParams
+      );
     }
 
-    params.push(storeId, id);
-    await query(
-      `UPDATE catalog.store_products
-       SET ${updates.join(', ')}
-       WHERE store_id = $${paramIndex++} AND product_id = $${paramIndex}`,
-      params
-    );
+    // Build update query for products (name, description, category, brand)
+    const productUpdates: string[] = [];
+    const productParams: (string | null)[] = [];
+    let productIndex = 1;
+
+    if (name !== undefined) {
+      productUpdates.push(`name = $${productIndex++}`);
+      productParams.push(name);
+    }
+    if (description !== undefined) {
+      productUpdates.push(`description = $${productIndex++}`);
+      productParams.push(description || null);
+    }
+    if (category !== undefined) {
+      productUpdates.push(`category = $${productIndex++}`);
+      productParams.push(category || null);
+    }
+    if (brand !== undefined) {
+      productUpdates.push(`brand = $${productIndex++}`);
+      productParams.push(brand || null);
+    }
+
+    if (productUpdates.length > 0) {
+      productParams.push(id);
+      await query(
+        `UPDATE catalog.products
+         SET ${productUpdates.join(', ')}, updated_at = NOW()
+         WHERE id = $${productIndex}`,
+        productParams
+      );
+    }
 
     res.json({
       success: true,
       data: { id, message: 'Product updated' },
+    });
+  })
+);
+
+/**
+ * DELETE /retailer-admin/products/:id
+ * Delete a product from the store (soft delete)
+ */
+router.delete(
+  '/products/:id',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+    const { id } = req.params;
+
+    // Verify product belongs to store
+    const existing = await query(
+      `SELECT sp.id FROM catalog.store_products sp
+       WHERE sp.store_id = $1 AND sp.product_id = $2`,
+      [storeId, id]
+    );
+
+    if (existing.length === 0) {
+      throw ApiError.notFound('Product');
+    }
+
+    // Soft delete - set is_active to false
+    await query(
+      `UPDATE catalog.store_products SET is_active = false, updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2`,
+      [storeId, id]
+    );
+
+    res.json({
+      success: true,
+      data: { id, message: 'Product deleted' },
+    });
+  })
+);
+
+/**
+ * POST /retailer-admin/products/bulk
+ * Bulk create products for the store (high-volume inline upload)
+ */
+router.post(
+  '/products/bulk',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+    const { products } = req.body as {
+      products: Array<{
+        name: string;
+        barcode?: string;
+        category?: string;
+        brand?: string;
+        sellPrice: number;
+        purchasePrice?: number;
+        mrp?: number;
+        unit?: string;
+        stock?: number;
+        type?: string;
+      }>;
+    };
+
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      throw ApiError.badRequest('Products array is required', 'products');
+    }
+
+    if (products.length > 100) {
+      throw ApiError.badRequest('Maximum 100 products per batch', 'products');
+    }
+
+    let imported = 0;
+    const errors: Array<{ index: number; name: string; error: string }> = [];
+
+    for (let i = 0; i < products.length; i++) {
+      const p = products[i];
+      try {
+        if (!p.name || !p.sellPrice) {
+          errors.push({ index: i, name: p.name || '(empty)', error: 'Name and sell price required' });
+          continue;
+        }
+
+        // Check for duplicate barcode
+        if (p.barcode) {
+          const existing = await query(
+            `SELECT 1 FROM catalog.store_products sp
+             JOIN catalog.products prod ON sp.product_id = prod.id
+             WHERE sp.store_id = $1 AND prod.primary_barcode = $2`,
+            [storeId, p.barcode]
+          );
+          if (existing.length > 0) {
+            errors.push({ index: i, name: p.name, error: `Duplicate barcode: ${p.barcode}` });
+            continue;
+          }
+        }
+
+        // Create product
+        const productResult = await query<{ id: string; store_product_id: string }>(
+          `WITH new_product AS (
+             INSERT INTO catalog.products (primary_barcode, name, unit, category, brand)
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING id
+           )
+           INSERT INTO catalog.store_products (store_id, product_id, purchase_price, sell_price, mrp, current_stock)
+           SELECT $6, id, $7, $8, $9, $10 FROM new_product
+           RETURNING product_id as id, id as store_product_id`,
+          [
+            p.barcode || null,
+            p.name,
+            p.unit || 'pcs',
+            p.category || null,
+            p.brand || null,
+            storeId,
+            p.purchasePrice || 0,
+            p.sellPrice,
+            p.mrp || null,
+            p.stock || 0,
+          ]
+        );
+
+        // Add barcode lookup entry
+        if (p.barcode && productResult[0]) {
+          await query(
+            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+             VALUES ($1, $2, $3, 'bulk_import')
+             ON CONFLICT (store_id, barcode) DO NOTHING`,
+            [storeId, productResult[0].store_product_id, p.barcode]
+          );
+        }
+
+        imported++;
+      } catch (err) {
+        errors.push({ index: i, name: p.name, error: err instanceof Error ? err.message : 'Unknown error' });
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        imported,
+        total: products.length,
+        errors: errors.length > 0 ? errors : undefined,
+      },
     });
   })
 );
@@ -429,6 +785,7 @@ router.get(
 /**
  * GET /retailer-admin/suppliers
  * List suppliers linked to the store
+ * Returns full supplier details with verification status and store-specific terms
  */
 router.get(
   '/suppliers',
@@ -437,18 +794,101 @@ router.get(
 
     const result = await query<{
       id: string;
+      // Section A: Identity & Compliance
+      businessName: string;
+      tradeName: string | null;
+      supplierType: string | null;
+      gstin: string | null;
+      pan: string | null;
+      fssai: string | null;
+      // Section B: Contact & Address
+      primaryPhone: string | null;
+      whatsappEnabled: boolean;
+      secondaryPhone: string | null;
+      email: string | null;
+      addressLine1: string | null;
+      addressLine2: string | null;
+      area: string | null;
+      city: string | null;
+      state: string | null;
+      pincode: string | null;
+      // Section C: Commercial Terms (from store_links)
+      paymentTerms: string | null;
+      creditDays: number;
+      minOrderValue: number;
+      deliveryCharges: number;
+      deliverySchedule: string | null;
+      returnsAllowed: boolean;
+      returnsWindow: number;
+      taxInvoiceProvided: boolean;
+      priceSource: string | null;
+      serviceArea: string | null;
+      deliveryAddress: string | null;
+      // Section D: Operational Metadata (from store_links)
+      categoriesSupplied: string[];
+      brandsSupplied: string | null;
+      orderingChannel: string | null;
+      notes: string | null;
+      // Status & metadata
+      verificationStatus: string;
+      isSupermandi: boolean;
+      supplierCode: string | null;
+      // Legacy fields for backward compatibility
       name: string;
       phone: string | null;
-      gstin: string | null;
       address: string | null;
     }>(
-      `SELECT s.id, s.business_name as name, s.primary_phone as phone,
-              CASE WHEN s.gstin LIKE 'XX%' THEN NULL ELSE s.gstin END as gstin,
-              CONCAT_WS(', ', NULLIF(s.address_line1, ''), NULLIF(s.city, ''), NULLIF(s.state, '')) as address
+      `SELECT
+         s.id,
+         -- Section A: Identity & Compliance
+         s.business_name as "businessName",
+         s.trade_name as "tradeName",
+         s.business_type as "supplierType",
+         CASE WHEN s.gstin LIKE 'XX%' THEN NULL ELSE s.gstin END as gstin,
+         s.pan,
+         s.fssai,
+         -- Section B: Contact & Address
+         s.primary_phone as "primaryPhone",
+         COALESCE(s.whatsapp_enabled, false) as "whatsappEnabled",
+         s.secondary_phone as "secondaryPhone",
+         s.primary_email as email,
+         s.address_line1 as "addressLine1",
+         s.address_line2 as "addressLine2",
+         s.area,
+         s.city,
+         s.state,
+         s.pincode,
+         -- Section C: Commercial Terms (from store_links)
+         COALESCE(ssl.payment_terms, 'Cash') as "paymentTerms",
+         COALESCE(ssl.credit_days, 0) as "creditDays",
+         COALESCE(ssl.min_order_value, 0) as "minOrderValue",
+         COALESCE(ssl.delivery_charges, 0) as "deliveryCharges",
+         ssl.delivery_schedule as "deliverySchedule",
+         COALESCE(ssl.returns_allowed, false) as "returnsAllowed",
+         COALESCE(ssl.returns_window, 0) as "returnsWindow",
+         COALESCE(ssl.tax_invoice_provided, false) as "taxInvoiceProvided",
+         ssl.price_source as "priceSource",
+         ssl.service_area as "serviceArea",
+         ssl.delivery_address as "deliveryAddress",
+         -- Section D: Operational Metadata (from store_links)
+         COALESCE(ssl.categories_supplied, '[]'::jsonb) as "categoriesSupplied",
+         ssl.brands_supplied as "brandsSupplied",
+         ssl.ordering_channel as "orderingChannel",
+         ssl.notes,
+         -- Status & metadata
+         COALESCE(s.verification_status, 'unverified') as "verificationStatus",
+         (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as "isSupermandi",
+         CASE WHEN s.verification_status = 'verified' THEN LEFT(s.id::text, 8) ELSE NULL END as "supplierCode",
+         -- Legacy fields
+         s.business_name as name,
+         s.primary_phone as phone,
+         CONCAT_WS(', ', NULLIF(s.address_line1, ''), NULLIF(s.city, ''), NULLIF(s.state, '')) as address
        FROM supplier.suppliers s
        JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
        WHERE ssl.store_id = $1 AND ssl.status = 'active'
-       ORDER BY s.business_name`,
+       ORDER BY
+         CASE s.verification_status WHEN 'verified' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
+         s.business_name`,
       [storeId]
     );
 
@@ -468,72 +908,579 @@ router.post(
   '/suppliers',
   asyncHandler(async (req, res) => {
     const { storeId } = getRetailerContext(req);
-    const { name, phone, gstin, address } = req.body as {
-      name: string;
-      phone?: string;
+
+    // Full 4-section supplier form fields
+    const {
+      // Section A: Identity & Compliance
+      supplierType,
+      businessName,  // Required
+      tradeName,
+      gstin,
+      pan,
+      fssai,
+      // Section B: Contact & Address
+      primaryPhone,
+      whatsappEnabled,
+      secondaryPhone,
+      email,
+      addressLine1,
+      addressLine2,
+      area,
+      city,
+      state,
+      pincode,
+      // Section C: Commercial Terms (stored on store_links)
+      paymentTerms,
+      creditDays,
+      minOrderValue,
+      deliveryCharges,
+      deliverySchedule,
+      returnsAllowed,
+      returnsWindow,
+      taxInvoiceProvided,
+      priceSource,
+      serviceArea,
+      deliveryAddress,
+      // Section D: Operational Metadata (stored on store_links)
+      categoriesSupplied,
+      brandsSupplied,
+      orderingChannel,
+      notes,
+      // Legacy field mapping
+      name,  // Maps to businessName
+      phone,  // Maps to primaryPhone
+      address,  // Maps to addressLine1
+    } = req.body as {
+      supplierType?: string;
+      businessName?: string;
+      tradeName?: string;
       gstin?: string;
+      pan?: string;
+      fssai?: string;
+      primaryPhone?: string;
+      whatsappEnabled?: boolean;
+      secondaryPhone?: string;
+      email?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      area?: string;
+      city?: string;
+      state?: string;
+      pincode?: string;
+      paymentTerms?: string;
+      creditDays?: string | number;
+      minOrderValue?: string | number;
+      deliveryCharges?: string | number;
+      deliverySchedule?: string;
+      returnsAllowed?: boolean;
+      returnsWindow?: string | number;
+      taxInvoiceProvided?: boolean;
+      priceSource?: string;
+      serviceArea?: string;
+      deliveryAddress?: string;
+      categoriesSupplied?: string[];
+      brandsSupplied?: string;
+      orderingChannel?: string;
+      notes?: string;
+      // Legacy
+      name?: string;
+      phone?: string;
       address?: string;
     };
 
-    if (!name) {
-      throw ApiError.badRequest('Supplier name is required', 'name');
+    // Support legacy field names
+    const effectiveBusinessName = businessName || name;
+    const effectivePrimaryPhone = primaryPhone || phone;
+    const effectiveAddressLine1 = addressLine1 || address;
+
+    if (!effectiveBusinessName) {
+      throw ApiError.badRequest('Supplier name is required', 'businessName');
     }
 
-    // Check if supplier already exists by phone or GSTIN
-    let existingSupplier: { id: string } | null = null;
+    // Determine if this is a real GSTIN or informal supplier
+    const hasRealGstin = gstin && !gstin.startsWith('XX') && gstin.length >= 10;
+    let supplierId: string | null = null;
+    let linkedToVerified = false;
+    let pendingRequestCreated = false;
 
-    if (phone) {
-      const byPhone = await query<{ id: string }>(
-        `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
-        [phone]
-      );
-      existingSupplier = byPhone[0] || null;
-    }
-
-    if (!existingSupplier && gstin) {
-      const byGstin = await query<{ id: string }>(
-        `SELECT id FROM supplier.suppliers WHERE gstin = $1`,
+    // STEP 1: If real GSTIN provided, check for verified supplier first
+    if (hasRealGstin) {
+      const verifiedResult = await query<{ id: string; verification_status: string }>(
+        `SELECT id, verification_status FROM supplier.suppliers
+         WHERE gstin = $1 AND verification_status = 'verified'`,
         [gstin]
       );
-      existingSupplier = byGstin[0] || null;
+
+      if (verifiedResult.length > 0) {
+        // Found verified supplier - auto-link
+        supplierId = verifiedResult[0]!.id;
+        linkedToVerified = true;
+      }
     }
 
-    let supplierId: string;
+    // STEP 2: If not linked to verified supplier, check for existing supplier by phone or GSTIN
+    if (!supplierId) {
+      let existingSupplier: { id: string } | null = null;
 
-    if (existingSupplier) {
-      supplierId = existingSupplier.id;
-    } else {
-      // Create new supplier
+      if (effectivePrimaryPhone) {
+        const byPhone = await query<{ id: string }>(
+          `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
+          [effectivePrimaryPhone]
+        );
+        existingSupplier = byPhone[0] || null;
+      }
+
+      if (!existingSupplier && gstin) {
+        const byGstin = await query<{ id: string }>(
+          `SELECT id FROM supplier.suppliers WHERE gstin = $1`,
+          [gstin]
+        );
+        existingSupplier = byGstin[0] || null;
+      }
+
+      if (existingSupplier) {
+        supplierId = existingSupplier.id;
+      }
+    }
+
+    // STEP 3: Create new supplier if not found
+    if (!supplierId) {
       // gstin is NOT NULL and max 15 chars, generate placeholder for informal suppliers
       // Format: XX + 13 random base36 chars = 15 chars total (like: XX1ABC2DEF3GHI)
       const effectiveGstin = gstin || `XX${(Date.now().toString(36) + Math.random().toString(36).substring(2)).substring(0, 13)}`.toUpperCase();
 
       const result = await query<{ id: string }>(
-        `INSERT INTO supplier.suppliers (business_name, primary_phone, gstin, address_line1, verification_status)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO supplier.suppliers (
+          business_name, trade_name, business_type, gstin, pan, fssai,
+          primary_phone, whatsapp_enabled, secondary_phone, primary_email,
+          address_line1, address_line2, area, city, state, pincode,
+          verification_status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
          RETURNING id`,
-        [name, phone || null, effectiveGstin, address || null, gstin ? 'pending' : 'pending']
+        [
+          effectiveBusinessName,
+          tradeName || null,
+          supplierType || null,
+          effectiveGstin,
+          pan || null,
+          fssai || null,
+          effectivePrimaryPhone || null,
+          whatsappEnabled || false,
+          secondaryPhone || null,
+          email || null,
+          effectiveAddressLine1 || null,
+          addressLine2 || null,
+          area || null,
+          city || null,
+          state || null,
+          pincode || null,
+          'pending'
+        ]
       );
       supplierId = result[0]!.id;
+
+      // STEP 4: If real GSTIN was provided, create pending request for SuperAdmin review
+      if (hasRealGstin) {
+        await query(
+          `INSERT INTO supplier.supplier_requests (
+            store_id, requested_gstin, requested_name, requested_phone, requested_email, status
+          ) VALUES ($1, $2, $3, $4, $5, 'pending')
+           ON CONFLICT DO NOTHING`,
+          [storeId, gstin, effectiveBusinessName, effectivePrimaryPhone || null, email || null]
+        );
+        pendingRequestCreated = true;
+      }
     }
 
-    // Link supplier to store
+    // Link supplier to store with commercial terms and operational metadata
+    const creditDaysNum = creditDays ? parseInt(String(creditDays), 10) || 0 : 0;
+    const minOrderValueNum = minOrderValue ? parseInt(String(minOrderValue), 10) || 0 : 0;
+    const deliveryChargesNum = deliveryCharges ? parseInt(String(deliveryCharges), 10) || 0 : 0;
+    const returnsWindowNum = returnsWindow ? parseInt(String(returnsWindow), 10) || 0 : 0;
+
     await query(
-      `INSERT INTO supplier.supplier_store_links (supplier_id, store_id, status)
-       VALUES ($1, $2, 'active')
-       ON CONFLICT (supplier_id, store_id) DO UPDATE SET status = 'active'`,
-      [supplierId, storeId]
+      `INSERT INTO supplier.supplier_store_links (
+        supplier_id, store_id, status,
+        payment_terms, credit_days, min_order_value, delivery_charges,
+        delivery_schedule, returns_allowed, returns_window, tax_invoice_provided,
+        price_source, service_area, delivery_address,
+        categories_supplied, brands_supplied, ordering_channel, notes
+      ) VALUES ($1, $2, 'active', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+       ON CONFLICT (supplier_id, store_id) DO UPDATE SET
+         status = 'active',
+         payment_terms = COALESCE(EXCLUDED.payment_terms, supplier.supplier_store_links.payment_terms),
+         credit_days = COALESCE(EXCLUDED.credit_days, supplier.supplier_store_links.credit_days),
+         min_order_value = COALESCE(EXCLUDED.min_order_value, supplier.supplier_store_links.min_order_value),
+         delivery_charges = COALESCE(EXCLUDED.delivery_charges, supplier.supplier_store_links.delivery_charges),
+         delivery_schedule = COALESCE(EXCLUDED.delivery_schedule, supplier.supplier_store_links.delivery_schedule),
+         returns_allowed = COALESCE(EXCLUDED.returns_allowed, supplier.supplier_store_links.returns_allowed),
+         returns_window = COALESCE(EXCLUDED.returns_window, supplier.supplier_store_links.returns_window),
+         tax_invoice_provided = COALESCE(EXCLUDED.tax_invoice_provided, supplier.supplier_store_links.tax_invoice_provided),
+         price_source = COALESCE(EXCLUDED.price_source, supplier.supplier_store_links.price_source),
+         service_area = COALESCE(EXCLUDED.service_area, supplier.supplier_store_links.service_area),
+         delivery_address = COALESCE(EXCLUDED.delivery_address, supplier.supplier_store_links.delivery_address),
+         categories_supplied = COALESCE(EXCLUDED.categories_supplied, supplier.supplier_store_links.categories_supplied),
+         brands_supplied = COALESCE(EXCLUDED.brands_supplied, supplier.supplier_store_links.brands_supplied),
+         ordering_channel = COALESCE(EXCLUDED.ordering_channel, supplier.supplier_store_links.ordering_channel),
+         notes = COALESCE(EXCLUDED.notes, supplier.supplier_store_links.notes),
+         updated_at = NOW()`,
+      [
+        supplierId, storeId,
+        paymentTerms || 'Cash',
+        creditDaysNum,
+        minOrderValueNum,
+        deliveryChargesNum,
+        deliverySchedule || null,
+        returnsAllowed || false,
+        returnsWindowNum,
+        taxInvoiceProvided || false,
+        priceSource || null,
+        serviceArea || null,
+        deliveryAddress || null,
+        JSON.stringify(categoriesSupplied || []),
+        brandsSupplied || null,
+        orderingChannel || null,
+        notes || null
+      ]
     );
 
     res.status(201).json({
       success: true,
       data: {
         id: supplierId,
-        name,
-        phone,
+        businessName: effectiveBusinessName,
+        phone: effectivePrimaryPhone,
         gstin: gstin || null,
         linked: true,
+        linkedToVerified,
+        pendingRequestCreated,
       },
+    });
+  })
+);
+
+/**
+ * PATCH /retailer-admin/suppliers/:id
+ * Update a supplier linked to the store
+ * Note: Only updates fields on the store link or supplier if it's a retailer-owned supplier
+ */
+router.patch(
+  '/suppliers/:id',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+    const { id } = req.params;
+
+    // Full 4-section supplier form fields
+    const {
+      // Section A: Identity & Compliance
+      supplierType,
+      businessName,
+      tradeName,
+      pan,
+      fssai,
+      // Section B: Contact & Address
+      primaryPhone,
+      whatsappEnabled,
+      secondaryPhone,
+      email,
+      addressLine1,
+      addressLine2,
+      area,
+      city,
+      state,
+      pincode,
+      // Section C: Commercial Terms (stored on store_links)
+      paymentTerms,
+      creditDays,
+      minOrderValue,
+      deliveryCharges,
+      deliverySchedule,
+      returnsAllowed,
+      returnsWindow,
+      taxInvoiceProvided,
+      priceSource,
+      serviceArea,
+      deliveryAddress,
+      // Section D: Operational Metadata (stored on store_links)
+      categoriesSupplied,
+      brandsSupplied,
+      orderingChannel,
+      notes,
+      // Legacy field mapping
+      name,
+      phone,
+      address,
+    } = req.body as {
+      supplierType?: string;
+      businessName?: string;
+      tradeName?: string;
+      pan?: string;
+      fssai?: string;
+      primaryPhone?: string;
+      whatsappEnabled?: boolean;
+      secondaryPhone?: string;
+      email?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      area?: string;
+      city?: string;
+      state?: string;
+      pincode?: string;
+      paymentTerms?: string;
+      creditDays?: string | number;
+      minOrderValue?: string | number;
+      deliveryCharges?: string | number;
+      deliverySchedule?: string;
+      returnsAllowed?: boolean;
+      returnsWindow?: string | number;
+      taxInvoiceProvided?: boolean;
+      priceSource?: string;
+      serviceArea?: string;
+      deliveryAddress?: string;
+      categoriesSupplied?: string[];
+      brandsSupplied?: string;
+      orderingChannel?: string;
+      notes?: string;
+      // Legacy
+      name?: string;
+      phone?: string;
+      address?: string;
+    };
+
+    // Check if supplier is linked to this store
+    const linkResult = await query<{ supplier_id: string }>(
+      `SELECT supplier_id FROM supplier.supplier_store_links
+       WHERE supplier_id = $1 AND store_id = $2 AND status = 'active'`,
+      [id, storeId]
+    );
+
+    if (linkResult.length === 0) {
+      throw ApiError.notFound('Supplier');
+    }
+
+    // Check if this is a SuperMandi supplier (cannot edit supplier base fields)
+    const supplierResult = await query<{ verification_status: string }>(
+      `SELECT verification_status FROM supplier.suppliers WHERE id = $1`,
+      [id]
+    );
+
+    const isVerified = supplierResult[0]?.verification_status === 'verified';
+
+    // Build update query for supplier.suppliers (only if not verified)
+    const supplierUpdates: string[] = [];
+    const supplierParams: (string | boolean | null)[] = [];
+    let paramIndex = 1;
+
+    if (!isVerified) {
+      // Section A fields
+      if (businessName !== undefined || name !== undefined) {
+        const effectiveName = businessName || name;
+        supplierUpdates.push(`business_name = $${paramIndex++}`);
+        supplierParams.push(effectiveName?.trim() || null);
+      }
+      if (tradeName !== undefined) {
+        supplierUpdates.push(`trade_name = $${paramIndex++}`);
+        supplierParams.push(tradeName?.trim() || null);
+      }
+      if (supplierType !== undefined) {
+        supplierUpdates.push(`business_type = $${paramIndex++}`);
+        supplierParams.push(supplierType?.trim() || null);
+      }
+      if (pan !== undefined) {
+        supplierUpdates.push(`pan = $${paramIndex++}`);
+        supplierParams.push(pan?.trim() || null);
+      }
+      if (fssai !== undefined) {
+        supplierUpdates.push(`fssai = $${paramIndex++}`);
+        supplierParams.push(fssai?.trim() || null);
+      }
+
+      // Section B fields (contact & address)
+      if (primaryPhone !== undefined || phone !== undefined) {
+        const effectivePhone = primaryPhone || phone;
+        supplierUpdates.push(`primary_phone = $${paramIndex++}`);
+        supplierParams.push(effectivePhone?.trim() || null);
+      }
+      if (whatsappEnabled !== undefined) {
+        supplierUpdates.push(`whatsapp_enabled = $${paramIndex++}`);
+        supplierParams.push(whatsappEnabled);
+      }
+      if (secondaryPhone !== undefined) {
+        supplierUpdates.push(`secondary_phone = $${paramIndex++}`);
+        supplierParams.push(secondaryPhone?.trim() || null);
+      }
+      if (email !== undefined) {
+        supplierUpdates.push(`primary_email = $${paramIndex++}`);
+        supplierParams.push(email?.trim() || null);
+      }
+      if (addressLine1 !== undefined || address !== undefined) {
+        const effectiveAddress = addressLine1 || address;
+        supplierUpdates.push(`address_line1 = $${paramIndex++}`);
+        supplierParams.push(effectiveAddress?.trim() || null);
+      }
+      if (addressLine2 !== undefined) {
+        supplierUpdates.push(`address_line2 = $${paramIndex++}`);
+        supplierParams.push(addressLine2?.trim() || null);
+      }
+      if (area !== undefined) {
+        supplierUpdates.push(`area = $${paramIndex++}`);
+        supplierParams.push(area?.trim() || null);
+      }
+      if (city !== undefined) {
+        supplierUpdates.push(`city = $${paramIndex++}`);
+        supplierParams.push(city?.trim() || null);
+      }
+      if (state !== undefined) {
+        supplierUpdates.push(`state = $${paramIndex++}`);
+        supplierParams.push(state?.trim() || null);
+      }
+      if (pincode !== undefined) {
+        supplierUpdates.push(`pincode = $${paramIndex++}`);
+        supplierParams.push(pincode?.trim() || null);
+      }
+
+      // Update supplier if any fields changed
+      if (supplierUpdates.length > 0) {
+        supplierParams.push(id);
+        await query(
+          `UPDATE supplier.suppliers SET ${supplierUpdates.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex}`,
+          supplierParams
+        );
+      }
+    }
+
+    // Build update query for store_links (always allowed - these are store-specific)
+    const linkUpdates: string[] = [];
+    const linkParams: (string | number | boolean | null)[] = [];
+    let linkParamIndex = 1;
+
+    // Section C: Commercial Terms
+    if (paymentTerms !== undefined) {
+      linkUpdates.push(`payment_terms = $${linkParamIndex++}`);
+      linkParams.push(paymentTerms || 'Cash');
+    }
+    if (creditDays !== undefined) {
+      linkUpdates.push(`credit_days = $${linkParamIndex++}`);
+      linkParams.push(parseInt(String(creditDays), 10) || 0);
+    }
+    if (minOrderValue !== undefined) {
+      linkUpdates.push(`min_order_value = $${linkParamIndex++}`);
+      linkParams.push(parseInt(String(minOrderValue), 10) || 0);
+    }
+    if (deliveryCharges !== undefined) {
+      linkUpdates.push(`delivery_charges = $${linkParamIndex++}`);
+      linkParams.push(parseInt(String(deliveryCharges), 10) || 0);
+    }
+    if (deliverySchedule !== undefined) {
+      linkUpdates.push(`delivery_schedule = $${linkParamIndex++}`);
+      linkParams.push(deliverySchedule?.trim() || null);
+    }
+    if (returnsAllowed !== undefined) {
+      linkUpdates.push(`returns_allowed = $${linkParamIndex++}`);
+      linkParams.push(returnsAllowed);
+    }
+    if (returnsWindow !== undefined) {
+      linkUpdates.push(`returns_window = $${linkParamIndex++}`);
+      linkParams.push(parseInt(String(returnsWindow), 10) || 0);
+    }
+    if (taxInvoiceProvided !== undefined) {
+      linkUpdates.push(`tax_invoice_provided = $${linkParamIndex++}`);
+      linkParams.push(taxInvoiceProvided);
+    }
+    if (priceSource !== undefined) {
+      linkUpdates.push(`price_source = $${linkParamIndex++}`);
+      linkParams.push(priceSource?.trim() || null);
+    }
+    if (serviceArea !== undefined) {
+      linkUpdates.push(`service_area = $${linkParamIndex++}`);
+      linkParams.push(serviceArea?.trim() || null);
+    }
+    if (deliveryAddress !== undefined) {
+      linkUpdates.push(`delivery_address = $${linkParamIndex++}`);
+      linkParams.push(deliveryAddress?.trim() || null);
+    }
+
+    // Section D: Operational Metadata
+    if (categoriesSupplied !== undefined) {
+      linkUpdates.push(`categories_supplied = $${linkParamIndex++}`);
+      linkParams.push(JSON.stringify(categoriesSupplied || []));
+    }
+    if (brandsSupplied !== undefined) {
+      linkUpdates.push(`brands_supplied = $${linkParamIndex++}`);
+      linkParams.push(brandsSupplied?.trim() || null);
+    }
+    if (orderingChannel !== undefined) {
+      linkUpdates.push(`ordering_channel = $${linkParamIndex++}`);
+      linkParams.push(orderingChannel?.trim() || null);
+    }
+    if (notes !== undefined) {
+      linkUpdates.push(`notes = $${linkParamIndex++}`);
+      linkParams.push(notes?.trim() || null);
+    }
+
+    // Update store_links if any fields changed
+    if (linkUpdates.length > 0) {
+      linkParams.push(id);
+      linkParams.push(storeId);
+      await query(
+        `UPDATE supplier.supplier_store_links SET ${linkUpdates.join(', ')}, updated_at = NOW()
+         WHERE supplier_id = $${linkParamIndex++} AND store_id = $${linkParamIndex}`,
+        linkParams
+      );
+    }
+
+    const totalChanges = supplierUpdates.length + linkUpdates.length;
+    if (totalChanges === 0) {
+      res.json({ success: true, data: { id, message: 'No changes made' } });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id,
+        message: 'Supplier updated',
+        fieldsUpdated: totalChanges,
+        supplierFieldsSkipped: isVerified && supplierUpdates.length > 0
+          ? 'Verified supplier base fields cannot be edited'
+          : undefined
+      },
+    });
+  })
+);
+
+/**
+ * DELETE /retailer-admin/suppliers/:id
+ * Remove supplier link from the store (soft delete - sets status to 'inactive')
+ */
+router.delete(
+  '/suppliers/:id',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+    const { id } = req.params;
+
+    // Check if supplier is linked to this store
+    const linkResult = await query<{ supplier_id: string }>(
+      `SELECT supplier_id FROM supplier.supplier_store_links
+       WHERE supplier_id = $1 AND store_id = $2 AND status = 'active'`,
+      [id, storeId]
+    );
+
+    if (linkResult.length === 0) {
+      throw ApiError.notFound('Supplier');
+    }
+
+    // Soft delete: set status to 'inactive'
+    await query(
+      `UPDATE supplier.supplier_store_links
+       SET status = 'inactive', updated_at = NOW()
+       WHERE supplier_id = $1 AND store_id = $2`,
+      [id, storeId]
+    );
+
+    res.json({
+      success: true,
+      data: { id, message: 'Supplier removed from store' },
     });
   })
 );
@@ -1037,7 +1984,7 @@ router.post(
         } else {
           // Create new product
           // FIX: Use primary_barcode instead of barcode, remove type column (doesn't exist)
-          const result = await query<{ id: string }>(
+          const result = await query<{ id: string; store_product_id: string }>(
             `WITH new_product AS (
                INSERT INTO catalog.products (primary_barcode, name, description, unit)
                VALUES ($1, $2, $3, $4)
@@ -1045,10 +1992,21 @@ router.post(
              )
              INSERT INTO catalog.store_products (store_id, product_id, purchase_price, sell_price, mrp)
              SELECT $5, id, $6, $7, $8 FROM new_product
-             RETURNING product_id as id`,
+             RETURNING product_id as id, id as store_product_id`,
             [barcode, name, description, unit, storeId, purchasePrice, sellPrice, mrp]
           );
           productId = result[0]!.id;
+          const storeProductId = result[0]!.store_product_id;
+
+          // Insert into store_product_barcodes for POS barcode lookup
+          if (barcode) {
+            await query(
+              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+               VALUES ($1, $2, $3, 'manual')
+               ON CONFLICT (store_id, barcode) DO NOTHING`,
+              [storeId, storeProductId, barcode]
+            );
+          }
           productsCreated++;
         }
 

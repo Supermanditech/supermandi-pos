@@ -14,11 +14,19 @@ import {
   fetchAnalyticsConsumerSales
 } from "./api/analytics";
 import { fetchBarcodeSheetPdf } from "./api/barcodeSheets";
+import {
+  fetchPendingSuppliers,
+  fetchVerifiedSuppliers,
+  verifySupplierRequest,
+  rejectSupplierRequest,
+  type PendingSupplierRequest,
+  type VerifiedSupplier
+} from "./api/suppliers";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
 
-type TabKey = "events" | "devices" | "stores" | "payments" | "analytics" | "ai";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer";
 
@@ -187,6 +195,18 @@ export default function App() {
   const [analyticsConsumerSales, setAnalyticsConsumerSales] = useState<any>(null);
   const [productsGroupBy, setProductsGroupBy] = useState<string>("day");
 
+  // Suppliers state
+  const [pendingSuppliers, setPendingSuppliers] = useState<PendingSupplierRequest[]>([]);
+  const [verifiedSuppliers, setVerifiedSuppliers] = useState<VerifiedSupplier[]>([]);
+  const [suppliersLoading, setSuppliersLoading] = useState<boolean>(false);
+  const [suppliersError, setSuppliersError] = useState<string>("");
+  const [supplierSearch, setSupplierSearch] = useState<string>("");
+  const [supplierActionLoading, setSupplierActionLoading] = useState<Record<string, boolean>>({});
+  const [supplierActionError, setSupplierActionError] = useState<string>("");
+  const [selectedSupplierForLink, setSelectedSupplierForLink] = useState<Record<string, string>>({});
+  const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
+  const suppliersInFlightRef = useRef(false);
+
   const setRateLimit = (until: number | null) => {
     rateLimitedUntilRef.current = until;
     setRateLimitedUntil(until);
@@ -306,6 +326,75 @@ export default function App() {
     }
   }
 
+  async function refreshSuppliers() {
+    if (isRateLimited() || suppliersInFlightRef.current) return;
+    suppliersInFlightRef.current = true;
+    setSuppliersLoading(true);
+    setSuppliersError("");
+    try {
+      const [pending, verified] = await Promise.all([
+        fetchPendingSuppliers(),
+        fetchVerifiedSuppliers(supplierSearch || undefined)
+      ]);
+      setPendingSuppliers(pending);
+      setVerifiedSuppliers(verified);
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
+    } catch (e: any) {
+      const message = e?.message ? String(e.message) : "Failed to fetch suppliers";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      setSuppliersError(message);
+    } finally {
+      suppliersInFlightRef.current = false;
+      setSuppliersLoading(false);
+    }
+  }
+
+  async function handleVerifySupplier(requestId: string) {
+    const supplierId = selectedSupplierForLink[requestId];
+    if (!supplierId) {
+      setSupplierActionError("Please select a verified supplier to link");
+      return;
+    }
+    setSupplierActionError("");
+    setSupplierActionLoading((prev) => ({ ...prev, [requestId]: true }));
+    try {
+      await verifySupplierRequest(requestId, { supplierId });
+      setPendingSuppliers((prev) => prev.filter((r) => r.id !== requestId));
+      setSelectedSupplierForLink((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+    } catch (e: any) {
+      setSupplierActionError(e?.message ? String(e.message) : "Failed to verify supplier");
+    } finally {
+      setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
+    }
+  }
+
+  async function handleRejectSupplier(requestId: string) {
+    const reason = rejectReason[requestId] || "";
+    setSupplierActionError("");
+    setSupplierActionLoading((prev) => ({ ...prev, [requestId]: true }));
+    try {
+      await rejectSupplierRequest(requestId, { reason });
+      setPendingSuppliers((prev) => prev.filter((r) => r.id !== requestId));
+      setRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[requestId];
+        return next;
+      });
+    } catch (e: any) {
+      setSupplierActionError(e?.message ? String(e.message) : "Failed to reject supplier");
+    } finally {
+      setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
+    }
+  }
+
   async function refreshAnalytics(activeTab: AnalyticsTabKey) {
     setAnalyticsLoading(true);
     setAnalyticsError("");
@@ -349,12 +438,14 @@ export default function App() {
     const shouldRefreshEvents = tab === "events" || tab === "devices";
     const shouldRefreshDevices = tab === "devices";
     const shouldRefreshStores = tab === "stores";
+    const shouldRefreshSuppliers = tab === "suppliers";
     const shouldRefreshAi = tab === "ai";
 
     refreshHealth();
     if (shouldRefreshEvents) refreshEvents();
     if (shouldRefreshDevices) refreshDevices();
     if (shouldRefreshStores) refreshStores();
+    if (shouldRefreshSuppliers) refreshSuppliers();
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
@@ -367,6 +458,7 @@ export default function App() {
       if (shouldRefreshEvents) refreshEvents();
       if (shouldRefreshDevices) refreshDevices();
       if (shouldRefreshStores) refreshStores();
+      if (shouldRefreshSuppliers) refreshSuppliers();
       if (shouldRefreshAi) {
         fetchAiHealth()
           .then((res) => setAiConfigured(res.configured))
@@ -893,6 +985,14 @@ export default function App() {
         </button>
         <button className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>
           Stores
+        </button>
+        <button className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>
+          Suppliers
+          {pendingSuppliers.filter(s => s.status === "pending").length > 0 && (
+            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
+              {pendingSuppliers.filter(s => s.status === "pending").length}
+            </span>
+          )}
         </button>
         <button className={tab === "analytics" ? "tab tabActive" : "tab"} onClick={() => setTab("analytics")}>
           Analytics
@@ -1520,6 +1620,223 @@ export default function App() {
                       <td className="mono">{s.storeId}</td>
                       <td className="mono">{s.eventCount}</td>
                       <td className="mono">{new Date(s.lastSeen).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === "suppliers" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div>
+              <div className="cardTitle">Pending Supplier Requests</div>
+              <div className="muted">Retailers requesting to link suppliers - verify with platform suppliers or reject</div>
+            </div>
+            <button onClick={refreshSuppliers} disabled={suppliersLoading}>
+              {suppliersLoading ? "Refreshing..." : "Refresh"}
+            </button>
+          </div>
+
+          {suppliersError && <div className="banner" style={{ margin: "0 16px 12px" }}>{suppliersError}</div>}
+          {supplierActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{supplierActionError}</div>}
+
+          {pendingSuppliers.filter(s => s.status === "pending").length === 0 ? (
+            <div className="empty">
+              {suppliersLoading ? "Loading pending requests..." : "No pending supplier requests."}
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <div className="deviceGrid">
+                {pendingSuppliers.filter(s => s.status === "pending").map((request) => (
+                  <div className="deviceCard" key={request.id}>
+                    <div className="deviceHeader">
+                      <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
+                        {request.requestedName || "Unknown Supplier"}
+                      </div>
+                      <div className="badgeRow">
+                        <span className="badge badgeWarn">Pending</span>
+                      </div>
+                    </div>
+
+                    <div className="deviceMetaGrid">
+                      <div>
+                        <strong>Store:</strong> <span className="mono">{request.storeName || request.storeId}</span>
+                      </div>
+                      <div>
+                        <strong>GSTIN:</strong> <span className="mono">{request.requestedGstin || "-"}</span>
+                      </div>
+                      <div>
+                        <strong>Phone:</strong> <span className="mono">{request.requestedPhone || "-"}</span>
+                      </div>
+                      <div>
+                        <strong>Email:</strong> <span className="mono">{request.requestedEmail || "-"}</span>
+                      </div>
+                      <div>
+                        <strong>Requested:</strong> <span className="mono">{new Date(request.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Link to Verified Supplier:</label>
+                      <select
+                        className="selectSmall"
+                        style={{ width: "100%", marginBottom: 8 }}
+                        value={selectedSupplierForLink[request.id] || ""}
+                        onChange={(e) => setSelectedSupplierForLink((prev) => ({ ...prev, [request.id]: e.target.value }))}
+                      >
+                        <option value="">-- Select verified supplier --</option>
+                        {verifiedSuppliers.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.businessName} ({s.gstin}) - {s.city || "Unknown city"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ marginTop: 8 }}>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Reject Reason (optional):</label>
+                      <input
+                        className="tableInput"
+                        style={{ width: "100%", marginBottom: 8 }}
+                        placeholder="Reason for rejection..."
+                        value={rejectReason[request.id] || ""}
+                        onChange={(e) => setRejectReason((prev) => ({ ...prev, [request.id]: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="deviceActions">
+                      <button
+                        onClick={() => handleVerifySupplier(request.id)}
+                        disabled={supplierActionLoading[request.id] || !selectedSupplierForLink[request.id]}
+                        style={{ background: "#22c55e", color: "white" }}
+                      >
+                        {supplierActionLoading[request.id] ? "Verifying..." : "Verify & Link"}
+                      </button>
+                      <button
+                        className="btnGhost"
+                        onClick={() => handleRejectSupplier(request.id)}
+                        disabled={supplierActionLoading[request.id]}
+                        style={{ color: "#ef4444" }}
+                      >
+                        {supplierActionLoading[request.id] ? "Rejecting..." : "Reject"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="cardHeader" style={{ paddingTop: 0 }}>
+            <div>
+              <div className="cardTitle">Verified Suppliers (Platform)</div>
+              <div className="muted">Search platform suppliers for linking to requests</div>
+            </div>
+          </div>
+
+          <div className="tableWrap" style={{ paddingTop: 0 }}>
+            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+              <div className="control">
+                <label>Search</label>
+                <input
+                  value={supplierSearch}
+                  onChange={(e) => setSupplierSearch(e.target.value)}
+                  placeholder="GSTIN or business name..."
+                />
+              </div>
+              <div className="control">
+                <label>&nbsp;</label>
+                <button onClick={refreshSuppliers} disabled={suppliersLoading}>
+                  Search
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {verifiedSuppliers.length === 0 ? (
+            <div className="empty">
+              {suppliersLoading ? "Loading verified suppliers..." : "No verified suppliers found. Try a different search."}
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Business Name</th>
+                    <th>GSTIN</th>
+                    <th>Contact</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {verifiedSuppliers.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <div>{s.businessName}</div>
+                        {s.tradeName && <div className="muted">{s.tradeName}</div>}
+                      </td>
+                      <td className="mono">{s.gstin}</td>
+                      <td>
+                        <div className="mono">{s.primaryPhone || "-"}</div>
+                        <div className="muted">{s.primaryEmail || ""}</div>
+                      </td>
+                      <td>{[s.city, s.state].filter(Boolean).join(", ") || "-"}</td>
+                      <td>
+                        <span className={`badge ${s.verificationStatus === "verified" ? "badgeOk" : "badgeWarn"}`}>
+                          {s.verificationStatus}
+                        </span>
+                      </td>
+                      <td className="mono">{s.rating?.toFixed(1) || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="cardHeader" style={{ paddingTop: 0 }}>
+            <div>
+              <div className="cardTitle">Recently Processed</div>
+              <div className="muted">Approved and rejected requests</div>
+            </div>
+          </div>
+
+          {pendingSuppliers.filter(s => s.status !== "pending").length === 0 ? (
+            <div className="empty">No processed requests yet.</div>
+          ) : (
+            <div className="tableWrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Store</th>
+                    <th>Requested Name</th>
+                    <th>GSTIN</th>
+                    <th>Status</th>
+                    <th>Processed</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingSuppliers.filter(s => s.status !== "pending").map((request) => (
+                    <tr key={request.id}>
+                      <td className="mono">{request.storeName || request.storeId}</td>
+                      <td>{request.requestedName || "-"}</td>
+                      <td className="mono">{request.requestedGstin || "-"}</td>
+                      <td>
+                        <span className={`badge ${request.status === "approved" ? "badgeOk" : "badgeError"}`}>
+                          {request.status}
+                        </span>
+                      </td>
+                      <td className="mono">
+                        {request.reviewedAt ? new Date(request.reviewedAt).toLocaleString() : "-"}
+                      </td>
+                      <td>{request.reviewNotes || "-"}</td>
                     </tr>
                   ))}
                 </tbody>

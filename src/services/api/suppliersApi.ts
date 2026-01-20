@@ -1,5 +1,6 @@
 // TICKET-001: Suppliers API for POS
-// Fetches suppliers linked to the current store
+// Fetches VERIFIED suppliers linked to the current store
+// Per 10K Store Scale spec: only supplierVerified=true suppliers are visible on POS
 
 import { apiClient } from "./apiClient";
 
@@ -9,18 +10,53 @@ import { apiClient } from "./apiClient";
 
 export interface Supplier {
   id: string;
+  supplierCode: string;
+  businessName: string;
+  tradeName?: string | null;
+  gstin: string;
+  primaryPhone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  // Store-specific terms
+  creditDays: number;
+  minOrderValue: number;
+  expectedDeliveryDays: number;
+  isPreferred: boolean;
+  // Verification status (always true for POS - verified-only filter)
+  supplierVerified: true;
+  supplierAccountId: string;
+  verificationSource: 'platform';
+  // Legacy fields for backwards compatibility
   name: string;
   phone?: string;
-  email?: string;
   address?: string;
-  gstin?: string;
   isActive: boolean;
+}
+
+interface RawPosSupplier {
+  id: string;
+  supplierCode: string;
+  businessName: string;
+  tradeName?: string | null;
+  gstin: string;
+  primaryPhone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  creditDays: number;
+  minOrderValue: number;
+  expectedDeliveryDays: number;
+  isPreferred: boolean;
+  supplierVerified: true;
+  supplierAccountId: string;
+  verificationSource: 'platform';
 }
 
 interface GetSuppliersResponse {
   success: boolean;
   data: {
-    suppliers: Supplier[];
+    suppliers: RawPosSupplier[];
   };
   count?: number;
 }
@@ -54,15 +90,29 @@ interface UpdateSupplierPayload {
 const SUPPLIERS_BASE = "/api/v1/pos/suppliers";
 
 /**
- * Get all suppliers linked to the current store.
+ * Get all VERIFIED suppliers linked to the current store.
  * Requires device token authentication.
+ *
+ * NOTE: Per 10K Store Scale spec, only verified suppliers
+ * (supplierVerified=true) are returned. Local/unverified
+ * suppliers are NOT visible on POS.
  */
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
     const response = await apiClient.get<GetSuppliersResponse>(SUPPLIERS_BASE);
     // Handle missing data gracefully - return empty array if no suppliers
     // API returns { success: true, data: { suppliers: [...] } }
-    return response.data?.suppliers ?? [];
+    const rawSuppliers = response.data?.suppliers ?? [];
+
+    // Map to Supplier interface with legacy field support
+    return rawSuppliers.map((s) => ({
+      ...s,
+      // Legacy fields for backwards compatibility
+      name: s.businessName,
+      phone: s.primaryPhone ?? undefined,
+      address: [s.city, s.state].filter(Boolean).join(', ') || undefined,
+      isActive: true, // All returned suppliers are active
+    }));
   } catch (error) {
     console.error("[suppliersApi] getSuppliers failed:", error);
     // Return empty array on error to prevent crashes
