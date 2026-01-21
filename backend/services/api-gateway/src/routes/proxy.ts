@@ -14,12 +14,15 @@ const router: Router = Router();
  * Create proxy options for a service
  */
 function createProxyOptions(service: ServiceConfig): Options {
+  // GW-ADMIN-001: Support stripPrefix option (default: true for backward compatibility)
+  const shouldStripPrefix = service.stripPrefix !== false;
+
   return {
     target: service.url,
     changeOrigin: true,
-    pathRewrite: {
-      [`^${service.pathPrefix}`]: '', // Remove prefix when forwarding
-    },
+    pathRewrite: shouldStripPrefix
+      ? { [`^${service.pathPrefix}`]: '' } // Remove prefix when forwarding
+      : undefined, // Keep path as-is when stripPrefix is false
     onProxyReq: (proxyReq: ClientRequest, req: Request) => {
       // Forward correlation ID to backend service
       if (req.correlationId) {

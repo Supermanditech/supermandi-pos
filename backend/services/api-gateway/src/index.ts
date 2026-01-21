@@ -10,6 +10,7 @@ import {
   rateLimiterMiddleware,
   stripClientAuthHeaders,
   jwtAuthMiddleware,
+  adminAuthMiddleware,
 } from './middleware';
 import { setupProxyRoutes } from './routes/proxy';
 
@@ -34,8 +35,11 @@ app.use(rateLimiterMiddleware);
 // Strip any client-provided auth headers (prevents spoofing)
 app.use(stripClientAuthHeaders);
 
-// JWT authentication for protected routes
+// JWT authentication for protected routes (retailer-admin)
 app.use(jwtAuthMiddleware);
+
+// SEC-ADMIN-001: Admin authentication for /api/v1/admin/* routes (superadmin)
+app.use(adminAuthMiddleware);
 
 // =============================================================================
 // HEALTH CHECK ENDPOINTS

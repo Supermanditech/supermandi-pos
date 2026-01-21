@@ -4,6 +4,8 @@ export interface ServiceConfig {
   name: string;
   url: string;
   pathPrefix: string;
+  /** If false, the pathPrefix is NOT stripped when forwarding to backend (default: true) */
+  stripPrefix?: boolean;
 }
 
 export interface GatewayConfig {
@@ -33,6 +35,32 @@ export const config: GatewayConfig = {
 
   // Backend services
   services: [
+    // ==========================================================================
+    // ADMIN ROUTES - GW-ADMIN-001: Fix gateway routing for /api/v1/admin/*
+    // More specific routes MUST come before less specific ones
+    // stripPrefix: false because backends expect full /api/v1/admin/... path
+    // ==========================================================================
+    // Admin pos/events and analytics routes -> main backend (monolith)
+    {
+      name: 'admin-pos',
+      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/pos',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-analytics',
+      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/analytics',
+      stripPrefix: false,
+    },
+    // All other admin routes (stores, pending-suppliers, etc.) -> platform-service
+    {
+      name: 'admin',
+      url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),
+      pathPrefix: '/api/v1/admin',
+      stripPrefix: false,
+    },
+    // ==========================================================================
     {
       name: 'auth',
       url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
