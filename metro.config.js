@@ -1,12 +1,14 @@
 const { getDefaultConfig } = require("expo/metro-config");
-const exclusionList = require("metro-config/src/defaults/exclusionList");
+const path = require("path");
 
 const config = getDefaultConfig(__dirname);
 
-// Block Metro from watching anything under /backend (prevents ENOENT watcher crashes)
-config.resolver.blockList = exclusionList([
+// ✅ Ignore backend (pnpm creates temporary _tmp_ folders that disappear and crash Metro watcher on Windows)
+config.watchFolders = [__dirname];
+
+config.resolver.blockList = [
   /.*\/backend\/.*/,
   /.*\\backend\\.*/
-]);
+];
 
 module.exports = config;
