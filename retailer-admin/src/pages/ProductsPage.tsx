@@ -14,70 +14,102 @@ interface Supplier {
 
 interface Product {
   id: string;
-  barcode: string;
+  barcode: string | null;
+  generatedBarcode?: string | null;
   name: string;
   description?: string;
-  type: 'branded' | 'loose';
-  category?: string;
+  mode: 'PACKAGED' | 'LOOSE_BULK';
   brand?: string;
   sellPrice: number;
-  purchasePrice?: number;
+  purchasePrice: number;
   mrp?: number;
   stock: number;
   unit: string;
   supplierId?: string;
   supplierName?: string;
+  // New fields per E2E Go-Live spec
+  lowStockAlertQty?: number;
+  gstPercent?: number;
+  hsn?: string;
+  notes?: string;
+  // PACKAGED only
+  packSize?: number;
+  packUnit?: string;
+  // LOOSE_BULK only
+  soldBy?: string;
+  rateUnit?: string;
+}
+
+// API response for product create
+interface ProductCreateResponse {
+  ok: boolean;
+  data: {
+    storeId: string;
+    productId: string;
+    barcode: string | null;
+    generatedBarcode: string | null;
+    ledgerEntryId: string | null;
+    storeProduct: {
+      productId: string;
+      mode: 'PACKAGED' | 'LOOSE_BULK';
+      name: string;
+      sellPrice: number;
+      purchasePrice: number;
+      currentStock: number;
+    };
+  };
 }
 
 interface ProductFormData {
   barcode: string;
   name: string;
   description: string;
-  type: 'branded' | 'loose';
-  category: string;
+  mode: 'PACKAGED' | 'LOOSE_BULK';
   brand: string;
+  alias: string;
   unit: string;
   purchasePrice: string;
   sellPrice: string;
   mrp: string;
-  openingStock: string;
+  openingStockQty: string;
   supplierId: string;
+  // New fields per E2E Go-Live spec
+  lowStockAlertQty: string;  // Optional - threshold for low stock alerts
+  gstPercent: string;        // Optional - GST percentage (0, 5, 12, 18, 28)
+  hsn: string;               // Optional - HSN code for tax compliance
+  notes: string;             // Optional - internal notes
+  // PACKAGED only
+  packSize: string;          // Recommended - e.g., "500" for 500g pack
+  packUnit: string;          // Recommended - e.g., "g", "ml", "pcs"
+  // LOOSE_BULK only
+  soldBy: string;            // Required - "WEIGHT" or "COUNT"
+  rateUnit: string;          // Required - the unit rate is quoted in (e.g., KG, GM, PCS)
 }
-
-// Common product categories for Indian kirana stores
-const PRODUCT_CATEGORIES = [
-  'Groceries',
-  'Dairy & Milk',
-  'Fruits & Vegetables',
-  'Snacks & Beverages',
-  'Personal Care',
-  'Household',
-  'Spices & Masala',
-  'Rice & Flour',
-  'Oil & Ghee',
-  'Pulses & Dals',
-  'Tea & Coffee',
-  'Biscuits & Cookies',
-  'Frozen Foods',
-  'Baby Products',
-  'Pet Supplies',
-  'Stationery',
-  'Other',
-];
 
 const initialFormData: ProductFormData = {
   barcode: '',
   name: '',
   description: '',
-  type: 'branded',
-  category: '',
+  mode: 'PACKAGED',
   brand: '',
-  unit: 'pcs',
+  alias: '',
+  unit: 'PCS',
   purchasePrice: '',
   sellPrice: '',
   mrp: '',
-  openingStock: '0',
+  openingStockQty: '0',
   supplierId: '',
+  // New fields per E2E Go-Live spec
+  lowStockAlertQty: '',
+  gstPercent: '',
+  hsn: '',
+  notes: '',
+  // PACKAGED only
+  packSize: '',
+  packUnit: '',
+  // LOOSE_BULK only
+  soldBy: 'WEIGHT',   // Default for loose products
+  rateUnit: 'KG',     // Default rate unit
 };
 
 export default function ProductsPage() {
@@ -95,6 +127,7 @@ export default function ProductsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [createdProduct, setCreatedProduct] = useState<ProductCreateResponse['data'] | null>(null);
 
   // Bulk upload state
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -147,19 +180,31 @@ export default function ProductsPage() {
       barcode: product.barcode || '',
       name: product.name,
       description: product.description || '',
-      type: product.type,
-      category: product.category || '',
+      mode: product.mode || 'PACKAGED',
       brand: product.brand || '',
+      alias: '',
       unit: product.unit,
-      purchasePrice: product.purchasePrice ? String(product.purchasePrice) : '',
-      sellPrice: String(product.sellPrice),
-      mrp: product.mrp ? String(product.mrp) : '',
-      openingStock: String(product.stock),
+      purchasePrice: product.purchasePrice ? String(product.purchasePrice / 100) : '',
+      sellPrice: String(product.sellPrice / 100),
+      mrp: product.mrp ? String(product.mrp / 100) : '',
+      openingStockQty: String(product.stock),
       supplierId: product.supplierId || '',
+      // New fields per E2E Go-Live spec
+      lowStockAlertQty: product.lowStockAlertQty ? String(product.lowStockAlertQty) : '',
+      gstPercent: product.gstPercent !== undefined ? String(product.gstPercent) : '',
+      hsn: product.hsn || '',
+      notes: product.notes || '',
+      // PACKAGED only
+      packSize: product.packSize ? String(product.packSize) : '',
+      packUnit: product.packUnit || '',
+      // LOOSE_BULK only
+      soldBy: product.soldBy || 'WEIGHT',
+      rateUnit: product.rateUnit || 'KG',
     });
     setShowForm(true);
     setError('');
     setSuccess('');
+    setCreatedProduct(null);
   };
 
   // Close form
@@ -168,6 +213,7 @@ export default function ProductsPage() {
     setEditingProduct(null);
     setFormData(initialFormData);
     setError('');
+    setCreatedProduct(null);
   };
 
   // Handle delete
@@ -197,14 +243,27 @@ export default function ProductsPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleTypeChange = (type: 'branded' | 'loose') => {
-    setFormData(prev => ({ ...prev, type }));
+  const handleModeChange = (mode: 'PACKAGED' | 'LOOSE_BULK') => {
+    setFormData(prev => ({
+      ...prev,
+      mode,
+      barcode: mode === 'LOOSE_BULK' ? '' : prev.barcode, // Clear barcode for loose products
+      // Reset mode-specific fields
+      unit: mode === 'PACKAGED' ? 'PCS' : 'KG',
+      // PACKAGED fields - clear when switching to LOOSE_BULK
+      packSize: mode === 'LOOSE_BULK' ? '' : prev.packSize,
+      packUnit: mode === 'LOOSE_BULK' ? '' : prev.packUnit,
+      // LOOSE_BULK fields - set defaults when switching to LOOSE_BULK
+      soldBy: mode === 'LOOSE_BULK' ? (prev.soldBy || 'WEIGHT') : prev.soldBy,
+      rateUnit: mode === 'LOOSE_BULK' ? (prev.rateUnit || 'KG') : prev.rateUnit,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setCreatedProduct(null);
     setIsSubmitting(true);
 
     try {
@@ -214,6 +273,10 @@ export default function ProductsPage() {
       }
       if (!formData.sellPrice || parseFloat(formData.sellPrice) <= 0) {
         throw new Error('Valid sell price is required');
+      }
+      // Purchase price is now required per E2E Go-Live spec
+      if (!formData.purchasePrice || parseFloat(formData.purchasePrice) <= 0) {
+        throw new Error('Valid purchase price is required for ledger tracking');
       }
 
       // CRITICAL: Convert rupees to paise (integer minor units)
@@ -225,20 +288,37 @@ export default function ProductsPage() {
         return Math.round(float * 100); // Round to avoid floating point issues
       };
 
-      const payload = {
-        barcode: formData.barcode.trim() || undefined,
+      // API-RCAT-001: New contract - no category, mode required
+      const payload: Record<string, unknown> = {
+        mode: formData.mode,
+        barcode: formData.mode === 'PACKAGED' && formData.barcode.trim() ? formData.barcode.trim() : undefined,
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        type: formData.type,
-        category: formData.category || undefined,
         brand: formData.brand.trim() || undefined,
+        alias: formData.alias.trim() || undefined,
         unit: formData.unit,
-        purchasePrice: rupeesToPaise(formData.purchasePrice),
-        sellPrice: rupeesToPaise(formData.sellPrice)!, // Required field
+        purchasePrice: rupeesToPaise(formData.purchasePrice)!, // Required
+        sellPrice: rupeesToPaise(formData.sellPrice)!, // Required
         mrp: rupeesToPaise(formData.mrp),
-        openingStock: parseInt(formData.openingStock) || 0,
+        openingStockQty: parseInt(formData.openingStockQty) || 0,
         supplierId: formData.supplierId || undefined,
+        // New fields per E2E Go-Live spec
+        lowStockAlertQty: formData.lowStockAlertQty ? parseInt(formData.lowStockAlertQty) : undefined,
+        gstPercent: formData.gstPercent ? parseFloat(formData.gstPercent) : undefined,
+        hsn: formData.hsn.trim() || undefined,
+        notes: formData.notes.trim() || undefined,
       };
+
+      // Add mode-specific fields
+      if (formData.mode === 'PACKAGED') {
+        // PACKAGED: Pack Size and Pack Unit (recommended)
+        if (formData.packSize) payload.packSize = parseInt(formData.packSize);
+        if (formData.packUnit.trim()) payload.packUnit = formData.packUnit.trim();
+      } else {
+        // LOOSE_BULK: Sold By and Rate Unit (required per spec)
+        payload.soldBy = formData.soldBy || 'WEIGHT';
+        payload.rateUnit = formData.rateUnit || 'KG';
+      }
 
       const isEdit = !!editingProduct;
       const url = isEdit
@@ -252,14 +332,22 @@ export default function ProductsPage() {
       });
 
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await response.json() as ProductCreateResponse;
 
       if (!response.ok) {
-        throw new Error(data.error?.message || `Failed to ${isEdit ? 'update' : 'create'} product`);
+        throw new Error((data as unknown as { error?: { message?: string } }).error?.message || `Failed to ${isEdit ? 'update' : 'create'} product`);
       }
 
-      setSuccess(`Product ${isEdit ? 'updated' : 'created'} successfully!`);
-      closeForm();
+      if (isEdit) {
+        setSuccess('Product updated successfully!');
+        closeForm();
+      } else {
+        // Show success with barcode info for new products
+        setSuccess('Product created successfully! Synced to POS.');
+        setCreatedProduct(data.data);
+        // Don't close form yet - let user see barcode info and download PDF
+      }
+
       await fetchProducts();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save product. Please try again.');
@@ -275,8 +363,9 @@ export default function ProductsPage() {
 
     return lines.map(line => {
       // Support both tab and comma separation
+      // New format: Name, Barcode, Brand, SellPrice, PurchasePrice, MRP, Unit, Stock
       const parts = line.includes('\t') ? line.split('\t') : line.split(',');
-      const [name, barcode, category, brand, sellPrice, purchasePrice, mrp, unit, stock] = parts.map(p => p?.trim());
+      const [name, barcode, brand, sellPrice, purchasePrice, mrp, unit, stock] = parts.map(p => p?.trim());
 
       // CRITICAL: Convert rupees to paise (integer minor units)
       const rupeesToPaise = (rupees: string | undefined): number | undefined => {
@@ -288,15 +377,15 @@ export default function ProductsPage() {
 
       return {
         name: name || '',
-        barcode: barcode || '',
-        category: category || '',
+        barcode: barcode || null,
         brand: brand || '',
         sellPrice: rupeesToPaise(sellPrice) || 0,
-        purchasePrice: rupeesToPaise(purchasePrice),
+        purchasePrice: rupeesToPaise(purchasePrice) || 0,
         mrp: rupeesToPaise(mrp),
-        unit: unit || 'pcs',
+        unit: unit || 'PCS',
         stock: stock ? parseInt(stock) : 0,
-        type: barcode ? 'branded' as const : 'loose' as const,
+        // Mode is determined by presence of barcode
+        mode: barcode ? 'PACKAGED' as const : 'LOOSE_BULK' as const,
       };
     }).filter(p => p.name); // Filter out empty rows
   };
@@ -402,9 +491,93 @@ export default function ProductsPage() {
           <div className="card" style={{ marginBottom: '1.5rem' }}>
             <h3 className="card-title">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
             <form onSubmit={handleSubmit}>
-              {/* Product Type Selection */}
+              {/* Success: Show created product info with SKU PDF download */}
+              {createdProduct && (
+                <div style={{
+                  background: '#dcfce7',
+                  border: '2px solid #22c55e',
+                  borderRadius: '0.5rem',
+                  padding: '1rem',
+                  marginBottom: '1.5rem',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>✅</span>
+                    <strong style={{ color: '#166534' }}>Product Synced to POS!</strong>
+                  </div>
+
+                  {createdProduct.storeProduct.mode === 'LOOSE_BULK' && createdProduct.generatedBarcode && (
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <p style={{ margin: '0 0 0.5rem 0', color: '#166534' }}>
+                        <strong>Generated Barcode:</strong>
+                        <code style={{
+                          marginLeft: '0.5rem',
+                          padding: '0.25rem 0.5rem',
+                          background: 'white',
+                          borderRadius: '0.25rem',
+                          fontFamily: 'monospace',
+                          fontSize: '1rem',
+                        }}>
+                          {createdProduct.generatedBarcode}
+                        </code>
+                      </p>
+                      <p style={{ margin: '0', fontSize: '0.875rem', color: '#166534' }}>
+                        Scan this barcode in POS SELL to add this product.
+                      </p>
+                    </div>
+                  )}
+
+                  {createdProduct.storeProduct.mode === 'PACKAGED' && createdProduct.barcode && (
+                    <p style={{ margin: '0 0 0.75rem 0', color: '#166534' }}>
+                      <strong>Barcode:</strong>
+                      <code style={{
+                        marginLeft: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        background: 'white',
+                        borderRadius: '0.25rem',
+                        fontFamily: 'monospace',
+                      }}>
+                        {createdProduct.barcode}
+                      </code>
+                    </p>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <a
+                      href={`/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-primary"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      📄 Download SKU Labels (PDF)
+                    </a>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        closeForm();
+                        setSuccess('');
+                      }}
+                    >
+                      Done
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setCreatedProduct(null);
+                        setFormData(initialFormData);
+                      }}
+                    >
+                      Add Another Product
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Product Mode Selection (PACKAGED / LOOSE_BULK) */}
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label className="form-label" style={{ marginBottom: '0.75rem', display: 'block' }}>Product Type *</label>
+                <label className="form-label" style={{ marginBottom: '0.75rem', display: 'block' }}>Product Mode *</label>
                 <div style={{ display: 'flex', gap: '1rem' }}>
                   <label
                     style={{
@@ -412,27 +585,27 @@ export default function ProductsPage() {
                       alignItems: 'center',
                       gap: '0.5rem',
                       padding: '0.75rem 1.25rem',
-                      border: `2px solid ${formData.type === 'branded' ? 'var(--primary)' : 'var(--border)'}`,
+                      border: `2px solid ${formData.mode === 'PACKAGED' ? 'var(--primary)' : 'var(--border)'}`,
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
-                      background: formData.type === 'branded' ? 'var(--primary-light)' : 'white',
+                      background: formData.mode === 'PACKAGED' ? 'var(--primary-light)' : 'white',
                       transition: 'all 0.2s',
                       flex: '1',
-                      maxWidth: '200px',
+                      maxWidth: '220px',
                     }}
-                    onClick={() => handleTypeChange('branded')}
+                    onClick={() => handleModeChange('PACKAGED')}
                   >
                     <input
                       type="radio"
-                      name="productType"
-                      checked={formData.type === 'branded'}
-                      onChange={() => handleTypeChange('branded')}
+                      name="productMode"
+                      checked={formData.mode === 'PACKAGED'}
+                      onChange={() => handleModeChange('PACKAGED')}
                       style={{ accentColor: 'var(--primary)' }}
                     />
                     <span>
-                      <strong>Branded</strong>
+                      <strong>Packaged (FMCG)</strong>
                       <br />
-                      <small style={{ color: 'var(--text-muted)' }}>Has barcode/MRP</small>
+                      <small style={{ color: 'var(--text-muted)' }}>Has manufacturer barcode</small>
                     </span>
                   </label>
 
@@ -442,37 +615,54 @@ export default function ProductsPage() {
                       alignItems: 'center',
                       gap: '0.5rem',
                       padding: '0.75rem 1.25rem',
-                      border: `2px solid ${formData.type === 'loose' ? 'var(--primary)' : 'var(--border)'}`,
+                      border: `2px solid ${formData.mode === 'LOOSE_BULK' ? 'var(--primary)' : 'var(--border)'}`,
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
-                      background: formData.type === 'loose' ? 'var(--primary-light)' : 'white',
+                      background: formData.mode === 'LOOSE_BULK' ? 'var(--primary-light)' : 'white',
                       transition: 'all 0.2s',
                       flex: '1',
-                      maxWidth: '200px',
+                      maxWidth: '220px',
                     }}
-                    onClick={() => handleTypeChange('loose')}
+                    onClick={() => handleModeChange('LOOSE_BULK')}
                   >
                     <input
                       type="radio"
-                      name="productType"
-                      checked={formData.type === 'loose'}
-                      onChange={() => handleTypeChange('loose')}
+                      name="productMode"
+                      checked={formData.mode === 'LOOSE_BULK'}
+                      onChange={() => handleModeChange('LOOSE_BULK')}
                       style={{ accentColor: 'var(--primary)' }}
                     />
                     <span>
-                      <strong>Loose</strong>
+                      <strong>Loose / Bulk</strong>
                       <br />
-                      <small style={{ color: 'var(--text-muted)' }}>Sold by weight</small>
+                      <small style={{ color: 'var(--text-muted)' }}>Barcode auto-generated</small>
                     </span>
                   </label>
                 </div>
+                {formData.mode === 'LOOSE_BULK' && (
+                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                    💡 A store-scoped barcode will be generated. Download the SKU PDF to print labels.
+                  </p>
+                )}
+              </div>
+
+              {/* Auto-category hint */}
+              <div style={{
+                background: '#e0f2fe',
+                borderRadius: '0.5rem',
+                padding: '0.75rem 1rem',
+                marginBottom: '1rem',
+                fontSize: '0.875rem',
+                color: '#0369a1',
+              }}>
+                💡 Categories are auto-created from product name and will appear in POS & Dashboard automatically.
               </div>
 
               <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
-                {/* Barcode - only for branded products */}
-                {formData.type === 'branded' && (
+                {/* Barcode - only for PACKAGED products */}
+                {formData.mode === 'PACKAGED' && (
                   <div className="form-group">
-                    <label className="form-label">Barcode</label>
+                    <label className="form-label">Barcode (GTIN/EAN)</label>
                     <input
                       type="text"
                       name="barcode"
@@ -481,6 +671,7 @@ export default function ProductsPage() {
                       value={formData.barcode}
                       onChange={handleInputChange}
                     />
+                    <small style={{ color: 'var(--text-muted)' }}>Optional - leave blank if no barcode</small>
                   </div>
                 )}
 
@@ -497,32 +688,16 @@ export default function ProductsPage() {
                   />
                 </div>
 
-                <div className="form-group" style={{ gridColumn: formData.type === 'loose' ? 'span 2' : 'auto' }}>
-                  <label className="form-label">Description</label>
+                <div className="form-group">
+                  <label className="form-label">Alias / Local Name</label>
                   <input
                     type="text"
-                    name="description"
+                    name="alias"
                     className="form-input"
-                    placeholder="Brief description (optional)"
-                    value={formData.description}
+                    placeholder="e.g., नमक, चावल"
+                    value={formData.alias}
                     onChange={handleInputChange}
                   />
-                </div>
-
-                {/* Category dropdown */}
-                <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select
-                    name="category"
-                    className="form-input"
-                    value={formData.category}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select category...</option>
-                    {PRODUCT_CATEGORIES.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
                 </div>
 
                 {/* Brand text input */}
@@ -547,11 +722,12 @@ export default function ProductsPage() {
                     onChange={handleInputChange}
                     required
                   >
-                    <option value="pcs">Pieces</option>
-                    <option value="kg">Kilograms</option>
-                    <option value="g">Grams</option>
-                    <option value="l">Liters</option>
-                    <option value="ml">Milliliters</option>
+                    <option value="PCS">Pieces (PCS)</option>
+                    <option value="PACK">Pack</option>
+                    <option value="KG">Kilograms (KG)</option>
+                    <option value="GM">Grams (GM)</option>
+                    <option value="LTR">Liters (LTR)</option>
+                    <option value="ML">Milliliters (ML)</option>
                   </select>
                 </div>
 
@@ -624,7 +800,7 @@ export default function ProductsPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Purchase Price</label>
+                  <label className="form-label">Purchase Price (₹) *</label>
                   <input
                     type="number"
                     name="purchasePrice"
@@ -634,11 +810,13 @@ export default function ProductsPage() {
                     min="0"
                     value={formData.purchasePrice}
                     onChange={handleInputChange}
+                    required
                   />
+                  <small style={{ color: 'var(--text-muted)' }}>Required for ledger tracking</small>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Sell Price *</label>
+                  <label className="form-label">Sell Price (₹) *</label>
                   <input
                     type="number"
                     name="sellPrice"
@@ -652,35 +830,191 @@ export default function ProductsPage() {
                   />
                 </div>
 
-                {/* MRP - only for branded products */}
-                {formData.type === 'branded' && (
-                  <div className="form-group">
-                    <label className="form-label">MRP</label>
-                    <input
-                      type="number"
-                      name="mrp"
-                      className="form-input"
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      value={formData.mrp}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                )}
-
+                {/* MRP - optional for both modes */}
                 <div className="form-group">
-                  <label className="form-label">Opening Stock</label>
+                  <label className="form-label">MRP (₹)</label>
                   <input
                     type="number"
-                    name="openingStock"
+                    name="mrp"
                     className="form-input"
-                    placeholder="0"
+                    placeholder="0.00"
+                    step="0.01"
                     min="0"
-                    value={formData.openingStock}
+                    value={formData.mrp}
                     onChange={handleInputChange}
                   />
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label">Opening Stock Qty</label>
+                  <input
+                    type="number"
+                    name="openingStockQty"
+                    className="form-input"
+                    placeholder="0"
+                    min="0"
+                    value={formData.openingStockQty}
+                    onChange={handleInputChange}
+                  />
+                  <small style={{ color: 'var(--text-muted)' }}>Creates ledger entry if &gt; 0</small>
+                </div>
+
+                {/* Low Stock Alert Qty - Common to both modes */}
+                <div className="form-group">
+                  <label className="form-label">Low Stock Alert Qty</label>
+                  <input
+                    type="number"
+                    name="lowStockAlertQty"
+                    className="form-input"
+                    placeholder="e.g., 10"
+                    min="0"
+                    value={formData.lowStockAlertQty}
+                    onChange={handleInputChange}
+                  />
+                  <small style={{ color: 'var(--text-muted)' }}>Alert when stock falls below this</small>
+                </div>
+
+                {/* GST% - Common to both modes */}
+                <div className="form-group">
+                  <label className="form-label">GST %</label>
+                  <select
+                    name="gstPercent"
+                    className="form-input"
+                    value={formData.gstPercent}
+                    onChange={handleInputChange}
+                  >
+                    <option value="">-- Select GST Rate --</option>
+                    <option value="0">0% (Exempt)</option>
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18">18%</option>
+                    <option value="28">28%</option>
+                  </select>
+                </div>
+
+                {/* HSN Code - Common to both modes */}
+                <div className="form-group">
+                  <label className="form-label">HSN Code</label>
+                  <input
+                    type="text"
+                    name="hsn"
+                    className="form-input"
+                    placeholder="e.g., 1006 for rice"
+                    value={formData.hsn}
+                    onChange={handleInputChange}
+                  />
+                  <small style={{ color: 'var(--text-muted)' }}>For GST compliance</small>
+                </div>
+              </div>
+
+              {/* Mode-specific fields section */}
+              {formData.mode === 'PACKAGED' && (
+                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                    Packaged Product Details
+                  </h4>
+                  <div className="grid grid-2">
+                    {/* Pack Size */}
+                    <div className="form-group">
+                      <label className="form-label">Pack Size</label>
+                      <input
+                        type="number"
+                        name="packSize"
+                        className="form-input"
+                        placeholder="e.g., 500"
+                        min="0"
+                        value={formData.packSize}
+                        onChange={handleInputChange}
+                      />
+                      <small style={{ color: 'var(--text-muted)' }}>Quantity in pack (e.g., 500 for 500g)</small>
+                    </div>
+
+                    {/* Pack Unit */}
+                    <div className="form-group">
+                      <label className="form-label">Pack Unit</label>
+                      <select
+                        name="packUnit"
+                        className="form-input"
+                        value={formData.packUnit}
+                        onChange={handleInputChange}
+                      >
+                        <option value="">-- Select --</option>
+                        <option value="g">Grams (g)</option>
+                        <option value="kg">Kilograms (kg)</option>
+                        <option value="ml">Milliliters (ml)</option>
+                        <option value="l">Liters (l)</option>
+                        <option value="pcs">Pieces (pcs)</option>
+                        <option value="pack">Pack</option>
+                      </select>
+                      <small style={{ color: 'var(--text-muted)' }}>Unit for pack size</small>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formData.mode === 'LOOSE_BULK' && (
+                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+                    Loose/Bulk Product Details
+                  </h4>
+                  <div className="grid grid-2">
+                    {/* Sold By */}
+                    <div className="form-group">
+                      <label className="form-label">Sold By *</label>
+                      <select
+                        name="soldBy"
+                        className="form-input"
+                        value={formData.soldBy}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        <option value="WEIGHT">Weight (KG/GM)</option>
+                        <option value="COUNT">Count (pieces)</option>
+                      </select>
+                      <small style={{ color: 'var(--text-muted)' }}>How product is measured at sale</small>
+                    </div>
+
+                    {/* Rate Unit */}
+                    <div className="form-group">
+                      <label className="form-label">Rate Unit *</label>
+                      <select
+                        name="rateUnit"
+                        className="form-input"
+                        value={formData.rateUnit}
+                        onChange={handleInputChange}
+                        required
+                      >
+                        {formData.soldBy === 'WEIGHT' ? (
+                          <>
+                            <option value="KG">Per Kilogram (KG)</option>
+                            <option value="GM">Per 100 Grams</option>
+                          </>
+                        ) : (
+                          <>
+                            <option value="PCS">Per Piece (PCS)</option>
+                            <option value="DOZEN">Per Dozen</option>
+                          </>
+                        )}
+                      </select>
+                      <small style={{ color: 'var(--text-muted)' }}>Unit for price rate</small>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Notes field - Common to both modes */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Internal Notes</label>
+                <textarea
+                  name="notes"
+                  className="form-input"
+                  placeholder="Any internal notes about this product..."
+                  rows={2}
+                  value={formData.notes}
+                  onChange={handleInputChange}
+                  style={{ resize: 'vertical' }}
+                />
+                <small style={{ color: 'var(--text-muted)' }}>For store use only, not shown on POS</small>
               </div>
 
               <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -709,15 +1043,16 @@ export default function ProductsPage() {
           <div className="card" style={{ marginBottom: '1.5rem' }}>
             <h3 className="card-title">Bulk Product Upload</h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              Paste product data (one per line). Format: <code>Name, Barcode, Category, Brand, SellPrice, PurchasePrice, MRP, Unit, Stock</code>
+              Paste product data (one per line). Format: <code>Name, Barcode, Brand, SellPrice, PurchasePrice, MRP, Unit, Stock</code>
+              <br /><small>Leave barcode empty for loose/bulk products (barcode will be auto-generated).</small>
             </p>
             <div className="form-group">
               <textarea
                 className="form-input"
                 rows={8}
-                placeholder={`Amul Butter 500g, 8901234567890, Dairy & Milk, Amul, 280, 260, 295, pcs, 10
-Tata Salt 1kg, 8901234567891, Groceries, Tata, 28, 25, 30, pcs, 50
-Loose Rice,,Rice & Flour,,45,40,,kg,25`}
+                placeholder={`Amul Butter 500g, 8901234567890, Amul, 280, 260, 295, PACK, 10
+Tata Salt 1kg, 8901234567891, Tata, 28, 25, 30, PCS, 50
+Loose Rice,, , 45, 40, , KG, 25`}
                 value={bulkData}
                 onChange={(e) => setBulkData(e.target.value)}
               />
@@ -756,21 +1091,21 @@ Loose Rice,,Rice & Flour,,45,40,,kg,25`}
                     <tr>
                       <th>Name</th>
                       <th>Barcode</th>
-                      <th>Category</th>
                       <th>Brand</th>
                       <th>Sell ₹</th>
-                      <th>Type</th>
+                      <th>Purchase ₹</th>
+                      <th>Mode</th>
                     </tr>
                   </thead>
                   <tbody>
                     {bulkPreview.map((p, i) => (
                       <tr key={i}>
                         <td>{p.name}</td>
-                        <td style={{ fontFamily: 'monospace' }}>{p.barcode || '-'}</td>
-                        <td>{p.category || '-'}</td>
+                        <td style={{ fontFamily: 'monospace' }}>{p.barcode || <em style={{ color: 'var(--text-muted)' }}>auto</em>}</td>
                         <td>{p.brand || '-'}</td>
-                        <td>₹{p.sellPrice}</td>
-                        <td><span className={`badge ${p.type === 'branded' ? 'badge-info' : 'badge-secondary'}`}>{p.type}</span></td>
+                        <td>₹{((p.sellPrice || 0) / 100).toFixed(2)}</td>
+                        <td>₹{((p.purchasePrice || 0) / 100).toFixed(2)}</td>
+                        <td><span className={`badge ${p.mode === 'PACKAGED' ? 'badge-info' : 'badge-secondary'}`}>{p.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}</span></td>
                       </tr>
                     ))}
                   </tbody>
@@ -853,9 +1188,8 @@ Loose Rice,,Rice & Flour,,45,40,,kg,25`}
                 <tr>
                   <th>Barcode</th>
                   <th>Name</th>
-                  <th>Category</th>
                   <th>Brand</th>
-                  <th>Type</th>
+                  <th>Mode</th>
                   <th>Price</th>
                   <th>Stock</th>
                   <th>Supplier</th>
@@ -865,19 +1199,29 @@ Loose Rice,,Rice & Flour,,45,40,,kg,25`}
               <tbody>
                 {filteredProducts.map((product) => (
                   <tr key={product.id}>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{product.barcode || '-'}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                      {product.barcode || product.generatedBarcode || '-'}
+                    </td>
                     <td style={{ fontWeight: '500' }}>{product.name}</td>
-                    <td style={{ fontSize: '0.875rem' }}>{product.category || <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
                     <td style={{ fontSize: '0.875rem' }}>{product.brand || <span style={{ color: 'var(--text-muted)' }}>-</span>}</td>
                     <td>
-                      <span className={`badge ${product.type === 'branded' ? 'badge-info' : 'badge-secondary'}`}>
-                        {product.type}
+                      <span className={`badge ${product.mode === 'PACKAGED' ? 'badge-info' : 'badge-secondary'}`}>
+                        {product.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}
                       </span>
                     </td>
-                    <td>₹{product.sellPrice}</td>
+                    <td>₹{(product.sellPrice / 100).toFixed(2)}</td>
                     <td>
-                      <span className={`badge ${product.stock < 20 ? 'badge-warning' : 'badge-success'}`}>
+                      <span className={`badge ${
+                        product.lowStockAlertQty && product.stock <= product.lowStockAlertQty
+                          ? 'badge-warning'
+                          : product.stock < 20
+                            ? 'badge-warning'
+                            : 'badge-success'
+                      }`}>
                         {product.stock}
+                        {product.lowStockAlertQty && product.stock <= product.lowStockAlertQty && (
+                          <span title="Below alert threshold"> ⚠️</span>
+                        )}
                       </span>
                     </td>
                     <td style={{ fontSize: '0.875rem' }}>
@@ -885,6 +1229,16 @@ Loose Rice,,Rice & Flour,,45,40,,kg,25`}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.25rem' }}>
+                        <a
+                          href={`/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          title="Download SKU Labels"
+                        >
+                          📄
+                        </a>
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}

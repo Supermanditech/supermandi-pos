@@ -194,6 +194,8 @@ export async function createTransaction(
       break;
     case 'sale_return':
     case 'purchase_received':
+    case 'opening_stock':
+      // All increase stock
       signMultiplier = 1;
       break;
     case 'adjustment':

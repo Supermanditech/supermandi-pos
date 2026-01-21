@@ -163,6 +163,14 @@ export async function recordStockMovement(
       deltaQty = input.quantity;
       break;
 
+    case 'opening_stock':
+      // Opening stock increases stock (initial inventory from retailer portal)
+      if (input.quantity <= 0) {
+        throw ApiError.badRequest('Opening stock quantity must be positive');
+      }
+      deltaQty = input.quantity;
+      break;
+
     default:
       throw ApiError.badRequest(`Invalid transaction type: ${input.transactionType}`);
   }

@@ -5,6 +5,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiError, query } from '@supermandi/common';
+import { config } from '../config.js';
 import {
   generateSignedUploadUrl,
   generateSignedDownloadUrl,
@@ -31,6 +32,22 @@ import {
   failCsvImport,
   type ValidationError,
 } from '../db/retailerAdminQueries.js';
+
+// Retailer Catalog Service - shared module for catalog operations (API-RCAT-001)
+import {
+  generateSupermandiBarcode,
+  createProductWithStoreProduct,
+  attachStoreBarcodeMapping,
+  checkDuplicateBarcode,
+  updateStoreProductStock,
+  linkSupplierToStoreProduct,
+  storeUnverifiedSupplierInfo,
+  createPendingSupplierRequest,
+  findVerifiedSupplierByName,
+  verifySupplierLink,
+  createSupplierProductLink,
+  type ProductMode,
+} from '../services/retailerCatalogService.js';
 
 const router: Router = Router();
 
@@ -266,6 +283,136 @@ router.get(
 );
 
 // =============================================================================
+// INVENTORY SUMMARY (Ticket 4: opening_stock affects purchase totals)
+// =============================================================================
+
+/**
+ * GET /retailer-admin/inventory-summary
+ * Get inventory value summary for the store.
+ *
+ * EPIC: Retailer Dashboard → POS Retailer-Owned Catalog (API-RCAT-003)
+ *
+ * Total Purchase Value includes:
+ * - opening_stock: Initial inventory from retailer dashboard
+ * - purchase_received: GRN receipts from purchase orders
+ *
+ * This ensures dashboard reports correctly account for opening stock entries.
+ */
+router.get(
+  '/inventory-summary',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+
+    // Calculate Total Purchase Value including opening_stock
+    // Per Ticket 4: opening_stock must affect purchase value totals
+    const purchaseValueResult = await query<{
+      total_purchase_value: string;
+      opening_stock_value: string;
+      purchase_received_value: string;
+      total_stock_qty: string;
+      product_count: string;
+    }>(
+      `SELECT
+         COALESCE(SUM(CASE WHEN il.transaction_type IN ('opening_stock', 'purchase_received')
+                          THEN il.delta_qty * COALESCE(il.unit_cost, 0) ELSE 0 END), 0)::BIGINT AS total_purchase_value,
+         COALESCE(SUM(CASE WHEN il.transaction_type = 'opening_stock'
+                          THEN il.delta_qty * COALESCE(il.unit_cost, 0) ELSE 0 END), 0)::BIGINT AS opening_stock_value,
+         COALESCE(SUM(CASE WHEN il.transaction_type = 'purchase_received'
+                          THEN il.delta_qty * COALESCE(il.unit_cost, 0) ELSE 0 END), 0)::BIGINT AS purchase_received_value,
+         COALESCE(SUM(sb.current_qty), 0)::BIGINT AS total_stock_qty,
+         COUNT(DISTINCT sb.product_id)::INTEGER AS product_count
+       FROM inventory.stock_balances sb
+       LEFT JOIN inventory.inventory_ledger il ON il.store_id = sb.store_id AND il.product_id = sb.product_id
+       WHERE sb.store_id = $1`,
+      [storeId]
+    );
+
+    const summary = purchaseValueResult[0];
+
+    res.json({
+      success: true,
+      data: {
+        // Total value in minor units (paise) - includes opening_stock per Ticket 4
+        totalPurchaseValue: parseInt(summary?.total_purchase_value || '0', 10),
+        // Breakdown by source
+        openingStockValue: parseInt(summary?.opening_stock_value || '0', 10),
+        purchaseReceivedValue: parseInt(summary?.purchase_received_value || '0', 10),
+        // Inventory counts
+        totalStockQty: parseInt(summary?.total_stock_qty || '0', 10),
+        productCount: parseInt(summary?.product_count || '0', 10),
+      },
+    });
+  })
+);
+
+// =============================================================================
+// CATEGORIES (Ticket 3: WEB-RCAT-001 - Categories auto-sync from POS)
+// =============================================================================
+
+/**
+ * GET /retailer-admin/categories
+ * Returns store categories using the same source as POS (FMCG taxonomy).
+ *
+ * EPIC: Retailer Dashboard → POS Retailer-Owned Catalog (WEB-RCAT-001)
+ *
+ * Categories are auto-derived from product names via taxonomy keywords.
+ * Dashboard must NOT maintain its own category list - this ensures
+ * Dashboard and POS always show the same categories.
+ */
+router.get(
+  '/categories',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+
+    // Query FMCG taxonomy categories with product counts for this store
+    // This is the SAME query used by catalog-service for POS
+    const result = await query<{
+      id: string;
+      label_en: string;
+      label_hi: string | null;
+      icon_key: string | null;
+      sort_order: number;
+      product_count: string;
+    }>(
+      `WITH store_counts AS (
+         SELECT sp.taxonomy_id, COUNT(*) AS product_count
+         FROM catalog.store_products sp
+         WHERE sp.store_id = $1 AND sp.is_active = true
+         GROUP BY sp.taxonomy_id
+       ),
+       total_count AS (
+         SELECT COUNT(*) AS total
+         FROM catalog.store_products sp
+         WHERE sp.store_id = $1 AND sp.is_active = true
+       )
+       SELECT ft.id, ft.label_en, ft.label_hi, ft.icon_key, ft.sort_order,
+              CASE
+                WHEN ft.label_en = 'Sab' THEN (SELECT total FROM total_count)
+                ELSE COALESCE(sc.product_count, 0)
+              END AS product_count
+       FROM catalog.fmcg_taxonomy ft
+       LEFT JOIN store_counts sc ON sc.taxonomy_id = ft.id
+       WHERE ft.is_active = true
+         AND (ft.label_en = 'Sab' OR sc.product_count > 0)
+       ORDER BY ft.sort_order ASC`,
+      [storeId]
+    );
+
+    res.json({
+      success: true,
+      data: result.map((cat) => ({
+        id: cat.id,
+        labelEn: cat.label_en,
+        labelHi: cat.label_hi,
+        iconKey: cat.icon_key,
+        sortOrder: cat.sort_order,
+        productCount: parseInt(cat.product_count, 10),
+      })),
+    });
+  })
+);
+
+// =============================================================================
 // PRODUCTS (Store Catalog)
 // =============================================================================
 
@@ -306,17 +453,28 @@ router.get(
 
     // Get products with current stock, category, brand, supplier
     // FIX: Use stock_balances instead of inventory.inventory, return camelCase for frontend
+    // EXTENDED: Include new fields per E2E Go-Live spec (lowStockAlertQty, gstPercent, hsn, notes, etc.)
     const result = await query<StoreProduct>(
       `SELECT p.id, p.primary_barcode AS barcode, p.name, p.description, p.unit,
               p.category, p.brand,
+              p.hsn_code AS hsn,
+              p.default_gst_rate AS "gstPercent",
+              p.pack_size AS "packSize",
+              p.pack_unit AS "packUnit",
+              sp.product_mode AS mode,
               sp.purchase_price AS "purchasePrice", sp.sell_price AS "sellPrice", sp.mrp,
               COALESCE(sb.current_qty, sp.current_stock, 0) as stock,
-              CASE WHEN p.primary_barcode IS NOT NULL THEN 'branded' ELSE 'loose' END as type,
+              sp.low_stock_alert_qty AS "lowStockAlertQty",
+              sp.notes,
+              sp.sold_by AS "soldBy",
+              sp.rate_unit AS "rateUnit",
               sp.created_at,
-              NULL as "supplierId", NULL as "supplierName"
+              sp.supplier_id AS "supplierId",
+              COALESCE(spb.barcode, p.primary_barcode) AS "generatedBarcode"
        FROM catalog.store_products sp
        JOIN catalog.products p ON sp.product_id = p.id
        LEFT JOIN inventory.stock_balances sb ON sb.product_id = sp.product_id AND sb.store_id = sp.store_id
+       LEFT JOIN catalog.store_product_barcodes spb ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
        WHERE ${whereClause}
        ORDER BY sp.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -349,50 +507,79 @@ router.get(
 
 /**
  * POST /retailer-admin/products
- * Create a new product for the store
- * Supports: category, brand, supplierId for linking to suppliers
+ * Create a new product for the store (Retailer-Owned Catalog)
+ *
+ * EPIC: Retailer Dashboard → POS Retailer-Owned Catalog (API-RCAT-001)
+ *
+ * Contract changes from E2E Go-Live Document:
+ * - mode: PACKAGED | LOOSE_BULK (required)
+ * - category: NOT accepted (auto-derived via taxonomy)
+ * - purchasePrice: required for ledger effect
+ * - openingStockQty: creates opening_stock ledger entry when > 0
+ * - barcode: optional for PACKAGED, rejected for LOOSE_BULK (server generates)
+ *
+ * Response includes: storeId, productId, barcode, generatedBarcode, ledgerEntryId, storeProduct
  */
 router.post(
   '/products',
   asyncHandler(async (req, res) => {
     const { userId, storeId } = getRetailerContext(req);
     const {
-      barcode,
+      barcode: rawBarcode,
       name,
       description,
-      type = 'branded',
-      category,
+      mode,  // Required: 'PACKAGED' | 'LOOSE_BULK'
       brand,
-      unit = 'pcs',
+      alias,  // Local name / alternate name
+      unit = 'PCS',
+      packSize,
+      packUnit,
+      soldBy,  // For LOOSE_BULK: KG/LTR/PCS
+      rateUnit,  // For LOOSE_BULK: ₹/KG etc
       purchasePrice,
       sellPrice,
       mrp,
-      openingStock = 0,
+      openingStockQty = 0,
+      lowStockAlertQty,
+      gstPercent,
+      hsn,
+      notes,
       supplierId,
-      supplierName, // 10K Store Scale: raw supplier name for unverified path
+      supplierName,
     } = req.body as {
       barcode?: string;
       name: string;
       description?: string;
-      type?: string;
-      category?: string;
+      mode: 'PACKAGED' | 'LOOSE_BULK';
       brand?: string;
+      alias?: string;
       unit?: string;
+      packSize?: number;
+      packUnit?: string;
+      soldBy?: string;
+      rateUnit?: string;
       purchasePrice: number;
       sellPrice: number;
       mrp?: number;
-      openingStock?: number;
+      openingStockQty?: number;
+      lowStockAlertQty?: number;
+      gstPercent?: number;
+      hsn?: string;
+      notes?: string;
       supplierId?: string;
-      supplierName?: string; // Raw name when no supplierId
+      supplierName?: string;
     };
 
-    // Validate required fields
+    // ==========================================================================
+    // VALIDATION
+    // ==========================================================================
+
+    // Required fields
     if (!name) {
       throw ApiError.badRequest('Product name is required', 'name');
     }
-    // 10K Store Scale: Category is required for proper taxonomy
-    if (!category) {
-      throw ApiError.badRequest('Category is required', 'category');
+    if (!mode || !['PACKAGED', 'LOOSE_BULK'].includes(mode)) {
+      throw ApiError.badRequest('Mode is required and must be PACKAGED or LOOSE_BULK', 'mode');
     }
     if (sellPrice === undefined || sellPrice < 0) {
       throw ApiError.badRequest('Valid sell price is required', 'sellPrice');
@@ -400,8 +587,8 @@ router.post(
     if (purchasePrice === undefined || purchasePrice < 0) {
       throw ApiError.badRequest('Valid purchase price is required', 'purchasePrice');
     }
-    // 10K Store Scale: Prices must be positive integers (paise)
-    // Warn if decimal values detected (should be in minor units)
+
+    // Prices must be positive integers (paise/minor units)
     if (!Number.isInteger(sellPrice) || !Number.isInteger(purchasePrice)) {
       throw ApiError.badRequest(
         'Prices must be integers in paise (minor units). E.g., ₹10.50 = 1050 paise.',
@@ -415,81 +602,181 @@ router.post(
       );
     }
 
-    // Check for duplicate barcode within store
-    if (barcode) {
-      const existing = await query(
-        `SELECT sp.id FROM catalog.store_products sp
-         JOIN catalog.products p ON sp.product_id = p.id
-         WHERE sp.store_id = $1 AND p.primary_barcode = $2`,
-        [storeId, barcode]
-      );
-      if (existing.length > 0) {
-        throw ApiError.conflict('DUPLICATE_BARCODE', `Product with barcode ${barcode} already exists`);
+    // Mode-specific validation
+    let barcode: string | null = null;
+    let generatedBarcode: string | null = null;
+
+    if (mode === 'PACKAGED') {
+      // PACKAGED: barcode optional, normalize if present (trim, no spaces)
+      if (rawBarcode) {
+        barcode = rawBarcode.trim().replace(/\s+/g, '');
+        if (!barcode) {
+          barcode = null;
+        }
+      }
+    } else if (mode === 'LOOSE_BULK') {
+      // LOOSE_BULK: barcode must NOT be accepted from client
+      if (rawBarcode) {
+        throw ApiError.badRequest(
+          'Barcode must not be provided for LOOSE_BULK products. Server will generate a store-scoped barcode.',
+          'barcode'
+        );
+      }
+      // Generate store-scoped barcode using shared service (API-RCAT-001 reuse)
+      generatedBarcode = generateSupermandiBarcode();
+      barcode = generatedBarcode;
+    }
+
+    // Check for duplicate barcode within store using shared service (API-RCAT-001 reuse)
+    if (barcode && mode === 'PACKAGED') {
+      const isDuplicate = await checkDuplicateBarcode(storeId, barcode);
+      if (isDuplicate) {
+        throw ApiError.conflict('DUPLICATE_BARCODE', `Product with barcode ${barcode} already exists in this store`);
       }
     }
 
-    // 10K STORE SCALE: LEDGER-FIRST - write audit log BEFORE mutation
+    // ==========================================================================
+    // AUDIT LOG (LEDGER-FIRST)
+    // ==========================================================================
     await writeAuditLog({
       actorUserId: userId,
       storeId,
       action: 'product.create',
       resourceType: 'store_product',
-      requestBody: { barcode, name, category, brand, sellPrice, purchasePrice, mrp, supplierId, supplierName },
+      requestBody: { mode, barcode, name, brand, sellPrice, purchasePrice, mrp, openingStockQty, supplierId, supplierName },
       req,
     });
 
-    // Create product and store_product in transaction
-    const productResult = await query<{ id: string; store_product_id: string }>(
-      `WITH new_product AS (
-         INSERT INTO catalog.products (primary_barcode, name, description, unit, category, brand)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING id
-       )
-       INSERT INTO catalog.store_products (store_id, product_id, purchase_price, sell_price, mrp)
-       SELECT $7, id, $8, $9, $10 FROM new_product
-       RETURNING product_id as id, id as store_product_id`,
-      [barcode || null, name, description || null, unit, category || null, brand || null, storeId, purchasePrice, sellPrice, mrp || null]
+    // ==========================================================================
+    // CREATE PRODUCT (API-RCAT-001: using shared catalog service)
+    // ==========================================================================
+
+    // Create product and store_product using shared service
+    // NOTE: category is NOT set here - it will be auto-derived via taxonomy keywords
+    const { productId, storeProductId } = await createProductWithStoreProduct(
+      {
+        // catalog.products fields
+        primaryBarcode: mode === 'PACKAGED' ? barcode : null,
+        name,
+        description: description || null,
+        unit,
+        brand: brand || null,
+        hsn: hsn || null,
+        gstPercent: gstPercent || null,
+        packSize: packSize || null,
+        packUnit: packUnit || null,
+      },
+      {
+        // catalog.store_products fields
+        storeId,
+        mode: mode as ProductMode,
+        purchasePrice,
+        sellPrice,
+        mrp: mrp || null,
+        displayName: alias || null,
+        lowStockAlertQty: lowStockAlertQty || null,
+        notes: notes || null,
+        soldBy: mode === 'LOOSE_BULK' ? (soldBy || 'WEIGHT') : null,
+        rateUnit: mode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null,
+      }
     );
 
-    const productId = productResult[0]!.id;
-    const storeProductId = productResult[0]!.store_product_id;
-
+    // ==========================================================================
+    // BARCODE MAPPING (API-RCAT-001: using shared catalog service)
+    // ==========================================================================
     // Insert into store_product_barcodes for POS barcode lookup
+    // This ensures store-scoped uniqueness: (store_id, barcode)
     if (barcode) {
-      await query(
-        `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-         VALUES ($1, $2, $3, 'manual')
-         ON CONFLICT (store_id, barcode) DO NOTHING`,
-        [storeId, storeProductId, barcode]
+      const barcodeSource = mode === 'LOOSE_BULK' ? 'supermandi_generated' : 'manual';
+      const maxRetries = mode === 'LOOSE_BULK' ? 3 : 1;
+
+      // Use shared service for barcode mapping (handles collision retry for LOOSE_BULK)
+      const finalBarcode = await attachStoreBarcodeMapping(
+        {
+          storeId,
+          storeProductId,
+          barcode,
+          source: barcodeSource,
+        },
+        maxRetries
       );
+
+      // Update barcode if it was regenerated due to collision
+      if (mode === 'LOOSE_BULK' && finalBarcode !== barcode) {
+        generatedBarcode = finalBarcode;
+        barcode = finalBarcode;
+      }
     }
 
-    // Add opening stock if provided
-    // FIX: Use stock_balances table and correct ledger columns
-    if (openingStock > 0) {
-      // Create ledger entry first (idempotent)
-      await query(
-        `INSERT INTO inventory.inventory_ledger
-         (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, source, notes)
-         VALUES ($1, $2, $3, 'adjustment', 0, $3, 'RETAILER_PORTAL', 'Opening stock from retailer portal')`,
-        [storeId, productId, openingStock]
-      );
+    // ==========================================================================
+    // OPENING STOCK LEDGER ENTRY (Ticket 4: opening_stock type)
+    // API-RCAT-001: Calls inventory-service per "No Double Coding" reuse rule
+    // ==========================================================================
+    let ledgerEntryId: string | null = null;
 
-      // Update stock_balances
-      await query(
-        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
-        [storeId, productId, openingStock]
-      );
+    if (openingStockQty > 0) {
+      // Call inventory-service via HTTP (reuse pattern per spec)
+      const inventoryUrl = `${config.services.inventoryService}/stores/${storeId}/inventory/transactions`;
 
-      // Also update store_products.current_stock for denormalized access
-      await query(
-        `UPDATE catalog.store_products SET current_stock = $3 WHERE store_id = $1 AND product_id = $2`,
-        [storeId, productId, openingStock]
-      );
+      try {
+        const inventoryResponse = await fetch(inventoryUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Service-Name': 'platform-service',
+            'X-User-Id': userId,
+          },
+          body: JSON.stringify({
+            items: [{
+              productId,
+              quantity: openingStockQty,
+              unitCost: purchasePrice,
+            }],
+            transactionType: 'opening_stock',
+            referenceType: 'manual',
+            referenceId: productId,
+            notes: notes || 'Opening stock from retailer dashboard',
+          }),
+        });
+
+        if (!inventoryResponse.ok) {
+          const errorData = await inventoryResponse.json().catch(() => ({}));
+          throw new Error((errorData as { error?: { message?: string } }).error?.message || 'Failed to create opening stock ledger entry');
+        }
+
+        const inventoryData = await inventoryResponse.json() as {
+          data?: { ledgerEntries?: Array<{ id: string }> };
+        };
+        ledgerEntryId = inventoryData.data?.ledgerEntries?.[0]?.id || null;
+      } catch (error) {
+        // Log but don't fail product creation - ledger entry is important but not critical
+        console.error('Opening stock ledger entry failed:', error);
+        // Fallback: create ledger entry directly if inventory-service is unavailable
+        const ledgerResult = await query<{ id: string }>(
+          `INSERT INTO inventory.inventory_ledger
+           (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
+           VALUES ($1, $2, $3, 'opening_stock', 0, $3, $4, 'RETAILER_PORTAL', $5)
+           RETURNING id`,
+          [storeId, productId, openingStockQty, purchasePrice, notes || 'Opening stock from retailer dashboard']
+        );
+        ledgerEntryId = ledgerResult[0]?.id || null;
+
+        // Fallback: Update stock_balances directly
+        await query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+          [storeId, productId, openingStockQty]
+        );
+      }
+
+      // Update store_products.current_stock for denormalized access using shared service
+      await updateStoreProductStock(storeId, productId, openingStockQty);
     }
 
+    // ==========================================================================
+    // SUPPLIER LINKING (API-RCAT-001: using shared catalog service)
+    // ==========================================================================
     // 10K STORE SCALE: Supplier linking with verified-only enforcement
     let supplierVerified = false;
     let supplierLinked = false;
@@ -497,25 +784,10 @@ router.post(
     let supplierNameRaw: string | null = null;
 
     if (supplierId) {
-      // CRITICAL: If supplierId is provided, it MUST be a verified supplier
-      // This enforces the 10K Store Scale rule - no linking to unverified suppliers
-      const supplierLink = await query<{
-        supplier_id: string;
-        business_name: string;
-        verification_status: string;
-        is_supermandi: boolean;
-      }>(
-        `SELECT ssl.supplier_id,
-                s.business_name,
-                COALESCE(s.verification_status, 'unverified') as verification_status,
-                (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as is_supermandi
-         FROM supplier.supplier_store_links ssl
-         JOIN supplier.suppliers s ON ssl.supplier_id = s.id
-         WHERE ssl.supplier_id = $1 AND ssl.store_id = $2 AND ssl.status = 'active'`,
-        [supplierId, storeId]
-      );
+      // CRITICAL: Verify supplier link using shared service
+      const supplierCheck = await verifySupplierLink(storeId, supplierId);
 
-      if (supplierLink.length === 0) {
+      if (!supplierCheck.exists) {
         throw ApiError.badRequest(
           'Supplier not found or not linked to this store. Add supplier first via Suppliers page.',
           'supplierId'
@@ -523,9 +795,9 @@ router.post(
       }
 
       // 10K STORE SCALE: BLOCK unverified supplier links (not just warn)
-      if (!supplierLink[0]!.is_supermandi) {
+      if (!supplierCheck.verified) {
         throw ApiError.badRequest(
-          `Supplier "${supplierLink[0]!.business_name}" is not verified. Only verified suppliers can be linked to products. Request supplier verification first.`,
+          `Supplier "${supplierCheck.businessName}" is not verified. Only verified suppliers can be linked to products. Request supplier verification first.`,
           'supplierId'
         );
       }
@@ -533,90 +805,64 @@ router.post(
       supplierLinked = true;
       supplierVerified = true;
 
-      // Update store_product with verified supplier_id
-      await query(
-        `UPDATE catalog.store_products SET supplier_id = $1 WHERE id = $2`,
-        [supplierId, storeProductId]
-      );
+      // Update store_product with verified supplier_id using shared service
+      await linkSupplierToStoreProduct(storeProductId, supplierId);
 
-      // Create supplier-product link
-      await query(
-        `INSERT INTO catalog.supplier_products (supplier_id, name, category, brand, purchase_price, is_active)
-         VALUES ($1, $2, $3, $4, $5, true)
-         ON CONFLICT DO NOTHING`,
-        [supplierId, name, category || null, brand || null, purchasePrice]
-      ).catch(() => {
-        // Table might not exist yet, silently ignore
-      });
+      // Create supplier-product link using shared service
+      await createSupplierProductLink(supplierId, name, brand || null, purchasePrice);
 
     } else if (supplierName && supplierName.trim()) {
       // 10K STORE SCALE: Unverified supplier name path
-      // Search for matching verified supplier by name first
+      // Search for matching verified supplier by name first using shared service
       supplierNameRaw = supplierName.trim();
 
-      const matchingSupplier = await query<{
-        id: string;
-        business_name: string;
-        is_supermandi: boolean;
-      }>(
-        `SELECT s.id, s.business_name,
-                (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as is_supermandi
-         FROM supplier.suppliers s
-         JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
-         WHERE ssl.store_id = $1 AND ssl.status = 'active'
-           AND (s.business_name ILIKE $2 OR s.trade_name ILIKE $2)
-         LIMIT 1`,
-        [storeId, `%${supplierNameRaw}%`]
-      );
+      const matchingSupplier = await findVerifiedSupplierByName(storeId, supplierNameRaw);
 
-      if (matchingSupplier.length > 0 && matchingSupplier[0]!.is_supermandi) {
-        // Found verified supplier - link it
+      if (matchingSupplier) {
+        // Found verified supplier - link it using shared service
         supplierLinked = true;
         supplierVerified = true;
-        await query(
-          `UPDATE catalog.store_products SET supplier_id = $1, supplier_name_raw = NULL WHERE id = $2`,
-          [matchingSupplier[0]!.id, storeProductId]
-        );
+        await linkSupplierToStoreProduct(storeProductId, matchingSupplier.id);
       } else {
-        // No verified supplier found - create pending enrollment request
-        const pendingResult = await query<{ id: string }>(
-          `INSERT INTO supplier.supplier_requests (store_id, requested_name, status)
-           VALUES ($1, $2, 'pending')
-           RETURNING id`,
-          [storeId, supplierNameRaw]
-        );
+        // No verified supplier found - create pending enrollment request using shared service
+        pendingSupplierRequestId = await createPendingSupplierRequest(storeId, supplierNameRaw);
 
-        pendingSupplierRequestId = pendingResult[0]?.id || null;
-
-        // Store raw name and pending request ID on product
-        await query(
-          `UPDATE catalog.store_products
-           SET supplier_name_raw = $1, pending_supplier_request_id = $2
-           WHERE id = $3`,
-          [supplierNameRaw, pendingSupplierRequestId, storeProductId]
-        );
+        // Store raw name and pending request ID using shared service
+        await storeUnverifiedSupplierInfo(storeProductId, supplierNameRaw, pendingSupplierRequestId);
 
         supplierLinked = false;
         supplierVerified = false;
       }
     }
 
+    // ==========================================================================
+    // RESPONSE (API-RCAT-001 contract)
+    // ==========================================================================
     res.status(201).json({
-      success: true,
+      ok: true,
       data: {
-        id: productId,
-        barcode,
-        name,
-        category,
-        brand,
-        sellPrice,
-        purchasePrice,
-        openingStock,
+        storeId,
+        productId,
+        barcode: mode === 'PACKAGED' ? barcode : null,
+        generatedBarcode: mode === 'LOOSE_BULK' ? generatedBarcode : null,
+        ledgerEntryId,
+        storeProduct: {
+          productId,
+          mode,
+          name,
+          brand: brand || null,
+          alias: alias || null,
+          unit,
+          sellPrice,
+          mrp: mrp || null,
+          purchasePrice,
+          currentStock: openingStockQty,
+        },
+        // Supplier linking status (backward compatible)
         supplierId: supplierLinked ? supplierId : undefined,
         supplierName: supplierNameRaw,
         supplierVerified,
         pendingSupplierRequestId,
-        // 10K Store Scale status message
         supplierStatus: supplierVerified
           ? 'verified'
           : pendingSupplierRequestId
@@ -735,6 +981,81 @@ router.patch(
       success: true,
       data: { id, message: 'Product updated' },
     });
+  })
+);
+
+/**
+ * GET /retailer-admin/products/:productId/sku.pdf
+ * Download SKU barcode label sheet for a product.
+ *
+ * EPIC: Retailer Dashboard → POS Retailer-Owned Catalog (API-RCAT-004)
+ *
+ * Returns actual PDF (application/pdf) with barcode labels.
+ * Includes: store name, product name, barcode image (Code128), barcode text.
+ *
+ * Query params:
+ * - tier: TIER_1 (24 labels/page, default) or TIER_2 (40 labels/page)
+ * - count: number of labels (default 24)
+ */
+router.get(
+  '/products/:productId/sku.pdf',
+  asyncHandler(async (req, res) => {
+    const { storeId } = getRetailerContext(req);
+    const { productId } = req.params;
+    const { tier = 'TIER_1', count = '24' } = req.query;
+
+    // Validate tier
+    const validTier = tier === 'TIER_2' ? 'TIER_2' : 'TIER_1';
+    const labelCount = Math.min(96, Math.max(1, parseInt(count as string, 10) || 24));
+
+    // Get product and barcode info - must belong to this store
+    const productResult = await query<{
+      product_id: string;
+      name: string;
+      barcode: string | null;
+      product_mode: string | null;
+      store_name: string;
+    }>(
+      `SELECT sp.product_id, p.name,
+              COALESCE(spb.barcode, p.primary_barcode) AS barcode,
+              sp.product_mode,
+              s.name AS store_name
+       FROM catalog.store_products sp
+       JOIN catalog.products p ON sp.product_id = p.id
+       JOIN platform.stores s ON s.id = sp.store_id
+       LEFT JOIN catalog.store_product_barcodes spb ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
+       WHERE sp.store_id = $1 AND sp.product_id = $2 AND sp.is_active = true`,
+      [storeId, productId]
+    );
+
+    if (productResult.length === 0) {
+      throw ApiError.notFound('Product not found or does not belong to this store');
+    }
+
+    const product = productResult[0]!;
+
+    if (!product.barcode) {
+      throw ApiError.badRequest('Product does not have a barcode. Cannot generate SKU labels.');
+    }
+
+    // Generate actual PDF (API-RCAT-004 spec: must return application/pdf)
+    const { generateSingleProductLabelPdf } = await import('../services/barcodeSheetService.js');
+
+    const pdfBuffer = await generateSingleProductLabelPdf(
+      {
+        barcode: product.barcode,
+        name: product.name,
+        storeName: product.store_name,
+      },
+      validTier as 'TIER_1' | 'TIER_2',
+      labelCount
+    );
+
+    // Return actual PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="sku-${product.barcode}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
   })
 );
 

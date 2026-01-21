@@ -685,7 +685,7 @@ router.post(
         [notes || 'Supplier verified by SuperAdmin', req.params.id]
       );
 
-      return res.json({
+      res.json({
         success: true,
         data: {
           id: req.params.id,
@@ -695,6 +695,7 @@ router.post(
           message: `Successfully verified supplier: ${supplierName}`,
         },
       });
+      return;
     }
 
     // MODE 1: Link to existing verified supplier

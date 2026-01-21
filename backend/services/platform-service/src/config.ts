@@ -38,6 +38,14 @@ export const config = {
     defaultScope: 'global' as const,
     cacheTimeoutMs: getEnvIntOrDefault('FLAG_CACHE_TIMEOUT_MS', 60000), // 1 minute
   },
+
+  // Internal service URLs (for reuse pattern compliance)
+  services: {
+    inventoryService: getEnvOrDefault(
+      'INVENTORY_SERVICE_URL',
+      'http://localhost:3005'
+    ),
+  },
 };
 
 export type Config = typeof config;

@@ -8,7 +8,7 @@ import { PoolClient } from 'pg';
 // LEDGER TYPES
 // =============================================================================
 
-export type TransactionType = 'sale' | 'sale_return' | 'purchase_received' | 'adjustment';
+export type TransactionType = 'sale' | 'sale_return' | 'purchase_received' | 'adjustment' | 'opening_stock';
 export type ReferenceType = 'sale' | 'po' | 'return' | 'manual';
 
 export interface LedgerEntry extends BaseEntity {
