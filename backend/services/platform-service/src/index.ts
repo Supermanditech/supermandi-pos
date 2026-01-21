@@ -24,8 +24,13 @@ app.use(helmet());
 // CORS for local development (SuperAdmin/Retailer-Admin frontends)
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
-  // Allow localhost origins for development
-  if (origin && (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
+  // Allow localhost and LAN origins for development
+  const isAllowedOrigin = origin && (
+    origin.startsWith('http://localhost:') ||
+    origin.startsWith('http://127.0.0.1:') ||
+    origin.startsWith('http://192.168.')
+  );
+  if (isAllowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, x-admin-token, x-store-id, Authorization');
