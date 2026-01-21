@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
+import { fetchCategories, FmcgCategory } from '../api/store';
 
 interface Supplier {
   id: string;
@@ -115,10 +116,16 @@ const initialFormData: ProductFormData = {
 export default function ProductsPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // FE-RETAILER-CAT-001: Categories from POS taxonomy
+  const [categories, setCategories] = useState<FmcgCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -134,6 +141,19 @@ export default function ProductsPage() {
   const [bulkData, setBulkData] = useState('');
   const [bulkPreview, setBulkPreview] = useState<Partial<Product>[]>([]);
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+
+  // Handle ?action=create query param from dashboard navigation
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      setShowForm(true);
+      setEditingProduct(null);
+      setFormData(initialFormData);
+      // Clear the query param after handling
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch products from API
   const fetchProducts = async () => {
@@ -170,6 +190,22 @@ export default function ProductsPage() {
     if (accessToken) {
       fetchProducts();
       fetchSuppliers();
+
+      // FE-RETAILER-CAT-001: Load categories from POS taxonomy
+      const loadCategories = async () => {
+        setCategoriesLoading(true);
+        try {
+          const result = await fetchCategories(accessToken);
+          // Filter out "Sab" (All) category - we'll add our own "All" option
+          setCategories((result.data || []).filter(c => c.sortOrder > 0));
+        } catch (err) {
+          console.error('Failed to load categories:', err);
+          setCategories([]);
+        } finally {
+          setCategoriesLoading(false);
+        }
+      };
+      loadCategories();
     }
   }, [accessToken]);
 
@@ -1114,6 +1150,37 @@ Loose Rice,, , 45, 40, , KG, 25`}
             )}
           </div>
         )}
+
+        {/* FE-RETAILER-CAT-001: Category Filter from POS Taxonomy */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+            Filter by Category
+          </label>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <button
+              className={`btn ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+              onClick={() => setSelectedCategory('all')}
+            >
+              All ({products.length})
+            </button>
+            {categoriesLoading ? (
+              <span style={{ padding: '0.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading categories...</span>
+            ) : (
+              categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  title={cat.labelHi || cat.labelEn}
+                >
+                  {cat.labelEn} ({cat.productCount})
+                </button>
+              ))
+            )}
+          </div>
+        </div>
 
         {/* Search */}
         <div style={{ marginBottom: '1rem' }}>

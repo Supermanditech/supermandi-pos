@@ -16,7 +16,7 @@ The backend base URL is provided **only** via Vite env.
 Create a `.env` file (or set hosting env vars):
 
 ```bash
-VITE_API_BASE_URL=http://34.14.150.183:3001
+VITE_API_BASE_URL=http://34.14.150.183:3000
 # Optional (recommended): protect /api/v1/admin/*
 # VITE_ADMIN_TOKEN=YOUR_STATIC_ADMIN_TOKEN
 ```
@@ -63,7 +63,7 @@ Output is written to `dist/` (static assets).
 - Framework preset: **Vite**
 - Build command: `npm run build`
 - Output directory: `dist`
-- Add env var: `VITE_API_BASE_URL=http://34.14.150.183:3001`
+- Add env var: `VITE_API_BASE_URL=http://34.14.150.183:3000`
 
 ### Firebase Hosting
 

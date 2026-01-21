@@ -1,30 +1,101 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext';
+import { authFetch } from '../lib/api';
 
+// FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
   id: string;
-  date: string;
-  product: string;
-  type: 'INWARD' | 'OUTWARD' | 'ADJUSTMENT';
-  quantity: number;
-  reference: string;
-  balance: number;
+  storeId: string;
+  productId: string;
+  productName: string;
+  barcode?: string;
+  deltaQty: number;
+  transactionType: 'sale' | 'sale_return' | 'purchase_received' | 'adjustment' | 'opening_stock';
+  referenceType?: string;
+  referenceId?: string;
+  stockBefore: number;
+  stockAfter: number;
+  unitCost?: number;
+  createdAt: string;
 }
 
-// Mock data
-const mockLedger: LedgerEntry[] = [
-  { id: '1', date: '2024-01-18 14:30', product: 'Parle-G 100g', type: 'OUTWARD', quantity: -5, reference: 'POS Sale #1234', balance: 145 },
-  { id: '2', date: '2024-01-18 12:00', product: 'Tata Salt 1kg', type: 'INWARD', quantity: 50, reference: 'CSV Import #12', balance: 130 },
-  { id: '3', date: '2024-01-18 11:45', product: 'Parle-G 100g', type: 'OUTWARD', quantity: -3, reference: 'POS Sale #1233', balance: 150 },
-  { id: '4', date: '2024-01-18 10:00', product: 'Loose Rice', type: 'ADJUSTMENT', quantity: -2, reference: 'Damage Write-off', balance: 23 },
-  { id: '5', date: '2024-01-17 16:00', product: 'Amul Butter 500g', type: 'INWARD', quantity: 20, reference: 'Purchase Order #45', balance: 32 },
-];
+interface LedgerResponse {
+  success: boolean;
+  data: LedgerEntry[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+// Map transaction types to display types
+function getDisplayType(transactionType: string): 'INWARD' | 'OUTWARD' | 'ADJUSTMENT' {
+  switch (transactionType) {
+    case 'purchase_received':
+    case 'opening_stock':
+    case 'sale_return':
+      return 'INWARD';
+    case 'sale':
+      return 'OUTWARD';
+    case 'adjustment':
+    default:
+      return 'ADJUSTMENT';
+  }
+}
 
 export default function InventoryPage() {
+  const { accessToken } = useAuth();
   const [filter, setFilter] = useState<'all' | 'INWARD' | 'OUTWARD' | 'ADJUSTMENT'>('all');
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ total: 0, hasMore: false });
 
-  const filteredEntries = filter === 'all'
-    ? mockLedger
-    : mockLedger.filter(e => e.type === filter);
+  // Fetch ledger entries from API
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const fetchLedger = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Map display filter to API transaction types
+        let url = '/api/v1/retailer-admin/inventory/ledger?limit=100';
+        if (filter === 'INWARD') {
+          url += '&transactionType=purchase_received';
+        } else if (filter === 'OUTWARD') {
+          url += '&transactionType=sale';
+        } else if (filter === 'ADJUSTMENT') {
+          url += '&transactionType=adjustment';
+        }
+
+        const response = await authFetch(url, accessToken);
+        if (response.status === 401) return;
+        if (!response.ok) throw new Error('Failed to fetch ledger');
+
+        const data: LedgerResponse = await response.json();
+        setLedgerEntries(data.data || []);
+        setPagination({ total: data.pagination?.total || 0, hasMore: data.pagination?.hasMore || false });
+      } catch (err) {
+        console.error('Failed to load ledger:', err);
+        setError('Failed to load inventory ledger');
+        setLedgerEntries([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLedger();
+  }, [accessToken, filter]);
+
+  // Calculate summary stats from ledger
+  const totalSKUs = new Set(ledgerEntries.map(e => e.productId)).size;
+  const todayMovements = ledgerEntries.filter(e => {
+    const today = new Date().toISOString().split('T')[0];
+    return e.createdAt.startsWith(today);
+  }).length;
 
   return (
     <>
@@ -37,19 +108,19 @@ export default function InventoryPage() {
         <div className="grid grid-4" style={{ marginBottom: '1.5rem' }}>
           <div className="stat-card">
             <div className="stat-label">📦 Total SKUs</div>
-            <div className="stat-value">1,234</div>
+            <div className="stat-value">{loading ? '...' : totalSKUs}</div>
           </div>
           <div className="stat-card">
-            <div className="stat-label">⚠️ Low Stock</div>
-            <div className="stat-value" style={{ color: 'var(--warning)' }}>23</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">🚫 Out of Stock</div>
-            <div className="stat-value" style={{ color: 'var(--danger)' }}>5</div>
+            <div className="stat-label">📋 Total Entries</div>
+            <div className="stat-value">{loading ? '...' : pagination.total}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">📈 Today's Movements</div>
-            <div className="stat-value">42</div>
+            <div className="stat-value">{loading ? '...' : todayMovements}</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-label">📊 Showing</div>
+            <div className="stat-value">{loading ? '...' : ledgerEntries.length}</div>
           </div>
         </div>
 
@@ -80,29 +151,56 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredEntries.map((entry) => (
-                <tr key={entry.id}>
-                  <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{entry.date}</td>
-                  <td>{entry.product}</td>
-                  <td>
-                    <span className={`badge ${
-                      entry.type === 'INWARD' ? 'badge-success' :
-                      entry.type === 'OUTWARD' ? 'badge-warning' :
-                      'badge-danger'
-                    }`}>
-                      {entry.type}
-                    </span>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    Loading ledger entries...
                   </td>
-                  <td style={{
-                    color: entry.quantity > 0 ? 'var(--success)' : 'var(--danger)',
-                    fontWeight: '500'
-                  }}>
-                    {entry.quantity > 0 ? '+' : ''}{entry.quantity}
-                  </td>
-                  <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>{entry.reference}</td>
-                  <td style={{ fontWeight: '500' }}>{entry.balance}</td>
                 </tr>
-              ))}
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)' }}>
+                    {error}
+                  </td>
+                </tr>
+              ) : ledgerEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                    No ledger entries found. Stock movements will appear here.
+                  </td>
+                </tr>
+              ) : (
+                ledgerEntries.map((entry) => {
+                  const displayType = getDisplayType(entry.transactionType);
+                  return (
+                    <tr key={entry.id}>
+                      <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        {new Date(entry.createdAt).toLocaleString()}
+                      </td>
+                      <td>{entry.productName || entry.productId}</td>
+                      <td>
+                        <span className={`badge ${
+                          displayType === 'INWARD' ? 'badge-success' :
+                          displayType === 'OUTWARD' ? 'badge-warning' :
+                          'badge-danger'
+                        }`}>
+                          {displayType}
+                        </span>
+                      </td>
+                      <td style={{
+                        color: entry.deltaQty > 0 ? 'var(--success)' : 'var(--danger)',
+                        fontWeight: '500'
+                      }}>
+                        {entry.deltaQty > 0 ? '+' : ''}{entry.deltaQty}
+                      </td>
+                      <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                        {entry.transactionType}{entry.referenceId ? ` #${entry.referenceId.slice(0, 8)}` : ''}
+                      </td>
+                      <td style={{ fontWeight: '500' }}>{entry.stockAfter}</td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

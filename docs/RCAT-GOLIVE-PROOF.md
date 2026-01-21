@@ -1206,11 +1206,166 @@ pm2 restart all
 
 ---
 
+## Proof 12: VM Audit E2E Verification (QA-RCAT-PROOF-001)
+
+This proof is for end-to-end verification on the production VM.
+
+### VM Environment Setup
+
+```bash
+# SSH to VM
+ssh supermandi-vm
+
+# Set environment
+export VM_BASE="http://34.14.150.183:3000"  # Gateway port
+export JWT_TOKEN="<retailer-jwt-token>"
+export DEVICE_TOKEN="<pos-device-token>"
+export ADMIN_TOKEN="<admin-token>"
+```
+
+### Test 1: Gateway Health Check
+
+```bash
+curl -s "$VM_BASE/health" | jq .
+# Expected: { "status": "ok", "service": "api-gateway", "version": "3.0.9" }
+```
+
+### Test 2: Admin Events (SEC-ADMIN-001 - Auth Required)
+
+```bash
+# Without token - should fail
+curl -s "$VM_BASE/api/v1/admin/pos/events?limit=5"
+# Expected: 401 Unauthorized
+
+# With token - should succeed
+curl -s "$VM_BASE/api/v1/admin/pos/events?limit=5" \
+  -H "x-admin-token: $ADMIN_TOKEN" | jq '.length'
+# Expected: 5 (or array of events)
+```
+
+### Test 3: Retailer Inventory Endpoint (FE-RETAILER-INVENTORY-001)
+
+```bash
+curl -s "$VM_BASE/api/v1/retailer-admin/inventory" \
+  -H "Authorization: Bearer $JWT_TOKEN" | jq .
+# Expected:
+# {
+#   "success": true,
+#   "data": [
+#     { "productId": "...", "productName": "...", "totalStockQty": N, "totalPurchaseValue": N, "totalSellRevenue": N }
+#   ]
+# }
+```
+
+### Test 4: Retailer Categories Endpoint (FE-RETAILER-CAT-001)
+
+```bash
+curl -s "$VM_BASE/api/v1/retailer-admin/categories" \
+  -H "Authorization: Bearer $JWT_TOKEN" | jq .
+# Expected:
+# {
+#   "success": true,
+#   "data": [
+#     { "id": "...", "labelEn": "Atta-Dal", "labelHi": "आटा-दाल", "iconKey": "barley", "sortOrder": 1, "productCount": N, "stockValue": N }
+#   ],
+#   "count": 15
+# }
+```
+
+### Test 5: Category Products Endpoint
+
+```bash
+# Get products in "Atta-Dal" category (example ID)
+curl -s "$VM_BASE/api/v1/retailer-admin/categories/f0000000-0000-0000-0000-000000000002/products" \
+  -H "Authorization: Bearer $JWT_TOKEN" | jq .
+# Expected:
+# {
+#   "success": true,
+#   "data": [...products...],
+#   "pagination": { "total": N, "limit": 50, "offset": 0, "hasMore": false }
+# }
+```
+
+### Test 6: Inventory Ledger Endpoint
+
+```bash
+curl -s "$VM_BASE/api/v1/retailer-admin/inventory/ledger?limit=10" \
+  -H "Authorization: Bearer $JWT_TOKEN" | jq .
+# Expected:
+# {
+#   "success": true,
+#   "data": [
+#     { "id": "...", "productId": "...", "deltaQty": N, "transactionType": "sale|purchase_received|opening_stock", ... }
+#   ],
+#   "pagination": { "total": N, "limit": 10, "offset": 0, "hasMore": ... }
+# }
+```
+
+### Test 7: POS Scan Resolve (Cross-service)
+
+```bash
+curl -s -X POST "$VM_BASE/api/v1/pos/scan/resolve" \
+  -H "Authorization: Bearer $DEVICE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"barcode": "8901030123456"}' | jq .
+# Expected: { "status": "FOUND"|"NOT_FOUND"|"NEEDS_CREATE", ... }
+```
+
+### Test 8: Product Create with Opening Stock
+
+```bash
+curl -s -X POST "$VM_BASE/api/v1/retailer-admin/products" \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "PACKAGED",
+    "name": "E2E Test Product",
+    "barcode": "9999999999999",
+    "unit": "PCS",
+    "purchasePrice": 1000,
+    "sellPrice": 1200,
+    "openingStockQty": 5
+  }' | jq .
+# Expected: { "ok": true, "data": { "productId": "...", "ledgerEntryId": "...", ... } }
+```
+
+### VM Audit Summary Checklist
+
+| Test | Route | Expected | Status |
+|------|-------|----------|--------|
+| Gateway health | GET /health | 200 + status:ok | [ ] |
+| Admin auth blocked | GET /admin/pos/events (no token) | 401 | [ ] |
+| Admin auth success | GET /admin/pos/events (with token) | 200 | [ ] |
+| Retailer inventory | GET /retailer-admin/inventory | 200 + data[] | [ ] |
+| Retailer categories | GET /retailer-admin/categories | 200 + data[] | [ ] |
+| Category products | GET /retailer-admin/categories/:id/products | 200 + data[] | [ ] |
+| Inventory ledger | GET /retailer-admin/inventory/ledger | 200 + data[] | [ ] |
+| POS scan resolve | POST /pos/scan/resolve | 200 + status | [ ] |
+| Product create | POST /retailer-admin/products | 200 + productId | [ ] |
+
+### Files Changed for VM Audit Go-Live
+
+| File | Change | Ticket |
+|------|--------|--------|
+| `docs/ROUTE-MAPPING.md` | Created route ownership table | GW-DECIDE-001 |
+| `backend/src/routes/v1/admin/posEvents.ts` | Added requireAdminToken | SVC-ADMINPOS-001 |
+| `backend/services/api-gateway/src/config.ts` | Fixed POS routing, added admin routes | GW-ROUTES-001 |
+| `supermandi-superadmin/README.md` | Fixed port 3001→3000 | FE-SUPERADMIN-ENV-001 |
+| `backend/src/routes/v1/retailer-admin/inventory.ts` | Created retailer inventory endpoints | FE-RETAILER-INVENTORY-001 |
+| `backend/src/routes/v1/index.ts` | Registered retailer-admin router | FE-RETAILER-INVENTORY-001 |
+| `retailer-admin/src/api/store.ts` | Added fetchCategories API | FE-RETAILER-CAT-001 |
+| `retailer-admin/src/pages/DashboardPage.tsx` | Added inventory + categories UI | FE-RETAILER-INVENTORY-001, FE-RETAILER-CAT-001 |
+
+---
+
 ## Sign-off
 
 **Tested by**: ________________
 **Date**: ________________
 **Environment**: ________________
+**VM IP**: 34.14.150.183
+**Gateway Port**: 3000
 **Migration executed**: [ ] Yes / [ ] No
 **Smoke tests passed**: [ ] Yes / [ ] No
 **Cross-store isolation verified**: [ ] Yes / [ ] No
+**Admin auth enforced**: [ ] Yes / [ ] No

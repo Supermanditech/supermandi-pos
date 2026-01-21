@@ -66,6 +66,11 @@ Location: [`src/services/printerService.ts`](src/services/printerService.ts)
 npm install
 ```
 
+## API Documentation
+
+For detailed API routing and service architecture, see:
+- **[Route Mapping](docs/ROUTE-MAPPING.md)** - Complete route ownership map (Gateway → Services)
+
 ## Backend (Express + Prisma)
 
 Backend lives in [`backend/`](backend/package.json) and provides:

@@ -91,6 +91,31 @@ export async function fetchInventory(accessToken: string): Promise<ApiResponse<I
   return response.json();
 }
 
+// FE-RETAILER-CAT-001: Categories from FMCG taxonomy
+export interface FmcgCategory {
+  id: string;
+  labelEn: string;
+  labelHi: string | null;
+  iconKey: string;
+  sortOrder: number;
+  productCount: number;
+  stockValue: number;  // paise
+}
+
+export async function fetchCategories(accessToken: string): Promise<ApiResponse<FmcgCategory[]>> {
+  const response = await authFetch(`${API_BASE}/categories`, accessToken);
+
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch categories');
+  }
+
+  return response.json();
+}
+
 // Full 4-section supplier interface matching backend
 export interface Supplier {
   id: string;

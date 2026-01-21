@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
 
@@ -176,6 +177,7 @@ type FormSection = 'identity' | 'contact' | 'terms' | 'metadata';
 
 export default function SuppliersPage() {
   const { accessToken } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -188,6 +190,20 @@ export default function SuppliersPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Handle ?action=create query param from dashboard navigation
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create') {
+      setShowForm(true);
+      setEditingSupplier(null);
+      setFormData(initialFormData);
+      setActiveSection('identity');
+      // Clear the query param after handling
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch suppliers from API
   const fetchSuppliers = async () => {

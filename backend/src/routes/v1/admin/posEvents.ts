@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { fetchLatestPosEvents } from "../../../services/posEventLogger";
+import { requireAdminToken } from "../../../middleware/adminToken";
 
 export const adminPosEventsRouter = Router();
+
+// Apply admin auth to all routes in this router
+adminPosEventsRouter.use(requireAdminToken);
 
 // GET /api/v1/admin/pos/events?limit=100
 // Returns an array (SuperAdmin expects an array, not an object wrapper).
