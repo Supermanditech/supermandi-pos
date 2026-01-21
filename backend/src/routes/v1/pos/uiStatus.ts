@@ -31,6 +31,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let storeCode: string | null = null; // STORECODE-003
   let upiVpa: string | null = null;
   let storeScanLookupV2Enabled = false;
+  // GO-LIVE-REVEAL-001: Feature flags for tab visibility (default enabled for live testing)
+  let buyEnabled = true;
+  let reorderEnabled = true;
   if (status.storeId) {
     const storeRes = await pool.query(
       `SELECT name, store_code, upi_vpa, scan_lookup_v2_enabled FROM stores WHERE id = $1`,
@@ -41,6 +44,20 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     storeCode = storeRow?.store_code ? String(storeRow.store_code) : null; // STORECODE-003
     upiVpa = storeRow?.upi_vpa ? String(storeRow.upi_vpa) : null;
     storeScanLookupV2Enabled = Boolean(storeRow?.scan_lookup_v2_enabled);
+
+    // GO-LIVE-REVEAL-001: Check reorder_settings for reorderEnabled if store has settings
+    try {
+      const reorderRes = await pool.query(
+        `SELECT reorder_enabled FROM reorder_settings WHERE store_id = $1`,
+        [status.storeId]
+      );
+      if (reorderRes.rows[0] !== undefined) {
+        reorderEnabled = Boolean(reorderRes.rows[0].reorder_enabled);
+      }
+      // buyEnabled stays true (no store-level override currently)
+    } catch {
+      // Table may not exist in all environments - default to enabled
+    }
   }
 
   await pool.query(
@@ -92,7 +109,12 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     printerOk: null,
     scannerOk: null,
     features: {
-      scan_lookup_v2: scanLookupV2Enabled
+      scan_lookup_v2: scanLookupV2Enabled,
+      // GO-LIVE-REVEAL-001: Feature flags for POS tab visibility
+      buyEnabled,
+      reorderEnabled,
+      // Legacy alias for buyEnabled
+      ordersEnabled: buyEnabled
     }
   });
 });

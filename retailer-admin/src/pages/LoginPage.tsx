@@ -109,7 +109,7 @@ export default function LoginPage() {
 
       // Check if Firebase is configured
       if (!isFirebaseReady()) {
-        throw new Error('Firebase is not configured. Please contact support or use demo mode (dev only).');
+        throw new Error('Firebase is not configured. Set VITE_FIREBASE_* environment variables and restart the server.');
       }
 
       // Production: trigger Firebase Phone Auth
@@ -222,6 +222,32 @@ export default function LoginPage() {
           zIndex: 1000,
         }}>
           ⚠️ DEMO MODE - FOR DEVELOPMENT ONLY - NOT FOR PRODUCTION ⚠️
+        </div>
+      )}
+
+      {/* GO-LIVE-REVEAL-001: Firebase not configured warning */}
+      {!isFirebaseReady() && (
+        <div style={{
+          background: '#fef3c7',
+          border: '1px solid #f59e0b',
+          color: '#92400e',
+          padding: '1rem',
+          borderRadius: '0.5rem',
+          marginBottom: '1rem',
+          maxWidth: '400px',
+        }}>
+          <strong>Firebase Configuration Required</strong>
+          <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
+            Set the following environment variables in <code>retailer-admin/.env</code>:
+          </p>
+          <ul style={{ margin: '0.5rem 0', paddingLeft: '1.25rem', fontSize: '0.8rem' }}>
+            <li>VITE_FIREBASE_API_KEY</li>
+            <li>VITE_FIREBASE_AUTH_DOMAIN</li>
+            <li>VITE_FIREBASE_PROJECT_ID</li>
+          </ul>
+          <p style={{ margin: 0, fontSize: '0.75rem', color: '#78350f' }}>
+            Then restart the dev server.
+          </p>
         </div>
       )}
 

@@ -971,6 +971,19 @@ export default function App() {
         </div>
       </header>
 
+      {/* GO-LIVE-REVEAL-001: Prominent warning when admin token is missing */}
+      {!getAdminToken() && (
+        <div className="banner" role="alert" style={{ background: "#fef3c7", borderColor: "#f59e0b" }}>
+          <strong style={{ color: "#92400e" }}>Admin Token Required</strong>
+          <div className="bannerDetails" style={{ color: "#78350f" }}>
+            <div>Enter your admin token in the input field above to access dashboard data.</div>
+            <div style={{ marginTop: 8, fontSize: "0.9em" }}>
+              The token must match the <code>ADMIN_TOKEN</code> environment variable set in the backend.
+            </div>
+          </div>
+        </div>
+      )}
+
       {(healthError || eventsError || devicesError) && (
         <div className="banner" role="alert">
           <strong>Backend warning:</strong>

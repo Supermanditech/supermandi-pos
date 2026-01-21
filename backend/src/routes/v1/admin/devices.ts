@@ -24,7 +24,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
   }
 
   const params: string[] = [];
-  const where = storeId ? "WHERE store_id = $1" : "";
+  const where = storeId ? "WHERE store_id = $1::uuid" : "";
   if (storeId) params.push(storeId);
 
   const result = await pool.query(
@@ -163,7 +163,7 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
   const updateSql = `
     UPDATE pos_devices
     SET ${updates.join(", ")}
-    WHERE id = $${params.length + 1}
+    WHERE id = $${params.length + 1}::uuid
     RETURNING id,
               store_id,
               active,

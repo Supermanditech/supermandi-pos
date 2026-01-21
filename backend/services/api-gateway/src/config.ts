@@ -43,17 +43,53 @@ export const config: GatewayConfig = {
     // Admin pos/events and analytics routes -> main backend (monolith)
     {
       name: 'admin-pos',
-      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
       pathPrefix: '/api/v1/admin/pos',
       stripPrefix: false,
     },
     {
       name: 'admin-analytics',
-      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
       pathPrefix: '/api/v1/admin/analytics',
       stripPrefix: false,
     },
-    // All other admin routes (stores, pending-suppliers, etc.) -> platform-service
+    {
+      name: 'admin-devices',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/devices',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-ai',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/ai',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-barcode-sheets',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/barcode-sheets',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-global-products',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/global-products',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-stores',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/stores',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-device-enrollments',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/admin/device-enrollments',
+      stripPrefix: false,
+    },
+    // All other admin routes (pending-suppliers, etc.) -> platform-service
     {
       name: 'admin',
       url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),
@@ -96,11 +132,23 @@ export const config: GatewayConfig = {
       url: getEnvOrDefault('REORDER_SERVICE_URL', 'http://localhost:3007'),
       pathPrefix: '/api/v1/reorder',
     },
+    // ==========================================================================
+    // POS ROUTES - GW-ROUTES-001: Fix routing for POS endpoints
+    // Most POS endpoints are in the main backend (3001)
+    // Only /pos/enroll goes to enroll-service (3009)
+    // More specific routes MUST come before less specific ones
+    // ==========================================================================
+    {
+      name: 'pos-enroll',
+      url: getEnvOrDefault('ENROLL_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
+      pathPrefix: '/api/v1/pos/enroll',
+    },
     {
       name: 'pos',
-      url: getEnvOrDefault('POS_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
       pathPrefix: '/api/v1/pos',
     },
+    // ==========================================================================
     {
       name: 'voice',
       url: getEnvOrDefault('VOICE_SERVICE_URL', 'http://localhost:3008'),
@@ -112,6 +160,20 @@ export const config: GatewayConfig = {
       name: 'retailer-auth',
       url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
       pathPrefix: '/api/v1/retailer-admin/auth',
+    },
+    // FE-RETAILER-INVENTORY-001: Inventory routes go to main backend
+    {
+      name: 'retailer-inventory',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/retailer-admin/inventory',
+      stripPrefix: false,
+    },
+    // FE-RETAILER-CAT-001: Categories routes go to main backend
+    {
+      name: 'retailer-categories',
+      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      pathPrefix: '/api/v1/retailer-admin/categories',
+      stripPrefix: false,
     },
     // Portal API routes go to platform-service
     {
