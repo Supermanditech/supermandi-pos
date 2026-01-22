@@ -126,12 +126,22 @@ function Invoke-ApiRequest {
         }
     }
     catch {
-        $statusCode = $_.Exception.Response.StatusCode.value__
+        $statusCode = 0
         $errorBody = $null
 
         try {
-            $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-            $errorBody = $reader.ReadToEnd() | ConvertFrom-Json
+            $statusCode = [int]$_.Exception.Response.StatusCode
+        } catch {
+            $statusCode = 0
+        }
+
+        # PowerShell Core: use ErrorDetails.Message for response body
+        try {
+            if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+                $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json
+            } else {
+                $errorBody = @{ error = @{ message = $_.Exception.Message } }
+            }
         }
         catch {
             $errorBody = @{ error = @{ message = $_.Exception.Message } }

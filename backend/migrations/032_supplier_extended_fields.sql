@@ -72,4 +72,12 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+-- Update verification_status constraint to include 'unverified' for local suppliers (RCAT-SUP-UI-001)
+DO $$ BEGIN
+  ALTER TABLE supplier.suppliers DROP CONSTRAINT IF EXISTS chk_suppliers_verification_status;
+  ALTER TABLE supplier.suppliers ADD CONSTRAINT chk_suppliers_verification_status
+    CHECK (verification_status IN ('pending', 'verified', 'rejected', 'unverified'));
+  ALTER TABLE supplier.suppliers ALTER COLUMN verification_status SET DEFAULT 'unverified';
+END $$;
+
 COMMIT;
