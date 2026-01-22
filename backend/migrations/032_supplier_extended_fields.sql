@@ -1,4 +1,4 @@
--- Migration: 014_supplier_extended_fields
+-- Migration: 032_supplier_extended_fields (renumbered from 014 to resolve conflict with 014_stores_add_store_code)
 -- Extends supplier schema with full 4-section registration form fields
 -- Safe to run multiple times (idempotent)
 

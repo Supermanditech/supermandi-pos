@@ -147,6 +147,47 @@ async function writeAuditLog(params: {
 }
 
 // =============================================================================
+// MIGRATION 014 COLUMN DETECTION (RCAT-SUP-FORM-001)
+// =============================================================================
+
+/**
+ * Cache for migration 014 column existence check.
+ * Avoids repeated DB queries for column existence on every request.
+ * Reset on server restart; that's fine since migrations are applied rarely.
+ */
+let migration014ColumnsExist: boolean | null = null;
+
+/**
+ * Check if migration 014 (supplier extended fields) columns exist.
+ * Caches result for performance - only queries DB once per server lifetime.
+ */
+async function checkMigration014Applied(): Promise<boolean> {
+  if (migration014ColumnsExist !== null) {
+    return migration014ColumnsExist;
+  }
+
+  try {
+    // Check for one of the migration 014 columns on each table
+    const result = await query<{ exists: boolean }>(
+      `SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'supplier'
+          AND table_name = 'suppliers'
+          AND column_name = 'fssai'
+      ) as exists`
+    );
+    migration014ColumnsExist = result[0]?.exists === true;
+    console.log(`[migration014] Extended supplier columns exist: ${migration014ColumnsExist}`);
+    return migration014ColumnsExist;
+  } catch (err) {
+    console.error('[migration014] Failed to check column existence:', err);
+    // Assume columns don't exist on error - safer default
+    migration014ColumnsExist = false;
+    return false;
+  }
+}
+
+// =============================================================================
 // STORE INFO
 // =============================================================================
 
@@ -1289,7 +1330,12 @@ router.get('/suppliers', async (req, res) => {
     const userId = req.headers['x-user-id'] as string;
     const storeId = req.headers['x-actor-id'] as string;
 
-    log('info', 'Request received', { userId, storeId, headers: isDev ? req.headers : undefined });
+    // Parse query parameters for server-side filtering (RCAT-SUP-API-001)
+    const searchQuery = (req.query.query as string)?.trim() || '';
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 100, 1), 500); // 1-500, default 100
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0); // default 0
+
+    log('info', 'Request received', { userId, storeId, searchQuery, limit, offset, headers: isDev ? req.headers : undefined });
 
     if (!userId || !storeId) {
       log('error', 'Missing auth headers', { userId: !!userId, storeId: !!storeId });
@@ -1299,9 +1345,69 @@ router.get('/suppliers', async (req, res) => {
       });
     }
 
-    // Query using only columns from base migration 003
-    // Migration 014 columns (fssai, whatsapp_enabled, area, payment_terms, etc.) may not exist
-    log('info', 'Executing suppliers query (base columns only)', { storeId });
+    // Check migration 014 before querying extended columns (RCAT-SUP-DB-001 / RCAT-SUP-API-001)
+    const extendedColumnsExist = await checkMigration014Applied();
+    log('info', 'Executing suppliers query', { storeId, searchQuery, extendedColumnsExist });
+
+    // Build WHERE clause with optional search filter
+    // Search on: business_name, trade_name, primary_phone, gstin (case-insensitive)
+    const params: (string | number)[] = [storeId];
+    let searchClause = '';
+    if (searchQuery) {
+      const searchPattern = `%${searchQuery.toLowerCase()}%`;
+      params.push(searchPattern);
+      searchClause = `
+        AND (
+          LOWER(s.business_name) LIKE $2
+          OR LOWER(COALESCE(s.trade_name, '')) LIKE $2
+          OR COALESCE(s.primary_phone, '') LIKE $2
+          OR LOWER(COALESCE(s.gstin, '')) LIKE $2
+        )`;
+    }
+
+    // Add limit and offset params
+    params.push(limit, offset);
+    const limitParam = searchQuery ? '$3' : '$2';
+    const offsetParam = searchQuery ? '$4' : '$3';
+
+    // Build SELECT columns conditionally based on migration 014 status
+    const extendedSupplierCols = extendedColumnsExist
+      ? `s.fssai,
+         COALESCE(s.whatsapp_enabled, false) as "whatsappEnabled",
+         s.secondary_phone as "secondaryPhone",
+         s.area,`
+      : `NULL as fssai,
+         false as "whatsappEnabled",
+         NULL as "secondaryPhone",
+         NULL as area,`;
+
+    const extendedLinkCols = extendedColumnsExist
+      ? `COALESCE(ssl.payment_terms, 'Cash') as "paymentTerms",
+         COALESCE(ssl.delivery_charges, 0) as "deliveryCharges",
+         ssl.delivery_schedule as "deliverySchedule",
+         COALESCE(ssl.returns_allowed, false) as "returnsAllowed",
+         COALESCE(ssl.returns_window, 0) as "returnsWindow",
+         COALESCE(ssl.tax_invoice_provided, false) as "taxInvoiceProvided",
+         ssl.price_source as "priceSource",
+         ssl.service_area as "serviceArea",
+         ssl.delivery_address as "deliveryAddress",
+         COALESCE(ssl.categories_supplied, '[]'::jsonb) as "categoriesSupplied",
+         ssl.brands_supplied as "brandsSupplied",
+         ssl.ordering_channel as "orderingChannel",
+         ssl.notes,`
+      : `'Cash' as "paymentTerms",
+         0 as "deliveryCharges",
+         NULL as "deliverySchedule",
+         false as "returnsAllowed",
+         0 as "returnsWindow",
+         false as "taxInvoiceProvided",
+         NULL as "priceSource",
+         NULL as "serviceArea",
+         NULL as "deliveryAddress",
+         '[]'::jsonb as "categoriesSupplied",
+         NULL as "brandsSupplied",
+         NULL as "orderingChannel",
+         NULL as notes,`;
 
     const result = await query(
       `SELECT
@@ -1311,6 +1417,7 @@ router.get('/suppliers', async (req, res) => {
          s.business_type as "supplierType",
          CASE WHEN s.gstin LIKE 'XX%' THEN NULL ELSE s.gstin END as gstin,
          s.pan,
+         ${extendedSupplierCols}
          s.primary_phone as "primaryPhone",
          s.primary_email as email,
          s.address_line1 as "addressLine1",
@@ -1320,6 +1427,7 @@ router.get('/suppliers', async (req, res) => {
          s.pincode,
          COALESCE(ssl.credit_days, 0) as "creditDays",
          COALESCE(ssl.min_order_value, 0) as "minOrderValue",
+         ${extendedLinkCols}
          COALESCE(s.verification_status, 'unverified') as "verificationStatus",
          (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as "isSupermandi",
          CASE WHEN s.verification_status = 'verified' THEN LEFT(s.id::text, 8) ELSE NULL END as "supplierCode",
@@ -1328,14 +1436,15 @@ router.get('/suppliers', async (req, res) => {
          CONCAT_WS(', ', NULLIF(s.address_line1, ''), NULLIF(s.city, ''), NULLIF(s.state, '')) as address
        FROM supplier.suppliers s
        JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
-       WHERE ssl.store_id = $1 AND ssl.status = 'active'
+       WHERE ssl.store_id = $1 AND ssl.status = 'active'${searchClause}
        ORDER BY
          CASE s.verification_status WHEN 'verified' THEN 0 WHEN 'pending' THEN 1 ELSE 2 END,
-         s.business_name`,
-      [storeId]
+         s.business_name
+       LIMIT ${limitParam} OFFSET ${offsetParam}`,
+      params
     );
 
-    // Map to full interface with defaults for missing fields (from migration 014)
+    // Map result (all fields now come from DB with COALESCE defaults)
     const mappedResult = result.map((s: Record<string, unknown>) => ({
       id: s.id,
       businessName: s.businessName,
@@ -1343,32 +1452,32 @@ router.get('/suppliers', async (req, res) => {
       supplierType: s.supplierType,
       gstin: s.gstin,
       pan: s.pan,
-      fssai: null, // migration 014
+      fssai: s.fssai,
       primaryPhone: s.primaryPhone,
-      whatsappEnabled: false, // migration 014
-      secondaryPhone: null, // migration 014
+      whatsappEnabled: s.whatsappEnabled,
+      secondaryPhone: s.secondaryPhone,
       email: s.email,
       addressLine1: s.addressLine1,
       addressLine2: s.addressLine2,
-      area: null, // migration 014
+      area: s.area,
       city: s.city,
       state: s.state,
       pincode: s.pincode,
-      paymentTerms: 'Cash', // migration 014
+      paymentTerms: s.paymentTerms,
       creditDays: s.creditDays,
       minOrderValue: s.minOrderValue,
-      deliveryCharges: 0, // migration 014
-      deliverySchedule: null, // migration 014
-      returnsAllowed: false, // migration 014
-      returnsWindow: 0, // migration 014
-      taxInvoiceProvided: false, // migration 014
-      priceSource: null, // migration 014
-      serviceArea: null, // migration 014
-      deliveryAddress: null, // migration 014
-      categoriesSupplied: [], // migration 014
-      brandsSupplied: null, // migration 014
-      orderingChannel: null, // migration 014
-      notes: null, // migration 014
+      deliveryCharges: s.deliveryCharges,
+      deliverySchedule: s.deliverySchedule,
+      returnsAllowed: s.returnsAllowed,
+      returnsWindow: s.returnsWindow,
+      taxInvoiceProvided: s.taxInvoiceProvided,
+      priceSource: s.priceSource,
+      serviceArea: s.serviceArea,
+      deliveryAddress: s.deliveryAddress,
+      categoriesSupplied: s.categoriesSupplied,
+      brandsSupplied: s.brandsSupplied,
+      orderingChannel: s.orderingChannel,
+      notes: s.notes,
       verificationStatus: s.verificationStatus,
       isSupermandi: s.isSupermandi,
       supplierCode: s.supplierCode,
@@ -1377,12 +1486,44 @@ router.get('/suppliers', async (req, res) => {
       address: s.address,
     }));
 
-    log('info', 'Query success', { count: mappedResult.length });
+    log('info', 'Query success', { count: mappedResult.length, searchQuery, limit, offset });
+
+    // Get total count for pagination (only if using search or pagination)
+    let totalCount = mappedResult.length;
+    if (searchQuery || offset > 0 || mappedResult.length === limit) {
+      const countParams: string[] = [storeId];
+      let countSearchClause = '';
+      if (searchQuery) {
+        const searchPattern = `%${searchQuery.toLowerCase()}%`;
+        countParams.push(searchPattern);
+        countSearchClause = `
+          AND (
+            LOWER(s.business_name) LIKE $2
+            OR LOWER(COALESCE(s.trade_name, '')) LIKE $2
+            OR COALESCE(s.primary_phone, '') LIKE $2
+            OR LOWER(COALESCE(s.gstin, '')) LIKE $2
+          )`;
+      }
+      const countResult = await query(
+        `SELECT COUNT(*) as total
+         FROM supplier.suppliers s
+         JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
+         WHERE ssl.store_id = $1 AND ssl.status = 'active'${countSearchClause}`,
+        countParams
+      ) as { total: string }[];
+      totalCount = parseInt(countResult[0]?.total || '0', 10);
+    }
 
     return res.json({
       success: true,
       data: mappedResult,
-      _debug: isDev ? { reqId } : undefined,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset,
+        hasMore: offset + mappedResult.length < totalCount,
+      },
+      _debug: isDev ? { reqId, searchQuery } : undefined,
     });
   } catch (err: unknown) {
     // Extract postgres-specific error fields
@@ -1595,40 +1736,80 @@ router.post(
     }
 
     // STEP 3: Create new supplier if not found
+    // Check if migration 014 columns exist (RCAT-SUP-FORM-001)
+    const extendedColumnsExist = await checkMigration014Applied();
+    const warnings: string[] = [];
+
     if (!supplierId) {
       // gstin is NOT NULL and max 15 chars, generate placeholder for informal suppliers
       // Format: XX + 13 random base36 chars = 15 chars total (like: XX1ABC2DEF3GHI)
       const effectiveGstin = gstin || `XX${(Date.now().toString(36) + Math.random().toString(36).substring(2)).substring(0, 13)}`.toUpperCase();
 
-      const result = await query<{ id: string }>(
-        `INSERT INTO supplier.suppliers (
-          business_name, trade_name, business_type, gstin, pan, fssai,
-          primary_phone, whatsapp_enabled, secondary_phone, primary_email,
-          address_line1, address_line2, area, city, state, pincode,
-          verification_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-         RETURNING id`,
-        [
-          effectiveBusinessName,
-          tradeName || null,
-          supplierType || null,
-          effectiveGstin,
-          pan || null,
-          fssai || null,
-          effectivePrimaryPhone || null,
-          whatsappEnabled || false,
-          secondaryPhone || null,
-          email || null,
-          effectiveAddressLine1 || null,
-          addressLine2 || null,
-          area || null,
-          city || null,
-          state || null,
-          pincode || null,
-          'pending'
-        ]
-      );
-      supplierId = result[0]!.id;
+      if (extendedColumnsExist) {
+        // Full insert with migration 014 columns
+        const result = await query<{ id: string }>(
+          `INSERT INTO supplier.suppliers (
+            business_name, trade_name, business_type, gstin, pan, fssai,
+            primary_phone, whatsapp_enabled, secondary_phone, primary_email,
+            address_line1, address_line2, area, city, state, pincode,
+            verification_status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+           RETURNING id`,
+          [
+            effectiveBusinessName,
+            tradeName || null,
+            supplierType || null,
+            effectiveGstin,
+            pan || null,
+            fssai || null,
+            effectivePrimaryPhone || null,
+            whatsappEnabled || false,
+            secondaryPhone || null,
+            email || null,
+            effectiveAddressLine1 || null,
+            addressLine2 || null,
+            area || null,
+            city || null,
+            state || null,
+            pincode || null,
+            'pending'
+          ]
+        );
+        supplierId = result[0]!.id;
+      } else {
+        // Base insert with only migration 003 columns (graceful degradation)
+        const result = await query<{ id: string }>(
+          `INSERT INTO supplier.suppliers (
+            business_name, trade_name, business_type, gstin, pan,
+            primary_phone, primary_email,
+            address_line1, address_line2, city, state, pincode,
+            verification_status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+           RETURNING id`,
+          [
+            effectiveBusinessName,
+            tradeName || null,
+            supplierType || null,
+            effectiveGstin,
+            pan || null,
+            effectivePrimaryPhone || null,
+            email || null,
+            effectiveAddressLine1 || null,
+            addressLine2 || null,
+            city || null,
+            state || null,
+            pincode || null,
+            'pending'
+          ]
+        );
+        supplierId = result[0]!.id;
+
+        // Track which fields were not saved
+        if (fssai) warnings.push('fssai');
+        if (whatsappEnabled) warnings.push('whatsappEnabled');
+        if (secondaryPhone) warnings.push('secondaryPhone');
+        if (area) warnings.push('area');
+      }
 
       // STEP 4: ALWAYS create pending request for SuperAdmin review for new suppliers
       // This ensures ALL new suppliers (with or without GSTIN) can be verified
@@ -1650,51 +1831,82 @@ router.post(
     const deliveryChargesNum = deliveryCharges ? parseInt(String(deliveryCharges), 10) || 0 : 0;
     const returnsWindowNum = returnsWindow ? parseInt(String(returnsWindow), 10) || 0 : 0;
 
-    await query(
-      `INSERT INTO supplier.supplier_store_links (
-        supplier_id, store_id, status,
-        payment_terms, credit_days, min_order_value, delivery_charges,
-        delivery_schedule, returns_allowed, returns_window, tax_invoice_provided,
-        price_source, service_area, delivery_address,
-        categories_supplied, brands_supplied, ordering_channel, notes
-      ) VALUES ($1, $2, 'active', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-       ON CONFLICT (supplier_id, store_id) DO UPDATE SET
-         status = 'active',
-         payment_terms = COALESCE(EXCLUDED.payment_terms, supplier.supplier_store_links.payment_terms),
-         credit_days = COALESCE(EXCLUDED.credit_days, supplier.supplier_store_links.credit_days),
-         min_order_value = COALESCE(EXCLUDED.min_order_value, supplier.supplier_store_links.min_order_value),
-         delivery_charges = COALESCE(EXCLUDED.delivery_charges, supplier.supplier_store_links.delivery_charges),
-         delivery_schedule = COALESCE(EXCLUDED.delivery_schedule, supplier.supplier_store_links.delivery_schedule),
-         returns_allowed = COALESCE(EXCLUDED.returns_allowed, supplier.supplier_store_links.returns_allowed),
-         returns_window = COALESCE(EXCLUDED.returns_window, supplier.supplier_store_links.returns_window),
-         tax_invoice_provided = COALESCE(EXCLUDED.tax_invoice_provided, supplier.supplier_store_links.tax_invoice_provided),
-         price_source = COALESCE(EXCLUDED.price_source, supplier.supplier_store_links.price_source),
-         service_area = COALESCE(EXCLUDED.service_area, supplier.supplier_store_links.service_area),
-         delivery_address = COALESCE(EXCLUDED.delivery_address, supplier.supplier_store_links.delivery_address),
-         categories_supplied = COALESCE(EXCLUDED.categories_supplied, supplier.supplier_store_links.categories_supplied),
-         brands_supplied = COALESCE(EXCLUDED.brands_supplied, supplier.supplier_store_links.brands_supplied),
-         ordering_channel = COALESCE(EXCLUDED.ordering_channel, supplier.supplier_store_links.ordering_channel),
-         notes = COALESCE(EXCLUDED.notes, supplier.supplier_store_links.notes),
-         updated_at = NOW()`,
-      [
-        supplierId, storeId,
-        paymentTerms || 'Cash',
-        creditDaysNum,
-        minOrderValueNum,
-        deliveryChargesNum,
-        deliverySchedule || null,
-        returnsAllowed || false,
-        returnsWindowNum,
-        taxInvoiceProvided || false,
-        priceSource || null,
-        serviceArea || null,
-        deliveryAddress || null,
-        JSON.stringify(categoriesSupplied || []),
-        brandsSupplied || null,
-        orderingChannel || null,
-        notes || null
-      ]
-    );
+    if (extendedColumnsExist) {
+      // Full insert/update with migration 014 columns
+      await query(
+        `INSERT INTO supplier.supplier_store_links (
+          supplier_id, store_id, status,
+          payment_terms, credit_days, min_order_value, delivery_charges,
+          delivery_schedule, returns_allowed, returns_window, tax_invoice_provided,
+          price_source, service_area, delivery_address,
+          categories_supplied, brands_supplied, ordering_channel, notes
+        ) VALUES ($1, $2, 'active', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+         ON CONFLICT (supplier_id, store_id) DO UPDATE SET
+           status = 'active',
+           payment_terms = COALESCE(EXCLUDED.payment_terms, supplier.supplier_store_links.payment_terms),
+           credit_days = COALESCE(EXCLUDED.credit_days, supplier.supplier_store_links.credit_days),
+           min_order_value = COALESCE(EXCLUDED.min_order_value, supplier.supplier_store_links.min_order_value),
+           delivery_charges = COALESCE(EXCLUDED.delivery_charges, supplier.supplier_store_links.delivery_charges),
+           delivery_schedule = COALESCE(EXCLUDED.delivery_schedule, supplier.supplier_store_links.delivery_schedule),
+           returns_allowed = COALESCE(EXCLUDED.returns_allowed, supplier.supplier_store_links.returns_allowed),
+           returns_window = COALESCE(EXCLUDED.returns_window, supplier.supplier_store_links.returns_window),
+           tax_invoice_provided = COALESCE(EXCLUDED.tax_invoice_provided, supplier.supplier_store_links.tax_invoice_provided),
+           price_source = COALESCE(EXCLUDED.price_source, supplier.supplier_store_links.price_source),
+           service_area = COALESCE(EXCLUDED.service_area, supplier.supplier_store_links.service_area),
+           delivery_address = COALESCE(EXCLUDED.delivery_address, supplier.supplier_store_links.delivery_address),
+           categories_supplied = COALESCE(EXCLUDED.categories_supplied, supplier.supplier_store_links.categories_supplied),
+           brands_supplied = COALESCE(EXCLUDED.brands_supplied, supplier.supplier_store_links.brands_supplied),
+           ordering_channel = COALESCE(EXCLUDED.ordering_channel, supplier.supplier_store_links.ordering_channel),
+           notes = COALESCE(EXCLUDED.notes, supplier.supplier_store_links.notes),
+           updated_at = NOW()`,
+        [
+          supplierId, storeId,
+          paymentTerms || 'Cash',
+          creditDaysNum,
+          minOrderValueNum,
+          deliveryChargesNum,
+          deliverySchedule || null,
+          returnsAllowed || false,
+          returnsWindowNum,
+          taxInvoiceProvided || false,
+          priceSource || null,
+          serviceArea || null,
+          deliveryAddress || null,
+          JSON.stringify(categoriesSupplied || []),
+          brandsSupplied || null,
+          orderingChannel || null,
+          notes || null
+        ]
+      );
+    } else {
+      // Base insert/update with only migration 003 columns (graceful degradation)
+      await query(
+        `INSERT INTO supplier.supplier_store_links (
+          supplier_id, store_id, status, credit_days, min_order_value
+        ) VALUES ($1, $2, 'active', $3, $4)
+         ON CONFLICT (supplier_id, store_id) DO UPDATE SET
+           status = 'active',
+           credit_days = COALESCE(EXCLUDED.credit_days, supplier.supplier_store_links.credit_days),
+           min_order_value = COALESCE(EXCLUDED.min_order_value, supplier.supplier_store_links.min_order_value),
+           updated_at = NOW()`,
+        [supplierId, storeId, creditDaysNum, minOrderValueNum]
+      );
+
+      // Track which store_link fields were not saved
+      if (paymentTerms && paymentTerms !== 'Cash') warnings.push('paymentTerms');
+      if (deliveryChargesNum > 0) warnings.push('deliveryCharges');
+      if (deliverySchedule) warnings.push('deliverySchedule');
+      if (returnsAllowed) warnings.push('returnsAllowed');
+      if (returnsWindowNum > 0) warnings.push('returnsWindow');
+      if (taxInvoiceProvided) warnings.push('taxInvoiceProvided');
+      if (priceSource) warnings.push('priceSource');
+      if (serviceArea) warnings.push('serviceArea');
+      if (deliveryAddress) warnings.push('deliveryAddress');
+      if (categoriesSupplied && categoriesSupplied.length > 0) warnings.push('categoriesSupplied');
+      if (brandsSupplied) warnings.push('brandsSupplied');
+      if (orderingChannel) warnings.push('orderingChannel');
+      if (notes) warnings.push('notes');
+    }
 
     res.status(201).json({
       success: true,
@@ -1707,6 +1919,8 @@ router.post(
         linkedToVerified,
         pendingRequestCreated,
       },
+      warnings: warnings.length > 0 ? warnings : undefined,
+      migrationRequired: warnings.length > 0 ? 'Some fields could not be saved. Admin must apply migration 014.' : undefined,
     });
   })
 );
@@ -1829,13 +2043,17 @@ router.patch(
 
     const isVerified = supplierResult[0]?.verification_status === 'verified';
 
+    // RCAT-SUP-FORM-001: Check if migration 014 columns exist for graceful degradation
+    const extendedColumnsExist = await checkMigration014Applied();
+    const warnings: string[] = [];
+
     // Build update query for supplier.suppliers (only if not verified)
     const supplierUpdates: string[] = [];
     const supplierParams: (string | boolean | null)[] = [];
     let paramIndex = 1;
 
     if (!isVerified) {
-      // Section A fields
+      // Section A fields (base migration 003 columns)
       if (businessName !== undefined || name !== undefined) {
         const effectiveName = businessName || name;
         supplierUpdates.push(`business_name = $${paramIndex++}`);
@@ -1853,24 +2071,38 @@ router.patch(
         supplierUpdates.push(`pan = $${paramIndex++}`);
         supplierParams.push(pan?.trim() || null);
       }
+      // Section A extended fields (migration 014)
       if (fssai !== undefined) {
-        supplierUpdates.push(`fssai = $${paramIndex++}`);
-        supplierParams.push(fssai?.trim() || null);
+        if (extendedColumnsExist) {
+          supplierUpdates.push(`fssai = $${paramIndex++}`);
+          supplierParams.push(fssai?.trim() || null);
+        } else if (fssai) {
+          warnings.push('fssai');
+        }
       }
 
-      // Section B fields (contact & address)
+      // Section B fields (contact & address - base migration 003)
       if (primaryPhone !== undefined || phone !== undefined) {
         const effectivePhone = primaryPhone || phone;
         supplierUpdates.push(`primary_phone = $${paramIndex++}`);
         supplierParams.push(effectivePhone?.trim() || null);
       }
+      // Section B extended fields (migration 014)
       if (whatsappEnabled !== undefined) {
-        supplierUpdates.push(`whatsapp_enabled = $${paramIndex++}`);
-        supplierParams.push(whatsappEnabled);
+        if (extendedColumnsExist) {
+          supplierUpdates.push(`whatsapp_enabled = $${paramIndex++}`);
+          supplierParams.push(whatsappEnabled);
+        } else if (whatsappEnabled) {
+          warnings.push('whatsappEnabled');
+        }
       }
       if (secondaryPhone !== undefined) {
-        supplierUpdates.push(`secondary_phone = $${paramIndex++}`);
-        supplierParams.push(secondaryPhone?.trim() || null);
+        if (extendedColumnsExist) {
+          supplierUpdates.push(`secondary_phone = $${paramIndex++}`);
+          supplierParams.push(secondaryPhone?.trim() || null);
+        } else if (secondaryPhone) {
+          warnings.push('secondaryPhone');
+        }
       }
       if (email !== undefined) {
         supplierUpdates.push(`primary_email = $${paramIndex++}`);
@@ -1885,9 +2117,14 @@ router.patch(
         supplierUpdates.push(`address_line2 = $${paramIndex++}`);
         supplierParams.push(addressLine2?.trim() || null);
       }
+      // Section B extended field (migration 014)
       if (area !== undefined) {
-        supplierUpdates.push(`area = $${paramIndex++}`);
-        supplierParams.push(area?.trim() || null);
+        if (extendedColumnsExist) {
+          supplierUpdates.push(`area = $${paramIndex++}`);
+          supplierParams.push(area?.trim() || null);
+        } else if (area) {
+          warnings.push('area');
+        }
       }
       if (city !== undefined) {
         supplierUpdates.push(`city = $${paramIndex++}`);
@@ -1917,11 +2154,7 @@ router.patch(
     const linkParams: (string | number | boolean | null)[] = [];
     let linkParamIndex = 1;
 
-    // Section C: Commercial Terms
-    if (paymentTerms !== undefined) {
-      linkUpdates.push(`payment_terms = $${linkParamIndex++}`);
-      linkParams.push(paymentTerms || 'Cash');
-    }
+    // Section C: Commercial Terms (base migration 003 columns)
     if (creditDays !== undefined) {
       linkUpdates.push(`credit_days = $${linkParamIndex++}`);
       linkParams.push(parseInt(String(creditDays), 10) || 0);
@@ -1930,55 +2163,113 @@ router.patch(
       linkUpdates.push(`min_order_value = $${linkParamIndex++}`);
       linkParams.push(parseInt(String(minOrderValue), 10) || 0);
     }
+
+    // Section C: Commercial Terms (migration 014 columns)
+    if (paymentTerms !== undefined) {
+      if (extendedColumnsExist) {
+        linkUpdates.push(`payment_terms = $${linkParamIndex++}`);
+        linkParams.push(paymentTerms || 'Cash');
+      } else if (paymentTerms && paymentTerms !== 'Cash') {
+        warnings.push('paymentTerms');
+      }
+    }
     if (deliveryCharges !== undefined) {
-      linkUpdates.push(`delivery_charges = $${linkParamIndex++}`);
-      linkParams.push(parseInt(String(deliveryCharges), 10) || 0);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`delivery_charges = $${linkParamIndex++}`);
+        linkParams.push(parseInt(String(deliveryCharges), 10) || 0);
+      } else if (parseInt(String(deliveryCharges), 10) > 0) {
+        warnings.push('deliveryCharges');
+      }
     }
     if (deliverySchedule !== undefined) {
-      linkUpdates.push(`delivery_schedule = $${linkParamIndex++}`);
-      linkParams.push(deliverySchedule?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`delivery_schedule = $${linkParamIndex++}`);
+        linkParams.push(deliverySchedule?.trim() || null);
+      } else if (deliverySchedule) {
+        warnings.push('deliverySchedule');
+      }
     }
     if (returnsAllowed !== undefined) {
-      linkUpdates.push(`returns_allowed = $${linkParamIndex++}`);
-      linkParams.push(returnsAllowed);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`returns_allowed = $${linkParamIndex++}`);
+        linkParams.push(returnsAllowed);
+      } else if (returnsAllowed) {
+        warnings.push('returnsAllowed');
+      }
     }
     if (returnsWindow !== undefined) {
-      linkUpdates.push(`returns_window = $${linkParamIndex++}`);
-      linkParams.push(parseInt(String(returnsWindow), 10) || 0);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`returns_window = $${linkParamIndex++}`);
+        linkParams.push(parseInt(String(returnsWindow), 10) || 0);
+      } else if (parseInt(String(returnsWindow), 10) > 0) {
+        warnings.push('returnsWindow');
+      }
     }
     if (taxInvoiceProvided !== undefined) {
-      linkUpdates.push(`tax_invoice_provided = $${linkParamIndex++}`);
-      linkParams.push(taxInvoiceProvided);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`tax_invoice_provided = $${linkParamIndex++}`);
+        linkParams.push(taxInvoiceProvided);
+      } else if (taxInvoiceProvided) {
+        warnings.push('taxInvoiceProvided');
+      }
     }
     if (priceSource !== undefined) {
-      linkUpdates.push(`price_source = $${linkParamIndex++}`);
-      linkParams.push(priceSource?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`price_source = $${linkParamIndex++}`);
+        linkParams.push(priceSource?.trim() || null);
+      } else if (priceSource) {
+        warnings.push('priceSource');
+      }
     }
     if (serviceArea !== undefined) {
-      linkUpdates.push(`service_area = $${linkParamIndex++}`);
-      linkParams.push(serviceArea?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`service_area = $${linkParamIndex++}`);
+        linkParams.push(serviceArea?.trim() || null);
+      } else if (serviceArea) {
+        warnings.push('serviceArea');
+      }
     }
     if (deliveryAddress !== undefined) {
-      linkUpdates.push(`delivery_address = $${linkParamIndex++}`);
-      linkParams.push(deliveryAddress?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`delivery_address = $${linkParamIndex++}`);
+        linkParams.push(deliveryAddress?.trim() || null);
+      } else if (deliveryAddress) {
+        warnings.push('deliveryAddress');
+      }
     }
 
-    // Section D: Operational Metadata
+    // Section D: Operational Metadata (migration 014 columns)
     if (categoriesSupplied !== undefined) {
-      linkUpdates.push(`categories_supplied = $${linkParamIndex++}`);
-      linkParams.push(JSON.stringify(categoriesSupplied || []));
+      if (extendedColumnsExist) {
+        linkUpdates.push(`categories_supplied = $${linkParamIndex++}`);
+        linkParams.push(JSON.stringify(categoriesSupplied || []));
+      } else if (categoriesSupplied && categoriesSupplied.length > 0) {
+        warnings.push('categoriesSupplied');
+      }
     }
     if (brandsSupplied !== undefined) {
-      linkUpdates.push(`brands_supplied = $${linkParamIndex++}`);
-      linkParams.push(brandsSupplied?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`brands_supplied = $${linkParamIndex++}`);
+        linkParams.push(brandsSupplied?.trim() || null);
+      } else if (brandsSupplied) {
+        warnings.push('brandsSupplied');
+      }
     }
     if (orderingChannel !== undefined) {
-      linkUpdates.push(`ordering_channel = $${linkParamIndex++}`);
-      linkParams.push(orderingChannel?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`ordering_channel = $${linkParamIndex++}`);
+        linkParams.push(orderingChannel?.trim() || null);
+      } else if (orderingChannel) {
+        warnings.push('orderingChannel');
+      }
     }
     if (notes !== undefined) {
-      linkUpdates.push(`notes = $${linkParamIndex++}`);
-      linkParams.push(notes?.trim() || null);
+      if (extendedColumnsExist) {
+        linkUpdates.push(`notes = $${linkParamIndex++}`);
+        linkParams.push(notes?.trim() || null);
+      } else if (notes) {
+        warnings.push('notes');
+      }
     }
 
     // Update store_links if any fields changed
@@ -2008,6 +2299,8 @@ router.patch(
           ? 'Verified supplier base fields cannot be edited'
           : undefined
       },
+      warnings: warnings.length > 0 ? warnings : undefined,
+      migrationRequired: warnings.length > 0 ? 'Some fields could not be saved. Admin must apply migration 014.' : undefined,
     });
   })
 );
