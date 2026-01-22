@@ -1772,7 +1772,7 @@ router.post(
             city || null,
             state || null,
             pincode || null,
-            'pending'
+            'unverified'
           ]
         );
         supplierId = result[0]!.id;
@@ -1799,7 +1799,7 @@ router.post(
             city || null,
             state || null,
             pincode || null,
-            'pending'
+            'unverified'
           ]
         );
         supplierId = result[0]!.id;
