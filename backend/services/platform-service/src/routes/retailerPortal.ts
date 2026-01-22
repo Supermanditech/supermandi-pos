@@ -1299,8 +1299,9 @@ router.get('/suppliers', async (req, res) => {
       });
     }
 
-    // Try full query with extended fields
-    log('info', 'Executing full suppliers query', { storeId });
+    // Query using only columns from base migration 003
+    // Migration 014 columns (fssai, whatsapp_enabled, area, payment_terms, etc.) may not exist
+    log('info', 'Executing suppliers query (base columns only)', { storeId });
 
     const result = await query(
       `SELECT
@@ -1310,32 +1311,15 @@ router.get('/suppliers', async (req, res) => {
          s.business_type as "supplierType",
          CASE WHEN s.gstin LIKE 'XX%' THEN NULL ELSE s.gstin END as gstin,
          s.pan,
-         s.fssai,
          s.primary_phone as "primaryPhone",
-         COALESCE(s.whatsapp_enabled, false) as "whatsappEnabled",
-         s.secondary_phone as "secondaryPhone",
          s.primary_email as email,
          s.address_line1 as "addressLine1",
          s.address_line2 as "addressLine2",
-         s.area,
          s.city,
          s.state,
          s.pincode,
-         COALESCE(ssl.payment_terms, 'Cash') as "paymentTerms",
          COALESCE(ssl.credit_days, 0) as "creditDays",
          COALESCE(ssl.min_order_value, 0) as "minOrderValue",
-         COALESCE(ssl.delivery_charges, 0) as "deliveryCharges",
-         ssl.delivery_schedule as "deliverySchedule",
-         COALESCE(ssl.returns_allowed, false) as "returnsAllowed",
-         COALESCE(ssl.returns_window, 0) as "returnsWindow",
-         COALESCE(ssl.tax_invoice_provided, false) as "taxInvoiceProvided",
-         ssl.price_source as "priceSource",
-         ssl.service_area as "serviceArea",
-         ssl.delivery_address as "deliveryAddress",
-         COALESCE(ssl.categories_supplied, '[]'::jsonb) as "categoriesSupplied",
-         ssl.brands_supplied as "brandsSupplied",
-         ssl.ordering_channel as "orderingChannel",
-         ssl.notes,
          COALESCE(s.verification_status, 'unverified') as "verificationStatus",
          (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as "isSupermandi",
          CASE WHEN s.verification_status = 'verified' THEN LEFT(s.id::text, 8) ELSE NULL END as "supplierCode",
@@ -1351,11 +1335,53 @@ router.get('/suppliers', async (req, res) => {
       [storeId]
     );
 
-    log('info', 'Query success', { count: result.length });
+    // Map to full interface with defaults for missing fields (from migration 014)
+    const mappedResult = result.map((s: Record<string, unknown>) => ({
+      id: s.id,
+      businessName: s.businessName,
+      tradeName: s.tradeName,
+      supplierType: s.supplierType,
+      gstin: s.gstin,
+      pan: s.pan,
+      fssai: null, // migration 014
+      primaryPhone: s.primaryPhone,
+      whatsappEnabled: false, // migration 014
+      secondaryPhone: null, // migration 014
+      email: s.email,
+      addressLine1: s.addressLine1,
+      addressLine2: s.addressLine2,
+      area: null, // migration 014
+      city: s.city,
+      state: s.state,
+      pincode: s.pincode,
+      paymentTerms: 'Cash', // migration 014
+      creditDays: s.creditDays,
+      minOrderValue: s.minOrderValue,
+      deliveryCharges: 0, // migration 014
+      deliverySchedule: null, // migration 014
+      returnsAllowed: false, // migration 014
+      returnsWindow: 0, // migration 014
+      taxInvoiceProvided: false, // migration 014
+      priceSource: null, // migration 014
+      serviceArea: null, // migration 014
+      deliveryAddress: null, // migration 014
+      categoriesSupplied: [], // migration 014
+      brandsSupplied: null, // migration 014
+      orderingChannel: null, // migration 014
+      notes: null, // migration 014
+      verificationStatus: s.verificationStatus,
+      isSupermandi: s.isSupermandi,
+      supplierCode: s.supplierCode,
+      name: s.name,
+      phone: s.phone,
+      address: s.address,
+    }));
+
+    log('info', 'Query success', { count: mappedResult.length });
 
     return res.json({
       success: true,
-      data: result,
+      data: mappedResult,
       _debug: isDev ? { reqId } : undefined,
     });
   } catch (err: unknown) {
