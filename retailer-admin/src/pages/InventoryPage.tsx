@@ -22,6 +22,11 @@ interface LedgerEntry {
 interface LedgerResponse {
   success: boolean;
   data: LedgerEntry[];
+  totals?: {
+    totalSkus: number;
+    totalEntries: number;
+    todaysMovements: number;
+  };
   pagination: {
     total: number;
     limit: number;
@@ -52,6 +57,7 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ total: 0, hasMore: false });
+  const [totals, setTotals] = useState({ totalSkus: 0, totalEntries: 0, todaysMovements: 0 });
 
   // Fetch ledger entries from API
   useEffect(() => {
@@ -78,6 +84,9 @@ export default function InventoryPage() {
         const data: LedgerResponse = await response.json();
         setLedgerEntries(data.data || []);
         setPagination({ total: data.pagination?.total || 0, hasMore: data.pagination?.hasMore || false });
+        if (data.totals) {
+          setTotals(data.totals);
+        }
       } catch (err) {
         console.error('Failed to load ledger:', err);
         setError('Failed to load inventory ledger');
@@ -90,12 +99,9 @@ export default function InventoryPage() {
     fetchLedger();
   }, [accessToken, filter]);
 
-  // Calculate summary stats from ledger
-  const totalSKUs = new Set(ledgerEntries.map(e => e.productId)).size;
-  const todayMovements = ledgerEntries.filter(e => {
-    const today = new Date().toISOString().split('T')[0];
-    return e.createdAt.startsWith(today);
-  }).length;
+  // RCAT-LEDGER-001: Use backend-provided totals for accuracy
+  const totalSKUs = totals.totalSkus;
+  const todayMovements = totals.todaysMovements;
 
   return (
     <>
@@ -112,7 +118,7 @@ export default function InventoryPage() {
           </div>
           <div className="stat-card">
             <div className="stat-label">📋 Total Entries</div>
-            <div className="stat-value">{loading ? '...' : pagination.total}</div>
+            <div className="stat-value">{loading ? '...' : totals.totalEntries}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">📈 Today's Movements</div>
@@ -188,15 +194,15 @@ export default function InventoryPage() {
                         </span>
                       </td>
                       <td style={{
-                        color: entry.deltaQty > 0 ? 'var(--success)' : 'var(--danger)',
+                        color: Number(entry.deltaQty) > 0 ? 'var(--success)' : 'var(--danger)',
                         fontWeight: '500'
                       }}>
-                        {entry.deltaQty > 0 ? '+' : ''}{entry.deltaQty}
+                        {Number(entry.deltaQty) > 0 ? '+' : ''}{Number(entry.deltaQty) || 0}
                       </td>
                       <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                         {entry.transactionType}{entry.referenceId ? ` #${entry.referenceId.slice(0, 8)}` : ''}
                       </td>
-                      <td style={{ fontWeight: '500' }}>{entry.stockAfter}</td>
+                      <td style={{ fontWeight: '500' }}>{Number(entry.stockAfter) || 0}</td>
                     </tr>
                   );
                 })

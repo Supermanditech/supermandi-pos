@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
+
+// Debounce delay for server-side search (RCAT-SUP-API-001)
+const SEARCH_DEBOUNCE_MS = 350;
 
 type VerificationStatus = 'verified' | 'pending' | 'rejected' | 'unverified';
 
@@ -175,6 +178,51 @@ const initialFormData: SupplierFormData = {
 
 type FormSection = 'identity' | 'contact' | 'terms' | 'metadata';
 
+// Section configuration for the 3 supplier groups
+interface SectionConfig {
+  key: 'verified' | 'pending' | 'local';
+  title: string;
+  icon: string;
+  description: string;
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+  isEditable: boolean;
+}
+
+const SECTION_CONFIGS: SectionConfig[] = [
+  {
+    key: 'verified',
+    title: 'Verified',
+    icon: '🔒',
+    description: 'Approved by SuperMandi - View Only',
+    bgColor: '#dcfce7',
+    borderColor: '#86efac',
+    textColor: '#166534',
+    isEditable: false,
+  },
+  {
+    key: 'pending',
+    title: 'Pending Approval',
+    icon: '⏳',
+    description: 'Awaiting SuperAdmin verification - View Only',
+    bgColor: '#fef3c7',
+    borderColor: '#fcd34d',
+    textColor: '#92400e',
+    isEditable: false,
+  },
+  {
+    key: 'local',
+    title: 'Local Suppliers',
+    icon: '✏️',
+    description: 'Store-only suppliers - Editable',
+    bgColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+    textColor: '#374151',
+    isEditable: true,
+  },
+];
+
 export default function SuppliersPage() {
   const { accessToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -186,10 +234,22 @@ export default function SuppliersPage() {
   const [formData, setFormData] = useState<SupplierFormData>(initialFormData);
   const [activeSection, setActiveSection] = useState<FormSection>('identity');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false); // Server-side search indicator
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // Collapsible section state - all expanded by default
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    verified: false,
+    pending: false,
+    local: false,
+  });
+  // RCAT-SUP-UX-001: Locked supplier modal state
+  const [lockedSupplierModal, setLockedSupplierModal] = useState<{ supplier: Supplier; status: 'verified' | 'pending' } | null>(null);
+
+  // Debounce timer ref for server-side search
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Handle ?action=create query param from dashboard navigation
   useEffect(() => {
@@ -205,12 +265,20 @@ export default function SuppliersPage() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Fetch suppliers from API
-  const fetchSuppliers = async () => {
-    setIsLoading(true);
+  // Fetch suppliers from API with optional server-side search (RCAT-SUP-API-001)
+  const fetchSuppliers = useCallback(async (query?: string, showSearchIndicator = false) => {
+    if (showSearchIndicator) {
+      setIsSearching(true);
+    } else {
+      setIsLoading(true);
+    }
     setError('');
     try {
-      const response = await authFetch('/api/v1/retailer-admin/suppliers', accessToken);
+      // Build URL with query parameter for server-side filtering
+      const url = query
+        ? `/api/v1/retailer-admin/suppliers?query=${encodeURIComponent(query)}`
+        : '/api/v1/retailer-admin/suppliers';
+      const response = await authFetch(url, accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch suppliers');
       const data = await response.json();
@@ -220,14 +288,45 @@ export default function SuppliersPage() {
       setError('Failed to load suppliers. Please try again.');
     } finally {
       setIsLoading(false);
+      setIsSearching(false);
     }
-  };
+  }, [accessToken]);
 
+  // Initial load
   useEffect(() => {
     if (accessToken) {
       fetchSuppliers();
     }
-  }, [accessToken]);
+  }, [accessToken, fetchSuppliers]);
+
+  // Debounced server-side search when searchTerm changes
+  useEffect(() => {
+    // Clear any existing debounce timer
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    // Don't trigger search on initial mount (empty string)
+    if (searchTerm === '') {
+      // If search was cleared, refetch all suppliers
+      if (suppliers.length > 0 || error) {
+        fetchSuppliers();
+      }
+      return;
+    }
+
+    // Debounce the search API call
+    searchDebounceRef.current = setTimeout(() => {
+      fetchSuppliers(searchTerm, true);
+    }, SEARCH_DEBOUNCE_MS);
+
+    // Cleanup on unmount or when searchTerm changes
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -375,9 +474,15 @@ export default function SuppliersPage() {
         throw new Error(data.error?.message || `Failed to ${isEdit ? 'update' : 'create'} supplier`);
       }
 
-      setSuccess(`Supplier ${isEdit ? 'updated' : 'created'} successfully!`);
+      // RCAT-SUP-FORM-001: Check for warnings about fields that couldn't be saved
+      if (data.warnings && data.warnings.length > 0) {
+        const fieldNames = data.warnings.join(', ');
+        setSuccess(`Supplier ${isEdit ? 'updated' : 'created'} (partial). Note: Some fields (${fieldNames}) could not be saved - database migration required.`);
+      } else {
+        setSuccess(`Supplier ${isEdit ? 'updated' : 'created'} successfully!`);
+      }
       closeForm();
-      await fetchSuppliers();
+      await fetchSuppliers(searchTerm || undefined); // Preserve search context
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save supplier. Please try again.');
     } finally {
@@ -403,18 +508,31 @@ export default function SuppliersPage() {
 
       setSuccess('Supplier removed successfully!');
       setDeleteConfirm(null);
-      await fetchSuppliers();
+      await fetchSuppliers(searchTerm || undefined); // Preserve search context
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete supplier. Please try again.');
       setDeleteConfirm(null);
     }
   };
 
-  const filteredSuppliers = suppliers.filter(
-    s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         (s.phone && s.phone.includes(searchTerm)) ||
-         (s.gstin && s.gstin.includes(searchTerm))
-  );
+  // Server-side filtering is now used (RCAT-SUP-API-001)
+  // The suppliers array already contains filtered results from the API
+  // No client-side filtering needed anymore
+
+  // Group suppliers by verification status for sectioned view
+  const groupedSuppliers = {
+    verified: suppliers.filter(s => s.verificationStatus === 'verified'),
+    pending: suppliers.filter(s => s.verificationStatus === 'pending'),
+    local: suppliers.filter(s => s.verificationStatus === 'unverified' || !s.verificationStatus),
+  };
+
+  // Toggle section collapse
+  const toggleSection = (sectionKey: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  };
 
   // Form section tabs
   const FormSectionTabs = () => (
@@ -993,16 +1111,30 @@ export default function SuppliersPage() {
           </div>
         )}
 
-        {/* Search */}
-        <div style={{ marginBottom: '1rem' }}>
+        {/* Search with server-side filtering indicator */}
+        <div style={{ marginBottom: '1rem', position: 'relative', maxWidth: '400px' }}>
           <input
             type="text"
             className="form-input"
             placeholder="Search by name, phone, or GSTIN..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ maxWidth: '400px' }}
+            style={{ width: '100%', paddingRight: isSearching ? '90px' : undefined }}
           />
+          {isSearching && (
+            <span
+              style={{
+                position: 'absolute',
+                right: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+              }}
+            >
+              Searching...
+            </span>
+          )}
         </div>
 
         {/* Delete Confirmation Modal */}
@@ -1050,137 +1182,298 @@ export default function SuppliersPage() {
           </div>
         )}
 
-        {/* Suppliers Table */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          {isLoading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              Loading suppliers...
-            </div>
-          ) : filteredSuppliers.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              {searchTerm ? 'No suppliers match your search.' : 'No suppliers yet. Add your first supplier above!'}
-            </div>
-          ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Status</th>
-                  <th>Supplier Name</th>
-                  <th>Code</th>
-                  <th>Phone</th>
-                  <th>GSTIN</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredSuppliers.map((supplier) => {
-                  const status = supplier.verificationStatus || 'unverified';
-                  const badge = STATUS_BADGES[status];
-                  const isEditable = !supplier.isSupermandi && status !== 'verified';
+        {/* RCAT-SUP-UX-001: Locked Supplier Modal */}
+        {lockedSupplierModal && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={() => setLockedSupplierModal(null)}
+          >
+            <div
+              className="card"
+              style={{ maxWidth: '450px', margin: '1rem' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                <span style={{ fontSize: '1.5rem' }}>
+                  {lockedSupplierModal.status === 'verified' ? '🔒' : '⏳'}
+                </span>
+                <h3 className="card-title" style={{ margin: 0 }}>
+                  {lockedSupplierModal.status === 'verified' ? 'Verified Supplier' : 'Pending Approval'}
+                </h3>
+              </div>
 
-                  return (
-                    <tr key={supplier.id}>
-                      <td>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            background: badge.bg,
-                            color: badge.color,
-                          }}
-                        >
-                          {badge.icon && <span>{badge.icon}</span>}
-                          {badge.label}
-                        </span>
-                        {supplier.isSupermandi && (
-                          <span
-                            style={{
-                              display: 'block',
-                              fontSize: '0.65rem',
-                              color: '#6366f1',
-                              marginTop: '0.125rem',
-                            }}
-                          >
-                            SuperMandi
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ fontWeight: '500' }}>
-                        {supplier.name}
-                        {supplier.tradeName && supplier.tradeName !== supplier.name && (
-                          <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                            {supplier.tradeName}
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                        {supplier.supplierCode || <span style={{ color: 'var(--text-muted)' }}>-</span>}
-                      </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                        {supplier.phone || <span style={{ color: 'var(--text-muted)' }}>-</span>}
-                      </td>
-                      <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                        {supplier.gstin || <span style={{ color: 'var(--text-muted)' }}>-</span>}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.25rem' }}>
-                          {isEditable ? (
-                            <>
-                              <button
-                                className="btn btn-secondary"
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                                onClick={() => openEditForm(supplier)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="btn"
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: '#fee2e2', color: '#991b1b' }}
-                                onClick={() => setDeleteConfirm(supplier.id)}
-                              >
-                                Remove
-                              </button>
-                            </>
-                          ) : (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', padding: '0.25rem 0.5rem' }}>
-                              {supplier.isSupermandi ? 'View Only' : 'Verified'}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+              <div style={{
+                background: lockedSupplierModal.status === 'verified' ? '#dcfce7' : '#fef3c7',
+                padding: '0.75rem 1rem',
+                borderRadius: '0.375rem',
+                marginBottom: '1rem',
+              }}>
+                <strong style={{ display: 'block', marginBottom: '0.25rem' }}>
+                  {lockedSupplierModal.supplier.name}
+                </strong>
+                {lockedSupplierModal.supplier.tradeName && lockedSupplierModal.supplier.tradeName !== lockedSupplierModal.supplier.name && (
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {lockedSupplierModal.supplier.tradeName}
+                  </span>
+                )}
+              </div>
 
-        {/* Verification Status Legend */}
-        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem' }}>
-          <h4 style={{ fontSize: '0.875rem', marginBottom: '0.75rem', color: 'var(--text-secondary)' }}>Supplier Status Guide</h4>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.8rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ padding: '0.125rem 0.5rem', borderRadius: '9999px', background: '#dcfce7', color: '#166534' }}>✓ Verified</span>
-              <span style={{ color: 'var(--text-muted)' }}>Approved by SuperAdmin</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ padding: '0.125rem 0.5rem', borderRadius: '9999px', background: '#fef3c7', color: '#92400e' }}>⏳ Pending</span>
-              <span style={{ color: 'var(--text-muted)' }}>Awaiting verification</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ padding: '0.125rem 0.5rem', borderRadius: '9999px', background: '#f3f4f6', color: '#6b7280' }}>Local</span>
-              <span style={{ color: 'var(--text-muted)' }}>Store-only (not in SuperMandi)</span>
+              <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                {lockedSupplierModal.status === 'verified' ? (
+                  <>
+                    This supplier is part of the <strong>SuperMandi verified directory</strong>.
+                    Their details are managed centrally to ensure accuracy across all stores.
+                    You cannot edit their information directly.
+                  </>
+                ) : (
+                  <>
+                    This supplier is <strong>awaiting SuperAdmin verification</strong>.
+                    Once approved, they will appear in the Verified section.
+                    You cannot edit their details while verification is in progress.
+                  </>
+                )}
+              </p>
+
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                <strong>What you can do:</strong>
+                <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+                  <li>Create a new local supplier with different details</li>
+                  {lockedSupplierModal.status === 'verified' && (
+                    <li>Contact SuperMandi support to request changes</li>
+                  )}
+                </ul>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setLockedSupplierModal(null)}
+                >
+                  Close
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setLockedSupplierModal(null);
+                    setShowForm(true);
+                    setEditingSupplier(null);
+                    setFormData(initialFormData);
+                    setActiveSection('identity');
+                  }}
+                >
+                  + Create Local Supplier
+                </button>
+              </div>
             </div>
           </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>
-            <strong>Note:</strong> Verified and SuperMandi suppliers cannot be edited. To order from verified suppliers, their products will appear in POS.
-          </p>
+        )}
+
+        {/* Sectioned Suppliers View */}
+        {isLoading ? (
+          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Loading suppliers...
+          </div>
+        ) : suppliers.length === 0 && !searchTerm ? (
+          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            No suppliers yet. Add your first supplier above!
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {SECTION_CONFIGS.map((config) => {
+              const sectionSuppliers = groupedSuppliers[config.key];
+              const isCollapsed = collapsedSections[config.key];
+              const count = sectionSuppliers.length;
+
+              return (
+                <div
+                  key={config.key}
+                  style={{
+                    border: `1px solid ${config.borderColor}`,
+                    borderRadius: '0.5rem',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Section Header - Collapsible */}
+                  <button
+                    onClick={() => toggleSection(config.key)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 1rem',
+                      background: config.bgColor,
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.1rem' }}>{config.icon}</span>
+                      <span style={{ fontWeight: '600', color: config.textColor }}>
+                        {config.title}
+                      </span>
+                      <span
+                        style={{
+                          background: config.textColor,
+                          color: 'white',
+                          padding: '0.125rem 0.5rem',
+                          borderRadius: '9999px',
+                          fontSize: '0.75rem',
+                          fontWeight: '600',
+                        }}
+                      >
+                        {count}
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: config.textColor, opacity: 0.8, marginLeft: '0.5rem' }}>
+                        {config.description}
+                      </span>
+                    </div>
+                    <span style={{ color: config.textColor, fontSize: '0.875rem' }}>
+                      {isCollapsed ? '▶' : '▼'}
+                    </span>
+                  </button>
+
+                  {/* Section Content */}
+                  {!isCollapsed && (
+                    <div style={{ background: 'white' }}>
+                      {count === 0 ? (
+                        <div style={{
+                          padding: '1.5rem',
+                          textAlign: 'center',
+                          color: 'var(--text-muted)',
+                          fontSize: '0.875rem',
+                        }}>
+                          {searchTerm
+                            ? `No ${config.title.toLowerCase()} suppliers match your search.`
+                            : config.key === 'verified'
+                              ? 'No verified suppliers linked to your store yet.'
+                              : config.key === 'pending'
+                                ? 'No suppliers pending verification.'
+                                : 'No local suppliers added yet. Click "+ Add Supplier" to create one.'}
+                        </div>
+                      ) : (
+                        <table className="table" style={{ margin: 0 }}>
+                          <thead>
+                            <tr>
+                              <th>Supplier Name</th>
+                              <th>Type</th>
+                              <th>Phone</th>
+                              <th>GSTIN</th>
+                              <th style={{ width: '120px' }}>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sectionSuppliers.map((supplier) => (
+                              <tr key={supplier.id}>
+                                <td style={{ fontWeight: '500' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {supplier.name}
+                                    {supplier.isSupermandi && (
+                                      <span
+                                        style={{
+                                          fontSize: '0.65rem',
+                                          color: '#6366f1',
+                                          background: '#eef2ff',
+                                          padding: '0.125rem 0.375rem',
+                                          borderRadius: '4px',
+                                        }}
+                                      >
+                                        SuperMandi
+                                      </span>
+                                    )}
+                                  </div>
+                                  {supplier.tradeName && supplier.tradeName !== supplier.name && (
+                                    <span style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                      {supplier.tradeName}
+                                    </span>
+                                  )}
+                                </td>
+                                <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                  {supplier.supplierType || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                </td>
+                                <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                  {supplier.phone || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                </td>
+                                <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                  {supplier.gstin || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                </td>
+                                <td>
+                                  {config.isEditable ? (
+                                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                                      <button
+                                        className="btn btn-secondary"
+                                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                                        onClick={() => openEditForm(supplier)}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        className="btn"
+                                        style={{
+                                          padding: '0.25rem 0.5rem',
+                                          fontSize: '0.75rem',
+                                          background: '#fee2e2',
+                                          color: '#991b1b',
+                                        }}
+                                        onClick={() => setDeleteConfirm(supplier.id)}
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    /* RCAT-SUP-UX-001: View button for locked suppliers */
+                                    <button
+                                      className="btn btn-secondary"
+                                      style={{
+                                        padding: '0.25rem 0.5rem',
+                                        fontSize: '0.75rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.25rem',
+                                      }}
+                                      onClick={() => setLockedSupplierModal({
+                                        supplier,
+                                        status: config.key as 'verified' | 'pending',
+                                      })}
+                                    >
+                                      {config.key === 'verified' ? '🔒' : '⏳'} View
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Quick Tips */}
+        <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#f8fafc', borderRadius: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          <strong style={{ color: 'var(--text-secondary)' }}>Quick Tips:</strong>
+          <ul style={{ margin: '0.5rem 0 0 1.25rem', padding: 0 }}>
+            <li><strong>Verified</strong> suppliers are from the SuperMandi network and cannot be edited.</li>
+            <li><strong>Pending</strong> suppliers are awaiting SuperAdmin approval.</li>
+            <li><strong>Local</strong> suppliers are your store-only contacts and can be freely edited or removed.</li>
+            <li>Click a section header to collapse/expand it.</li>
+          </ul>
         </div>
       </div>
     </>

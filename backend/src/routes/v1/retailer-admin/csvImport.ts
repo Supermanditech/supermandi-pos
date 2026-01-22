@@ -1,0 +1,622 @@
+// Retailer Admin CSV Import Routes
+// RCAT-CSV-001: CSV template download
+// RCAT-CSV-002: Upload → validate → review → commit flow
+// Store-scoped via JWT (x-actor-id header from gateway)
+
+import { Router, Request, Response } from "express";
+import { getPool } from "../../../db/client";
+
+export const retailerAdminCsvImportRouter = Router();
+
+/**
+ * Get store ID from gateway-provided headers
+ */
+function getStoreId(req: Request): string | null {
+  const actorId = req.headers['x-actor-id'];
+  return typeof actorId === 'string' ? actorId : null;
+}
+
+/**
+ * Generate a store-scoped barcode for LOOSE_BULK products
+ */
+function generateStoreBarcode(storeId: string): string {
+  const storePrefix = storeId.replace(/-/g, '').substring(0, 6);
+  const timestamp = Date.now().toString().slice(-7);
+  const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+  return `2${storePrefix}${timestamp}${random}`;
+}
+
+function safeNumber(val: unknown, defaultVal = 0): number {
+  if (val === null || val === undefined) return defaultVal;
+  const num = Number(val);
+  return isNaN(num) ? defaultVal : num;
+}
+
+// CSV Template headers and examples
+const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes
+"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit"
+"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501",""
+"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati"
+"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate"
+`;
+
+// =============================================================================
+// GET /api/v1/retailer-admin/products/import/template
+// RCAT-CSV-001: Download CSV template
+// =============================================================================
+
+retailerAdminCsvImportRouter.get("/products/import/template", async (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="supermandi_products_import_template.csv"');
+  return res.send(CSV_TEMPLATE);
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/products/import/upload
+// RCAT-CSV-002: Upload CSV file and store temporarily
+// Accepts raw CSV text in body (for simplicity; multipart can be added later)
+// =============================================================================
+
+retailerAdminCsvImportRouter.post("/products/import/upload", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { csvContent, fileName } = req.body;
+  if (!csvContent || typeof csvContent !== 'string') {
+    return res.status(400).json({
+      error: { code: "VALIDATION_ERROR", message: "CSV content is required" },
+    });
+  }
+
+  try {
+    // Parse CSV rows
+    const lines = csvContent.trim().split('\n');
+    if (lines.length < 2) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "CSV must have at least a header row and one data row" },
+      });
+    }
+
+    // Store the job in the database
+    const jobResult = await pool.query(
+      `INSERT INTO platform.csv_imports (
+        store_id, file_name, file_sha256, total_rows, status, uploaded_by_user_id
+      ) VALUES ($1, $2, $3, $4, 'pending', $1)
+      RETURNING id`,
+      [
+        storeId,
+        fileName || 'upload.csv',
+        require('crypto').createHash('sha256').update(csvContent).digest('hex'),
+        lines.length - 1, // Exclude header
+      ]
+    );
+
+    const jobId = jobResult.rows[0].id;
+
+    // Store CSV content in a temp table or job metadata (using validation_errors field for now)
+    await pool.query(
+      `UPDATE platform.csv_imports SET validation_errors = $2 WHERE id = $1`,
+      [jobId, JSON.stringify({ rawCsv: csvContent })]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        jobId,
+        totalRows: lines.length - 1,
+        fileName: fileName || 'upload.csv',
+      },
+    });
+  } catch (error: any) {
+    console.error("[CsvImport] Upload error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to upload CSV" },
+    });
+  }
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/products/import/validate
+// RCAT-CSV-002: Validate CSV rows
+// =============================================================================
+
+retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { jobId } = req.query;
+  if (!jobId) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "jobId is required" } });
+  }
+
+  try {
+    // Get the job
+    const jobResult = await pool.query(
+      `SELECT id, validation_errors, store_id FROM platform.csv_imports WHERE id = $1 AND store_id = $2`,
+      [jobId, storeId]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Import job not found" } });
+    }
+
+    const rawCsv = jobResult.rows[0].validation_errors?.rawCsv;
+    if (!rawCsv) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "No CSV data found for this job" } });
+    }
+
+    // Parse and validate
+    const lines = rawCsv.trim().split('\n');
+    const headers = parseCSVLine(lines[0]);
+
+    const errors: { row: number; field: string; error: string }[] = [];
+    const previewRows: any[] = [];
+    let validCount = 0;
+
+    for (let i = 1; i < lines.length; i++) {
+      const fields = parseCSVLine(lines[i]);
+      if (fields.length === 0 || fields.every((f: string) => !f.trim())) continue;
+
+      const row = mapHeadersToRow(headers, fields);
+      const rowErrors: string[] = [];
+
+      // Validate required fields
+      if (!row.name || !row.name.trim()) {
+        rowErrors.push('name is required');
+      }
+      if (!row.sell_price || parseFloat(row.sell_price) <= 0) {
+        rowErrors.push('sell_price must be > 0');
+      }
+      if (!row.purchase_price || parseFloat(row.purchase_price) <= 0) {
+        rowErrors.push('purchase_price must be > 0');
+      }
+
+      // Validate barcode rules
+      const mode = (row.mode || '').toUpperCase() === 'LOOSE_BULK' ? 'LOOSE_BULK' :
+                   (!row.barcode || !row.barcode.trim()) ? 'LOOSE_BULK' : 'PACKAGED';
+
+      // Validate numeric fields
+      if (row.sell_price && isNaN(parseFloat(row.sell_price.replace(/[₹,]/g, '')))) {
+        rowErrors.push('sell_price must be numeric');
+      }
+      if (row.purchase_price && isNaN(parseFloat(row.purchase_price.replace(/[₹,]/g, '')))) {
+        rowErrors.push('purchase_price must be numeric');
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push(...rowErrors.map(e => ({ row: i, field: '', error: e })));
+      } else {
+        validCount++;
+      }
+
+      previewRows.push({
+        row: i,
+        name: row.name?.trim() || '',
+        barcode: row.barcode?.trim() || '',
+        brand: row.brand?.trim() || '',
+        unit: row.unit?.trim() || 'PCS',
+        sellPrice: parsePrice(row.sell_price),
+        purchasePrice: parsePrice(row.purchase_price),
+        mrp: parsePrice(row.mrp),
+        stock: parseInt(row.stock) || 0,
+        mode,
+        valid: rowErrors.length === 0,
+        errors: rowErrors,
+      });
+    }
+
+    // Update job status
+    await pool.query(
+      `UPDATE platform.csv_imports SET
+        status = 'validated',
+        valid_rows = $2,
+        error_rows = $3,
+        validation_errors = $4,
+        validated_at = NOW()
+      WHERE id = $1`,
+      [
+        jobId,
+        validCount,
+        previewRows.length - validCount,
+        JSON.stringify({ rawCsv, errors, previewRows }),
+      ]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        validCount,
+        invalidCount: previewRows.length - validCount,
+        totalRows: previewRows.length,
+        errors: errors.slice(0, 50), // Limit errors shown
+        previewRows: previewRows.slice(0, 20), // First 20 for preview
+      },
+    });
+  } catch (error: any) {
+    console.error("[CsvImport] Validate error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Validation failed" },
+    });
+  }
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/products/import/commit
+// RCAT-CSV-002: Commit validated rows (idempotent)
+// =============================================================================
+
+retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { jobId } = req.query;
+  if (!jobId) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "jobId is required" } });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Get the job
+    const jobResult = await client.query(
+      `SELECT id, status, validation_errors, store_id FROM platform.csv_imports
+       WHERE id = $1 AND store_id = $2`,
+      [jobId, storeId]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Import job not found" } });
+    }
+
+    const job = jobResult.rows[0];
+    if (job.status === 'committed') {
+      // Idempotent: already committed
+      return res.json({
+        success: true,
+        data: { created: job.products_created || 0, updated: 0, skipped: 0, warnings: [] },
+        message: "Already committed",
+      });
+    }
+
+    const previewRows = job.validation_errors?.previewRows || [];
+    const validRows = previewRows.filter((r: any) => r.valid);
+
+    if (validRows.length === 0) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "No valid rows to commit" },
+      });
+    }
+
+    await client.query("BEGIN");
+
+    let created = 0;
+    let skipped = 0;
+    const warnings: string[] = [];
+
+    for (const row of validRows) {
+      try {
+        const mode = row.mode || 'PACKAGED';
+        const sellPricePaise = row.sellPrice || 0;
+        const purchasePricePaise = row.purchasePrice || 0;
+        const stock = row.stock || 0;
+
+        // Create product
+        const prodResult = await client.query(
+          `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
+           VALUES ($1, $2, $3, $4, true) RETURNING id`,
+          [
+            row.name,
+            row.brand || null,
+            row.unit || 'PCS',
+            mode === 'PACKAGED' && row.barcode ? row.barcode : null,
+          ]
+        );
+        const productId = prodResult.rows[0].id;
+
+        // Create store_product
+        const spResult = await client.query(
+          `INSERT INTO catalog.store_products (
+            store_id, product_id, sell_price, mrp, purchase_price,
+            product_mode, current_stock, is_active
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
+          [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock]
+        );
+        const storeProductId = spResult.rows[0].id;
+
+        // Create barcode
+        if (mode === 'PACKAGED' && row.barcode) {
+          await client.query(
+            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+             VALUES ($1, $2, $3, 'retailer_digitisation')
+             ON CONFLICT (store_id, barcode) DO NOTHING`,
+            [storeId, storeProductId, row.barcode]
+          );
+        } else if (mode === 'LOOSE_BULK') {
+          const genBarcode = generateStoreBarcode(storeId);
+          await client.query(
+            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+             VALUES ($1, $2, $3, 'supermandi_generated')`,
+            [storeId, storeProductId, genBarcode]
+          );
+        }
+
+        // Opening stock ledger entry
+        if (stock > 0) {
+          await client.query(
+            `INSERT INTO inventory.inventory_ledger (
+              store_id, product_id, delta_qty, transaction_type,
+              reference_type, stock_before, stock_after, unit_cost,
+              source, source_id
+            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'CSV_IMPORT', $5)
+            ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING`,
+            [storeId, productId, stock, purchasePricePaise, jobId]
+          );
+        }
+
+        created++;
+      } catch (err: any) {
+        if (err.code === '23505') {
+          warnings.push(`Row ${row.row}: Duplicate barcode ${row.barcode}, skipped`);
+          skipped++;
+        } else {
+          warnings.push(`Row ${row.row}: ${err.message?.substring(0, 80)}`);
+          skipped++;
+        }
+      }
+    }
+
+    // Update job status
+    await client.query(
+      `UPDATE platform.csv_imports SET
+        status = 'committed', products_created = $2, committed_at = NOW()
+      WHERE id = $1`,
+      [jobId, created]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      success: true,
+      data: { created, updated: 0, skipped, warnings: warnings.slice(0, 20) },
+      message: `Imported ${created} products`,
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[CsvImport] Commit error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Commit failed" },
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/products/bulk-paste/preview
+// RCAT-BULK-002: Parse pasted lines and return preview
+// =============================================================================
+
+retailerAdminCsvImportRouter.post("/products/bulk-paste/preview", async (req: Request, res: Response) => {
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { text } = req.body;
+  if (!text || typeof text !== 'string' || !text.trim()) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Text data is required" } });
+  }
+
+  const lines = text.trim().split('\n').filter((l: string) => l.trim());
+  const preview: any[] = [];
+  const errors: { row: number; error: string }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].includes('\t') ? lines[i].split('\t') : lines[i].split(',');
+    const [name, barcode, brand, sellPrice, purchasePrice, mrp, unit, stock] = parts.map((p: string) => p?.trim());
+
+    const rowErrors: string[] = [];
+    if (!name) rowErrors.push('name is required');
+
+    const parsedSellPrice = parsePrice(sellPrice);
+    const parsedPurchasePrice = parsePrice(purchasePrice);
+
+    if (!parsedSellPrice || parsedSellPrice <= 0) rowErrors.push('sell_price must be > 0');
+
+    const mode = barcode ? 'PACKAGED' : 'LOOSE_BULK';
+
+    if (rowErrors.length > 0) {
+      errors.push(...rowErrors.map(e => ({ row: i + 1, error: e })));
+    }
+
+    preview.push({
+      row: i + 1,
+      name: name || '',
+      barcode: barcode || '',
+      brand: brand || '',
+      sellPrice: parsedSellPrice,
+      purchasePrice: parsedPurchasePrice,
+      mrp: parsePrice(mrp),
+      unit: unit || 'PCS',
+      stock: parseInt(stock) || 0,
+      mode,
+      valid: rowErrors.length === 0,
+      errors: rowErrors,
+    });
+  }
+
+  return res.json({
+    success: true,
+    data: {
+      validCount: preview.filter(p => p.valid).length,
+      invalidCount: preview.filter(p => !p.valid).length,
+      totalRows: preview.length,
+      errors: errors.slice(0, 50),
+      previewRows: preview,
+    },
+  });
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/products/bulk-paste/commit
+// RCAT-BULK-002: Commit pasted products
+// =============================================================================
+
+retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { rows } = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "No rows to commit" } });
+  }
+
+  const validRows = rows.filter((r: any) => r.valid !== false && r.name);
+  if (validRows.length === 0) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "No valid rows to commit" } });
+  }
+
+  const client = await pool.connect();
+  let created = 0;
+  const warnings: string[] = [];
+
+  try {
+    await client.query("BEGIN");
+
+    for (const row of validRows) {
+      try {
+        const mode = row.mode || (row.barcode ? 'PACKAGED' : 'LOOSE_BULK');
+        const sellPrice = safeNumber(row.sellPrice);
+        const purchasePrice = safeNumber(row.purchasePrice);
+        const stock = safeNumber(row.stock);
+
+        const prodResult = await client.query(
+          `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
+           VALUES ($1, $2, $3, $4, true) RETURNING id`,
+          [row.name, row.brand || null, row.unit || 'PCS', mode === 'PACKAGED' && row.barcode ? row.barcode : null]
+        );
+        const productId = prodResult.rows[0].id;
+
+        const spResult = await client.query(
+          `INSERT INTO catalog.store_products (
+            store_id, product_id, sell_price, purchase_price, product_mode, current_stock, is_active
+          ) VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
+          [storeId, productId, sellPrice, purchasePrice, mode, stock]
+        );
+        const storeProductId = spResult.rows[0].id;
+
+        if (mode === 'PACKAGED' && row.barcode) {
+          await client.query(
+            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+             VALUES ($1, $2, $3, 'retailer_digitisation')
+             ON CONFLICT (store_id, barcode) DO NOTHING`,
+            [storeId, storeProductId, row.barcode]
+          );
+        } else {
+          const genBarcode = generateStoreBarcode(storeId);
+          await client.query(
+            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+             VALUES ($1, $2, $3, 'supermandi_generated')`,
+            [storeId, storeProductId, genBarcode]
+          );
+        }
+
+        if (stock > 0) {
+          await client.query(
+            `INSERT INTO inventory.inventory_ledger (
+              store_id, product_id, delta_qty, transaction_type,
+              reference_type, stock_before, stock_after, unit_cost, source
+            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_PASTE')`,
+            [storeId, productId, stock, purchasePrice]
+          );
+        }
+
+        created++;
+      } catch (err: any) {
+        warnings.push(`${row.name}: ${err.message?.substring(0, 60)}`);
+      }
+    }
+
+    await client.query("COMMIT");
+
+    return res.json({
+      success: true,
+      data: { created, skipped: validRows.length - created, warnings: warnings.slice(0, 20) },
+      message: `Imported ${created} products`,
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[BulkPaste] Commit error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Commit failed" },
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
+// Helper functions
+// =============================================================================
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function mapHeadersToRow(headers: string[], fields: string[]): Record<string, string> {
+  const row: Record<string, string> = {};
+  for (let i = 0; i < headers.length; i++) {
+    const key = headers[i].trim().toLowerCase().replace(/\s+/g, '_');
+    row[key] = fields[i]?.trim() || '';
+  }
+  return row;
+}
+
+function parsePrice(val: string | undefined): number {
+  if (!val) return 0;
+  // Remove currency symbols, commas
+  const cleaned = val.replace(/[₹$,\s]/g, '');
+  const num = parseFloat(cleaned);
+  if (isNaN(num)) return 0;
+  // Convert rupees to paise
+  return Math.round(num * 100);
+}

@@ -6,53 +6,60 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 
 # Copy workspace files
 COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
-COPY backend/package.json ./backend/
-COPY backend/packages/common/package.json ./backend/packages/common/
+COPY packages/common/package.json ./packages/common/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
 
 # Copy source code
-COPY backend/packages/common ./backend/packages/common
-COPY backend/src ./backend/src
-COPY backend/tsconfig.json ./backend/
+COPY packages/common ./packages/common
+COPY src ./src
+COPY tsconfig.base.json ./
+COPY tsconfig.main.json ./
+COPY tsconfig.json ./
 
 # Build common package first
-WORKDIR /app/backend/packages/common
+WORKDIR /app/packages/common
 RUN pnpm run build
 
 # Build main backend
-WORKDIR /app/backend
-RUN pnpm exec tsc -p tsconfig.json
+WORKDIR /app
+RUN pnpm exec tsc -p tsconfig.main.json
 
 # Production stage
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 
 COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
-COPY backend/package.json ./backend/
-COPY backend/packages/common/package.json ./backend/packages/common/
+COPY packages/common/package.json ./packages/common/
 
 RUN pnpm install --frozen-lockfile --prod
 
 # Copy built artifacts
-COPY --from=builder /app/backend/packages/common/dist ./backend/packages/common/dist
-COPY --from=builder /app/backend/dist ./backend/dist
+COPY --from=builder /app/packages/common/dist ./packages/common/dist
+COPY --from=builder /app/dist ./dist
 
-WORKDIR /app/backend
+# Copy migrations and entrypoint for production migration runner
+COPY migrations ./migrations
+COPY scripts/migrate-prod.js ./scripts/migrate-prod.js
+COPY scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+RUN chmod +x ./scripts/docker-entrypoint.sh
+
+WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3010
 
-EXPOSE 3001
+EXPOSE 3010
 
-CMD ["node", "dist/server.js"]
+# Entrypoint: runs migrations then starts server
+CMD ["./scripts/docker-entrypoint.sh"]

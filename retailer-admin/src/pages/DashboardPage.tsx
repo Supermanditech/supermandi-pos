@@ -1,24 +1,85 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory } from '../api/store';
+import { authFetch } from '../lib/api';
+import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult } from '../api/store';
 
 export default function DashboardPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
   const { store, accessToken } = useAuth();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAddProductMenu, setShowAddProductMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // FE-RETAILER-INVENTORY-001: Wire to real inventory endpoint
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [inventoryTotals, setInventoryTotals] = useState<{ totalProducts: number; totalStockQty: number; totalPurchaseValue: number; totalSellRevenue: number }>({ totalProducts: 0, totalStockQty: 0, totalPurchaseValue: 0, totalSellRevenue: 0 });
   const [inventoryLoading, setInventoryLoading] = useState(true);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
 
   // FE-RETAILER-CAT-001: Categories from POS taxonomy
   const [categories, setCategories] = useState<FmcgCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // RCAT-CAT-002: Category edit/delete state
+  const [editingCategory, setEditingCategory] = useState<FmcgCategory | null>(null);
+  const [catEditNameEn, setCatEditNameEn] = useState('');
+  const [catEditNameHi, setCatEditNameHi] = useState('');
+  const [catEditSaving, setCatEditSaving] = useState(false);
+  const [showHiddenCategories, setShowHiddenCategories] = useState(false);
+
+  // RCAT-CAT-002: Rename category (store override)
+  const handleCategoryRename = async () => {
+    if (!editingCategory || !accessToken) return;
+    setCatEditSaving(true);
+    try {
+      const response = await authFetch(`/api/v1/retailer-admin/categories/${editingCategory.id}`, accessToken, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayNameEn: catEditNameEn.trim() || undefined,
+          displayNameHi: catEditNameHi.trim() || undefined,
+        }),
+      });
+      if (response.ok) {
+        // Update local state
+        setCategories(prev => prev.map(c =>
+          c.id === editingCategory.id
+            ? { ...c, labelEn: catEditNameEn.trim() || c.labelEn, labelHi: catEditNameHi.trim() || c.labelHi }
+            : c
+        ));
+        setEditingCategory(null);
+      }
+    } catch (err) {
+      console.error('Failed to rename category:', err);
+    } finally {
+      setCatEditSaving(false);
+    }
+  };
+
+  // RCAT-CAT-002: Hide/unhide category (store override)
+  const handleCategoryToggleHidden = async (category: FmcgCategory) => {
+    if (!accessToken) return;
+    try {
+      const response = await authFetch(`/api/v1/retailer-admin/categories/${category.id}`, accessToken, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(prev => prev.map(c =>
+          c.id === category.id ? { ...c, isHidden: data.isHidden } : c
+        ));
+      }
+    } catch (err) {
+      console.error('Failed to toggle category visibility:', err);
+    }
+  };
 
   useEffect(() => {
     if (!accessToken) return;
@@ -27,8 +88,12 @@ export default function DashboardPage() {
       setInventoryLoading(true);
       setInventoryError(null);
       try {
-        const result = await fetchInventory(accessToken);
+        const result = await fetchInventory(accessToken) as any;
         setInventory(result.data || []);
+        // RCAT-METRICS-001: Use server-provided totals (NaN-safe)
+        if (result.totals) {
+          setInventoryTotals(result.totals);
+        }
       } catch (err) {
         console.error('Failed to load inventory:', err);
         setInventoryError('Failed to load inventory');
@@ -61,10 +126,43 @@ export default function DashboardPage() {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowAddProductMenu(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearchResults(false);
+      }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  // RCAT-SEARCH-001: Debounced search
+  const doSearch = useCallback(async (term: string) => {
+    if (!accessToken || term.length < 2) {
+      setSearchResults(null);
+      setShowSearchResults(false);
+      return;
+    }
+    setSearchLoading(true);
+    try {
+      const result = await fetchSearch(accessToken, term, 10);
+      setSearchResults(result.data || null);
+      setShowSearchResults(true);
+    } catch {
+      setSearchResults(null);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (searchQuery.trim().length < 2) {
+      setSearchResults(null);
+      setShowSearchResults(false);
+      return;
+    }
+    searchTimerRef.current = setTimeout(() => doSearch(searchQuery.trim()), 300);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [searchQuery, doSearch]);
 
   // Get greeting based on time
   const getGreeting = () => {
@@ -165,8 +263,8 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          {/* Search Bar - Prominent */}
-          <div style={{ maxWidth: '560px' }}>
+          {/* RCAT-SEARCH-001: Search Bar with Results Dropdown */}
+          <div ref={searchRef} style={{ maxWidth: '560px', position: 'relative' }}>
             <div style={{
               background: 'white',
               borderRadius: '14px',
@@ -178,6 +276,7 @@ export default function DashboardPage() {
                 placeholder="Search product / supplier / barcode..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => { if (searchResults) setShowSearchResults(true); }}
                 style={{
                   width: '100%',
                   padding: '1rem 1.25rem',
@@ -190,6 +289,144 @@ export default function DashboardPage() {
                 }}
               />
             </div>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (searchLoading || searchResults) && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '0.5rem',
+                background: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 12px 48px rgba(0,0,0,0.2)',
+                maxHeight: '400px',
+                overflow: 'auto',
+                zIndex: 200,
+                border: '1px solid #e2e8f0',
+              }}>
+                {searchLoading && (
+                  <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                    Searching...
+                  </div>
+                )}
+
+                {!searchLoading && searchResults && (
+                  <>
+                    {/* Products Section */}
+                    {searchResults.products.length > 0 && (
+                      <div>
+                        <div style={{ padding: '0.5rem 1rem', background: '#f8fafc', fontSize: '0.7rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Products ({searchResults.products.length})
+                        </div>
+                        {searchResults.products.map((p) => (
+                          <div
+                            key={p.id}
+                            onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(p.name)}`); }}
+                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.9rem' }}>{p.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                {p.brand && <span>{p.brand} | </span>}
+                                <span style={{ fontFamily: 'monospace' }}>{p.barcode || 'No barcode'}</span>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.85rem' }}>
+                                {'\u20B9'}{(p.sellPrice / 100).toFixed(2)}
+                              </div>
+                              <div style={{ fontSize: '0.7rem', color: p.stock > 0 ? '#059669' : '#dc2626' }}>
+                                Stock: {p.stock}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Suppliers Section */}
+                    {searchResults.suppliers.length > 0 && (
+                      <div>
+                        <div style={{ padding: '0.5rem 1rem', background: '#f8fafc', fontSize: '0.7rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Suppliers ({searchResults.suppliers.length})
+                        </div>
+                        {searchResults.suppliers.map((s) => (
+                          <div
+                            key={s.id}
+                            onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/suppliers`); }}
+                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.9rem' }}>{s.businessName}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                                {s.phone && <span>{s.phone} | </span>}
+                                {s.gstin && <span style={{ fontFamily: 'monospace' }}>{s.gstin}</span>}
+                              </div>
+                            </div>
+                            <span style={{
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.65rem',
+                              fontWeight: '600',
+                              background: s.isSupermandi ? '#dbeafe' : s.verificationStatus === 'verified' ? '#dcfce7' : '#f1f5f9',
+                              color: s.isSupermandi ? '#1d4ed8' : s.verificationStatus === 'verified' ? '#166534' : '#64748b',
+                            }}>
+                              {s.isSupermandi ? 'SuperMandi' : s.verificationStatus}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Barcode Matches Section */}
+                    {searchResults.barcodes.length > 0 && (
+                      <div>
+                        <div style={{ padding: '0.5rem 1rem', background: '#f8fafc', fontSize: '0.7rem', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Barcode Matches ({searchResults.barcodes.length})
+                        </div>
+                        {searchResults.barcodes.map((b) => (
+                          <div
+                            key={b.storeProductId}
+                            onClick={() => { setShowSearchResults(false); navigate(`/s/${storeCode}/products?search=${encodeURIComponent(b.barcode)}`); }}
+                            style={{ padding: '0.75rem 1rem', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#f0f9ff'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'white'}
+                          >
+                            <div>
+                              <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.9rem' }}>{b.productName}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b', fontFamily: 'monospace' }}>{b.barcode}</div>
+                            </div>
+                            <span style={{
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontSize: '0.65rem',
+                              fontWeight: '600',
+                              background: b.mode === 'PACKAGED' ? '#dbeafe' : '#fef3c7',
+                              color: b.mode === 'PACKAGED' ? '#1d4ed8' : '#92400e',
+                            }}>
+                              {b.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* No Results */}
+                    {searchResults.products.length === 0 && searchResults.suppliers.length === 0 && searchResults.barcodes.length === 0 && (
+                      <div style={{ padding: '1.5rem', textAlign: 'center', color: '#64748b', fontSize: '0.875rem' }}>
+                        No results found for "{searchQuery}"
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -223,7 +460,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Products</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : inventory.length}
+            {inventoryLoading ? '...' : inventoryTotals.totalProducts}
           </div>
         </div>
 
@@ -249,7 +486,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Stock Qty</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : inventory.reduce((sum, item) => sum + (item.totalStockQty || 0), 0).toLocaleString('en-IN')}
+            {inventoryLoading ? '...' : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
           </div>
         </div>
 
@@ -275,7 +512,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Purchase Value</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : `₹${(inventory.reduce((sum, item) => sum + (item.totalPurchaseValue || 0), 0) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+            {inventoryLoading ? '...' : `₹${(inventoryTotals.totalPurchaseValue / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
           </div>
         </div>
 
@@ -301,7 +538,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Sell Revenue</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#059669' }}>
-            {inventoryLoading ? '...' : `₹${(inventory.reduce((sum, item) => sum + (item.totalSellRevenue || 0), 0) / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+            {inventoryLoading ? '...' : `₹${(inventoryTotals.totalSellRevenue / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
           </div>
         </div>
       </div>
@@ -485,16 +722,30 @@ export default function DashboardPage() {
 
       {/* FE-RETAILER-CAT-001: Categories Section */}
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{
-          margin: '0 0 1rem',
-          fontSize: '0.85rem',
-          fontWeight: '600',
-          color: '#64748b',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-        }}>
-          Product Categories
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '0.85rem',
+            fontWeight: '600',
+            color: '#64748b',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+          }}>
+            Product Categories
+          </h2>
+          {/* RCAT-CAT-002: Toggle to show/hide hidden categories */}
+          {categories.some(c => c.isHidden) && (
+            <button
+              onClick={() => setShowHiddenCategories(!showHiddenCategories)}
+              style={{
+                background: 'none', border: 'none', color: '#64748b', fontSize: '0.75rem',
+                cursor: 'pointer', textDecoration: 'underline',
+              }}
+            >
+              {showHiddenCategories ? 'Hide hidden' : `Show hidden (${categories.filter(c => c.isHidden).length})`}
+            </button>
+          )}
+        </div>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
@@ -509,17 +760,21 @@ export default function DashboardPage() {
               No categories yet. Add products to see category breakdown.
             </div>
           ) : (
-            categories.map((category) => (
+            categories
+              .filter(c => showHiddenCategories || !c.isHidden)
+              .map((category) => (
               <div
                 key={category.id}
                 style={{
-                  background: 'white',
+                  background: category.isHidden ? '#f8fafc' : 'white',
                   borderRadius: '12px',
                   padding: '1.25rem',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  border: '1px solid #e2e8f0',
+                  border: `1px solid ${category.isHidden ? '#cbd5e1' : '#e2e8f0'}`,
                   transition: 'all 0.2s ease',
                   cursor: 'pointer',
+                  opacity: category.isHidden ? 0.6 : 1,
+                  position: 'relative' as const,
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
@@ -530,50 +785,164 @@ export default function DashboardPage() {
                   e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                  <span style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '1.2rem',
-                  }}>
-                    {getCategoryIcon(category.iconKey)}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.95rem' }}>
-                      {category.labelEn}
-                    </div>
-                    {category.labelHi && (
-                      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                        {category.labelHi}
-                      </div>
-                    )}
-                  </div>
+                {/* RCAT-CAT-002: Edit/Delete action buttons */}
+                <div style={{
+                  position: 'absolute', top: '6px', right: '6px',
+                  display: 'flex', gap: '2px',
+                }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCategory(category);
+                      setCatEditNameEn(category.labelEn);
+                      setCatEditNameHi(category.labelHi || '');
+                    }}
+                    title="Rename category"
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '0.7rem', padding: '2px 4px', borderRadius: '4px',
+                      color: '#64748b',
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCategoryToggleHidden(category);
+                    }}
+                    title={category.isHidden ? 'Show category' : 'Hide category'}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: '0.7rem', padding: '2px 4px', borderRadius: '4px',
+                      color: category.isHidden ? '#166534' : '#dc2626',
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = 'none'; }}
+                  >
+                    {category.isHidden ? 'Show' : 'Hide'}
+                  </button>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{
-                    padding: '0.25rem 0.5rem',
-                    background: category.productCount > 0 ? '#dcfce7' : '#f1f5f9',
-                    color: category.productCount > 0 ? '#166534' : '#64748b',
-                    borderRadius: '6px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                  }}>
-                    {category.productCount} products
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                    ₹{(category.stockValue / 100).toLocaleString('en-IN')}
-                  </span>
+                <div
+                  onClick={() => navigate(`/s/${storeCode}/products?category=${category.id}`)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <span style={{
+                      width: '36px',
+                      height: '36px',
+                      background: 'linear-gradient(135deg, #e0f2fe, #f0f9ff)',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.2rem',
+                    }}>
+                      {getCategoryIcon(category.iconKey)}
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: '600', color: '#334155', fontSize: '0.95rem' }}>
+                        {category.labelEn}
+                      </div>
+                      {category.labelHi && (
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                          {category.labelHi}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <span style={{
+                      padding: '0.25rem 0.5rem',
+                      background: category.productCount > 0 ? '#dcfce7' : '#f1f5f9',
+                      color: category.productCount > 0 ? '#166534' : '#64748b',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                    }}>
+                      {Number(category.productCount) || 0} products
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                      {Number(category.stockValue || 0) > 0
+                        ? `₹${(Number(category.stockValue) / 100).toLocaleString('en-IN')}`
+                        : '—'}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
+
+      {/* RCAT-CAT-002: Category Rename Modal */}
+      {editingCategory && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }} onClick={() => setEditingCategory(null)}>
+          <div style={{
+            background: 'white', borderRadius: '12px', padding: '1.5rem',
+            width: '100%', maxWidth: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', color: '#334155' }}>
+              Rename Category (Store Override)
+            </h3>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
+                English Name
+              </label>
+              <input
+                type="text"
+                value={catEditNameEn}
+                onChange={(e) => setCatEditNameEn(e.target.value)}
+                style={{
+                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+                  borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#64748b', marginBottom: '4px' }}>
+                Hindi Name
+              </label>
+              <input
+                type="text"
+                value={catEditNameHi}
+                onChange={(e) => setCatEditNameHi(e.target.value)}
+                style={{
+                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+                  borderRadius: '6px', fontSize: '0.9rem', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setEditingCategory(null)}
+                style={{
+                  padding: '8px 16px', border: '1px solid #e2e8f0', background: 'white',
+                  borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCategoryRename}
+                disabled={catEditSaving || (!catEditNameEn.trim() && !catEditNameHi.trim())}
+                style={{
+                  padding: '8px 16px', border: 'none',
+                  background: catEditSaving ? '#94a3b8' : '#2563eb', color: 'white',
+                  borderRadius: '6px', cursor: catEditSaving ? 'not-allowed' : 'pointer',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {catEditSaving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Inventory Section */}
       <div>
@@ -601,7 +970,7 @@ export default function DashboardPage() {
             fontSize: '0.75rem',
             fontWeight: '600',
           }}>
-            {inventoryLoading ? 'Loading...' : `${inventory.length} products`}
+            {inventoryLoading ? 'Loading...' : `${inventoryTotals.totalProducts} products`}
           </span>
         </div>
 
@@ -733,14 +1102,14 @@ export default function DashboardPage() {
                       color: '#475569',
                       fontWeight: '600',
                     }}>
-                      {item.totalStockQty}
+                      {Number(item.totalStockQty) || 0}
                     </td>
                     <td style={{
                       padding: '1rem 1.5rem',
                       textAlign: 'right',
                       color: '#475569',
                     }}>
-                      ₹{((item.totalPurchaseValue ?? 0) / 100).toFixed(2)}
+                      ₹{(Number(item.totalPurchaseValue || 0) / 100).toFixed(2)}
                     </td>
                     <td style={{
                       padding: '1rem 1.5rem',
@@ -748,7 +1117,7 @@ export default function DashboardPage() {
                       color: '#059669',
                       fontWeight: '600',
                     }}>
-                      ₹{((item.totalSellRevenue ?? 0) / 100).toFixed(2)}
+                      ₹{(Number(item.totalSellRevenue || 0) / 100).toFixed(2)}
                     </td>
                   </tr>
                 ))

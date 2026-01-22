@@ -100,6 +100,7 @@ export interface FmcgCategory {
   sortOrder: number;
   productCount: number;
   stockValue: number;  // paise
+  isHidden?: boolean;  // RCAT-CAT-002: Store override - hidden for this store
 }
 
 export async function fetchCategories(accessToken: string): Promise<ApiResponse<FmcgCategory[]>> {
@@ -290,6 +291,55 @@ export async function fetchDailySummary(accessToken: string, date?: string): Pro
 
   if (!response.ok) {
     throw new Error('Failed to fetch daily summary');
+  }
+
+  return response.json();
+}
+
+// RCAT-SEARCH-001: Unified search results
+export interface SearchResult {
+  products: {
+    id: string;
+    productId: string;
+    name: string;
+    brand: string | null;
+    barcode: string | null;
+    mode: string;
+    sellPrice: number;
+    stock: number;
+  }[];
+  suppliers: {
+    id: string;
+    businessName: string;
+    phone: string | null;
+    gstin: string | null;
+    verificationStatus: string;
+    isSupermandi: boolean;
+  }[];
+  barcodes: {
+    storeProductId: string;
+    productId: string;
+    productName: string;
+    manufacturerBarcode: string | null;
+    storeBarcode: string | null;
+    mode: string;
+    sellPrice: number;
+    barcode: string;
+  }[];
+}
+
+export async function fetchSearch(accessToken: string, query: string, limit = 10): Promise<ApiResponse<SearchResult>> {
+  const response = await authFetch(
+    `${API_BASE}/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    accessToken
+  );
+
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.ok) {
+    throw new Error('Search failed');
   }
 
   return response.json();

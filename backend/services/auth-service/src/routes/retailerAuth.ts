@@ -243,7 +243,7 @@ router.post(
     res.json({
       success: true,
       data: {
-        accessToken: tokenPair.accessToken,
+        token: tokenPair.accessToken,
         refreshToken: tokenPair.refreshToken,
         expiresIn: tokenPair.expiresIn,
         user: {
@@ -252,9 +252,9 @@ router.post(
           role: 'RETAILER_ADMIN',
         },
         store: {
-          id: store.id,
-          code: store.code,
-          name: store.name,
+          storeId: store.id,
+          storeCode: store.code,
+          storeName: store.name,
         },
       },
     });
@@ -423,7 +423,7 @@ router.post(
     res.json({
       success: true,
       data: {
-        accessToken: tokenPair.accessToken,
+        token: tokenPair.accessToken,
         refreshToken: tokenPair.refreshToken,
         expiresIn: tokenPair.expiresIn,
         user: {
@@ -432,9 +432,9 @@ router.post(
           role: 'RETAILER_ADMIN',
         },
         store: {
-          id: store.id,
-          code: store.code,
-          name: store.name,
+          storeId: store.id,
+          storeCode: store.code,
+          storeName: store.name,
         },
       },
     });

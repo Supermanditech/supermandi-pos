@@ -13,6 +13,33 @@ const DEMO_PHONE = '+919999999999'; // Only this phone works in demo mode
 // Usage: Add ?bypass=supermandi2026 to URL
 const TEMP_BYPASS_KEY = 'supermandi2026';
 
+function normalizeStore(store: Record<string, string>) {
+  return {
+    id: store.storeId ?? store.id,
+    code: store.storeCode ?? store.code,
+    name: store.storeName ?? store.name,
+  };
+}
+
+function parseAuthResponse(payload: { data?: Record<string, unknown> } | Record<string, unknown>) {
+  const data = 'data' in payload ? payload.data : payload;
+  const token = (data as Record<string, unknown>)?.token ?? (data as Record<string, unknown>)?.accessToken;
+  const refreshToken = (data as Record<string, unknown>)?.refreshToken ?? '';
+  const user = (data as Record<string, unknown>)?.user;
+  const store = (data as Record<string, unknown>)?.store;
+
+  if (!token || !user || !store) {
+    throw new Error('Login response missing token or store details');
+  }
+
+  return {
+    token: token as string,
+    refreshToken: refreshToken as string,
+    user: user as { id: string; phone: string; role: string },
+    store: normalizeStore(store as Record<string, string>),
+  };
+}
+
 export default function LoginPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
   const navigate = useNavigate();
@@ -56,12 +83,8 @@ export default function LoginPage() {
             return;
           }
 
-          login(
-            data.data.accessToken,
-            data.data.refreshToken,
-            data.data.user,
-            data.data.store
-          );
+          const authPayload = parseAuthResponse(data);
+          login(authPayload.token, authPayload.refreshToken, authPayload.user, authPayload.store);
           navigate(`/s/${storeCode}`, { replace: true });
         } catch (err) {
           console.error('Bypass login error:', err);
@@ -138,7 +161,7 @@ export default function LoginPage() {
         }
 
         const mockResponse = {
-          accessToken: 'demo-token-' + Date.now(),
+          token: 'demo-token-' + Date.now(),
           refreshToken: 'demo-refresh-' + Date.now(),
           user: {
             id: 'demo-user-001',
@@ -152,12 +175,8 @@ export default function LoginPage() {
           },
         };
 
-        login(
-          mockResponse.accessToken,
-          mockResponse.refreshToken,
-          mockResponse.user,
-          mockResponse.store
-        );
+        const authPayload = parseAuthResponse(mockResponse);
+        login(authPayload.token, authPayload.refreshToken, authPayload.user, authPayload.store);
 
         navigate(from, { replace: true });
         return;
@@ -185,12 +204,8 @@ export default function LoginPage() {
         throw new Error(data.error?.message || 'Login failed');
       }
 
-      login(
-        data.data.accessToken,
-        data.data.refreshToken,
-        data.data.user,
-        data.data.store
-      );
+      const authPayload = parseAuthResponse(data);
+      login(authPayload.token, authPayload.refreshToken, authPayload.user, authPayload.store);
 
       navigate(from, { replace: true });
     } catch (err) {

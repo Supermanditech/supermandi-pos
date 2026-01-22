@@ -39,6 +39,8 @@ interface Product {
   // LOOSE_BULK only
   soldBy?: string;
   rateUnit?: string;
+  // RCAT-CAT-002: Category
+  categoryId?: string;
 }
 
 // API response for product create
@@ -85,6 +87,8 @@ interface ProductFormData {
   // LOOSE_BULK only
   soldBy: string;            // Required - "WEIGHT" or "COUNT"
   rateUnit: string;          // Required - the unit rate is quoted in (e.g., KG, GM, PCS)
+  // RCAT-CAT-002: Category override
+  categoryId: string;        // Optional - taxonomy_id from fmcg_taxonomy
 }
 
 const initialFormData: ProductFormData = {
@@ -111,6 +115,8 @@ const initialFormData: ProductFormData = {
   // LOOSE_BULK only
   soldBy: 'WEIGHT',   // Default for loose products
   rateUnit: 'KG',     // Default rate unit
+  // RCAT-CAT-002: Category override
+  categoryId: '',
 };
 
 export default function ProductsPage() {
@@ -142,25 +148,42 @@ export default function ProductsPage() {
   const [bulkPreview, setBulkPreview] = useState<Partial<Product>[]>([]);
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
-  // Handle ?action=create query param from dashboard navigation
+  // Handle ?action=create and ?category=... query params from dashboard navigation
   useEffect(() => {
     const action = searchParams.get('action');
     if (action === 'create') {
       setShowForm(true);
       setEditingProduct(null);
       setFormData(initialFormData);
-      // Clear the query param after handling
       searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // RCAT-CAT-001: Handle ?category=... from dashboard category card click
+    const catParam = searchParams.get('category');
+    if (catParam) {
+      setSelectedCategory(catParam);
+      searchParams.delete('category');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // RCAT-SEARCH-001: Handle ?search=... from global search
+    const searchParam = searchParams.get('search');
+    if (searchParam) {
+      setSearchTerm(searchParam);
+      searchParams.delete('search');
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
-  // Fetch products from API
-  const fetchProducts = async () => {
+  // RCAT-CAT-001: Fetch products from API with optional category filter
+  const fetchProducts = async (categoryFilter?: string) => {
     setIsLoading(true);
     setError('');
     try {
-      const response = await authFetch('/api/v1/retailer-admin/products', accessToken);
+      const cat = categoryFilter || selectedCategory;
+      const params = new URLSearchParams();
+      if (cat && cat !== 'all') params.set('categoryId', cat);
+      const url = `/api/v1/retailer-admin/products${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await authFetch(url, accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
@@ -209,6 +232,13 @@ export default function ProductsPage() {
     }
   }, [accessToken]);
 
+  // RCAT-CAT-001: Re-fetch products when category changes
+  useEffect(() => {
+    if (accessToken) {
+      fetchProducts(selectedCategory);
+    }
+  }, [selectedCategory, accessToken]);
+
   // Open edit form
   const openEditForm = (product: Product) => {
     setEditingProduct(product);
@@ -236,6 +266,8 @@ export default function ProductsPage() {
       // LOOSE_BULK only
       soldBy: product.soldBy || 'WEIGHT',
       rateUnit: product.rateUnit || 'KG',
+      // RCAT-CAT-002: Category
+      categoryId: product.categoryId || '',
     });
     setShowForm(true);
     setError('');
@@ -345,6 +377,11 @@ export default function ProductsPage() {
         notes: formData.notes.trim() || undefined,
       };
 
+      // RCAT-CAT-002: Category override (store level)
+      if (formData.categoryId) {
+        payload.categoryId = formData.categoryId;
+      }
+
       // Add mode-specific fields
       if (formData.mode === 'PACKAGED') {
         // PACKAGED: Pack Size and Pack Unit (recommended)
@@ -426,11 +463,44 @@ export default function ProductsPage() {
     }).filter(p => p.name); // Filter out empty rows
   };
 
-  const handleBulkPreview = () => {
-    const parsed = parseBulkData(bulkData);
-    setBulkPreview(parsed);
+  // RCAT-BULK-002: Preview via backend endpoint (validates + parses server-side)
+  const handleBulkPreview = async () => {
+    if (!bulkData.trim()) return;
+    setError('');
+    setIsBulkSubmitting(true);
+    try {
+      const response = await authFetch('/api/v1/retailer-admin/products/bulk-paste/preview', accessToken, {
+        method: 'POST',
+        body: JSON.stringify({ text: bulkData }),
+      });
+      if (response.status === 401) return;
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to preview products');
+      }
+      const rows = data.data?.previewRows || [];
+      setBulkPreview(rows.map((r: any) => ({
+        name: r.name,
+        barcode: r.barcode || null,
+        brand: r.brand || '',
+        sellPrice: r.sellPrice || 0,
+        purchasePrice: r.purchasePrice || 0,
+        mrp: r.mrp || 0,
+        unit: r.unit || 'PCS',
+        stock: r.stock || 0,
+        mode: r.mode as 'PACKAGED' | 'LOOSE_BULK',
+      })));
+      if (data.data?.invalidCount > 0) {
+        setError(`${data.data.invalidCount} row(s) have errors. Fix them before importing.`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to preview products.');
+    } finally {
+      setIsBulkSubmitting(false);
+    }
   };
 
+  // RCAT-BULK-002: Commit via backend endpoint (creates products + barcodes + ledger)
   const handleBulkSubmit = async () => {
     if (bulkPreview.length === 0) return;
 
@@ -439,9 +509,9 @@ export default function ProductsPage() {
     setSuccess('');
 
     try {
-      const response = await authFetch('/api/v1/retailer-admin/products/bulk', accessToken, {
+      const response = await authFetch('/api/v1/retailer-admin/products/bulk-paste/commit', accessToken, {
         method: 'POST',
-        body: JSON.stringify({ products: bulkPreview }),
+        body: JSON.stringify({ rows: bulkPreview }),
       });
 
       if (response.status === 401) return;
@@ -451,7 +521,8 @@ export default function ProductsPage() {
         throw new Error(data.error?.message || 'Failed to import products');
       }
 
-      setSuccess(`Successfully imported ${data.imported || bulkPreview.length} products!`);
+      const created = data.data?.created || 0;
+      setSuccess(`Successfully imported ${created} products!`);
       setBulkData('');
       setBulkPreview([]);
       setShowBulkUpload(false);
@@ -682,16 +753,22 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              {/* Auto-category hint */}
-              <div style={{
-                background: '#e0f2fe',
-                borderRadius: '0.5rem',
-                padding: '0.75rem 1rem',
-                marginBottom: '1rem',
-                fontSize: '0.875rem',
-                color: '#0369a1',
-              }}>
-                💡 Categories are auto-created from product name and will appear in POS & Dashboard automatically.
+              {/* RCAT-CAT-002: Category dropdown (store override) */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Category</label>
+                <select
+                  className="form-input"
+                  value={formData.categoryId}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                >
+                  <option value="">Auto-detect from name</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.labelEn}</option>
+                  ))}
+                </select>
+                <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Leave as "Auto-detect" to assign category automatically, or select manually to override.
+                </p>
               </div>
 
               <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
@@ -767,7 +844,7 @@ export default function ProductsPage() {
                   </select>
                 </div>
 
-                {/* Supplier dropdown with verification enforcement */}
+                {/* RCAT-SUP-003: Supplier dropdown - only verified suppliers for linking */}
                 <div className="form-group">
                   <label className="form-label">
                     Supplier (optional)
@@ -779,7 +856,7 @@ export default function ProductsPage() {
                       backgroundColor: '#dcfce7',
                       color: '#166534'
                     }}>
-                      Only verified suppliers sync to POS
+                      Verified only
                     </span>
                   </label>
                   <select
@@ -787,48 +864,28 @@ export default function ProductsPage() {
                     className="form-input"
                     value={formData.supplierId}
                     onChange={handleInputChange}
-                    style={{
-                      borderColor: formData.supplierId && !suppliers.find(s => s.id === formData.supplierId)?.isSupermandi
-                        ? '#fbbf24'
-                        : undefined
-                    }}
                   >
                     <option value="">-- No supplier linked --</option>
-                    {/* Verified suppliers first */}
-                    {suppliers.filter(s => s.isSupermandi).length > 0 && (
-                      <optgroup label="Verified Suppliers (POS visible)">
-                        {suppliers.filter(s => s.isSupermandi).map(supplier => (
-                          <option key={supplier.id} value={supplier.id}>
-                            {supplier.businessName || supplier.name} {supplier.supplierCode ? `[${supplier.supplierCode}]` : ''}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {/* Unverified suppliers */}
-                    {suppliers.filter(s => !s.isSupermandi).length > 0 && (
-                      <optgroup label="Local Suppliers (not on POS)">
-                        {suppliers.filter(s => !s.isSupermandi).map(supplier => (
-                          <option key={supplier.id} value={supplier.id}>
-                            {supplier.businessName || supplier.name} (Local)
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
+                    {suppliers.filter(s => s.isSupermandi).map(supplier => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.businessName || supplier.name} {supplier.supplierCode ? `[${supplier.supplierCode}]` : ''}
+                      </option>
+                    ))}
                   </select>
-                  {formData.supplierId && !suppliers.find(s => s.id === formData.supplierId)?.isSupermandi && (
+                  {suppliers.filter(s => s.isSupermandi).length === 0 && (
                     <span style={{
                       display: 'block',
                       marginTop: '4px',
                       fontSize: '0.75rem',
-                      color: '#b45309',
-                      backgroundColor: '#fef3c7',
+                      color: '#64748b',
+                      backgroundColor: '#f1f5f9',
                       padding: '4px 8px',
                       borderRadius: '4px'
                     }}>
-                      This supplier is not verified. Product will not show supplier link on POS.
+                      No verified suppliers available to link
                     </span>
                   )}
-                  {!formData.supplierId && (
+                  {!formData.supplierId && suppliers.filter(s => s.isSupermandi).length > 0 && (
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Link to a verified supplier for purchase tracking on POS
                     </span>
@@ -965,14 +1022,20 @@ export default function ProductsPage() {
                       <small style={{ color: 'var(--text-muted)' }}>Quantity in pack (e.g., 500 for 500g)</small>
                     </div>
 
-                    {/* Pack Unit */}
+                    {/* Pack Unit - RCAT-PROD-002: Custom editable option */}
                     <div className="form-group">
                       <label className="form-label">Pack Unit</label>
                       <select
                         name="packUnit"
                         className="form-input"
-                        value={formData.packUnit}
-                        onChange={handleInputChange}
+                        value={['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) ? formData.packUnit : 'OTHER'}
+                        onChange={(e) => {
+                          if (e.target.value === 'OTHER') {
+                            setFormData(prev => ({ ...prev, packUnit: '' }));
+                          } else {
+                            setFormData(prev => ({ ...prev, packUnit: e.target.value }));
+                          }
+                        }}
                       >
                         <option value="">-- Select --</option>
                         <option value="g">Grams (g)</option>
@@ -981,7 +1044,18 @@ export default function ProductsPage() {
                         <option value="l">Liters (l)</option>
                         <option value="pcs">Pieces (pcs)</option>
                         <option value="pack">Pack</option>
+                        <option value="OTHER">Other (type...)</option>
                       </select>
+                      {!['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) && (
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ marginTop: '0.5rem' }}
+                          placeholder="Enter custom unit (e.g., sachet, strip)"
+                          value={formData.packUnit}
+                          onChange={(e) => setFormData(prev => ({ ...prev, packUnit: e.target.value }))}
+                        />
+                      )}
                       <small style={{ color: 'var(--text-muted)' }}>Unit for pack size</small>
                     </div>
                   </div>
@@ -1098,9 +1172,9 @@ Loose Rice,, , 45, 40, , KG, 25`}
                 type="button"
                 className="btn btn-secondary"
                 onClick={handleBulkPreview}
-                disabled={!bulkData.trim()}
+                disabled={!bulkData.trim() || isBulkSubmitting}
               >
-                Preview ({parseBulkData(bulkData).length} items)
+                {isBulkSubmitting && bulkPreview.length === 0 ? 'Previewing...' : `Preview (${parseBulkData(bulkData).length} lines)`}
               </button>
               <button
                 type="button"

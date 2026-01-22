@@ -183,6 +183,13 @@ export const config: GatewayConfig = {
       url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
       pathPrefix: '/api/v1/retailer-admin/auth',
     },
+    // RCAT-DEPLOY-001: Health endpoint for gateway verification -> main backend
+    {
+      name: 'retailer-health',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/retailer-admin/health',
+      stripPrefix: false,
+    },
     // FE-RETAILER-INVENTORY-001: Inventory routes go to main backend
     {
       name: 'retailer-inventory',
@@ -197,7 +204,28 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/retailer-admin/categories',
       stripPrefix: false,
     },
-    // Portal API routes go to platform-service
+    // RCAT-PROD-001: Products routes go to main backend
+    {
+      name: 'retailer-products',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/retailer-admin/products',
+      stripPrefix: false,
+    },
+    // RCAT-SUP-001: Suppliers routes go to main backend
+    {
+      name: 'retailer-suppliers',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/retailer-admin/suppliers',
+      stripPrefix: false,
+    },
+    // RCAT-SEARCH-001: Search routes go to main backend
+    {
+      name: 'retailer-search',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/retailer-admin/search',
+      stripPrefix: false,
+    },
+    // Portal API catch-all routes go to platform-service
     {
       name: 'retailer-portal',
       url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),

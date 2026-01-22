@@ -23,6 +23,10 @@ import { adminBarcodeSheetsRouter } from "./admin/barcodeSheets";
 import { adminGlobalProductsRouter } from "./admin/globalProducts";
 import { adminSuppliersRouter } from "./admin/suppliers";
 import { retailerAdminInventoryRouter } from "./retailer-admin/inventory";
+import { retailerAdminSuppliersRouter } from "./retailer-admin/suppliers";
+import { retailerAdminProductsRouter } from "./retailer-admin/products";
+import { retailerAdminCsvImportRouter } from "./retailer-admin/csvImport";
+import { retailerAdminSearchRouter } from "./retailer-admin/search";
 
 export const v1Router = Router();
 
@@ -50,3 +54,7 @@ v1Router.use("/admin", adminBarcodeSheetsRouter);
 v1Router.use("/admin", adminGlobalProductsRouter);
 v1Router.use("/admin", adminSuppliersRouter);
 v1Router.use("/retailer-admin", retailerAdminInventoryRouter);
+v1Router.use("/retailer-admin", retailerAdminSuppliersRouter);
+v1Router.use("/retailer-admin", retailerAdminProductsRouter);
+v1Router.use("/retailer-admin", retailerAdminCsvImportRouter);
+v1Router.use("/retailer-admin", retailerAdminSearchRouter);
