@@ -114,8 +114,8 @@ retailerAdminSearchRouter.get("/search", async (req: Request, res: Response) => 
           OR spb.barcode ILIKE $2
         )
       ORDER BY p.name ASC
-      LIMIT $4`,
-      [storeId, likeTerm, `${searchTerm}%`, limitNum]
+      LIMIT $3`,
+      [storeId, likeTerm, limitNum]
     );
 
     return res.json({
