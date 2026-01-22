@@ -171,13 +171,8 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/voice',
     },
     // Retailer Admin Portal routes
-    // RCAT-DEPLOY-001: Health endpoint for gateway routing verification
-    {
-      name: 'retailer-health',
-      url: getMainBackendUrl(),
-      pathPrefix: '/api/v1/retailer-admin/health',
-      stripPrefix: false,
-    },
+    // RCAT-DEPLOY-001: Health endpoint routes to platform-service via catch-all
+    // (platform-service has /health endpoint, gateway strips prefix to /health)
     // Auth routes go to auth-service (Firebase token exchange)
     {
       name: 'retailer-auth',
