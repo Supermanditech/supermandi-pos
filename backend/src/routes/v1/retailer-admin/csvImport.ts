@@ -83,16 +83,18 @@ retailerAdminCsvImportRouter.post("/products/import/upload", async (req: Request
     }
 
     // Store the job in the database
+    const userId = req.headers['x-user-id'] as string || storeId;
     const jobResult = await pool.query(
       `INSERT INTO platform.csv_imports (
         store_id, file_name, file_sha256, total_rows, status, uploaded_by_user_id
-      ) VALUES ($1, $2, $3, $4, 'pending', $1)
+      ) VALUES ($1, $2, $3, $4, 'pending', $5)
       RETURNING id`,
       [
         storeId,
         fileName || 'upload.csv',
         require('crypto').createHash('sha256').update(csvContent).digest('hex'),
         lines.length - 1, // Exclude header
+        userId,
       ]
     );
 
