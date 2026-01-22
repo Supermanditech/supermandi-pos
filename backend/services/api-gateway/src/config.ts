@@ -152,20 +152,20 @@ export const config: GatewayConfig = {
     },
     // ==========================================================================
     // POS ROUTES - GW-ROUTES-001: Fix routing for POS endpoints
-    // Most POS endpoints are in the main backend (3001)
-    // Only /pos/enroll goes to enroll-service (3009)
-    // More specific routes MUST come before less specific ones
+    // ALL POS endpoints go to pos-service (enroll-service on 3009)
+    // Includes: enroll, ui-status, suppliers, daily-summary, stock-in, store-products
     // ==========================================================================
     {
       name: 'pos-enroll',
-      url: getEnvOrDefault('ENROLL_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
+      url: getEnvOrDefault('POS_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
       pathPrefix: '/api/v1/pos/enroll',
       // FIX: Rewrite /api/v1/pos/enroll -> /enroll (not empty string)
       rewriteTo: '/enroll',
     },
     {
       name: 'pos',
-      url: getMainBackendUrl(),
+      // FIX: POS endpoints (ui-status, suppliers, daily-summary, etc.) are in pos-service, not main-backend
+      url: getEnvOrDefault('POS_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
       pathPrefix: '/api/v1/pos',
     },
     // ==========================================================================
