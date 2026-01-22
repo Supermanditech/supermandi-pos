@@ -59,7 +59,7 @@ retailerAdminSearchRouter.get("/search", async (req: Request, res: Response) => 
         AND (
           p.name ILIKE $2
           OR p.brand ILIKE $2
-          OR p.aliases::text ILIKE $2
+          OR p.description ILIKE $2
         )
       ORDER BY
         CASE WHEN p.name ILIKE $3 THEN 0 ELSE 1 END,
