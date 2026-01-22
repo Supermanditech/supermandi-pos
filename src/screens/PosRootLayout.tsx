@@ -118,6 +118,8 @@ export default function PosRootLayout() {
   const reorderAppStateRef = useRef(AppState.currentState);
 
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
+  // UI-REVEAL: Track API connection errors to show banner instead of hiding UI
+  const [apiConnectionError, setApiConnectionError] = useState<string | null>(null);
 
   // DEV-055: Restrict to MENU when store is inactive
   const effectiveMode = storeActive === false ? "MENU" : selectedMode;
@@ -376,6 +378,8 @@ export default function PosRootLayout() {
       try {
         const status = await fetchUiStatus();
         if (cancelled) return;
+        // UI-REVEAL: Clear connection error on successful API call
+        setApiConnectionError(null);
         setStoreActive(status.storeActive ?? null);
         setDeviceActive(status.deviceActive ?? null);
         setDeviceStoreId(status.storeId ?? null);
@@ -425,6 +429,11 @@ export default function PosRootLayout() {
             setStoreActive(false);
             return;
           }
+          // UI-REVEAL: Set connection error for other API failures
+          setApiConnectionError(error.message || "Server connection failed");
+        } else {
+          // UI-REVEAL: Network or unknown error
+          setApiConnectionError("Could not connect to server");
         }
       } finally {
         uiStatusInFlightRef.current = false;
@@ -935,6 +944,16 @@ export default function PosRootLayout() {
         </View>
       )}
 
+      {/* UI-REVEAL: API connection error banner - show warning but keep UI functional */}
+      {apiConnectionError && storeActive !== false && (
+        <View style={styles.apiConnectionBanner}>
+          <MaterialCommunityIcons name="cloud-off-outline" size={16} color={theme.colors.warning} />
+          <Text style={styles.apiConnectionBannerText}>
+            Offline mode: {apiConnectionError}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.tabs}>
         {indicatorLayout ? (
           <Animated.View
@@ -951,18 +970,15 @@ export default function PosRootLayout() {
             ]}
           />
         ) : null}
-        {TABS.filter((tab) => {
-          // Feature flag checks: hide tabs if not enabled
-          if (tab.id === "PURCHASE" && !buyEnabled) return false;
-          // GO-LIVE-002: Hide REORDER tab when reorderEnabled=false
-          if (tab.id === "REORDER" && !reorderEnabled) return false;
-          return true;
-        }).map((tab) => {
+        {TABS.map((tab) => {
           const active = effectiveMode === tab.id;
           const isReorder = tab.id === "REORDER";
           const isPurchase = tab.id === "PURCHASE";
+          // UI-REVEAL: Feature-disabled tabs are shown but disabled (not hidden)
+          const isFeatureDisabled = (isPurchase && !buyEnabled) || (isReorder && !reorderEnabled);
           // DEV-055: Disable non-MENU tabs when store is inactive
-          const isDisabled = storeActive === false && tab.id !== "MENU";
+          const isStoreDisabled = storeActive === false && tab.id !== "MENU";
+          const isDisabled = isStoreDisabled || isFeatureDisabled;
           const iconColor = isDisabled
             ? theme.colors.textTertiary
             : active
@@ -989,8 +1005,16 @@ export default function PosRootLayout() {
                 pressed && !isDisabled && styles.tabPressed,
                 isDisabled && styles.tabButtonDisabled,
               ]}
-              onPress={() => setSelectedMode(tab.id)}
-              disabled={isDisabled}
+              onPress={() => {
+                // UI-REVEAL: Show toast for feature-disabled tabs instead of hiding them
+                if (isFeatureDisabled) {
+                  const featureName = isPurchase ? "Purchase Orders" : "Reorder";
+                  ToastAndroid.show(`${featureName} is not enabled for this store`, ToastAndroid.SHORT);
+                  return;
+                }
+                setSelectedMode(tab.id);
+              }}
+              disabled={isStoreDisabled}
               testID={isReorder ? "tab-reorder" : isPurchase ? "tab-buy" : undefined}
               accessibilityLabel={
                 isReorder ? `Reorder ${reorderStatusLabel}` : tab.id === "MENU" ? "Menu" : undefined
@@ -1205,6 +1229,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: theme.colors.error,
+  },
+  // UI-REVEAL: API connection error banner styles
+  apiConnectionBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.warningSoft,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.warning,
+  },
+  apiConnectionBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.warning,
   },
   tabs: {
     flexDirection: "row",
