@@ -70,7 +70,7 @@ retailerAdminSearchRouter.get("/search", async (req: Request, res: Response) => 
 
     // 2. Search suppliers by business_name, phone, GSTIN (store-scoped via store links)
     const suppliersResult = await pool.query(
-      `SELECT DISTINCT
+      `SELECT
         s.id,
         s.business_name as "businessName",
         s.primary_phone as "phone",
