@@ -1267,68 +1267,50 @@ router.get(
  * GET /retailer-admin/suppliers
  * List suppliers linked to the store
  * Returns full supplier details with verification status and store-specific terms
+ *
+ * RCAT-SUP-001: Added structured logging + dev debug payload
  */
-router.get(
-  '/suppliers',
-  asyncHandler(async (req, res) => {
-    const { storeId } = getRetailerContext(req);
+router.get('/suppliers', async (req, res) => {
+  const reqId = `sup-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
+  const isDev = config.env !== 'production';
 
-    const result = await query<{
-      id: string;
-      // Section A: Identity & Compliance
-      businessName: string;
-      tradeName: string | null;
-      supplierType: string | null;
-      gstin: string | null;
-      pan: string | null;
-      fssai: string | null;
-      // Section B: Contact & Address
-      primaryPhone: string | null;
-      whatsappEnabled: boolean;
-      secondaryPhone: string | null;
-      email: string | null;
-      addressLine1: string | null;
-      addressLine2: string | null;
-      area: string | null;
-      city: string | null;
-      state: string | null;
-      pincode: string | null;
-      // Section C: Commercial Terms (from store_links)
-      paymentTerms: string | null;
-      creditDays: number;
-      minOrderValue: number;
-      deliveryCharges: number;
-      deliverySchedule: string | null;
-      returnsAllowed: boolean;
-      returnsWindow: number;
-      taxInvoiceProvided: boolean;
-      priceSource: string | null;
-      serviceArea: string | null;
-      deliveryAddress: string | null;
-      // Section D: Operational Metadata (from store_links)
-      categoriesSupplied: string[];
-      brandsSupplied: string | null;
-      orderingChannel: string | null;
-      notes: string | null;
-      // Status & metadata
-      verificationStatus: string;
-      isSupermandi: boolean;
-      supplierCode: string | null;
-      // Legacy fields for backward compatibility
-      name: string;
-      phone: string | null;
-      address: string | null;
-    }>(
+  // Structured log helper
+  const log = (level: 'info' | 'error', msg: string, extra?: Record<string, unknown>) => {
+    const entry = { reqId, endpoint: 'GET /suppliers', level, msg, ts: new Date().toISOString(), ...extra };
+    if (level === 'error') {
+      console.error(JSON.stringify(entry));
+    } else {
+      console.log(JSON.stringify(entry));
+    }
+  };
+
+  try {
+    // Extract context - may throw if headers missing
+    const userId = req.headers['x-user-id'] as string;
+    const storeId = req.headers['x-actor-id'] as string;
+
+    log('info', 'Request received', { userId, storeId, headers: isDev ? req.headers : undefined });
+
+    if (!userId || !storeId) {
+      log('error', 'Missing auth headers', { userId: !!userId, storeId: !!storeId });
+      return res.status(401).json({
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' },
+        _debug: isDev ? { reqId, reason: 'Missing x-user-id or x-actor-id header' } : undefined,
+      });
+    }
+
+    // Try full query with extended fields
+    log('info', 'Executing full suppliers query', { storeId });
+
+    const result = await query(
       `SELECT
          s.id,
-         -- Section A: Identity & Compliance
          s.business_name as "businessName",
          s.trade_name as "tradeName",
          s.business_type as "supplierType",
          CASE WHEN s.gstin LIKE 'XX%' THEN NULL ELSE s.gstin END as gstin,
          s.pan,
          s.fssai,
-         -- Section B: Contact & Address
          s.primary_phone as "primaryPhone",
          COALESCE(s.whatsapp_enabled, false) as "whatsappEnabled",
          s.secondary_phone as "secondaryPhone",
@@ -1339,7 +1321,6 @@ router.get(
          s.city,
          s.state,
          s.pincode,
-         -- Section C: Commercial Terms (from store_links)
          COALESCE(ssl.payment_terms, 'Cash') as "paymentTerms",
          COALESCE(ssl.credit_days, 0) as "creditDays",
          COALESCE(ssl.min_order_value, 0) as "minOrderValue",
@@ -1351,16 +1332,13 @@ router.get(
          ssl.price_source as "priceSource",
          ssl.service_area as "serviceArea",
          ssl.delivery_address as "deliveryAddress",
-         -- Section D: Operational Metadata (from store_links)
          COALESCE(ssl.categories_supplied, '[]'::jsonb) as "categoriesSupplied",
          ssl.brands_supplied as "brandsSupplied",
          ssl.ordering_channel as "orderingChannel",
          ssl.notes,
-         -- Status & metadata
          COALESCE(s.verification_status, 'unverified') as "verificationStatus",
          (s.gstin IS NOT NULL AND s.gstin NOT LIKE 'XX%' AND s.verification_status = 'verified') as "isSupermandi",
          CASE WHEN s.verification_status = 'verified' THEN LEFT(s.id::text, 8) ELSE NULL END as "supplierCode",
-         -- Legacy fields
          s.business_name as name,
          s.primary_phone as phone,
          CONCAT_WS(', ', NULLIF(s.address_line1, ''), NULLIF(s.city, ''), NULLIF(s.state, '')) as address
@@ -1373,12 +1351,62 @@ router.get(
       [storeId]
     );
 
-    res.json({
+    log('info', 'Query success', { count: result.length });
+
+    return res.json({
       success: true,
       data: result,
+      _debug: isDev ? { reqId } : undefined,
     });
-  })
-);
+  } catch (err: unknown) {
+    // Extract postgres-specific error fields
+    const pgErr = err as {
+      message?: string;
+      code?: string;
+      detail?: string;
+      hint?: string;
+      position?: string;
+      schema?: string;
+      table?: string;
+      column?: string;
+      constraint?: string;
+      stack?: string;
+    };
+
+    log('error', 'Suppliers query failed', {
+      message: pgErr.message,
+      pgCode: pgErr.code,
+      pgDetail: pgErr.detail,
+      pgHint: pgErr.hint,
+      pgPosition: pgErr.position,
+      pgSchema: pgErr.schema,
+      pgTable: pgErr.table,
+      pgColumn: pgErr.column,
+      pgConstraint: pgErr.constraint,
+      stack: pgErr.stack,
+    });
+
+    // Return error with debug info in dev
+    return res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: isDev ? pgErr.message : 'An unexpected error occurred',
+      },
+      _debug: isDev
+        ? {
+            reqId,
+            message: pgErr.message,
+            pgCode: pgErr.code,
+            pgDetail: pgErr.detail,
+            pgHint: pgErr.hint,
+            pgSchema: pgErr.schema,
+            pgTable: pgErr.table,
+            pgColumn: pgErr.column,
+          }
+        : undefined,
+    });
+  }
+});
 
 /**
  * POST /retailer-admin/suppliers
