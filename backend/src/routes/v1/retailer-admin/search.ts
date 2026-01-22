@@ -76,7 +76,7 @@ retailerAdminSearchRouter.get("/search", async (req: Request, res: Response) => 
         s.primary_phone as "phone",
         s.gstin,
         s.verification_status as "verificationStatus",
-        COALESCE(s.is_supermandi, false) as "isSupermandi"
+        CASE WHEN s.verification_status = 'verified' THEN true ELSE false END as "isSupermandi"
       FROM supplier.suppliers s
       INNER JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
       WHERE ssl.store_id = $1
