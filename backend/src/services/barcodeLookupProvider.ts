@@ -69,7 +69,7 @@ async function lookupOpenFoodFacts(barcode: string): Promise<BarcodeProductPrefi
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
 
     if (data.status !== 1 || !data.product) {
       return null;
@@ -125,7 +125,7 @@ async function lookupUpcDatabase(barcode: string): Promise<BarcodeProductPrefill
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json() as any;
 
     if (!data.success || !data.title) {
       return null;

@@ -11,7 +11,8 @@
  * - SEQ: 3-digit sequence, resets daily per prefix
  */
 
-import { pool } from "../db/client";
+import type { Pool } from "pg";
+import { getPool } from "../db/client";
 
 // =============================================================================
 // CONSTANTS - STORECODE-004
@@ -22,6 +23,14 @@ import { pool } from "../db/client";
  * Production stores use all OTHER prefixes and must NEVER be seeded.
  */
 export const DEMO_PREFIXES = ["DM", "QA", "TS", "ST"] as const;
+
+function requirePool(): Pool {
+  const pool = getPool();
+  if (!pool) {
+    throw new Error("Database pool not initialized");
+  }
+  return pool;
+}
 
 // =============================================================================
 // TYPES
@@ -50,6 +59,7 @@ export interface StoreCodeResult {
  * // Returns: "SU260115-001"
  */
 export async function generateStoreCode(storeName: string): Promise<string> {
+  const pool = requirePool();
   const result = await pool.query<{ generate_store_code: string }>(
     "SELECT platform.generate_store_code($1) as generate_store_code",
     [storeName]
@@ -219,6 +229,7 @@ export function formatDateYYMMDD(date: Date = new Date()): string {
 export async function getCounterStats(
   prefix: string
 ): Promise<{ prefix: string; yymmdd: string; lastSeq: number } | null> {
+  const pool = requirePool();
   const result = await pool.query<{
     prefix: string;
     yymmdd: string;
