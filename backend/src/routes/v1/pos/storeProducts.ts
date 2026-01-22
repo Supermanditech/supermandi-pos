@@ -2,10 +2,23 @@ import { Router } from "express";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import {
   createStoreProductFromDigitisation,
-  type CreateStoreProductInput
+  type CreateStoreProductInput,
+  type CreateStoreProductResult
 } from "../../../services/storeProductDigitisationService";
 
 export const posStoreProductsRouter = Router();
+
+type SuccessResult = Extract<CreateStoreProductResult, { success: true }>;
+type ConflictResult = Extract<CreateStoreProductResult, { success: false; error: "CONFLICT" }>;
+type ValidationResult = Extract<CreateStoreProductResult, { success: false; error: "VALIDATION" }>;
+
+function isSuccessResult(result: CreateStoreProductResult): result is SuccessResult {
+  return result.success;
+}
+
+function isConflictResult(result: CreateStoreProductResult): result is ConflictResult {
+  return !result.success && "error" in result && result.error === "CONFLICT";
+}
 
 /**
  * POST /api/v1/pos/store-products
@@ -100,13 +113,11 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
       brand
     });
 
-    if (result.success) {
+    if (isSuccessResult(result)) {
       return res.status(201).json({
         storeProduct: result.storeProduct
       });
-    }
-
-    if (result.error === "CONFLICT") {
+    } else if (isConflictResult(result)) {
       return res.status(409).json({
         error: "BARCODE_ALREADY_MAPPED",
         message: "Barcode already exists for this store",
@@ -115,9 +126,10 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
     }
 
     // Validation error
+    const validationResult = result as ValidationResult;
     return res.status(422).json({
       error: "VALIDATION_ERROR",
-      message: result.message
+      message: validationResult.message
     });
   } catch (error) {
     console.error("[storeProducts] Error creating store product:", error);

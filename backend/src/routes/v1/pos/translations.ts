@@ -5,7 +5,8 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
-import { pool } from "../../../db/client";
+import type { Pool } from "pg";
+import { getPool } from "../../../db/client";
 import {
   saveTranslationOverride,
   getLocalizedProduct,
@@ -17,6 +18,15 @@ import {
 import { HttpError } from "../../../lib/httpError";
 
 const router = Router();
+type TranslationRequest = Request & { storeId?: string; locale?: string };
+
+function requirePool(): Pool {
+  const pool = getPool();
+  if (!pool) {
+    throw new HttpError(503, "database_unavailable");
+  }
+  return pool;
+}
 
 /**
  * GET /translations/product/:productId
@@ -24,8 +34,9 @@ const router = Router();
  */
 router.get(
   "/product/:productId",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: TranslationRequest, res: Response, next: NextFunction) => {
     try {
+      const pool = requirePool();
       const { productId } = req.params;
       const storeId = req.storeId; // Set by deviceToken middleware
       const locale = req.locale || "en";
@@ -77,8 +88,9 @@ router.get(
  */
 router.patch(
   "/product/:productId/override",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: TranslationRequest, res: Response, next: NextFunction) => {
     try {
+      const pool = requirePool();
       const { productId } = req.params;
       const storeId = req.storeId;
       const { locale, nameOverride, descriptionOverride } = req.body;
@@ -145,8 +157,9 @@ router.patch(
  */
 router.post(
   "/products/bulk",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: TranslationRequest, res: Response, next: NextFunction) => {
     try {
+      const pool = requirePool();
       const storeId = req.storeId;
       const { productIds, locale: requestedLocale } = req.body;
       const locale = requestedLocale || req.locale || "en";
@@ -206,8 +219,9 @@ router.post(
  */
 router.get(
   "/quota",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: TranslationRequest, res: Response, next: NextFunction) => {
     try {
+      const pool = requirePool();
       const storeId = req.storeId;
 
       if (!storeId) {
@@ -240,8 +254,9 @@ router.get(
  */
 router.delete(
   "/product/:productId/override",
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: TranslationRequest, res: Response, next: NextFunction) => {
     try {
+      const pool = requirePool();
       const { productId } = req.params;
       const storeId = req.storeId;
       const locale = req.query.locale as string;
