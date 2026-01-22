@@ -1,4 +1,5 @@
-// API Gateway Configuration - V3.0.9 compliant
+// API Gateway Configuration - V3.0.10 compliant
+// RCAT-DEPLOY-001: Fixed service URL configuration for 10k store deployment
 
 export interface ServiceConfig {
   name: string;
@@ -25,6 +26,21 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
   return value ? parseInt(value, 10) : defaultValue;
 }
 
+/**
+ * RCAT-DEPLOY-001: Get main backend URL with proper fallback chain
+ * Production uses ADMIN_SERVICE_URL, but we support multiple env vars for compatibility:
+ * 1. ADMIN_SERVICE_URL (production - http://supermandi-main-backend:3010)
+ * 2. POS_SERVICE_URL (alias)
+ * 3. BACKEND_SERVICE_URL (legacy)
+ * 4. Default: http://localhost:3001 (local dev)
+ */
+function getMainBackendUrl(): string {
+  return process.env['ADMIN_SERVICE_URL']
+    || process.env['POS_SERVICE_URL']
+    || process.env['BACKEND_SERVICE_URL']
+    || 'http://localhost:3001';
+}
+
 export const config: GatewayConfig = {
   port: getEnvIntOrDefault('API_GATEWAY_PORT', 3000),
   env: getEnvOrDefault('NODE_ENV', 'development'),
@@ -43,49 +59,49 @@ export const config: GatewayConfig = {
     // Admin pos/events and analytics routes -> main backend (monolith)
     {
       name: 'admin-pos',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/pos',
       stripPrefix: false,
     },
     {
       name: 'admin-analytics',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/analytics',
       stripPrefix: false,
     },
     {
       name: 'admin-devices',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/devices',
       stripPrefix: false,
     },
     {
       name: 'admin-ai',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/ai',
       stripPrefix: false,
     },
     {
       name: 'admin-barcode-sheets',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/barcode-sheets',
       stripPrefix: false,
     },
     {
       name: 'admin-global-products',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/global-products',
       stripPrefix: false,
     },
     {
       name: 'admin-stores',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/stores',
       stripPrefix: false,
     },
     {
       name: 'admin-device-enrollments',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin/device-enrollments',
       stripPrefix: false,
     },
@@ -145,7 +161,7 @@ export const config: GatewayConfig = {
     },
     {
       name: 'pos',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/pos',
     },
     // ==========================================================================
@@ -155,6 +171,13 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/voice',
     },
     // Retailer Admin Portal routes
+    // RCAT-DEPLOY-001: Health endpoint for gateway routing verification
+    {
+      name: 'retailer-health',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/retailer-admin/health',
+      stripPrefix: false,
+    },
     // Auth routes go to auth-service (Firebase token exchange)
     {
       name: 'retailer-auth',
@@ -164,14 +187,14 @@ export const config: GatewayConfig = {
     // FE-RETAILER-INVENTORY-001: Inventory routes go to main backend
     {
       name: 'retailer-inventory',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/retailer-admin/inventory',
       stripPrefix: false,
     },
     // FE-RETAILER-CAT-001: Categories routes go to main backend
     {
       name: 'retailer-categories',
-      url: getEnvOrDefault('BACKEND_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/retailer-admin/categories',
       stripPrefix: false,
     },

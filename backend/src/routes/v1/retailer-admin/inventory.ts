@@ -1,11 +1,38 @@
 // Retailer Admin Inventory Routes - V3.0.10 compliant
 // Inventory endpoints for retailer dashboard
 // FE-RETAILER-CAT-001: Categories UI from POS taxonomy
+// RCAT-DEPLOY-001: Health endpoint for gateway routing verification
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 
+// Git SHA and build time for health endpoint
+const GIT_SHA = process.env['GIT_SHA'] || 'dev';
+const BUILD_TIME = process.env['BUILD_TIME'] || new Date().toISOString();
+
 export const retailerAdminInventoryRouter = Router();
+
+// =============================================================================
+// HEALTH ENDPOINT - RCAT-DEPLOY-001
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/health
+ * Health check endpoint for gateway routing verification
+ * Returns version info and git SHA for deployment verification
+ * This endpoint is public (no JWT required)
+ */
+retailerAdminInventoryRouter.get("/health", (_req: Request, res: Response) => {
+  res.json({
+    status: "ok",
+    service: "retailer-admin-api",
+    version: "3.0.10",
+    gitSha: GIT_SHA,
+    buildTime: BUILD_TIME,
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || "development",
+  });
+});
 
 /**
  * Get store ID from gateway-provided headers
