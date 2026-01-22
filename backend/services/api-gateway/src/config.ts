@@ -7,6 +7,8 @@ export interface ServiceConfig {
   pathPrefix: string;
   /** If false, the pathPrefix is NOT stripped when forwarding to backend (default: true) */
   stripPrefix?: boolean;
+  /** Custom path to rewrite to (e.g., '/enroll' for /api/v1/pos/enroll -> /enroll) */
+  rewriteTo?: string;
 }
 
 export interface GatewayConfig {
@@ -158,6 +160,8 @@ export const config: GatewayConfig = {
       name: 'pos-enroll',
       url: getEnvOrDefault('ENROLL_SERVICE_URL', 'http://supermandi-enroll-service:3009'),
       pathPrefix: '/api/v1/pos/enroll',
+      // FIX: Rewrite /api/v1/pos/enroll -> /enroll (not empty string)
+      rewriteTo: '/enroll',
     },
     {
       name: 'pos',

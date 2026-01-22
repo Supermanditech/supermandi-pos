@@ -17,12 +17,21 @@ function createProxyOptions(service: ServiceConfig): Options {
   // GW-ADMIN-001: Support stripPrefix option (default: true for backward compatibility)
   const shouldStripPrefix = service.stripPrefix !== false;
 
+  // Determine pathRewrite: rewriteTo takes precedence, then stripPrefix, then no rewrite
+  let pathRewrite: Options['pathRewrite'];
+  if (service.rewriteTo !== undefined) {
+    // Custom rewrite (e.g., /api/v1/pos/enroll -> /enroll)
+    pathRewrite = { [`^${service.pathPrefix}`]: service.rewriteTo };
+  } else if (shouldStripPrefix) {
+    // Strip prefix (e.g., /api/v1/pos/products -> /products)
+    pathRewrite = { [`^${service.pathPrefix}`]: '' };
+  }
+  // else: undefined = keep path as-is
+
   return {
     target: service.url,
     changeOrigin: true,
-    pathRewrite: shouldStripPrefix
-      ? { [`^${service.pathPrefix}`]: '' } // Remove prefix when forwarding
-      : undefined, // Keep path as-is when stripPrefix is false
+    pathRewrite,
     onProxyReq: (proxyReq: ClientRequest, req: Request) => {
       // Forward correlation ID to backend service
       if (req.correlationId) {
