@@ -98,7 +98,7 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
   const auth = app.auth();
 
   try {
-    const decodedToken = await auth.verifyIdToken(idToken, true); // checkRevoked = true
+    const decodedToken = await auth.verifyIdToken(idToken, false); // checkRevoked = false (ADC on GCE lacks identitytoolkit scope)
     console.log(`[Firebase] Token verified! UID: ${decodedToken.uid}, phone: ${decodedToken.phone_number}`);
 
     // Extract sign-in provider
