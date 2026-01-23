@@ -21,6 +21,7 @@ interface Product {
   description?: string;
   mode: 'PACKAGED' | 'LOOSE_BULK';
   brand?: string;
+  alias?: string;
   sellPrice: number;
   purchasePrice: number;
   mrp?: number;
@@ -248,7 +249,7 @@ export default function ProductsPage() {
       description: product.description || '',
       mode: product.mode || 'PACKAGED',
       brand: product.brand || '',
-      alias: '',
+      alias: product.alias || '',
       unit: product.unit,
       purchasePrice: product.purchasePrice ? String(product.purchasePrice / 100) : '',
       sellPrice: String(product.sellPrice / 100),
@@ -595,8 +596,8 @@ export default function ProductsPage() {
 
         {/* Add/Edit Product Form */}
         {showForm && (
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h3 className="card-title">{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
+          <div className="card" style={{ marginBottom: '1rem', padding: '1rem' }}>
+            <h3 className="card-title" style={{ marginBottom: '0.75rem', fontSize: '1rem' }}>{editingProduct ? 'Edit Product' : 'Add New Product'}</h3>
             <form onSubmit={handleSubmit}>
               {/* Success: Show created product info with SKU PDF download */}
               {createdProduct && (
@@ -682,16 +683,19 @@ export default function ProductsPage() {
                 </div>
               )}
 
-              {/* Product Mode Selection (PACKAGED / LOOSE_BULK) */}
-              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <label className="form-label" style={{ marginBottom: '0.75rem', display: 'block' }}>Product Mode *</label>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+              {/* ═══ STEP 1: Product Type ═══ */}
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <label className="form-label" style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>1</span>
+                  Product Mode *
+                </label>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <label
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      padding: '0.75rem 1.25rem',
+                      padding: '0.5rem 0.75rem',
                       border: `2px solid ${formData.mode === 'PACKAGED' ? 'var(--primary)' : 'var(--border)'}`,
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
@@ -721,7 +725,7 @@ export default function ProductsPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
-                      padding: '0.75rem 1.25rem',
+                      padding: '0.5rem 0.75rem',
                       border: `2px solid ${formData.mode === 'LOOSE_BULK' ? 'var(--primary)' : 'var(--border)'}`,
                       borderRadius: '0.5rem',
                       cursor: 'pointer',
@@ -753,98 +757,308 @@ export default function ProductsPage() {
                 )}
               </div>
 
-              {/* RCAT-CAT-002: Category dropdown (store override) */}
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label className="form-label">Category</label>
-                <select
-                  className="form-input"
-                  value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                >
-                  <option value="">Auto-detect from name</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.labelEn}</option>
-                  ))}
-                </select>
-                <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  Leave as "Auto-detect" to assign category automatically, or select manually to override.
-                </p>
-              </div>
-
-              <div className="grid grid-2" style={{ marginBottom: '1rem' }}>
-                {/* Barcode - only for PACKAGED products */}
-                {formData.mode === 'PACKAGED' && (
+              {/* ═══ STEP 2: Product Identity ═══ */}
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>2</span>
+                  Product Identity
+                </h4>
+                {/* Row 1: Name (wide) + Brand (narrow) */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
                   <div className="form-group">
-                    <label className="form-label">Barcode (GTIN/EAN)</label>
+                    <label className="form-label">Product Name *</label>
                     <input
                       type="text"
-                      name="barcode"
+                      name="name"
                       className="form-input"
-                      placeholder="8901030865432"
-                      value={formData.barcode}
+                      placeholder="Enter product name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Brand</label>
+                    <input
+                      type="text"
+                      name="brand"
+                      className="form-input"
+                      placeholder="e.g., Amul, Tata"
+                      value={formData.brand}
                       onChange={handleInputChange}
                     />
-                    <small style={{ color: 'var(--text-muted)' }}>Optional - leave blank if no barcode</small>
                   </div>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label">Product Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    className="form-input"
-                    placeholder="Enter product name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                  />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Alias / Local Name</label>
-                  <input
-                    type="text"
-                    name="alias"
-                    className="form-input"
-                    placeholder="e.g., नमक, चावल"
-                    value={formData.alias}
-                    onChange={handleInputChange}
-                  />
+                {/* Row 2: Alias (medium) + Category (medium) + Barcode (narrow, if packaged) */}
+                <div style={{ display: 'grid', gridTemplateColumns: formData.mode === 'PACKAGED' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Alias / Local Name</label>
+                    <input
+                      type="text"
+                      name="alias"
+                      className="form-input"
+                      placeholder="e.g., नमक, चावल"
+                      value={formData.alias}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  {/* RCAT-CAT-002: Category dropdown */}
+                  <div className="form-group">
+                    <label className="form-label">Category</label>
+                    <select
+                      className="form-input"
+                      value={formData.categoryId}
+                      onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                    >
+                      <option value="">Auto-detect from name</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.labelEn}</option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--text-muted)' }}>Leave as "Auto-detect" to assign category automatically, or select manually to override.</small>
+                  </div>
+
+                  {formData.mode === 'PACKAGED' && (
+                    <div className="form-group">
+                      <label className="form-label">Barcode (GTIN/EAN)</label>
+                      <input
+                        type="text"
+                        name="barcode"
+                        className="form-input"
+                        placeholder="8901030865432"
+                        value={formData.barcode}
+                        onChange={handleInputChange}
+                        style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }}
+                      />
+                      <small style={{ color: 'var(--text-muted)' }}>Optional - leave blank if no barcode</small>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ═══ STEP 3: Measurement & Packaging ═══ */}
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>3</span>
+                  Measurement & Packaging
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: formData.mode === 'PACKAGED' ? '1fr 1fr 1fr' : formData.mode === 'LOOSE_BULK' ? '1fr 1fr 1fr' : '1fr', gap: '0.75rem', alignItems: 'start' }}>
+                  <div className="form-group">
+                    <label className="form-label">Unit *</label>
+                    <select
+                      name="unit"
+                      className="form-input"
+                      value={formData.unit}
+                      onChange={handleInputChange}
+                      required
+                    >
+                      <option value="PCS">Pieces (PCS)</option>
+                      <option value="PACK">Pack</option>
+                      <option value="KG">Kilograms (KG)</option>
+                      <option value="GM">Grams (GM)</option>
+                      <option value="LTR">Liters (LTR)</option>
+                      <option value="ML">Milliliters (ML)</option>
+                    </select>
+                  </div>
+
+                  {/* Mode-specific: Packaged fields */}
+                  {formData.mode === 'PACKAGED' && (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Pack Size</label>
+                        <input
+                          type="number"
+                          name="packSize"
+                          className="form-input"
+                          placeholder="e.g., 500"
+                          min="0"
+                          value={formData.packSize}
+                          onChange={handleInputChange}
+                        />
+                        <small style={{ color: 'var(--text-muted)' }}>Quantity in pack (e.g., 500 for 500g)</small>
+                      </div>
+
+                      {/* Pack Unit - RCAT-PROD-002: Custom editable option */}
+                      <div className="form-group">
+                        <label className="form-label">Pack Unit</label>
+                        <select
+                          name="packUnit"
+                          className="form-input"
+                          value={['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) ? formData.packUnit : 'OTHER'}
+                          onChange={(e) => {
+                            if (e.target.value === 'OTHER') {
+                              setFormData(prev => ({ ...prev, packUnit: '' }));
+                            } else {
+                              setFormData(prev => ({ ...prev, packUnit: e.target.value }));
+                            }
+                          }}
+                        >
+                          <option value="">-- Select --</option>
+                          <option value="g">Grams (g)</option>
+                          <option value="kg">Kilograms (kg)</option>
+                          <option value="ml">Milliliters (ml)</option>
+                          <option value="l">Liters (l)</option>
+                          <option value="pcs">Pieces (pcs)</option>
+                          <option value="pack">Pack</option>
+                          <option value="OTHER">Other (type...)</option>
+                        </select>
+                        {!['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) && (
+                          <input
+                            type="text"
+                            className="form-input"
+                            style={{ marginTop: '0.5rem' }}
+                            placeholder="Enter custom unit (e.g., sachet, strip)"
+                            value={formData.packUnit}
+                            onChange={(e) => setFormData(prev => ({ ...prev, packUnit: e.target.value }))}
+                          />
+                        )}
+                        <small style={{ color: 'var(--text-muted)' }}>Unit for pack size</small>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Mode-specific: Loose/Bulk fields */}
+                  {formData.mode === 'LOOSE_BULK' && (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Sold By *</label>
+                        <select
+                          name="soldBy"
+                          className="form-input"
+                          value={formData.soldBy}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          <option value="WEIGHT">Weight (KG/GM)</option>
+                          <option value="COUNT">Count (pieces)</option>
+                        </select>
+                        <small style={{ color: 'var(--text-muted)' }}>How product is measured at sale</small>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Rate Unit *</label>
+                        <select
+                          name="rateUnit"
+                          className="form-input"
+                          value={formData.rateUnit}
+                          onChange={handleInputChange}
+                          required
+                        >
+                          {formData.soldBy === 'WEIGHT' ? (
+                            <>
+                              <option value="KG">Per Kilogram (KG)</option>
+                              <option value="GM">Per 100 Grams</option>
+                            </>
+                          ) : (
+                            <>
+                              <option value="PCS">Per Piece (PCS)</option>
+                              <option value="DOZEN">Per Dozen</option>
+                            </>
+                          )}
+                        </select>
+                        <small style={{ color: 'var(--text-muted)' }}>Unit for price rate</small>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* ═══ STEP 4: Pricing ═══ */}
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>4</span>
+                  Pricing
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Purchase (₹) *</label>
+                    <input
+                      type="number"
+                      name="purchasePrice"
+                      className="form-input"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      value={formData.purchasePrice}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <small style={{ color: 'var(--text-muted)' }}>Required for ledger tracking</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Sell (₹) *</label>
+                    <input
+                      type="number"
+                      name="sellPrice"
+                      className="form-input"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      value={formData.sellPrice}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">MRP (₹)</label>
+                    <input
+                      type="number"
+                      name="mrp"
+                      className="form-input"
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      value={formData.mrp}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══ STEP 5: Stock & Supplier ═══ */}
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>5</span>
+                  Stock & Supplier
+                </h4>
+                {/* Row 1: Two small qty fields */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Opening Stock</label>
+                    <input
+                      type="number"
+                      name="openingStockQty"
+                      className="form-input"
+                      placeholder="0"
+                      min="0"
+                      value={formData.openingStockQty}
+                      onChange={handleInputChange}
+                    />
+                    <small style={{ color: 'var(--text-muted)' }}>Creates ledger entry if &gt; 0</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Low Stock Alert</label>
+                    <input
+                      type="number"
+                      name="lowStockAlertQty"
+                      className="form-input"
+                      placeholder="e.g., 10"
+                      min="0"
+                      value={formData.lowStockAlertQty}
+                      onChange={handleInputChange}
+                    />
+                    <small style={{ color: 'var(--text-muted)' }}>Alert when stock falls below this</small>
+                  </div>
                 </div>
 
-                {/* Brand text input */}
-                <div className="form-group">
-                  <label className="form-label">Brand</label>
-                  <input
-                    type="text"
-                    name="brand"
-                    className="form-input"
-                    placeholder="e.g., Amul, Tata, Fortune"
-                    value={formData.brand}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Unit *</label>
-                  <select
-                    name="unit"
-                    className="form-input"
-                    value={formData.unit}
-                    onChange={handleInputChange}
-                    required
-                  >
-                    <option value="PCS">Pieces (PCS)</option>
-                    <option value="PACK">Pack</option>
-                    <option value="KG">Kilograms (KG)</option>
-                    <option value="GM">Grams (GM)</option>
-                    <option value="LTR">Liters (LTR)</option>
-                    <option value="ML">Milliliters (ML)</option>
-                  </select>
-                </div>
-
-                {/* RCAT-SUP-003: Supplier dropdown - only verified suppliers for linking */}
+                {/* Row 2: Supplier full width */}
+                {/* RCAT-SUP-003: Supplier dropdown */}
                 <div className="form-group">
                   <label className="form-label">
                     Supplier (optional)
@@ -891,229 +1105,50 @@ export default function ProductsPage() {
                     </span>
                   )}
                 </div>
+              </div>
 
-                <div className="form-group">
-                  <label className="form-label">Purchase Price (₹) *</label>
-                  <input
-                    type="number"
-                    name="purchasePrice"
-                    className="form-input"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    value={formData.purchasePrice}
-                    onChange={handleInputChange}
-                    required
-                  />
-                  <small style={{ color: 'var(--text-muted)' }}>Required for ledger tracking</small>
-                </div>
+              {/* ═══ STEP 6: Tax & Compliance (Optional) ═══ */}
+              <div style={{ marginBottom: '0.75rem', padding: '0.75rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
+                <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', paddingBottom: '0.375rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ background: 'var(--primary)', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 'bold' }}>6</span>
+                  Tax & Compliance
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">GST %</label>
+                    <select
+                      name="gstPercent"
+                      className="form-input"
+                      value={formData.gstPercent}
+                      onChange={handleInputChange}
+                    >
+                      <option value="">-- Select --</option>
+                      <option value="0">0% (Exempt)</option>
+                      <option value="5">5%</option>
+                      <option value="12">12%</option>
+                      <option value="18">18%</option>
+                      <option value="28">28%</option>
+                    </select>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label">Sell Price (₹) *</label>
-                  <input
-                    type="number"
-                    name="sellPrice"
-                    className="form-input"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    value={formData.sellPrice}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-
-                {/* MRP - optional for both modes */}
-                <div className="form-group">
-                  <label className="form-label">MRP (₹)</label>
-                  <input
-                    type="number"
-                    name="mrp"
-                    className="form-input"
-                    placeholder="0.00"
-                    step="0.01"
-                    min="0"
-                    value={formData.mrp}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Opening Stock Qty</label>
-                  <input
-                    type="number"
-                    name="openingStockQty"
-                    className="form-input"
-                    placeholder="0"
-                    min="0"
-                    value={formData.openingStockQty}
-                    onChange={handleInputChange}
-                  />
-                  <small style={{ color: 'var(--text-muted)' }}>Creates ledger entry if &gt; 0</small>
-                </div>
-
-                {/* Low Stock Alert Qty - Common to both modes */}
-                <div className="form-group">
-                  <label className="form-label">Low Stock Alert Qty</label>
-                  <input
-                    type="number"
-                    name="lowStockAlertQty"
-                    className="form-input"
-                    placeholder="e.g., 10"
-                    min="0"
-                    value={formData.lowStockAlertQty}
-                    onChange={handleInputChange}
-                  />
-                  <small style={{ color: 'var(--text-muted)' }}>Alert when stock falls below this</small>
-                </div>
-
-                {/* GST% - Common to both modes */}
-                <div className="form-group">
-                  <label className="form-label">GST %</label>
-                  <select
-                    name="gstPercent"
-                    className="form-input"
-                    value={formData.gstPercent}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">-- Select GST Rate --</option>
-                    <option value="0">0% (Exempt)</option>
-                    <option value="5">5%</option>
-                    <option value="12">12%</option>
-                    <option value="18">18%</option>
-                    <option value="28">28%</option>
-                  </select>
-                </div>
-
-                {/* HSN Code - Common to both modes */}
-                <div className="form-group">
-                  <label className="form-label">HSN Code</label>
-                  <input
-                    type="text"
-                    name="hsn"
-                    className="form-input"
-                    placeholder="e.g., 1006 for rice"
-                    value={formData.hsn}
-                    onChange={handleInputChange}
-                  />
-                  <small style={{ color: 'var(--text-muted)' }}>For GST compliance</small>
+                  <div className="form-group">
+                    <label className="form-label">HSN Code</label>
+                    <input
+                      type="text"
+                      name="hsn"
+                      className="form-input"
+                      placeholder="e.g., 1006"
+                      value={formData.hsn}
+                      onChange={handleInputChange}
+                      style={{ fontFamily: 'monospace' }}
+                    />
+                    <small style={{ color: 'var(--text-muted)' }}>For GST compliance</small>
+                  </div>
                 </div>
               </div>
 
-              {/* Mode-specific fields section */}
-              {formData.mode === 'PACKAGED' && (
-                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                    Packaged Product Details
-                  </h4>
-                  <div className="grid grid-2">
-                    {/* Pack Size */}
-                    <div className="form-group">
-                      <label className="form-label">Pack Size</label>
-                      <input
-                        type="number"
-                        name="packSize"
-                        className="form-input"
-                        placeholder="e.g., 500"
-                        min="0"
-                        value={formData.packSize}
-                        onChange={handleInputChange}
-                      />
-                      <small style={{ color: 'var(--text-muted)' }}>Quantity in pack (e.g., 500 for 500g)</small>
-                    </div>
-
-                    {/* Pack Unit - RCAT-PROD-002: Custom editable option */}
-                    <div className="form-group">
-                      <label className="form-label">Pack Unit</label>
-                      <select
-                        name="packUnit"
-                        className="form-input"
-                        value={['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) ? formData.packUnit : 'OTHER'}
-                        onChange={(e) => {
-                          if (e.target.value === 'OTHER') {
-                            setFormData(prev => ({ ...prev, packUnit: '' }));
-                          } else {
-                            setFormData(prev => ({ ...prev, packUnit: e.target.value }));
-                          }
-                        }}
-                      >
-                        <option value="">-- Select --</option>
-                        <option value="g">Grams (g)</option>
-                        <option value="kg">Kilograms (kg)</option>
-                        <option value="ml">Milliliters (ml)</option>
-                        <option value="l">Liters (l)</option>
-                        <option value="pcs">Pieces (pcs)</option>
-                        <option value="pack">Pack</option>
-                        <option value="OTHER">Other (type...)</option>
-                      </select>
-                      {!['g', 'kg', 'ml', 'l', 'pcs', 'pack', ''].includes(formData.packUnit) && (
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ marginTop: '0.5rem' }}
-                          placeholder="Enter custom unit (e.g., sachet, strip)"
-                          value={formData.packUnit}
-                          onChange={(e) => setFormData(prev => ({ ...prev, packUnit: e.target.value }))}
-                        />
-                      )}
-                      <small style={{ color: 'var(--text-muted)' }}>Unit for pack size</small>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {formData.mode === 'LOOSE_BULK' && (
-                <div style={{ marginTop: '1rem', marginBottom: '1rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.75rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-                    Loose/Bulk Product Details
-                  </h4>
-                  <div className="grid grid-2">
-                    {/* Sold By */}
-                    <div className="form-group">
-                      <label className="form-label">Sold By *</label>
-                      <select
-                        name="soldBy"
-                        className="form-input"
-                        value={formData.soldBy}
-                        onChange={handleInputChange}
-                        required
-                      >
-                        <option value="WEIGHT">Weight (KG/GM)</option>
-                        <option value="COUNT">Count (pieces)</option>
-                      </select>
-                      <small style={{ color: 'var(--text-muted)' }}>How product is measured at sale</small>
-                    </div>
-
-                    {/* Rate Unit */}
-                    <div className="form-group">
-                      <label className="form-label">Rate Unit *</label>
-                      <select
-                        name="rateUnit"
-                        className="form-input"
-                        value={formData.rateUnit}
-                        onChange={handleInputChange}
-                        required
-                      >
-                        {formData.soldBy === 'WEIGHT' ? (
-                          <>
-                            <option value="KG">Per Kilogram (KG)</option>
-                            <option value="GM">Per 100 Grams</option>
-                          </>
-                        ) : (
-                          <>
-                            <option value="PCS">Per Piece (PCS)</option>
-                            <option value="DOZEN">Per Dozen</option>
-                          </>
-                        )}
-                      </select>
-                      <small style={{ color: 'var(--text-muted)' }}>Unit for price rate</small>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Notes field - Common to both modes */}
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
+              {/* ═══ Notes (Optional) ═══ */}
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
                 <label className="form-label">Internal Notes</label>
                 <textarea
                   name="notes"
@@ -1127,7 +1162,7 @@ export default function ProductsPage() {
                 <small style={{ color: 'var(--text-muted)' }}>For store use only, not shown on POS</small>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem' }}>
                 <button
                   type="submit"
                   className="btn btn-primary"

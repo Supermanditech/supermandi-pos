@@ -484,7 +484,7 @@ router.get(
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    let whereClause = 'sp.store_id = $1';
+    let whereClause = 'sp.store_id = $1 AND sp.is_active = true';
     const params: (string | number)[] = [storeId];
 
     if (search) {
@@ -497,12 +497,13 @@ router.get(
     // EXTENDED: Include new fields per E2E Go-Live spec (lowStockAlertQty, gstPercent, hsn, notes, etc.)
     const result = await query<StoreProduct>(
       `SELECT p.id, p.primary_barcode AS barcode, p.name, p.description, p.unit,
-              p.category, p.brand,
+              p.category AS "categoryId", p.brand,
               p.hsn_code AS hsn,
               p.default_gst_rate AS "gstPercent",
               p.pack_size AS "packSize",
               p.pack_unit AS "packUnit",
               sp.product_mode AS mode,
+              sp.display_name AS alias,
               sp.purchase_price AS "purchasePrice", sp.sell_price AS "sellPrice", sp.mrp,
               COALESCE(sb.current_qty, sp.current_stock, 0) as stock,
               sp.low_stock_alert_qty AS "lowStockAlertQty",
@@ -925,21 +926,39 @@ router.patch(
   asyncHandler(async (req, res) => {
     const { userId, storeId } = getRetailerContext(req);
     const { id } = req.params;
-    const { name, description, category, brand, purchasePrice, sellPrice, mrp, supplierId } = req.body as {
+    const {
+      name, description, category, categoryId, brand, alias,
+      purchasePrice, sellPrice, mrp, supplierId,
+      unit, mode,
+      notes, lowStockAlertQty, gstPercent, hsn,
+      packSize, packUnit, soldBy, rateUnit,
+    } = req.body as {
       name?: string;
       description?: string;
       category?: string;
+      categoryId?: string;
       brand?: string;
+      alias?: string;
       purchasePrice?: number;
       sellPrice?: number;
       mrp?: number;
       supplierId?: string;
+      unit?: string;
+      mode?: string;
+      notes?: string;
+      lowStockAlertQty?: number;
+      gstPercent?: number;
+      hsn?: string;
+      packSize?: number;
+      packUnit?: string;
+      soldBy?: string;
+      rateUnit?: string;
     };
 
     // Verify product belongs to store
     const existing = await query(
       `SELECT sp.id FROM catalog.store_products sp
-       WHERE sp.store_id = $1 AND sp.product_id = $2`,
+       WHERE sp.store_id = $1 AND sp.product_id = $2 AND sp.is_active = true`,
       [storeId, id]
     );
 
@@ -954,41 +973,69 @@ router.patch(
       action: 'product.update',
       resourceType: 'store_product',
       resourceId: id,
-      requestBody: { name, description, category, brand, purchasePrice, sellPrice, mrp, supplierId },
+      requestBody: req.body,
       req,
     });
 
-    // Build update query for store_products (prices)
-    const priceUpdates: string[] = [];
-    const priceParams: (number | string)[] = [];
-    let priceIndex = 1;
+    // Build update query for store_products (prices, stock settings, mode-specific)
+    const spUpdates: string[] = [];
+    const spParams: (number | string | null)[] = [];
+    let spIndex = 1;
 
     if (purchasePrice !== undefined) {
-      priceUpdates.push(`purchase_price = $${priceIndex++}`);
-      priceParams.push(purchasePrice);
+      spUpdates.push(`purchase_price = $${spIndex++}`);
+      spParams.push(purchasePrice);
     }
     if (sellPrice !== undefined) {
-      priceUpdates.push(`sell_price = $${priceIndex++}`);
-      priceParams.push(sellPrice);
+      spUpdates.push(`sell_price = $${spIndex++}`);
+      spParams.push(sellPrice);
     }
     if (mrp !== undefined) {
-      priceUpdates.push(`mrp = $${priceIndex++}`);
-      priceParams.push(mrp);
+      spUpdates.push(`mrp = $${spIndex++}`);
+      spParams.push(mrp);
+    }
+    if (supplierId !== undefined) {
+      spUpdates.push(`supplier_id = $${spIndex++}`);
+      spParams.push(supplierId || null);
+    }
+    if (alias !== undefined) {
+      spUpdates.push(`display_name = $${spIndex++}`);
+      spParams.push(alias || null);
+    }
+    if (notes !== undefined) {
+      spUpdates.push(`notes = $${spIndex++}`);
+      spParams.push(notes || null);
+    }
+    if (lowStockAlertQty !== undefined) {
+      spUpdates.push(`low_stock_alert_qty = $${spIndex++}`);
+      spParams.push(lowStockAlertQty);
+    }
+    if (mode !== undefined) {
+      spUpdates.push(`product_mode = $${spIndex++}`);
+      spParams.push(mode);
+    }
+    if (soldBy !== undefined) {
+      spUpdates.push(`sold_by = $${spIndex++}`);
+      spParams.push(soldBy || null);
+    }
+    if (rateUnit !== undefined) {
+      spUpdates.push(`rate_unit = $${spIndex++}`);
+      spParams.push(rateUnit || null);
     }
 
-    if (priceUpdates.length > 0) {
-      priceParams.push(storeId, id);
+    if (spUpdates.length > 0) {
+      spParams.push(storeId, id);
       await query(
         `UPDATE catalog.store_products
-         SET ${priceUpdates.join(', ')}, updated_at = NOW()
-         WHERE store_id = $${priceIndex++} AND product_id = $${priceIndex}`,
-        priceParams
+         SET ${spUpdates.join(', ')}, updated_at = NOW()
+         WHERE store_id = $${spIndex++} AND product_id = $${spIndex}`,
+        spParams
       );
     }
 
-    // Build update query for products (name, description, category, brand)
+    // Build update query for products (name, description, category, brand, unit, tax, packaging)
     const productUpdates: string[] = [];
-    const productParams: (string | null)[] = [];
+    const productParams: (string | number | null)[] = [];
     let productIndex = 1;
 
     if (name !== undefined) {
@@ -999,13 +1046,35 @@ router.patch(
       productUpdates.push(`description = $${productIndex++}`);
       productParams.push(description || null);
     }
-    if (category !== undefined) {
+    // Handle both category and categoryId (frontend sends categoryId)
+    const resolvedCategory = categoryId || category;
+    if (resolvedCategory !== undefined) {
       productUpdates.push(`category = $${productIndex++}`);
-      productParams.push(category || null);
+      productParams.push(resolvedCategory || null);
     }
     if (brand !== undefined) {
       productUpdates.push(`brand = $${productIndex++}`);
       productParams.push(brand || null);
+    }
+    if (unit !== undefined) {
+      productUpdates.push(`unit = $${productIndex++}`);
+      productParams.push(unit);
+    }
+    if (gstPercent !== undefined) {
+      productUpdates.push(`default_gst_rate = $${productIndex++}`);
+      productParams.push(gstPercent);
+    }
+    if (hsn !== undefined) {
+      productUpdates.push(`hsn_code = $${productIndex++}`);
+      productParams.push(hsn || null);
+    }
+    if (packSize !== undefined) {
+      productUpdates.push(`pack_size = $${productIndex++}`);
+      productParams.push(packSize);
+    }
+    if (packUnit !== undefined) {
+      productUpdates.push(`pack_unit = $${productIndex++}`);
+      productParams.push(packUnit || null);
     }
 
     if (productUpdates.length > 0) {
