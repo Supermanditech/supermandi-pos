@@ -28,6 +28,7 @@ export interface StoreProductResponse {
   name: string;
   barcode: string;
   sellPrice: number | null;
+  purchasePrice: number | null;
   mrp: number | null;
   stock: StoreProductStock;
   unit: string;
@@ -53,7 +54,8 @@ export type ScanResolveResult =
 export interface CreateStoreProductInput {
   barcode: string;
   name: string;
-  sellPrice: number; // Minor units (paise)
+  sellPrice?: number | null; // Minor units (paise) - optional for partial creation
+  purchasePrice?: number; // Minor units (paise) - optional
   mrp?: number; // Minor units (paise)
   initialStockQty: number;
   unit?: string;
@@ -84,6 +86,7 @@ async function lookupStoreProductByBarcode(
 
   // Query: Check store_product_barcodes first (store-scoped mapping)
   // Then fallback to catalog.products.primary_barcode if store_product exists
+  // Stock is authoritative from inventory.stock_balances (R6)
   const result = await pool.query(
     `
     SELECT
@@ -91,14 +94,16 @@ async function lookupStoreProductByBarcode(
       COALESCE(sp.display_name, p.name) AS name,
       spb.barcode AS barcode,
       sp.sell_price,
+      sp.purchase_price,
       sp.mrp,
-      sp.current_stock,
+      COALESCE(sb.current_qty, sp.current_stock, 0) AS current_stock,
       p.unit,
       p.brand,
       p.description
     FROM catalog.store_product_barcodes spb
     JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
     JOIN catalog.products p ON p.id = sp.product_id
+    LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
     WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
     LIMIT 1
     `,
@@ -112,10 +117,11 @@ async function lookupStoreProductByBarcode(
       name: row.name || "",
       barcode: row.barcode,
       sellPrice: row.sell_price,
+      purchasePrice: row.purchase_price ?? null,
       mrp: row.mrp,
       stock: {
-        isKnown: row.current_stock !== null && row.current_stock >= 0,
-        qty: row.current_stock ?? 0
+        isKnown: true,
+        qty: row.current_stock
       },
       unit: row.unit || "pcs",
       brand: row.brand || "",
@@ -133,13 +139,15 @@ async function lookupStoreProductByBarcode(
       COALESCE(sp.display_name, p.name) AS name,
       p.primary_barcode AS barcode,
       sp.sell_price,
+      sp.purchase_price,
       sp.mrp,
-      sp.current_stock,
+      COALESCE(sb.current_qty, sp.current_stock, 0) AS current_stock,
       p.unit,
       p.brand,
       p.description
     FROM catalog.products p
     JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
+    LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
     WHERE p.primary_barcode = $2 AND sp.is_active = true
     LIMIT 1
     `,
@@ -153,10 +161,11 @@ async function lookupStoreProductByBarcode(
       name: row.name || "",
       barcode: row.barcode,
       sellPrice: row.sell_price,
+      purchasePrice: row.purchase_price ?? null,
       mrp: row.mrp,
       stock: {
-        isKnown: row.current_stock !== null && row.current_stock >= 0,
-        qty: row.current_stock ?? 0
+        isKnown: true,
+        qty: row.current_stock
       },
       unit: row.unit || "pcs",
       brand: row.brand || "",
@@ -283,7 +292,7 @@ export async function resolveScanForDigitisation(
  * - catalog.products (if barcode not in global catalog)
  * - catalog.store_products (store-specific pricing/stock)
  * - catalog.store_product_barcodes (store-scoped barcode binding)
- * - inventory.inventory_ledger (initial stock INWARD)
+ * - inventory.inventory_ledger (opening_stock entry when qty > 0)
  * - inventory.stock_balances (stock balance record)
  *
  * Idempotent: Returns 409 CONFLICT if (store_id, barcode) already exists
@@ -303,15 +312,18 @@ export async function createStoreProductFromDigitisation(
     return { success: false, error: "VALIDATION", message: "Barcode is required" };
   }
 
-  if (typeof input.sellPrice !== "number" || input.sellPrice <= 0) {
-    return { success: false, error: "VALIDATION", message: "Sell price must be positive" };
+  // sellPrice is optional for partial creation (P3: partial allowed, completed on dashboard later)
+  if (input.sellPrice !== undefined && input.sellPrice !== null && input.sellPrice !== 0) {
+    if (typeof input.sellPrice !== "number" || input.sellPrice < 0) {
+      return { success: false, error: "VALIDATION", message: "Sell price must be non-negative" };
+    }
   }
 
   if (typeof input.initialStockQty !== "number" || input.initialStockQty < 0) {
     return { success: false, error: "VALIDATION", message: "Initial stock quantity must be >= 0" };
   }
 
-  const productName = input.name?.trim() || `Item ${normalizedBarcode.slice(-4)}`;
+  const productName = input.name?.trim() || normalizedBarcode;
 
   // Check idempotency: does this store already have this barcode mapped?
   const existingMapping = await lookupStoreProductByBarcode(storeId, normalizedBarcode);
@@ -373,16 +385,18 @@ export async function createStoreProductFromDigitisation(
 
     // Step 3: Create or update catalog.store_products
     const storeProductId = randomUUID();
-    const sellPriceMinor = Math.round(input.sellPrice);
+    const sellPriceMinor = input.sellPrice ? Math.round(input.sellPrice) : null;
     const mrpMinor = input.mrp ? Math.round(input.mrp) : sellPriceMinor;
+    const purchasePriceMinor = input.purchasePrice ? Math.round(input.purchasePrice) : null;
 
     await client.query(
       `
-      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, display_name, is_active, current_stock, taxonomy_id)
-      VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8)
+      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9)
       ON CONFLICT (store_id, product_id) DO UPDATE SET
-        sell_price = EXCLUDED.sell_price,
-        mrp = EXCLUDED.mrp,
+        sell_price = COALESCE(EXCLUDED.sell_price, catalog.store_products.sell_price),
+        mrp = COALESCE(EXCLUDED.mrp, catalog.store_products.mrp),
+        purchase_price = COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price),
         display_name = EXCLUDED.display_name,
         current_stock = EXCLUDED.current_stock,
         taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
@@ -390,7 +404,7 @@ export async function createStoreProductFromDigitisation(
         updated_at = NOW()
       RETURNING id
       `,
-      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, productName, input.initialStockQty, taxonomyId]
+      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, purchasePriceMinor, productName, input.initialStockQty, taxonomyId]
     );
 
     // Get the actual store_product_id (might be existing if ON CONFLICT triggered)
@@ -410,33 +424,35 @@ export async function createStoreProductFromDigitisation(
       [storeId, actualStoreProductId, normalizedBarcode]
     );
 
-    // Step 4: Create INWARD ledger entry for initial stock
+    // Step 4: Create opening_stock ledger entry (R6: only when qty > 0)
+    let ledgerId: string | null = null;
     if (input.initialStockQty > 0) {
-      const ledgerId = randomUUID();
+      ledgerId = randomUUID();
+      const unitCost = purchasePriceMinor ?? sellPriceMinor ?? 0;
       await client.query(
         `
         INSERT INTO inventory.inventory_ledger (
           id, store_id, product_id, delta_qty, transaction_type,
-          reference_type, reference_id, stock_before, stock_after, notes
+          reference_type, reference_id, stock_before, stock_after, unit_cost, notes
         )
-        VALUES ($1, $2, $3, $4, 'adjustment', 'manual', $5, 0, $4, 'Initial stock from digitisation')
+        VALUES ($1, $2, $3, $4, 'opening_stock', 'digitisation', $5, 0, $4, $6, 'Opening stock from POS digitisation')
         `,
-        [ledgerId, storeId, productId, input.initialStockQty, `digitisation:${actualStoreProductId}`]
-      );
-
-      // Step 5: Create or update stock balance
-      await client.query(
-        `
-        INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (store_id, product_id) DO UPDATE SET
-          current_qty = EXCLUDED.current_qty,
-          last_ledger_id = EXCLUDED.last_ledger_id,
-          updated_at = NOW()
-        `,
-        [storeId, productId, input.initialStockQty, ledgerId]
+        [ledgerId, storeId, productId, input.initialStockQty, `digitisation:${actualStoreProductId}`, unitCost]
       );
     }
+
+    // Step 5: Always create stock_balances record (R6: consistent stock resolution for search JOIN)
+    await client.query(
+      `
+      INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (store_id, product_id) DO UPDATE SET
+        current_qty = EXCLUDED.current_qty,
+        last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+        updated_at = NOW()
+      `,
+      [storeId, productId, input.initialStockQty, ledgerId]
+    );
 
     await client.query("COMMIT");
 
@@ -449,8 +465,9 @@ export async function createStoreProductFromDigitisation(
         storeProductId: actualStoreProductId,
         name: productName,
         barcode: normalizedBarcode,
-        sellPrice: sellPriceMinor,
-        mrp: mrpMinor,
+        sellPrice: sellPriceMinor ?? null,
+        purchasePrice: purchasePriceMinor ?? null,
+        mrp: mrpMinor ?? null,
         stock: {
           isKnown: true,
           qty: input.initialStockQty

@@ -97,7 +97,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
     `
     SELECT d.id AS device_id, d.store_id, d.active AS device_active, s.active AS store_active
     FROM pos_devices d
-    LEFT JOIN stores s ON s.id = d.store_id
+    LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
     WHERE d.device_token = $1
     `,
     [token]

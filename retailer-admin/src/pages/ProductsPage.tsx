@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, API_GATEWAY_BASE } from '../lib/api';
 import { fetchCategories, FmcgCategory } from '../api/store';
 
 interface Supplier {
@@ -651,7 +651,7 @@ export default function ProductsPage() {
 
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <a
-                      href={`/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
+                      href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-primary"
@@ -1406,7 +1406,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                     <td>
                       <div style={{ display: 'flex', gap: '0.25rem' }}>
                         <a
-                          href={`/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
+                          href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn btn-secondary"

@@ -100,16 +100,18 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         COALESCE(sp.sell_price, 0) as "sellPrice",
         COALESCE(sp.mrp, 0) as "mrp",
         COALESCE(sp.purchase_price, 0) as "purchasePrice",
-        COALESCE(sp.current_stock, 0) as "stock",
+        COALESCE(sb.current_qty, sp.current_stock, 0) as "stock",
         sp.low_stock_alert_qty as "lowStockAlertQty",
         sp.notes,
         sp.sold_by as "soldBy",
         sp.rate_unit as "rateUnit",
         sp.supplier_id as "supplierId",
         sp.taxonomy_id as "categoryId",
+        sp.display_name as "alias",
         spb.barcode as "generatedBarcode"
       FROM catalog.store_products sp
       INNER JOIN catalog.products p ON p.id = sp.product_id
+      LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
       LEFT JOIN catalog.store_product_barcodes spb ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
       ${whereClause}
       ORDER BY sp.created_at DESC
@@ -272,7 +274,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
       );
     }
 
-    // 4. Create opening stock ledger entry if qty > 0
+    // 4. Create opening stock ledger entry if qty > 0 (R6: only create ledger when > 0)
     let ledgerEntryId: string | null = null;
     if (stockQty > 0) {
       const ledgerResult = await client.query(
@@ -285,6 +287,17 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
       );
       ledgerEntryId = ledgerResult.rows[0].id;
     }
+
+    // 5. Always create stock_balances record (R6: consistent stock resolution for POS search JOIN)
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = EXCLUDED.current_qty,
+         last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+         updated_at = NOW()`,
+      [storeId, productId, stockQty, ledgerEntryId]
+    );
 
     await client.query("COMMIT");
 
@@ -356,6 +369,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     lowStockAlertQty, gstPercent, hsn, notes,
     packSize, packUnit, soldBy, rateUnit, supplierId,
     categoryId, // RCAT-CAT-002: Store override for taxonomy_id
+    openingStockQty, // Stock level update (absolute)
+    mode, // PACKAGED or LOOSE_BULK
+    alias, // Store-level display name
   } = req.body;
 
   const client = await pool.connect();
@@ -417,6 +433,8 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         rate_unit = $9,
         supplier_id = $10,
         taxonomy_id = COALESCE($11, taxonomy_id),
+        product_mode = COALESCE($12, product_mode),
+        display_name = $13,
         updated_at = NOW()
       WHERE id = $1 AND store_id = $2`,
       [
@@ -431,8 +449,44 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         rateUnit || null,
         supplierId || null,
         categoryId || null,
+        mode || null,
+        alias?.trim() || null,
       ]
     );
+
+    // Stock update: openingStockQty sets absolute stock level via ledger-first pattern
+    if (openingStockQty !== undefined && typeof openingStockQty === 'number' && openingStockQty >= 0) {
+      const stockResult = await client.query(
+        `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+        [storeId, productId]
+      );
+      const stockBefore = stockResult.rows[0]?.current_qty || 0;
+      const delta = openingStockQty - stockBefore;
+
+      if (delta !== 0) {
+        // Ledger entry for audit trail
+        await client.query(
+          `INSERT INTO inventory.inventory_ledger
+           (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
+           VALUES ($1, $2, $3, 'adjustment', $4, $5, $6, 'RETAILER_PORTAL', 'Stock updated from retailer dashboard')`,
+          [storeId, productId, delta, stockBefore, openingStockQty, purchasePrice ? safeNumber(purchasePrice) : 0]
+        );
+
+        // Update authoritative stock
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+          [storeId, productId, openingStockQty]
+        );
+
+        // Update denormalized stock
+        await client.query(
+          `UPDATE catalog.store_products SET current_stock = $3 WHERE id = $1 AND store_id = $2`,
+          [id, storeId, openingStockQty]
+        );
+      }
+    }
 
     await client.query("COMMIT");
 

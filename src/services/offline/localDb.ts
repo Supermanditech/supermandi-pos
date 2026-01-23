@@ -11,7 +11,7 @@ let currentDb: Db | null = null;
 let currentScope: string | null = null;
 
 // Current schema version - increment when adding migrations
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function buildDbName(scope: string): string {
   return `supermandi_offline_${scope}.db`;
@@ -185,6 +185,14 @@ const migrations: Migration[] = [
       // Add currency column to offline_sales if missing (for upgraded installs)
       await ensureColumn(db, "offline_sales", "currency", "TEXT NOT NULL DEFAULT 'INR'");
     }
+  },
+  {
+    version: 3,
+    name: "add_product_id_and_stock",
+    up: async (db: Db) => {
+      await ensureColumn(db, "offline_products", "product_id", "TEXT NULL");
+      await ensureColumn(db, "offline_products", "current_stock", "INTEGER NULL");
+    }
   }
 ];
 
@@ -206,6 +214,8 @@ async function selfHealSchema(db: Db): Promise<void> {
     { table: "offline_collections", column: "synced_at", definition: "TEXT NULL" },
     { table: "offline_collections", column: "server_collection_id", definition: "TEXT NULL" },
     { table: "offline_products", column: "category", definition: "TEXT NULL" },
+    { table: "offline_products", column: "product_id", definition: "TEXT NULL" },
+    { table: "offline_products", column: "current_stock", definition: "INTEGER NULL" },
     { table: "offline_sale_items", column: "line_subtotal_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
     { table: "offline_sale_items", column: "discount_type", definition: "TEXT NULL" },
     { table: "offline_sale_items", column: "discount_value", definition: "REAL NULL" },

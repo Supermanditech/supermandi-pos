@@ -1,6 +1,8 @@
 import { authFetch } from '../lib/api';
 
-const API_BASE = '/api/v1/retailer-admin';
+// DEPLOY-003: Use VITE_API_BASE_URL when set (points to gateway e.g. http://34.14.220.171:3000)
+// Falls back to relative path (requires Nginx proxy for /api/* in production)
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1/retailer-admin';
 
 interface Store {
   id: string;

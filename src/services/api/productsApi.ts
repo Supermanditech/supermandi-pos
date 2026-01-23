@@ -2,7 +2,6 @@ import { ApiError, apiClient } from "./apiClient";
 import { API_BASE_URL } from "../../config/api";
 import { getDeviceToken } from "../deviceSession";
 
-const PRODUCTS_BASE = "/api/v2/products";
 const STORE_PRODUCTS_BASE = "/api/v1/pos/store-products";
 
 type ApiProductInventory = {
@@ -149,17 +148,36 @@ export async function lookupStoreProductByScan(input: {
 }): Promise<StoreLookupProduct | null> {
   const scanned = input.scanned.trim();
   if (!scanned) return null;
-  const query = new URLSearchParams({ scanned });
-  if (input.format) {
-    query.set("format", input.format);
-  }
+  const query = new URLSearchParams({ barcode: scanned });
   try {
-    const res = await apiClient.get<{ product: StoreLookupProduct }>(
-      `${PRODUCTS_BASE}/lookup?${query.toString()}`
-    );
-    return res.product;
+    const res = await apiClient.get<{
+      success: boolean;
+      data: {
+        productId: string;
+        storeProductId: string;
+        name: string;
+        barcode?: string;
+        sellPrice?: number | null;
+        purchasePrice?: number | null;
+        currentStock: number;
+        displayName?: string;
+        unit?: string;
+      };
+    }>(`${STORE_PRODUCTS_BASE}/lookup?${query.toString()}`);
+    const d = res.data;
+    return {
+      global_product_id: d.productId,
+      global_name: d.name,
+      store_display_name: d.displayName || d.name,
+      sell_price: d.sellPrice ?? null,
+      purchase_price: d.purchasePrice ?? null,
+      unit: d.unit || null,
+      variant: null,
+      available_qty: d.currentStock,
+      is_first_time_in_store: false
+    };
   } catch (error) {
-    if (error instanceof ApiError && error.message === "product_not_found") {
+    if (error instanceof ApiError && (error.status === 404 || error.message === "product_not_found")) {
       return null;
     }
     throw error;
@@ -172,19 +190,42 @@ export async function lookupStoreProductPreviewByScan(input: {
 }): Promise<StoreLookupProduct | null> {
   const scanned = input.scanned.trim();
   if (!scanned) return null;
-  const query = new URLSearchParams({ scanned, preview: "1" });
-  if (input.format) {
-    query.set("format", input.format);
-  }
-  const url = `${PRODUCTS_BASE}/lookup?${query.toString()}`;
+  const query = new URLSearchParams({ barcode: scanned });
+  const url = `${STORE_PRODUCTS_BASE}/lookup?${query.toString()}`;
   console.log(`[scan_debug] GET ${url}`);
   try {
-    const res = await apiClient.get<{ product: StoreLookupProduct }>(url);
+    const res = await apiClient.get<{
+      success: boolean;
+      data: {
+        productId: string;
+        storeProductId: string;
+        name: string;
+        brand?: string;
+        barcode?: string;
+        sellPrice?: number | null;
+        purchasePrice?: number | null;
+        currentStock: number;
+        displayName?: string;
+        unit?: string;
+        mode?: string;
+      };
+    }>(url);
     console.log(`[scan_debug] response:`, JSON.stringify(res).slice(0, 300));
-    return res.product;
+    const d = res.data;
+    return {
+      global_product_id: d.productId,
+      global_name: d.name,
+      store_display_name: d.displayName || d.name,
+      sell_price: d.sellPrice ?? null,
+      purchase_price: d.purchasePrice ?? null,
+      unit: d.unit || null,
+      variant: null,
+      available_qty: d.currentStock,
+      is_first_time_in_store: false
+    };
   } catch (error) {
     console.log(`[scan_debug] error:`, error instanceof ApiError ? `ApiError(${error.status}): ${error.message}` : String(error));
-    if (error instanceof ApiError && error.message === "product_not_found") {
+    if (error instanceof ApiError && (error.status === 404 || error.message === "product_not_found")) {
       return null;
     }
     throw error;
@@ -201,16 +242,59 @@ export async function createStoreProductFromScan(input: {
   if (!scanned) {
     throw new Error("scanned is required");
   }
-  const payload: Record<string, unknown> = { scanned };
-  if (input.format) payload.format = input.format;
-  if (input.globalName) payload.global_name = input.globalName;
-  if (input.storeDisplayName) payload.store_display_name = input.storeDisplayName;
 
-  const res = await apiClient.post<{ product: StoreLookupProduct }>(
-    `${PRODUCTS_BASE}/create-from-scan`,
-    payload
-  );
-  return res.product;
+  const productName = input.storeDisplayName || input.globalName || "";
+
+  const payload: Record<string, unknown> = {
+    barcode: scanned,
+    name: productName,
+    initialStockQty: 0
+  };
+
+  type StoreProductPayload = {
+    storeProductId: string;
+    name: string;
+    barcode: string;
+    sellPrice: number | null;
+    purchasePrice: number | null;
+    mrp: number | null;
+    stock: { isKnown: boolean; qty: number };
+    unit: string;
+    brand: string;
+  };
+
+  let sp: StoreProductPayload;
+  try {
+    const res = await apiClient.post<{ storeProduct: StoreProductPayload }>(
+      `${STORE_PRODUCTS_BASE}`,
+      payload
+    );
+    sp = res.storeProduct;
+  } catch (error) {
+    // 409 = barcode already mapped - return existing product
+    if (error instanceof ApiError && error.status === 409) {
+      const data = error.payload as { storeProduct?: StoreProductPayload } | undefined;
+      if (data?.storeProduct) {
+        sp = data.storeProduct;
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  return {
+    global_product_id: sp.storeProductId,
+    global_name: sp.name,
+    store_display_name: sp.name,
+    sell_price: sp.sellPrice,
+    purchase_price: sp.purchasePrice ?? null,
+    unit: sp.unit || null,
+    variant: null,
+    available_qty: sp.stock?.qty ?? 0,
+    is_first_time_in_store: true
+  };
 }
 
 export async function receiveStoreProductFromScan(input: {
@@ -227,23 +311,63 @@ export async function receiveStoreProductFromScan(input: {
     throw new Error("scanned is required");
   }
 
+  const productName = input.storeDisplayName || input.globalName || "";
+
   const payload: Record<string, unknown> = {
-    scanned,
-    sell_price_minor: input.sellPriceMinor,
-    initial_stock: input.initialStock
+    barcode: scanned,
+    name: productName,
+    sellPrice: input.sellPriceMinor,
+    initialStockQty: input.initialStock
   };
   if (typeof input.purchasePriceMinor === "number") {
-    payload.purchase_price_minor = input.purchasePriceMinor;
+    payload.purchasePrice = input.purchasePriceMinor;
   }
-  if (input.format) payload.format = input.format;
-  if (input.globalName) payload.global_name = input.globalName;
-  if (input.storeDisplayName) payload.store_display_name = input.storeDisplayName;
 
-  const res = await apiClient.post<{ product: StoreLookupProduct }>(
-    `${PRODUCTS_BASE}/receive`,
-    payload
-  );
-  return res.product;
+  type StoreProductPayload = {
+    storeProductId: string;
+    name: string;
+    barcode: string;
+    sellPrice: number | null;
+    purchasePrice: number | null;
+    mrp: number | null;
+    stock: { isKnown: boolean; qty: number };
+    unit: string;
+    brand: string;
+    description: string;
+  };
+
+  let sp: StoreProductPayload;
+  try {
+    const res = await apiClient.post<{ storeProduct: StoreProductPayload }>(
+      `${STORE_PRODUCTS_BASE}`,
+      payload
+    );
+    sp = res.storeProduct;
+  } catch (error) {
+    // 409 = barcode already mapped for this store - treat as success with existing product
+    if (error instanceof ApiError && error.status === 409) {
+      const data = error.payload as { storeProduct?: StoreProductPayload } | undefined;
+      if (data?.storeProduct) {
+        sp = data.storeProduct;
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
+
+  return {
+    global_product_id: sp.storeProductId,
+    global_name: sp.name,
+    store_display_name: sp.name,
+    sell_price: sp.sellPrice,
+    purchase_price: sp.purchasePrice ?? null,
+    unit: sp.unit || null,
+    variant: null,
+    available_qty: sp.stock?.qty ?? input.initialStock,
+    is_first_time_in_store: true
+  };
 }
 
 export async function updateStoreProductPrice(input: {
@@ -251,19 +375,19 @@ export async function updateStoreProductPrice(input: {
   scanned?: string;
   format?: string;
   sellPriceMinor: number | null;
-}): Promise<StoreLookupProduct> {
-  const payload: Record<string, unknown> = {
-    sell_price_minor: input.sellPriceMinor
-  };
-  if (input.globalProductId) payload.global_product_id = input.globalProductId;
-  if (input.scanned) payload.scanned = input.scanned;
-  if (input.format) payload.format = input.format;
+}): Promise<void> {
+  if (input.sellPriceMinor === null || input.sellPriceMinor <= 0) return;
 
-  const res = await apiClient.patch<{ product: StoreLookupProduct }>(
-    `${PRODUCTS_BASE}/store-price`,
+  const payload: Record<string, unknown> = {
+    sellPrice: input.sellPriceMinor
+  };
+  if (input.globalProductId) payload.productId = input.globalProductId;
+  if (input.scanned) payload.barcode = input.scanned;
+
+  await apiClient.patch<{ success: boolean }>(
+    `${STORE_PRODUCTS_BASE}/price`,
     payload
   );
-  return res.product;
 }
 
 const normalizePriceInput = (value: unknown): number | null => {

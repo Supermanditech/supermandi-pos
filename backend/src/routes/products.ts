@@ -31,6 +31,13 @@ function asPositiveInt(value: unknown): number | null {
   return rounded;
 }
 
+function asNonNegativeInt(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  const rounded = Math.round(value);
+  return rounded < 0 ? 0 : rounded;
+}
+
 function resolveIdentifierCodeTypes(codeType: string): string[] {
   if (!codeType.endsWith("_TEXT")) return [codeType];
   const baseType = codeType.slice(0, -5);
@@ -506,10 +513,7 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
     (body.initialStock as unknown) ??
     (body.stock as unknown) ??
     null;
-  const initialStock = asPositiveInt(rawInitialStock);
-  if (!initialStock) {
-    return res.status(400).json({ error: "initial_stock must be a positive number" });
-  }
+  const initialStock = asNonNegativeInt(rawInitialStock);
 
   const hasPurchasePrice =
     Object.prototype.hasOwnProperty.call(body, "purchase_price_minor") ||
@@ -639,26 +643,28 @@ productsRouter.post("/receive", requireDeviceToken, async (req, res) => {
       insertArgs
     );
 
-    const purchaseItem: PurchaseItemInput = {
-      barcode: scanned,
-      productName: storeDisplayName ?? globalName ?? globalNameFallback,
-      globalProductId,
-      scanFormat: format ?? null,
-      quantity: initialStock,
-      unitCostMinor: purchasePriceMinor ?? sellPriceMinor,
-      sellingPriceMinor: sellPriceMinor,
-      currency: "INR"
-    };
+    if (initialStock > 0) {
+      const purchaseItem: PurchaseItemInput = {
+        barcode: scanned,
+        productName: storeDisplayName ?? globalName ?? globalNameFallback,
+        globalProductId,
+        scanFormat: format ?? null,
+        quantity: initialStock,
+        unitCostMinor: purchasePriceMinor ?? sellPriceMinor,
+        sellingPriceMinor: sellPriceMinor,
+        currency: "INR"
+      };
 
-    await createPurchase({
-      client,
-      storeId,
-      input: {
-        supplierName: null,
-        currency: "INR",
-        items: [purchaseItem]
-      }
-    });
+      await createPurchase({
+        client,
+        storeId,
+        input: {
+          supplierName: null,
+          currency: "INR",
+          items: [purchaseItem]
+        }
+      });
+    }
 
     // Get the productId from the created/linked variant for store_inventory query
     // store_inventory.global_product_id stores products.id (via variants.product_id)

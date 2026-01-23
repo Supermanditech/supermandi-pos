@@ -19,9 +19,17 @@ export type OfflineScanResult =
       product_not_found_for_store?: boolean;
     };
 
-function buildProductName(barcode: string): string {
-  const suffix = barcode.slice(-4);
-  return `Item ${suffix || barcode}`;
+function buildProductName(barcode: string, searchQuery?: string): string {
+  // Prefer search query as name if it exists and doesn't look like a barcode
+  if (searchQuery) {
+    const trimmed = searchQuery.trim();
+    if (trimmed && !/^\d{8,}$/.test(trimmed)) {
+      return trimmed;
+    }
+  }
+  // R3: Return empty string instead of "Item XXXX" placeholder
+  // The onboarding modal will use the search query or show blank for user input
+  return "";
 }
 
 export async function fetchLocalProduct(barcode: string): Promise<OfflineScanProduct | null> {
@@ -55,20 +63,24 @@ export async function upsertLocalProduct(
   barcode: string,
   name: string,
   currency = "INR",
-  category: string | null = null
+  category: string | null = null,
+  productId: string | null = null,
+  currentStock: number | null = null
 ): Promise<OfflineScanProduct> {
   const now = new Date().toISOString();
   await offlineDb.run(
     `
-    INSERT INTO offline_products (barcode, name, category, currency, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO offline_products (barcode, name, category, currency, product_id, current_stock, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(barcode) DO UPDATE SET
       name = excluded.name,
       category = COALESCE(excluded.category, offline_products.category),
       currency = excluded.currency,
+      product_id = COALESCE(excluded.product_id, offline_products.product_id),
+      current_stock = COALESCE(excluded.current_stock, offline_products.current_stock),
       updated_at = excluded.updated_at
     `,
-    [barcode, name, category, currency, now, now]
+    [barcode, name, category, currency, productId, currentStock, now, now]
   );
 
   return {

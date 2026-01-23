@@ -2,6 +2,13 @@
 // Handles 401 responses by clearing auth state and redirecting to login
 
 /**
+ * DEPLOY-003: API base URL for production gateway.
+ * When VITE_API_BASE_URL is set (e.g. http://34.14.220.171:3000), all relative
+ * API paths are prefixed with it. When empty, relative paths are used (requires Nginx proxy).
+ */
+export const API_GATEWAY_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+/**
  * Event system for auth state changes
  * Components can listen for auth failures to trigger logout
  */
@@ -44,6 +51,9 @@ export async function authFetch(
   accessToken: string | null,
   options: RequestInit = {}
 ): Promise<Response> {
+  // DEPLOY-003: Prefix relative API paths with gateway base URL
+  const resolvedUrl = (url.startsWith('/') && API_GATEWAY_BASE) ? API_GATEWAY_BASE + url : url;
+
   const storedToken = typeof window !== 'undefined'
     ? (localStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY))
     : null;
@@ -78,7 +88,7 @@ export async function authFetch(
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(url, {
+  const response = await fetch(resolvedUrl, {
     ...options,
     headers,
   });

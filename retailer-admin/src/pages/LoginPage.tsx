@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import { API_GATEWAY_BASE } from '../lib/api';
 import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 
 // Demo mode is ONLY available when:
@@ -66,7 +67,7 @@ export default function LoginPage() {
       // Call the backend dev-bypass endpoint to get a real JWT
       const doBypassLogin = async () => {
         try {
-          const response = await fetch('/api/v1/retailer-admin/auth/dev-bypass', {
+          const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/dev-bypass', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -189,7 +190,7 @@ export default function LoginPage() {
 
       // Exchange Firebase ID token for app JWT via backend
       console.log('[OTP] Calling backend /firebase-login...');
-      const response = await fetch('/api/v1/retailer-admin/auth/firebase-login', {
+      const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/firebase-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

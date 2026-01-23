@@ -18,6 +18,7 @@ export interface StoreSkuMatch {
   sellPrice?: number | null;
   currentStock: number;
   displayName?: string;
+  updatedAt?: string | null;
 }
 
 /**
@@ -123,6 +124,7 @@ export interface StoreProductListItem {
   currentStock: number;
   brand: string | null;
   unit: string;
+  updatedAt?: string | null;
 }
 
 export interface StoreProductListResponse {
@@ -187,6 +189,37 @@ export async function lookupStoreProductByBarcode(
     }
     throw error;
   }
+}
+
+// =============================================================================
+// R5: Catalog Freshness Check (Cross-sync after dashboard edits)
+// =============================================================================
+
+export interface FreshnessResponse {
+  success: boolean;
+  stale: boolean;
+  latestUpdatedAt: string | null;
+  storeId: string;
+}
+
+/**
+ * Check if the store catalog has been updated since the given timestamp.
+ * Used to detect dashboard edits and trigger a POS catalog refresh.
+ *
+ * @param since - ISO timestamp of last known sync
+ * @returns { stale, latestUpdatedAt }
+ */
+export async function checkCatalogFreshness(
+  since: string | null
+): Promise<FreshnessResponse> {
+  const params = new URLSearchParams();
+  if (since) params.set("since", since);
+
+  const response = await apiClient.get<FreshnessResponse>(
+    `/api/v1/pos/store-products/freshness?${params}`
+  );
+
+  return response;
 }
 
 // =============================================================================

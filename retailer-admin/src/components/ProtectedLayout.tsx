@@ -1,5 +1,6 @@
 import { Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
+import { API_GATEWAY_BASE } from '../lib/api';
 
 // A1: RouterDebug banner - shows routing info for debugging "no screens" issues
 const API_BASE_URL = '/api/v1/retailer-admin';
@@ -10,16 +11,9 @@ export default function ProtectedLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Compute actual API base URL based on environment
+  // DEPLOY-003: Use gateway base URL from env
   const getApiBaseUrl = () => {
-    if (typeof window !== 'undefined') {
-      // In dev mode with Vite proxy, API calls go to /api which proxies to backend
-      // In production, use same origin
-      return window.location.hostname === 'localhost'
-        ? 'http://34.14.220.171:3000' + API_BASE_URL
-        : window.location.origin + API_BASE_URL;
-    }
-    return API_BASE_URL;
+    return (API_GATEWAY_BASE || window.location.origin) + API_BASE_URL;
   };
 
   const handleLogout = () => {

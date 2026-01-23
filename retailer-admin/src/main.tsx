@@ -6,9 +6,7 @@ import App from './App';
 import './index.css';
 
 // A3: Console-visible log on app start for debugging "no screens" issues
-const API_BASE_URL = window.location.hostname === 'localhost'
-  ? 'http://34.14.220.171:3000/api/v1/retailer-admin'
-  : window.location.origin + '/api/v1/retailer-admin';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.location.origin) + '/api/v1/retailer-admin';
 const AUTH_MODE = 'Bearer Token (localStorage)';
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 

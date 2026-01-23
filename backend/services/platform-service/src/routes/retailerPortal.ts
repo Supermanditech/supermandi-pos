@@ -932,6 +932,7 @@ router.patch(
       unit, mode,
       notes, lowStockAlertQty, gstPercent, hsn,
       packSize, packUnit, soldBy, rateUnit,
+      openingStockQty,
     } = req.body as {
       name?: string;
       description?: string;
@@ -953,6 +954,7 @@ router.patch(
       packUnit?: string;
       soldBy?: string;
       rateUnit?: string;
+      openingStockQty?: number;
     };
 
     // Verify product belongs to store
@@ -1085,6 +1087,40 @@ router.patch(
          WHERE id = $${productIndex}`,
         productParams
       );
+    }
+
+    // Stock update: openingStockQty sets absolute stock level via ledger entry
+    if (openingStockQty !== undefined && typeof openingStockQty === 'number') {
+      const currentStockRows = await query<{ current_qty: number }>(
+        `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+        [storeId, id]
+      );
+      const stockBefore = currentStockRows[0]?.current_qty || 0;
+      const delta = openingStockQty - stockBefore;
+
+      if (delta !== 0) {
+        // Ledger-first: write audit entry
+        await query(
+          `INSERT INTO inventory.inventory_ledger
+           (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
+           VALUES ($1, $2, $3, 'adjustment', $4, $5, $6, 'RETAILER_PORTAL', 'Stock updated from retailer dashboard')`,
+          [storeId, id, delta, stockBefore, openingStockQty, purchasePrice || 0]
+        );
+
+        // Update authoritative stock
+        await query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+          [storeId, id, openingStockQty]
+        );
+
+        // Update denormalized stock for fast reads
+        await query(
+          `UPDATE catalog.store_products SET current_stock = $3 WHERE store_id = $1 AND product_id = $2`,
+          [storeId, id, openingStockQty]
+        );
+      }
     }
 
     res.json({

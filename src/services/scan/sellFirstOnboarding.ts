@@ -51,11 +51,11 @@ export async function submitSellFirstOnboarding(
   }
 
   const sellPriceMinor = Math.round(input.sellPriceMinor);
-  const initialStock = Math.max(1, Math.round(input.initialStock));
+  const initialStock = Math.max(0, Math.round(input.initialStock));
   if (!Number.isFinite(sellPriceMinor) || sellPriceMinor <= 0) {
     throw new Error("invalid_sell_price");
   }
-  if (!Number.isFinite(initialStock) || initialStock <= 0) {
+  if (!Number.isFinite(initialStock) || initialStock < 0) {
     throw new Error("invalid_initial_stock");
   }
 
@@ -88,10 +88,12 @@ export async function submitSellFirstOnboarding(
         : sellPriceMinor;
     const availableQty = resolveAvailableQty(product, initialStock);
 
-    upsertStockEntries([
-      { key: product.global_product_id, stock: availableQty },
-      { key: barcode, stock: availableQty }
-    ]);
+    if (availableQty > 0) {
+      upsertStockEntries([
+        { key: product.global_product_id, stock: availableQty },
+        { key: barcode, stock: availableQty }
+      ]);
+    }
 
     useCartStore.getState().addItem({
       id: product.global_product_id,
@@ -113,30 +115,32 @@ export async function submitSellFirstOnboarding(
     return product;
   }
 
-  const purchaseId = uuidv4();
-  const createdAt = new Date().toISOString();
-  const totalMinor = resolvedPurchasePrice * initialStock;
+  if (initialStock > 0) {
+    const purchaseId = uuidv4();
+    const createdAt = new Date().toISOString();
+    const totalMinor = resolvedPurchasePrice * initialStock;
 
-  await enqueueEvent("PURCHASE_SUBMIT", {
-    purchaseId,
-    supplierName: null,
-    items: [
-      {
-        barcode,
-        globalProductId: null,
-        scanFormat: input.format ?? null,
-        name: resolvedName,
-        quantity: initialStock,
-        purchasePriceMinor: resolvedPurchasePrice,
-        sellingPriceMinor: sellPriceMinor,
-        currency: "INR"
-      }
-    ],
-    totalMinor,
-    createdAt
-  });
+    await enqueueEvent("PURCHASE_SUBMIT", {
+      purchaseId,
+      supplierName: null,
+      items: [
+        {
+          barcode,
+          globalProductId: null,
+          scanFormat: input.format ?? null,
+          name: resolvedName,
+          quantity: initialStock,
+          purchasePriceMinor: resolvedPurchasePrice,
+          sellingPriceMinor: sellPriceMinor,
+          currency: "INR"
+        }
+      ],
+      totalMinor,
+      createdAt
+    });
 
-  upsertStockEntries([{ key: barcode, stock: initialStock }]);
+    upsertStockEntries([{ key: barcode, stock: initialStock }]);
+  }
 
   useCartStore.getState().addItem({
     id: barcode,

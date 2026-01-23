@@ -258,11 +258,6 @@ async function cacheLocalProduct(product: {
   }
 }
 
-function buildFallbackName(barcode: string): string {
-  const suffix = barcode.slice(-4);
-  return `Item ${suffix || barcode}`;
-}
-
 function resolveDisplayName(product: StoreLookupProduct): string {
   const trimmed = product.store_display_name?.trim();
   if (trimmed) return trimmed;
@@ -350,13 +345,14 @@ async function handleScan(
   try {
     if (intent === "SELL" && mode === "SELL" && useScanLookupV2) {
       if (await isOnline()) {
-        const fallbackName = buildFallbackName(trimmed);
         let storeProduct = await lookupStoreProductPreviewByScan({ scanned: trimmed, format });
         if (!storeProduct) {
+          // R3: Pass empty name so the onboarding modal uses search query or shows blank
+          // (do NOT use "Item XXXX" placeholder - per go-live requirements)
           storeProduct = {
             global_product_id: trimmed,
-            global_name: fallbackName,
-            store_display_name: fallbackName,
+            global_name: "",
+            store_display_name: "",
             sell_price: null,
             purchase_price: null,
             unit: null,
@@ -461,12 +457,11 @@ async function handleScan(
       if (await isOnline()) {
         let storeProduct = await lookupStoreProductByScan({ scanned: trimmed, format });
         if (!storeProduct) {
-          const fallbackName = buildFallbackName(trimmed);
           storeProduct = await createStoreProductFromScan({
             scanned: trimmed,
             format,
-            globalName: fallbackName,
-            storeDisplayName: fallbackName
+            globalName: null,
+            storeDisplayName: null
           });
         }
 
@@ -555,14 +550,14 @@ async function handleScan(
     }
 
     if (result.action === "PROMPT_PRICE") {
-      const fallbackName = result.product.name?.trim() || buildFallbackName(trimmed);
+      const productName = result.product.name?.trim() || "";
       runtime.onSellFirstOnboarding?.({
         barcode: trimmed,
         format,
         product: {
           global_product_id: trimmed,
-          global_name: fallbackName,
-          store_display_name: fallbackName,
+          global_name: productName,
+          store_display_name: productName,
           sell_price: result.product.priceMinor ?? null,
           purchase_price: null,
           unit: null,

@@ -39,7 +39,8 @@ import {
   refreshStockSnapshot,
   resolveStockForCartItem,
   resolveStockForSku,
-  subscribeStockUpdates
+  subscribeStockUpdates,
+  upsertStockEntries
 } from "../services/stockService";
 import {
   feedHidKey,
@@ -81,6 +82,7 @@ type SkuItem = {
   inventoryPriceMinor: number | null;
   variantPriceMinor: number | null;
   variantMrpMinor: number | null;
+  currentStock?: number | null;
 };
 
 const resolveSkuPrice = (item: SkuItem) => {
@@ -100,12 +102,23 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
     // SD-ONBOARD-002C: Use list endpoint for initial load, search for queries
     if (trimmedQuery.length < 2) {
-      // No query or short query - use list endpoint for tap-and-add grid
+      // No query or short query - paginate through all store products
       console.log("[syncProductsToOffline] Using list endpoint for tap-and-add");
-      const products = await sellSearchApi.listStoreProducts({ limit: 50 });
+      const PAGE = 100;
+      let offset = 0;
+      let allProducts: sellSearchApi.StoreProductListItem[] = [];
+      for (;;) {
+        const page = await sellSearchApi.listStoreProducts({ limit: PAGE, offset });
+        allProducts.push(...page);
+        if (page.length < PAGE) break;
+        offset += PAGE;
+        if (allProducts.length > 1000) break; // Safety cap
+      }
 
-      for (const product of products) {
+      const stockEntries: Array<{ key: string; stock: number }> = [];
+      for (const product of allProducts) {
         const barcode = product.barcode?.trim() || "";
+        const stock = typeof product.currentStock === "number" ? product.currentStock : null;
 
         items.push({
           productId: product.productId,
@@ -117,14 +130,23 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
           variantMrpMinor: null,
         });
 
-        // Store in offline DB for offline search
+        // Store in offline DB (with productId and stock)
         if (barcode) {
-          await upsertLocalProduct(barcode, product.name, "INR", null);
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, stock);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
         }
+
+        // Build stock cache entries
+        if (stock !== null) {
+          if (product.productId) stockEntries.push({ key: product.productId, stock });
+          if (barcode) stockEntries.push({ key: barcode, stock });
+        }
       }
+
+      // Populate stock cache
+      if (stockEntries.length > 0) upsertStockEntries(stockEntries);
     } else {
       // Query provided - use search endpoint
       const storeId = await getDeviceStoreId();
@@ -138,11 +160,13 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
         includeZeroStock: true,
       });
 
+      const stockEntries: Array<{ key: string; stock: number }> = [];
       for (const group of groups) {
         for (const match of group.matches) {
           const barcode = match.barcode?.trim() || "";
           const displayName = match.displayName || group.displayName;
           const sellPrice = match.sellPrice ?? null;
+          const stock = typeof match.currentStock === "number" ? match.currentStock : null;
 
           items.push({
             productId: match.productId,
@@ -154,15 +178,24 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
             variantMrpMinor: null,
           });
 
-          // Store in offline DB for offline search
+          // Store in offline DB (with productId and stock)
           if (barcode) {
-            await upsertLocalProduct(barcode, displayName, "INR", null);
+            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock);
             if (sellPrice !== null) {
               await setLocalPrice(barcode, sellPrice);
             }
           }
+
+          // Build stock cache entries
+          if (stock !== null) {
+            if (match.productId) stockEntries.push({ key: match.productId, stock });
+            if (barcode) stockEntries.push({ key: barcode, stock });
+          }
         }
       }
+
+      // Populate stock cache
+      if (stockEntries.length > 0) upsertStockEntries(stockEntries);
     }
 
     return items;
@@ -714,7 +747,7 @@ export default function SellScanScreen({
   const [stockRefreshTick, setStockRefreshTick] = useState(0);
   const [sellOnboardingPrice, setSellOnboardingPrice] = useState("");
   const [sellOnboardingPurchasePrice, setSellOnboardingPurchasePrice] = useState("");
-  const [sellOnboardingStock, setSellOnboardingStock] = useState("1");
+  const [sellOnboardingStock, setSellOnboardingStock] = useState("0");
   const [sellOnboardingNameInput, setSellOnboardingNameInput] = useState("");
   const [sellOnboardingBusy, setSellOnboardingBusy] = useState(false);
   const [sellOnboardingError, setSellOnboardingError] = useState<string | null>(null);
@@ -872,6 +905,38 @@ export default function SellScanScreen({
     });
   }, []);
 
+  // R5: Periodic catalog freshness check - detect dashboard edits and re-sync
+  const lastSyncedAtRef = useRef<string | null>(new Date().toISOString());
+  useEffect(() => {
+    let cancelled = false;
+    const FRESHNESS_INTERVAL_MS = 30_000; // Check every 30s
+
+    const checkFreshness = async () => {
+      if (cancelled) return;
+      try {
+        const resp = await sellSearchApi.checkCatalogFreshness(lastSyncedAtRef.current);
+        if (cancelled) return;
+        if (resp.stale) {
+          console.log("[R5] Catalog stale, re-syncing from server");
+          await syncProductsToOffline();
+          if (resp.latestUpdatedAt) {
+            lastSyncedAtRef.current = resp.latestUpdatedAt;
+          }
+          // Refresh stock snapshot after catalog re-sync
+          refreshStockSnapshot();
+        }
+      } catch {
+        // Freshness check failures are non-critical
+      }
+    };
+
+    const interval = setInterval(checkFreshness, FRESHNESS_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   const detailPressRef = useRef(false);
   const addMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -880,11 +945,20 @@ export default function SellScanScreen({
   const sellOnboarding = sellOnboardingRequest ?? null;
   const sellOnboardingVisible = cartMode === "SELL" && Boolean(sellOnboarding);
   // DEV-070: Use editable name input, fallback to product data for display
-  const sellOnboardingDefaultName =
+  const rawOnboardingName =
     sellOnboarding?.product.store_display_name?.trim() ||
     sellOnboarding?.product.global_name?.trim() ||
-    sellOnboarding?.barcode ||
     "";
+  // Prefer search query over placeholder names like "Item 1234"
+  const isOnboardingNamePlaceholder = !rawOnboardingName || /^Item\s+\S{1,8}$/i.test(rawOnboardingName);
+  const onboardingSearchHint = addQuery.trim();
+  const onboardingHintIsBarcode = /^\d{8,}$/.test(onboardingSearchHint);
+  // R3: Default name = search query (if not barcode-like), otherwise blank
+  // Do NOT prefill with barcode as the product name
+  const sellOnboardingDefaultName =
+    isOnboardingNamePlaceholder && onboardingSearchHint && !onboardingHintIsBarcode
+      ? onboardingSearchHint
+      : rawOnboardingName || "";
   const sellOnboardingName = sellOnboardingNameInput.trim() || sellOnboardingDefaultName;
   const sellOnboardingPriceMinor = parsePriceInput(sellOnboardingPrice);
   const sellOnboardingPurchaseProvided = sellOnboardingPurchasePrice.trim().length > 0;
@@ -894,7 +968,7 @@ export default function SellScanScreen({
     ? Math.round(sellOnboardingStockRaw)
     : NaN;
   const sellOnboardingStockValid =
-    Number.isFinite(sellOnboardingStockParsed) && sellOnboardingStockParsed >= 1;
+    Number.isFinite(sellOnboardingStockParsed) && sellOnboardingStockParsed >= 0;
   const sellOnboardingPurchaseValid =
     !sellOnboardingPurchaseProvided || sellOnboardingPurchaseMinor !== null;
   const sellOnboardingFormValid =
@@ -938,10 +1012,17 @@ export default function SellScanScreen({
       sellOnboarding.product.store_display_name?.trim() ||
       sellOnboarding.product.global_name?.trim() ||
       "";
-    setSellOnboardingNameInput(existingName);
+    // If the resolved name is a placeholder like "Item 1234", prefer the search query
+    const isPlaceholderName = !existingName || /^Item\s+\S{1,8}$/i.test(existingName);
+    const searchHint = addQuery.trim();
+    const looksLikeBarcode = /^\d{8,}$/.test(searchHint);
+    const nameToUse = isPlaceholderName && searchHint && !looksLikeBarcode
+      ? searchHint
+      : existingName;
+    setSellOnboardingNameInput(nameToUse);
     setSellOnboardingPrice(formatPriceInput(existingPrice));
     setSellOnboardingPurchasePrice(formatPriceInput(existingPurchase));
-    setSellOnboardingStock("1");
+    setSellOnboardingStock("0");
     setSellOnboardingError(null);
   }, [sellOnboarding]);
 
@@ -1139,7 +1220,7 @@ export default function SellScanScreen({
       setSellOnboardingNameInput("");
       setSellOnboardingPrice("");
       setSellOnboardingPurchasePrice("");
-      setSellOnboardingStock("1");
+      setSellOnboardingStock("0");
       onSellOnboardingClose?.();
     },
     [onSellOnboardingClose, sellOnboardingBusy]
@@ -1148,7 +1229,7 @@ export default function SellScanScreen({
   const handleSellOnboardingConfirm = useCallback(async () => {
     if (!sellOnboarding || sellOnboardingBusy) return;
     if (sellOnboardingPriceMinor === null || !sellOnboardingStockValid) {
-      setSellOnboardingError("Enter a sell price and initial stock.");
+      setSellOnboardingError("Enter a sell price and opening stock.");
       return;
     }
     if (sellOnboardingPurchaseProvided && sellOnboardingPurchaseMinor === null) {
@@ -1170,6 +1251,8 @@ export default function SellScanScreen({
         name: sellOnboardingName
       });
       closeSellOnboarding(true);
+      // R5: Refresh catalog in background after product creation so next scan/search finds it
+      syncProductsToOffline().catch(() => {});
     } catch {
       setSellOnboardingError("Unable to receive product. Try again.");
     } finally {
@@ -1360,12 +1443,14 @@ export default function SellScanScreen({
     const params: Array<string | number> = [PAGE_SIZE, offset];
     const sql = `
       SELECT
+        p.product_id as productId,
         p.barcode as barcode,
         p.name as name,
         p.currency as currency,
         pr.price_minor as inventoryPriceMinor,
         NULL as variantPriceMinor,
-        NULL as variantMrpMinor
+        NULL as variantMrpMinor,
+        p.current_stock as currentStock
       FROM offline_products p
       LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
       ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC
@@ -1375,10 +1460,19 @@ export default function SellScanScreen({
     try {
       let rows = await offlineDb.all<SkuItem>(sql, params);
       if (reset && rows.length === 0) {
+        // DB empty - sync blocking before showing UI
         const remote = await syncProductsToOffline();
         if (remote.length > 0) {
           rows = await offlineDb.all<SkuItem>(sql, params);
         }
+      } else if (reset && rows.length > 0) {
+        // DB has data - show immediately, sync in background for freshness
+        syncProductsToOffline().then(async () => {
+          const fresh = await offlineDb.all<SkuItem>(sql, params);
+          if (fresh.length > 0) {
+            setCatalogItems(fresh);
+          }
+        }).catch(() => {});
       }
       setCatalogItems((prev) => mergeSkuItems(reset ? [] : prev, rows));
       setCatalogHasMore(rows.length === PAGE_SIZE);
@@ -1401,20 +1495,29 @@ export default function SellScanScreen({
     const params: Array<string | number> = [];
     let sql = `
       SELECT
+        p.product_id as productId,
         p.barcode as barcode,
         p.name as name,
         p.currency as currency,
         pr.price_minor as inventoryPriceMinor,
         NULL as variantPriceMinor,
-        NULL as variantMrpMinor
+        NULL as variantMrpMinor,
+        p.current_stock as currentStock
       FROM offline_products p
       LEFT JOIN offline_prices pr ON pr.barcode = p.barcode
     `;
 
     if (query.length > 0) {
-      const like = `%${query}%`;
-      sql += " WHERE lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?";
-      params.push(like, like);
+      // Tokenize: split by whitespace, match any token against name or barcode (OR)
+      const tokens = query.split(/\s+/).filter(t => t.length >= 1);
+      if (tokens.length > 0) {
+        const tokenClauses = tokens.map(token => {
+          const like = `%${token}%`;
+          params.push(like, like);
+          return "(lower(p.name) LIKE ? OR lower(p.barcode) LIKE ?)";
+        });
+        sql += ` WHERE (${tokenClauses.join(" OR ")})`;
+      }
     }
 
     sql += " ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.name ASC LIMIT ? OFFSET ?";
@@ -1422,11 +1525,27 @@ export default function SellScanScreen({
 
     try {
       let rows = await offlineDb.all<SkuItem>(sql, params);
-      if (reset && rows.length === 0) {
+      if (reset && rows.length === 0 && query.length >= 2) {
+        // P1: No local results - fetch from server (handles dashboard-only products)
         const remote = await syncProductsToOffline(query);
         if (remote.length > 0) {
+          // Re-query local DB (products with barcodes get stored locally)
           rows = await offlineDb.all<SkuItem>(sql, params);
+          // Fallback: if local DB still empty (products without barcodes), use remote results directly
+          if (rows.length === 0) {
+            rows = remote;
+          }
         }
+      } else if (reset && query.length >= 2) {
+        // Background sync for freshness: pick up dashboard edits without blocking UI (R5)
+        syncProductsToOffline(query).then(async () => {
+          try {
+            const fresh = await offlineDb.all<SkuItem>(sql, params);
+            if (fresh.length > 0) {
+              setAddResults(fresh);
+            }
+          } catch {}
+        }).catch(() => {});
       }
       setAddResults((prev) => mergeSkuItems(reset ? [] : prev, rows));
       setAddHasMore(rows.length === PAGE_SIZE);
@@ -1738,7 +1857,7 @@ export default function SellScanScreen({
 
   const detailStockLabel = useMemo(() => {
     if (!detailItem) return "";
-    const stockValue = resolveStockForSku(detailItem);
+    const stockValue = resolveStockForSku(detailItem) ?? (typeof detailItem.currentStock === "number" ? detailItem.currentStock : null);
     return stockValue === null ? "Unknown" : String(stockValue);
   }, [detailItem, stockRefreshTick]);
 
@@ -1839,7 +1958,7 @@ export default function SellScanScreen({
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
-    const stockValue = resolveStockForSku(item);
+    const stockValue = resolveStockForSku(item) ?? (typeof item.currentStock === "number" ? item.currentStock : null);
     const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
 
     return (
@@ -1933,7 +2052,7 @@ export default function SellScanScreen({
     const resolved = resolveSkuPrice(item);
     logPriceDebug(item, resolved);
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
-    const stockValue = resolveStockForSku(item);
+    const stockValue = resolveStockForSku(item) ?? (typeof item.currentStock === "number" ? item.currentStock : null);
     const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
 
     return (
@@ -2110,6 +2229,7 @@ export default function SellScanScreen({
           data={addResults}
           keyExtractor={(item) => item.barcode}
           renderItem={renderAddRow}
+          extraData={stockRefreshTick}
           style={styles.searchPanelList}
           contentContainerStyle={styles.searchPanelListContent}
           ListEmptyComponent={
@@ -2355,6 +2475,7 @@ export default function SellScanScreen({
             data={gridItems}
             keyExtractor={(item) => item.barcode}
             renderItem={renderSkuItem}
+            extraData={stockRefreshTick}
             numColumns={NUM_COLUMNS}
             columnWrapperStyle={styles.skuRow}
             ListHeaderComponent={catalogHeader}
@@ -2670,16 +2791,17 @@ export default function SellScanScreen({
                 />
               </View>
               <View style={styles.onboardingField}>
-                <Text style={styles.onboardingLabel}>Initial stock</Text>
+                <Text style={styles.onboardingLabel}>Opening stock</Text>
                 <TextInput
                   style={[styles.onboardingInput, sellOnboardingBusy && styles.inputDisabled]}
                   value={sellOnboardingStock}
                   onChangeText={handleSellOnboardingStockChange}
-                  placeholder="Enter stock"
+                  placeholder="Enter stock (0 if unknown)"
                   placeholderTextColor={theme.colors.textTertiary}
                   keyboardType="number-pad"
                   editable={!sellOnboardingBusy}
                 />
+                <Text style={styles.onboardingHelper}>Creates ledger entry if greater than 0</Text>
               </View>
             </View>
 
@@ -3363,6 +3485,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 13,
     color: theme.colors.textPrimary,
+  },
+  onboardingHelper: {
+    fontSize: 10,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
   },
   onboardingError: {
     fontSize: 11,
