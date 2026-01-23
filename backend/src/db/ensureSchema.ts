@@ -125,7 +125,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS store_products (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
       store_display_name TEXT NULL,
       sell_price_minor INTEGER NULL,
@@ -139,7 +139,7 @@ export async function ensureCoreSchema(): Promise<void> {
     );
 
     CREATE TABLE IF NOT EXISTS store_inventory (
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
       available_qty INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -149,7 +149,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS inventory_ledger (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
       movement_type TEXT NOT NULL,
       quantity INTEGER NOT NULL,
@@ -193,7 +193,7 @@ export async function ensureCoreSchema(): Promise<void> {
     );
 
     CREATE TABLE IF NOT EXISTS retailer_variants (
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       variant_id TEXT NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
       selling_price_minor INTEGER NULL,
       digitised_by_retailer BOOLEAN NOT NULL DEFAULT TRUE,
@@ -203,7 +203,7 @@ export async function ensureCoreSchema(): Promise<void> {
     );
 
     CREATE TABLE IF NOT EXISTS bulk_inventory (
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       base_unit TEXT NOT NULL,
       quantity_base INTEGER NOT NULL DEFAULT 0,
@@ -214,7 +214,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS scan_events (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       device_id TEXT NULL,
       scan_value TEXT NOT NULL,
       mode TEXT NOT NULL,
@@ -225,7 +225,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS sales (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       device_id TEXT NULL,
       bill_ref TEXT NOT NULL UNIQUE,
       offline_receipt_ref TEXT NULL,
@@ -258,7 +258,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS collections (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       device_id TEXT NULL,
       amount_minor INTEGER NOT NULL,
       mode TEXT NOT NULL,
@@ -278,7 +278,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS pos_devices (
       id TEXT PRIMARY KEY,
-      store_id TEXT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NULL /* FK to stores omitted — public.stores is a view */,
       active BOOLEAN NOT NULL DEFAULT TRUE,
       device_token TEXT NULL,
       label TEXT NULL,
@@ -298,7 +298,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS pos_device_enrollments (
       code TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       expires_at TIMESTAMPTZ NOT NULL,
       used_at TIMESTAMPTZ NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -307,7 +307,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS purchases (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       supplier_name TEXT NULL,
       total_minor INTEGER NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'INR',
@@ -330,7 +330,7 @@ export async function ensureCoreSchema(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS consumer_orders (
       id TEXT PRIMARY KEY,
-      store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+      store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       status TEXT NOT NULL,
       payment_mode TEXT NOT NULL,
       total_minor INTEGER NOT NULL,
@@ -419,19 +419,9 @@ export async function ensureCoreSchema(): Promise<void> {
   `);
 
   // Keep purchase_items rename idempotent to avoid 42701 in prod when variant_id already exists.
+  // NOTE: ALTER TABLE stores skipped — public.stores is a VIEW backed by platform.stores
+  // Columns are managed via platform migrations (001_platform_schema.sql et al.)
   await pool.query(`
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS address TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS contact_name TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS contact_phone TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS contact_email TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS location TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS pos_device_id TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS kyc_status TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS upi_vpa_updated_at TIMESTAMPTZ NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS upi_vpa_updated_by TEXT NULL;
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-    ALTER TABLE stores ADD COLUMN IF NOT EXISTS scan_lookup_v2_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS retailer_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS enrichment_status TEXT NULL;

@@ -566,7 +566,7 @@ async function getPaymentStoreStatus(
       SELECT p.sale_id, s.store_id, st.active
       FROM payments p
       JOIN sales s ON s.id = p.sale_id
-      JOIN stores st ON st.id = s.store_id
+      JOIN stores st ON st.id::text = s.store_id
       WHERE p.id = $1 AND s.store_id = $2
     `,
     [paymentId, storeId]
@@ -584,7 +584,7 @@ async function getCollectionStoreStatus(
     `
       SELECT c.store_id, st.active
       FROM collections c
-      JOIN stores st ON st.id = c.store_id
+      JOIN stores st ON st.id::text = c.store_id
       WHERE c.id = $1 AND c.store_id = $2
     `,
     [collectionId, storeId]

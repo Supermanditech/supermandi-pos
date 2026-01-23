@@ -15,7 +15,7 @@ posDevicesRouter.get("/devices/me", requireDeviceTokenAllowInactive, async (req,
     `
     SELECT d.id AS device_id, d.store_id, s.name AS store_name
     FROM pos_devices d
-    LEFT JOIN stores s ON s.id = d.store_id
+    LEFT JOIN stores s ON s.id::text = d.store_id
     WHERE d.id = $1
     `,
     [status.deviceId]

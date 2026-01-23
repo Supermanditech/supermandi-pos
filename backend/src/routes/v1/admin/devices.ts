@@ -47,7 +47,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
            d.created_at,
            d.updated_at
     FROM pos_devices d
-    LEFT JOIN stores s ON s.id = d.store_id
+    LEFT JOIN stores s ON s.id::text = d.store_id
     ${where ? where.replace("store_id", "d.store_id") : ""}
     ORDER BY d.last_seen_online DESC NULLS LAST
     `,
