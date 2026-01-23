@@ -27,9 +27,9 @@ UPDATE catalog.store_products
   SET metadata_updated_at = COALESCE(updated_at, created_at)
   WHERE metadata_updated_at IS NULL OR display_name IS NOT NULL;
 
--- Index for freshness check queries
+COMMIT;
+
+-- Index for freshness check queries (must be outside transaction due to pending trigger events)
 CREATE INDEX IF NOT EXISTS idx_store_products_metadata_updated
   ON catalog.store_products (store_id, metadata_updated_at DESC)
   WHERE is_active = true;
-
-COMMIT;
