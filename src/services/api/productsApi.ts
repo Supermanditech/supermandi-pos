@@ -390,6 +390,24 @@ export async function updateStoreProductPrice(input: {
   );
 }
 
+export async function updateStoreProductStock(input: {
+  productId?: string;
+  barcode?: string;
+  stock: number;
+}): Promise<{ productId: string; stock: number }> {
+  const payload: Record<string, unknown> = {
+    stock: input.stock
+  };
+  if (input.productId) payload.productId = input.productId;
+  if (input.barcode) payload.barcode = input.barcode;
+
+  const res = await apiClient.patch<{ success: boolean; data: { productId: string; stock: number } }>(
+    `${STORE_PRODUCTS_BASE}/stock`,
+    payload
+  );
+  return res.data;
+}
+
 const normalizePriceInput = (value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return Math.round(value);

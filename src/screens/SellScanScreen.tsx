@@ -762,6 +762,9 @@ export default function SellScanScreen({
   const [editorDiscountType, setEditorDiscountType] = useState<DiscountType>("percentage");
   const [editorDiscountValue, setEditorDiscountValue] = useState("");
   const [detailItem, setDetailItem] = useState<SkuItem | null>(null);
+  const [detailStockEditing, setDetailStockEditing] = useState(false);
+  const [detailStockInput, setDetailStockInput] = useState("");
+  const [detailStockBusy, setDetailStockBusy] = useState(false);
 
   // SD-CATEGORY: Category rail state (Demo Store only)
   const storeCode = useSettingsStore((s) => s.storeCode);
@@ -1724,7 +1727,38 @@ export default function SellScanScreen({
 
   const closeDetail = useCallback(() => {
     setDetailItem(null);
+    setDetailStockEditing(false);
+    setDetailStockInput("");
+    setDetailStockBusy(false);
   }, []);
+
+  const handleDetailStockSave = useCallback(async () => {
+    if (!detailItem) return;
+    const stockVal = parseInt(detailStockInput, 10);
+    if (!Number.isFinite(stockVal) || stockVal < 0) {
+      if (Platform.OS === "android") ToastAndroid.show("Enter a valid stock quantity", ToastAndroid.SHORT);
+      return;
+    }
+    setDetailStockBusy(true);
+    try {
+      await productsApi.updateStoreProductStock({
+        productId: detailItem.productId ?? undefined,
+        barcode: detailItem.barcode ?? undefined,
+        stock: stockVal,
+      });
+      // Update local stock data
+      if (detailItem.productId) {
+        upsertStockEntries([{ productId: detailItem.productId, currentQty: stockVal }]);
+      }
+      setDetailStockEditing(false);
+      if (Platform.OS === "android") ToastAndroid.show("Stock updated", ToastAndroid.SHORT);
+    } catch (e) {
+      console.error("[SellScanScreen] Stock update failed:", e);
+      if (Platform.OS === "android") ToastAndroid.show("Stock update failed", ToastAndroid.SHORT);
+    } finally {
+      setDetailStockBusy(false);
+    }
+  }, [detailItem, detailStockInput]);
 
   const handleEditorRemove = useCallback(() => {
     if (!editorItem) return;
@@ -2870,9 +2904,44 @@ export default function SellScanScreen({
                     <Text style={styles.detailMetaValue}>{detailStockLabel}</Text>
                   </View>
                 </View>
+                {detailStockEditing ? (
+                  <View style={styles.detailStockRow}>
+                    <TextInput
+                      style={styles.detailStockInput}
+                      value={detailStockInput}
+                      onChangeText={setDetailStockInput}
+                      keyboardType="number-pad"
+                      placeholder="Enter stock qty"
+                      placeholderTextColor={theme.colors.textMuted}
+                      autoFocus
+                      editable={!detailStockBusy}
+                    />
+                    <Pressable
+                      style={[styles.detailButton, styles.detailButtonPrimary, detailStockBusy && styles.detailButtonDisabled]}
+                      onPress={handleDetailStockSave}
+                      disabled={detailStockBusy}
+                    >
+                      {detailStockBusy ? (
+                        <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                      ) : (
+                        <Text style={styles.detailButtonTextInverse}>Save</Text>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : null}
                 <View style={styles.detailActions}>
                   <Pressable style={styles.detailButton} onPress={closeDetail}>
                     <Text style={styles.detailButtonText}>Close</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.detailButton}
+                    onPress={() => {
+                      const currentStock = resolveStockForSku(detailItem) ?? detailItem.currentStock ?? 0;
+                      setDetailStockInput(String(currentStock));
+                      setDetailStockEditing(true);
+                    }}
+                  >
+                    <Text style={styles.detailButtonText}>Update Stock</Text>
                   </Pressable>
                   <Pressable
                     style={[
@@ -4333,6 +4402,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: theme.colors.textPrimary,
+  },
+  detailStockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  detailStockInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
   },
   detailActions: {
     flexDirection: "row",

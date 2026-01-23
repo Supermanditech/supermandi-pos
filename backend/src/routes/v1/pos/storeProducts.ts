@@ -592,3 +592,101 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Price update failed" });
   }
 });
+
+/**
+ * PATCH /api/v1/pos/store-products/stock
+ * Update stock for a store product (by productId or barcode)
+ * Sets absolute stock level with ledger audit trail
+ * Used when POS user updates stock from product detail view
+ */
+posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { productId, barcode, stock } = req.body as {
+    productId?: string;
+    barcode?: string;
+    stock: number;
+  };
+
+  if (typeof stock !== "number" || !Number.isFinite(stock) || stock < 0) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "stock must be a non-negative number" });
+  }
+
+  if (!productId && !barcode) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "productId or barcode is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  const client = await pool.connect();
+  try {
+    // Resolve product_id from barcode if needed
+    let resolvedProductId = productId;
+
+    if (!resolvedProductId && barcode) {
+      const lookup = await client.query(
+        `SELECT sp.product_id FROM catalog.store_products sp
+         LEFT JOIN catalog.store_product_barcodes spb ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
+         LEFT JOIN catalog.products p ON p.id = sp.product_id
+         WHERE sp.store_id = $1 AND sp.is_active = true
+           AND (spb.barcode = $2 OR p.primary_barcode = $2)
+         LIMIT 1`,
+        [storeId, barcode]
+      );
+      resolvedProductId = lookup.rows[0]?.product_id;
+    }
+
+    if (!resolvedProductId) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
+    }
+
+    const newStock = Math.round(stock);
+
+    await client.query("BEGIN");
+
+    // Get current stock
+    const stockResult = await client.query(
+      `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+      [storeId, resolvedProductId]
+    );
+    const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
+    const delta = newStock - stockBefore;
+
+    if (delta !== 0) {
+      // Ledger entry for audit trail
+      await client.query(
+        `INSERT INTO inventory.inventory_ledger
+         (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
+         VALUES ($1, $2, $3, 'adjustment', $4, $5, 0, 'POS_APP', 'Stock updated from POS')`,
+        [storeId, resolvedProductId, delta, stockBefore, newStock]
+      );
+    }
+
+    // Upsert stock_balances
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+      [storeId, resolvedProductId, newStock]
+    );
+
+    // Update denormalized stock
+    await client.query(
+      `UPDATE catalog.store_products SET current_stock = $2, updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $3 AND is_active = true`,
+      [storeId, newStock, resolvedProductId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({ success: true, data: { productId: resolvedProductId, stock: newStock } });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("[storeProducts] Stock update error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Stock update failed" });
+  } finally {
+    client.release();
+  }
+});
