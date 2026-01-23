@@ -353,6 +353,97 @@ async function getSale(
   return res.rows[0] ?? null;
 }
 
+// TICKET-002: Daily Summary for POS home screen
+posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const dateParam = typeof req.query.date === "string" ? req.query.date.trim() : null;
+
+  // Use provided date or default to today (store timezone assumed UTC for now)
+  const targetDate = dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+    ? dateParam
+    : new Date().toISOString().slice(0, 10);
+
+  try {
+    // Aggregate sales for the target date (only confirmed sales)
+    const summaryRes = await pool.query(
+      `
+      SELECT
+        COUNT(*)::int AS total_bills,
+        COALESCE(SUM(total_minor), 0)::bigint AS total_sales,
+        COUNT(*) FILTER (WHERE status = 'PAID_CASH')::int AS cash_count,
+        COALESCE(SUM(total_minor) FILTER (WHERE status = 'PAID_CASH'), 0)::bigint AS cash_total,
+        COUNT(*) FILTER (WHERE status = 'PAID_UPI')::int AS upi_count,
+        COALESCE(SUM(total_minor) FILTER (WHERE status = 'PAID_UPI'), 0)::bigint AS upi_total,
+        COUNT(*) FILTER (WHERE status = 'DUE')::int AS due_count,
+        COALESCE(SUM(total_minor) FILTER (WHERE status = 'DUE'), 0)::bigint AS due_total
+      FROM sales
+      WHERE store_id = $1
+        AND status IN ('PAID_CASH', 'PAID_UPI', 'DUE')
+        AND created_at::date = $2::date
+      `,
+      [storeId, targetDate]
+    );
+
+    const row = summaryRes.rows[0] || {};
+    const totalBills = Number(row.total_bills || 0);
+    const totalSales = Number(row.total_sales || 0);
+    const averageBillValue = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
+
+    // Get items sold count and top selling items
+    const itemsRes = await pool.query(
+      `
+      SELECT
+        COALESCE(si.item_name, 'Unknown') AS product_name,
+        si.variant_id AS product_id,
+        SUM(si.quantity)::int AS quantity_sold,
+        SUM(si.line_total_minor)::bigint AS total_amount
+      FROM sale_items si
+      JOIN sales s ON s.id = si.sale_id
+      WHERE s.store_id = $1
+        AND s.status IN ('PAID_CASH', 'PAID_UPI', 'DUE')
+        AND s.created_at::date = $2::date
+      GROUP BY si.variant_id, si.item_name
+      ORDER BY quantity_sold DESC
+      LIMIT 10
+      `,
+      [storeId, targetDate]
+    );
+
+    const topSellingItems = itemsRes.rows.map((r) => ({
+      productId: String(r.product_id || ""),
+      productName: String(r.product_name || "Unknown"),
+      quantitySold: Number(r.quantity_sold || 0),
+      totalAmount: Number(r.total_amount || 0),
+    }));
+
+    const itemsSold = topSellingItems.reduce((sum, item) => sum + item.quantitySold, 0);
+
+    return res.json({
+      success: true,
+      data: {
+        date: targetDate,
+        totalSales,
+        totalBills,
+        averageBillValue,
+        paymentBreakdown: {
+          cash: Number(row.cash_total || 0),
+          upi: Number(row.upi_total || 0),
+          card: 0,
+          credit: Number(row.due_total || 0),
+        },
+        itemsSold,
+        topSellingItems,
+      },
+    });
+  } catch (error) {
+    console.error("[daily-summary] Error:", error);
+    return res.status(500).json({ error: "failed to load daily summary" });
+  }
+});
+
 posSalesRouter.get("/bills", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
