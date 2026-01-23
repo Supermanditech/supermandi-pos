@@ -369,7 +369,9 @@ export default function ProductsPage() {
         purchasePrice: rupeesToPaise(formData.purchasePrice)!, // Required
         sellPrice: rupeesToPaise(formData.sellPrice)!, // Required
         mrp: rupeesToPaise(formData.mrp),
-        openingStockQty: parseInt(formData.openingStockQty) || 0,
+        openingStockQty: editingProduct
+          ? (formData.openingStockQty !== '' ? parseInt(formData.openingStockQty) : undefined)
+          : (parseInt(formData.openingStockQty) || 0),
         supplierId: formData.supplierId || undefined,
         // New fields per E2E Go-Live spec
         lowStockAlertQty: formData.lowStockAlertQty ? parseInt(formData.lowStockAlertQty) : undefined,

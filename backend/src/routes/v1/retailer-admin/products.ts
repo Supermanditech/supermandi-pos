@@ -460,32 +460,32 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
         [storeId, productId]
       );
-      const stockBefore = stockResult.rows[0]?.current_qty || 0;
+      const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
       const delta = openingStockQty - stockBefore;
 
       if (delta !== 0) {
-        // Ledger entry for audit trail
+        // Ledger entry for audit trail (only when stock actually changes)
         await client.query(
           `INSERT INTO inventory.inventory_ledger
            (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
            VALUES ($1, $2, $3, 'adjustment', $4, $5, $6, 'RETAILER_PORTAL', 'Stock updated from retailer dashboard')`,
           [storeId, productId, delta, stockBefore, openingStockQty, purchasePrice ? safeNumber(purchasePrice) : 0]
         );
-
-        // Update authoritative stock
-        await client.query(
-          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
-          [storeId, productId, openingStockQty]
-        );
-
-        // Update denormalized stock
-        await client.query(
-          `UPDATE catalog.store_products SET current_stock = $3 WHERE id = $1 AND store_id = $2`,
-          [id, storeId, openingStockQty]
-        );
       }
+
+      // Always ensure stock_balances record exists (POS reads from this table)
+      await client.query(
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+        [storeId, productId, openingStockQty]
+      );
+
+      // Always update denormalized stock for consistency
+      await client.query(
+        `UPDATE catalog.store_products SET current_stock = $3, updated_at = NOW() WHERE id = $1 AND store_id = $2`,
+        [id, storeId, openingStockQty]
+      );
     }
 
     await client.query("COMMIT");
