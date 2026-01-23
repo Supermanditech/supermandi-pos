@@ -38,7 +38,6 @@ const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 // RCAT-DEPLOY-001: Added retailer-admin health endpoint for gateway verification
 const PUBLIC_PATHS = [
   '/api/v1/retailer-admin/auth/firebase-login',
-  '/api/v1/retailer-admin/auth/dev-bypass',
   '/api/v1/retailer-admin/auth/refresh',
   '/api/v1/retailer-admin/health',  // RCAT-DEPLOY-001: Gateway routing verification
   '/health',

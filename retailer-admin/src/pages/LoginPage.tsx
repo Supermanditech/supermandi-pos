@@ -10,10 +10,6 @@ import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerify
 const DEMO_MODE_AVAILABLE = !import.meta.env.PROD && import.meta.env.VITE_DEMO_MODE === 'true';
 const DEMO_PHONE = '+919999999999'; // Only this phone works in demo mode
 
-// TEMPORARY BYPASS - Remove after Firebase OTP is working
-// Usage: Add ?bypass=supermandi2026 to URL
-const TEMP_BYPASS_KEY = 'supermandi2026';
-
 function normalizeStore(store: Record<string, string>) {
   return {
     id: store.storeId ?? store.id,
@@ -59,43 +55,6 @@ export default function LoginPage() {
 
   // Get the intended destination after login
   const from = (location.state as { from?: Location })?.from?.pathname || `/s/${storeCode}`;
-
-  // TEMPORARY BYPASS - Check URL param and auto-login via dev endpoint
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('bypass') === TEMP_BYPASS_KEY) {
-      // Call the backend dev-bypass endpoint to get a real JWT
-      const doBypassLogin = async () => {
-        try {
-          const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/dev-bypass', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              bypassKey: TEMP_BYPASS_KEY,
-              storeCode: storeCode || 'DEMO001',
-            }),
-          });
-
-          const data = await response.json();
-
-          if (!response.ok) {
-            console.error('Bypass login failed:', data.error?.message || 'Unknown error');
-            setError('Bypass login failed. Backend may be in production mode.');
-            return;
-          }
-
-          const authPayload = parseAuthResponse(data);
-          login(authPayload.token, authPayload.refreshToken, authPayload.user, authPayload.store);
-          navigate(`/s/${storeCode}`, { replace: true });
-        } catch (err) {
-          console.error('Bypass login error:', err);
-          setError('Bypass login failed. Check if backend is running.');
-        }
-      };
-
-      doBypassLogin();
-    }
-  }, [location.search, login, navigate, storeCode]);
 
   // Setup reCAPTCHA on mount (only if Firebase is configured)
   useEffect(() => {
