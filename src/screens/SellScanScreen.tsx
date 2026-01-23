@@ -1401,7 +1401,7 @@ export default function SellScanScreen({
     if (!trimmed) return;
     // SD-CATEGORY: Auto-collapse rail on scan
     setCategoryRailExpanded(false);
-    void onBarcodeScanned(trimmed);
+    void onBarcodeScanned(trimmed, undefined, "keyboard");
     setAddQuery("");
     setAddExpanded(true);
     focusAddInput();

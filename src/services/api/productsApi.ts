@@ -228,6 +228,26 @@ export async function lookupStoreProductPreviewByScan(input: {
     if (error instanceof ApiError && (error.status === 404 || error.message === "product_not_found")) {
       return null;
     }
+    // RCAT-PROD-014: Handle barcode conflict — use canonical (most recently updated) product
+    if (error instanceof ApiError && error.status === 409) {
+      const conflict = error.payload as { canonical?: { productId?: string; name?: string; displayName?: string; sellPrice?: number | null; purchasePrice?: number | null; unit?: string; currentStock?: number }; productIds?: string[] } | undefined;
+      console.warn(`[RCAT-PROD-014] Barcode conflict for ${input.scanned}, products=${JSON.stringify(conflict?.productIds)}`);
+      if (conflict?.canonical) {
+        const c = conflict.canonical;
+        return {
+          global_product_id: c.productId || input.scanned,
+          global_name: c.name || "",
+          store_display_name: c.displayName || c.name || "",
+          sell_price: c.sellPrice ?? null,
+          purchase_price: c.purchasePrice ?? null,
+          unit: c.unit || null,
+          variant: null,
+          available_qty: c.currentStock ?? 0,
+          is_first_time_in_store: false
+        };
+      }
+      return null;
+    }
     throw error;
   }
 }

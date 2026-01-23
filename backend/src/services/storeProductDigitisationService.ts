@@ -105,6 +105,7 @@ async function lookupStoreProductByBarcode(
     JOIN catalog.products p ON p.id = sp.product_id
     LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
     WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
+    ORDER BY sp.updated_at DESC
     LIMIT 1
     `,
     [storeId, normalizedBarcode]
@@ -149,6 +150,7 @@ async function lookupStoreProductByBarcode(
     JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
     LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
     WHERE p.primary_barcode = $2 AND sp.is_active = true
+    ORDER BY sp.updated_at DESC
     LIMIT 1
     `,
     [storeId, normalizedBarcode]

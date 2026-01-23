@@ -347,12 +347,12 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
             WHERE pb.product_id = p.id AND pb.barcode = $2
           )
         )
-      LIMIT 1`,
+      ORDER BY sp.updated_at DESC
+      LIMIT 2`,
       [storeId, barcode]
     );
 
-    const row = result.rows[0];
-    if (!row) {
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: "PRODUCT_NOT_IN_STORE_CATALOG",
@@ -361,6 +361,35 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
       });
     }
 
+    // RCAT-PROD-014: Conflict detection — if multiple store_products match the same barcode
+    if (result.rows.length > 1) {
+      const ids = result.rows.map((r: any) => r.store_product_id);
+      console.error(`[RCAT-PROD-014] Barcode conflict: store=${storeId}, barcode=${barcode}, products=[${ids.join(",")}]`);
+      const canonical = result.rows[0]; // most recently updated
+      return res.status(409).json({
+        error: "BARCODE_CONFLICT",
+        message: "Multiple products found for this barcode",
+        productIds: ids,
+        canonical: {
+          productId: canonical.product_id,
+          storeProductId: canonical.store_product_id,
+          name: canonical.display_name || canonical.name,
+          brand: canonical.brand || undefined,
+          category: canonical.category || undefined,
+          unit: canonical.unit || "pcs",
+          barcode: canonical.store_barcode || canonical.primary_barcode || undefined,
+          sellPrice: canonical.sell_price,
+          mrp: canonical.mrp || undefined,
+          purchasePrice: canonical.purchase_price || undefined,
+          currentStock: canonical.current_stock,
+          displayName: canonical.display_name || undefined,
+          mode: canonical.product_mode || undefined,
+          metadataUpdatedAt: canonical.metadata_updated_at || undefined,
+        },
+      });
+    }
+
+    const row = result.rows[0];
     return res.json({
       success: true,
       data: {

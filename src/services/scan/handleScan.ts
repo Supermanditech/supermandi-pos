@@ -278,7 +278,9 @@ function confirmPurchaseAdd(): Promise<boolean> {
   });
 }
 
-export async function onBarcodeScanned(rawText: string, format?: string): Promise<void> {
+export type ScanSource = "scanner" | "keyboard";
+
+export async function onBarcodeScanned(rawText: string, format?: string, source: ScanSource = "scanner"): Promise<void> {
   try {
     const trimmed = rawText?.trim?.() ?? "";
     if (!trimmed) return;
@@ -309,7 +311,7 @@ export async function onBarcodeScanned(rawText: string, format?: string): Promis
       return;
     }
 
-    await handleScan(trimmed, format, "SELL");
+    await handleScan(trimmed, format, "SELL", source);
   } catch (err) {
     console.error("onBarcodeScanned error:", err);
     notify({ tone: "error", message: "Scan failed. Please try again." });
@@ -319,7 +321,8 @@ export async function onBarcodeScanned(rawText: string, format?: string): Promis
 async function handleScan(
   barcode: string,
   format?: string,
-  intentOverride?: ScanIntent
+  intentOverride?: ScanIntent,
+  source: ScanSource = "scanner"
 ): Promise<void> {
   const trimmed = barcode.trim();
   if (!trimmed) return;
@@ -363,6 +366,11 @@ async function handleScan(
         }
 
         if (needsSellFirstOnboarding(storeProduct)) {
+          if (source === "keyboard" && storeProduct.is_first_time_in_store) {
+            // Typed search text not found — don't open product creation modal
+            notify({ tone: "info", message: "Product not found" });
+            return;
+          }
           console.log(`scan_needs_onboarding:${trimmed},sellPrice=${storeProduct.sell_price},isNew=${storeProduct.is_first_time_in_store}`);
           runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
           return;
@@ -416,6 +424,10 @@ async function handleScan(
       }
 
       if (offline.action === "PROMPT_PRICE") {
+        if (source === "keyboard" && offline.product_not_found_for_store === true) {
+          notify({ tone: "info", message: "Product not found" });
+          return;
+        }
         const offlineProduct: StoreLookupProduct = {
           global_product_id: trimmed,
           global_name: offline.product.name,
@@ -554,6 +566,10 @@ async function handleScan(
     }
 
     if (result.action === "PROMPT_PRICE") {
+      if (source === "keyboard" && result.product_not_found_for_store === true) {
+        notify({ tone: "info", message: "Product not found" });
+        return;
+      }
       const productName = result.product.name?.trim() || "";
       runtime.onSellFirstOnboarding?.({
         barcode: trimmed,
