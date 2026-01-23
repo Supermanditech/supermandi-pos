@@ -1793,10 +1793,11 @@ export default function SellScanScreen({
         barcode: detailItem.barcode ?? undefined,
         stock: stockVal,
       });
-      // Update local data
-      if (detailItem.productId) {
-        upsertStockEntries([{ productId: detailItem.productId, currentQty: stockVal }]);
-      }
+      // Update local stock cache (key + stock format required by stockService)
+      const stockUpdates: Array<{ key: string; stock: number }> = [];
+      if (detailItem.productId) stockUpdates.push({ key: detailItem.productId, stock: stockVal });
+      if (detailItem.barcode) stockUpdates.push({ key: detailItem.barcode, stock: stockVal });
+      if (stockUpdates.length > 0) upsertStockEntries(stockUpdates);
       if (detailItem.barcode) {
         setLocalPrice(detailItem.barcode, priceVal);
       }
