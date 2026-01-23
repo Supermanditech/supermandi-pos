@@ -76,6 +76,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "Payment">;
 
 type SkuItem = {
   productId?: string | null;
+  storeProductId?: string | null;  // SYNC-PRD-001: needed for metadata update endpoint
   barcode: string;
   name: string;
   currency: string | null;
@@ -122,6 +123,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
         items.push({
           productId: product.productId,
+          storeProductId: product.storeProductId,  // SYNC-PRD-001
           barcode,
           name: product.name,
           currency: "INR",
@@ -170,6 +172,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
           items.push({
             productId: match.productId,
+            storeProductId: match.storeProductId,  // SYNC-PRD-001
             barcode,
             name: displayName,
             currency: "INR",
@@ -1752,7 +1755,12 @@ export default function SellScanScreen({
 
     const priceVal = parsePriceInput(editProductPrice);
     const stockVal = parseInt(editProductStock, 10);
+    const trimmedName = editProductName.trim();
 
+    if (!trimmedName) {
+      setEditProductError("Product name cannot be empty");
+      return;
+    }
     if (priceVal === null || priceVal <= 0) {
       setEditProductError("Enter a valid sell price");
       return;
@@ -1765,6 +1773,14 @@ export default function SellScanScreen({
     setEditProductBusy(true);
     setEditProductError(null);
     try {
+      // SYNC-PRD-001: Update name metadata if changed
+      const nameChanged = trimmedName !== (detailItem.name || "");
+      if (nameChanged && detailItem.storeProductId) {
+        await productsApi.updateStoreProductMetadata({
+          storeProductId: detailItem.storeProductId,
+          displayName: trimmedName,
+        });
+      }
       // Update price
       await productsApi.updateStoreProductPrice({
         globalProductId: detailItem.productId ?? undefined,
@@ -1784,6 +1800,20 @@ export default function SellScanScreen({
       if (detailItem.barcode) {
         setLocalPrice(detailItem.barcode, priceVal);
       }
+      // SYNC-PRD-001: Refresh local product lists so updated name shows immediately
+      if (nameChanged) {
+        const updateName = (items: SkuItem[]) =>
+          items.map(i =>
+            (i.storeProductId === detailItem.storeProductId || i.barcode === detailItem.barcode)
+              ? { ...i, name: trimmedName }
+              : i
+          );
+        setCatalogItems(updateName);
+        setAddResults(updateName);
+        if (detailItem.barcode) {
+          void upsertLocalProduct(detailItem.barcode, trimmedName, "INR", null, detailItem.productId ?? null);
+        }
+      }
       closeDetail();
       if (Platform.OS === "android") ToastAndroid.show("Product updated", ToastAndroid.SHORT);
     } catch (e) {
@@ -1792,7 +1822,7 @@ export default function SellScanScreen({
     } finally {
       setEditProductBusy(false);
     }
-  }, [detailItem, editProductBusy, editProductPrice, editProductStock, closeDetail]);
+  }, [detailItem, editProductBusy, editProductPrice, editProductStock, editProductName, closeDetail]);
 
   const handleEditorRemove = useCallback(() => {
     if (!editorItem) return;
@@ -2922,9 +2952,12 @@ export default function SellScanScreen({
               <View style={styles.onboardingField}>
                 <Text style={styles.onboardingLabel}>Product name</Text>
                 <TextInput
-                  style={[styles.onboardingInput, styles.inputDisabled]}
+                  style={[styles.onboardingInput, editProductBusy && styles.inputDisabled]}
                   value={editProductName}
-                  editable={false}
+                  onChangeText={(v) => { setEditProductName(v); setEditProductError(null); }}
+                  placeholder="Product name"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  editable={!editProductBusy}
                 />
               </View>
               <View style={styles.onboardingField}>

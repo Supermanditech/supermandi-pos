@@ -389,10 +389,11 @@ export async function createStoreProductFromDigitisation(
     const mrpMinor = input.mrp ? Math.round(input.mrp) : sellPriceMinor;
     const purchasePriceMinor = input.purchasePrice ? Math.round(input.purchasePrice) : null;
 
+    // SYNC-PRD-001: Set metadata_updated_at/metadata_updated_by on both INSERT and ON CONFLICT
     await client.query(
       `
-      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9)
+      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'POS_APP')
       ON CONFLICT (store_id, product_id) DO UPDATE SET
         sell_price = COALESCE(EXCLUDED.sell_price, catalog.store_products.sell_price),
         mrp = COALESCE(EXCLUDED.mrp, catalog.store_products.mrp),
@@ -400,6 +401,8 @@ export async function createStoreProductFromDigitisation(
         display_name = EXCLUDED.display_name,
         current_stock = EXCLUDED.current_stock,
         taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
+        metadata_updated_at = NOW(),
+        metadata_updated_by = 'POS_APP',
         is_active = true,
         updated_at = NOW()
       RETURNING id

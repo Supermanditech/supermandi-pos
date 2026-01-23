@@ -226,6 +226,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           sp.purchase_price,
           sp.display_name as sp_display_name,
           sp.product_mode,
+          sp.metadata_updated_at,
           COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
           p.name,
           p.brand,
@@ -234,7 +235,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           p.primary_barcode,
           spb.barcode as store_barcode,
           GREATEST(sp.updated_at, p.updated_at) as updated_at,
-          LOWER(TRIM(COALESCE(p.name, ''))) || '::' || LOWER(TRIM(COALESCE(p.brand, ''))) as group_key,
+          LOWER(TRIM(COALESCE(sp.display_name, p.name, ''))) || '::' || LOWER(TRIM(COALESCE(p.brand, ''))) as group_key,
           (${scoreExpr}) as priority_score
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
@@ -264,7 +265,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
       if (!group) {
         group = {
           groupId: row.group_key,
-          displayName: row.name,
+          displayName: row.sp_display_name || row.name,  // SYNC-PRD-001: display_name is authoritative
           brand: row.brand || undefined,
           category: row.category || undefined,
           matches: [],
@@ -283,6 +284,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         mode: row.product_mode || undefined,
         displayName: row.sp_display_name || undefined,
         updatedAt: row.updated_at || undefined,
+        metadataUpdatedAt: row.metadata_updated_at || undefined,
       });
     }
 
@@ -327,6 +329,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         sp.purchase_price,
         sp.display_name,
         sp.product_mode,
+        sp.metadata_updated_at,
         COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
         spb_match.barcode as store_barcode
       FROM catalog.store_products sp
@@ -363,7 +366,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
       data: {
         productId: row.product_id,
         storeProductId: row.store_product_id,
-        name: row.name,
+        name: row.display_name || row.name,  // SYNC-PRD-001: display_name is authoritative
         brand: row.brand || undefined,
         category: row.category || undefined,
         unit: row.unit || "pcs",
@@ -374,6 +377,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         currentStock: row.current_stock,
         displayName: row.display_name || undefined,
         mode: row.product_mode || undefined,
+        metadataUpdatedAt: row.metadata_updated_at || undefined,
       },
       context: "SELL",
     });
@@ -412,6 +416,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           sp.purchase_price,
           sp.display_name,
           sp.product_mode,
+          sp.metadata_updated_at,
           COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
           p.brand,
           p.unit,
@@ -428,7 +433,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
         WHERE sp.store_id = $1
           AND sp.is_active = true
           AND p.is_active = true
-        ORDER BY p.name ASC
+        ORDER BY COALESCE(sp.display_name, p.name) ASC
         LIMIT $2 OFFSET $3`,
         [storeId, limit, offset]
       ),
@@ -446,7 +451,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
     const data = dataResult.rows.map((row: any) => ({
       storeProductId: row.store_product_id,
       productId: row.product_id,
-      name: row.name,
+      name: row.display_name || row.name,  // SYNC-PRD-001: display_name is authoritative
       barcode: row.store_barcode || row.primary_barcode || null,
       sellPrice: row.sell_price,
       mrp: row.mrp || null,
@@ -458,6 +463,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
       displayName: row.display_name || null,
       mode: row.product_mode || null,
       updatedAt: row.updated_at || null,
+      metadataUpdatedAt: row.metadata_updated_at || null,
     }));
 
     const total = countResult.rows[0]?.total || 0;
@@ -485,10 +491,12 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
   }
 
   try {
-    // Get the latest updated_at across store_products and stock_balances for this store
+    // Get the latest updated_at across store_products, stock_balances, and metadata for this store
+    // SYNC-PRD-001: Include metadata_updated_at to detect name changes from Dashboard
     const result = await pool.query(
       `SELECT GREATEST(
         (SELECT MAX(updated_at) FROM catalog.store_products WHERE store_id = $1 AND is_active = true),
+        (SELECT MAX(metadata_updated_at) FROM catalog.store_products WHERE store_id = $1 AND is_active = true),
         (SELECT MAX(updated_at) FROM inventory.stock_balances WHERE store_id = $1)
       ) as latest_updated_at`,
       [storeId]
@@ -688,5 +696,60 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Stock update failed" });
   } finally {
     client.release();
+  }
+});
+
+/**
+ * PATCH /api/v1/pos/store-products/:storeProductId/metadata
+ * SYNC-PRD-001: Update product metadata (display name) from POS
+ * Last-write-wins: server sets metadata_updated_at = NOW() on every write
+ */
+posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeProductId } = req.params;
+  const { displayName } = req.body as { displayName?: string };
+
+  if (typeof displayName !== "string" || displayName.trim().length === 0) {
+    return res.status(422).json({
+      error: "VALIDATION_ERROR",
+      message: "displayName is required and must be non-empty"
+    });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE catalog.store_products
+       SET display_name = $1,
+           metadata_updated_at = NOW(),
+           metadata_updated_by = 'POS_APP',
+           updated_at = NOW()
+       WHERE id = $2 AND store_id = $3 AND is_active = true
+       RETURNING id, display_name, metadata_updated_at`,
+      [displayName.trim(), storeProductId, storeId]
+    );
+
+    if ((result.rowCount ?? 0) === 0) {
+      return res.status(404).json({
+        error: "NOT_FOUND",
+        message: "Store product not found"
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        storeProductId: result.rows[0].id,
+        displayName: result.rows[0].display_name,
+        metadataUpdatedAt: result.rows[0].metadata_updated_at,
+      }
+    });
+  } catch (error) {
+    console.error("[storeProducts] Metadata update error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Metadata update failed" });
   }
 });

@@ -77,7 +77,7 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
 
     if (search && typeof search === 'string' && search.trim()) {
       const term = `%${search.trim()}%`;
-      whereClause += ` AND (p.name ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex} OR p.brand ILIKE $${paramIndex})`;
+      whereClause += ` AND (p.name ILIKE $${paramIndex} OR sp.display_name ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex} OR p.brand ILIKE $${paramIndex})`;
       params.push(term);
       paramIndex++;
     }
@@ -86,7 +86,7 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
       `SELECT
         sp.id,
         sp.product_id as "productId",
-        p.name,
+        COALESCE(sp.display_name, p.name) as name,
         p.description,
         p.brand,
         p.category,
@@ -108,6 +108,7 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         sp.supplier_id as "supplierId",
         sp.taxonomy_id as "categoryId",
         sp.display_name as "alias",
+        sp.metadata_updated_at as "metadataUpdatedAt",
         spb.barcode as "generatedBarcode"
       FROM catalog.store_products sp
       INNER JOIN catalog.products p ON p.id = sp.product_id
@@ -229,12 +230,14 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
 
     // 2. Create the store_product mapping
     // RCAT-CAT-002: Include taxonomy_id for category assignment (store override)
+    // SYNC-PRD-001: Set display_name = name so product is immediately visible with correct name
     const storeProductResult = await client.query(
       `INSERT INTO catalog.store_products (
         store_id, product_id, sell_price, mrp, purchase_price,
         product_mode, current_stock, is_active,
-        low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id, taxonomy_id
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13)
+        low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id, taxonomy_id,
+        display_name, metadata_updated_at, metadata_updated_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, $10, $11, $12, $13, $14, NOW(), 'RETAILER_DASHBOARD')
       RETURNING id`,
       [
         storeId,
@@ -250,6 +253,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         productMode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null,
         supplierId || null,
         categoryId || null,
+        name.trim(),
       ]
     );
     const storeProductId = storeProductResult.rows[0].id;
@@ -422,6 +426,11 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
 
     // Update store_product fields
     // RCAT-CAT-002: Include taxonomy_id for category assignment (store override)
+    // SYNC-PRD-001: display_name is the authoritative name for both POS and Dashboard
+    // "Product Name" from the form is the display name shown everywhere
+    const resolvedDisplayName = name?.trim() || alias?.trim() || null;
+
+    // SYNC-PRD-001: Only update metadata_updated_at when display_name actually changes
     await client.query(
       `UPDATE catalog.store_products SET
         sell_price = COALESCE($3, sell_price),
@@ -434,7 +443,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         supplier_id = $10,
         taxonomy_id = COALESCE($11, taxonomy_id),
         product_mode = COALESCE($12, product_mode),
-        display_name = $13,
+        display_name = COALESCE($13, display_name),
+        metadata_updated_at = CASE WHEN $13 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
+        metadata_updated_by = CASE WHEN $13 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
         updated_at = NOW()
       WHERE id = $1 AND store_id = $2`,
       [
@@ -450,7 +461,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         supplierId || null,
         categoryId || null,
         mode || null,
-        alias?.trim() || null,
+        resolvedDisplayName,
       ]
     );
 
@@ -617,13 +628,15 @@ retailerAdminProductsRouter.post("/products/bulk", async (req: Request, res: Res
         const productId = prodResult.rows[0].id;
 
         // Create store_product
+        // SYNC-PRD-001: Set display_name so product shows correctly across POS and Dashboard
         const spResult = await client.query(
           `INSERT INTO catalog.store_products (
             store_id, product_id, sell_price, mrp, purchase_price,
-            product_mode, current_stock, is_active
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+            product_mode, current_stock, is_active,
+            display_name, metadata_updated_at, metadata_updated_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW(), 'BULK_IMPORT')
           RETURNING id`,
-          [storeId, productId, pSellPrice, p.mrp ? safeNumber(p.mrp) : null, pPurchasePrice, productMode, pStock]
+          [storeId, productId, pSellPrice, p.mrp ? safeNumber(p.mrp) : null, pPurchasePrice, productMode, pStock, p.name.trim()]
         );
         const storeProductId = spResult.rows[0].id;
 
@@ -735,12 +748,14 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
     );
     const productId = productResult.rows[0].id;
 
+    // SYNC-PRD-001: Set display_name so product shows same name across POS and Dashboard
     const spResult = await client.query(
       `INSERT INTO catalog.store_products (
         store_id, product_id, sell_price, mrp, purchase_price,
         product_mode, current_stock, is_active,
-        low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id
-      ) VALUES ($1, $2, $3, $4, $5, 'LOOSE_BULK', $6, true, $7, $8, $9, $10, $11)
+        low_stock_alert_qty, notes, sold_by, rate_unit, supplier_id,
+        display_name, metadata_updated_at, metadata_updated_by
+      ) VALUES ($1, $2, $3, $4, $5, 'LOOSE_BULK', $6, true, $7, $8, $9, $10, $11, $12, NOW(), 'RETAILER_DASHBOARD')
       RETURNING id`,
       [
         storeId, productId,
@@ -750,6 +765,7 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
         notes?.trim() || null,
         soldBy || 'WEIGHT', rateUnit || 'KG',
         supplierId || null,
+        name.trim(),
       ]
     );
     const storeProductId = spResult.rows[0].id;
@@ -956,9 +972,10 @@ retailerAdminProductsRouter.get("/products/:id/sku.pdf", async (req: Request, re
 
   try {
     // Get product details
+    // SYNC-PRD-001: Use display_name (store override) for label, fallback to products.name
     const result = await pool.query(
       `SELECT
-        p.name, p.brand, p.unit,
+        COALESCE(sp.display_name, p.name) as name, p.brand, p.unit,
         sp.sell_price, sp.product_mode,
         COALESCE(spb.barcode, p.primary_barcode) as barcode
       FROM catalog.store_products sp

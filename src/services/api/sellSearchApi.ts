@@ -19,6 +19,7 @@ export interface StoreSkuMatch {
   currentStock: number;
   displayName?: string;
   updatedAt?: string | null;
+  metadataUpdatedAt?: string | null;  // SYNC-PRD-001
 }
 
 /**
@@ -54,6 +55,8 @@ export interface StoreLookupResponse {
     barcode?: string;
     sellPrice?: number | null;
     currentStock: number;
+    displayName?: string;           // SYNC-PRD-001: store override name
+    metadataUpdatedAt?: string | null;  // SYNC-PRD-001
   };
   context: "SELL";
 }
@@ -125,6 +128,7 @@ export interface StoreProductListItem {
   brand: string | null;
   unit: string;
   updatedAt?: string | null;
+  metadataUpdatedAt?: string | null;  // SYNC-PRD-001
 }
 
 export interface StoreProductListResponse {

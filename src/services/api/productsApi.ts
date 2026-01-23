@@ -408,6 +408,20 @@ export async function updateStoreProductStock(input: {
   return res.data;
 }
 
+/**
+ * SYNC-PRD-001: Update product metadata (display name) from POS
+ * Last-write-wins: server sets metadata_updated_at = NOW()
+ */
+export async function updateStoreProductMetadata(input: {
+  storeProductId: string;
+  displayName: string;
+}): Promise<void> {
+  await apiClient.patch<{ success: boolean }>(
+    `${STORE_PRODUCTS_BASE}/${input.storeProductId}/metadata`,
+    { displayName: input.displayName }
+  );
+}
+
 const normalizePriceInput = (value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return Math.round(value);
