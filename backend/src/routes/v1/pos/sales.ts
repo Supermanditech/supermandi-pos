@@ -396,7 +396,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
     const itemsRes = await pool.query(
       `
       SELECT
-        COALESCE(si.item_name, 'Unknown') AS product_name,
+        COALESCE(si.name, 'Unknown') AS product_name,
         si.variant_id AS product_id,
         SUM(si.quantity)::int AS quantity_sold,
         SUM(si.line_total_minor)::bigint AS total_amount
@@ -405,7 +405,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
       WHERE s.store_id = $1
         AND s.status IN ('PAID_CASH', 'PAID_UPI', 'DUE')
         AND s.created_at::date = $2::date
-      GROUP BY si.variant_id, si.item_name
+      GROUP BY si.variant_id, si.name
       ORDER BY quantity_sold DESC
       LIMIT 10
       `,
