@@ -215,6 +215,7 @@ async function selfHealSchema(db: Db): Promise<void> {
     { table: "offline_collections", column: "server_collection_id", definition: "TEXT NULL" },
     { table: "offline_products", column: "category", definition: "TEXT NULL" },
     { table: "offline_products", column: "product_id", definition: "TEXT NULL" },
+    { table: "offline_products", column: "store_product_id", definition: "TEXT NULL" },
     { table: "offline_products", column: "current_stock", definition: "INTEGER NULL" },
     { table: "offline_sale_items", column: "line_subtotal_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
     { table: "offline_sale_items", column: "discount_type", definition: "TEXT NULL" },

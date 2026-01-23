@@ -409,19 +409,27 @@ export async function updateStoreProductStock(input: {
 }
 
 /**
- * SYNC-PRD-001: Update product metadata (display name, purchase price) from POS
+ * SYNC-PRD-001: Update product metadata (display name, purchase price, sell price) from POS.
+ * Accepts storeProductId, productId, or barcode for identification (fallback order).
  * Last-write-wins: server sets metadata_updated_at = NOW()
  */
 export async function updateStoreProductMetadata(input: {
-  storeProductId: string;
+  storeProductId?: string;
+  productId?: string;
+  barcode?: string;
   displayName?: string;
   purchasePrice?: number;
+  sellPrice?: number;
 }): Promise<void> {
   const body: Record<string, unknown> = {};
+  if (input.storeProductId) body.storeProductId = input.storeProductId;
+  if (input.productId) body.productId = input.productId;
+  if (input.barcode) body.barcode = input.barcode;
   if (input.displayName) body.displayName = input.displayName;
   if (typeof input.purchasePrice === "number") body.purchasePrice = input.purchasePrice;
+  if (typeof input.sellPrice === "number") body.sellPrice = input.sellPrice;
   await apiClient.patch<{ success: boolean }>(
-    `${STORE_PRODUCTS_BASE}/${input.storeProductId}/metadata`,
+    `${STORE_PRODUCTS_BASE}/metadata`,
     body
   );
 }

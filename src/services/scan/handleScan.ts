@@ -439,7 +439,11 @@ async function handleScan(
             name: offline.product.name || offline.product.barcode,
             barcode: offline.product.barcode,
             priceMinor: offline.product.priceMinor,
-            currency: offline.product.currency ?? "INR"
+            currency: offline.product.currency ?? "INR",
+            metadata: {
+              storeProductId: offline.product.storeProductId || undefined,
+              productId: offline.product.productId || undefined,
+            },
           },
           priceMinor
         );

@@ -134,7 +134,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
         // Store in offline DB (with productId and stock)
         if (barcode) {
-          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, stock);
+          await upsertLocalProduct(barcode, product.name, "INR", null, product.productId, stock, product.storeProductId ?? null);
           if (product.sellPrice !== null) {
             await setLocalPrice(barcode, product.sellPrice);
           }
@@ -183,7 +183,7 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 
           // Store in offline DB (with productId and stock)
           if (barcode) {
-            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock);
+            await upsertLocalProduct(barcode, displayName, "INR", null, match.productId, stock, match.storeProductId ?? null);
             if (sellPrice !== null) {
               await setLocalPrice(barcode, sellPrice);
             }
@@ -1773,20 +1773,18 @@ export default function SellScanScreen({
     setEditProductBusy(true);
     setEditProductError(null);
     try {
-      // SYNC-PRD-001: Update name metadata if changed
+      // SYNC-PRD-001: Unified sync for name + price to backend (last-write-wins)
       const nameChanged = trimmedName !== (detailItem.name || "");
-      if (nameChanged && detailItem.storeProductId) {
+      const hasIdentifier = detailItem.storeProductId || detailItem.productId || detailItem.barcode;
+      if (hasIdentifier) {
         await productsApi.updateStoreProductMetadata({
-          storeProductId: detailItem.storeProductId,
-          displayName: trimmedName,
+          storeProductId: detailItem.storeProductId ?? undefined,
+          productId: detailItem.productId ?? undefined,
+          barcode: detailItem.barcode ?? undefined,
+          displayName: nameChanged ? trimmedName : undefined,
+          sellPrice: priceVal,
         });
       }
-      // Update price
-      await productsApi.updateStoreProductPrice({
-        globalProductId: detailItem.productId ?? undefined,
-        scanned: detailItem.barcode ?? undefined,
-        sellPriceMinor: priceVal,
-      });
       // Update stock
       await productsApi.updateStoreProductStock({
         productId: detailItem.productId ?? undefined,
@@ -1812,7 +1810,7 @@ export default function SellScanScreen({
         setCatalogItems(updateName);
         setAddResults(updateName);
         if (detailItem.barcode) {
-          void upsertLocalProduct(detailItem.barcode, trimmedName, "INR", null, detailItem.productId ?? null);
+          void upsertLocalProduct(detailItem.barcode, trimmedName, "INR", null, detailItem.productId ?? null, null, detailItem.storeProductId ?? null);
         }
       }
       closeDetail();
@@ -1840,14 +1838,17 @@ export default function SellScanScreen({
     // This triggers stockLimitEvent which shows unified toast + red highlight
     updateQuantity(editorItem.id, nextQty);
 
-    // Update sell price
+    // Update sell price (local cart + local DB)
     const parsedSellPrice = parsePriceInput(editorPrice);
+    const sellPriceChanged = parsedSellPrice !== null && parsedSellPrice > 0 && parsedSellPrice !== editorItem.priceMinor;
     if (parsedSellPrice !== null && parsedSellPrice > 0) {
       updatePrice(editorItem.id, parsedSellPrice);
-      void handleSaveDefaultPrice(editorItem, parsedSellPrice);
+      if (editorItem.barcode) {
+        void setLocalPrice(editorItem.barcode, parsedSellPrice);
+      }
     }
 
-    // Update name and purchase price in metadata
+    // Update name and purchase price in metadata (local cart)
     const parsedPurchasePrice = parsePriceInput(editorPurchasePrice);
     const trimmedName = editorName.trim();
     const nameChanged = trimmedName && trimmedName !== editorItem.name;
@@ -1859,23 +1860,32 @@ export default function SellScanScreen({
         metadata: purchasePriceChanged ? { purchasePriceMinor: parsedPurchasePrice } : undefined
       });
 
-      // SYNC-PRD-001: Sync name/purchasePrice to backend (last-write-wins)
-      const storeProductId = editorItem.metadata?.storeProductId as string | undefined;
-      if (storeProductId) {
-        void productsApi.updateStoreProductMetadata({
-          storeProductId,
-          displayName: nameChanged ? trimmedName : undefined,
-          purchasePrice: purchasePriceChanged ? parsedPurchasePrice : undefined,
-        });
-      }
-
       // Update catalog grid so name shows immediately
       if (nameChanged && editorItem.barcode) {
         const updateName = (items: SkuItem[]) =>
           items.map(i => i.barcode === editorItem.barcode ? { ...i, name: trimmedName } : i);
         setCatalogItems(updateName);
         setAddResults(updateName);
-        void upsertLocalProduct(editorItem.barcode, trimmedName, "INR", null, editorItem.metadata?.productId ?? null);
+        void upsertLocalProduct(editorItem.barcode, trimmedName, "INR", null, editorItem.metadata?.productId ?? null, null, (editorItem.metadata?.storeProductId as string) ?? null);
+      }
+    }
+
+    // SYNC-PRD-001: Unified backend sync for ALL changed fields (last-write-wins)
+    // Uses storeProductId > productId > barcode fallback for identification
+    if (nameChanged || purchasePriceChanged || sellPriceChanged) {
+      const storeProductId = editorItem.metadata?.storeProductId as string | undefined;
+      const productId = editorItem.metadata?.productId as string | undefined;
+      const barcode = editorItem.barcode;
+
+      if (storeProductId || productId || barcode) {
+        void productsApi.updateStoreProductMetadata({
+          storeProductId: storeProductId || undefined,
+          productId: productId || undefined,
+          barcode: barcode || undefined,
+          displayName: nameChanged ? trimmedName : undefined,
+          purchasePrice: purchasePriceChanged ? parsedPurchasePrice : undefined,
+          sellPrice: sellPriceChanged ? parsedSellPrice! : undefined,
+        });
       }
     }
 
@@ -1906,7 +1916,6 @@ export default function SellScanScreen({
     editorPrice,
     editorPurchasePrice,
     editorQty,
-    handleSaveDefaultPrice,
     removeItemDiscount,
     updateItemDetails,
     updatePrice,

@@ -700,8 +700,155 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
 });
 
 /**
+ * PATCH /api/v1/pos/store-products/metadata
+ * Update product metadata (display name, purchase price, sell price) by barcode, productId, or storeProductId.
+ * Uses barcode/productId fallback when storeProductId is unavailable (offline-first, last-write-wins).
+ * IMPORTANT: This literal route MUST be defined BEFORE the parametric /:storeProductId/metadata route.
+ */
+posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice } = req.body as {
+    barcode?: string;
+    productId?: string;
+    storeProductId?: string;
+    displayName?: string;
+    purchasePrice?: number;
+    sellPrice?: number;
+  };
+
+  if (!barcode && !productId && !storeProductId) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "barcode, productId, or storeProductId is required" });
+  }
+
+  const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
+  const validPurchasePrice = typeof purchasePrice === "number" && Number.isFinite(purchasePrice) && purchasePrice >= 0
+    ? Math.round(purchasePrice)
+    : null;
+  const validSellPrice = typeof sellPrice === "number" && Number.isFinite(sellPrice) && sellPrice > 0
+    ? Math.round(sellPrice)
+    : null;
+
+  if (!trimmedName && validPurchasePrice === null && validSellPrice === null) {
+    return res.status(422).json({
+      error: "VALIDATION_ERROR",
+      message: "At least one of displayName, purchasePrice, or sellPrice is required"
+    });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  try {
+    // Build dynamic SET clause
+    const setClauses: string[] = [];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (trimmedName) {
+      setClauses.push(`display_name = $${paramIdx++}`);
+      params.push(trimmedName);
+    }
+    if (validPurchasePrice !== null) {
+      setClauses.push(`purchase_price = $${paramIdx++}`);
+      params.push(validPurchasePrice);
+    }
+    if (validSellPrice !== null) {
+      setClauses.push(`sell_price = $${paramIdx++}`);
+      params.push(validSellPrice);
+    }
+    setClauses.push(`metadata_updated_at = NOW()`);
+    setClauses.push(`metadata_updated_by = 'POS_APP'`);
+    setClauses.push(`updated_at = NOW()`);
+
+    const setClause = setClauses.join(", ");
+    let result;
+
+    if (storeProductId) {
+      params.push(storeProductId);
+      params.push(storeId);
+      result = await pool.query(
+        `UPDATE catalog.store_products
+         SET ${setClause}
+         WHERE id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
+         RETURNING id, display_name, purchase_price, sell_price, metadata_updated_at`,
+        params
+      );
+    } else if (productId) {
+      params.push(productId);
+      params.push(storeId);
+      result = await pool.query(
+        `UPDATE catalog.store_products
+         SET ${setClause}
+         WHERE product_id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
+         RETURNING id, display_name, purchase_price, sell_price, metadata_updated_at`,
+        params
+      );
+    } else {
+      // Lookup by barcode via store_product_barcodes
+      params.push(storeId);
+      params.push(barcode);
+      result = await pool.query(
+        `UPDATE catalog.store_products sp
+         SET ${setClause}
+         FROM catalog.store_product_barcodes spb
+         WHERE spb.store_id = $${paramIdx++} AND spb.barcode = $${paramIdx++}
+           AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+           AND sp.is_active = true
+         RETURNING sp.id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at`,
+        params
+      );
+
+      // Fallback: try primary_barcode on catalog.products
+      if ((result.rowCount ?? 0) === 0) {
+        const fbParams: any[] = [];
+        const fbSetClauses: string[] = [];
+        let fbIdx = 1;
+        if (trimmedName) { fbSetClauses.push(`display_name = $${fbIdx++}`); fbParams.push(trimmedName); }
+        if (validPurchasePrice !== null) { fbSetClauses.push(`purchase_price = $${fbIdx++}`); fbParams.push(validPurchasePrice); }
+        if (validSellPrice !== null) { fbSetClauses.push(`sell_price = $${fbIdx++}`); fbParams.push(validSellPrice); }
+        fbSetClauses.push(`metadata_updated_at = NOW()`);
+        fbSetClauses.push(`metadata_updated_by = 'POS_APP'`);
+        fbSetClauses.push(`updated_at = NOW()`);
+
+        fbParams.push(barcode);
+        fbParams.push(storeId);
+        result = await pool.query(
+          `UPDATE catalog.store_products sp
+           SET ${fbSetClauses.join(", ")}
+           FROM catalog.products p
+           WHERE p.primary_barcode = $${fbIdx++} AND sp.product_id = p.id
+             AND sp.store_id = $${fbIdx} AND sp.is_active = true
+           RETURNING sp.id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at`,
+          fbParams
+        );
+      }
+    }
+
+    if ((result.rowCount ?? 0) === 0) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        storeProductId: result.rows[0].id,
+        displayName: result.rows[0].display_name,
+        purchasePrice: result.rows[0].purchase_price,
+        sellPrice: result.rows[0].sell_price,
+        metadataUpdatedAt: result.rows[0].metadata_updated_at,
+      }
+    });
+  } catch (error) {
+    console.error("[storeProducts] Metadata update (body-based) error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Metadata update failed" });
+  }
+});
+
+/**
  * PATCH /api/v1/pos/store-products/:storeProductId/metadata
- * SYNC-PRD-001: Update product metadata (display name) from POS
+ * SYNC-PRD-001: Update product metadata (display name) from POS (legacy path-param endpoint)
  * Last-write-wins: server sets metadata_updated_at = NOW() on every write
  */
 posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, async (req, res) => {
@@ -779,3 +926,4 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Metadata update failed" });
   }
 });
+

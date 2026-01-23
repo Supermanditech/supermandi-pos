@@ -9,6 +9,8 @@ export type OfflineScanProduct = {
   category: string | null;
   currency: string;
   priceMinor: number | null;
+  productId?: string | null;
+  storeProductId?: string | null;
 };
 
 export type OfflineScanResult =
@@ -38,8 +40,10 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
     name: string;
     category: string | null;
     currency: string;
+    product_id: string | null;
+    store_product_id: string | null;
   }>(
-    `SELECT barcode, name, category, currency FROM offline_products WHERE barcode = ? LIMIT 1`,
+    `SELECT barcode, name, category, currency, product_id, store_product_id FROM offline_products WHERE barcode = ? LIMIT 1`,
     [barcode]
   );
 
@@ -55,7 +59,9 @@ export async function fetchLocalProduct(barcode: string): Promise<OfflineScanPro
     name: rows[0].name,
     category: rows[0].category ?? null,
     currency: rows[0].currency,
-    priceMinor: priceRows[0]?.price_minor ?? null
+    priceMinor: priceRows[0]?.price_minor ?? null,
+    productId: rows[0].product_id ?? null,
+    storeProductId: rows[0].store_product_id ?? null,
   };
 }
 
@@ -65,22 +71,24 @@ export async function upsertLocalProduct(
   currency = "INR",
   category: string | null = null,
   productId: string | null = null,
-  currentStock: number | null = null
+  currentStock: number | null = null,
+  storeProductId: string | null = null
 ): Promise<OfflineScanProduct> {
   const now = new Date().toISOString();
   await offlineDb.run(
     `
-    INSERT INTO offline_products (barcode, name, category, currency, product_id, current_stock, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO offline_products (barcode, name, category, currency, product_id, store_product_id, current_stock, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(barcode) DO UPDATE SET
       name = excluded.name,
       category = COALESCE(excluded.category, offline_products.category),
       currency = excluded.currency,
       product_id = COALESCE(excluded.product_id, offline_products.product_id),
+      store_product_id = COALESCE(excluded.store_product_id, offline_products.store_product_id),
       current_stock = COALESCE(excluded.current_stock, offline_products.current_stock),
       updated_at = excluded.updated_at
     `,
-    [barcode, name, category, currency, productId, currentStock, now, now]
+    [barcode, name, category, currency, productId, storeProductId, currentStock, now, now]
   );
 
   return {
