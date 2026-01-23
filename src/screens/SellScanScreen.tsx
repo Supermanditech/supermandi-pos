@@ -762,9 +762,11 @@ export default function SellScanScreen({
   const [editorDiscountType, setEditorDiscountType] = useState<DiscountType>("percentage");
   const [editorDiscountValue, setEditorDiscountValue] = useState("");
   const [detailItem, setDetailItem] = useState<SkuItem | null>(null);
-  const [detailStockEditing, setDetailStockEditing] = useState(false);
-  const [detailStockInput, setDetailStockInput] = useState("");
-  const [detailStockBusy, setDetailStockBusy] = useState(false);
+  const [editProductPrice, setEditProductPrice] = useState("");
+  const [editProductStock, setEditProductStock] = useState("");
+  const [editProductName, setEditProductName] = useState("");
+  const [editProductBusy, setEditProductBusy] = useState(false);
+  const [editProductError, setEditProductError] = useState<string | null>(null);
 
   // SD-CATEGORY: Category rail state (Demo Store only)
   const storeCode = useSettingsStore((s) => s.storeCode);
@@ -1727,38 +1729,70 @@ export default function SellScanScreen({
 
   const closeDetail = useCallback(() => {
     setDetailItem(null);
-    setDetailStockEditing(false);
-    setDetailStockInput("");
-    setDetailStockBusy(false);
+    setEditProductPrice("");
+    setEditProductStock("");
+    setEditProductName("");
+    setEditProductBusy(false);
+    setEditProductError(null);
   }, []);
 
-  const handleDetailStockSave = useCallback(async () => {
+  // Populate edit form when detailItem opens
+  useEffect(() => {
     if (!detailItem) return;
-    const stockVal = parseInt(detailStockInput, 10);
-    if (!Number.isFinite(stockVal) || stockVal < 0) {
-      if (Platform.OS === "android") ToastAndroid.show("Enter a valid stock quantity", ToastAndroid.SHORT);
+    const resolved = resolveSkuPrice(detailItem);
+    setEditProductName(detailItem.name || "");
+    setEditProductPrice(formatPriceInput(resolved.priceMinor));
+    const stockVal = resolveStockForSku(detailItem) ?? detailItem.currentStock ?? 0;
+    setEditProductStock(String(stockVal));
+    setEditProductError(null);
+  }, [detailItem]);
+
+  const handleEditProductSave = useCallback(async () => {
+    if (!detailItem || editProductBusy) return;
+
+    const priceVal = parsePriceInput(editProductPrice);
+    const stockVal = parseInt(editProductStock, 10);
+
+    if (priceVal === null || priceVal <= 0) {
+      setEditProductError("Enter a valid sell price");
       return;
     }
-    setDetailStockBusy(true);
+    if (!Number.isFinite(stockVal) || stockVal < 0) {
+      setEditProductError("Enter a valid stock quantity");
+      return;
+    }
+
+    setEditProductBusy(true);
+    setEditProductError(null);
     try {
+      // Update price
+      await productsApi.updateStoreProductPrice({
+        globalProductId: detailItem.productId ?? undefined,
+        scanned: detailItem.barcode ?? undefined,
+        sellPriceMinor: priceVal,
+      });
+      // Update stock
       await productsApi.updateStoreProductStock({
         productId: detailItem.productId ?? undefined,
         barcode: detailItem.barcode ?? undefined,
         stock: stockVal,
       });
-      // Update local stock data
+      // Update local data
       if (detailItem.productId) {
         upsertStockEntries([{ productId: detailItem.productId, currentQty: stockVal }]);
       }
-      setDetailStockEditing(false);
-      if (Platform.OS === "android") ToastAndroid.show("Stock updated", ToastAndroid.SHORT);
+      if (detailItem.barcode) {
+        setLocalPrice(detailItem.barcode, priceVal);
+      }
+      closeDetail();
+      if (Platform.OS === "android") ToastAndroid.show("Product updated", ToastAndroid.SHORT);
     } catch (e) {
-      console.error("[SellScanScreen] Stock update failed:", e);
-      if (Platform.OS === "android") ToastAndroid.show("Stock update failed", ToastAndroid.SHORT);
+      console.error("[SellScanScreen] Product edit failed:", e);
+      setEditProductError("Update failed. Try again.");
     } finally {
-      setDetailStockBusy(false);
+      setEditProductBusy(false);
     }
-  }, [detailItem, detailStockInput]);
+  }, [detailItem, editProductBusy, editProductPrice, editProductStock, closeDetail]);
 
   const handleEditorRemove = useCallback(() => {
     if (!editorItem) return;
@@ -1882,18 +1916,6 @@ export default function SellScanScreen({
     const parsed = parseDiscountInput(editorDiscountValue);
     return parsed > 100;
   }, [editorDiscountType, editorDiscountValue]);
-
-  const detailPriceLabel = useMemo(() => {
-    if (!detailItem) return "";
-    const resolved = resolveSkuPrice(detailItem);
-    return formatMoney(resolved.priceMinor, detailItem.currency ?? "INR");
-  }, [detailItem]);
-
-  const detailStockLabel = useMemo(() => {
-    if (!detailItem) return "";
-    const stockValue = resolveStockForSku(detailItem) ?? (typeof detailItem.currentStock === "number" ? detailItem.currentStock : null);
-    return stockValue === null ? "Unknown" : String(stockValue);
-  }, [detailItem, stockRefreshTick]);
 
   const scheduleDiscountApply = useCallback(
     (value: string, type: DiscountType) => {
@@ -2881,85 +2903,88 @@ export default function SellScanScreen({
         animationType="slide"
         onRequestClose={closeDetail}
       >
-        <View style={styles.detailOverlay}>
-          <Pressable style={styles.detailOverlayTap} onPress={closeDetail} />
-          <View style={[styles.detailSheet, { paddingBottom: 16 + insets.bottom }]}>
-            <View style={styles.detailHandle} />
-            <Text style={styles.detailTitle}>Product details</Text>
-            {detailItem ? (
-              <View style={styles.detailContent}>
-                <Text style={styles.detailName} numberOfLines={2}>
-                  {detailItem.name}
-                </Text>
-                <Text style={styles.detailBarcode} numberOfLines={1}>
-                  {detailItem.barcode}
-                </Text>
-                <View style={styles.detailMetaRow}>
-                  <View style={styles.detailMetaBlock}>
-                    <Text style={styles.detailMetaLabel}>Price</Text>
-                    <Text style={styles.detailMetaValue}>{detailPriceLabel}</Text>
-                  </View>
-                  <View style={styles.detailMetaBlock}>
-                    <Text style={styles.detailMetaLabel}>Stock</Text>
-                    <Text style={styles.detailMetaValue}>{detailStockLabel}</Text>
-                  </View>
-                </View>
-                {detailStockEditing ? (
-                  <View style={styles.detailStockRow}>
-                    <TextInput
-                      style={styles.detailStockInput}
-                      value={detailStockInput}
-                      onChangeText={setDetailStockInput}
-                      keyboardType="number-pad"
-                      placeholder="Enter stock qty"
-                      placeholderTextColor={theme.colors.textMuted}
-                      autoFocus
-                      editable={!detailStockBusy}
-                    />
-                    <Pressable
-                      style={[styles.detailButton, styles.detailButtonPrimary, detailStockBusy && styles.detailButtonDisabled]}
-                      onPress={handleDetailStockSave}
-                      disabled={detailStockBusy}
-                    >
-                      {detailStockBusy ? (
-                        <ActivityIndicator size="small" color={theme.colors.textInverse} />
-                      ) : (
-                        <Text style={styles.detailButtonTextInverse}>Save</Text>
-                      )}
-                    </Pressable>
-                  </View>
-                ) : null}
-                <View style={styles.detailActions}>
-                  <Pressable style={styles.detailButton} onPress={closeDetail}>
-                    <Text style={styles.detailButtonText}>Close</Text>
-                  </Pressable>
-                  <Pressable
-                    style={styles.detailButton}
-                    onPress={() => {
-                      const currentStock = resolveStockForSku(detailItem) ?? detailItem.currentStock ?? 0;
-                      setDetailStockInput(String(currentStock));
-                      setDetailStockEditing(true);
-                    }}
-                  >
-                    <Text style={styles.detailButtonText}>Update Stock</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.detailButton,
-                      styles.detailButtonPrimary,
-                      storeActive === false && styles.detailButtonDisabled
-                    ]}
-                    onPress={() => {
-                      handleAddSku(detailItem);
-                      closeDetail();
-                    }}
-                    disabled={storeActive === false}
-                  >
-                    <Text style={styles.detailButtonTextInverse}>Add to cart</Text>
-                  </Pressable>
-                </View>
+        <View style={styles.onboardingOverlay}>
+          <Pressable
+            style={styles.onboardingOverlayTap}
+            onPress={closeDetail}
+            disabled={editProductBusy}
+          />
+          <View style={styles.onboardingSheet}>
+            <View style={styles.onboardingHandle} />
+            <View style={styles.onboardingHeader}>
+              <Text style={styles.onboardingTitle}>Edit product</Text>
+              {detailItem?.barcode ? (
+                <Text style={styles.onboardingBarcode}>{detailItem.barcode}</Text>
+              ) : null}
+            </View>
+
+            <View style={styles.onboardingFields}>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Product name</Text>
+                <TextInput
+                  style={[styles.onboardingInput, styles.inputDisabled]}
+                  value={editProductName}
+                  editable={false}
+                />
               </View>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Sell price</Text>
+                <TextInput
+                  style={[styles.onboardingInput, editProductBusy && styles.inputDisabled]}
+                  value={editProductPrice}
+                  onChangeText={(v) => { setEditProductPrice(v); setEditProductError(null); }}
+                  placeholder="Enter sell price"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="decimal-pad"
+                  editable={!editProductBusy}
+                />
+              </View>
+              <View style={styles.onboardingField}>
+                <Text style={styles.onboardingLabel}>Stock</Text>
+                <TextInput
+                  style={[styles.onboardingInput, editProductBusy && styles.inputDisabled]}
+                  value={editProductStock}
+                  onChangeText={(v) => { setEditProductStock(v); setEditProductError(null); }}
+                  placeholder="Enter stock qty"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="number-pad"
+                  editable={!editProductBusy}
+                />
+              </View>
+            </View>
+
+            {editProductError ? (
+              <Text style={styles.onboardingError}>{editProductError}</Text>
             ) : null}
+
+            <View style={styles.onboardingActions}>
+              <Pressable
+                style={[
+                  styles.onboardingButton,
+                  styles.onboardingButtonGhost,
+                  editProductBusy && styles.onboardingButtonDisabled
+                ]}
+                onPress={closeDetail}
+                disabled={editProductBusy}
+              >
+                <Text style={styles.onboardingButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.onboardingButton,
+                  styles.onboardingButtonPrimary,
+                  editProductBusy && styles.onboardingButtonDisabled
+                ]}
+                onPress={handleEditProductSave}
+                disabled={editProductBusy}
+              >
+                {editProductBusy ? (
+                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                ) : (
+                  <Text style={styles.onboardingButtonTextInverse}>Save</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -4336,119 +4361,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.accent,
-  },
-  detailOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 15, 20, 0.55)",
-    justifyContent: "flex-end",
-  },
-  detailOverlayTap: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  detailSheet: {
-    backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 16,
-    gap: 12,
-    ...theme.shadows.sm,
-  },
-  detailHandle: {
-    alignSelf: "center",
-    width: 46,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: theme.colors.border,
-    marginBottom: 6,
-  },
-  detailTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-  },
-  detailContent: {
-    gap: 12,
-  },
-  detailName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  detailBarcode: {
-    fontSize: 11,
-    color: theme.colors.textSecondary,
-  },
-  detailMetaRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  detailMetaBlock: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    backgroundColor: theme.colors.surfaceAlt,
-    padding: 10,
-  },
-  detailMetaLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: theme.colors.textSecondary,
-  },
-  detailMetaValue: {
-    marginTop: 4,
-    fontSize: 13,
-    fontWeight: "800",
-    color: theme.colors.textPrimary,
-  },
-  detailStockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-  },
-  detailStockInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
-  detailActions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  detailButton: {
-    flex: 1,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surfaceAlt,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  detailButtonPrimary: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  detailButtonDisabled: {
-    opacity: 0.5,
-  },
-  detailButtonText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textPrimary,
-  },
-  detailButtonTextInverse: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: theme.colors.textInverse,
   },
   editOverlay: {
     flex: 1,
