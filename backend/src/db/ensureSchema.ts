@@ -390,8 +390,7 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS sales_device_id_idx ON sales (device_id);
     CREATE INDEX IF NOT EXISTS sales_status_created_at_idx ON sales (status, created_at DESC);
     CREATE INDEX IF NOT EXISTS sales_store_status_created_at_idx ON sales (store_id, status, created_at DESC);
-    CREATE UNIQUE INDEX IF NOT EXISTS sales_offline_receipt_uidx ON sales (store_id, offline_receipt_ref)
-      WHERE offline_receipt_ref IS NOT NULL;
+    /* sales_offline_receipt_uidx moved to post-ALTER block */
     CREATE INDEX IF NOT EXISTS payments_sale_id_idx ON payments (sale_id);
     CREATE INDEX IF NOT EXISTS payments_created_at_idx ON payments (created_at DESC);
     CREATE INDEX IF NOT EXISTS payments_mode_created_at_idx ON payments (mode, created_at DESC);
@@ -461,6 +460,21 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS printing_mode TEXT NULL;
     ALTER TABLE pos_devices ADD COLUMN IF NOT EXISTS scan_lookup_v2_enabled BOOLEAN NULL;
     ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'sales'
+          AND column_name = 'offline_receipt_ref'
+      ) THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS sales_offline_receipt_uidx ON sales (store_id, offline_receipt_ref)
+          WHERE offline_receipt_ref IS NOT NULL;
+      END IF;
+    END $$;
   `);
 
   await pool.query(`
