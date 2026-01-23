@@ -26,7 +26,8 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
+    res.sendStatus(204);
+    return;
   }
   next();
 });
