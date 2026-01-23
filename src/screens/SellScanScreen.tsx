@@ -1858,6 +1858,25 @@ export default function SellScanScreen({
         name: nameChanged ? trimmedName : undefined,
         metadata: purchasePriceChanged ? { purchasePriceMinor: parsedPurchasePrice } : undefined
       });
+
+      // SYNC-PRD-001: Sync name/purchasePrice to backend (last-write-wins)
+      const storeProductId = editorItem.metadata?.storeProductId as string | undefined;
+      if (storeProductId) {
+        void productsApi.updateStoreProductMetadata({
+          storeProductId,
+          displayName: nameChanged ? trimmedName : undefined,
+          purchasePrice: purchasePriceChanged ? parsedPurchasePrice : undefined,
+        });
+      }
+
+      // Update catalog grid so name shows immediately
+      if (nameChanged && editorItem.barcode) {
+        const updateName = (items: SkuItem[]) =>
+          items.map(i => i.barcode === editorItem.barcode ? { ...i, name: trimmedName } : i);
+        setCatalogItems(updateName);
+        setAddResults(updateName);
+        void upsertLocalProduct(editorItem.barcode, trimmedName, "INR", null, editorItem.metadata?.productId ?? null);
+      }
     }
 
     // Log to ledger for accounting/tracking
@@ -2014,14 +2033,18 @@ export default function SellScanScreen({
         ToastAndroid.show(`${existing.name} qty +1`, ToastAndroid.SHORT);
       }
     } else {
-      // New item - add to cart
+      // New item - add to cart (store identifiers in metadata for sync)
       console.log(`handleAddSku:new_item:${item.barcode}`);
       cartState.addItem({
         id: item.barcode,
         name: item.name,
         priceMinor: resolved.priceMinor,
         currency: item.currency ?? "INR",
-        barcode: item.barcode
+        barcode: item.barcode,
+        metadata: {
+          storeProductId: item.storeProductId || undefined,
+          productId: item.productId || undefined,
+        },
       });
     }
 

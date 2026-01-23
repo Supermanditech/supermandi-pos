@@ -707,12 +707,20 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
 posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   const { storeProductId } = req.params;
-  const { displayName } = req.body as { displayName?: string };
+  const { displayName, purchasePrice } = req.body as {
+    displayName?: string;
+    purchasePrice?: number;
+  };
 
-  if (typeof displayName !== "string" || displayName.trim().length === 0) {
+  const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
+  const validPurchasePrice = typeof purchasePrice === "number" && Number.isFinite(purchasePrice) && purchasePrice >= 0
+    ? Math.round(purchasePrice)
+    : null;
+
+  if (!trimmedName && validPurchasePrice === null) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
-      message: "displayName is required and must be non-empty"
+      message: "At least one of displayName or purchasePrice is required"
     });
   }
 
@@ -722,15 +730,32 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
   }
 
   try {
+    // Build dynamic SET clause based on provided fields
+    const setClauses: string[] = [];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (trimmedName) {
+      setClauses.push(`display_name = $${paramIdx++}`);
+      params.push(trimmedName);
+    }
+    if (validPurchasePrice !== null) {
+      setClauses.push(`purchase_price = $${paramIdx++}`);
+      params.push(validPurchasePrice);
+    }
+    setClauses.push(`metadata_updated_at = NOW()`);
+    setClauses.push(`metadata_updated_by = 'POS_APP'`);
+    setClauses.push(`updated_at = NOW()`);
+
+    params.push(storeProductId); // $N for WHERE id
+    params.push(storeId);        // $N+1 for WHERE store_id
+
     const result = await pool.query(
       `UPDATE catalog.store_products
-       SET display_name = $1,
-           metadata_updated_at = NOW(),
-           metadata_updated_by = 'POS_APP',
-           updated_at = NOW()
-       WHERE id = $2 AND store_id = $3 AND is_active = true
-       RETURNING id, display_name, metadata_updated_at`,
-      [displayName.trim(), storeProductId, storeId]
+       SET ${setClauses.join(", ")}
+       WHERE id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
+       RETURNING id, display_name, purchase_price, metadata_updated_at`,
+      params
     );
 
     if ((result.rowCount ?? 0) === 0) {
@@ -745,6 +770,7 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
       data: {
         storeProductId: result.rows[0].id,
         displayName: result.rows[0].display_name,
+        purchasePrice: result.rows[0].purchase_price,
         metadataUpdatedAt: result.rows[0].metadata_updated_at,
       }
     });
