@@ -24,24 +24,36 @@ export async function ensureCoreSchema(): Promise<void> {
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'retailer_variants' AND column_name = 'product_id'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'retailer_variants' AND column_name = 'variant_id'
       ) THEN
         ALTER TABLE retailer_variants RENAME COLUMN product_id TO variant_id;
       END IF;
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'scan_events' AND column_name = 'product_id'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'scan_events' AND column_name = 'variant_id'
       ) THEN
         ALTER TABLE scan_events RENAME COLUMN product_id TO variant_id;
       END IF;
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'sale_items' AND column_name = 'product_id'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'sale_items' AND column_name = 'variant_id'
       ) THEN
         ALTER TABLE sale_items RENAME COLUMN product_id TO variant_id;
       END IF;
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'consumer_order_items' AND column_name = 'product_id'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'consumer_order_items' AND column_name = 'variant_id'
       ) THEN
         ALTER TABLE consumer_order_items RENAME COLUMN product_id TO variant_id;
       END IF;
