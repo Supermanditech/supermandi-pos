@@ -366,10 +366,15 @@ async function handleScan(
         }
 
         if (needsSellFirstOnboarding(storeProduct)) {
-          if (source === "keyboard" && storeProduct.is_first_time_in_store) {
-            // Typed search text not found — don't open product creation modal
-            notify({ tone: "info", message: "Product not found" });
-            return;
+          if (storeProduct.is_first_time_in_store) {
+            // Product not found in catalog — only open modal for genuine barcode scans
+            // (real barcodes contain digits or are 8+ chars; short alpha-only text like "rrtt"
+            // is likely a misdetected HID scan from keyboard typing)
+            const looksLikeBarcode = /\d/.test(trimmed) || trimmed.length >= 8;
+            if (source === "keyboard" || !looksLikeBarcode) {
+              notify({ tone: "info", message: "Product not found" });
+              return;
+            }
           }
           console.log(`scan_needs_onboarding:${trimmed},sellPrice=${storeProduct.sell_price},isNew=${storeProduct.is_first_time_in_store}`);
           runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
@@ -424,9 +429,13 @@ async function handleScan(
       }
 
       if (offline.action === "PROMPT_PRICE") {
-        if (source === "keyboard" && offline.product_not_found_for_store === true) {
-          notify({ tone: "info", message: "Product not found" });
-          return;
+        if (offline.product_not_found_for_store === true) {
+          // Product not found — only open modal for genuine barcode scans
+          const looksLikeBarcode = /\d/.test(trimmed) || trimmed.length >= 8;
+          if (source === "keyboard" || !looksLikeBarcode) {
+            notify({ tone: "info", message: "Product not found" });
+            return;
+          }
         }
         const offlineProduct: StoreLookupProduct = {
           global_product_id: trimmed,
