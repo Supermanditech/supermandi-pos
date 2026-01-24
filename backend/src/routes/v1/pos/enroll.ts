@@ -135,7 +135,7 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
 
     // GO-LIVE: Fetch store name and code for enrollment response
     const storeRes = await client.query(
-      `SELECT id, name, store_code, active, is_demo FROM stores WHERE id = $1`,
+      `SELECT id::TEXT as id, name, store_code, active, (store_type = 'demo') as is_demo FROM platform.stores WHERE id = $1::uuid`,
       [enrollment.store_id]
     );
     const store = storeRes.rows[0];

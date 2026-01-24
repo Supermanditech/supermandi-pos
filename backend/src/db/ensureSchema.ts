@@ -564,28 +564,28 @@ export async function ensureCoreSchema(): Promise<void> {
 
   const storeCount = await pool.query("SELECT COUNT(*)::int AS count FROM stores");
   if (storeCount.rows[0]?.count === 0) {
-    await pool.query(
-      `INSERT INTO stores (id, name, upi_vpa, active) VALUES ($1, $2, $3, $4)`,
-      ["store-1", "Supermandi Pilot Store", null, false]
-    );
+    try {
+      // V1 fallback: seed a pilot store if none exist. In V2 (platform schema),
+      // stores are created via migrations or admin API, and this is a no-op.
+      await pool.query(
+        `INSERT INTO stores (id, name, upi_vpa, active) VALUES ($1, $2, $3, $4)`,
+        ["store-1", "Supermandi Pilot Store", null, false]
+      );
+    } catch {
+      // Expected in V2 mode where public.stores is a non-insertable view
+    }
   }
 
-  await pool.query(`
-    UPDATE stores
-    SET upi_vpa = NULL
-    WHERE upi_vpa IS NOT NULL
-      AND length(trim(upi_vpa)) = 0;
-
-    UPDATE stores
-    SET active = TRUE
-    WHERE upi_vpa IS NOT NULL
-      AND length(trim(upi_vpa)) > 0;
-
-    UPDATE stores
-    SET active = FALSE
-    WHERE upi_vpa IS NULL
-      OR length(trim(upi_vpa)) = 0
-  `);
+  try {
+    await pool.query(`
+      UPDATE platform.stores
+      SET upi_vpa = NULL
+      WHERE upi_vpa IS NOT NULL
+        AND length(trim(upi_vpa)) = 0
+    `);
+  } catch {
+    // V1 fallback: platform schema may not exist yet
+  }
 
   ensured = true;
 }

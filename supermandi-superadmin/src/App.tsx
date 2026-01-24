@@ -1044,7 +1044,7 @@ export default function App() {
         </div>
         <div className="control">
           <label>Store ID</label>
-          <input value={storeIdFilter} onChange={(e) => setStoreIdFilter(e.target.value)} placeholder="e.g. store-1" />
+          <input value={storeIdFilter} onChange={(e) => setStoreIdFilter(e.target.value)} placeholder="UUID or store code" />
         </div>
         <div className="control">
           <label>Event Type</label>
@@ -1442,7 +1442,7 @@ export default function App() {
                 <input
                   value={createStoreId}
                   onChange={(e) => setCreateStoreId(e.target.value)}
-                  placeholder="store-1"
+                  placeholder="UUID or store code"
                 />
               </div>
               <div className="control">
@@ -1595,7 +1595,7 @@ export default function App() {
                 <input
                   value={barcodeSheetStoreId}
                   onChange={(e) => setBarcodeSheetStoreId(e.target.value)}
-                  placeholder="store-1"
+                  placeholder="UUID or store code"
                 />
               </div>
               <div className="control">
@@ -1898,7 +1898,7 @@ export default function App() {
                 <input
                   value={analyticsStoreId}
                   onChange={(e) => setAnalyticsStoreId(e.target.value)}
-                  placeholder="store-1"
+                  placeholder="UUID or store code"
                 />
               </div>
               <div className="control">

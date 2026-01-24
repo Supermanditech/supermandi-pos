@@ -83,7 +83,7 @@ async function fetchStoreProductByBarcode(
 async function getStoreStatus(storeId: string): Promise<{ exists: boolean; active: boolean }> {
   const pool = getPool();
   if (!pool) return { exists: false, active: false };
-  const res = await pool.query(`SELECT id, active FROM stores WHERE id = $1`, [storeId]);
+  const res = await pool.query(`SELECT id::TEXT as id, active FROM platform.stores WHERE id = $1::uuid`, [storeId]);
   if (!res.rows[0]) return { exists: false, active: false };
   return { exists: true, active: Boolean(res.rows[0].active) };
 }

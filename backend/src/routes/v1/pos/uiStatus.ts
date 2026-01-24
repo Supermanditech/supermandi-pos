@@ -36,7 +36,7 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let reorderEnabled = true;
   if (status.storeId) {
     const storeRes = await pool.query(
-      `SELECT name, store_code, upi_vpa, scan_lookup_v2_enabled FROM stores WHERE id = $1`,
+      `SELECT name, store_code, upi_vpa, scan_lookup_v2_enabled FROM platform.stores WHERE id = $1::uuid`,
       [status.storeId]
     );
     const storeRow = storeRes.rows[0];

@@ -107,7 +107,19 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/admin/device-enrollments',
       stripPrefix: false,
     },
-    // All other admin routes (pending-suppliers, etc.) -> platform-service
+    {
+      name: 'admin-pending-suppliers',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/admin/pending-suppliers',
+      stripPrefix: false,
+    },
+    {
+      name: 'admin-verified-suppliers',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/admin/verified-suppliers',
+      stripPrefix: false,
+    },
+    // All other admin routes -> platform-service
     {
       name: 'admin',
       url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),

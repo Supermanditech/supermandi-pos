@@ -9,7 +9,7 @@ export const adminStoresRouter = Router();
 adminStoresRouter.use(requireAdminToken);
 
 const UPI_VPA_PATTERN = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/;
-const STORE_ID_PATTERN = /^[a-z0-9][a-z0-9-_]{2,}$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const normalizeUpiVpa = (value: unknown): string | null | undefined => {
   if (value === null) return null;
@@ -25,7 +25,7 @@ const normalizeStoreIdInput = (value: unknown): { value?: string; error?: string
   if (typeof value !== "string") return { error: "storeId_invalid" };
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return { error: "storeId_invalid" };
-  if (!STORE_ID_PATTERN.test(trimmed)) return { error: "storeId_invalid" };
+  if (!UUID_PATTERN.test(trimmed)) return { error: "storeId_must_be_uuid" };
   return { value: trimmed };
 };
 
@@ -36,26 +36,20 @@ const normalizeStoreNameInput = (value: unknown): { value?: string; error?: stri
   return { value: trimmed };
 };
 
-const generateStoreId = (): string => `store-${randomUUID().slice(0, 8)}`;
+const generateStoreId = (): string => randomUUID();
 
 async function ensureUniqueStoreId(pool: ReturnType<typeof getPool>, preferredId?: string): Promise<string> {
   if (!pool) return generateStoreId();
   if (preferredId) {
-    const existing = await pool.query(`SELECT id FROM stores WHERE id = $1`, [preferredId]);
+    const existing = await pool.query(`SELECT id FROM platform.stores WHERE id = $1::uuid`, [preferredId]);
     if (existing.rowCount && existing.rowCount > 0) {
       throw new Error("store_exists");
     }
     return preferredId;
   }
 
-  for (let i = 0; i < 5; i += 1) {
-    const candidate = generateStoreId();
-    const existing = await pool.query(`SELECT id FROM stores WHERE id = $1`, [candidate]);
-    if (!existing.rowCount) {
-      return candidate;
-    }
-  }
-  throw new Error("store_id_unavailable");
+  // UUIDs are globally unique; collision is astronomically unlikely
+  return generateStoreId();
 }
 
 // POST /api/v1/admin/stores - STORECODE-002: Now generates store_code automatically
@@ -95,30 +89,44 @@ adminStoresRouter.post("/stores", async (req, res) => {
     storeCode = `ST${Date.now().toString(36).toUpperCase()}`;
   }
 
-  const result = await pool.query(
-    `
-      INSERT INTO stores (id, name, store_code, active, created_at, updated_at)
-      VALUES ($1, $2, $3, FALSE, NOW(), NOW())
-      RETURNING id,
-        name,
-        store_code,
-        upi_vpa,
-        active,
-        address,
-        contact_name,
-        contact_phone,
-        contact_email,
-        location,
-        pos_device_id,
-        kyc_status,
-        scan_lookup_v2_enabled,
-        upi_vpa_updated_at,
-        upi_vpa_updated_by,
-        created_at,
-        updated_at
-    `,
-    [storeId, storeNameInput.value, storeCode]
-  );
+  let result;
+  try {
+    result = await pool.query(
+      `
+        INSERT INTO platform.stores (id, name, code, store_code, active, status, created_at, updated_at)
+        VALUES ($1::uuid, $2, $3, $3, FALSE, 'inactive', NOW(), NOW())
+        RETURNING id::TEXT as id,
+          name,
+          store_code,
+          store_type,
+          status,
+          upi_vpa,
+          active,
+          address,
+          contact_name,
+          contact_phone,
+          contact_email,
+          location,
+          pos_device_id,
+          kyc_status,
+          scan_lookup_v2_enabled,
+          upi_vpa_updated_at,
+          upi_vpa_updated_by,
+          created_at,
+          updated_at
+      `,
+      [storeId, storeNameInput.value, storeCode]
+    );
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      const constraint = err?.constraint ?? "";
+      if (constraint.includes("code") || constraint.includes("store_code")) {
+        return res.status(409).json({ error: "store_code_conflict" });
+      }
+      return res.status(409).json({ error: "store_exists" });
+    }
+    throw err;
+  }
 
   const store = result.rows[0];
   return res.status(201).json({ store: { ...store, storeName: store?.name, storeCode: store?.store_code } });
@@ -131,9 +139,11 @@ adminStoresRouter.get("/stores", async (_req, res) => {
 
   const result = await pool.query(
     `
-      SELECT id,
+      SELECT id::TEXT as id,
         name,
         store_code,
+        store_type,
+        status,
         upi_vpa,
         active,
         address,
@@ -148,7 +158,7 @@ adminStoresRouter.get("/stores", async (_req, res) => {
         upi_vpa_updated_by,
         created_at,
         updated_at
-      FROM stores
+      FROM platform.stores
       ORDER BY created_at DESC
     `
   );
@@ -172,11 +182,14 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
   const result = await pool.query(
     `
-      SELECT id,
+      SELECT id::TEXT as id,
         name,
         store_code,
+        store_type,
+        status,
         upi_vpa,
         active,
         address,
@@ -191,8 +204,8 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
         upi_vpa_updated_by,
         created_at,
         updated_at
-      FROM stores
-      WHERE id = $1
+      FROM platform.stores
+      WHERE ${isUuid ? "id = $1::uuid" : "store_code = $1"}
     `,
     [storeId]
   );
@@ -249,6 +262,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     }
     addUpdate("upi_vpa", normalized);
     addUpdate("active", Boolean(normalized));
+    addUpdate("status", normalized ? "active" : "inactive");
     updates.push("upi_vpa_updated_at = NOW()");
     addUpdate("upi_vpa_updated_by", "superadmin");
   }
@@ -276,11 +290,12 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
   const sql = `
-    UPDATE stores
+    UPDATE platform.stores
     SET ${updates.join(", ")}
-    WHERE id = $${values.length + 1}
-    RETURNING id, name, store_code, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, scan_lookup_v2_enabled, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
+    WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `store_code = $${values.length + 1}`}
+    RETURNING id::TEXT as id, name, store_code, store_type, status, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, scan_lookup_v2_enabled, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
   `;
   values.push(storeId);
 

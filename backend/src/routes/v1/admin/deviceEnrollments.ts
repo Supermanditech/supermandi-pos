@@ -47,7 +47,7 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
 
   // BUG-FIX: Fetch store details to determine if demo store (for multi-use enrollments)
   const storeRes = await pool.query(
-    `SELECT id, store_code, code, is_demo FROM stores WHERE id = $1`,
+    `SELECT id::TEXT as id, store_code, code, (store_type = 'demo') as is_demo FROM platform.stores WHERE id = $1::uuid`,
     [storeId]
   );
   if (storeRes.rowCount === 0) {

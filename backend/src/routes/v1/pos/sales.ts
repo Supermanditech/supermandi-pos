@@ -336,7 +336,7 @@ async function resolveVariantByBarcode(
 async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
   const pool = getPool();
   if (!pool) return null;
-  const res = await pool.query(`SELECT id, name, upi_vpa, active FROM stores WHERE id = $1`, [storeId]);
+  const res = await pool.query(`SELECT id::TEXT as id, name, upi_vpa, active FROM platform.stores WHERE id = $1::uuid`, [storeId]);
   return res.rows[0] ?? null;
 }
 
@@ -566,7 +566,7 @@ async function getPaymentStoreStatus(
       SELECT p.sale_id, s.store_id, st.active
       FROM payments p
       JOIN sales s ON s.id = p.sale_id
-      JOIN stores st ON st.id::text = s.store_id
+      JOIN platform.stores st ON st.id = s.store_id::uuid
       WHERE p.id = $1 AND s.store_id = $2
     `,
     [paymentId, storeId]
@@ -584,7 +584,7 @@ async function getCollectionStoreStatus(
     `
       SELECT c.store_id, st.active
       FROM collections c
-      JOIN stores st ON st.id::text = c.store_id
+      JOIN platform.stores st ON st.id = c.store_id::uuid
       WHERE c.id = $1 AND c.store_id = $2
     `,
     [collectionId, storeId]

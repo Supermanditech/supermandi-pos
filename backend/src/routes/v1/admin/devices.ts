@@ -47,7 +47,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
            d.created_at,
            d.updated_at
     FROM pos_devices d
-    LEFT JOIN stores s ON s.id::text = d.store_id
+    LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
     ${where ? where.replace("store_id", "d.store_id") : ""}
     ORDER BY d.last_seen_online DESC NULLS LAST
     `,
@@ -190,7 +190,7 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
 
   let storeName: string | null = null;
   if (row.store_id) {
-    const storeRes = await pool.query(`SELECT name FROM stores WHERE id = $1`, [row.store_id]);
+    const storeRes = await pool.query(`SELECT name FROM platform.stores WHERE id = $1::uuid`, [row.store_id]);
     storeName = storeRes.rows[0]?.name ? String(storeRes.rows[0].name) : null;
   }
 
