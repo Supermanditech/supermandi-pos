@@ -46,10 +46,10 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
     const pool = getPool();
     if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-    // Support both UUID and store code lookups
+    // Support both UUID and store code lookups (case-insensitive for codes)
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
     const storeRes = await pool.query(
-      `SELECT id::TEXT as id, code FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "code = $1"}`,
+      `SELECT id::TEXT as id, code FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)"}`,
       [storeId]
     );
     if (storeRes.rowCount === 0) {

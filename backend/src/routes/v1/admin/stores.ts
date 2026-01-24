@@ -205,7 +205,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
 
   try {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
-    const whereClause = isUuid ? "id = $1::uuid" : "(store_code = $1 OR code = $1)";
+    const whereClause = isUuid ? "id = $1::uuid" : "(UPPER(store_code) = UPPER($1) OR UPPER(code) = UPPER($1))";
     const result = await pool.query(
       `
         SELECT id::TEXT as id,
@@ -246,7 +246,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
     try {
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
       const result = await pool.query(
-        `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "code = $1"}`,
+        `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)"}`,
         [storeId]
       );
       const store = result.rows[0];
