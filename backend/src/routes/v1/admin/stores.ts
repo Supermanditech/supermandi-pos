@@ -137,39 +137,60 @@ adminStoresRouter.get("/stores", async (_req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const result = await pool.query(
-    `
-      SELECT id::TEXT as id,
-        name,
-        store_code,
-        store_type,
-        status,
-        upi_vpa,
-        active,
-        address,
-        contact_name,
-        contact_phone,
-        contact_email,
-        location,
-        pos_device_id,
-        kyc_status,
-        scan_lookup_v2_enabled,
-        upi_vpa_updated_at,
-        upi_vpa_updated_by,
-        created_at,
-        updated_at
-      FROM platform.stores
-      ORDER BY created_at DESC
-    `
-  );
+  try {
+    const result = await pool.query(
+      `
+        SELECT id::TEXT as id,
+          name,
+          code,
+          store_code,
+          store_type,
+          status,
+          upi_vpa,
+          (status = 'active') AS active,
+          address,
+          contact_name,
+          contact_phone,
+          contact_email,
+          location,
+          pos_device_id,
+          kyc_status,
+          scan_lookup_v2_enabled,
+          upi_vpa_updated_at,
+          upi_vpa_updated_by,
+          created_at,
+          updated_at
+        FROM platform.stores
+        ORDER BY created_at DESC
+      `
+    );
 
-  const stores = result.rows.map((row) => ({
-    ...row,
-    storeName: row.name,
-    storeCode: row.store_code // STORECODE-003
-  }));
+    const stores = result.rows.map((row) => ({
+      ...row,
+      storeName: row.name,
+      storeCode: row.store_code ?? row.code
+    }));
 
-  return res.json({ stores });
+    return res.json({ stores });
+  } catch (error: any) {
+    // Fallback: query only base columns if extended columns don't exist
+    console.error("[admin/stores] Full query failed, trying base columns:", error?.message);
+    try {
+      const result = await pool.query(
+        `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores ORDER BY created_at DESC`
+      );
+      const stores = result.rows.map((row) => ({
+        ...row,
+        storeName: row.name,
+        storeCode: row.code,
+        active: row.status === "active"
+      }));
+      return res.json({ stores });
+    } catch (fallbackErr: any) {
+      console.error("[admin/stores] Fallback query also failed:", fallbackErr?.message);
+      return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch stores" });
+    }
+  }
 });
 
 // GET /api/v1/admin/stores/:storeId
@@ -182,40 +203,59 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
-  const result = await pool.query(
-    `
-      SELECT id::TEXT as id,
-        name,
-        store_code,
-        store_type,
-        status,
-        upi_vpa,
-        active,
-        address,
-        contact_name,
-        contact_phone,
-        contact_email,
-        location,
-        pos_device_id,
-        kyc_status,
-        scan_lookup_v2_enabled,
-        upi_vpa_updated_at,
-        upi_vpa_updated_by,
-        created_at,
-        updated_at
-      FROM platform.stores
-      WHERE ${isUuid ? "id = $1::uuid" : "store_code = $1"}
-    `,
-    [storeId]
-  );
+  try {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+    const whereClause = isUuid ? "id = $1::uuid" : "(store_code = $1 OR code = $1)";
+    const result = await pool.query(
+      `
+        SELECT id::TEXT as id,
+          name,
+          code,
+          store_code,
+          store_type,
+          status,
+          upi_vpa,
+          (status = 'active') AS active,
+          address,
+          contact_name,
+          contact_phone,
+          contact_email,
+          location,
+          pos_device_id,
+          kyc_status,
+          scan_lookup_v2_enabled,
+          upi_vpa_updated_at,
+          upi_vpa_updated_by,
+          created_at,
+          updated_at
+        FROM platform.stores
+        WHERE ${whereClause}
+      `,
+      [storeId]
+    );
 
-  const store = result.rows[0];
-  if (!store) {
-    return res.status(404).json({ error: "store not found" });
+    const store = result.rows[0];
+    if (!store) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code } });
+  } catch (error: any) {
+    console.error("[admin/stores/:storeId] Query failed:", error?.message);
+    // Fallback with base columns
+    try {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
+      const result = await pool.query(
+        `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "code = $1"}`,
+        [storeId]
+      );
+      const store = result.rows[0];
+      if (!store) return res.status(404).json({ error: "store not found" });
+      return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "active" } });
+    } catch (fallbackErr: any) {
+      return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store" });
+    }
   }
-
-  return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code } });
 });
 
 // PATCH /api/v1/admin/stores/:storeId

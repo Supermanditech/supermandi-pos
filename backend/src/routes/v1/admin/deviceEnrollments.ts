@@ -46,9 +46,10 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
     const pool = getPool();
     if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-    // Fetch store details to determine if demo store (for multi-use enrollments)
+    // Support both UUID and store code lookups
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
     const storeRes = await pool.query(
-      `SELECT id::TEXT as id, code FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, code FROM platform.stores WHERE ${isUuid ? "id = $1::uuid" : "code = $1"}`,
       [storeId]
     );
     if (storeRes.rowCount === 0) {
@@ -74,7 +75,7 @@ adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireA
       INSERT INTO pos_device_enrollments (code, store_id, expires_at, max_uses, created_by)
       VALUES ($1, $2, $3, $4, $5)
       `,
-      [code, storeId, expiresAt, maxUses, "superadmin"]
+      [code, store.id, expiresAt, maxUses, "superadmin"]
     );
 
     console.log(`[AdminEnrollment] Created code=${code} store=${storeCode} isDemo=${isDemo} maxUses=${maxUses}`);
