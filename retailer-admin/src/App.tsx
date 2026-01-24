@@ -40,7 +40,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) {
     // Extract storeCode from current path
     const match = location.pathname.match(/^\/s\/([^/]+)/);
-    const storeCode = match ? match[1] : 'DEMO001';
+    const storeCode = match?.[1];
+    if (!storeCode) {
+      return <Navigate to="/" replace />;
+    }
     // Redirect to login, preserving the intended destination
     return <Navigate to={`/s/${storeCode}/login`} state={{ from: location }} replace />;
   }
@@ -53,8 +56,13 @@ function AppRoutes() {
     <>
       <TrailingSlashRedirect />
       <Routes>
-        {/* Root redirect */}
-        <Route path="/" element={<Navigate to="/s/DEMO001" replace />} />
+        {/* Root - show store URL prompt */}
+        <Route path="/" element={
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: '1rem' }}>
+            <h2>SuperMandi Retailer Portal</h2>
+            <p style={{ color: '#666' }}>Please use your store-specific URL to access the portal.</p>
+          </div>
+        } />
 
         {/* Login page - always accessible */}
         <Route path="/s/:storeCode/login" element={<LoginPage />} />
@@ -77,8 +85,8 @@ function AppRoutes() {
           <Route path="_pages" element={<AllPagesPage />} />
         </Route>
 
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/s/DEMO001" replace />} />
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

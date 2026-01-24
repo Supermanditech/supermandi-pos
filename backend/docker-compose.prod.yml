@@ -142,7 +142,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
       # Firebase Auth (Retailer Admin Portal OTP)
-      FIREBASE_ENABLED: ${FIREBASE_ENABLED:-false}
+      FIREBASE_ENABLED: ${FIREBASE_ENABLED:-true}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_SERVICE_ACCOUNT_PATH: /etc/supermandi/firebase-service-account.json
       # Go-live testing bypass (TEMPORARY - set to 'true' for testing, remove after go-live)

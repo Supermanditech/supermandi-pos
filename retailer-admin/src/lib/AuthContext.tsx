@@ -59,7 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (isExpired) {
         // Session expired due to idle - clear all auth data
-        console.log('[Auth] Session expired due to idle timeout');
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(LEGACY_TOKEN_KEY);
         localStorage.removeItem(REFRESH_TOKEN_KEY);
@@ -133,7 +132,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Subscribe to auth failures (401 responses) - triggers logout
   useEffect(() => {
     return onAuthFailure(() => {
-      console.log('[Auth] Received auth failure event - logging out');
       logout();
     });
   }, [logout]);
@@ -164,7 +162,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!lastActivity) return;
       const elapsed = Date.now() - parseInt(lastActivity, 10);
       if (elapsed > IDLE_TIMEOUT_MS) {
-        console.log('[Auth] Idle timeout reached (30 min) - logging out');
         logout();
       }
     }, 60000); // Check every 60 seconds
