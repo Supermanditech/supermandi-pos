@@ -68,7 +68,6 @@ export async function authFetch(
   if (resolvedToken) {
     headers['Authorization'] = `Bearer ${resolvedToken}`;
   } else if (isRetailerAdmin && !isAuthRequest) {
-    console.warn('[API] Missing token for protected request, skipping fetch:', url);
     return new Response(
       JSON.stringify({
         error: {
@@ -88,14 +87,15 @@ export async function authFetch(
     headers['Content-Type'] = 'application/json';
   }
 
+  // CACHE-000: Prevent browser from caching API responses
   const response = await fetch(resolvedUrl, {
     ...options,
     headers,
+    cache: "no-store",
   });
 
   // Handle 401 Unauthorized - trigger logout
   if (response.status === 401 && resolvedToken && !isAuthRequest) {
-    console.log('[API] 401 Unauthorized - triggering auth failure');
     notifyAuthFailure();
   }
 

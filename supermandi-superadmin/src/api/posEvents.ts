@@ -39,6 +39,7 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
 
   const res = await fetch(`${base}/api/v1/admin/pos/events?limit=${limit}`, {
     method: "GET",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "x-admin-token": token } : {})

@@ -15,6 +15,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
   const token = getAdminToken();
   const res = await fetch(`${base}/health`, {
     method: "GET",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "X-Admin-Token": token } : {})

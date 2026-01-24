@@ -36,6 +36,7 @@ export async function fetchDevices(params?: { storeId?: string }): Promise<Devic
   const storeId = params?.storeId?.trim();
   const qs = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
   const res = await fetch(`${API_BASE}/api/v1/admin/devices${qs}`, {
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       "x-admin-token": getAdminToken() ?? ""

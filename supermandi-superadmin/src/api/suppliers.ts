@@ -53,6 +53,7 @@ export async function fetchPendingSuppliers(): Promise<PendingSupplierRequest[]>
 
   const res = await fetch(`${base}/api/v1/admin/pending-suppliers`, {
     method: "GET",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "x-admin-token": token } : {})
@@ -77,6 +78,7 @@ export async function fetchVerifiedSuppliers(search?: string): Promise<VerifiedS
 
   const res = await fetch(url.toString(), {
     method: "GET",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "x-admin-token": token } : {})

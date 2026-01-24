@@ -41,6 +41,7 @@ export async function fetchStore(storeId: string): Promise<StoreRecord> {
 
   const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
     method: "GET",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "x-admin-token": token } : {})
@@ -61,6 +62,7 @@ export async function fetchStores(): Promise<StoreRecord[]> {
 
   const res = await fetch(`${base}/api/v1/admin/stores`, {
     method: "GET",
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "x-admin-token": token } : {})

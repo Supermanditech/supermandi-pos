@@ -20,6 +20,7 @@ export async function fetchBarcodeSheetPdf(params: {
   qs.set("tier", params.tier);
 
   const res = await fetch(`${base}/api/v1/admin/barcode-sheets?${qs.toString()}`, {
+    cache: "no-store",
     headers: {
       Accept: "application/pdf",
       ...(token ? { "x-admin-token": token } : {})

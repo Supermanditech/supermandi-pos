@@ -1,7 +1,8 @@
 import { normalizeStoreScope, storeScopedStorage } from "./storeScope";
 
 const STOCK_CACHE_KEY = "supermandi.stock.cache.v1";
-const STOCK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+// CACHE-000: Reduced from 6h to 60s — stock must be near-real-time truth
+const STOCK_CACHE_TTL_MS = 60 * 1000;
 
 type StockCacheEntry = {
   stock: number;

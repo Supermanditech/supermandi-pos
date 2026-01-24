@@ -40,6 +40,7 @@ export async function fetchAiHealth(): Promise<{ configured: boolean }> {
   const base = requireApiBase();
   const token = getAdminToken();
   const res = await fetch(`${base}/api/v1/admin/ai/health`, {
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       ...(token ? { "x-admin-token": token } : {})

@@ -27,8 +27,10 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   console.log(`[api_debug] X-Device-Token: ${deviceToken ? deviceToken.slice(0, 8) + "..." : "none"}`);
   if (body) console.log(`[api_debug] body: ${JSON.stringify(body).slice(0, 200)}`);
 
+  // CACHE-000: Prevent stale API responses from HTTP cache
   const res = await fetch(fullUrl, {
     method,
+    cache: "no-store",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",

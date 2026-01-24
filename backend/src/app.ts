@@ -5,6 +5,7 @@ import path from "path";
 import { execSync } from "child_process";
 import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
+import { noCacheHeaders } from "./middleware/noCache";
 import { getTranslationHealth } from "./services/translationService";
 
 // Always load backend env from `backend/.env` (not repo root `/.env`).
@@ -43,7 +44,8 @@ app.get("/health/translation", (_req, res) => {
   res.json(health);
 });
 
-app.use("/api", apiRouter);
+// CACHE-000: Enforce no-cache headers on all dynamic API responses
+app.use("/api", noCacheHeaders, apiRouter);
 
 app.use(errorHandler);
 

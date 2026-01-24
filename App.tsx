@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { StatusBar, Platform, View, ActivityIndicator } from "react-native";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { StatusBar, Platform, View, ActivityIndicator, AppState, AppStateStatus } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -155,6 +155,7 @@ function StockStatementWrapper() {
 }
 
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
+import { useProductsStore } from "./src/stores/productsStore";
 
 const Stack = createNativeStackNavigator();
 
@@ -180,6 +181,18 @@ export default function App() {
     initializeApp();
     startScanIntentListener();
   }, [initializeApp]);
+
+  // CACHE-000: Force refresh truth data (products/stock) when app resumes from background
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (appStateRef.current.match(/inactive|background/) && nextState === "active") {
+        useProductsStore.getState().loadProducts();
+      }
+      appStateRef.current = nextState;
+    });
+    return () => subscription.remove();
+  }, []);
 
   // Show loading indicator while app is initializing
   if (!appReady) {
