@@ -563,7 +563,7 @@ async function getPaymentStoreStatus(
   if (!pool) return null;
   const res = await pool.query(
     `
-      SELECT p.sale_id, s.store_id, st.active
+      SELECT p.sale_id, s.store_id, (st.status = 'active') AS active
       FROM payments p
       JOIN sales s ON s.id = p.sale_id
       JOIN platform.stores st ON st.id = s.store_id::uuid
@@ -582,7 +582,7 @@ async function getCollectionStoreStatus(
   if (!pool) return null;
   const res = await pool.query(
     `
-      SELECT c.store_id, st.active
+      SELECT c.store_id, (st.status = 'active') AS active
       FROM collections c
       JOIN platform.stores st ON st.id = c.store_id::uuid
       WHERE c.id = $1 AND c.store_id = $2

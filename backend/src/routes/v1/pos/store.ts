@@ -12,7 +12,7 @@ posStoreRouter.get("/stores/:storeId/status", requireDeviceToken, async (req, re
   const { storeId } = (req as any).posDevice as { storeId: string };
 
   const result = await pool.query(
-    `SELECT id::TEXT as id, name, active FROM platform.stores WHERE id = $1::uuid`,
+    `SELECT id::TEXT as id, name, (status = 'active') AS active FROM platform.stores WHERE id = $1::uuid`,
     [storeId]
   );
   const store = result.rows[0];
