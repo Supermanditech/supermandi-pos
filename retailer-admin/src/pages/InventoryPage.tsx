@@ -56,7 +56,7 @@ export default function InventoryPage() {
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({ total: 0, hasMore: false });
+  const [, setPagination] = useState({ total: 0, hasMore: false });
   const [totals, setTotals] = useState({ totalSkus: 0, totalEntries: 0, todaysMovements: 0 });
 
   // Fetch ledger entries from API

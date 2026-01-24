@@ -54,14 +54,6 @@ interface Supplier {
   supplierCode?: string;
 }
 
-// Badge styles for verification status
-// Using ASCII-friendly characters to avoid encoding issues
-const STATUS_BADGES: Record<VerificationStatus, { bg: string; color: string; label: string; icon: string }> = {
-  verified: { bg: '#dcfce7', color: '#166534', label: 'Verified', icon: '[OK]' },
-  pending: { bg: '#fef3c7', color: '#92400e', label: 'Pending', icon: '[...]' },
-  rejected: { bg: '#fee2e2', color: '#991b1b', label: 'Rejected', icon: '[X]' },
-  unverified: { bg: '#f3f4f6', color: '#6b7280', label: 'Local', icon: '' },
-};
 
 // Supplier types for dropdown
 const SUPPLIER_TYPES = [
