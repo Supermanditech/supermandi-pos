@@ -1,8 +1,14 @@
 import { normalizeStoreScope, storeScopedStorage } from "./storeScope";
 
 const STOCK_CACHE_KEY = "supermandi.stock.cache.v1";
-// CACHE-000: Reduced from 6h to 60s — stock must be near-real-time truth
-const STOCK_CACHE_TTL_MS = 60 * 1000;
+// CACHE-000: Keep 6h TTL for offline cart safety. Truth-first is enforced by:
+// - cache:"no-store" on all fetches (no HTTP caching)
+// - AppState foreground listener (refreshes products on resume)
+// - Each online scan calls upsertStockEntries() with fresh API values
+// The stock TTL only gates the cart's stock-cap check; a short TTL would block
+// offline cart additions once entries expire (capAddQuantity returns addedQty:0
+// for null/unknown stock).
+const STOCK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 type StockCacheEntry = {
   stock: number;
