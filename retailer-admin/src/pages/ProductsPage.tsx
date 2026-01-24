@@ -240,6 +240,17 @@ export default function ProductsPage() {
     }
   }, [selectedCategory, accessToken]);
 
+  // RCAT-SYNC-001: Auto-refresh products when tab regains focus (detect POS edits)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && accessToken) {
+        fetchProducts(selectedCategory);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [accessToken, selectedCategory]);
+
   // Open edit form
   const openEditForm = (product: Product) => {
     setEditingProduct(product);

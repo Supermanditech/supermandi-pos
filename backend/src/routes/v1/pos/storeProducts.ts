@@ -589,7 +589,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
         `UPDATE catalog.store_products
          SET sell_price = $1, updated_at = NOW()
          WHERE store_id = $2 AND product_id = $3 AND is_active = true
-         RETURNING id`,
+         RETURNING id, product_id, sell_price, display_name, updated_at`,
         [Math.round(sellPrice), storeId, productId]
       );
     } else {
@@ -601,7 +601,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
          WHERE spb.store_id = $2 AND spb.barcode = $3
            AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
            AND sp.is_active = true
-         RETURNING sp.id`,
+         RETURNING sp.id, sp.product_id, sp.sell_price, sp.display_name, sp.updated_at`,
         [Math.round(sellPrice), storeId, barcode]
       );
 
@@ -613,7 +613,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
            FROM catalog.products p
            WHERE p.primary_barcode = $3 AND sp.product_id = p.id
              AND sp.store_id = $2 AND sp.is_active = true
-           RETURNING sp.id`,
+           RETURNING sp.id, sp.product_id, sp.sell_price, sp.display_name, sp.updated_at`,
           [Math.round(sellPrice), storeId, barcode]
         );
       }
@@ -623,7 +623,25 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
       return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
     }
 
-    return res.json({ success: true });
+    // RCAT-SYNC-001: Return canonical product data so POS can update local cache
+    const updatedRow = updateResult.rows[0];
+    const stockResult = await pool.query(
+      `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+      [storeId, updatedRow.product_id]
+    );
+    const currentStock = stockResult.rows[0]?.current_qty ?? 0;
+
+    return res.json({
+      success: true,
+      data: {
+        storeProductId: updatedRow.id,
+        productId: updatedRow.product_id,
+        sellPrice: updatedRow.sell_price,
+        name: updatedRow.display_name || undefined,
+        currentStock,
+        updatedAt: updatedRow.updated_at,
+      },
+    });
   } catch (error) {
     console.error("[storeProducts] Price update error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Price update failed" });
@@ -801,7 +819,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         `UPDATE catalog.store_products
          SET ${setClause}
          WHERE id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
-         RETURNING id, display_name, purchase_price, sell_price, metadata_updated_at`,
+         RETURNING id, product_id, display_name, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else if (productId) {
@@ -811,7 +829,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         `UPDATE catalog.store_products
          SET ${setClause}
          WHERE product_id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
-         RETURNING id, display_name, purchase_price, sell_price, metadata_updated_at`,
+         RETURNING id, product_id, display_name, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else {
@@ -825,7 +843,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
          WHERE spb.store_id = $${paramIdx++} AND spb.barcode = $${paramIdx++}
            AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
            AND sp.is_active = true
-         RETURNING sp.id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at`,
+         RETURNING sp.id, sp.product_id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
         params
       );
 
@@ -849,7 +867,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
            FROM catalog.products p
            WHERE p.primary_barcode = $${fbIdx++} AND sp.product_id = p.id
              AND sp.store_id = $${fbIdx} AND sp.is_active = true
-           RETURNING sp.id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at`,
+           RETURNING sp.id, sp.product_id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
           fbParams
         );
       }
@@ -859,14 +877,17 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
       return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
     }
 
+    // RCAT-SYNC-001: Return canonical data so POS can update local caches
     return res.json({
       success: true,
       data: {
         storeProductId: result.rows[0].id,
+        productId: result.rows[0].product_id,
         displayName: result.rows[0].display_name,
         purchasePrice: result.rows[0].purchase_price,
         sellPrice: result.rows[0].sell_price,
         metadataUpdatedAt: result.rows[0].metadata_updated_at,
+        updatedAt: result.rows[0].updated_at,
       }
     });
   } catch (error) {

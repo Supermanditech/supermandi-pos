@@ -390,13 +390,23 @@ export async function receiveStoreProductFromScan(input: {
   };
 }
 
+/** RCAT-SYNC-001: Canonical product data returned after price update */
+export type PriceUpdateResult = {
+  storeProductId: string;
+  productId: string;
+  sellPrice: number;
+  currentStock: number;
+  name?: string;
+  updatedAt: string;
+};
+
 export async function updateStoreProductPrice(input: {
   globalProductId?: string;
   scanned?: string;
   format?: string;
   sellPriceMinor: number | null;
-}): Promise<void> {
-  if (input.sellPriceMinor === null || input.sellPriceMinor <= 0) return;
+}): Promise<PriceUpdateResult | null> {
+  if (input.sellPriceMinor === null || input.sellPriceMinor <= 0) return null;
 
   const payload: Record<string, unknown> = {
     sellPrice: input.sellPriceMinor
@@ -404,10 +414,11 @@ export async function updateStoreProductPrice(input: {
   if (input.globalProductId) payload.productId = input.globalProductId;
   if (input.scanned) payload.barcode = input.scanned;
 
-  await apiClient.patch<{ success: boolean }>(
+  const res = await apiClient.patch<{ success: boolean; data?: PriceUpdateResult }>(
     `${STORE_PRODUCTS_BASE}/price`,
     payload
   );
+  return res.data ?? null;
 }
 
 export async function updateStoreProductStock(input: {
@@ -428,6 +439,17 @@ export async function updateStoreProductStock(input: {
   return res.data;
 }
 
+/** RCAT-SYNC-001: Canonical product data returned after metadata update */
+export type MetadataUpdateResult = {
+  storeProductId: string;
+  productId: string;
+  displayName?: string;
+  sellPrice?: number;
+  purchasePrice?: number;
+  metadataUpdatedAt: string;
+  updatedAt: string;
+};
+
 /**
  * SYNC-PRD-001: Update product metadata (display name, purchase price, sell price) from POS.
  * Accepts storeProductId, productId, or barcode for identification (fallback order).
@@ -440,7 +462,7 @@ export async function updateStoreProductMetadata(input: {
   displayName?: string;
   purchasePrice?: number;
   sellPrice?: number;
-}): Promise<void> {
+}): Promise<MetadataUpdateResult | null> {
   const body: Record<string, unknown> = {};
   if (input.storeProductId) body.storeProductId = input.storeProductId;
   if (input.productId) body.productId = input.productId;
@@ -448,10 +470,11 @@ export async function updateStoreProductMetadata(input: {
   if (input.displayName) body.displayName = input.displayName;
   if (typeof input.purchasePrice === "number") body.purchasePrice = input.purchasePrice;
   if (typeof input.sellPrice === "number") body.sellPrice = input.sellPrice;
-  await apiClient.patch<{ success: boolean }>(
+  const res = await apiClient.patch<{ success: boolean; data?: MetadataUpdateResult }>(
     `${STORE_PRODUCTS_BASE}/metadata`,
     body
   );
+  return res.data ?? null;
 }
 
 const normalizePriceInput = (value: unknown): number | null => {

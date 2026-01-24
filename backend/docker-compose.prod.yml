@@ -91,7 +91,7 @@ services:
       INVENTORY_SERVICE_URL: http://inventory-service:3005
       ORDER_SERVICE_URL: http://order-service:3006
       REORDER_SERVICE_URL: http://reorder-service:3007
-      POS_SERVICE_URL: http://supermandi-enroll-service:3009
+      POS_SERVICE_URL: http://main-backend:3010
       VOICE_SERVICE_URL: http://voice-service:3008
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}

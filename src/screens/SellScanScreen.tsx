@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Animated,
+  AppState,
   BackHandler,
   Easing,
   FlatList,
@@ -939,9 +940,19 @@ export default function SellScanScreen({
     };
 
     const interval = setInterval(checkFreshness, FRESHNESS_INTERVAL_MS);
+
+    // RCAT-SYNC-001: Immediate freshness check when app returns to foreground
+    const handleAppState = (nextState: string) => {
+      if (nextState === "active" && !cancelled) {
+        checkFreshness();
+      }
+    };
+    const appStateSub = AppState.addEventListener("change", handleAppState);
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      appStateSub.remove();
     };
   }, []);
 
@@ -1377,13 +1388,26 @@ export default function SellScanScreen({
     }
 
     try {
-      await productsApi.updateStoreProductPrice({
+      const result = await productsApi.updateStoreProductPrice({
         globalProductId,
         scanned,
         format: scanFormat,
         sellPriceMinor: priceMinor
       });
-      if (barcode) {
+      // RCAT-SYNC-001: Use server-confirmed values to update local caches
+      if (result) {
+        const confirmedPrice = result.sellPrice ?? priceMinor;
+        if (barcode) {
+          await setLocalPrice(barcode, confirmedPrice);
+        }
+        // Update stock cache with server-confirmed stock
+        const stockEntries: Array<{ key: string; stock: number }> = [];
+        if (result.productId) stockEntries.push({ key: result.productId, stock: result.currentStock });
+        if (barcode) stockEntries.push({ key: barcode, stock: result.currentStock });
+        if (stockEntries.length > 0) upsertStockEntries(stockEntries);
+        // Advance sync timestamp so freshness check knows we're current
+        if (result.updatedAt) lastSyncedAtRef.current = result.updatedAt;
+      } else if (barcode) {
         await setLocalPrice(barcode, priceMinor);
       }
       const logSku = item.sku ?? barcode ?? item.id;
@@ -1773,32 +1797,40 @@ export default function SellScanScreen({
     setEditProductBusy(true);
     setEditProductError(null);
     try {
-      // SYNC-PRD-001: Unified sync for name + price to backend (last-write-wins)
+      // RCAT-SYNC-001: Unified sync for name + price to backend (last-write-wins)
       const nameChanged = trimmedName !== (detailItem.name || "");
       const hasIdentifier = detailItem.storeProductId || detailItem.productId || detailItem.barcode;
       if (hasIdentifier) {
-        await productsApi.updateStoreProductMetadata({
+        const metaResult = await productsApi.updateStoreProductMetadata({
           storeProductId: detailItem.storeProductId ?? undefined,
           productId: detailItem.productId ?? undefined,
           barcode: detailItem.barcode ?? undefined,
           displayName: nameChanged ? trimmedName : undefined,
           sellPrice: priceVal,
         });
+        // RCAT-SYNC-001: Use server-confirmed price for local cache
+        if (metaResult) {
+          const confirmedPrice = metaResult.sellPrice ?? priceVal;
+          if (detailItem.barcode) setLocalPrice(detailItem.barcode, confirmedPrice);
+          if (metaResult.updatedAt) lastSyncedAtRef.current = metaResult.updatedAt;
+        } else if (detailItem.barcode) {
+          setLocalPrice(detailItem.barcode, priceVal);
+        }
+      } else if (detailItem.barcode) {
+        setLocalPrice(detailItem.barcode, priceVal);
       }
-      // Update stock
-      await productsApi.updateStoreProductStock({
+      // Update stock - use server-confirmed value for cache
+      const stockResult = await productsApi.updateStoreProductStock({
         productId: detailItem.productId ?? undefined,
         barcode: detailItem.barcode ?? undefined,
         stock: stockVal,
       });
-      // Update local stock cache (key + stock format required by stockService)
+      const confirmedStock = stockResult?.stock ?? stockVal;
       const stockUpdates: Array<{ key: string; stock: number }> = [];
-      if (detailItem.productId) stockUpdates.push({ key: detailItem.productId, stock: stockVal });
-      if (detailItem.barcode) stockUpdates.push({ key: detailItem.barcode, stock: stockVal });
+      if (stockResult?.productId) stockUpdates.push({ key: stockResult.productId, stock: confirmedStock });
+      else if (detailItem.productId) stockUpdates.push({ key: detailItem.productId, stock: confirmedStock });
+      if (detailItem.barcode) stockUpdates.push({ key: detailItem.barcode, stock: confirmedStock });
       if (stockUpdates.length > 0) upsertStockEntries(stockUpdates);
-      if (detailItem.barcode) {
-        setLocalPrice(detailItem.barcode, priceVal);
-      }
       // SYNC-PRD-001: Refresh local product lists so updated name shows immediately
       if (nameChanged) {
         const updateName = (items: SkuItem[]) =>
@@ -1870,7 +1902,7 @@ export default function SellScanScreen({
       }
     }
 
-    // SYNC-PRD-001: Unified backend sync for ALL changed fields (last-write-wins)
+    // RCAT-SYNC-001: Unified backend sync for ALL changed fields (last-write-wins)
     // Uses storeProductId > productId > barcode fallback for identification
     if (nameChanged || purchasePriceChanged || sellPriceChanged) {
       const storeProductId = editorItem.metadata?.storeProductId as string | undefined;
@@ -1878,14 +1910,20 @@ export default function SellScanScreen({
       const barcode = editorItem.barcode;
 
       if (storeProductId || productId || barcode) {
-        void productsApi.updateStoreProductMetadata({
+        productsApi.updateStoreProductMetadata({
           storeProductId: storeProductId || undefined,
           productId: productId || undefined,
           barcode: barcode || undefined,
           displayName: nameChanged ? trimmedName : undefined,
           purchasePrice: purchasePriceChanged ? parsedPurchasePrice : undefined,
           sellPrice: sellPriceChanged ? parsedSellPrice! : undefined,
-        });
+        }).then((result) => {
+          // RCAT-SYNC-001: Update local caches with server-confirmed values
+          if (result) {
+            if (barcode && result.sellPrice) setLocalPrice(barcode, result.sellPrice);
+            if (result.updatedAt) lastSyncedAtRef.current = result.updatedAt;
+          }
+        }).catch(() => { /* sync failure is non-critical for cart UX */ });
       }
     }
 
