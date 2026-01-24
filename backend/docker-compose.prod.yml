@@ -251,9 +251,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3003
-      DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      SUPPLIER_SERVICE_PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-supermandi}
+      DB_USER: ${POSTGRES_USER:-supermandi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -285,9 +290,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3004
-      DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      CATALOG_SERVICE_PORT: 3004
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-supermandi}
+      DB_USER: ${POSTGRES_USER:-supermandi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -319,9 +329,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3005
-      DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      INVENTORY_SERVICE_PORT: 3005
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-supermandi}
+      DB_USER: ${POSTGRES_USER:-supermandi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -353,9 +368,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3006
-      DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      ORDER_SERVICE_PORT: 3006
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-supermandi}
+      DB_USER: ${POSTGRES_USER:-supermandi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy
@@ -387,9 +407,14 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3007
-      DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      REORDER_SERVICE_PORT: 3007
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-supermandi}
+      DB_USER: ${POSTGRES_USER:-supermandi}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

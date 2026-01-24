@@ -199,7 +199,7 @@ INSERT INTO auth.roles (name, description, permissions) VALUES (
 -- 7. Extend stores table for retailer portal
 -- =============================================================================
 ALTER TABLE platform.stores
-  ADD COLUMN IF NOT EXISTS retailer_portal_enabled BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS retailer_portal_enabled BOOLEAN DEFAULT true,
   ADD COLUMN IF NOT EXISTS retailer_portal_phone VARCHAR(20),
   ADD COLUMN IF NOT EXISTS retailer_portal_enabled_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS retailer_portal_enabled_by UUID REFERENCES auth.users(id);

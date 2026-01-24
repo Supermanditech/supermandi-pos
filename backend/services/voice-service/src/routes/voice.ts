@@ -12,7 +12,7 @@ import { config } from '../config.js';
 import { transcribeAudio } from '../services/sttService.js';
 import { parseIntent, type ParsedIntent } from '../services/intentParser.js';
 
-const router = Router();
+const router: ReturnType<typeof Router> = Router();
 
 // =============================================================================
 // MULTER SETUP FOR FILE UPLOADS

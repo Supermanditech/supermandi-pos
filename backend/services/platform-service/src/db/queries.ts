@@ -34,6 +34,7 @@ export interface CreateStoreInput {
   pincode?: string;
   timezone?: string;
   currency?: string;
+  retailerPortalPhone?: string;
 }
 
 export interface UpdateStoreInput {
@@ -135,13 +136,15 @@ export async function createStore(input: CreateStoreInput): Promise<Store> {
     `INSERT INTO platform.stores (
       name, code, phone, email,
       address_line1, address_line2,
-      city, state, pincode, timezone, currency
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      city, state, pincode, timezone, currency,
+      retailer_portal_phone
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING
       id, name, code, phone, email,
       address_line1 as "addressLine1",
       address_line2 as "addressLine2",
       city, state, pincode, timezone, currency, status,
+      retailer_portal_phone as "retailerPortalPhone",
       created_at as "createdAt",
       updated_at as "updatedAt"`,
     [
@@ -156,6 +159,7 @@ export async function createStore(input: CreateStoreInput): Promise<Store> {
       input.pincode || null,
       input.timezone || 'Asia/Kolkata',
       input.currency || 'INR',
+      input.retailerPortalPhone || input.phone || null,
     ]
   );
   return rows[0];
