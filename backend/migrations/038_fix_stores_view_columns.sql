@@ -60,7 +60,8 @@ WHERE status = 'active' AND (active IS NULL OR active = FALSE);
 --    Uses direct column references (no COALESCE) so view is fully updatable.
 -- =============================================================================
 
-CREATE OR REPLACE VIEW public.stores AS
+DROP VIEW IF EXISTS public.stores;
+CREATE VIEW public.stores AS
   SELECT
     id::TEXT as id,
     name,
