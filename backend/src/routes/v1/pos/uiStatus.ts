@@ -35,15 +35,17 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let buyEnabled = true;
   let reorderEnabled = true;
   if (status.storeId) {
-    const storeRes = await pool.query(
-      `SELECT name, store_code, upi_vpa, scan_lookup_v2_enabled FROM platform.stores WHERE id = $1::uuid`,
-      [status.storeId]
-    );
-    const storeRow = storeRes.rows[0];
-    storeName = storeRow?.name ? String(storeRow.name) : null;
-    storeCode = storeRow?.store_code ? String(storeRow.store_code) : null; // STORECODE-003
-    upiVpa = storeRow?.upi_vpa ? String(storeRow.upi_vpa) : null;
-    storeScanLookupV2Enabled = Boolean(storeRow?.scan_lookup_v2_enabled);
+    try {
+      const storeRes = await pool.query(
+        `SELECT name, code, status FROM platform.stores WHERE id = $1::uuid`,
+        [status.storeId]
+      );
+      const storeRow = storeRes.rows[0];
+      storeName = storeRow?.name ? String(storeRow.name) : null;
+      storeCode = storeRow?.code ? String(storeRow.code) : null;
+    } catch (storeErr: any) {
+      console.error("[uiStatus] Store lookup failed:", storeErr?.message);
+    }
 
     // GO-LIVE-REVEAL-001: Check reorder_settings for reorderEnabled if store has settings
     try {

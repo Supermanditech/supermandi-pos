@@ -93,27 +93,9 @@ adminStoresRouter.post("/stores", async (req, res) => {
   try {
     result = await pool.query(
       `
-        INSERT INTO platform.stores (id, name, code, store_code, active, status, created_at, updated_at)
-        VALUES ($1::uuid, $2, $3, $3, FALSE, 'inactive', NOW(), NOW())
-        RETURNING id::TEXT as id,
-          name,
-          store_code,
-          store_type,
-          status,
-          upi_vpa,
-          active,
-          address,
-          contact_name,
-          contact_phone,
-          contact_email,
-          location,
-          pos_device_id,
-          kyc_status,
-          scan_lookup_v2_enabled,
-          upi_vpa_updated_at,
-          upi_vpa_updated_by,
-          created_at,
-          updated_at
+        INSERT INTO platform.stores (id, name, code, status, created_at, updated_at)
+        VALUES ($1::uuid, $2, $3, 'inactive', NOW(), NOW())
+        RETURNING id::TEXT as id, name, code, status, created_at, updated_at
       `,
       [storeId, storeNameInput.value, storeCode]
     );
@@ -129,7 +111,7 @@ adminStoresRouter.post("/stores", async (req, res) => {
   }
 
   const store = result.rows[0];
-  return res.status(201).json({ store: { ...store, storeName: store?.name, storeCode: store?.store_code } });
+  return res.status(201).json({ store: { ...store, storeName: store?.name, storeCode: store?.code, active: store?.status === "active" } });
 });
 
 // GET /api/v1/admin/stores
@@ -205,7 +187,7 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
 
   try {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
-    const whereClause = isUuid ? "id = $1::uuid" : "(UPPER(store_code) = UPPER($1) OR UPPER(code) = UPPER($1))";
+    const whereClause = isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)";
     const result = await pool.query(
       `
         SELECT id::TEXT as id,
@@ -289,8 +271,10 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     values.push(value);
   };
 
+  // Only update columns that exist in production DB: name, status
   if (storeName !== undefined) addUpdate("name", typeof storeName === "string" ? storeName.trim() : storeName);
   else if (name !== undefined) addUpdate("name", typeof name === "string" ? name.trim() : name);
+
   const upiVpaValue = upiVpa !== undefined ? upiVpa : upiVpaSnake;
   if (upiVpaValue !== undefined) {
     const normalized = normalizeUpiVpa(upiVpaValue);
@@ -300,25 +284,8 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     if (normalized && !UPI_VPA_PATTERN.test(normalized)) {
       return res.status(400).json({ error: "upi_vpa_invalid" });
     }
-    addUpdate("upi_vpa", normalized);
-    addUpdate("active", Boolean(normalized));
+    // Activate/deactivate store based on UPI VPA presence
     addUpdate("status", normalized ? "active" : "inactive");
-    updates.push("upi_vpa_updated_at = NOW()");
-    addUpdate("upi_vpa_updated_by", "superadmin");
-  }
-  if (address !== undefined) addUpdate("address", typeof address === "string" ? address.trim() : address);
-  if (contactName !== undefined) addUpdate("contact_name", typeof contactName === "string" ? contactName.trim() : contactName);
-  if (contactPhone !== undefined) addUpdate("contact_phone", typeof contactPhone === "string" ? contactPhone.trim() : contactPhone);
-  if (contactEmail !== undefined) addUpdate("contact_email", typeof contactEmail === "string" ? contactEmail.trim() : contactEmail);
-  if (location !== undefined) addUpdate("location", typeof location === "string" ? location.trim() : location);
-  if (posDeviceId !== undefined) addUpdate("pos_device_id", typeof posDeviceId === "string" ? posDeviceId.trim() : posDeviceId);
-  if (kycStatus !== undefined) addUpdate("kyc_status", typeof kycStatus === "string" ? kycStatus.trim() : kycStatus);
-  const scanLookupV2Value = scanLookupV2Enabled !== undefined ? scanLookupV2Enabled : scanLookupV2EnabledSnake;
-  if (scanLookupV2Value !== undefined) {
-    if (typeof scanLookupV2Value !== "boolean") {
-      return res.status(400).json({ error: "scanLookupV2Enabled must be boolean" });
-    }
-    addUpdate("scan_lookup_v2_enabled", scanLookupV2Value);
   }
 
   if (updates.length === 0) {
@@ -331,19 +298,24 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storeId);
-  const sql = `
-    UPDATE platform.stores
-    SET ${updates.join(", ")}
-    WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `store_code = $${values.length + 1}`}
-    RETURNING id::TEXT as id, name, store_code, store_type, status, upi_vpa, active, address, contact_name, contact_phone, contact_email, location, pos_device_id, kyc_status, scan_lookup_v2_enabled, upi_vpa_updated_at, upi_vpa_updated_by, created_at, updated_at
-  `;
-  values.push(storeId);
+  try {
+    const sql = `
+      UPDATE platform.stores
+      SET ${updates.join(", ")}
+      WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `UPPER(code) = UPPER($${values.length + 1})`}
+      RETURNING id::TEXT as id, name, code, status, created_at, updated_at
+    `;
+    values.push(storeId);
 
-  const result = await pool.query(sql, values);
-  const store = result.rows[0];
-  if (!store) {
-    return res.status(404).json({ error: "store not found" });
+    const result = await pool.query(sql, values);
+    const store = result.rows[0];
+    if (!store) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "active" } });
+  } catch (err: any) {
+    console.error("[admin/stores PATCH] Update failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store" });
   }
-
-  return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code } });
 });

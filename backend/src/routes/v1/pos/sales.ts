@@ -336,8 +336,18 @@ async function resolveVariantByBarcode(
 async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
   const pool = getPool();
   if (!pool) return null;
-  const res = await pool.query(`SELECT id::TEXT as id, name, upi_vpa, active FROM platform.stores WHERE id = $1::uuid`, [storeId]);
-  return res.rows[0] ?? null;
+  try {
+    const res = await pool.query(
+      `SELECT id::TEXT as id, name, (status = 'active') as active FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    const row = res.rows[0];
+    if (!row) return null;
+    return { ...row, upi_vpa: null };
+  } catch (err: any) {
+    console.error("[sales/getStore] Query failed:", err?.message);
+    return null;
+  }
 }
 
 async function getSale(
