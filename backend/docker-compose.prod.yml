@@ -1,8 +1,6 @@
 # Docker Compose Production - V3.0.9 compliant
 # Full production stack with all microservices
 
-version: '3.8'
-
 # =============================================================================
 # SERVICES
 # =============================================================================
@@ -448,17 +446,9 @@ services:
 # =============================================================================
 volumes:
   postgres-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${DATA_DIR:-./data}/postgres
+    name: supermanditech_postgres-data
   redis-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ${DATA_DIR:-./data}/redis
+    name: supermanditech_redis-data
 
 # =============================================================================
 # NETWORKS
