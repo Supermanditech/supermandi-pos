@@ -245,3 +245,99 @@ posSuppliersRouter.get("/suppliers/:supplierId", requireDeviceToken, async (req,
     });
   }
 });
+
+/**
+ * GET /api/v1/pos/suppliers/:supplierId/products
+ * Get products available from a specific supplier.
+ *
+ * Queries catalog.supplier_products for active products belonging to this supplier.
+ * Used by PurchaseScreen to show orderable products and by readinessGate probe.
+ *
+ * Response contract: { success: true, data: { products: [] } }
+ */
+posSuppliersRouter.get("/suppliers/:supplierId/products", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ success: false, error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { supplierId } = req.params;
+  const { limit = "100", offset = "0" } = req.query;
+
+  const limitNum = Math.min(parseInt(limit as string, 10) || 100, 500);
+  const offsetNum = parseInt(offset as string, 10) || 0;
+
+  try {
+    // Verify supplier is verified and linked to this store
+    const supplierCheck = await pool.query(
+      `SELECT 1 FROM supplier.suppliers s
+       JOIN supplier.supplier_store_links ssl ON s.id = ssl.supplier_id
+       WHERE s.id = $1
+         AND ssl.store_id = $2
+         AND s.verification_status = 'verified'
+         AND ssl.status = 'active'`,
+      [supplierId, storeId]
+    );
+
+    if (supplierCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Supplier not found or not linked to this store",
+      });
+    }
+
+    // Get supplier's product catalog
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM catalog.supplier_products
+       WHERE supplier_id = $1 AND is_active = true`,
+      [supplierId]
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    const result = await pool.query(
+      `SELECT
+         id,
+         supplier_sku as "supplierSku",
+         barcode,
+         name,
+         category,
+         brand,
+         unit,
+         pack_size as "packSize",
+         mrp,
+         purchase_price as "purchasePrice",
+         stock_quantity as "stockQuantity",
+         stock_status as "stockStatus",
+         moq
+       FROM catalog.supplier_products
+       WHERE supplier_id = $1 AND is_active = true
+       ORDER BY name ASC
+       LIMIT $2 OFFSET $3`,
+      [supplierId, limitNum, offsetNum]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        products: result.rows,
+      },
+      pagination: { total, limit: limitNum, offset: offsetNum },
+    });
+  } catch (error: any) {
+    console.error("[pos/suppliers] Error fetching supplier products:", error.message);
+
+    // Table might not exist yet
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: { products: [] },
+        pagination: { total: 0, limit: limitNum, offset: offsetNum },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to fetch supplier products",
+    });
+  }
+});
