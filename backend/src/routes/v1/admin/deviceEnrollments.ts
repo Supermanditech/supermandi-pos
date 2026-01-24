@@ -37,52 +37,57 @@ async function generateUniqueCode(pool: ReturnType<typeof getPool>): Promise<str
 
 // POST /api/v1/admin/stores/:storeId/device-enrollments
 adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireAdminToken, async (req, res) => {
-  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
-  if (!storeId) {
-    return res.status(400).json({ error: "storeId is required" });
+  try {
+    const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+    if (!storeId) {
+      return res.status(400).json({ error: "storeId is required" });
+    }
+
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    // Fetch store details to determine if demo store (for multi-use enrollments)
+    const storeRes = await pool.query(
+      `SELECT id::TEXT as id, code FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    if (storeRes.rowCount === 0) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    const store = storeRes.rows[0];
+    const storeCode = store.code ?? "";
+    const isDemo = isDemoStoreCode(storeCode);
+
+    // Demo stores get unlimited multi-use enrollment codes
+    // Production stores get single-use codes
+    const maxUses = isDemo ? DEMO_MAX_USES : PRODUCTION_MAX_USES;
+    // Demo codes don't expire (set far future)
+    const expiresAt = isDemo
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year for demo
+      : new Date(Date.now() + ENROLLMENT_TTL_MINUTES * 60_000).toISOString();
+
+    const code = await generateUniqueCode(pool);
+
+    await pool.query(
+      `
+      INSERT INTO pos_device_enrollments (code, store_id, expires_at, max_uses, created_by)
+      VALUES ($1, $2, $3, $4, $5)
+      `,
+      [code, storeId, expiresAt, maxUses, "superadmin"]
+    );
+
+    console.log(`[AdminEnrollment] Created code=${code} store=${storeCode} isDemo=${isDemo} maxUses=${maxUses}`);
+
+    return res.json({
+      code,
+      expiresAt,
+      maxUses,
+      isDemo,
+      qrPayload: `supermandi://enroll?code=${encodeURIComponent(code)}`
+    });
+  } catch (error) {
+    console.error("[AdminEnrollment] Error creating enrollment:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to create enrollment" });
   }
-
-  const pool = getPool();
-  if (!pool) return res.status(503).json({ error: "database unavailable" });
-
-  // BUG-FIX: Fetch store details to determine if demo store (for multi-use enrollments)
-  const storeRes = await pool.query(
-    `SELECT id::TEXT as id, store_code, code, (store_type = 'demo') as is_demo FROM platform.stores WHERE id = $1::uuid`,
-    [storeId]
-  );
-  if (storeRes.rowCount === 0) {
-    return res.status(404).json({ error: "store not found" });
-  }
-
-  const store = storeRes.rows[0];
-  const storeCode = store.store_code ?? store.code ?? "";
-  const isDemo = Boolean(store.is_demo) || isDemoStoreCode(storeCode);
-
-  // Demo stores get unlimited multi-use enrollment codes
-  // Production stores get single-use codes
-  const maxUses = isDemo ? DEMO_MAX_USES : PRODUCTION_MAX_USES;
-  // Demo codes don't expire (set far future)
-  const expiresAt = isDemo
-    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year for demo
-    : new Date(Date.now() + ENROLLMENT_TTL_MINUTES * 60_000).toISOString();
-
-  const code = await generateUniqueCode(pool);
-
-  await pool.query(
-    `
-    INSERT INTO pos_device_enrollments (code, store_id, expires_at, max_uses, created_by)
-    VALUES ($1, $2, $3, $4, $5)
-    `,
-    [code, storeId, expiresAt, maxUses, "superadmin"]
-  );
-
-  console.log(`[AdminEnrollment] Created code=${code} store=${storeCode} isDemo=${isDemo} maxUses=${maxUses}`);
-
-  return res.json({
-    code,
-    expiresAt,
-    maxUses,
-    isDemo,
-    qrPayload: `supermandi://enroll?code=${encodeURIComponent(code)}`
-  });
 });
