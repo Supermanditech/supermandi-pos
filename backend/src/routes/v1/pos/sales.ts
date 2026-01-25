@@ -1105,6 +1105,8 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     if (error instanceof Error && error.message === "sale_id_conflict") {
       return res.status(409).json({ error: "sale_id_conflict" });
     }
+    // AUD-VM-033 DEBUG: Log unknown errors for diagnosis
+    console.error("[sales] Unhandled error:", error instanceof Error ? { message: error.message, stack: error.stack } : error);
     return res.status(500).json({ error: "failed to create sale" });
   } finally {
     client.release();
