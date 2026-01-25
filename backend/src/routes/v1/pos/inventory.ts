@@ -75,13 +75,14 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
     // Get paginated results with product details
+    // AUD-050: Fixed sp.name -> COALESCE(sp.display_name, p.name), sp.barcode -> p.primary_barcode
     const result = await pool.query(
       `SELECT
         il.id,
         il.store_id as "storeId",
         il.product_id as "productId",
-        sp.name as "productName",
-        sp.barcode,
+        COALESCE(sp.display_name, p.name) as "productName",
+        p.primary_barcode as barcode,
         il.delta_qty as "deltaQty",
         il.transaction_type as "transactionType",
         il.reference_type as "referenceType",
@@ -92,6 +93,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
         il.created_at as "createdAt"
       FROM inventory.inventory_ledger il
       LEFT JOIN catalog.store_products sp ON sp.store_id = il.store_id AND sp.product_id = il.product_id
+      LEFT JOIN catalog.products p ON p.id = il.product_id
       ${whereClause}
       ORDER BY il.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,

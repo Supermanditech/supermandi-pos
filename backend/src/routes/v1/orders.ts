@@ -215,7 +215,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", async (req: Request, res: R
         poi.supplier_product_id as "supplierProductId",
         poi.product_id as "productId",
         COALESCE(p.name, sp.name, 'Unknown Product') as "productName",
-        COALESCE(p.barcode, sp.barcode) as "barcode",
+        COALESCE(p.primary_barcode, sp.barcode) as "barcode",
         poi.ordered_quantity as "orderedQuantity",
         poi.received_quantity as "receivedQuantity",
         poi.unit_price as "unitPrice",
