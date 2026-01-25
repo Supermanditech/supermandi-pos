@@ -77,13 +77,14 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
 
     // Get paginated results with product details
     // AUD-050: Fixed sp.name -> COALESCE(sp.display_name, p.name), sp.barcode -> p.primary_barcode
+    // ITER2: Added null-safe fallbacks for productName and barcode
     const result = await pool.query(
       `SELECT
         il.id,
         il.store_id as "storeId",
         il.product_id as "productId",
-        COALESCE(sp.display_name, p.name) as "productName",
-        p.primary_barcode as barcode,
+        COALESCE(sp.display_name, p.name, 'Unknown Product') as "productName",
+        COALESCE(p.primary_barcode, '') as barcode,
         il.delta_qty as "deltaQty",
         il.transaction_type as "transactionType",
         il.reference_type as "referenceType",
@@ -100,6 +101,9 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, limitNum, offsetNum]
     );
+
+    // ITER2: Log ledger query results for audit trail
+    console.log(`[Ledger] Query: storeId=${storeId}, returned=${result.rows.length} of ${total} entries`);
 
     return res.json({
       success: true,
