@@ -119,48 +119,62 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/admin/verified-suppliers',
       stripPrefix: false,
     },
-    // All other admin routes -> platform-service
+    // AUD-042-A: All other admin routes -> main backend (monolith deployment)
     {
       name: 'admin',
-      url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/admin',
       stripPrefix: false,
     },
     // ==========================================================================
+    // AUD-042-A: Auth routes -> main backend (monolith deployment)
     {
       name: 'auth',
-      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/auth',
+      stripPrefix: false,
     },
+    // AUD-042-A: Platform routes -> main backend (monolith deployment)
     {
       name: 'platform',
-      url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/platform',
+      stripPrefix: false,
     },
+    // AUD-042-A: Supplier routes -> main backend (monolith deployment)
     {
       name: 'supplier',
-      url: getEnvOrDefault('SUPPLIER_SERVICE_URL', 'http://localhost:3003'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/suppliers',
+      stripPrefix: false,
     },
+    // AUD-042-A: Catalog routes -> main backend (monolith deployment)
     {
       name: 'catalog',
-      url: getEnvOrDefault('CATALOG_SERVICE_URL', 'http://localhost:3004'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/catalog',
+      stripPrefix: false,
     },
+    // AUD-042-A: Inventory routes -> main backend (monolith deployment)
     {
       name: 'inventory',
-      url: getEnvOrDefault('INVENTORY_SERVICE_URL', 'http://localhost:3005'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/inventory',
+      stripPrefix: false,
     },
+    // AUD-042-A: Orders routes -> main backend (monolith deployment)
     {
       name: 'orders',
-      url: getEnvOrDefault('ORDER_SERVICE_URL', 'http://localhost:3006'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/orders',
+      stripPrefix: false,
     },
+    // AUD-042-A: Reorder routes -> main backend (monolith deployment)
     {
       name: 'reorder',
-      url: getEnvOrDefault('REORDER_SERVICE_URL', 'http://localhost:3007'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/reorder',
+      stripPrefix: false,
     },
     // ==========================================================================
     // POS ROUTES - GW-ROUTES-001: All POS endpoints go to main-backend
@@ -173,19 +187,20 @@ export const config: GatewayConfig = {
       stripPrefix: false,
     },
     // ==========================================================================
+    // AUD-042-A: Voice routes -> main backend (monolith deployment)
     {
       name: 'voice',
-      url: getEnvOrDefault('VOICE_SERVICE_URL', 'http://localhost:3008'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/voice',
+      stripPrefix: false,
     },
     // Retailer Admin Portal routes
-    // RCAT-DEPLOY-001: Health endpoint routes to platform-service via catch-all
-    // (platform-service has /health endpoint, gateway strips prefix to /health)
-    // Auth routes go to auth-service (Firebase token exchange)
+    // AUD-042-A: Auth routes -> main backend (monolith deployment)
     {
       name: 'retailer-auth',
-      url: getEnvOrDefault('AUTH_SERVICE_URL', 'http://localhost:3001'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/retailer-admin/auth',
+      stripPrefix: false,
     },
     // RCAT-DEPLOY-001: Health endpoint for gateway verification -> main backend
     {
@@ -229,11 +244,12 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/retailer-admin/search',
       stripPrefix: false,
     },
-    // Portal API catch-all routes go to platform-service
+    // AUD-042-A: Portal API catch-all routes -> main backend (monolith deployment)
     {
       name: 'retailer-portal',
-      url: getEnvOrDefault('PLATFORM_SERVICE_URL', 'http://localhost:3002'),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/retailer-admin',
+      stripPrefix: false,
     },
   ],
 };
