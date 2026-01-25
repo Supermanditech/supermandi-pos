@@ -595,6 +595,17 @@ export async function ensureSaleAvailability(params: {
     const catalogStock = Number(row.catalog_stock ?? 0);
     const catalogAvailable = Number.isFinite(catalogStock) ? Math.max(0, catalogStock) : 0;
 
+    // DEBUG: Log stock check values
+    console.log("[ensureSaleAvailability] DEBUG:", {
+      variantId,
+      productId: row.product_id,
+      requiredQty,
+      hasVariantStock,
+      variantStock: row.variant_stock,
+      catalogStock: row.catalog_stock,
+      catalogAvailable
+    });
+
     if (hasVariantStock) {
       // Legacy mode: variants.stock column exists, check it with catalog as fallback
       const variantStock = Number(row.variant_stock ?? 0);
