@@ -157,10 +157,23 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
     return res.status(400).json({ error: "Store not configured" });
   }
 
-  const { items, transactionType, referenceType, referenceId, notes } = req.body;
+  // ITER2-001 FIX (AUD-074-A): Accept supplierId for traceability
+  const { items, transactionType, referenceType, referenceId, notes, supplierId, supplierName } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "items array is required" });
+  }
+
+  // ITER2-001: Build structured notes with supplier info for queryability
+  // Format: [supplier_id=xxx|name=yyy] Original notes
+  // This allows parsing supplier info without DB schema change
+  let enrichedNotes = notes || null;
+  if (supplierId || supplierName) {
+    const supplierMeta = [];
+    if (supplierId) supplierMeta.push(`supplier_id=${supplierId}`);
+    if (supplierName) supplierMeta.push(`name=${supplierName}`);
+    const prefix = `[${supplierMeta.join('|')}]`;
+    enrichedNotes = notes ? `${prefix} ${notes}` : prefix;
   }
 
   if (!transactionType) {
@@ -253,7 +266,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
           stockBalancesBefore,
           stockBalancesAfter,
           unitCost || null,
-          notes || null,
+          enrichedNotes,  // ITER2-001: Use enriched notes with supplier info
         ]
       );
 

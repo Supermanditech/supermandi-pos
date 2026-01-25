@@ -705,11 +705,17 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             continue;
           }
 
+          // ITER2-002 FIX (AUD-082-D): Skip invalid items in subtotal, don't default to 0
+          // This makes subtotal calculation consistent with item validation below
           const computedSubtotal = items.reduce((sum: number, item: any) => {
             const qtyRaw = asNumber(item?.quantity);
             const priceRaw = asNumber(item?.priceMinor);
-            const qty = qtyRaw === null ? 0 : Math.round(qtyRaw);
-            const price = priceRaw === null ? 0 : Math.round(priceRaw);
+            // Skip items with invalid quantity or price (they'll be rejected in validation below)
+            if (qtyRaw === null || qtyRaw <= 0 || priceRaw === null || priceRaw <= 0) {
+              return sum;
+            }
+            const qty = Math.round(qtyRaw);
+            const price = Math.round(priceRaw);
             return sum + qty * price;
           }, 0);
           const computedTotal = Math.max(0, computedSubtotal - discountMinor);

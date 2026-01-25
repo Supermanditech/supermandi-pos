@@ -182,10 +182,12 @@ export async function recordSaleReturnTransaction(
 /**
  * Record a manual stock inward transaction (increments stock).
  * GO-LIVE-004: For stock-in without a PO.
+ * ITER2-001 (AUD-074-A): Added supplierId/supplierName for traceability
  */
 export async function recordManualInward(
   items: InventoryTransactionItem[],
-  notes?: string
+  notes?: string,
+  supplier?: { id?: string; name?: string } | null
 ): Promise<InventoryTransactionResponse> {
   if (!(await isOnline())) {
     throw new Error("Offline mode not supported for stock inward");
@@ -202,6 +204,9 @@ export async function recordManualInward(
       referenceType: "manual",
       referenceId,
       notes,
+      // ITER2-001: Pass supplier info for backend traceability
+      supplierId: supplier?.id || undefined,
+      supplierName: supplier?.name || undefined,
     }
   );
   return response.data;

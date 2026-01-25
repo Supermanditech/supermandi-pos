@@ -328,11 +328,10 @@ export default function InwardScreen({
         unitCost: item.purchasePriceMinor,
       }));
 
-      const supplierNote = selectedSupplier
-        ? `Supplier: ${selectedSupplier.name}. ${notes}`
-        : notes || "Manual stock inward";
-
-      await recordManualInward(txItems, supplierNote);
+      // ITER2-001 (AUD-074-A): Pass supplier object separately for structured storage
+      // Notes field is now clean, supplier info stored in backend with structured format
+      const userNotes = notes || "Manual stock inward";
+      await recordManualInward(txItems, userNotes, selectedSupplier);
 
       Alert.alert(
         "Stock Inward Complete",
