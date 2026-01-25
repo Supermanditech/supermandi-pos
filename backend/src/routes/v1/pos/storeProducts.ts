@@ -9,6 +9,37 @@ import {
 
 export const posStoreProductsRouter = Router();
 
+// ITER3-003: Stock drift detection threshold (5 units or 10% difference triggers warning)
+const STOCK_DRIFT_THRESHOLD = 5;
+const STOCK_DRIFT_PERCENT = 0.1;
+
+/**
+ * ITER3-003: Log stock drift when stock_balances.current_qty differs from store_products.current_stock
+ * This helps detect consistency issues between the authoritative and denormalized stock values.
+ */
+function logStockDriftIfDetected(params: {
+  storeId: string;
+  productId: string;
+  storeProductId?: string;
+  stockBalanceQty: number | null;
+  storeProductStock: number | null;
+  context: string;
+}): void {
+  const balanceQty = params.stockBalanceQty ?? 0;
+  const productStock = params.storeProductStock ?? 0;
+  const diff = Math.abs(balanceQty - productStock);
+  const maxStock = Math.max(balanceQty, productStock, 1);
+  const percentDiff = diff / maxStock;
+
+  if (diff > STOCK_DRIFT_THRESHOLD || percentDiff > STOCK_DRIFT_PERCENT) {
+    console.warn(
+      `[ITER3-003] Stock drift detected: store=${params.storeId}, product=${params.productId}, ` +
+      `storeProduct=${params.storeProductId || 'N/A'}, stock_balances=${balanceQty}, ` +
+      `store_products=${productStock}, diff=${diff}, context=${params.context}`
+    );
+  }
+}
+
 type SuccessResult = Extract<CreateStoreProductResult, { success: true }>;
 type ConflictResult = Extract<CreateStoreProductResult, { success: false; error: "CONFLICT" }>;
 type ValidationResult = Extract<CreateStoreProductResult, { success: false; error: "VALIDATION" }>;
@@ -315,6 +346,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
   }
 
   try {
+    // ITER3-003: Also return individual stock values for drift detection
     const result = await pool.query(
       `SELECT
         sp.id as store_product_id,
@@ -331,6 +363,8 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         sp.product_mode,
         sp.metadata_updated_at,
         COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
+        sb.current_qty as stock_balance_qty,
+        sp.current_stock as store_product_stock,
         spb_match.barcode as store_barcode
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
@@ -390,6 +424,17 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
     }
 
     const row = result.rows[0];
+
+    // ITER3-003: Detect stock drift between stock_balances and store_products
+    logStockDriftIfDetected({
+      storeId,
+      productId: row.product_id,
+      storeProductId: row.store_product_id,
+      stockBalanceQty: row.stock_balance_qty,
+      storeProductStock: row.store_product_stock,
+      context: "lookup"
+    });
+
     return res.json({
       success: true,
       data: {
@@ -561,9 +606,11 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
  */
 posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
-  const { barcode, productId, sellPrice } = req.body as {
+  // ITER3-001: Accept storeProductId in addition to barcode/productId
+  const { barcode, productId, storeProductId, sellPrice } = req.body as {
     barcode?: string;
     productId?: string;
+    storeProductId?: string;
     sellPrice: number;
   };
 
@@ -571,8 +618,9 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
     return res.status(422).json({ error: "VALIDATION_ERROR", message: "sellPrice must be a positive number" });
   }
 
-  if (!barcode && !productId) {
-    return res.status(422).json({ error: "VALIDATION_ERROR", message: "barcode or productId is required" });
+  // ITER3-001: Accept any of the three identifiers
+  if (!barcode && !productId && !storeProductId) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "barcode, productId, or storeProductId is required" });
   }
 
   const pool = getPool();
@@ -583,7 +631,17 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
   try {
     let updateResult;
 
-    if (productId) {
+    // ITER3-001: Priority order: storeProductId > productId > barcode
+    if (storeProductId) {
+      // Update by storeProductId directly (most precise)
+      updateResult = await pool.query(
+        `UPDATE catalog.store_products
+         SET sell_price = $1, updated_at = NOW()
+         WHERE id = $2 AND store_id = $3 AND is_active = true
+         RETURNING id, product_id, sell_price, display_name, updated_at`,
+        [Math.round(sellPrice), storeProductId, storeId]
+      );
+    } else if (productId) {
       // Update by productId directly
       updateResult = await pool.query(
         `UPDATE catalog.store_products
@@ -656,9 +714,11 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
  */
 posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
-  const { productId, barcode, stock } = req.body as {
+  // ITER3-001: Accept storeProductId in addition to productId/barcode
+  const { productId, barcode, storeProductId, stock } = req.body as {
     productId?: string;
     barcode?: string;
+    storeProductId?: string;
     stock: number;
   };
 
@@ -666,8 +726,9 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
     return res.status(422).json({ error: "VALIDATION_ERROR", message: "stock must be a non-negative number" });
   }
 
-  if (!productId && !barcode) {
-    return res.status(422).json({ error: "VALIDATION_ERROR", message: "productId or barcode is required" });
+  // ITER3-001: Accept any of the three identifiers
+  if (!productId && !barcode && !storeProductId) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "productId, barcode, or storeProductId is required" });
   }
 
   const pool = getPool();
@@ -677,8 +738,18 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
 
   const client = await pool.connect();
   try {
-    // Resolve product_id from barcode if needed
+    // ITER3-001: Resolve product_id from storeProductId, productId, or barcode
     let resolvedProductId = productId;
+
+    if (!resolvedProductId && storeProductId) {
+      // Lookup by storeProductId (most precise)
+      const lookup = await client.query(
+        `SELECT product_id FROM catalog.store_products
+         WHERE id = $1 AND store_id = $2 AND is_active = true`,
+        [storeProductId, storeId]
+      );
+      resolvedProductId = lookup.rows[0]?.product_id;
+    }
 
     if (!resolvedProductId && barcode) {
       const lookup = await client.query(

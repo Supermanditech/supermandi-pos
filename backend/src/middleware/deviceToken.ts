@@ -126,8 +126,31 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
   };
 }
 
+// ITER3-006: Request audit logging for 10k store monitoring
+function logPosRequest(params: {
+  storeId: string;
+  deviceId: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMs: number;
+}): void {
+  // Structured logging for aggregation/monitoring (JSON format for log parsers)
+  console.log(JSON.stringify({
+    type: "pos_request",
+    ts: new Date().toISOString(),
+    store: params.storeId,
+    device: params.deviceId,
+    method: params.method,
+    path: params.path,
+    status: params.statusCode,
+    duration_ms: params.durationMs
+  }));
+}
+
 // Require device token for POS endpoints. Derives store/device server-side.
 export async function requireDeviceToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  const startTime = Date.now();
   const status = await resolveDeviceFromToken(req, res);
   if (!status) return;
   if (!enforceStoreBinding(req, res, status)) return;
@@ -149,6 +172,18 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
     deviceId: status.deviceId,
     storeId: status.storeId
   } satisfies PosDeviceContext;
+
+  // ITER3-006: Log request on response finish
+  res.on("finish", () => {
+    logPosRequest({
+      storeId: status.storeId!,
+      deviceId: status.deviceId,
+      method: req.method,
+      path: req.originalUrl || req.url,
+      statusCode: res.statusCode,
+      durationMs: Date.now() - startTime
+    });
+  });
 
   next();
 }

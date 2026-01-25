@@ -297,6 +297,14 @@ async function decrementCatalogStock(
          updated_at = NOW()`,
       [params.storeId, item.productId, stockAfter, ledgerId, deltaQty]
     );
+
+    // ITER3-007: Also update denormalized stock in store_products for consistency
+    await client.query(
+      `UPDATE catalog.store_products
+       SET current_stock = GREATEST(0, current_stock + $3), updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2 AND is_active = true`,
+      [params.storeId, item.productId, deltaQty]
+    );
   }
 }
 
@@ -343,6 +351,14 @@ async function incrementCatalogStock(
          last_ledger_id = $4,
          updated_at = NOW()`,
       [params.storeId, item.productId, stockAfter, ledgerId, deltaQty]
+    );
+
+    // ITER3-007: Also update denormalized stock in store_products for consistency
+    await client.query(
+      `UPDATE catalog.store_products
+       SET current_stock = current_stock + $3, updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2 AND is_active = true`,
+      [params.storeId, item.productId, deltaQty]
     );
   }
 }
