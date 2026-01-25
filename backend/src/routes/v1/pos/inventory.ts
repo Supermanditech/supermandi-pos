@@ -175,13 +175,13 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
 
       // Get current stock
       const stockResult = await client.query(
-        `SELECT stock_on_hand FROM catalog.store_products
+        `SELECT current_stock FROM catalog.store_products
          WHERE store_id = $1 AND product_id = $2
          FOR UPDATE`,
         [status.storeId, productId]
       );
 
-      const currentStock = stockResult.rows[0]?.stock_on_hand ?? 0;
+      const currentStock = stockResult.rows[0]?.current_stock ?? 0;
 
       // Calculate delta based on transaction type
       let deltaQty = quantity;
@@ -196,7 +196,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
       // Update stock
       await client.query(
         `UPDATE catalog.store_products
-         SET stock_on_hand = $3, updated_at = NOW()
+         SET current_stock = $3, updated_at = NOW()
          WHERE store_id = $1 AND product_id = $2`,
         [status.storeId, productId, newStock]
       );

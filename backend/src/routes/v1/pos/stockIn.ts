@@ -135,13 +135,14 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
 
       if (!quantity || quantity <= 0) continue;
 
-      // Look up product by barcode in store_products
+      // Look up product by barcode in store_product_barcodes + store_products
       const productResult = await client.query(
-        `SELECT product_id, stock_on_hand
-         FROM catalog.store_products
-         WHERE store_id = $1 AND barcode = $2 AND is_active = true
+        `SELECT sp.product_id, sp.current_stock
+         FROM catalog.store_product_barcodes spb
+         JOIN catalog.store_products sp ON sp.store_id = spb.store_id AND sp.id = spb.store_product_id
+         WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
          LIMIT 1
-         FOR UPDATE`,
+         FOR UPDATE OF sp`,
         [storeId, barcode]
       );
 
@@ -150,7 +151,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
 
       if (productResult.rows.length > 0) {
         productId = productResult.rows[0].product_id;
-        currentStock = productResult.rows[0].stock_on_hand ?? 0;
+        currentStock = productResult.rows[0].current_stock ?? 0;
       } else {
         // Product not in store catalog — skip (can't stock-in unknown product)
         console.log(`[stock-in] Skipping unknown barcode ${barcode} for store ${storeId}`);
@@ -163,7 +164,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
       // Update stock
       await client.query(
         `UPDATE catalog.store_products
-         SET stock_on_hand = $3, updated_at = NOW()
+         SET current_stock = $3, updated_at = NOW()
          WHERE store_id = $1 AND product_id = $2`,
         [storeId, productId, newStock]
       );
