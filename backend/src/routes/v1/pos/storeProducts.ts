@@ -754,13 +754,14 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
  */
 posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
-  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, metadataUpdatedAt } = req.body as {
+  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, brand, metadataUpdatedAt } = req.body as {
     barcode?: string;
     productId?: string;
     storeProductId?: string;
     displayName?: string;
     purchasePrice?: number;
     sellPrice?: number;
+    brand?: string; // MT-8: Store-level brand override
     metadataUpdatedAt?: string; // ISO timestamp for last-write-wins comparison
   };
 
@@ -773,6 +774,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
   }
 
   const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
+  const trimmedBrand = typeof brand === "string" ? brand.trim() : null; // MT-8: Brand support
   const validPurchasePrice = typeof purchasePrice === "number" && Number.isFinite(purchasePrice) && purchasePrice >= 0
     ? Math.round(purchasePrice)
     : null;
@@ -780,10 +782,10 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
     ? Math.round(sellPrice)
     : null;
 
-  if (!trimmedName && validPurchasePrice === null && validSellPrice === null) {
+  if (!trimmedName && !trimmedBrand && validPurchasePrice === null && validSellPrice === null) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
-      message: "At least one of displayName, purchasePrice, or sellPrice is required"
+      message: "At least one of displayName, brand, purchasePrice, or sellPrice is required"
     });
   }
 
@@ -801,6 +803,11 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
     if (trimmedName) {
       setClauses.push(`display_name = $${paramIdx++}`);
       params.push(trimmedName);
+    }
+    if (trimmedBrand !== null) {
+      // MT-8: Brand can be set to empty string to clear it
+      setClauses.push(`brand = $${paramIdx++}`);
+      params.push(trimmedBrand || null);
     }
     if (validPurchasePrice !== null) {
       setClauses.push(`purchase_price = $${paramIdx++}`);
@@ -831,7 +838,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         `UPDATE catalog.store_products
          SET ${setClause}
          WHERE id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
-         RETURNING id, product_id, display_name, purchase_price, sell_price, metadata_updated_at, updated_at`,
+         RETURNING id, product_id, display_name, brand, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else if (productId) {
@@ -843,7 +850,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         `UPDATE catalog.store_products
          SET ${setClause}
          WHERE product_id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
-         RETURNING id, product_id, display_name, purchase_price, sell_price, metadata_updated_at, updated_at`,
+         RETURNING id, product_id, display_name, brand, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else {
@@ -859,7 +866,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
          WHERE spb.store_id = $${paramIdx++} AND spb.barcode = $${paramIdx++}
            AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
            AND sp.is_active = true ${lwwGuard}
-         RETURNING sp.id, sp.product_id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
+         RETURNING sp.id, sp.product_id, sp.display_name, sp.brand, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
         params
       );
 
@@ -869,6 +876,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         const fbSetClauses: string[] = [];
         let fbIdx = 1;
         if (trimmedName) { fbSetClauses.push(`display_name = $${fbIdx++}`); fbParams.push(trimmedName); }
+        if (trimmedBrand !== null) { fbSetClauses.push(`brand = $${fbIdx++}`); fbParams.push(trimmedBrand || null); }
         if (validPurchasePrice !== null) { fbSetClauses.push(`purchase_price = $${fbIdx++}`); fbParams.push(validPurchasePrice); }
         if (validSellPrice !== null) { fbSetClauses.push(`sell_price = $${fbIdx++}`); fbParams.push(validSellPrice); }
         fbSetClauses.push(`metadata_updated_at = NOW()`);
@@ -887,7 +895,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
            FROM catalog.products p
            WHERE p.primary_barcode = $${fbIdx++} AND sp.product_id = p.id
              AND sp.store_id = $${fbIdx++} AND sp.is_active = true ${fbLwwGuard}
-           RETURNING sp.id, sp.product_id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
+           RETURNING sp.id, sp.product_id, sp.display_name, sp.brand, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
           fbParams
         );
       }
@@ -940,6 +948,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         storeProductId: result.rows[0].id,
         productId: result.rows[0].product_id,
         displayName: result.rows[0].display_name,
+        brand: result.rows[0].brand || null, // MT-8: Include brand in response
         purchasePrice: result.rows[0].purchase_price,
         sellPrice: result.rows[0].sell_price,
         metadataUpdatedAt: result.rows[0].metadata_updated_at,
@@ -960,9 +969,10 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
 posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   const { storeProductId } = req.params;
-  const { displayName, purchasePrice, metadataUpdatedAt } = req.body as {
+  const { displayName, purchasePrice, brand, metadataUpdatedAt } = req.body as {
     displayName?: string;
     purchasePrice?: number;
+    brand?: string; // MT-8: Store-level brand override
     metadataUpdatedAt?: string; // ISO timestamp for last-write-wins comparison (AUD-025-B)
   };
 
@@ -971,14 +981,15 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
   const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
 
   const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
+  const trimmedBrand = typeof brand === "string" ? brand.trim() : null; // MT-8
   const validPurchasePrice = typeof purchasePrice === "number" && Number.isFinite(purchasePrice) && purchasePrice >= 0
     ? Math.round(purchasePrice)
     : null;
 
-  if (!trimmedName && validPurchasePrice === null) {
+  if (!trimmedName && !trimmedBrand && validPurchasePrice === null) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
-      message: "At least one of displayName or purchasePrice is required"
+      message: "At least one of displayName, brand, or purchasePrice is required"
     });
   }
 
@@ -996,6 +1007,11 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
     if (trimmedName) {
       setClauses.push(`display_name = $${paramIdx++}`);
       params.push(trimmedName);
+    }
+    if (trimmedBrand !== null) {
+      // MT-8: Brand can be set to empty string to clear it
+      setClauses.push(`brand = $${paramIdx++}`);
+      params.push(trimmedBrand || null);
     }
     if (validPurchasePrice !== null) {
       setClauses.push(`purchase_price = $${paramIdx++}`);
@@ -1019,7 +1035,7 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
       `UPDATE catalog.store_products
        SET ${setClauses.join(", ")}
        WHERE id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
-       RETURNING id, display_name, purchase_price, metadata_updated_at`,
+       RETURNING id, display_name, brand, purchase_price, metadata_updated_at`,
       params
     );
 
@@ -1050,6 +1066,7 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
       data: {
         storeProductId: result.rows[0].id,
         displayName: result.rows[0].display_name,
+        brand: result.rows[0].brand || null,
         purchasePrice: result.rows[0].purchase_price,
         metadataUpdatedAt: result.rows[0].metadata_updated_at,
       }
