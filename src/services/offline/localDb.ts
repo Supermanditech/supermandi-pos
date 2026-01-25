@@ -11,7 +11,7 @@ let currentDb: Db | null = null;
 let currentScope: string | null = null;
 
 // Current schema version - increment when adding migrations
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function buildDbName(scope: string): string {
   return `supermandi_offline_${scope}.db`;
@@ -193,6 +193,17 @@ const migrations: Migration[] = [
       await ensureColumn(db, "offline_products", "product_id", "TEXT NULL");
       await ensureColumn(db, "offline_products", "current_stock", "INTEGER NULL");
     }
+  },
+  {
+    version: 4,
+    name: "add_outbox_error_tracking",
+    up: async (db: Db) => {
+      // AUD-081-A FIX: Add error tracking columns to offline_outbox
+      // error_flag: marks events that failed permanently (e.g., corrupted_json, permanently_rejected)
+      // error_at: timestamp when the error was recorded
+      await ensureColumn(db, "offline_outbox", "error_flag", "TEXT NULL");
+      await ensureColumn(db, "offline_outbox", "error_at", "TEXT NULL");
+    }
   }
 ];
 
@@ -221,7 +232,10 @@ async function selfHealSchema(db: Db): Promise<void> {
     { table: "offline_sale_items", column: "discount_type", definition: "TEXT NULL" },
     { table: "offline_sale_items", column: "discount_value", definition: "REAL NULL" },
     { table: "offline_sale_items", column: "discount_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
-    { table: "offline_sale_items", column: "line_total_minor", definition: "INTEGER NOT NULL DEFAULT 0" }
+    { table: "offline_sale_items", column: "line_total_minor", definition: "INTEGER NOT NULL DEFAULT 0" },
+    // AUD-081-A FIX: Error tracking for corrupted/permanently rejected events
+    { table: "offline_outbox", column: "error_flag", definition: "TEXT NULL" },
+    { table: "offline_outbox", column: "error_at", definition: "TEXT NULL" }
   ];
 
   let healed = 0;

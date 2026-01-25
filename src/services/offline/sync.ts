@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../../config/api";
 import NetInfo from "@react-native-community/netinfo";
 import { getDeviceToken } from "../deviceSession";
-import { getPendingEvents, markEventsSynced, pendingOutboxCount } from "./outbox";
+import { getPendingEvents, markEventsSynced, markEventsRejected, pendingOutboxCount } from "./outbox";
 import { offlineDb } from "./localDb";
 
 type SyncResult = {
@@ -69,15 +69,36 @@ export async function syncOutboxBatch(): Promise<number> {
     return 0;
   }
 
-  const applied =
-    (data as SyncResult).results?.filter(
-      (r) => r.status === "applied" || r.status === "duplicate_ignored"
-    ) ?? [];
-  const appliedIds = applied.map((r) => r.eventId);
+  const results = (data as SyncResult).results ?? [];
+
+  // AUD-081-A/D FIX: Handle all result statuses properly
+  const appliedIds: string[] = [];
+  const rejectedEvents: Array<{ eventId: string; reason: string }> = [];
+
+  for (const r of results) {
+    if (r.status === "applied" || r.status === "duplicate_ignored") {
+      appliedIds.push(r.eventId);
+    } else if (r.status === "rejected") {
+      // AUD-081-D FIX: Mark permanently rejected events to prevent infinite retry
+      rejectedEvents.push({ eventId: r.eventId, reason: r.error ?? "unknown" });
+    }
+  }
+
+  // Mark applied events as synced
   await markEventsSynced(appliedIds);
+
+  // Mark rejected events with error flag to prevent infinite loop
+  if (rejectedEvents.length > 0) {
+    const rejectedIds = rejectedEvents.map(e => e.eventId);
+    const reason = rejectedEvents[0]?.reason ?? "server_rejected";
+    await markEventsRejected(rejectedIds, reason);
+    console.warn(`[Sync] ${rejectedIds.length} event(s) permanently rejected:`, rejectedEvents);
+  }
+
   await markMappings(data as SyncResult);
 
-  return appliedIds.length;
+  // Return total processed (applied + rejected) to indicate progress
+  return appliedIds.length + rejectedEvents.length;
 }
 
 let syncing = false;
