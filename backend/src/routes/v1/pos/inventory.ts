@@ -3,7 +3,7 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
-import { requireDeviceToken, type PosDeviceStatusContext } from "../../../middleware/deviceToken";
+import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { randomUUID } from "crypto";
 
 export const posInventoryRouter = Router();
@@ -28,8 +28,9 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const status = (req as any).posDeviceStatus as PosDeviceStatusContext;
-  if (!status.storeId) {
+  // AUD-050: Fixed - use posDevice (set by requireDeviceToken), not posDeviceStatus
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
     return res.status(400).json({ error: "Store not configured" });
   }
 
@@ -37,7 +38,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
 
   try {
     let whereClause = "WHERE il.store_id = $1";
-    const params: any[] = [status.storeId];
+    const params: any[] = [storeId];
     let paramIndex = 2;
 
     if (transactionType && typeof transactionType === "string") {
@@ -146,8 +147,9 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const status = (req as any).posDeviceStatus as PosDeviceStatusContext;
-  if (!status.storeId) {
+  // AUD-050: Fixed - use posDevice (set by requireDeviceToken), not posDeviceStatus
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
     return res.status(400).json({ error: "Store not configured" });
   }
 
@@ -180,7 +182,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
         `SELECT current_stock FROM catalog.store_products
          WHERE store_id = $1 AND product_id = $2
          FOR UPDATE`,
-        [status.storeId, productId]
+        [storeId, productId]
       );
 
       const currentStock = stockResult.rows[0]?.current_stock ?? 0;
@@ -200,7 +202,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
         `UPDATE catalog.store_products
          SET current_stock = $3, updated_at = NOW()
          WHERE store_id = $1 AND product_id = $2`,
-        [status.storeId, productId, newStock]
+        [storeId, productId, newStock]
       );
 
       // Get current stock_balances for accurate ledger entry
@@ -208,7 +210,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
         `SELECT current_qty FROM inventory.stock_balances
          WHERE store_id = $1 AND product_id = $2
          FOR UPDATE`,
-        [status.storeId, productId]
+        [storeId, productId]
       );
       const stockBalancesBefore = balanceResult.rows[0]?.current_qty ?? 0;
       const stockBalancesAfter = Math.max(0, stockBalancesBefore + deltaQty);
@@ -238,7 +240,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
            created_at as "createdAt"`,
         [
           invLedgerId,
-          status.storeId,
+          storeId,
           productId,
           deltaQty,
           invTransactionType,
@@ -259,7 +261,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
            current_qty = GREATEST(0, inventory.stock_balances.current_qty + $5),
            last_ledger_id = $4,
            updated_at = NOW()`,
-        [status.storeId, productId, stockBalancesAfter, invLedgerId, deltaQty]
+        [storeId, productId, stockBalancesAfter, invLedgerId, deltaQty]
       );
 
       entries.push(ledgerResult.rows[0]);
