@@ -127,7 +127,27 @@ export async function applyInventoryMovement(
   );
 
   const currentRaw = inventoryRes.rows[0]?.available_qty ?? 0;
-  const current = Number.isFinite(Number(currentRaw)) ? Math.round(Number(currentRaw)) : 0;
+  let current = Number.isFinite(Number(currentRaw)) ? Math.round(Number(currentRaw)) : 0;
+
+  // AUD-VM-033 FIX: Also check catalog stock when store_inventory shows insufficient
+  // This bridges the dual inventory systems for catalog-digitised products
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(globalProductId);
+  if (isValidUUID) {
+    const catalogRes = await input.client.query(
+      `
+      SELECT current_qty
+      FROM inventory.stock_balances
+      WHERE store_id = $1::uuid AND product_id = $2::uuid
+      `,
+      [storeId, globalProductId]
+    );
+    const catalogStock = Number(catalogRes.rows[0]?.current_qty ?? 0);
+    if (Number.isFinite(catalogStock)) {
+      // Use MAX of store_inventory and catalog stock
+      current = Math.max(current, Math.floor(catalogStock));
+    }
+  }
+
   const nextQty = current + delta;
   if (nextQty < 0) {
     throw new Error("insufficient_stock");
