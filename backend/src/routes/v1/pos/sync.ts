@@ -558,8 +558,15 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
             const fallbackName = `Item ${barcode.slice(-4)}`;
             const itemName = name ?? fallbackName;
+
+            // MT-6: Dual-write - ensure product exists in BOTH schemas
+            // 1. Catalog schema (so Dashboard can see products from offline sales)
+            await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt: createdAt });
+
+            // 2. Legacy schema (for sales/inventory compatibility)
             const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency });
             await ensureRetailerVariant(client, { storeId, variantId });
+
             resolvedItems.push({
               variantId,
               quantity,
@@ -681,6 +688,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             skipIfExists: true
           });
 
+          // MT-6 Iteration 2: Dual-write for PURCHASE_SUBMIT price updates
+          const eventCreatedAt = asTrimmedString(raw?.createdAt);
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
             const sellingPriceRaw = asNumber(item?.sellingPriceMinor);
@@ -689,11 +698,15 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               continue;
             }
 
-            const variantId = await ensureProductByBarcode(client, {
-              barcode,
-              name: asTrimmedString(item?.name),
-              currency: asTrimmedString(item?.currency) ?? currency ?? "INR"
-            });
+            const itemName = asTrimmedString(item?.name);
+            const itemCurrency = asTrimmedString(item?.currency) ?? currency ?? "INR";
+
+            // 1. Catalog schema (so Dashboard sees products from purchases)
+            const { storeProductId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt });
+            await upsertCatalogPrice(client, { storeId, storeProductId, priceMinor: sellingPriceMinor, eventCreatedAt });
+
+            // 2. Legacy schema (for backward compatibility)
+            const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency: itemCurrency });
             await upsertRetailerPrice(client, { storeId, variantId, priceMinor: sellingPriceMinor });
           }
         } else if (type === "PURCHASE_CREATED") {
@@ -703,6 +716,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           const items = Array.isArray((payload as any)?.items) ? (payload as any).items : [];
           if (items.length === 0) {
             throw new Error("invalid purchase payload");
+          }
+
+          // MT-6 Iteration 3: Dual-write products to catalog before purchase creation
+          const eventCreatedAt = asTrimmedString(raw?.createdAt);
+          for (const item of items) {
+            const barcode = asTrimmedString(item?.barcode);
+            if (barcode) {
+              const itemName = asTrimmedString(item?.productName) ?? asTrimmedString(item?.name);
+              await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt });
+            }
           }
 
           const normalizedItems: PurchaseItemInput[] = items.map((item: any) => {
