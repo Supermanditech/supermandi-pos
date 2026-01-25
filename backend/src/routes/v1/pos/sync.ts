@@ -1171,6 +1171,19 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
     client.release();
   }
 
+  // AUD-081-B FIX: Server decrements pending_outbox_count based on processed events
+  // This ensures accurate count even if device goes offline after sync
+  const processedCount = results.filter(
+    r => r.status === "applied" || r.status === "duplicate_ignored"
+  ).length;
+
+  // Calculate new pending count: client-reported minus processed
+  // Only update if client provided a count, otherwise keep existing
+  let newPendingCount: number | null = null;
+  if (pendingOutboxCount !== null) {
+    newPendingCount = Math.max(0, pendingOutboxCount - processedCount);
+  }
+
   await pool.query(
     `
     UPDATE pos_devices
@@ -1179,7 +1192,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         updated_at = NOW()
     WHERE id = $1
     `,
-    [deviceId, pendingOutboxCount]
+    [deviceId, newPendingCount]
   );
 
   return res.json({ results, saleMappings, collectionMappings });
