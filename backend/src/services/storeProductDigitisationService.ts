@@ -392,6 +392,8 @@ export async function createStoreProductFromDigitisation(
     const purchasePriceMinor = input.purchasePrice ? Math.round(input.purchasePrice) : null;
 
     // SYNC-PRD-001: Set metadata_updated_at/metadata_updated_by on both INSERT and ON CONFLICT
+    // AUD-025-B: On conflict, preserve user-customized display_name if metadata_updated_at is set
+    // (indicates explicit user edit from Dashboard or POS metadata PATCH)
     await client.query(
       `
       INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by)
@@ -400,11 +402,15 @@ export async function createStoreProductFromDigitisation(
         sell_price = COALESCE(EXCLUDED.sell_price, catalog.store_products.sell_price),
         mrp = COALESCE(EXCLUDED.mrp, catalog.store_products.mrp),
         purchase_price = COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price),
-        display_name = EXCLUDED.display_name,
+        display_name = CASE
+          WHEN catalog.store_products.metadata_updated_at IS NOT NULL
+          THEN catalog.store_products.display_name
+          ELSE EXCLUDED.display_name
+        END,
         current_stock = EXCLUDED.current_stock,
         taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
-        metadata_updated_at = NOW(),
-        metadata_updated_by = 'POS_APP',
+        metadata_updated_at = COALESCE(catalog.store_products.metadata_updated_at, NOW()),
+        metadata_updated_by = COALESCE(catalog.store_products.metadata_updated_by, 'POS_APP'),
         is_active = true,
         updated_at = NOW()
       RETURNING id

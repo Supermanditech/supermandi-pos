@@ -413,12 +413,24 @@ export default function ProductsPage() {
         : '/api/v1/retailer-admin/products';
       const method = isEdit ? 'PATCH' : 'POST';
 
+      // AUD-025-B: Send timestamp for last-write-wins conflict resolution
+      if (isEdit) {
+        payload.metadataUpdatedAt = new Date().toISOString();
+      }
+
       const response = await authFetch(url, accessToken, {
         method,
         body: JSON.stringify(payload),
       });
 
       if (response.status === 401) return;
+
+      // AUD-025-B: Handle 409 CONFLICT (stale update rejected by LWW)
+      if (response.status === 409) {
+        const conflictData = await response.json() as { error: string; message: string; serverTimestamp?: string };
+        throw new Error('This product was updated elsewhere. Please refresh and try again.');
+      }
+
       const data = await response.json() as ProductCreateResponse;
 
       if (!response.ok) {

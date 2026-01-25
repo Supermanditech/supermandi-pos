@@ -1798,6 +1798,7 @@ export default function SellScanScreen({
     setEditProductError(null);
     try {
       // RCAT-SYNC-001: Unified sync for name + price to backend (last-write-wins)
+      // AUD-025-B: Send current timestamp for LWW conflict resolution
       const nameChanged = trimmedName !== (detailItem.name || "");
       const hasIdentifier = detailItem.storeProductId || detailItem.productId || detailItem.barcode;
       if (hasIdentifier) {
@@ -1807,6 +1808,7 @@ export default function SellScanScreen({
           barcode: detailItem.barcode ?? undefined,
           displayName: nameChanged ? trimmedName : undefined,
           sellPrice: priceVal,
+          metadataUpdatedAt: new Date().toISOString(), // AUD-025-B: LWW timestamp
         });
         // RCAT-SYNC-001: Use server-confirmed price for local cache
         if (metaResult) {
@@ -1917,6 +1919,7 @@ export default function SellScanScreen({
           displayName: nameChanged ? trimmedName : undefined,
           purchasePrice: purchasePriceChanged ? parsedPurchasePrice : undefined,
           sellPrice: sellPriceChanged ? parsedSellPrice! : undefined,
+          metadataUpdatedAt: new Date().toISOString(), // AUD-025-B: LWW timestamp
         }).then((result) => {
           // RCAT-SYNC-001: Update local caches with server-confirmed values
           if (result) {

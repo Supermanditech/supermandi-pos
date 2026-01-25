@@ -453,7 +453,8 @@ export type MetadataUpdateResult = {
 /**
  * SYNC-PRD-001: Update product metadata (display name, purchase price, sell price) from POS.
  * Accepts storeProductId, productId, or barcode for identification (fallback order).
- * Last-write-wins: server sets metadata_updated_at = NOW()
+ * AUD-025-B: Last-write-wins - send metadataUpdatedAt for conflict resolution.
+ * If server has newer data, returns 409 CONFLICT with serverTimestamp.
  */
 export async function updateStoreProductMetadata(input: {
   storeProductId?: string;
@@ -462,6 +463,7 @@ export async function updateStoreProductMetadata(input: {
   displayName?: string;
   purchasePrice?: number;
   sellPrice?: number;
+  metadataUpdatedAt?: string; // ISO timestamp for LWW - when this edit was made locally
 }): Promise<MetadataUpdateResult | null> {
   const body: Record<string, unknown> = {};
   if (input.storeProductId) body.storeProductId = input.storeProductId;
@@ -470,6 +472,8 @@ export async function updateStoreProductMetadata(input: {
   if (input.displayName) body.displayName = input.displayName;
   if (typeof input.purchasePrice === "number") body.purchasePrice = input.purchasePrice;
   if (typeof input.sellPrice === "number") body.sellPrice = input.sellPrice;
+  // AUD-025-B: Send timestamp for last-write-wins conflict resolution
+  if (input.metadataUpdatedAt) body.metadataUpdatedAt = input.metadataUpdatedAt;
   const res = await apiClient.patch<{ success: boolean; data?: MetadataUpdateResult }>(
     `${STORE_PRODUCTS_BASE}/metadata`,
     body

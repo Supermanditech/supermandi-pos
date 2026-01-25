@@ -754,14 +754,19 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
  */
 posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
-  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice } = req.body as {
+  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, metadataUpdatedAt } = req.body as {
     barcode?: string;
     productId?: string;
     storeProductId?: string;
     displayName?: string;
     purchasePrice?: number;
     sellPrice?: number;
+    metadataUpdatedAt?: string; // ISO timestamp for last-write-wins comparison
   };
+
+  // Parse incoming timestamp for LWW comparison (AUD-025-B fix)
+  const incomingTimestamp = metadataUpdatedAt ? new Date(metadataUpdatedAt) : null;
+  const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
 
   if (!barcode && !productId && !storeProductId) {
     return res.status(422).json({ error: "VALIDATION_ERROR", message: "barcode, productId, or storeProductId is required" });
@@ -812,23 +817,32 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
     const setClause = setClauses.join(", ");
     let result;
 
+    // AUD-025-B: Build LWW guard clause if timestamp provided
+    const buildLwwGuard = (tsParamIdx: number) => validIncomingTimestamp
+      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $${tsParamIdx})`
+      : "";
+
     if (storeProductId) {
       params.push(storeProductId);
       params.push(storeId);
+      if (validIncomingTimestamp) params.push(validIncomingTimestamp.toISOString());
+      const lwwGuard = buildLwwGuard(paramIdx + 2);
       result = await pool.query(
         `UPDATE catalog.store_products
          SET ${setClause}
-         WHERE id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
+         WHERE id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
          RETURNING id, product_id, display_name, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else if (productId) {
       params.push(productId);
       params.push(storeId);
+      if (validIncomingTimestamp) params.push(validIncomingTimestamp.toISOString());
+      const lwwGuard = buildLwwGuard(paramIdx + 2);
       result = await pool.query(
         `UPDATE catalog.store_products
          SET ${setClause}
-         WHERE product_id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
+         WHERE product_id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
          RETURNING id, product_id, display_name, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
@@ -836,13 +850,15 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
       // Lookup by barcode via store_product_barcodes
       params.push(storeId);
       params.push(barcode);
+      if (validIncomingTimestamp) params.push(validIncomingTimestamp.toISOString());
+      const lwwGuard = buildLwwGuard(paramIdx + 2);
       result = await pool.query(
         `UPDATE catalog.store_products sp
          SET ${setClause}
          FROM catalog.store_product_barcodes spb
          WHERE spb.store_id = $${paramIdx++} AND spb.barcode = $${paramIdx++}
            AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
-           AND sp.is_active = true
+           AND sp.is_active = true ${lwwGuard}
          RETURNING sp.id, sp.product_id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
         params
       );
@@ -861,19 +877,59 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
 
         fbParams.push(barcode);
         fbParams.push(storeId);
+        if (validIncomingTimestamp) fbParams.push(validIncomingTimestamp.toISOString());
+        const fbLwwGuard = validIncomingTimestamp
+          ? `AND (sp.metadata_updated_at IS NULL OR sp.metadata_updated_at < $${fbIdx + 2})`
+          : "";
         result = await pool.query(
           `UPDATE catalog.store_products sp
            SET ${fbSetClauses.join(", ")}
            FROM catalog.products p
            WHERE p.primary_barcode = $${fbIdx++} AND sp.product_id = p.id
-             AND sp.store_id = $${fbIdx} AND sp.is_active = true
+             AND sp.store_id = $${fbIdx++} AND sp.is_active = true ${fbLwwGuard}
            RETURNING sp.id, sp.product_id, sp.display_name, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
           fbParams
         );
       }
     }
 
+    // AUD-025-B: Distinguish between NOT_FOUND vs CONFLICT (stale timestamp)
     if ((result.rowCount ?? 0) === 0) {
+      // Check if product exists to determine if it's a conflict or not found
+      if (validIncomingTimestamp) {
+        let existsCheck;
+        if (storeProductId) {
+          existsCheck = await pool.query(
+            `SELECT id, metadata_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
+            [storeProductId, storeId]
+          );
+        } else if (productId) {
+          existsCheck = await pool.query(
+            `SELECT id, metadata_updated_at FROM catalog.store_products WHERE product_id = $1 AND store_id = $2 AND is_active = true`,
+            [productId, storeId]
+          );
+        } else {
+          existsCheck = await pool.query(
+            `SELECT sp.id, sp.metadata_updated_at FROM catalog.store_products sp
+             JOIN catalog.store_product_barcodes spb ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+             WHERE spb.barcode = $1 AND sp.store_id = $2 AND sp.is_active = true
+             UNION
+             SELECT sp.id, sp.metadata_updated_at FROM catalog.store_products sp
+             JOIN catalog.products p ON sp.product_id = p.id
+             WHERE p.primary_barcode = $1 AND sp.store_id = $2 AND sp.is_active = true`,
+            [barcode, storeId]
+          );
+        }
+        if (existsCheck.rowCount && existsCheck.rowCount > 0) {
+          // Product exists but timestamp check failed - stale update rejected
+          return res.status(409).json({
+            error: "CONFLICT",
+            message: "Stale update rejected - server has newer data",
+            serverTimestamp: existsCheck.rows[0].metadata_updated_at,
+            clientTimestamp: validIncomingTimestamp.toISOString()
+          });
+        }
+      }
       return res.status(404).json({ error: "NOT_FOUND", message: "Product not found in store" });
     }
 
@@ -904,10 +960,15 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
 posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   const { storeProductId } = req.params;
-  const { displayName, purchasePrice } = req.body as {
+  const { displayName, purchasePrice, metadataUpdatedAt } = req.body as {
     displayName?: string;
     purchasePrice?: number;
+    metadataUpdatedAt?: string; // ISO timestamp for last-write-wins comparison (AUD-025-B)
   };
+
+  // Parse incoming timestamp for LWW comparison (AUD-025-B fix)
+  const incomingTimestamp = metadataUpdatedAt ? new Date(metadataUpdatedAt) : null;
+  const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
 
   const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
   const validPurchasePrice = typeof purchasePrice === "number" && Number.isFinite(purchasePrice) && purchasePrice >= 0
@@ -947,15 +1008,37 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
     params.push(storeProductId); // $N for WHERE id
     params.push(storeId);        // $N+1 for WHERE store_id
 
+    // AUD-025-B: Add LWW guard if timestamp provided
+    let lwwGuard = "";
+    if (validIncomingTimestamp) {
+      params.push(validIncomingTimestamp.toISOString());
+      lwwGuard = `AND (metadata_updated_at IS NULL OR metadata_updated_at < $${paramIdx + 2})`;
+    }
+
     const result = await pool.query(
       `UPDATE catalog.store_products
        SET ${setClauses.join(", ")}
-       WHERE id = $${paramIdx++} AND store_id = $${paramIdx} AND is_active = true
+       WHERE id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
        RETURNING id, display_name, purchase_price, metadata_updated_at`,
       params
     );
 
+    // AUD-025-B: Distinguish between NOT_FOUND vs CONFLICT (stale timestamp)
     if ((result.rowCount ?? 0) === 0) {
+      if (validIncomingTimestamp) {
+        const existsCheck = await pool.query(
+          `SELECT id, metadata_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
+          [storeProductId, storeId]
+        );
+        if (existsCheck.rowCount && existsCheck.rowCount > 0) {
+          return res.status(409).json({
+            error: "CONFLICT",
+            message: "Stale update rejected - server has newer data",
+            serverTimestamp: existsCheck.rows[0].metadata_updated_at,
+            clientTimestamp: validIncomingTimestamp.toISOString()
+          });
+        }
+      }
       return res.status(404).json({
         error: "NOT_FOUND",
         message: "Store product not found"

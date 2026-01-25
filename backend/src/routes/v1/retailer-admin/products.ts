@@ -376,7 +376,12 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     openingStockQty, // Stock level update (absolute)
     mode, // PACKAGED or LOOSE_BULK
     alias, // Store-level display name
+    metadataUpdatedAt, // AUD-025-B: ISO timestamp for last-write-wins comparison
   } = req.body;
+
+  // AUD-025-B: Parse incoming timestamp for LWW comparison
+  const incomingTimestamp = metadataUpdatedAt ? new Date(metadataUpdatedAt) : null;
+  const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
 
   const client = await pool.connect();
   try {
@@ -430,8 +435,33 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     // "Product Name" from the form is the display name shown everywhere
     const resolvedDisplayName = name?.trim() || alias?.trim() || null;
 
+    // AUD-025-B: Build LWW guard clause if timestamp provided AND display_name is being updated
+    const lwwGuard = (resolvedDisplayName && validIncomingTimestamp)
+      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $14)`
+      : "";
+
     // SYNC-PRD-001: Only update metadata_updated_at when display_name actually changes
-    await client.query(
+    // AUD-025-B: Apply LWW guard when updating metadata with client timestamp
+    const updateParams: any[] = [
+      id,
+      storeId,
+      sellPrice !== undefined ? safeNumber(sellPrice) : null,
+      mrp !== undefined ? (mrp ? safeNumber(mrp) : null) : null,
+      purchasePrice !== undefined ? safeNumber(purchasePrice) : null,
+      lowStockAlertQty !== undefined ? (lowStockAlertQty ? parseInt(lowStockAlertQty) : null) : null,
+      notes?.trim() || null,
+      soldBy || null,
+      rateUnit || null,
+      supplierId || null,
+      categoryId || null,
+      mode || null,
+      resolvedDisplayName,
+    ];
+    if (resolvedDisplayName && validIncomingTimestamp) {
+      updateParams.push(validIncomingTimestamp.toISOString());
+    }
+
+    const storeProductUpdate = await client.query(
       `UPDATE catalog.store_products SET
         sell_price = COALESCE($3, sell_price),
         mrp = $4,
@@ -447,23 +477,28 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         metadata_updated_at = CASE WHEN $13 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
         metadata_updated_by = CASE WHEN $13 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
         updated_at = NOW()
-      WHERE id = $1 AND store_id = $2`,
-      [
-        id,
-        storeId,
-        sellPrice !== undefined ? safeNumber(sellPrice) : null,
-        mrp !== undefined ? (mrp ? safeNumber(mrp) : null) : null,
-        purchasePrice !== undefined ? safeNumber(purchasePrice) : null,
-        lowStockAlertQty !== undefined ? (lowStockAlertQty ? parseInt(lowStockAlertQty) : null) : null,
-        notes?.trim() || null,
-        soldBy || null,
-        rateUnit || null,
-        supplierId || null,
-        categoryId || null,
-        mode || null,
-        resolvedDisplayName,
-      ]
+      WHERE id = $1 AND store_id = $2 ${lwwGuard}
+      RETURNING id, metadata_updated_at`,
+      updateParams
     );
+
+    // AUD-025-B: Check for LWW conflict (0 rows updated when product exists)
+    if ((storeProductUpdate.rowCount ?? 0) === 0 && resolvedDisplayName && validIncomingTimestamp) {
+      // Product exists (we checked earlier), so this must be a timestamp conflict
+      const existsCheck = await client.query(
+        `SELECT id, metadata_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
+        [id, storeId]
+      );
+      if (existsCheck.rowCount && existsCheck.rowCount > 0) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          error: "CONFLICT",
+          message: "Stale update rejected - server has newer data",
+          serverTimestamp: existsCheck.rows[0].metadata_updated_at,
+          clientTimestamp: validIncomingTimestamp.toISOString()
+        });
+      }
+    }
 
     // Stock update: openingStockQty sets absolute stock level via ledger-first pattern
     if (openingStockQty !== undefined && typeof openingStockQty === 'number' && openingStockQty >= 0) {
