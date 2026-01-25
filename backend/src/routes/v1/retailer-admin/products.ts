@@ -497,11 +497,14 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       );
       if (existsCheck.rowCount && existsCheck.rowCount > 0) {
         await client.query("ROLLBACK");
+        // AUD-025-B: Stale update rejected with spec-compliant response
         return res.status(409).json({
-          error: "CONFLICT",
+          error: "stale_write",
           message: "Stale update rejected - server has newer data",
-          serverTimestamp: existsCheck.rows[0].metadata_updated_at,
-          clientTimestamp: validIncomingTimestamp.toISOString()
+          incomingMetadataUpdatedAt: validIncomingTimestamp.toISOString(),
+          currentMetadataUpdatedAt: existsCheck.rows[0].metadata_updated_at,
+          entity: "store_product",
+          storeProductId: existsCheck.rows[0].id
         });
       }
     }
