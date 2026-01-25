@@ -509,6 +509,7 @@ export async function ensureSaleAvailability(params: {
   const hasVariantStock = await hasVariantStockColumn(client);
   const stockSelect = hasVariantStock ? "v.stock AS variant_stock" : "NULL::int AS variant_stock";
 
+  // AUD-VM-033 FIX: Also join inventory.stock_balances for catalog products
   const res = await client.query(
     `
     SELECT v.id,
@@ -517,12 +518,15 @@ export async function ensureSaleAvailability(params: {
            v.product_id,
            bi.base_unit AS bulk_base_unit,
            bi.quantity_base AS bulk_quantity_base,
-           ${stockSelect}
+           ${stockSelect},
+           COALESCE(sb.current_qty, 0) AS catalog_stock
     FROM variants v
     JOIN retailer_variants rv
       ON rv.variant_id = v.id AND rv.store_id = $1
     LEFT JOIN bulk_inventory bi
       ON bi.store_id = $1 AND bi.product_id = v.product_id
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = $1 AND sb.product_id = v.product_id
     WHERE v.id = ANY($2::text[])
     FOR UPDATE OF v, rv
     `,
@@ -581,12 +585,16 @@ export async function ensureSaleAvailability(params: {
       continue;
     }
 
-    if (hasVariantStock) {
-      const stock = Number(row.variant_stock ?? 0);
-      const available = Number.isFinite(stock) ? Math.max(0, stock) : 0;
-      if (requiredQty > available) {
-        throw new Error("insufficient_stock");
-      }
+    // AUD-VM-033 FIX: Check BOTH variants.stock AND inventory.stock_balances (catalog)
+    // If EITHER source has sufficient stock, allow the sale
+    const variantStock = Number(row.variant_stock ?? 0);
+    const catalogStock = Number(row.catalog_stock ?? 0);
+    const variantAvailable = Number.isFinite(variantStock) ? Math.max(0, variantStock) : 0;
+    const catalogAvailable = Number.isFinite(catalogStock) ? Math.max(0, catalogStock) : 0;
+    // Use the higher of the two stock sources
+    const available = Math.max(variantAvailable, catalogAvailable);
+    if (requiredQty > available) {
+      throw new Error("insufficient_stock");
     }
   }
 
