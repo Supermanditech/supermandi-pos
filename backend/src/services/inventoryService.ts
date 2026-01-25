@@ -526,7 +526,9 @@ export async function ensureSaleAvailability(params: {
     LEFT JOIN bulk_inventory bi
       ON bi.store_id = $1 AND bi.product_id = v.product_id
     LEFT JOIN inventory.stock_balances sb
-      ON sb.store_id = $1 AND sb.product_id = v.product_id
+      ON sb.store_id = $1
+      AND v.product_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      AND sb.product_id = v.product_id::uuid
     WHERE v.id = ANY($2::text[])
     FOR UPDATE OF v, rv
     `,
