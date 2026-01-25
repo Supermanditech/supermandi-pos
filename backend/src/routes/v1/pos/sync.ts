@@ -486,8 +486,14 @@ async function upsertDeviceHeartbeat(params: {
   );
 }
 
+// AUD-081-C FIX: Sync batch timeout (30 seconds)
+// Prevents mobile app from timing out on large batches
+const SYNC_BATCH_TIMEOUT_MS = 30000;
+
 // POST /api/v1/pos/sync
 posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
+  const batchStartTime = Date.now();
+
   const pendingRaw = asNumber(req.body?.pendingOutboxCount);
   const pendingOutboxCount = pendingRaw !== null && pendingRaw >= 0 ? Math.round(pendingRaw) : null;
 
@@ -531,6 +537,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
   }> = [];
   const collectionMappings: Array<{ collectionId: string; serverCollectionId: string }> = [];
 
+  // AUD-081-C FIX: Track if we hit timeout to inform client (declared outside try for response access)
+  let timedOut = false;
+  let processedEventCount = 0;
+
   const client = await pool.connect();
   try {
     // AUD-080-A FIX: Wrap entire batch in single transaction for atomicity
@@ -544,6 +554,15 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
     await client.query(`SELECT pg_advisory_xact_lock($1)`, [lockKey.toString()]);
 
     for (const raw of events) {
+      // AUD-081-C FIX: Check timeout before processing each event
+      // This ensures we return partial results instead of timing out completely
+      const elapsed = Date.now() - batchStartTime;
+      if (elapsed >= SYNC_BATCH_TIMEOUT_MS) {
+        timedOut = true;
+        console.warn(`[Sync] Batch timeout after ${elapsed}ms, processed ${processedEventCount}/${events.length} events`);
+        break;
+      }
+
       const eventId = asTrimmedString(raw?.eventId);
       const type = asTrimmedString(raw?.type);
       const payload = raw?.payload ?? {};
@@ -1138,6 +1157,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         // AUD-080-A FIX: Release savepoint on success (event committed to batch transaction)
         await client.query(`RELEASE SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
         results.push({ eventId, status: "applied" });
+        processedEventCount++;
       } catch (error: any) {
         // AUD-080-A FIX: Rollback only the current event's savepoint, not the entire batch
         // This allows other events in the batch to still be processed
@@ -1152,6 +1172,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }
         }
         results.push({ eventId, status: "rejected", error: errorMessage });
+        processedEventCount++;
       }
     }
 
@@ -1195,5 +1216,6 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
     [deviceId, newPendingCount]
   );
 
-  return res.json({ results, saleMappings, collectionMappings });
+  // AUD-081-C FIX: Include timedOut flag so client knows to retry with remaining events
+  return res.json({ results, saleMappings, collectionMappings, timedOut });
 });
