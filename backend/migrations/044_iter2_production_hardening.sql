@@ -140,7 +140,7 @@ SET token_expires_at = NOW() + INTERVAL '90 days',
 WHERE token_expires_at IS NULL;
 
 -- Index for token expiry check
-CREATE INDEX IF NOT EXISTS pos_devices_token_expires_idx ON public.pos_devices (token_expires_at) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS pos_devices_token_expires_idx ON public.pos_devices (token_expires_at) WHERE active = true;
 
 -- =============================================================================
 -- FINDING-027: Configurable max devices per store

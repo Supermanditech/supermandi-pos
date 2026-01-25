@@ -105,7 +105,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
   // FINDING-026: Include token_expires_at in query
   const result = await pool.query(
     `
-    SELECT d.id AS device_id, d.store_id, d.is_active AS device_active,
+    SELECT d.id AS device_id, d.store_id, d.active AS device_active,
            (s.status = 'active') AS store_active,
            d.token_expires_at
     FROM pos_devices d
