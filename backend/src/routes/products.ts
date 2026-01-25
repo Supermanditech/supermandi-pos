@@ -159,40 +159,25 @@ async function buildStoreProductPayload(
     [storeId, globalProductId]
   );
 
-  // MED-005 FIX: Prefer inventory.stock_balances (new system), fall back to store_inventory (legacy)
-  // This ensures consistency during the transition period without requiring data migration
+  // MED-005 FIX (10k stores optimized): Single query with COALESCE for production scale
+  // Prefers inventory.stock_balances (new), falls back to store_inventory (legacy)
   const inventoryKey = inventoryProductId || globalProductId;
 
-  // First try new inventory system (stock_balances)
-  const stockBalancesRes = await client.query(
+  const inventoryRes = await client.query(
     `
-    SELECT current_qty
-    FROM inventory.stock_balances
-    WHERE store_id = $1 AND product_id = $2
+    SELECT COALESCE(sb.current_qty, si.available_qty, 0) as available_qty
+    FROM (SELECT 1) AS dummy
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = $1 AND sb.product_id = $2
+    LEFT JOIN store_inventory si
+      ON si.store_id = $1 AND si.global_product_id = $2
     LIMIT 1
     `,
     [storeId, inventoryKey]
   );
 
-  let availableQty = 0;
-  if (stockBalancesRes.rows[0]?.current_qty !== undefined) {
-    // Use new system if data exists
-    const qtyRaw = stockBalancesRes.rows[0].current_qty;
-    availableQty = Number.isFinite(Number(qtyRaw)) ? Math.max(0, Number(qtyRaw)) : 0;
-  } else {
-    // Fall back to legacy store_inventory
-    const inventoryRes = await client.query(
-      `
-      SELECT available_qty
-      FROM store_inventory
-      WHERE store_id = $1 AND global_product_id = $2
-      LIMIT 1
-      `,
-      [storeId, inventoryKey]
-    );
-    const qtyRaw = inventoryRes.rows[0]?.available_qty;
-    availableQty = Number.isFinite(Number(qtyRaw)) ? Math.max(0, Number(qtyRaw)) : 0;
-  }
+  const qtyRaw = inventoryRes.rows[0]?.available_qty;
+  const availableQty = Number.isFinite(Number(qtyRaw)) ? Math.max(0, Number(qtyRaw)) : 0;
 
   const storeRow = storeRes.rows[0] ?? {};
 
@@ -243,34 +228,23 @@ async function buildStoreProductPreviewPayload(
     [storeId, globalProductId]
   );
 
-  // MED-005 FIX: Prefer inventory.stock_balances (new system), fall back to store_inventory (legacy)
-  const stockBalancesRes = await client.query(
+  // MED-005 FIX (10k stores optimized): Single query with COALESCE for production scale
+  // Prefers inventory.stock_balances (new), falls back to store_inventory (legacy)
+  const inventoryRes = await client.query(
     `
-    SELECT current_qty
-    FROM inventory.stock_balances
-    WHERE store_id = $1 AND product_id = $2
+    SELECT COALESCE(sb.current_qty, si.available_qty, 0) as available_qty
+    FROM (SELECT 1) AS dummy
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = $1 AND sb.product_id = $2
+    LEFT JOIN store_inventory si
+      ON si.store_id = $1 AND si.global_product_id = $2
     LIMIT 1
     `,
     [storeId, globalProductId]
   );
 
-  let availableQty = 0;
-  if (stockBalancesRes.rows[0]?.current_qty !== undefined) {
-    const qtyRaw = stockBalancesRes.rows[0].current_qty;
-    availableQty = Number.isFinite(Number(qtyRaw)) ? Math.max(0, Number(qtyRaw)) : 0;
-  } else {
-    const inventoryRes = await client.query(
-      `
-      SELECT available_qty
-      FROM store_inventory
-      WHERE store_id = $1 AND global_product_id = $2
-      LIMIT 1
-      `,
-      [storeId, globalProductId]
-    );
-    const qtyRaw = inventoryRes.rows[0]?.available_qty;
-    availableQty = Number.isFinite(Number(qtyRaw)) ? Math.max(0, Number(qtyRaw)) : 0;
-  }
+  const qtyRaw = inventoryRes.rows[0]?.available_qty;
+  const availableQty = Number.isFinite(Number(qtyRaw)) ? Math.max(0, Number(qtyRaw)) : 0;
 
   const storeRow = storeRes.rows[0] ?? null;
 
