@@ -408,6 +408,13 @@ export async function ensureStoreInventoryAvailability(params: {
   if (requiredByProduct.size === 0) return;
 
   const globalProductIds = Array.from(requiredByProduct.keys()).sort();
+
+  // DEBUG: Log what we're checking
+  console.log("[ensureStoreInventoryAvailability] DEBUG:", {
+    storeId: params.storeId,
+    globalProductIds,
+    requiredByProduct: Object.fromEntries(requiredByProduct)
+  });
   const availableByProduct = new Map<string, number>();
 
   // AUD-VM-033 FIX: Check stock from both legacy store_inventory AND catalog schema
@@ -459,6 +466,13 @@ export async function ensureStoreInventoryAvailability(params: {
       Math.max(existing, Number.isFinite(catalogQty) ? Math.floor(catalogQty) : 0)
     );
   }
+
+  // DEBUG: Log availability check results
+  console.log("[ensureStoreInventoryAvailability] Results:", {
+    legacyRows: legacyRes.rows.length,
+    catalogRows: catalogRes.rows.length,
+    availableByProduct: Object.fromEntries(availableByProduct)
+  });
 
   const failures: InsufficientStockDetail[] = [];
   for (const [productId, payload] of requiredByProduct.entries()) {
