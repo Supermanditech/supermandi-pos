@@ -3,9 +3,17 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
-import { requireRetailerAuth } from "../../../middleware/retailerAuth";
 
 export const retailerComplianceRouter = Router();
+
+/**
+ * Get store ID from gateway-provided headers
+ * Gateway sets x-actor-id after JWT verification
+ */
+function getStoreId(req: Request): string | null {
+  const actorId = req.headers['x-actor-id'];
+  return typeof actorId === 'string' ? actorId : null;
+}
 
 // Document types that retailers need to submit
 const REQUIRED_DOCUMENT_TYPES = [
@@ -20,11 +28,11 @@ const REQUIRED_DOCUMENT_TYPES = [
  * GET /api/v1/retailer-admin/compliance
  * Returns compliance documents status for the retailer's store
  */
-retailerComplianceRouter.get("/compliance", requireRetailerAuth, async (req: Request, res: Response) => {
+retailerComplianceRouter.get("/compliance", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ success: false, error: "database unavailable" });
 
-  const { storeId } = (req as any).retailerAuth as { storeId: string };
+  const storeId = getStoreId(req);
   if (!storeId) {
     return res.status(400).json({ success: false, error: "Store not configured" });
   }
@@ -68,7 +76,7 @@ retailerComplianceRouter.get("/compliance", requireRetailerAuth, async (req: Req
  * GET /api/v1/retailer-admin/compliance/types
  * Returns list of required document types
  */
-retailerComplianceRouter.get("/compliance/types", requireRetailerAuth, async (_req: Request, res: Response) => {
+retailerComplianceRouter.get("/compliance/types", async (_req: Request, res: Response) => {
   return res.json({
     success: true,
     data: {
