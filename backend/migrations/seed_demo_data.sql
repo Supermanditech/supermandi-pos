@@ -127,31 +127,13 @@ ON CONFLICT (store_id, product_id) DO UPDATE SET
 
 -- =============================================================================
 -- 5. SUPPLIER PRODUCT MAP (link products to supplier)
+-- NOTE: Skipped - catalog.supplier_product_map schema has changed
+-- The table now maps supplier_products to catalog products, not suppliers directly
 -- =============================================================================
-INSERT INTO catalog.supplier_product_map (id, supplier_id, product_id, supplier_sku, supplier_product_name, cost_price, is_active, created_at)
-SELECT
-  gen_random_uuid(),
-  'b0000000-0000-0000-0000-000000000001',
-  id,
-  'SKU-' || SUBSTRING(id::text, 1, 8),
-  name,
-  (CASE category
-    WHEN 'Grocery' THEN 2000 + (RANDOM() * 4000)::INTEGER
-    WHEN 'Beverages' THEN 2800 + (RANDOM() * 800)::INTEGER
-    WHEN 'Snacks' THEN 1500 + (RANDOM() * 2500)::INTEGER
-    WHEN 'Dairy' THEN 4000 + (RANDOM() * 8000)::INTEGER
-    WHEN 'Personal Care' THEN 6000 + (RANDOM() * 12000)::INTEGER
-    WHEN 'Household' THEN 4000 + (RANDOM() * 8000)::INTEGER
-    ELSE 7000
-  END),
-  true,
-  NOW()
-FROM catalog.products
-WHERE id::text LIKE 'c0000000%'
-ON CONFLICT (supplier_id, product_id) DO NOTHING;
+
+-- Legacy INSERT removed as schema has diverged
 
 -- Show summary
 SELECT 'Products:' as label, COUNT(*) as count FROM catalog.products;
 SELECT 'Barcodes:' as label, COUNT(*) as count FROM catalog.product_barcodes;
 SELECT 'Store Products:' as label, COUNT(*) as count FROM catalog.store_products;
-SELECT 'Supplier Products:' as label, COUNT(*) as count FROM catalog.supplier_product_map;

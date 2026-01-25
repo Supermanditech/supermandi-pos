@@ -37,7 +37,7 @@ WHERE (max_uses IS NULL OR max_uses < 9999)
 
 -- ============================================================================
 -- 3. Fix enrollments for stores with demo-pattern code
--- Use platform.stores (not stores view) to avoid UUID/TEXT type mismatch
+-- Use platform.stores, cast id to TEXT (store_id is TEXT column)
 -- ============================================================================
 
 UPDATE pos_device_enrollments e
@@ -45,7 +45,7 @@ SET
   max_uses = 9999,
   expires_at = GREATEST(e.expires_at, NOW() + INTERVAL '1 year')
 FROM platform.stores s
-WHERE e.store_id = s.id
+WHERE e.store_id = s.id::TEXT
   AND (e.max_uses IS NULL OR e.max_uses < 9999)
   AND (
     -- Prefix patterns (2-char uppercase)

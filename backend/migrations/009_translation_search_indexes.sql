@@ -44,9 +44,9 @@ CREATE INDEX IF NOT EXISTS idx_translation_overrides_store_hindi
 -- =============================================================================
 
 -- Index for cache key lookups (already exists, but ensure it's present)
+-- NOTE: Cannot use WHERE expires_at > NOW() as NOW() is not immutable
 CREATE INDEX IF NOT EXISTS idx_translation_cache_key_lookup
-  ON catalog.translation_cache (cache_key)
-  WHERE expires_at > NOW();
+  ON catalog.translation_cache (cache_key);
 
 -- Index for target locale cache hits
 CREATE INDEX IF NOT EXISTS idx_translation_cache_locale

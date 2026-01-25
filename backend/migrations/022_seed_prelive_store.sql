@@ -81,30 +81,11 @@ ON CONFLICT (store_id, product_id) DO UPDATE SET
 
 -- =============================================================================
 -- 3. PRELIVE SUPPLIER PRODUCT MAP
+-- NOTE: Skipped - catalog.supplier_product_map schema has changed
+-- The table now maps supplier_products to catalog products, not suppliers directly
 -- =============================================================================
 
-INSERT INTO catalog.supplier_product_map (id, supplier_id, product_id, supplier_sku, supplier_product_name, cost_price, is_active, created_at)
-SELECT
-  gen_random_uuid(),
-  'b0000000-0000-0000-0000-000000000002',  -- Prelive supplier
-  id,
-  'PRE-' || SUBSTRING(id::text, 1, 8),  -- Different SKU prefix
-  name,
-  -- Different cost pricing (5% higher)
-  (CASE category
-    WHEN 'Grocery' THEN 2100 + (RANDOM() * 4200)::INTEGER
-    WHEN 'Beverages' THEN 2940 + (RANDOM() * 840)::INTEGER
-    WHEN 'Snacks' THEN 1575 + (RANDOM() * 2625)::INTEGER
-    WHEN 'Dairy' THEN 4200 + (RANDOM() * 8400)::INTEGER
-    WHEN 'Personal Care' THEN 6300 + (RANDOM() * 12600)::INTEGER
-    WHEN 'Household' THEN 4200 + (RANDOM() * 8400)::INTEGER
-    ELSE 7350
-  END),
-  true,
-  NOW()
-FROM catalog.products
-WHERE id::text LIKE 'c0000000%'
-ON CONFLICT (supplier_id, product_id) DO NOTHING;
+-- Legacy INSERT removed as schema has diverged
 
 -- =============================================================================
 -- 4. PRELIVE REORDER POLICIES (separate from demo)

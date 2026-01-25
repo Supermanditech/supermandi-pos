@@ -39,13 +39,14 @@ COMMENT ON COLUMN pos_device_enrollments.revoked_at IS
 -- ============================================================================
 
 -- Update enrollments for stores with demo-pattern code
--- Use platform.stores (not stores view) to avoid UUID/TEXT type mismatch
+-- Use platform.stores (not stores view)
+-- Cast s.id to TEXT since pos_device_enrollments.store_id is TEXT
 UPDATE pos_device_enrollments e
 SET
   max_uses = 9999,
   expires_at = GREATEST(expires_at, NOW() + INTERVAL '1 year')
 FROM platform.stores s
-WHERE e.store_id = s.id
+WHERE e.store_id = s.id::TEXT
   AND (e.max_uses IS NULL OR e.max_uses < 9999)
   AND (
     -- Prefix patterns (2-char uppercase)
