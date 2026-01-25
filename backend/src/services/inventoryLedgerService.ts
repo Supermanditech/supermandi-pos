@@ -356,7 +356,7 @@ export async function recordSaleInventoryMovements(params: {
       movementType: "SELL",
       quantity: item.quantity,
       unitSellMinor: item.unitSellMinor,
-      referenceType: "SALE",
+      referenceType: "sale",
       referenceId: params.saleId
     });
   }
