@@ -35,6 +35,8 @@ export interface StoreProductResponse {
   brand: string;
   description: string;
   imageUrl: string;
+  variant: string; // AUD-073-A FIX: Product variant
+  packSize: number | null; // AUD-073-A FIX: Pack size
 }
 
 export interface ScanResolvePrefill {
@@ -61,6 +63,8 @@ export interface CreateStoreProductInput {
   unit?: string;
   description?: string;
   brand?: string;
+  variant?: string; // AUD-073-A FIX: Product variant (e.g., "Red", "500ml")
+  packSize?: number; // AUD-073-A FIX: Pack size (e.g., 6 for 6-pack)
 }
 
 export type CreateStoreProductResult =
@@ -87,6 +91,7 @@ async function lookupStoreProductByBarcode(
   // Query: Check store_product_barcodes first (store-scoped mapping)
   // Then fallback to catalog.products.primary_barcode if store_product exists
   // Stock is authoritative from inventory.stock_balances (R6)
+  // AUD-073-A FIX: Include variant and pack_size in SELECT
   const result = await pool.query(
     `
     SELECT
@@ -99,7 +104,9 @@ async function lookupStoreProductByBarcode(
       COALESCE(sb.current_qty, sp.current_stock, 0) AS current_stock,
       p.unit,
       p.brand,
-      p.description
+      p.description,
+      p.variant,
+      p.pack_size
     FROM catalog.store_product_barcodes spb
     JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
     JOIN catalog.products p ON p.id = sp.product_id
@@ -127,12 +134,15 @@ async function lookupStoreProductByBarcode(
       unit: row.unit || "pcs",
       brand: row.brand || "",
       description: row.description || "",
-      imageUrl: ""
+      imageUrl: "",
+      variant: row.variant || "",
+      packSize: row.pack_size ?? null
     };
   }
 
   // Fallback: Check if product exists in catalog with this primary_barcode
   // AND store has it in store_products (but no store-scoped barcode binding yet)
+  // AUD-073-A FIX: Include variant and pack_size in SELECT
   const fallbackResult = await pool.query(
     `
     SELECT
@@ -145,7 +155,9 @@ async function lookupStoreProductByBarcode(
       COALESCE(sb.current_qty, sp.current_stock, 0) AS current_stock,
       p.unit,
       p.brand,
-      p.description
+      p.description,
+      p.variant,
+      p.pack_size
     FROM catalog.products p
     JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
     LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -172,7 +184,9 @@ async function lookupStoreProductByBarcode(
       unit: row.unit || "pcs",
       brand: row.brand || "",
       description: row.description || "",
-      imageUrl: ""
+      imageUrl: "",
+      variant: row.variant || "",
+      packSize: row.pack_size ?? null
     };
   }
 
@@ -358,13 +372,26 @@ export async function createStoreProductFromDigitisation(
     if (existingProductResult.rows[0]) {
       productId = existingProductResult.rows[0].id;
       console.log("[digitisation] Using existing catalog product:", productId);
+
+      // AUD-073-A FIX: Update variant and pack_size if provided (may have been missing before)
+      if (input.variant || input.packSize) {
+        await client.query(
+          `UPDATE catalog.products SET
+            variant = COALESCE($2, variant),
+            pack_size = COALESCE($3, pack_size),
+            updated_at = NOW()
+          WHERE id = $1`,
+          [productId, input.variant?.trim() || null, input.packSize || null]
+        );
+      }
     } else {
       // Create new catalog product
+      // AUD-073-A FIX: Include variant and pack_size in INSERT
       productId = randomUUID();
       await client.query(
         `
-        INSERT INTO catalog.products (id, name, brand, description, unit, primary_barcode, is_active)
-        VALUES ($1, $2, $3, $4, $5, $6, true)
+        INSERT INTO catalog.products (id, name, brand, description, unit, primary_barcode, variant, pack_size, is_active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
         `,
         [
           productId,
@@ -372,7 +399,9 @@ export async function createStoreProductFromDigitisation(
           input.brand || null,
           input.description || null,
           input.unit || "pcs",
-          normalizedBarcode
+          normalizedBarcode,
+          input.variant?.trim() || null,
+          input.packSize || null
         ]
       );
       console.log("[digitisation] Created new catalog product:", productId);
@@ -483,6 +512,7 @@ export async function createStoreProductFromDigitisation(
     console.log("[digitisation] Successfully created store product:", actualStoreProductId, "for store:", storeId);
 
     // Return the created store product
+    // AUD-073-A FIX: Include variant and packSize in response
     return {
       success: true,
       storeProduct: {
@@ -499,7 +529,9 @@ export async function createStoreProductFromDigitisation(
         unit: input.unit || "pcs",
         brand: input.brand || "",
         description: input.description || "",
-        imageUrl: ""
+        imageUrl: "",
+        variant: input.variant?.trim() || "",
+        packSize: input.packSize ?? null
       }
     };
   } catch (error) {

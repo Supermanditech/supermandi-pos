@@ -100,6 +100,7 @@ function isConflictResult(result: CreateStoreProductResult): result is ConflictR
 posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
 
+  // AUD-073-A FIX: Extract variant and packSize from request body
   const {
     barcode,
     name,
@@ -109,7 +110,9 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
     initialStockQty,
     unit,
     description,
-    brand
+    brand,
+    variant,
+    packSize
   } = req.body as Partial<CreateStoreProductInput>;
 
   // AUD-059-A/B FIX: Input validation bounds
@@ -200,6 +203,7 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
     : 0;
 
   try {
+    // AUD-073-A FIX: Pass variant and packSize to service
     const result = await createStoreProductFromDigitisation(storeId, {
       barcode,
       name: name || "",
@@ -209,7 +213,9 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
       initialStockQty: resolvedStockQty,
       unit,
       description,
-      brand
+      brand,
+      variant,
+      packSize
     });
 
     if (isSuccessResult(result)) {
