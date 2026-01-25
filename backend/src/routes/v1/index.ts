@@ -15,6 +15,7 @@ import { posStockInRouter } from "./pos/stockIn";
 import posTranslationsRouter from "./pos/translations";
 import { reorderRouter } from "./reorder";
 import { ordersRouter } from "./orders";
+import { adminHealthRouter } from "./admin/health";
 import { adminPosEventsRouter } from "./admin/posEvents";
 import { adminAiRouter } from "./admin/ai";
 import { adminStoresRouter } from "./admin/stores";
@@ -29,6 +30,8 @@ import { retailerAdminSuppliersRouter } from "./retailer-admin/suppliers";
 import { retailerAdminProductsRouter } from "./retailer-admin/products";
 import { retailerAdminCsvImportRouter } from "./retailer-admin/csvImport";
 import { retailerAdminSearchRouter } from "./retailer-admin/search";
+import { retailerComplianceRouter } from "./retailer-admin/compliance";
+import { demoRouter } from "./demo";
 
 export const v1Router = Router();
 
@@ -48,6 +51,7 @@ v1Router.use("/pos", posStockInRouter);
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
+v1Router.use("/admin", adminHealthRouter);  // MED-011: Public health check (no auth)
 v1Router.use("/admin", adminPosEventsRouter);
 v1Router.use("/admin", adminAiRouter);
 v1Router.use("/admin", adminStoresRouter);
@@ -62,3 +66,5 @@ v1Router.use("/retailer-admin", retailerAdminSuppliersRouter);
 v1Router.use("/retailer-admin", retailerAdminProductsRouter);
 v1Router.use("/retailer-admin", retailerAdminCsvImportRouter);
 v1Router.use("/retailer-admin", retailerAdminSearchRouter);
+v1Router.use("/retailer-admin", retailerComplianceRouter);
+v1Router.use("/demo", demoRouter);

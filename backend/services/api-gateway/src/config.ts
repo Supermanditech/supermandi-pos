@@ -251,6 +251,13 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/retailer-admin',
       stripPrefix: false,
     },
+    // MED-004: Demo routes -> main backend
+    {
+      name: 'demo',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/demo',
+      stripPrefix: false,
+    },
   ],
 };
 

@@ -104,6 +104,8 @@ adminAnalyticsRouter.get("/analytics/payments", async (req, res) => {
   }
 });
 
+// MED-012: DEPRECATED - No frontend callers as of 2026-01-25
+// Retained for potential future admin dashboard use
 adminAnalyticsRouter.get("/analytics/dues", async (req, res) => {
   try {
     const storeId = asString(req.query.storeId);
@@ -118,6 +120,8 @@ adminAnalyticsRouter.get("/analytics/dues", async (req, res) => {
   }
 });
 
+// MED-012: DEPRECATED - No frontend callers as of 2026-01-25
+// Retained for potential future admin dashboard use
 adminAnalyticsRouter.get("/analytics/activity", async (req, res) => {
   try {
     const storeId = asString(req.query.storeId);

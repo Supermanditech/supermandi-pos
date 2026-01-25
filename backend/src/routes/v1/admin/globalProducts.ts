@@ -1,3 +1,7 @@
+// MED-012: DEPRECATED - No frontend callers as of 2026-01-25
+// This endpoint is retained for potential future admin use
+// Candidate for removal if unused after 3 months
+
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken } from "../../../middleware/adminToken";

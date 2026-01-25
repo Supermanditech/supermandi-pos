@@ -14,7 +14,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getCatalog, type CatalogProduct, getStockStatusLabel, getStockStatusColor } from "../services/api/catalogApi";
+import { getCategoryProducts, type CategoryProduct, getStockStatusLabel, getStockStatusColor, type StockStatus } from "../services/api/catalogApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
@@ -92,18 +92,31 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
         throw new Error("Store not configured");
       }
 
-      const response = await getCatalog(storeId, { limit: 100 });
+      // MED-003 FIX: Use getCategoryProducts to get STORE stock, not supplier stock
+      // The "all" category returns all products with store's current_stock
+      const response = await getCategoryProducts(storeId, "all", { limit: 200, includeZeroStock: true });
 
-      const items: StockItem[] = response.data.map((product: CatalogProduct) => ({
-        id: product.id,
-        name: product.name,
-        barcode: product.primaryBarcode ?? product.id,
-        category: product.category ?? "Uncategorized",
-        stockStatus: product.stockStatus,
-        stockQty: product.suppliers[0]?.stockQuantity ?? 0,
-        unitPrice: product.bestPrice,
-        stockValue: (product.suppliers[0]?.stockQuantity ?? 0) * product.bestPrice,
-      }));
+      // Compute stock status from store's currentStock
+      const computeStockStatus = (qty: number): StockStatus => {
+        if (qty <= 0) return "out_of_stock";
+        if (qty < 10) return "low_stock";
+        return "in_stock";
+      };
+
+      const items: StockItem[] = response.data.map((product: CategoryProduct) => {
+        const stockQty = product.currentStock ?? 0;
+        const unitPrice = product.sellPrice ?? 0;
+        return {
+          id: product.id,
+          name: product.displayName,
+          barcode: product.barcode ?? product.productId ?? product.id,
+          category: "Uncategorized", // CategoryProduct doesn't have category
+          stockStatus: computeStockStatus(stockQty),
+          stockQty,
+          unitPrice,
+          stockValue: stockQty * unitPrice,
+        };
+      });
 
       // Sort by stock status (out_of_stock first, then low_stock)
       items.sort((a, b) => {

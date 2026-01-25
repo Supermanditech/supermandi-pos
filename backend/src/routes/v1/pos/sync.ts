@@ -15,6 +15,7 @@ import {
   InsufficientStockError
 } from "../../../services/inventoryLedgerService";
 import { createPurchase, type PurchaseItemInput } from "../../../services/purchaseService";
+import { logPosEventSafe } from "../../../services/posEventLogger";
 
 export const posSyncRouter = Router();
 
@@ -40,12 +41,20 @@ function asNumber(value: unknown): number | null {
   return value;
 }
 
-function buildBillRef(): string {
-  // Use full timestamp + cryptographically secure random bytes to avoid collisions
+// MED-006 FIX: Make billRef deterministic from saleId to prevent duplicates on retry
+function buildBillRef(saleId?: string): string {
+  if (saleId) {
+    // Hash the saleId to create a deterministic bill reference
+    // This ensures retries with same saleId produce same billRef
+    const hash = require("crypto").createHash("sha256").update(saleId).digest("hex");
+    // Use first 13 chars of hash (8 + 5) for consistent format
+    return hash.slice(0, 8).toUpperCase() + hash.slice(8, 13).toUpperCase();
+  }
+  // Fallback for cases without saleId (should not happen in production)
   const ts = Date.now().toString();
-  const randomBytes = require("crypto").randomBytes(3); // 3 bytes = 24 bits
+  const randomBytes = require("crypto").randomBytes(3);
   const rand = randomBytes.readUIntBE(0, 3).toString(36).toUpperCase().padStart(5, '0');
-  return `${ts.slice(-8)}${rand}`; // 8-digit timestamp + 5-char random = 13 chars
+  return `${ts.slice(-8)}${rand}`;
 }
 
 // ============================================================================
@@ -633,6 +642,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           continue;
         }
 
+        // MED-002 FIX: Log events to pos_events for SuperAdmin visibility
+        // Fire-and-forget logging so it doesn't block sync processing
+        void logPosEventSafe({
+          deviceId,
+          storeId,
+          eventType: type,
+          payload,
+          pendingOutboxCount
+        });
+
         if (type === "PRODUCT_UPSERT") {
           // MT-3: Write to catalog schema instead of legacy tables
           const barcode = asTrimmedString((payload as any)?.barcode);
@@ -695,54 +714,40 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }, 0);
           const computedTotal = Math.max(0, computedSubtotal - discountMinor);
 
-          let billRef = buildBillRef();
-          let insertedSale = false;
-          for (let attempt = 0; attempt < 3; attempt += 1) {
-            try {
-              await client.query(
-                `
-                INSERT INTO sales (
-                  id,
-                  store_id,
-                  device_id,
-                  bill_ref,
-                  offline_receipt_ref,
-                  subtotal_minor,
-                  discount_minor,
-                  total_minor,
-                  status,
-                  created_at,
-                  currency
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()), $11)
-                `,
-                [
-                  saleId,
-                  storeId,
-                  deviceId,
-                  billRef,
-                  offlineReceiptRef,
-                  computedSubtotal,
-                  discountMinor,
-                  computedTotal,
-                  "completed",
-                  createdAt,
-                  currency
-                ]
-              );
-              insertedSale = true;
-              break;
-            } catch (error) {
-              billRef = buildBillRef();
-              if (attempt === 2) {
-                throw error;
-              }
-            }
-          }
-
-          if (!insertedSale) {
-            throw new Error("failed to insert sale");
-          }
+          // MED-006 FIX: Use deterministic billRef from saleId - no retry loop needed
+          // Same saleId always produces same billRef, preventing duplicate rows
+          const billRef = buildBillRef(saleId);
+          await client.query(
+            `
+            INSERT INTO sales (
+              id,
+              store_id,
+              device_id,
+              bill_ref,
+              offline_receipt_ref,
+              subtotal_minor,
+              discount_minor,
+              total_minor,
+              status,
+              created_at,
+              currency
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()), $11)
+            `,
+            [
+              saleId,
+              storeId,
+              deviceId,
+              billRef,
+              offlineReceiptRef,
+              computedSubtotal,
+              discountMinor,
+              computedTotal,
+              "completed",
+              createdAt,
+              currency
+            ]
+          );
 
           const resolvedItems: Array<{
             productId: string;
@@ -934,7 +939,9 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const sellingPriceRaw = asNumber(item?.sellingPriceMinor);
             const sellingPriceMinor = sellingPriceRaw === null ? null : Math.round(sellingPriceRaw);
             const quantityRaw = asNumber(item?.quantity);
-            const quantity = quantityRaw === null ? 0 : Math.round(quantityRaw);
+            // MED-009 FIX: Skip items with invalid/missing quantity instead of defaulting to 0
+            if (quantityRaw === null || quantityRaw <= 0) continue;
+            const quantity = Math.round(quantityRaw);
             const unitCostRaw = asNumber(item?.purchasePriceMinor) ?? asNumber(item?.unitCostMinor);
             const unitCostMinor = unitCostRaw === null ? 0 : Math.round(unitCostRaw);
 
