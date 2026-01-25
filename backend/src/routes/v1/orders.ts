@@ -1,10 +1,30 @@
 // Orders Routes - V3.0.10 compliant
 // Purchase orders and GRN endpoints
+// ITER2-001: Added store-scoped authentication via x-actor-id
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
 
 export const ordersRouter = Router();
+
+/**
+ * ITER2-001: Get and validate store ID from gateway-provided x-actor-id header
+ * Returns null if not authenticated or if path storeId doesn't match actor's store
+ */
+function getAndValidateStoreId(req: Request, pathStoreId: string): { storeId: string } | { error: string; status: number } {
+  const actorId = req.headers['x-actor-id'];
+  if (typeof actorId !== 'string' || !actorId) {
+    return { error: "Unauthorized: Store not identified", status: 401 };
+  }
+
+  // Store isolation: Verify the requested storeId matches the authenticated user's store
+  if (actorId !== pathStoreId) {
+    console.warn(`[Orders] Store isolation violation: actor=${actorId} tried to access store=${pathStoreId}`);
+    return { error: "Forbidden: Cannot access another store's data", status: 403 };
+  }
+
+  return { storeId: actorId };
+}
 
 // =============================================================================
 // PURCHASE ORDER ENDPOINTS
@@ -13,12 +33,18 @@ export const ordersRouter = Router();
 /**
  * GET /api/v1/orders/stores/:storeId/orders
  * List purchase orders for a store.
+ * ITER2-001: Requires x-actor-id authentication + store isolation
  */
 ordersRouter.get("/stores/:storeId/orders", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId } = req.params;
+  // ITER2-001: Authenticate and validate store access
+  const authResult = getAndValidateStoreId(req, req.params.storeId);
+  if ('error' in authResult) {
+    return res.status(authResult.status).json({ success: false, error: authResult.error });
+  }
+  const { storeId } = authResult;
   const { status, supplierId, fromDate, toDate, page = "1", limit = "20" } = req.query;
 
   try {
@@ -129,12 +155,19 @@ ordersRouter.get("/stores/:storeId/orders", async (req: Request, res: Response) 
 /**
  * GET /api/v1/orders/stores/:storeId/orders/:orderId
  * Get a single purchase order with items.
+ * ITER2-001: Requires x-actor-id authentication + store isolation
  */
 ordersRouter.get("/stores/:storeId/orders/:orderId", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, orderId } = req.params;
+  // ITER2-001: Authenticate and validate store access
+  const authResult = getAndValidateStoreId(req, req.params.storeId);
+  if ('error' in authResult) {
+    return res.status(authResult.status).json({ success: false, error: authResult.error });
+  }
+  const { storeId } = authResult;
+  const { orderId } = req.params;
 
   try {
     // Get order
@@ -225,11 +258,17 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", async (req: Request, res: R
 /**
  * GET /api/v1/orders/stores/:storeId/orders/:orderId/events
  * Get order status history.
+ * ITER2-001: Requires x-actor-id authentication + store isolation
  */
 ordersRouter.get("/stores/:storeId/orders/:orderId/events", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
+  // ITER2-001: Authenticate and validate store access
+  const authResult = getAndValidateStoreId(req, req.params.storeId);
+  if ('error' in authResult) {
+    return res.status(authResult.status).json({ success: false, error: authResult.error });
+  }
   const { orderId } = req.params;
 
   try {
@@ -276,12 +315,19 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/events", async (req: Request,
  * POST /api/v1/orders/stores/:storeId/orders/:orderId/cancel
  * GL-PO-001: Cancel a purchase order (idempotent).
  * Returns 200 success even if order was already cancelled/deleted.
+ * ITER2-001: Requires x-actor-id authentication + store isolation
  */
 ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, orderId } = req.params;
+  // ITER2-001: Authenticate and validate store access
+  const authResult = getAndValidateStoreId(req, req.params.storeId);
+  if ('error' in authResult) {
+    return res.status(authResult.status).json({ success: false, error: authResult.error });
+  }
+  const { storeId } = authResult;
+  const { orderId } = req.params;
   const { reason } = req.body || {};
 
   try {
@@ -387,12 +433,19 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", async (req: Request
  * DELETE /api/v1/orders/stores/:storeId/orders/:orderId
  * GL-PO-001: Delete a draft purchase order (idempotent).
  * Returns 200/204 even if order was already deleted.
+ * ITER2-001: Requires x-actor-id authentication + store isolation
  */
 ordersRouter.delete("/stores/:storeId/orders/:orderId", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  const { storeId, orderId } = req.params;
+  // ITER2-001: Authenticate and validate store access
+  const authResult = getAndValidateStoreId(req, req.params.storeId);
+  if ('error' in authResult) {
+    return res.status(authResult.status).json({ success: false, error: authResult.error });
+  }
+  const { storeId } = authResult;
+  const { orderId } = req.params;
 
   try {
     // Check if order exists and is in draft status

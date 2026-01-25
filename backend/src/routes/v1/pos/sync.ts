@@ -421,7 +421,24 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
   if (!Array.isArray(rawEvents)) {
     return res.status(400).json({ error: "events must be an array" });
   }
-  const events = rawEvents as SyncEvent[];
+
+  // ITER2-006: Pre-sort events to ensure dependencies are processed in correct order
+  // Priority: PRODUCT_UPSERT (0) > SALE_CREATED (1) > PURCHASE_* (2) > PAYMENT_* (3) > COLLECTION (4) > others (5)
+  const eventPriority = (type: string | null): number => {
+    if (!type) return 5;
+    if (type === "PRODUCT_UPSERT" || type === "PRODUCT_PRICE_SET") return 0;
+    if (type === "SALE_CREATED") return 1;
+    if (type.startsWith("PURCHASE_")) return 2;
+    if (type === "PAYMENT_CASH" || type === "PAYMENT_DUE") return 3;
+    if (type === "COLLECTION_CREATED") return 4;
+    return 5;
+  };
+
+  const events = (rawEvents as SyncEvent[]).slice().sort((a, b) => {
+    const priorityA = eventPriority(asTrimmedString(a?.type));
+    const priorityB = eventPriority(asTrimmedString(b?.type));
+    return priorityA - priorityB;
+  });
 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
@@ -926,7 +943,18 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           );
           const sale = saleRes.rows[0];
           if (!sale) {
-            throw new Error("sale not found");
+            // ITER2-006: Check if there's a pending SALE_CREATED for this sale in the batch
+            // If so, throw a retriable error; the client should reorder events or retry
+            const pendingSaleCreate = events.some(
+              (e) => asTrimmedString(e?.type) === "SALE_CREATED" &&
+                     asTrimmedString((e?.payload as any)?.saleId) === saleId
+            );
+            if (pendingSaleCreate) {
+              // Sale exists in batch but hasn't been processed yet - client should reorder
+              throw new Error("sale_not_yet_created:reorder_events");
+            }
+            // ITER2-006: Use specific error code to signal retriable condition
+            throw new Error("sale_not_yet_synced:retry_later");
           }
 
           const mode = type === "PAYMENT_CASH" ? "CASH" : "DUE";
