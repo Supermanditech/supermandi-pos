@@ -290,3 +290,122 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
     client.release();
   }
 });
+
+// =============================================================================
+// GAP-001: STOCK LOOKUP ENDPOINTS
+// Single and batch stock balance queries
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/inventory/stock/:productId
+ * Get current stock for a single product
+ *
+ * Returns: { data: { storeId, productId, currentQty } }
+ */
+posInventoryRouter.get("/inventory/stock/:productId", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const { productId } = req.params;
+  if (!productId || typeof productId !== "string") {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        store_id as "storeId",
+        product_id as "productId",
+        COALESCE(current_qty, 0) as "currentQty"
+      FROM inventory.stock_balances
+      WHERE store_id = $1 AND product_id = $2`,
+      [storeId, productId]
+    );
+
+    if (result.rowCount === 0) {
+      // No balance record = 0 stock
+      return res.json({
+        data: {
+          storeId,
+          productId,
+          currentQty: 0
+        }
+      });
+    }
+
+    return res.json({
+      data: result.rows[0]
+    });
+  } catch (error: any) {
+    console.error("[InventoryStock] Get error:", error.message);
+    return res.status(500).json({ error: "Failed to get stock" });
+  }
+});
+
+/**
+ * POST /api/v1/pos/inventory/stock/batch
+ * Get current stock for multiple products
+ *
+ * Body: { productIds: string[] }
+ * Returns: { data: Array<{ storeId, productId, currentQty }> }
+ */
+posInventoryRouter.post("/inventory/stock/batch", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const { productIds } = req.body as { productIds?: string[] };
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    return res.status(400).json({ error: "productIds array is required" });
+  }
+
+  // Limit batch size to prevent abuse
+  const MAX_BATCH_SIZE = 100;
+  if (productIds.length > MAX_BATCH_SIZE) {
+    return res.status(400).json({ error: `Batch size exceeds maximum of ${MAX_BATCH_SIZE}` });
+  }
+
+  try {
+    // Query all requested products
+    const result = await pool.query(
+      `SELECT
+        store_id as "storeId",
+        product_id as "productId",
+        COALESCE(current_qty, 0) as "currentQty"
+      FROM inventory.stock_balances
+      WHERE store_id = $1 AND product_id = ANY($2::uuid[])`,
+      [storeId, productIds]
+    );
+
+    // Create a map of found results
+    const foundMap = new Map<string, { storeId: string; productId: string; currentQty: number }>();
+    for (const row of result.rows) {
+      foundMap.set(row.productId, row);
+    }
+
+    // Return all requested products, defaulting to 0 for unfound
+    const data = productIds.map((productId) => {
+      const found = foundMap.get(productId);
+      if (found) return found;
+      return {
+        storeId,
+        productId,
+        currentQty: 0
+      };
+    });
+
+    return res.json({ data });
+  } catch (error: any) {
+    console.error("[InventoryStock] Batch error:", error.message);
+    return res.status(500).json({ error: "Failed to get stock batch" });
+  }
+});
