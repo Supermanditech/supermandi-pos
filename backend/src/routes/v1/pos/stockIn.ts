@@ -56,17 +56,20 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
     // Get grouped entries
+    // AUD-074-A FIX: Include supplier_id and join with supplier.suppliers for name
     const result = await pool.query(
       `SELECT
          il.reference_id as id,
-         il.notes as "supplierName",
+         il.supplier_id as "supplierId",
+         COALESCE(s.business_name, s.trade_name, il.notes) as "supplierName",
          COUNT(*) as "itemCount",
          SUM(ABS(il.delta_qty) * COALESCE(il.unit_cost, 0)) as "totalAmount",
          MIN(il.created_at) as "createdAt",
          'completed' as status
        FROM inventory.inventory_ledger il
+       LEFT JOIN supplier.suppliers s ON s.id = il.supplier_id
        ${whereClause}
-       GROUP BY il.reference_id, il.notes
+       GROUP BY il.reference_id, il.supplier_id, s.business_name, s.trade_name, il.notes
        ORDER BY MIN(il.created_at) DESC
        LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
       [...params, limitNum, offsetNum]
@@ -74,6 +77,7 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
 
     const entries = result.rows.map(row => ({
       id: row.id,
+      supplierId: row.supplierId || undefined,
       supplierName: row.supplierName || undefined,
       itemCount: parseInt(row.itemCount, 10),
       totalAmount: parseFloat(row.totalAmount) || 0,
@@ -116,7 +120,8 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
     return res.status(400).json({ success: false, error: "Store not configured" });
   }
 
-  const { items, supplierName, notes, totalAmount } = req.body;
+  // AUD-074-A FIX: Accept supplierId for proper FK tracking
+  const { items, supplierId, supplierName, notes, totalAmount } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, error: "items array is required" });
@@ -180,12 +185,13 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
       const stockBalancesAfter = stockBalancesBefore + deltaQty;
 
       // Insert single ledger entry to inventory.inventory_ledger with source tracking
+      // AUD-074-A FIX: Include supplier_id FK for proper supplier tracking
       const invLedgerId = randomUUID();
       await client.query(
         `INSERT INTO inventory.inventory_ledger
          (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
-          stock_before, stock_after, unit_cost, source, notes)
-         VALUES ($1, $2, $3, $4, 'purchase_received', 'po', $5, $6, $7, $8, 'POS_STOCK_IN', $9)`,
+          stock_before, stock_after, unit_cost, source, notes, supplier_id)
+         VALUES ($1, $2, $3, $4, 'purchase_received', 'po', $5, $6, $7, $8, 'POS_STOCK_IN', $9, $10)`,
         [
           invLedgerId,
           storeId,
@@ -196,6 +202,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
           stockBalancesAfter,
           buyPrice || null,
           supplierName || notes || null,
+          supplierId || null,
         ]
       );
 
