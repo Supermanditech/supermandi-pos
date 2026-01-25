@@ -69,7 +69,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
 
     // Get total count
     const countResult = await pool.query(
-      `SELECT COUNT(*) as total FROM catalog.inventory_ledger il ${whereClause}`,
+      `SELECT COUNT(*) as total FROM inventory.inventory_ledger il ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
@@ -90,7 +90,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
         il.stock_after as "stockAfter",
         il.unit_cost as "unitCost",
         il.created_at as "createdAt"
-      FROM catalog.inventory_ledger il
+      FROM inventory.inventory_ledger il
       LEFT JOIN catalog.store_products sp ON sp.store_id = il.store_id AND sp.product_id = il.product_id
       ${whereClause}
       ORDER BY il.created_at DESC
@@ -201,9 +201,9 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
         [status.storeId, productId, newStock]
       );
 
-      // Insert ledger entry to catalog.inventory_ledger
+      // Insert ledger entry to inventory.inventory_ledger
       const ledgerResult = await client.query(
-        `INSERT INTO catalog.inventory_ledger
+        `INSERT INTO inventory.inventory_ledger
          (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id, stock_before, stock_after, unit_cost, notes)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING

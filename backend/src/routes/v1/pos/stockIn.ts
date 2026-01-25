@@ -49,7 +49,7 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
     // Count distinct batches
     const countResult = await pool.query(
       `SELECT COUNT(DISTINCT reference_id) as total
-       FROM catalog.inventory_ledger il
+       FROM inventory.inventory_ledger il
        ${whereClause}`,
       params
     );
@@ -64,7 +64,7 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
          SUM(ABS(il.delta_qty) * COALESCE(il.unit_cost, 0)) as "totalAmount",
          MIN(il.created_at) as "createdAt",
          'completed' as status
-       FROM catalog.inventory_ledger il
+       FROM inventory.inventory_ledger il
        ${whereClause}
        GROUP BY il.reference_id, il.notes
        ORDER BY MIN(il.created_at) DESC
@@ -169,9 +169,9 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
         [storeId, productId, newStock]
       );
 
-      // Insert ledger entry to catalog.inventory_ledger
+      // Insert ledger entry to inventory.inventory_ledger
       await client.query(
-        `INSERT INTO catalog.inventory_ledger
+        `INSERT INTO inventory.inventory_ledger
          (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
           stock_before, stock_after, unit_cost, notes)
          VALUES ($1, $2, $3, 'purchase_received', 'stock_in', $4, $5, $6, $7, $8)`,
