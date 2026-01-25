@@ -692,16 +692,30 @@ retailerAdminProductsRouter.post("/products/bulk", async (req: Request, res: Res
           );
         }
 
-        // Opening stock ledger entry
+        // MT-7: Opening stock ledger entry + stock_balances
+        let ledgerId: string | null = null;
         if (pStock > 0) {
-          await client.query(
+          const ledgerResult = await client.query(
             `INSERT INTO inventory.inventory_ledger (
               store_id, product_id, delta_qty, transaction_type,
               reference_type, stock_before, stock_after, unit_cost, source
-            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_IMPORT')`,
+            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_IMPORT')
+            RETURNING id`,
             [storeId, productId, pStock, pPurchasePrice]
           );
+          ledgerId = ledgerResult.rows[0]?.id ?? null;
         }
+
+        // MT-7: Always create stock_balances for consistent POS search JOIN
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             current_qty = EXCLUDED.current_qty,
+             last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+             updated_at = NOW()`,
+          [storeId, productId, pStock, ledgerId]
+        );
 
         imported++;
       } catch (err: any) {
@@ -813,7 +827,7 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
       [storeId, storeProductId, generatedBarcode]
     );
 
-    // Opening stock ledger
+    // MT-7: Opening stock ledger + stock_balances
     let ledgerEntryId: string | null = null;
     if (stockQty > 0) {
       const ledgerResult = await client.query(
@@ -826,6 +840,17 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
       );
       ledgerEntryId = ledgerResult.rows[0].id;
     }
+
+    // MT-7: Always create stock_balances for consistent POS search JOIN
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = EXCLUDED.current_qty,
+         last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+         updated_at = NOW()`,
+      [storeId, productId, stockQty, ledgerEntryId]
+    );
 
     await client.query("COMMIT");
 

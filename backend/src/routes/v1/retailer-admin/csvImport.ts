@@ -358,18 +358,32 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
           );
         }
 
-        // Opening stock ledger entry
+        // Opening stock ledger entry + stock_balances (MT-7: consistency fix)
+        let ledgerId: string | null = null;
         if (stock > 0) {
-          await client.query(
+          const ledgerResult = await client.query(
             `INSERT INTO inventory.inventory_ledger (
               store_id, product_id, delta_qty, transaction_type,
               reference_type, stock_before, stock_after, unit_cost,
               source, source_id
             ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'CSV_IMPORT', $5)
-            ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING`,
+            ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING
+            RETURNING id`,
             [storeId, productId, stock, purchasePricePaise, jobId]
           );
+          ledgerId = ledgerResult.rows[0]?.id ?? null;
         }
+
+        // MT-7: Always create stock_balances for consistent POS search JOIN
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             current_qty = EXCLUDED.current_qty,
+             last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+             updated_at = NOW()`,
+          [storeId, productId, stock, ledgerId]
+        );
 
         created++;
       } catch (err: any) {
@@ -545,15 +559,30 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
           );
         }
 
+        // MT-7: Opening stock ledger entry + stock_balances
+        let ledgerId: string | null = null;
         if (stock > 0) {
-          await client.query(
+          const ledgerResult = await client.query(
             `INSERT INTO inventory.inventory_ledger (
               store_id, product_id, delta_qty, transaction_type,
               reference_type, stock_before, stock_after, unit_cost, source
-            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_PASTE')`,
+            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_PASTE')
+            RETURNING id`,
             [storeId, productId, stock, purchasePrice]
           );
+          ledgerId = ledgerResult.rows[0]?.id ?? null;
         }
+
+        // MT-7: Always create stock_balances for consistent POS search JOIN
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             current_qty = EXCLUDED.current_qty,
+             last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+             updated_at = NOW()`,
+          [storeId, productId, stock, ledgerId]
+        );
 
         created++;
       } catch (err: any) {
