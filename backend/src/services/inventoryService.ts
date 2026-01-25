@@ -587,15 +587,24 @@ export async function ensureSaleAvailability(params: {
 
     // AUD-VM-033 FIX: Check BOTH variants.stock AND inventory.stock_balances (catalog)
     // If EITHER source has sufficient stock, allow the sale
-    const variantStock = Number(row.variant_stock ?? 0);
     const catalogStock = Number(row.catalog_stock ?? 0);
-    const variantAvailable = Number.isFinite(variantStock) ? Math.max(0, variantStock) : 0;
     const catalogAvailable = Number.isFinite(catalogStock) ? Math.max(0, catalogStock) : 0;
-    // Use the higher of the two stock sources
-    const available = Math.max(variantAvailable, catalogAvailable);
-    if (requiredQty > available) {
-      throw new Error("insufficient_stock");
+
+    if (hasVariantStock) {
+      // Legacy mode: variants.stock column exists, check it with catalog as fallback
+      const variantStock = Number(row.variant_stock ?? 0);
+      const variantAvailable = Number.isFinite(variantStock) ? Math.max(0, variantStock) : 0;
+      const available = Math.max(variantAvailable, catalogAvailable);
+      if (requiredQty > available) {
+        throw new Error("insufficient_stock");
+      }
+    } else if (catalogAvailable > 0) {
+      // Catalog-only mode: no variants.stock, check catalog if it has stock data
+      if (requiredQty > catalogAvailable) {
+        throw new Error("insufficient_stock");
+      }
     }
+    // If hasVariantStock is false AND no catalog entry: skip check (backward compat)
   }
 
   for (const entry of bulkRequiredByProduct.values()) {
