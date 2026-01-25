@@ -56,7 +56,8 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
 
   const { categoryId, search, limit, offset } = req.query;
   const limitNum = Math.min(parseInt(limit as string, 10) || 200, 500);
-  const offsetNum = parseInt(offset as string, 10) || 0;
+  // AUD-064-B FIX: Ensure offset is non-negative
+  const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
 
   try {
     let whereClause = "WHERE sp.store_id = $1 AND sp.is_active = true";

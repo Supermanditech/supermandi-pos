@@ -195,7 +195,8 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
     }
 
     const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
-    const offsetNum = parseInt(offset as string, 10) || 0;
+    // AUD-064-B FIX: Ensure offset is non-negative
+    const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
 
     // RCAT-LEDGER-001: Get totals (totalSkus, totalEntries, todaysMovements) for summary
     const totalsResult = await pool.query(
@@ -443,7 +444,8 @@ retailerAdminInventoryRouter.get("/categories/:categoryId/products", async (req:
     }
 
     const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
-    const offsetNum = parseInt(offset as string, 10) || 0;
+    // AUD-064-B FIX: Ensure offset is non-negative
+    const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
 
     // Get total count
     const countResult = await pool.query(

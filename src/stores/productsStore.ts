@@ -78,8 +78,9 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             source: 'cache'
           });
           return;
-        } catch {
-          // ignore and continue
+        } catch (parseError) {
+          // AUD-064-C FIX: Log cache parse errors for debugging
+          console.warn('[ProductsStore] Cache parse error, falling back to bundled data:', parseError);
         }
       }
 

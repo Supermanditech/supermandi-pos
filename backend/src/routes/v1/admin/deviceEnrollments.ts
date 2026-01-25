@@ -14,10 +14,12 @@ const PRODUCTION_MAX_USES = 1;
 const ENROLLMENT_TTL_MINUTES = 30;
 const CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
+// AUD-063-A FIX: Use crypto.randomBytes instead of Math.random() for secure code generation
 function generateCode(): string {
+  const bytes = randomBytes(6);
   let code = "";
   for (let i = 0; i < 6; i += 1) {
-    const idx = Math.floor(Math.random() * CODE_ALPHABET.length);
+    const idx = bytes[i] % CODE_ALPHABET.length;
     code += CODE_ALPHABET[idx];
   }
   return `SM-${code}`;
