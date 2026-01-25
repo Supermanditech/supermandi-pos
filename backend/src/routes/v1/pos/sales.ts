@@ -21,6 +21,8 @@ export const posSalesRouter = Router();
 
 type SaleItemInput = {
   productId?: string;
+  storeProductId?: string;  // AUD-VM-042: catalog.store_products.id
+  store_product_id?: string; // snake_case alias
   retailerVariantId?: string;
   retailer_variant_id?: string;
   variantId?: string;
@@ -90,6 +92,132 @@ async function ensureRetailerVariantLink(
     `,
     [storeId, variantId]
   );
+}
+
+/**
+ * AUD-VM-042 FIX: Bridge catalog.store_products to variants table for sales
+ * This allows products digitised via catalog schema to be sold.
+ * Creates a variant on-the-fly if one doesn't exist for the catalog product.
+ */
+async function resolveVariantFromCatalogProduct(params: {
+  client: PoolClient;
+  storeId: string;
+  storeProductId?: string;
+  productId?: string;
+  barcode?: string;
+  currency: string;
+}): Promise<string | null> {
+  const { client, storeId, storeProductId, productId, barcode, currency } = params;
+
+  // Step 1: Find the catalog store_product
+  let catalogProduct: {
+    store_product_id: string;
+    product_id: string;
+    display_name: string;
+    primary_barcode: string | null;
+    unit: string | null;
+  } | null = null;
+
+  if (storeProductId && isValidUUID(storeProductId)) {
+    const res = await client.query(
+      `SELECT sp.id as store_product_id, sp.product_id,
+              COALESCE(sp.display_name, p.name) as display_name,
+              p.primary_barcode, p.unit
+       FROM catalog.store_products sp
+       JOIN catalog.products p ON p.id = sp.product_id
+       WHERE sp.id = $1 AND sp.store_id = $2`,
+      [storeProductId, storeId]
+    );
+    if (res.rows[0]) {
+      catalogProduct = res.rows[0];
+    }
+  } else if (productId && isValidUUID(productId)) {
+    const res = await client.query(
+      `SELECT sp.id as store_product_id, sp.product_id,
+              COALESCE(sp.display_name, p.name) as display_name,
+              p.primary_barcode, p.unit
+       FROM catalog.store_products sp
+       JOIN catalog.products p ON p.id = sp.product_id
+       WHERE sp.product_id = $1 AND sp.store_id = $2`,
+      [productId, storeId]
+    );
+    if (res.rows[0]) {
+      catalogProduct = res.rows[0];
+    }
+  } else if (barcode) {
+    // Try to find by barcode in catalog schema
+    const res = await client.query(
+      `SELECT sp.id as store_product_id, sp.product_id,
+              COALESCE(sp.display_name, p.name) as display_name,
+              p.primary_barcode, p.unit
+       FROM catalog.store_products sp
+       JOIN catalog.products p ON p.id = sp.product_id
+       LEFT JOIN catalog.store_product_barcodes spb
+         ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id
+       WHERE sp.store_id = $1 AND (p.primary_barcode = $2 OR spb.barcode = $2)
+       LIMIT 1`,
+      [storeId, barcode]
+    );
+    if (res.rows[0]) {
+      catalogProduct = res.rows[0];
+    }
+  }
+
+  if (!catalogProduct) {
+    return null;
+  }
+
+  // Step 2: Check if variant already exists for this product
+  const existingVariant = await client.query(
+    `SELECT v.id FROM variants v
+     WHERE v.product_id = $1
+     ORDER BY v.created_at ASC
+     LIMIT 1`,
+    [catalogProduct.product_id]
+  );
+
+  if (existingVariant.rows[0]?.id) {
+    const variantId = String(existingVariant.rows[0].id);
+    await ensureRetailerVariantLink(client, storeId, variantId);
+    return variantId;
+  }
+
+  // Step 3: Create variant for the catalog product (bridge)
+  const variantId = randomUUID();
+  const productName = catalogProduct.display_name || `Item ${catalogProduct.product_id.slice(-4)}`;
+
+  // Ensure products table has the entry (for FK constraint)
+  await client.query(
+    `INSERT INTO products (id, name, category, retailer_status, enrichment_status)
+     VALUES ($1, $2, NULL, 'retailer_created', 'pending_enrichment')
+     ON CONFLICT (id) DO NOTHING`,
+    [catalogProduct.product_id, productName]
+  );
+
+  // Create the variant
+  await client.query(
+    `INSERT INTO variants (id, product_id, name, currency)
+     VALUES ($1, $2, $3, $4)`,
+    [variantId, catalogProduct.product_id, productName, currency]
+  );
+
+  // Link barcode if exists
+  if (catalogProduct.primary_barcode) {
+    await client.query(
+      `INSERT INTO barcodes (barcode, variant_id, barcode_type)
+       VALUES ($1, $2, 'primary')
+       ON CONFLICT (barcode) DO NOTHING`,
+      [catalogProduct.primary_barcode, variantId]
+    );
+  }
+
+  // Ensure supermandi barcode
+  await ensureSupermandiBarcode(client, variantId);
+
+  // Link to retailer
+  await ensureRetailerVariantLink(client, storeId, variantId);
+
+  return variantId;
 }
 
 async function findVariantForProduct(params: {
@@ -620,6 +748,9 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       asTrimmedString(item.retailer_variant_id) ??
       asTrimmedString(item.variantId);
     const productId = asTrimmedString(item.productId);
+    // AUD-VM-042: Support storeProductId from catalog schema
+    const storeProductId =
+      asTrimmedString(item.storeProductId) ?? asTrimmedString(item.store_product_id);
     const globalProductId =
       asTrimmedString(item.globalProductId) ?? asTrimmedString(item.global_product_id);
     const quantity =
@@ -633,6 +764,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     return {
       explicitVariantId,
       productId,
+      storeProductId,
       globalProductId,
       name: asTrimmedString(item.name) ?? undefined,
       barcode: asTrimmedString(item.barcode) ?? undefined,
@@ -647,7 +779,8 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
 
   const invalidItem = cleanedItems.find(
     (item) =>
-      (!item.explicitVariantId && !item.productId && !item.globalProductId) ||
+      // AUD-VM-042: Accept storeProductId as valid product identifier
+      (!item.explicitVariantId && !item.productId && !item.storeProductId && !item.globalProductId && !item.barcode) ||
       !Number.isFinite(item.quantity) ||
       item.quantity <= 0 ||
       item.quantity > MAX_QUANTITY ||
@@ -766,6 +899,19 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
           item.name ?? null,
           saleCurrency
         );
+      }
+
+      // AUD-VM-042 FIX: Try catalog schema bridge if no variant found
+      // This enables sales of products digitised via catalog schema
+      if (!variantId) {
+        variantId = await resolveVariantFromCatalogProduct({
+          client,
+          storeId,
+          storeProductId: item.storeProductId ?? item.productId, // Try explicit storeProductId first
+          productId: item.globalProductId ?? item.productId,
+          barcode: item.barcode,
+          currency: saleCurrency
+        });
       }
 
       if (!variantId) {
