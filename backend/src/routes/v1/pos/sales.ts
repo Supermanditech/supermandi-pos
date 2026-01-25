@@ -99,6 +99,10 @@ async function ensureRetailerVariantLink(
  * This allows products digitised via catalog schema to be sold.
  * Creates a variant on-the-fly if one doesn't exist for the catalog product.
  */
+// AUD-VM-042+033 FIX: Return both variantId AND productId (globalProductId)
+// The productId is needed for stock availability check in ensureStoreInventoryAvailability
+type CatalogResolution = { variantId: string; globalProductId: string } | null;
+
 async function resolveVariantFromCatalogProduct(params: {
   client: PoolClient;
   storeId: string;
@@ -106,7 +110,7 @@ async function resolveVariantFromCatalogProduct(params: {
   productId?: string;
   barcode?: string;
   currency: string;
-}): Promise<string | null> {
+}): Promise<CatalogResolution> {
   const { client, storeId, storeProductId, productId, barcode, currency } = params;
 
   // Step 1: Find the catalog store_product
@@ -179,7 +183,7 @@ async function resolveVariantFromCatalogProduct(params: {
   if (existingVariant.rows[0]?.id) {
     const variantId = String(existingVariant.rows[0].id);
     await ensureRetailerVariantLink(client, storeId, variantId);
-    return variantId;
+    return { variantId, globalProductId: catalogProduct.product_id };
   }
 
   // Step 3: Create variant for the catalog product (bridge)
@@ -217,7 +221,7 @@ async function resolveVariantFromCatalogProduct(params: {
   // Link to retailer
   await ensureRetailerVariantLink(client, storeId, variantId);
 
-  return variantId;
+  return { variantId, globalProductId: catalogProduct.product_id };
 }
 
 async function findVariantForProduct(params: {
@@ -913,10 +917,12 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
         );
       }
 
-      // AUD-VM-042 FIX: Try catalog schema bridge if no variant found
+      // AUD-VM-042+033 FIX: Try catalog schema bridge if no variant found
       // This enables sales of products digitised via catalog schema
+      // Returns both variantId and globalProductId for stock check
+      let catalogGlobalProductId: string | undefined = item.globalProductId ?? undefined;
       if (!variantId) {
-        variantId = await resolveVariantFromCatalogProduct({
+        const catalogResolution = await resolveVariantFromCatalogProduct({
           client,
           storeId,
           storeProductId: item.storeProductId ?? item.productId, // Try explicit storeProductId first
@@ -924,6 +930,10 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
           barcode: item.barcode,
           currency: saleCurrency
         });
+        if (catalogResolution) {
+          variantId = catalogResolution.variantId;
+          catalogGlobalProductId = catalogResolution.globalProductId;
+        }
       }
 
       if (!variantId) {
@@ -936,7 +946,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
         priceMinor: item.priceMinor,
         name: item.name,
         barcode: item.barcode,
-        globalProductId: item.globalProductId ?? undefined
+        globalProductId: catalogGlobalProductId ?? item.globalProductId ?? undefined
       });
     }
 
