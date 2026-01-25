@@ -522,6 +522,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }
 
           const resolvedItems: Array<{
+            productId: string;
             variantId: string;
             quantity: number;
             priceMinor: number;
@@ -561,13 +562,14 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
             // MT-6: Dual-write - ensure product exists in BOTH schemas
             // 1. Catalog schema (so Dashboard can see products from offline sales)
-            await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt: createdAt });
+            const { productId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt: createdAt });
 
             // 2. Legacy schema (for sales/inventory compatibility)
             const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency });
             await ensureRetailerVariant(client, { storeId, variantId });
 
             resolvedItems.push({
+              productId,
               variantId,
               quantity,
               priceMinor,
@@ -598,12 +600,13 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const lineTotal = item.priceMinor * item.quantity;
             await client.query(
               `
-              INSERT INTO sale_items (id, sale_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
               `,
               [
                 randomUUID(),
                 saleId,
+                item.productId,
                 item.variantId,
                 item.quantity,
                 item.priceMinor,
