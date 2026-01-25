@@ -754,7 +754,7 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
  */
 posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
-  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, brand, metadataUpdatedAt } = req.body as {
+  const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, brand, mode, metadataUpdatedAt } = req.body as {
     barcode?: string;
     productId?: string;
     storeProductId?: string;
@@ -762,6 +762,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
     purchasePrice?: number;
     sellPrice?: number;
     brand?: string; // MT-8: Store-level brand override
+    mode?: string; // AUD-022-A: Product mode (PACKAGED or LOOSE_BULK)
     metadataUpdatedAt?: string; // ISO timestamp for last-write-wins comparison
   };
 
@@ -775,6 +776,10 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
 
   const trimmedName = typeof displayName === "string" ? displayName.trim() : null;
   const trimmedBrand = typeof brand === "string" ? brand.trim() : null; // MT-8: Brand support
+  // AUD-022-A: Validate mode (PACKAGED or LOOSE_BULK only)
+  const validMode = typeof mode === "string" && ["PACKAGED", "LOOSE_BULK"].includes(mode.toUpperCase())
+    ? mode.toUpperCase()
+    : null;
   const validPurchasePrice = typeof purchasePrice === "number" && Number.isFinite(purchasePrice) && purchasePrice >= 0
     ? Math.round(purchasePrice)
     : null;
@@ -782,10 +787,10 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
     ? Math.round(sellPrice)
     : null;
 
-  if (!trimmedName && !trimmedBrand && validPurchasePrice === null && validSellPrice === null) {
+  if (!trimmedName && !trimmedBrand && !validMode && validPurchasePrice === null && validSellPrice === null) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
-      message: "At least one of displayName, brand, purchasePrice, or sellPrice is required"
+      message: "At least one of displayName, brand, mode, purchasePrice, or sellPrice is required"
     });
   }
 
@@ -808,6 +813,11 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
       // MT-8: Brand can be set to empty string to clear it
       setClauses.push(`brand = $${paramIdx++}`);
       params.push(trimmedBrand || null);
+    }
+    if (validMode) {
+      // AUD-022-A: Product mode (PACKAGED or LOOSE_BULK)
+      setClauses.push(`product_mode = $${paramIdx++}`);
+      params.push(validMode);
     }
     if (validPurchasePrice !== null) {
       setClauses.push(`purchase_price = $${paramIdx++}`);
@@ -838,7 +848,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         `UPDATE catalog.store_products
          SET ${setClause}
          WHERE id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
-         RETURNING id, product_id, display_name, brand, purchase_price, sell_price, metadata_updated_at, updated_at`,
+         RETURNING id, product_id, display_name, brand, product_mode, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else if (productId) {
@@ -850,7 +860,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         `UPDATE catalog.store_products
          SET ${setClause}
          WHERE product_id = $${paramIdx++} AND store_id = $${paramIdx++} AND is_active = true ${lwwGuard}
-         RETURNING id, product_id, display_name, brand, purchase_price, sell_price, metadata_updated_at, updated_at`,
+         RETURNING id, product_id, display_name, brand, product_mode, purchase_price, sell_price, metadata_updated_at, updated_at`,
         params
       );
     } else {
@@ -866,7 +876,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
          WHERE spb.store_id = $${paramIdx++} AND spb.barcode = $${paramIdx++}
            AND sp.id = spb.store_product_id AND sp.store_id = spb.store_id
            AND sp.is_active = true ${lwwGuard}
-         RETURNING sp.id, sp.product_id, sp.display_name, sp.brand, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
+         RETURNING sp.id, sp.product_id, sp.display_name, sp.brand, sp.product_mode, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
         params
       );
 
@@ -877,6 +887,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         let fbIdx = 1;
         if (trimmedName) { fbSetClauses.push(`display_name = $${fbIdx++}`); fbParams.push(trimmedName); }
         if (trimmedBrand !== null) { fbSetClauses.push(`brand = $${fbIdx++}`); fbParams.push(trimmedBrand || null); }
+        if (validMode) { fbSetClauses.push(`product_mode = $${fbIdx++}`); fbParams.push(validMode); }
         if (validPurchasePrice !== null) { fbSetClauses.push(`purchase_price = $${fbIdx++}`); fbParams.push(validPurchasePrice); }
         if (validSellPrice !== null) { fbSetClauses.push(`sell_price = $${fbIdx++}`); fbParams.push(validSellPrice); }
         fbSetClauses.push(`metadata_updated_at = NOW()`);
@@ -895,7 +906,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
            FROM catalog.products p
            WHERE p.primary_barcode = $${fbIdx++} AND sp.product_id = p.id
              AND sp.store_id = $${fbIdx++} AND sp.is_active = true ${fbLwwGuard}
-           RETURNING sp.id, sp.product_id, sp.display_name, sp.brand, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
+           RETURNING sp.id, sp.product_id, sp.display_name, sp.brand, sp.product_mode, sp.purchase_price, sp.sell_price, sp.metadata_updated_at, sp.updated_at`,
           fbParams
         );
       }
@@ -951,6 +962,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
         productId: result.rows[0].product_id,
         displayName: result.rows[0].display_name,
         brand: result.rows[0].brand || null, // MT-8: Include brand in response
+        mode: result.rows[0].product_mode || null, // AUD-022-A: Include mode in response
         purchasePrice: result.rows[0].purchase_price,
         sellPrice: result.rows[0].sell_price,
         metadataUpdatedAt: result.rows[0].metadata_updated_at,
