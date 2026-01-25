@@ -222,6 +222,17 @@ export async function applyInventoryMovement(
     [storeId, globalProductId, catalogStockAfter, invLedgerId, delta]
   );
 
+  // AUD-051-A FIX: Dual-write to catalog.store_products.current_stock for dashboard consistency
+  // This ensures POS sales are reflected in the catalog schema that dashboard reads
+  await input.client.query(
+    `UPDATE catalog.store_products
+     SET current_stock = GREATEST(0, current_stock + $3),
+         stock_last_event_at = NOW(),
+         updated_at = NOW()
+     WHERE store_id = $1 AND product_id = $2`,
+    [storeId, globalProductId, delta]
+  );
+
   return { previousQty: current, nextQty, delta };
 }
 

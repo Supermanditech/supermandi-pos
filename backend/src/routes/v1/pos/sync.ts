@@ -62,8 +62,28 @@ async function ensureProductByBarcode(
 ): Promise<string> {
   const rawBarcode = params.barcode.trim();
   const lookupBarcode = isSupermandiBarcode(rawBarcode) ? rawBarcode.toUpperCase() : rawBarcode;
-  const existing = await client.query(`SELECT variant_id FROM barcodes WHERE barcode = $1`, [lookupBarcode]);
-  if (existing.rows[0]?.variant_id) return existing.rows[0].variant_id as string;
+
+  // AUD-056-A FIX: Check for existing active variant (join through products to check is_active)
+  const existing = await client.query(
+    `SELECT b.variant_id, v.product_id, p.retailer_status
+     FROM barcodes b
+     JOIN variants v ON v.id = b.variant_id
+     JOIN products p ON p.id = v.product_id
+     WHERE b.barcode = $1`,
+    [lookupBarcode]
+  );
+
+  if (existing.rows[0]?.variant_id) {
+    // AUD-056-A FIX: If product was soft-deleted, reactivate it instead of creating duplicate
+    if (existing.rows[0].retailer_status === 'deleted' || existing.rows[0].retailer_status === 'inactive') {
+      await client.query(
+        `UPDATE products SET retailer_status = 'retailer_created', updated_at = NOW() WHERE id = $1`,
+        [existing.rows[0].product_id]
+      );
+      console.log(`[Sync] Reactivated soft-deleted product for barcode ${lookupBarcode}`);
+    }
+    return existing.rows[0].variant_id as string;
+  }
 
   const productId = randomUUID();
   const variantId = randomUUID();
@@ -127,21 +147,32 @@ async function ensureCatalogProduct(
   const eventTimestamp = params.eventCreatedAt ? new Date(params.eventCreatedAt) : null;
   const validEventTimestamp = eventTimestamp && !isNaN(eventTimestamp.getTime()) ? eventTimestamp : null;
 
-  // Step 1: Check if barcode already exists in store_product_barcodes for this store
+  // AUD-056-A/D FIX: Check if barcode already exists (including soft-deleted products)
+  // This prevents creating duplicate products when POS sells a soft-deleted item
   const existingMapping = await client.query(
-    `SELECT sp.id AS store_product_id, sp.product_id
+    `SELECT sp.id AS store_product_id, sp.product_id, sp.is_active
      FROM catalog.store_product_barcodes spb
      JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
-     WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
+     WHERE spb.store_id = $1 AND spb.barcode = $2
      LIMIT 1`,
     [params.storeId, normalizedBarcode]
   );
 
   if (existingMapping.rows[0]) {
-    // Already exists - return existing IDs
+    const { store_product_id, product_id, is_active } = existingMapping.rows[0];
+
+    // AUD-056-A FIX: If product was soft-deleted, reactivate it instead of creating duplicate
+    if (!is_active) {
+      await client.query(
+        `UPDATE catalog.store_products SET is_active = true, updated_at = NOW() WHERE id = $1`,
+        [store_product_id]
+      );
+      console.log(`[Sync] Reactivated soft-deleted catalog product for barcode ${normalizedBarcode}`);
+    }
+
     return {
-      productId: existingMapping.rows[0].product_id,
-      storeProductId: existingMapping.rows[0].store_product_id
+      productId: product_id,
+      storeProductId: store_product_id
     };
   }
 
@@ -391,16 +422,35 @@ async function upsertRetailerPrice(
     storeId: string;
     variantId: string;
     priceMinor: number;
+    eventCreatedAt?: string | null; // AUD-052-A FIX: LWW timestamp from offline event
   }
 ): Promise<void> {
+  // AUD-052-A FIX: Added LWW (Last-Write-Wins) timestamp comparison
+  // Parse event timestamp for LWW (when the offline event was created)
+  const eventTimestamp = params.eventCreatedAt ? new Date(params.eventCreatedAt) : null;
+  const validEventTimestamp = eventTimestamp && !isNaN(eventTimestamp.getTime()) ? eventTimestamp : null;
+  const metadataTimestamp = validEventTimestamp ? validEventTimestamp.toISOString() : null;
+
   await client.query(
     `
     INSERT INTO retailer_variants (store_id, variant_id, selling_price_minor, digitised_by_retailer, price_updated_at)
-    VALUES ($1, $2, $3, TRUE, NOW())
+    VALUES ($1, $2, $3, TRUE, COALESCE($4::timestamptz, NOW()))
     ON CONFLICT (store_id, variant_id)
-    DO UPDATE SET selling_price_minor = EXCLUDED.selling_price_minor, price_updated_at = NOW()
+    DO UPDATE SET
+      selling_price_minor = CASE
+        WHEN retailer_variants.price_updated_at IS NULL
+             OR ($4::timestamptz IS NOT NULL AND retailer_variants.price_updated_at < $4::timestamptz)
+        THEN EXCLUDED.selling_price_minor
+        ELSE retailer_variants.selling_price_minor
+      END,
+      price_updated_at = CASE
+        WHEN retailer_variants.price_updated_at IS NULL
+             OR ($4::timestamptz IS NOT NULL AND retailer_variants.price_updated_at < $4::timestamptz)
+        THEN COALESCE($4::timestamptz, NOW())
+        ELSE retailer_variants.price_updated_at
+      END
     `,
-    [params.storeId, params.variantId, params.priceMinor]
+    [params.storeId, params.variantId, params.priceMinor, metadataTimestamp]
   );
 }
 
@@ -861,7 +911,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             // 2. Legacy schema (for backward compatibility)
             if (sellingPriceMinor !== null && sellingPriceMinor > 0) {
               const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency: itemCurrency });
-              await upsertRetailerPrice(client, { storeId, variantId, priceMinor: sellingPriceMinor });
+              await upsertRetailerPrice(client, { storeId, variantId, priceMinor: sellingPriceMinor, eventCreatedAt });
             }
           }
 
@@ -1002,9 +1052,24 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           const status = asTrimmedString((payload as any)?.status);
           const reference = asTrimmedString((payload as any)?.reference);
           const createdAt = asTrimmedString((payload as any)?.createdAt);
+          const saleId = asTrimmedString((payload as any)?.saleId); // AUD-062-B: Optional explicit sale reference
 
           if (!collectionId || amountMinor === null || amountMinor <= 0 || !mode || !status) {
             throw new Error("invalid collection payload");
+          }
+
+          // AUD-062-B FIX: Soft validation of reference - log warning if sale reference is invalid
+          // This helps identify orphaned collections without rejecting the financial record
+          const effectiveSaleId = saleId || reference;
+          if (effectiveSaleId && /^[0-9a-f-]{36}$/i.test(effectiveSaleId)) {
+            // Reference looks like a UUID, check if sale exists
+            const saleCheck = await client.query(
+              `SELECT id FROM sales WHERE id = $1 AND store_id = $2`,
+              [effectiveSaleId, storeId]
+            );
+            if ((saleCheck.rowCount ?? 0) === 0) {
+              console.warn(`[Sync] COLLECTION_CREATED: Reference ${effectiveSaleId} appears to be a sale ID but sale not found for store ${storeId}. Collection will be created anyway.`);
+            }
           }
 
           const existing = await client.query(

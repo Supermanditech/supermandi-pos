@@ -142,20 +142,21 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
       return res.status(404).json({ error: { code: "STORE_NOT_FOUND", message: "Store not found" } });
     }
 
-    // Check for existing device by label (same store)
+    // AUD-054-A FIX: Add FOR UPDATE lock to prevent race conditions on concurrent enrollment
+    // Check for existing device by label (same store) WITH row lock
     const existingDeviceRes = await client.query(
       `
       SELECT id, device_token, device_fingerprint, enrollment_id
       FROM pos_devices
       WHERE store_id = $1
         AND lower(label) = lower($2)
-      LIMIT 1
+      FOR UPDATE
       `,
       [enrollment.store_id, label]
     );
     const existingDeviceByLabel = existingDeviceRes.rows[0];
 
-    // DEV-071: Check for existing device by fingerprint (idempotent enrollment)
+    // AUD-054-A FIX: Check for existing device by fingerprint WITH row lock (idempotent enrollment)
     let existingDeviceByFingerprint = null;
     if (deviceFingerprint) {
       const fingerprintRes = await client.query(
@@ -164,7 +165,7 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
         FROM pos_devices
         WHERE store_id = $1
           AND device_fingerprint = $2
-        LIMIT 1
+        FOR UPDATE
         `,
         [enrollment.store_id, deviceFingerprint]
       );
@@ -198,11 +199,25 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
     // Determine if this is a re-enrollment scenario
     const existingDevice = existingDeviceByLabel || existingDeviceByFingerprint;
 
-    // Idempotent enrollment - if same device (by fingerprint) already exists for this store, treat as re-enrollment
+    // AUD-054-B FIX: Idempotent enrollment for fingerprint matches ONLY
+    // Fingerprint match = same physical device, return existing token (true idempotency)
+    // Label match = device recovery scenario, device needs NEW token (handled below)
     if (existingDeviceByFingerprint) {
-      // Same device re-enrolling - return existing token without changes
+      // AUD-054-C FIX: Track re-enrollment attempts in audit log (increment last_used_at without consuming uses)
+      await client.query(
+        `
+        UPDATE pos_device_enrollments
+        SET last_used_at = NOW(),
+            updated_at = NOW()
+        WHERE code = $1
+        `,
+        [code]
+      );
+
+      // AUD-063-B FIX: Log re-enrollment with full context for audit trail
+      console.log(`[Enroll] Idempotent re-enrollment: device=${existingDeviceByFingerprint.id} code=${code} store=${store.id} matchType=fingerprint`);
+
       await client.query("COMMIT");
-      console.log(`[Enroll] Idempotent re-enrollment for device ${existingDeviceByFingerprint.id}`);
       return res.json({
         deviceId: existingDeviceByFingerprint.id,
         storeId: store.id,
@@ -213,6 +228,10 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
         reEnrolled: true
       });
     }
+
+    // AUD-054-B FIX: Label-only match (no fingerprint) = device recovery scenario
+    // Device needs NEW token but should NOT consume additional uses
+    // This is handled below by setting existingDevice which skips uses_count increment
 
     // =========================================================================
     // ENROLLMENT ENFORCEMENT RULES

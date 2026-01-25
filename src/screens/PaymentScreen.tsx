@@ -4,7 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert
+  Alert,
+  BackHandler
 } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -149,6 +150,9 @@ const PaymentScreen = () => {
   const transactionId = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
   const finalized = useRef(false);
   const pendingSaleIdRef = useRef<string | null>(null);
+  // AUD-055-A FIX: Use ref for immediate synchronous double-submit protection
+  // React setState is async, ref check is synchronous
+  const submittingRef = useRef(false);
 
   const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
     if (error.message === "device_inactive") {
@@ -446,6 +450,20 @@ const PaymentScreen = () => {
     };
   }, [billRef, currency, selectedMode, saleId, totalMinor, transactionId]);
 
+  // AUD-060-B FIX: Block back navigation during payment processing to prevent cancel/pay race
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (submittingRef.current) {
+        // Block back navigation while payment is being processed
+        Alert.alert("Payment in Progress", "Please wait for the payment to complete.");
+        return true; // Prevent default back behavior
+      }
+      return false; // Allow default back behavior
+    });
+
+    return () => backHandler.remove();
+  }, []);
+
   const handlePaymentSelect = (mode: PaymentMode) => {
     setSelectedMode(mode);
   };
@@ -456,8 +474,11 @@ const PaymentScreen = () => {
       return;
     }
 
-    if (finalized.current || submitting) return;
-    setSubmitting(true);
+    // AUD-055-A FIX: Use ref for IMMEDIATE synchronous check (React state is async)
+    // This prevents the race window where a second tap could pass the guard
+    if (finalized.current || submittingRef.current) return;
+    submittingRef.current = true; // Set IMMEDIATELY (synchronous)
+    setSubmitting(true); // Also set state for UI updates
 
     try {
       // Validate UPI mode requirements
@@ -545,6 +566,11 @@ const PaymentScreen = () => {
       }
       Alert.alert("Payment Error", "Unable to complete payment. Try again.");
     } finally {
+      // AUD-055-A FIX: Only reset submitting if NOT finalized
+      // If finalized=true, leave submittingRef=true to prevent any further attempts
+      if (!finalized.current) {
+        submittingRef.current = false;
+      }
       setSubmitting(false);
     }
   };

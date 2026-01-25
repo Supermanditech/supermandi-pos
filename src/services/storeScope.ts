@@ -22,16 +22,42 @@ export async function getStoreScopedKey(baseKey: string): Promise<string> {
 
 export const storeScopedStorage = {
   async getItem(key: string): Promise<string | null> {
-    const scopedKey = await getStoreScopedKey(key);
-    return AsyncStorage.getItem(scopedKey);
+    try {
+      const scopedKey = await getStoreScopedKey(key);
+      const value = await AsyncStorage.getItem(scopedKey);
+
+      // AUD-058-A FIX: Validate JSON is parseable before returning
+      // This prevents createJSONStorage from failing silently with corrupted data
+      if (value !== null) {
+        try {
+          JSON.parse(value); // Validate JSON
+        } catch (parseError) {
+          console.error(`[StoreScope] Corrupted JSON in storage key ${scopedKey}, clearing:`, parseError);
+          await AsyncStorage.removeItem(scopedKey);
+          return null;
+        }
+      }
+      return value;
+    } catch (error) {
+      console.error(`[StoreScope] Failed to get item ${key}:`, error);
+      return null;
+    }
   },
   async setItem(key: string, value: string): Promise<void> {
-    const scopedKey = await getStoreScopedKey(key);
-    await AsyncStorage.setItem(scopedKey, value);
+    try {
+      const scopedKey = await getStoreScopedKey(key);
+      await AsyncStorage.setItem(scopedKey, value);
+    } catch (error) {
+      console.error(`[StoreScope] Failed to set item ${key}:`, error);
+    }
   },
   async removeItem(key: string): Promise<void> {
-    const scopedKey = await getStoreScopedKey(key);
-    await AsyncStorage.removeItem(scopedKey);
+    try {
+      const scopedKey = await getStoreScopedKey(key);
+      await AsyncStorage.removeItem(scopedKey);
+    } catch (error) {
+      console.error(`[StoreScope] Failed to remove item ${key}:`, error);
+    }
   }
 };
 

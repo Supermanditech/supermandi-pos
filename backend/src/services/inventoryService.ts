@@ -344,6 +344,34 @@ export async function applyBulkDeductions(params: {
       baseUnit: payload.baseUnit,
       deltaBase: payload.deltaBase
     });
+
+    // AUD-051-A FIX: Dual-write to catalog schema for dashboard consistency
+    // Convert bulk delta to unit count for catalog.store_products.current_stock
+    // Note: For bulk items, we track by weight/volume base, but for simplicity
+    // we update current_stock as a count approximation (delta / 1000 for 1kg/1L units)
+    const unitDelta = Math.round(payload.deltaBase / 1000); // Convert base units to kg/L
+    if (unitDelta !== 0) {
+      await client.query(
+        `UPDATE catalog.store_products
+         SET current_stock = GREATEST(0, current_stock + $3),
+             stock_last_event_at = NOW(),
+             updated_at = NOW()
+         WHERE store_id = $1 AND product_id = $2`,
+        [storeId, productId, unitDelta]
+      );
+
+      // Also update inventory.stock_balances for ledger consistency
+      const invLedgerId = randomUUID();
+      await client.query(
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+         VALUES ($1, $2, GREATEST(0, $3), $4, NOW())
+         ON CONFLICT (store_id, product_id) DO UPDATE SET
+           current_qty = GREATEST(0, inventory.stock_balances.current_qty + $3),
+           last_ledger_id = $4,
+           updated_at = NOW()`,
+        [storeId, productId, unitDelta, invLedgerId]
+      );
+    }
   }
 }
 

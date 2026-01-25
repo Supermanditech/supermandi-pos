@@ -465,13 +465,19 @@ async function getStore(storeId: string): Promise<{ id: string; name: string; up
   const pool = getPool();
   if (!pool) return null;
   try {
+    // AUD-053-A FIX: Query actual upi_vpa from database instead of hardcoding null
     const res = await pool.query(
-      `SELECT id::TEXT as id, name, (status = 'active') as active FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, name, upi_vpa, (status = 'active') as active FROM platform.stores WHERE id = $1::uuid`,
       [storeId]
     );
     const row = res.rows[0];
     if (!row) return null;
-    return { ...row, upi_vpa: null };
+    return {
+      id: String(row.id),
+      name: String(row.name || ''),
+      upi_vpa: row.upi_vpa ? String(row.upi_vpa) : null,
+      active: Boolean(row.active)
+    };
   } catch (err: any) {
     console.error("[sales/getStore] Query failed:", err?.message);
     return null;

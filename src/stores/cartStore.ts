@@ -680,10 +680,22 @@ export const useCartStore = create<CartState>()(
         items: state.items,
         discount: state.discount
       }),
-      onRehydrateStorage: () => (state) => {
-        const changed = state?.normalizeItemsToStock?.() ?? false;
-        if (!changed) {
-          state?.recalculate();
+      // AUD-058-A FIX: Add error boundary for cart deserialization
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error("[CartStore] Failed to rehydrate cart from storage:", error);
+          // Cart will reset to empty state - this is acceptable for corrupted data
+          return;
+        }
+
+        try {
+          const changed = state?.normalizeItemsToStock?.() ?? false;
+          if (!changed) {
+            state?.recalculate();
+          }
+        } catch (rehydrateError) {
+          console.error("[CartStore] Error during cart normalization:", rehydrateError);
+          // State is partially loaded but may be inconsistent - log for debugging
         }
       }
     }
