@@ -9,8 +9,9 @@ adminAiRouter.use(requireAdminToken);
 const aiRateLimit = rateLimitAi({ windowMs: 60_000, max: 6 });
 
 adminAiRouter.get("/ai/health", async (_req, res) => {
-  const configured = Boolean(process.env.OPENAI_API_KEY?.trim());
-  res.json({ configured });
+  // FINDING-020: Updated to check ANTHROPIC_API_KEY (Claude API)
+  const configured = Boolean(process.env.ANTHROPIC_API_KEY?.trim());
+  res.json({ configured, provider: "claude" });
 });
 
 async function handleAi(req: any, res: any) {

@@ -5,6 +5,7 @@ import path from "path";
 import { execSync } from "child_process";
 import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
+import { notFoundHandler } from "./middleware/notFoundHandler";
 import { noCacheHeaders } from "./middleware/noCache";
 import { getTranslationHealth } from "./services/translationService";
 
@@ -46,6 +47,9 @@ app.get("/health/translation", (_req, res) => {
 
 // CACHE-000: Enforce no-cache headers on all dynamic API responses
 app.use("/api", noCacheHeaders, apiRouter);
+
+// FINDING-004: Standardize 404 response format (must be before errorHandler)
+app.use(notFoundHandler);
 
 app.use(errorHandler);
 

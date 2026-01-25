@@ -49,8 +49,11 @@ function generateDeviceToken(): string {
 const DEVICE_TYPES = new Set(["OEM_HANDHELD", "SUPMANDI_PHONE", "RETAILER_PHONE"]);
 const PRINTING_MODES = new Set(["DIRECT_ESC_POS", "SHARE_TO_PRINTER_APP", "NONE"]);
 
-// AUD-061-B FIX: Maximum devices per store to prevent abuse
-const MAX_DEVICES_PER_STORE = 20;
+// FINDING-027: Default max devices per store (can be overridden per store in platform.stores.max_devices)
+const DEFAULT_MAX_DEVICES_PER_STORE = 10;
+
+// FINDING-026: Token expiry duration (90 days - user-friendly with auto-refresh)
+const TOKEN_EXPIRY_DAYS = 90;
 
 function normalizeEnum(value: string | null): string | null {
   return value ? value.trim().toUpperCase() : null;
@@ -144,10 +147,11 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       return res.status(409).json({ error: { code: "ENROLLMENT_CODE_REVOKED", message: "This enrollment code has been revoked" } });
     }
 
-    // GO-LIVE: Fetch store name and code for enrollment response
+    // GO-LIVE: Fetch store name, code, and max_devices for enrollment response
+    // FINDING-027: Get configurable max_devices per store
     const storeRes = await client.query(
-      `SELECT id::TEXT as id, name, code, (status = 'active') as active FROM platform.stores WHERE id = $1::uuid`,
-      [enrollment.store_id]
+      `SELECT id::TEXT as id, name, code, (status = 'active') as active, COALESCE(max_devices, $2) as max_devices FROM platform.stores WHERE id = $1::uuid`,
+      [enrollment.store_id, DEFAULT_MAX_DEVICES_PER_STORE]
     );
     const store = storeRes.rows[0];
     if (!store) {
@@ -287,20 +291,22 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       console.log(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
     }
 
-    // AUD-061-B FIX: Check device count per store (skip for re-enrollment and demo stores)
+    // FINDING-027: Check device count per store using configurable max_devices
+    // Skip for re-enrollment and demo stores
+    const storeMaxDevices = store.max_devices ?? DEFAULT_MAX_DEVICES_PER_STORE;
     if (!existingDevice && !isDemo) {
       const deviceCountRes = await client.query(
-        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1`,
+        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND is_active = true`,
         [enrollment.store_id]
       );
       const currentDeviceCount = deviceCountRes.rows[0]?.count ?? 0;
-      if (currentDeviceCount >= MAX_DEVICES_PER_STORE) {
+      if (currentDeviceCount >= storeMaxDevices) {
         await client.query("ROLLBACK");
-        console.log(`[Enroll] REJECT 409: Store ${store.id} has reached device limit (${currentDeviceCount}/${MAX_DEVICES_PER_STORE})`);
+        console.log(`[Enroll] REJECT 409: Store ${store.id} has reached device limit (${currentDeviceCount}/${storeMaxDevices})`);
         return res.status(409).json({
           error: {
             code: "DEVICE_LIMIT_EXCEEDED",
-            message: `This store has reached the maximum number of devices (${MAX_DEVICES_PER_STORE}). Contact support to increase the limit.`
+            message: `This store has reached the maximum number of devices (${storeMaxDevices}). Contact support to increase the limit.`
           }
         });
       }
@@ -315,7 +321,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       try {
         if (existingDevice) {
           // Update existing device with new token and metadata
-          // AUD-075-B FIX: Persist re_enrolled flag when device is re-enrolled
+          // FINDING-026: Reset token_expires_at on re-enrollment (90 days from now)
+          // FINDING-028: Track re-enrollment for superadmin notification
           await client.query(
             `
             UPDATE pos_devices
@@ -331,7 +338,9 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
                 last_seen_online = NOW(),
                 updated_at = NOW(),
                 re_enrolled = true,
-                re_enrolled_at = NOW()
+                re_enrolled_at = NOW(),
+                token_expires_at = NOW() + INTERVAL '${TOKEN_EXPIRY_DAYS} days',
+                token_refreshed_at = NOW()
             WHERE id = $10
             `,
             [
@@ -347,8 +356,31 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               deviceId
             ]
           );
+
+          // FINDING-028: Log re-enrollment event for superadmin notification
+          try {
+            await client.query(
+              `INSERT INTO device_enrollment_events (store_id, device_id, event_type, device_fingerprint, device_label, enrollment_code, previous_device_id, previous_device_label, ip_address, metadata)
+               VALUES ($1, $2, 're_enrolled', $3, $4, $5, $6, $7, $8, $9)`,
+              [
+                enrollment.store_id,
+                deviceId,
+                deviceFingerprint,
+                label,
+                code,
+                existingDevice.id,
+                existingDevice.label ?? label,
+                req.ip ?? null,
+                JSON.stringify({ manufacturer, model, appVersion, androidVersion })
+              ]
+            );
+          } catch (eventErr) {
+            // Non-critical, just log
+            console.warn("[Enroll] Failed to log re-enrollment event:", eventErr);
+          }
         } else {
           // Insert new device
+          // FINDING-026: Set token_expires_at to 90 days from now
           await client.query(
             `
             INSERT INTO pos_devices (
@@ -364,9 +396,11 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               printing_mode,
               device_fingerprint,
               last_seen_online,
-              updated_at
+              updated_at,
+              token_expires_at,
+              token_refreshed_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW() + INTERVAL '${TOKEN_EXPIRY_DAYS} days', NOW())
             `,
             [
               deviceId,
@@ -382,6 +416,26 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               deviceFingerprint
             ]
           );
+
+          // FINDING-028: Log new enrollment event for superadmin dashboard
+          try {
+            await client.query(
+              `INSERT INTO device_enrollment_events (store_id, device_id, event_type, device_fingerprint, device_label, enrollment_code, ip_address, metadata)
+               VALUES ($1, $2, 'enrolled', $3, $4, $5, $6, $7)`,
+              [
+                enrollment.store_id,
+                deviceId,
+                deviceFingerprint,
+                label,
+                code,
+                req.ip ?? null,
+                JSON.stringify({ manufacturer, model, appVersion, androidVersion })
+              ]
+            );
+          } catch (eventErr) {
+            // Non-critical, just log
+            console.warn("[Enroll] Failed to log enrollment event:", eventErr);
+          }
         }
         inserted = true;
         break;

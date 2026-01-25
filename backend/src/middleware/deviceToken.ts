@@ -80,7 +80,16 @@ function enforceStoreBinding(req: Request, res: Response, status: PosDeviceStatu
   return false;
 }
 
-async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosDeviceStatusContext | null> {
+// FINDING-026: Token expiry duration (90 days) - must match enroll.ts
+const TOKEN_EXPIRY_DAYS = 90;
+
+// FINDING-026: Extended device status context with token expiry info
+type PosDeviceStatusContextExtended = PosDeviceStatusContext & {
+  tokenExpiresAt: Date | null;
+  tokenExpired: boolean;
+};
+
+async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosDeviceStatusContextExtended | null> {
   const token = req.header("x-device-token")?.trim();
   if (!token) {
     res.status(401).json({ error: "device_unauthorized" });
@@ -93,10 +102,12 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
     return null;
   }
 
+  // FINDING-026: Include token_expires_at in query
   const result = await pool.query(
     `
-    SELECT d.id AS device_id, d.store_id, d.active AS device_active,
-           (s.status = 'active') AS store_active
+    SELECT d.id AS device_id, d.store_id, d.is_active AS device_active,
+           (s.status = 'active') AS store_active,
+           d.token_expires_at
     FROM pos_devices d
     LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
     WHERE d.device_token = $1
@@ -118,12 +129,56 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
       ? null
       : Boolean(row.store_active);
 
+  // FINDING-026: Check token expiry
+  const tokenExpiresAt = row.token_expires_at ? new Date(row.token_expires_at) : null;
+  const tokenExpired = tokenExpiresAt ? tokenExpiresAt.getTime() < Date.now() : false;
+
   return {
     deviceId: String(row.device_id),
     storeId,
     deviceActive: Boolean(row.device_active),
-    storeActive
+    storeActive,
+    tokenExpiresAt,
+    tokenExpired
   };
+}
+
+// FINDING-026: Auto-refresh token expiry on valid API use
+// Extends token by 90 days if it's about to expire within 30 days
+async function autoRefreshTokenIfNeeded(deviceId: string, tokenExpiresAt: Date | null): Promise<void> {
+  if (!tokenExpiresAt) return;
+
+  const pool = getPool();
+  if (!pool) return;
+
+  // Refresh if token expires within 30 days
+  const thirtyDaysFromNow = Date.now() + 30 * 24 * 60 * 60 * 1000;
+  if (tokenExpiresAt.getTime() < thirtyDaysFromNow) {
+    try {
+      await pool.query(
+        `UPDATE pos_devices
+         SET token_expires_at = NOW() + INTERVAL '${TOKEN_EXPIRY_DAYS} days',
+             token_refreshed_at = NOW(),
+             last_active_at = NOW()
+         WHERE id = $1`,
+        [deviceId]
+      );
+      console.log(`[DeviceToken] Auto-refreshed token expiry for device ${deviceId}`);
+    } catch (err) {
+      // Non-critical, just log
+      console.warn("[DeviceToken] Failed to auto-refresh token:", err);
+    }
+  } else {
+    // Just update last_active_at
+    try {
+      await pool.query(
+        `UPDATE pos_devices SET last_active_at = NOW() WHERE id = $1`,
+        [deviceId]
+      );
+    } catch (err) {
+      // Non-critical
+    }
+  }
 }
 
 // ITER3-006: Request audit logging for 10k store monitoring
@@ -167,6 +222,19 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
     res.status(403).json({ error: "store_inactive" });
     return;
   }
+
+  // FINDING-026: Check token expiry - require re-enrollment if expired
+  if (status.tokenExpired) {
+    res.status(401).json({
+      error: "token_expired",
+      message: "Device token has expired. Please re-enroll the device.",
+      code: "TOKEN_EXPIRED"
+    });
+    return;
+  }
+
+  // FINDING-026: Auto-refresh token if about to expire (non-blocking)
+  autoRefreshTokenIfNeeded(status.deviceId, status.tokenExpiresAt).catch(() => {});
 
   (req as any).posDevice = {
     deviceId: status.deviceId,
