@@ -295,6 +295,15 @@ export async function recordSaleInventoryMovements(params: {
     });
   }
 
+  // AUD-080-E FIX: Resolve all product IDs first, then sort by productId before processing
+  // This ensures consistent lock acquisition order and prevents deadlocks
+  const resolvedItems: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitSellMinor: number;
+  }> = [];
+
   for (const item of params.items) {
     const info = infoByVariant.get(item.variantId);
     if (!info) continue;
@@ -302,16 +311,28 @@ export async function recordSaleInventoryMovements(params: {
     const resolvedProductId = explicitGlobalId || info.productId;
     const productName =
       item.name?.trim() || info.productName || fallbackName(resolvedProductId);
+    resolvedItems.push({
+      productId: resolvedProductId,
+      productName,
+      quantity: item.quantity,
+      unitSellMinor: item.unitSellMinor
+    });
+  }
+
+  // Sort by productId to prevent deadlocks
+  resolvedItems.sort((a, b) => a.productId.localeCompare(b.productId));
+
+  for (const item of resolvedItems) {
     await ensureGlobalProductEntry({
       client: params.client,
-      globalProductId: resolvedProductId,
-      globalName: productName
+      globalProductId: item.productId,
+      globalName: item.productName
     });
 
     await applyInventoryMovement({
       client: params.client,
       storeId: params.storeId,
-      globalProductId: resolvedProductId,
+      globalProductId: item.productId,
       movementType: "SELL",
       quantity: item.quantity,
       unitSellMinor: item.unitSellMinor,

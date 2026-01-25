@@ -296,7 +296,12 @@ async function decrementCatalogStock(
     items: Array<{ productId: string; quantity: number; priceMinor: number }>;
   }
 ): Promise<void> {
-  for (const item of params.items) {
+  // AUD-080-E FIX: Sort items by productId before acquiring locks to prevent deadlock
+  // When concurrent transactions lock rows in different order, PostgreSQL deadlocks.
+  // By always locking in sorted order, we guarantee consistent lock acquisition order.
+  const sortedItems = [...params.items].sort((a, b) => a.productId.localeCompare(b.productId));
+
+  for (const item of sortedItems) {
     // Get current stock balance
     const balanceResult = await client.query(
       `SELECT current_qty FROM inventory.stock_balances
@@ -351,7 +356,10 @@ async function incrementCatalogStock(
     items: Array<{ productId: string; quantity: number; unitCostMinor: number }>;
   }
 ): Promise<void> {
-  for (const item of params.items) {
+  // AUD-080-E FIX: Sort items by productId before acquiring locks to prevent deadlock
+  const sortedItems = [...params.items].sort((a, b) => a.productId.localeCompare(b.productId));
+
+  for (const item of sortedItems) {
     // Get current stock balance
     const balanceResult = await client.query(
       `SELECT current_qty FROM inventory.stock_balances
@@ -525,6 +533,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
   const client = await pool.connect();
   try {
+    // AUD-080-A FIX: Wrap entire batch in single transaction for atomicity
+    // This prevents concurrent batches from interleaving events
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+
+    // AUD-080-A FIX: Advisory lock on (store_id, device_id) to serialize concurrent batches
+    // This prevents two requests from same device processing overlapping events
+    const lockKey = BigInt(`0x${require("crypto").createHash("md5").update(`${storeId}:${deviceId}`).digest("hex").slice(0, 15)}`);
+    await client.query(`SELECT pg_advisory_xact_lock($1)`, [lockKey.toString()]);
+
     for (const raw of events) {
       const eventId = asTrimmedString(raw?.eventId);
       const type = asTrimmedString(raw?.type);
@@ -535,10 +553,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         continue;
       }
 
+      // AUD-080-B FIX: Per-event advisory lock to prevent concurrent INSERT race
+      // Two requests with same eventId will serialize on this lock
+      const eventLockKey = BigInt(`0x${require("crypto").createHash("md5").update(eventId).digest("hex").slice(0, 15)}`);
+      await client.query(`SELECT pg_advisory_xact_lock($1)`, [eventLockKey.toString()]);
+
+      // AUD-080-C FIX: Use SAVEPOINT instead of full ROLLBACK for duplicate handling
+      // This allows post-duplicate queries to run inside the transaction
+      await client.query(`SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
+
       try {
-        await client.query("BEGIN");
-        // Set SERIALIZABLE isolation to prevent race conditions in inventory deduction
-        await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
         const inserted = await client.query(
           `
           INSERT INTO processed_events (event_id, device_id, store_id, event_type)
@@ -550,9 +574,8 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         );
 
         if (inserted.rowCount === 0) {
-          await client.query("ROLLBACK");
-          results.push({ eventId, status: "duplicate_ignored" });
-
+          // AUD-080-C FIX: Query for existing mappings BEFORE rolling back savepoint
+          // This ensures queries run inside the transaction for consistency
           if (type === "SALE_CREATED") {
             const saleId = asTrimmedString((payload as any)?.saleId);
             if (saleId) {
@@ -584,6 +607,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               }
             }
           }
+
+          // Rollback savepoint (no-op since duplicate detection already complete)
+          await client.query(`ROLLBACK TO SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
+          results.push({ eventId, status: "duplicate_ignored" });
           continue;
         }
 
@@ -1026,10 +1053,13 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           const mode = type === "PAYMENT_CASH" ? "CASH" : "DUE";
           const status = mode === "CASH" ? "PAID" : "DUE";
 
+          // AUD-080-D FIX: Include amount_minor in dedup check to detect amount mismatches
+          // If payment exists with different amount, log warning and use the higher amount
           const existingPayment = await client.query(
-            `SELECT id FROM payments WHERE sale_id = $1 AND mode = $2 AND status = $3 LIMIT 1`,
+            `SELECT id, amount_minor FROM payments WHERE sale_id = $1 AND mode = $2 AND status = $3 LIMIT 1`,
             [saleId, mode, status]
           );
+
           if ((existingPayment.rowCount ?? 0) === 0) {
             await client.query(
               `
@@ -1043,6 +1073,20 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               mode === "CASH" ? "PAID_CASH" : "DUE",
               saleId
             ]);
+          } else {
+            // AUD-080-D FIX: Check for amount mismatch and update if new amount is higher
+            const existingAmount = existingPayment.rows[0]?.amount_minor ?? 0;
+            if (existingAmount !== amountMinor) {
+              console.warn(`[Sync] PAYMENT amount mismatch: sale_id=${saleId}, existing=${existingAmount}, new=${amountMinor}`);
+              // Use the higher amount (customer likely corrected underpayment)
+              if (amountMinor > existingAmount) {
+                await client.query(
+                  `UPDATE payments SET amount_minor = $1, updated_at = NOW() WHERE id = $2`,
+                  [amountMinor, existingPayment.rows[0].id]
+                );
+                console.log(`[Sync] Updated payment amount from ${existingAmount} to ${amountMinor}`);
+              }
+            }
           }
         } else if (type === "COLLECTION_CREATED") {
           const collectionId = asTrimmedString((payload as any)?.collectionId);
@@ -1091,10 +1135,13 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           throw new Error("unknown event type");
         }
 
-        await client.query("COMMIT");
+        // AUD-080-A FIX: Release savepoint on success (event committed to batch transaction)
+        await client.query(`RELEASE SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
         results.push({ eventId, status: "applied" });
       } catch (error: any) {
-        await client.query("ROLLBACK");
+        // AUD-080-A FIX: Rollback only the current event's savepoint, not the entire batch
+        // This allows other events in the batch to still be processed
+        await client.query(`ROLLBACK TO SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
         let errorMessage = error?.message ? String(error.message) : "rejected";
         if (error instanceof InsufficientStockError) {
           const details = Array.isArray(error.details) ? error.details : [];
@@ -1107,6 +1154,19 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         results.push({ eventId, status: "rejected", error: errorMessage });
       }
     }
+
+    // AUD-080-A FIX: Commit entire batch transaction after all events processed
+    await client.query("COMMIT");
+  } catch (batchError: any) {
+    // If batch-level error occurs, rollback entire transaction
+    try {
+      await client.query("ROLLBACK");
+    } catch (_) { /* ignore rollback errors */ }
+    console.error(`[Sync] Batch transaction failed:`, batchError?.message);
+    return res.status(500).json({
+      error: "batch_transaction_failed",
+      message: batchError?.message ?? "unknown error"
+    });
   } finally {
     client.release();
   }
