@@ -173,6 +173,55 @@ export async function applyInventoryMovement(
     ]
   );
 
+  // MT-10: Dual-write to inventory.stock_balances for dashboard consistency
+  // Map movement type to transaction type
+  const transactionType = input.movementType === "SELL" ? "sale" :
+                          input.movementType === "RECEIVE" ? "purchase_received" :
+                          "adjustment";
+
+  // Get current stock_balances entry
+  const balanceResult = await input.client.query(
+    `SELECT current_qty FROM inventory.stock_balances
+     WHERE store_id = $1 AND product_id = $2
+     FOR UPDATE`,
+    [storeId, globalProductId]
+  );
+  const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+  const catalogStockAfter = Math.max(0, catalogStockBefore + delta);
+
+  // Insert ledger entry to inventory.inventory_ledger
+  const invLedgerId = randomUUID();
+  await input.client.query(
+    `INSERT INTO inventory.inventory_ledger
+     (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
+      stock_before, stock_after, unit_cost, source, notes)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'LEGACY_LEDGER_SERVICE', $11)`,
+    [
+      invLedgerId,
+      storeId,
+      globalProductId,
+      delta,
+      transactionType,
+      input.referenceType ?? 'manual',
+      input.referenceId ?? null,
+      catalogStockBefore,
+      catalogStockAfter,
+      unitCostMinor,
+      input.reason ?? null
+    ]
+  );
+
+  // Upsert stock_balances
+  await input.client.query(
+    `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (store_id, product_id) DO UPDATE SET
+       current_qty = GREATEST(0, inventory.stock_balances.current_qty + $5),
+       last_ledger_id = $4,
+       updated_at = NOW()`,
+    [storeId, globalProductId, catalogStockAfter, invLedgerId, delta]
+  );
+
   return { previousQty: current, nextQty, delta };
 }
 

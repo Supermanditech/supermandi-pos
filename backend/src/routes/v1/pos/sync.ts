@@ -253,6 +253,100 @@ async function upsertCatalogPrice(
   );
 }
 
+/**
+ * MT-10: Decrement catalog stock_balances when a sale is processed
+ * This keeps inventory.stock_balances in sync with store_inventory for dashboard display
+ */
+async function decrementCatalogStock(
+  client: PoolClient,
+  params: {
+    storeId: string;
+    saleId: string;
+    items: Array<{ productId: string; quantity: number; priceMinor: number }>;
+  }
+): Promise<void> {
+  for (const item of params.items) {
+    // Get current stock balance
+    const balanceResult = await client.query(
+      `SELECT current_qty FROM inventory.stock_balances
+       WHERE store_id = $1 AND product_id = $2
+       FOR UPDATE`,
+      [params.storeId, item.productId]
+    );
+
+    const stockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+    const deltaQty = -Math.abs(item.quantity);
+    const stockAfter = Math.max(0, stockBefore + deltaQty);
+
+    // Create ledger entry for audit trail
+    const ledgerId = randomUUID();
+    await client.query(
+      `INSERT INTO inventory.inventory_ledger
+       (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id, stock_before, stock_after, unit_cost, source, notes)
+       VALUES ($1, $2, $3, $4, 'sale', 'sale', $5, $6, $7, $8, 'POS_SYNC', 'Sale from POS offline sync')`,
+      [ledgerId, params.storeId, item.productId, deltaQty, params.saleId, stockBefore, stockAfter, item.priceMinor]
+    );
+
+    // Update or create stock_balances entry
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = GREATEST(0, inventory.stock_balances.current_qty + $5),
+         last_ledger_id = $4,
+         updated_at = NOW()`,
+      [params.storeId, item.productId, stockAfter, ledgerId, deltaQty]
+    );
+  }
+}
+
+/**
+ * MT-10: Increment catalog stock_balances when a purchase is processed
+ * This keeps inventory.stock_balances in sync with store_inventory for dashboard display
+ */
+async function incrementCatalogStock(
+  client: PoolClient,
+  params: {
+    storeId: string;
+    purchaseId: string;
+    items: Array<{ productId: string; quantity: number; unitCostMinor: number }>;
+  }
+): Promise<void> {
+  for (const item of params.items) {
+    // Get current stock balance
+    const balanceResult = await client.query(
+      `SELECT current_qty FROM inventory.stock_balances
+       WHERE store_id = $1 AND product_id = $2
+       FOR UPDATE`,
+      [params.storeId, item.productId]
+    );
+
+    const stockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+    const deltaQty = Math.abs(item.quantity);
+    const stockAfter = stockBefore + deltaQty;
+
+    // Create ledger entry for audit trail
+    const ledgerId = randomUUID();
+    await client.query(
+      `INSERT INTO inventory.inventory_ledger
+       (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id, stock_before, stock_after, unit_cost, source, notes)
+       VALUES ($1, $2, $3, $4, 'purchase_received', 'po', $5, $6, $7, $8, 'POS_SYNC', 'Purchase from POS offline sync')`,
+      [ledgerId, params.storeId, item.productId, deltaQty, params.purchaseId, stockBefore, stockAfter, item.unitCostMinor]
+    );
+
+    // Update or create stock_balances entry
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = inventory.stock_balances.current_qty + $5,
+         last_ledger_id = $4,
+         updated_at = NOW()`,
+      [params.storeId, item.productId, stockAfter, ledgerId, deltaQty]
+    );
+  }
+}
+
 // ============================================================================
 // LEGACY FUNCTIONS - Used by SALE_CREATED for backward compatibility
 // TODO: Migrate SALE_CREATED to catalog schema in MT-6
@@ -630,6 +724,17 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             }))
           });
 
+          // MT-10: Also update catalog inventory.stock_balances for dashboard consistency
+          await decrementCatalogStock(client, {
+            storeId,
+            saleId,
+            items: resolvedItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              priceMinor: item.priceMinor
+            }))
+          });
+
           await applyBulkDeductions({
             client,
             storeId,
@@ -692,25 +797,48 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           });
 
           // MT-6 Iteration 2: Dual-write for PURCHASE_SUBMIT price updates
+          // MT-10: Also collect items for catalog stock_balances increment
           const eventCreatedAt = asTrimmedString(raw?.createdAt);
+          const catalogPurchaseItems: Array<{ productId: string; quantity: number; unitCostMinor: number }> = [];
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
             const sellingPriceRaw = asNumber(item?.sellingPriceMinor);
             const sellingPriceMinor = sellingPriceRaw === null ? null : Math.round(sellingPriceRaw);
-            if (!barcode || sellingPriceMinor === null || sellingPriceMinor <= 0) {
-              continue;
-            }
+            const quantityRaw = asNumber(item?.quantity);
+            const quantity = quantityRaw === null ? 0 : Math.round(quantityRaw);
+            const unitCostRaw = asNumber(item?.purchasePriceMinor) ?? asNumber(item?.unitCostMinor);
+            const unitCostMinor = unitCostRaw === null ? 0 : Math.round(unitCostRaw);
+
+            if (!barcode) continue;
 
             const itemName = asTrimmedString(item?.name);
             const itemCurrency = asTrimmedString(item?.currency) ?? currency ?? "INR";
 
             // 1. Catalog schema (so Dashboard sees products from purchases)
-            const { storeProductId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt });
-            await upsertCatalogPrice(client, { storeId, storeProductId, priceMinor: sellingPriceMinor, eventCreatedAt });
+            const { productId, storeProductId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt });
+            if (sellingPriceMinor !== null && sellingPriceMinor > 0) {
+              await upsertCatalogPrice(client, { storeId, storeProductId, priceMinor: sellingPriceMinor, eventCreatedAt });
+            }
+
+            // MT-10: Collect for stock_balances increment
+            if (quantity > 0 && unitCostMinor > 0) {
+              catalogPurchaseItems.push({ productId, quantity, unitCostMinor });
+            }
 
             // 2. Legacy schema (for backward compatibility)
-            const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency: itemCurrency });
-            await upsertRetailerPrice(client, { storeId, variantId, priceMinor: sellingPriceMinor });
+            if (sellingPriceMinor !== null && sellingPriceMinor > 0) {
+              const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency: itemCurrency });
+              await upsertRetailerPrice(client, { storeId, variantId, priceMinor: sellingPriceMinor });
+            }
+          }
+
+          // MT-10: Update catalog stock_balances for dashboard consistency
+          if (catalogPurchaseItems.length > 0) {
+            await incrementCatalogStock(client, {
+              storeId,
+              purchaseId: purchaseId ?? randomUUID(),
+              items: catalogPurchaseItems
+            });
           }
         } else if (type === "PURCHASE_CREATED") {
           const purchaseId = asTrimmedString((payload as any)?.purchaseId) ?? undefined;
@@ -722,12 +850,24 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           }
 
           // MT-6 Iteration 3: Dual-write products to catalog before purchase creation
+          // MT-10: Also collect items for catalog stock_balances increment
           const eventCreatedAt = asTrimmedString(raw?.createdAt);
+          const catalogPurchaseItems: Array<{ productId: string; quantity: number; unitCostMinor: number }> = [];
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
             if (barcode) {
               const itemName = asTrimmedString(item?.productName) ?? asTrimmedString(item?.name);
-              await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt });
+              const { productId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt });
+
+              // MT-10: Collect for stock_balances increment
+              const quantityRaw = asNumber(item?.quantity);
+              const purchasePriceRaw = asNumber(item?.purchasePriceMinor);
+              const unitCostRaw = purchasePriceRaw === null ? asNumber(item?.unitCostMinor) : purchasePriceRaw;
+              const quantity = quantityRaw === null ? 0 : Math.round(quantityRaw);
+              const unitCostMinor = unitCostRaw === null ? 0 : Math.round(unitCostRaw);
+              if (quantity > 0 && unitCostMinor > 0) {
+                catalogPurchaseItems.push({ productId, quantity, unitCostMinor });
+              }
             }
           }
 
@@ -763,6 +903,15 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             input: { purchaseId, supplierName, currency, items: normalizedItems },
             skipIfExists: true
           });
+
+          // MT-10: Update catalog stock_balances for dashboard consistency
+          if (catalogPurchaseItems.length > 0) {
+            await incrementCatalogStock(client, {
+              storeId,
+              purchaseId: purchaseId ?? randomUUID(),
+              items: catalogPurchaseItems
+            });
+          }
         } else if (type === "PAYMENT_CASH" || type === "PAYMENT_DUE") {
           const saleId = asTrimmedString((payload as any)?.saleId);
           const amountRaw = asNumber((payload as any)?.amountMinor);

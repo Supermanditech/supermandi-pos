@@ -168,7 +168,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
         [storeId, productId, newStock]
       );
 
-      // Insert ledger entry
+      // Insert ledger entry to catalog.inventory_ledger
       await client.query(
         `INSERT INTO catalog.inventory_ledger
          (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
@@ -184,6 +184,48 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
           buyPrice || null,
           supplierName || notes || null,
         ]
+      );
+
+      // MT-10: Dual-write to inventory.stock_balances for dashboard consistency
+      // Get current stock_balances entry
+      const balanceResult = await client.query(
+        `SELECT current_qty FROM inventory.stock_balances
+         WHERE store_id = $1 AND product_id = $2
+         FOR UPDATE`,
+        [storeId, productId]
+      );
+      const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+      const catalogStockAfter = catalogStockBefore + deltaQty;
+
+      // Insert ledger entry to inventory.inventory_ledger
+      const invLedgerId = randomUUID();
+      await client.query(
+        `INSERT INTO inventory.inventory_ledger
+         (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
+          stock_before, stock_after, unit_cost, source, notes)
+         VALUES ($1, $2, $3, $4, 'purchase_received', 'stock_in', $5, $6, $7, $8, 'POS_STOCK_IN', $9)`,
+        [
+          invLedgerId,
+          storeId,
+          productId,
+          deltaQty,
+          ledgerEntryId,
+          catalogStockBefore,
+          catalogStockAfter,
+          buyPrice || null,
+          supplierName || notes || null,
+        ]
+      );
+
+      // Upsert stock_balances
+      await client.query(
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (store_id, product_id) DO UPDATE SET
+           current_qty = inventory.stock_balances.current_qty + $5,
+           last_ledger_id = $4,
+           updated_at = NOW()`,
+        [storeId, productId, catalogStockAfter, invLedgerId, deltaQty]
       );
 
       itemsProcessed++;
