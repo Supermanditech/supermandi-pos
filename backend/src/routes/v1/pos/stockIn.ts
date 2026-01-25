@@ -28,8 +28,8 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
   const offsetNum = parseInt(offset as string, 10) || 0;
 
   try {
-    // Group inventory_ledger entries by reference_id where reference_type = 'stock_in'
-    let whereClause = `WHERE il.store_id = $1 AND il.reference_type = 'stock_in'`;
+    // Group inventory_ledger entries by reference_id where reference_type = 'po'
+    let whereClause = `WHERE il.store_id = $1 AND il.reference_type = 'po'`;
     const params: any[] = [storeId];
     let paramIdx = 2;
 
@@ -174,7 +174,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
         `INSERT INTO inventory.inventory_ledger
          (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
           stock_before, stock_after, unit_cost, notes)
-         VALUES ($1, $2, $3, 'purchase_received', 'stock_in', $4, $5, $6, $7, $8)`,
+         VALUES ($1, $2, $3, 'purchase_received', 'po', $4, $5, $6, $7, $8)`,
         [
           storeId,
           productId,
@@ -204,7 +204,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
         `INSERT INTO inventory.inventory_ledger
          (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
           stock_before, stock_after, unit_cost, source, notes)
-         VALUES ($1, $2, $3, $4, 'purchase_received', 'stock_in', $5, $6, $7, $8, 'POS_STOCK_IN', $9)`,
+         VALUES ($1, $2, $3, $4, 'purchase_received', 'po', $5, $6, $7, $8, 'POS_STOCK_IN', $9)`,
         [
           invLedgerId,
           storeId,
