@@ -100,13 +100,16 @@ ON CONFLICT DO NOTHING;
 
 -- =============================================================================
 -- 6. Update backward-compatibility view
+-- NOTE: Must DROP first to change column types (id UUID -> TEXT)
 -- =============================================================================
 
-CREATE OR REPLACE VIEW public.stores AS
+DROP VIEW IF EXISTS public.stores;
+CREATE VIEW public.stores AS
   SELECT
     id::TEXT as id,
     name,
     code,
+    store_code,
     phone,
     email,
     address_line1,
@@ -118,6 +121,9 @@ CREATE OR REPLACE VIEW public.stores AS
     currency,
     status,
     store_type,
+    COALESCE(active, status = 'active') as active,
+    upi_vpa,
+    scan_lookup_v2_enabled,
     created_at,
     updated_at
   FROM platform.stores;

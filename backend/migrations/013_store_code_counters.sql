@@ -102,22 +102,31 @@ SEQ: 3-digit sequence, resets daily per prefix';
 
 -- =============================================================================
 -- BACKFILL: Generate codes for any existing stores without proper format
+-- NOTE: Wrapped in exception handler for idempotency on re-run
 -- =============================================================================
 DO $$
 DECLARE
   r RECORD;
   new_code TEXT;
+  updated_count INTEGER := 0;
 BEGIN
   -- Only backfill stores that don't have the new format
   FOR r IN
     SELECT id, name, code
     FROM platform.stores
-    WHERE code !~ '^[A-Z]{2}[0-9]{6}-[0-9]{3}$'
+    WHERE code IS NULL OR code !~ '^[A-Z]{2}[0-9]{6}-[0-9]{3}$'
   LOOP
-    new_code := platform.generate_store_code(r.name);
-    UPDATE platform.stores SET code = new_code WHERE id = r.id;
-    RAISE NOTICE 'Updated store % (%) from % to %', r.id, r.name, r.code, new_code;
+    BEGIN
+      new_code := platform.generate_store_code(COALESCE(r.name, 'Store'));
+      UPDATE platform.stores SET code = new_code WHERE id = r.id;
+      updated_count := updated_count + 1;
+      RAISE NOTICE 'Updated store % (%) from % to %', r.id, r.name, r.code, new_code;
+    EXCEPTION WHEN OTHERS THEN
+      -- Skip stores that fail (already processed or edge case)
+      RAISE NOTICE 'Skipped store % (%): %', r.id, r.name, SQLERRM;
+    END;
   END LOOP;
+  RAISE NOTICE 'Migration 013: Updated % stores', updated_count;
 END;
 $$;
 

@@ -31,7 +31,7 @@ VALUES (
 ) ON CONFLICT (id) DO NOTHING;
 
 -- Link supplier to prelive store
-INSERT INTO supplier.supplier_store_links (store_id, supplier_id, is_primary, status, created_at)
+INSERT INTO supplier.supplier_store_links (store_id, supplier_id, is_preferred, status, created_at)
 VALUES (
   'a0000000-0000-0000-0000-000000000002',
   'b0000000-0000-0000-0000-000000000002',

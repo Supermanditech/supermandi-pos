@@ -51,9 +51,21 @@ END $$;
 --    been incorrectly set to false by the removed ensureSchema upi_vpa gate.
 -- =============================================================================
 
-UPDATE platform.stores
-SET active = TRUE
-WHERE status = 'active' AND (active IS NULL OR active = FALSE);
+-- Wrapped in DO block to check if column exists first
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'platform' AND table_name = 'stores' AND column_name = 'active'
+  ) THEN
+    UPDATE platform.stores
+    SET active = TRUE
+    WHERE status = 'active' AND (active IS NULL OR active = FALSE);
+    RAISE NOTICE 'Backfilled active column';
+  ELSE
+    RAISE NOTICE 'active column does not exist yet, skipping backfill';
+  END IF;
+END $$;
 
 -- =============================================================================
 -- 3. Recreate view with ALL columns needed by POS + SuperAdmin.

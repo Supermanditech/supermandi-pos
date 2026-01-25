@@ -189,9 +189,9 @@ CREATE INDEX IF NOT EXISTS translation_cache_key_idx
   ON catalog.translation_cache (cache_key);
 
 -- Expiry cleanup (find expired entries)
+-- NOTE: Cannot use WHERE expires_at < NOW() as NOW() is not immutable
 CREATE INDEX IF NOT EXISTS translation_cache_expires_idx
-  ON catalog.translation_cache (expires_at)
-  WHERE expires_at < NOW();
+  ON catalog.translation_cache (expires_at);
 
 -- =============================================================================
 -- SEED: Initial glossary terms for Hindi

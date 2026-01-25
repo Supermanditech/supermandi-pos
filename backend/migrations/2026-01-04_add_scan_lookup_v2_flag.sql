@@ -3,7 +3,8 @@
 
 BEGIN;
 
-ALTER TABLE stores
+-- NOTE: Use platform.stores (the actual table) not stores (the view)
+ALTER TABLE platform.stores
   ADD COLUMN IF NOT EXISTS scan_lookup_v2_enabled BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE pos_devices

@@ -38,34 +38,29 @@ COMMENT ON COLUMN pos_device_enrollments.revoked_at IS
 -- 2. Update demo enrollments to multi-use (9999 uses, 1 year expiry)
 -- ============================================================================
 
--- Update enrollments for stores with is_demo = TRUE
+-- Update enrollments for stores with demo-pattern code
+-- Use platform.stores (not stores view) to avoid UUID/TEXT type mismatch
 UPDATE pos_device_enrollments e
 SET
   max_uses = 9999,
   expires_at = GREATEST(expires_at, NOW() + INTERVAL '1 year')
-FROM stores s
-WHERE e.store_id = s.id
-  AND s.is_demo = TRUE
-  AND (e.max_uses IS NULL OR e.max_uses < 9999);
-
--- Update enrollments for stores with demo-pattern store_code
--- Patterns: DM*, QA*, TS*, ST* prefixes OR contains 'demo', 'test', 'qa-', 'staging'
-UPDATE pos_device_enrollments e
-SET
-  max_uses = 9999,
-  expires_at = GREATEST(expires_at, NOW() + INTERVAL '1 year')
-FROM stores s
+FROM platform.stores s
 WHERE e.store_id = s.id
   AND (e.max_uses IS NULL OR e.max_uses < 9999)
   AND (
     -- Prefix patterns (2-char uppercase)
-    UPPER(LEFT(COALESCE(s.store_code, s.code, ''), 2)) IN ('DM', 'QA', 'TS', 'ST')
+    UPPER(LEFT(COALESCE(s.code, ''), 2)) IN ('DM', 'QA', 'TS', 'ST', 'PR')
     OR
     -- Legacy patterns (case-insensitive contains)
-    LOWER(COALESCE(s.store_code, s.code, '')) LIKE '%demo%'
-    OR LOWER(COALESCE(s.store_code, s.code, '')) LIKE '%test%'
-    OR LOWER(COALESCE(s.store_code, s.code, '')) LIKE '%qa-%'
-    OR LOWER(COALESCE(s.store_code, s.code, '')) LIKE '%staging%'
+    LOWER(COALESCE(s.code, '')) LIKE '%demo%'
+    OR LOWER(COALESCE(s.code, '')) LIKE '%test%'
+    OR LOWER(COALESCE(s.code, '')) LIKE '%qa-%'
+    OR LOWER(COALESCE(s.code, '')) LIKE '%staging%'
+    OR LOWER(COALESCE(s.code, '')) LIKE '%prelive%'
+    -- Also match by store name
+    OR s.name ILIKE '%demo%'
+    OR s.name ILIKE '%prelive%'
+    OR s.name ILIKE '%test%'
   );
 
 -- ============================================================================

@@ -2,6 +2,7 @@
 -- Adds store_code column to platform.stores and updates VIEW
 -- GO-LIVE: Ensures backend routes can access store_code
 -- Safe: Idempotent, additive-only
+-- FIXED: DROP VIEW before recreating to allow column type changes
 
 BEGIN;
 
@@ -46,28 +47,6 @@ BEGIN
   END IF;
 END $$;
 
--- Update the public.stores VIEW to include store_code and active
-CREATE OR REPLACE VIEW public.stores AS
-  SELECT
-    id::TEXT as id,
-    name,
-    code,
-    store_code,
-    phone,
-    email,
-    address_line1,
-    address_line2,
-    city,
-    state,
-    pincode,
-    timezone,
-    currency,
-    status,
-    COALESCE(active, status = 'active') as active,
-    created_at,
-    updated_at
-  FROM platform.stores;
-
 -- Add upi_vpa column if not exists (referenced by ui-status)
 DO $$
 BEGIN
@@ -96,8 +75,12 @@ BEGIN
   END IF;
 END $$;
 
+-- CRITICAL: DROP VIEW first to allow column type changes (id UUID -> TEXT)
+DROP VIEW IF EXISTS public.stores;
+
 -- Recreate VIEW with all columns
-CREATE OR REPLACE VIEW public.stores AS
+-- Use COALESCE for columns that might not exist yet
+CREATE VIEW public.stores AS
   SELECT
     id::TEXT as id,
     name,
