@@ -408,7 +408,13 @@ export async function ensureStoreInventoryAvailability(params: {
   if (requiredByProduct.size === 0) return;
 
   const globalProductIds = Array.from(requiredByProduct.keys()).sort();
-  const res = await params.client.query(
+  const availableByProduct = new Map<string, number>();
+
+  // AUD-VM-033 FIX: Check stock from both legacy store_inventory AND catalog schema
+  // This bridges the two inventory systems during migration
+
+  // 1. First check legacy store_inventory
+  const legacyRes = await params.client.query(
     `
     SELECT global_product_id, available_qty
     FROM store_inventory
@@ -418,13 +424,39 @@ export async function ensureStoreInventoryAvailability(params: {
     [params.storeId, globalProductIds]
   );
 
-  const availableByProduct = new Map<string, number>();
-  for (const row of res.rows) {
+  for (const row of legacyRes.rows) {
     const productId = String(row.global_product_id);
     const qty = Number(row.available_qty ?? 0);
     availableByProduct.set(
       productId,
       Number.isFinite(qty) ? Math.max(0, Math.floor(qty)) : 0
+    );
+  }
+
+  // 2. Also check catalog schema stock (for products missing from legacy system)
+  // AUD-VM-033: Bridge catalog.store_products.current_stock and inventory.stock_balances
+  const catalogRes = await params.client.query(
+    `
+    SELECT sp.product_id::text AS product_id,
+           COALESCE(sb.current_qty, sp.current_stock, 0) AS available_qty
+    FROM catalog.store_products sp
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+    WHERE sp.store_id = $1
+      AND sp.product_id::text = ANY($2::text[])
+      AND sp.is_active = true
+    `,
+    [params.storeId, globalProductIds]
+  );
+
+  for (const row of catalogRes.rows) {
+    const productId = String(row.product_id);
+    const catalogQty = Number(row.available_qty ?? 0);
+    const existing = availableByProduct.get(productId) ?? 0;
+    // Use MAX of legacy and catalog stock (in case both exist)
+    availableByProduct.set(
+      productId,
+      Math.max(existing, Number.isFinite(catalogQty) ? Math.floor(catalogQty) : 0)
     );
   }
 
