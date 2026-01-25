@@ -782,6 +782,9 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   // Validation constants to prevent overflow and abuse
   const MAX_QUANTITY = 100000; // Maximum 100k items per line
   const MAX_PRICE_MINOR = 100000000; // Maximum 1 million INR per item
+  // AUD-059-B FIX: Name/barcode length bounds
+  const MAX_NAME_LENGTH = 200;
+  const MAX_BARCODE_LENGTH = 50;
 
   const invalidItem = cleanedItems.find(
     (item) =>
@@ -792,7 +795,10 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
       item.quantity > MAX_QUANTITY ||
       !Number.isFinite(item.priceMinor) ||
       item.priceMinor <= 0 ||
-      item.priceMinor > MAX_PRICE_MINOR
+      item.priceMinor > MAX_PRICE_MINOR ||
+      // AUD-059-B FIX: Validate name/barcode length bounds
+      (item.name && item.name.length > MAX_NAME_LENGTH) ||
+      (item.barcode && item.barcode.length > MAX_BARCODE_LENGTH)
   );
 
   if (invalidItem) {
@@ -1129,12 +1135,13 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, re
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
-    // Get sale and verify it's in PENDING status
+    // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+confirm race
     const saleRes = await client.query(
       `
       SELECT id, store_id, status, subtotal_minor, discount_minor, total_minor
       FROM sales
       WHERE id = $1 AND store_id = $2
+      FOR UPDATE
       `,
       [saleId, storeId]
     );
@@ -1235,14 +1242,18 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, async (req, res
 
   const client = await pool.connect();
   try {
+    // AUD-060-D FIX: Use SERIALIZABLE isolation + FOR UPDATE to prevent cancel+pay race
     await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
-    // Get sale and verify it exists
+    // Get sale and verify it exists WITH ROW LOCK
+    // AUD-060-D FIX: FOR UPDATE prevents concurrent payment from proceeding
     const saleRes = await client.query(
       `
       SELECT id, store_id, status
       FROM sales
       WHERE id = $1 AND store_id = $2
+      FOR UPDATE
       `,
       [saleId, storeId]
     );
@@ -1264,7 +1275,7 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, async (req, res
 
     // Update status to CANCELLED
     await client.query(
-      `UPDATE sales SET status = 'CANCELLED' WHERE id = $1`,
+      `UPDATE sales SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1`,
       [saleId]
     );
 
@@ -1392,12 +1403,13 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
 
     const saleId = String(payment.sale_id);
 
-    // Get sale and verify it's in PENDING status
+    // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
       SELECT id, store_id, status, total_minor
       FROM sales
       WHERE id = $1 AND store_id = $2
+      FOR UPDATE
       `,
       [saleId, storeId]
     );
@@ -1512,12 +1524,13 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
-    // Get sale and verify it's in PENDING status
+    // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
       SELECT id, store_id, status, total_minor
       FROM sales
       WHERE id = $1 AND store_id = $2
+      FOR UPDATE
       `,
       [saleId, storeId]
     );
@@ -1642,12 +1655,13 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
-    // Get sale and verify it's in PENDING status
+    // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
       SELECT id, store_id, status, total_minor
       FROM sales
       WHERE id = $1 AND store_id = $2
+      FOR UPDATE
       `,
       [saleId, storeId]
     );

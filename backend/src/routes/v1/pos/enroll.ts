@@ -7,6 +7,15 @@ import { isDemoStoreCode } from "../../../services/storeCodeService";
 // DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
 // BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
 
+// AUD-061-A FIX: Stricter burst rate limiter - 3 attempts per minute to prevent rapid-fire attacks
+const enrollmentBurstLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 3, // Maximum 3 enrollment attempts per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please wait a minute before trying again." } }
+});
+
 // Rate limiter for enrollment endpoint to prevent brute force attacks
 const enrollmentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -40,6 +49,9 @@ function generateDeviceToken(): string {
 const DEVICE_TYPES = new Set(["OEM_HANDHELD", "SUPMANDI_PHONE", "RETAILER_PHONE"]);
 const PRINTING_MODES = new Set(["DIRECT_ESC_POS", "SHARE_TO_PRINTER_APP", "NONE"]);
 
+// AUD-061-B FIX: Maximum devices per store to prevent abuse
+const MAX_DEVICES_PER_STORE = 20;
+
 function normalizeEnum(value: string | null): string | null {
   return value ? value.trim().toUpperCase() : null;
 }
@@ -55,7 +67,8 @@ function isMultiUseDemoAllowed(): boolean {
 }
 
 // POST /api/v1/pos/enroll (with rate limiting to prevent brute force)
-posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
+// AUD-061-A: Apply both burst limiter (3/min) and sustained limiter (10/15min)
+posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async (req, res) => {
   // DEV-071: Accept both field names for backward/forward compatibility during rollout
   // - Old clients send: enrollmentCode
   // - New clients send: code
@@ -272,6 +285,25 @@ posEnrollRouter.post("/enroll", enrollmentLimiter, async (req, res) => {
     // Log demo multi-use enrollment (for monitoring)
     if (isDemo && (usesExhausted || isExpired)) {
       console.log(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
+    }
+
+    // AUD-061-B FIX: Check device count per store (skip for re-enrollment and demo stores)
+    if (!existingDevice && !isDemo) {
+      const deviceCountRes = await client.query(
+        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1`,
+        [enrollment.store_id]
+      );
+      const currentDeviceCount = deviceCountRes.rows[0]?.count ?? 0;
+      if (currentDeviceCount >= MAX_DEVICES_PER_STORE) {
+        await client.query("ROLLBACK");
+        console.log(`[Enroll] REJECT 409: Store ${store.id} has reached device limit (${currentDeviceCount}/${MAX_DEVICES_PER_STORE})`);
+        return res.status(409).json({
+          error: {
+            code: "DEVICE_LIMIT_EXCEEDED",
+            message: `This store has reached the maximum number of devices (${MAX_DEVICES_PER_STORE}). Contact support to increase the limit.`
+          }
+        });
+      }
     }
 
     // Allow re-enrollment for existing devices even with expired/used code (for device recovery)

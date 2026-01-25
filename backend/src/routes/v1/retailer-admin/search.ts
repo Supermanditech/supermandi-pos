@@ -33,8 +33,13 @@ retailerAdminSearchRouter.get("/search", async (req: Request, res: Response) => 
   const { q, limit } = req.query;
   const searchTerm = typeof q === 'string' ? q.trim() : '';
 
+  // AUD-059-C FIX: Search query length bounds
+  const MAX_SEARCH_QUERY_LENGTH = 100;
   if (!searchTerm || searchTerm.length < 2) {
     return res.json({ success: true, data: { products: [], suppliers: [], barcodes: [] } });
+  }
+  if (searchTerm.length > MAX_SEARCH_QUERY_LENGTH) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Search query exceeds ${MAX_SEARCH_QUERY_LENGTH} characters` } });
   }
 
   const limitNum = Math.min(parseInt(limit as string, 10) || 10, 50);

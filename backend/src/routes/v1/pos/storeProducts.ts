@@ -112,11 +112,50 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
     brand
   } = req.body as Partial<CreateStoreProductInput>;
 
+  // AUD-059-A/B FIX: Input validation bounds
+  const MAX_PRICE_MINOR = 1000000000; // 10M INR = 1B paise
+  const MAX_NAME_LENGTH = 200;
+  const MAX_DESCRIPTION_LENGTH = 500;
+  const MAX_BRAND_LENGTH = 100;
+  const MAX_BARCODE_LENGTH = 50;
+
   // Basic validation
   if (typeof barcode !== "string" || barcode.trim().length === 0) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
       message: "Barcode is required"
+    });
+  }
+
+  // AUD-059-B FIX: Barcode length bounds
+  if (barcode.trim().length > MAX_BARCODE_LENGTH) {
+    return res.status(422).json({
+      error: "VALIDATION_ERROR",
+      message: `Barcode exceeds maximum length of ${MAX_BARCODE_LENGTH} characters`
+    });
+  }
+
+  // AUD-059-B FIX: Name length bounds
+  if (name && typeof name === "string" && name.length > MAX_NAME_LENGTH) {
+    return res.status(422).json({
+      error: "VALIDATION_ERROR",
+      message: `Product name exceeds maximum length of ${MAX_NAME_LENGTH} characters`
+    });
+  }
+
+  // AUD-059-B FIX: Description length bounds
+  if (description && typeof description === "string" && description.length > MAX_DESCRIPTION_LENGTH) {
+    return res.status(422).json({
+      error: "VALIDATION_ERROR",
+      message: `Description exceeds maximum length of ${MAX_DESCRIPTION_LENGTH} characters`
+    });
+  }
+
+  // AUD-059-B FIX: Brand length bounds
+  if (brand && typeof brand === "string" && brand.length > MAX_BRAND_LENGTH) {
+    return res.status(422).json({
+      error: "VALIDATION_ERROR",
+      message: `Brand exceeds maximum length of ${MAX_BRAND_LENGTH} characters`
     });
   }
 
@@ -126,6 +165,31 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
       return res.status(422).json({
         error: "VALIDATION_ERROR",
         message: "Sell price must be a positive number when provided"
+      });
+    }
+    // AUD-059-A FIX: Price upper bounds
+    if (sellPrice > MAX_PRICE_MINOR) {
+      return res.status(422).json({
+        error: "VALIDATION_ERROR",
+        message: "Sell price exceeds maximum allowed value"
+      });
+    }
+  }
+
+  // AUD-059-A FIX: purchasePrice and mrp bounds
+  if (purchasePrice !== undefined && purchasePrice !== null) {
+    if (typeof purchasePrice !== "number" || !Number.isFinite(purchasePrice) || purchasePrice < 0 || purchasePrice > MAX_PRICE_MINOR) {
+      return res.status(422).json({
+        error: "VALIDATION_ERROR",
+        message: "Purchase price must be a non-negative number within bounds"
+      });
+    }
+  }
+  if (mrp !== undefined && mrp !== null) {
+    if (typeof mrp !== "number" || !Number.isFinite(mrp) || mrp < 0 || mrp > MAX_PRICE_MINOR) {
+      return res.status(422).json({
+        error: "VALIDATION_ERROR",
+        message: "MRP must be a non-negative number within bounds"
       });
     }
   }
@@ -186,8 +250,13 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || "30"), 10) || 30, 1), 100);
   const includeZeroStock = req.query.includeZeroStock !== "false";
 
+  // AUD-059-C FIX: Search query length bounds (prevent DoS with huge queries)
+  const MAX_SEARCH_QUERY_LENGTH = 100;
   if (q.length < 2) {
     return res.json({ success: true, data: [], total: 0, context: "SELL" });
+  }
+  if (q.length > MAX_SEARCH_QUERY_LENGTH) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: `Search query exceeds maximum length of ${MAX_SEARCH_QUERY_LENGTH} characters` });
   }
 
   const pool = getPool();
@@ -614,8 +683,13 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
     sellPrice: number;
   };
 
+  // AUD-059-A FIX: Price bounds validation
+  const MAX_PRICE_MINOR = 1000000000; // 10M INR = 1B paise
   if (typeof sellPrice !== "number" || !Number.isFinite(sellPrice) || sellPrice <= 0) {
     return res.status(422).json({ error: "VALIDATION_ERROR", message: "sellPrice must be a positive number" });
+  }
+  if (sellPrice > MAX_PRICE_MINOR) {
+    return res.status(422).json({ error: "VALIDATION_ERROR", message: "sellPrice exceeds maximum allowed value" });
   }
 
   // ITER3-001: Accept any of the three identifiers

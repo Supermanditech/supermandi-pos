@@ -188,15 +188,51 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     categoryId, // RCAT-CAT-002: Store override for taxonomy_id
   } = req.body;
 
+  // AUD-059-A/B FIX: Input validation bounds
+  const MAX_PRICE_MINOR = 1000000000; // 10M INR = 1B paise
+  const MAX_NAME_LENGTH = 200;
+  const MAX_DESCRIPTION_LENGTH = 500;
+  const MAX_BRAND_LENGTH = 100;
+  const MAX_BARCODE_LENGTH = 50;
+
   // Validate required fields
   if (!name || !name.trim()) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Product name is required" } });
   }
+  // AUD-059-B FIX: Name length bounds
+  if (name.trim().length > MAX_NAME_LENGTH) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Product name exceeds ${MAX_NAME_LENGTH} characters` } });
+  }
+  // AUD-059-B FIX: Description length bounds
+  if (description && description.length > MAX_DESCRIPTION_LENGTH) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Description exceeds ${MAX_DESCRIPTION_LENGTH} characters` } });
+  }
+  // AUD-059-B FIX: Brand length bounds
+  if (brand && brand.length > MAX_BRAND_LENGTH) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Brand exceeds ${MAX_BRAND_LENGTH} characters` } });
+  }
+  // AUD-059-B FIX: Barcode length bounds
+  if (barcode && barcode.length > MAX_BARCODE_LENGTH) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Barcode exceeds ${MAX_BARCODE_LENGTH} characters` } });
+  }
+
   if (!sellPrice || sellPrice <= 0) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid sell price is required" } });
   }
+  // AUD-059-A FIX: Price upper bounds
+  if (sellPrice > MAX_PRICE_MINOR) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Sell price exceeds maximum allowed value" } });
+  }
   if (!purchasePrice || purchasePrice <= 0) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid purchase price is required for ledger tracking" } });
+  }
+  // AUD-059-A FIX: Price upper bounds
+  if (purchasePrice > MAX_PRICE_MINOR) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Purchase price exceeds maximum allowed value" } });
+  }
+  // AUD-059-A FIX: MRP bounds
+  if (mrp !== undefined && mrp !== null && (mrp < 0 || mrp > MAX_PRICE_MINOR)) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "MRP exceeds maximum allowed value" } });
   }
 
   const productMode = mode || 'PACKAGED';

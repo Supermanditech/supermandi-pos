@@ -189,7 +189,12 @@ reorderRouter.get("/stores/:storeId/reorder/policies", async (req, res) => {
     const params: any[] = [storeId];
     let paramIndex = 2;
 
+    // AUD-059-C FIX: Search query length bounds
+    const MAX_SEARCH_QUERY_LENGTH = 100;
     if (search && typeof search === "string" && search.trim().length > 0) {
+      if (search.trim().length > MAX_SEARCH_QUERY_LENGTH) {
+        return res.status(400).json({ success: false, error: { code: "VALIDATION_ERROR", message: `Search query exceeds ${MAX_SEARCH_QUERY_LENGTH} characters` } });
+      }
       // ITER2-005: Fixed column references - use display_name and join products for barcode
       whereClause += ` AND (COALESCE(sp.display_name, p.name) ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex})`;
       params.push(`%${search.trim()}%`);

@@ -84,8 +84,13 @@ posScanRouter.post("/products/price", requireDeviceToken, async (req, res) => {
     return res.status(400).json({ error: "productId is required" });
   }
 
+  // AUD-059-A FIX: Add price bounds validation (max 10M INR = 1B paise)
+  const MAX_PRICE_MINOR = 1000000000;
   if (typeof priceMinor !== "number" || !Number.isFinite(priceMinor) || priceMinor <= 0) {
     return res.status(400).json({ error: "priceMinor must be a positive number" });
+  }
+  if (priceMinor > MAX_PRICE_MINOR) {
+    return res.status(400).json({ error: "priceMinor exceeds maximum allowed value" });
   }
 
   const { storeId } = (req as any).posDevice as { storeId: string };
