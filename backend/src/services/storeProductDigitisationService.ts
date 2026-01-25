@@ -399,9 +399,22 @@ export async function createStoreProductFromDigitisation(
       INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, purchase_price, display_name, is_active, current_stock, taxonomy_id, metadata_updated_at, metadata_updated_by)
       VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'POS_APP')
       ON CONFLICT (store_id, product_id) DO UPDATE SET
-        sell_price = COALESCE(EXCLUDED.sell_price, catalog.store_products.sell_price),
-        mrp = COALESCE(EXCLUDED.mrp, catalog.store_products.mrp),
-        purchase_price = COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price),
+        -- AUD-025-B: Preserve user-edited metadata fields if metadata_updated_at is set
+        sell_price = CASE
+          WHEN catalog.store_products.metadata_updated_at IS NOT NULL
+          THEN catalog.store_products.sell_price
+          ELSE COALESCE(EXCLUDED.sell_price, catalog.store_products.sell_price)
+        END,
+        mrp = CASE
+          WHEN catalog.store_products.metadata_updated_at IS NOT NULL
+          THEN catalog.store_products.mrp
+          ELSE COALESCE(EXCLUDED.mrp, catalog.store_products.mrp)
+        END,
+        purchase_price = CASE
+          WHEN catalog.store_products.metadata_updated_at IS NOT NULL
+          THEN catalog.store_products.purchase_price
+          ELSE COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price)
+        END,
         display_name = CASE
           WHEN catalog.store_products.metadata_updated_at IS NOT NULL
           THEN catalog.store_products.display_name
