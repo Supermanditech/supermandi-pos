@@ -77,7 +77,7 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
 
     if (search && typeof search === 'string' && search.trim()) {
       const term = `%${search.trim()}%`;
-      whereClause += ` AND (p.name ILIKE $${paramIndex} OR sp.display_name ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex} OR p.brand ILIKE $${paramIndex})`;
+      whereClause += ` AND (p.name ILIKE $${paramIndex} OR sp.display_name ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex} OR COALESCE(sp.brand, p.brand) ILIKE $${paramIndex})`;
       params.push(term);
       paramIndex++;
     }
@@ -88,7 +88,7 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
         sp.product_id as "productId",
         COALESCE(sp.display_name, p.name) as name,
         p.description,
-        p.brand,
+        COALESCE(sp.brand, p.brand) as brand,
         p.category,
         p.unit,
         p.primary_barcode as "barcode",
@@ -434,14 +434,18 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     // SYNC-PRD-001: display_name is the authoritative name for both POS and Dashboard
     // "Product Name" from the form is the display name shown everywhere
     const resolvedDisplayName = name?.trim() || alias?.trim() || null;
+    // MT-8: Store-level brand override
+    const resolvedBrand = brand?.trim() || null;
 
-    // AUD-025-B: Build LWW guard clause if timestamp provided AND display_name is being updated
-    const lwwGuard = (resolvedDisplayName && validIncomingTimestamp)
-      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $14)`
+    // AUD-025-B: Build LWW guard clause if timestamp provided AND metadata field is being updated
+    const isMetadataUpdate = resolvedDisplayName || resolvedBrand;
+    const lwwGuard = (isMetadataUpdate && validIncomingTimestamp)
+      ? `AND (metadata_updated_at IS NULL OR metadata_updated_at < $15)`
       : "";
 
     // SYNC-PRD-001: Only update metadata_updated_at when display_name actually changes
     // AUD-025-B: Apply LWW guard when updating metadata with client timestamp
+    // MT-8: Include brand in store-level metadata updates
     const updateParams: any[] = [
       id,
       storeId,
@@ -456,8 +460,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
       categoryId || null,
       mode || null,
       resolvedDisplayName,
+      resolvedBrand,
     ];
-    if (resolvedDisplayName && validIncomingTimestamp) {
+    if (isMetadataUpdate && validIncomingTimestamp) {
       updateParams.push(validIncomingTimestamp.toISOString());
     }
 
@@ -474,8 +479,9 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
         taxonomy_id = COALESCE($11, taxonomy_id),
         product_mode = COALESCE($12, product_mode),
         display_name = COALESCE($13, display_name),
-        metadata_updated_at = CASE WHEN $13 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
-        metadata_updated_by = CASE WHEN $13 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
+        brand = COALESCE($14, brand),
+        metadata_updated_at = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN NOW() ELSE metadata_updated_at END,
+        metadata_updated_by = CASE WHEN $13 IS NOT NULL OR $14 IS NOT NULL THEN 'RETAILER_DASHBOARD' ELSE metadata_updated_by END,
         updated_at = NOW()
       WHERE id = $1 AND store_id = $2 ${lwwGuard}
       RETURNING id, metadata_updated_at`,
@@ -483,7 +489,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     );
 
     // AUD-025-B: Check for LWW conflict (0 rows updated when product exists)
-    if ((storeProductUpdate.rowCount ?? 0) === 0 && resolvedDisplayName && validIncomingTimestamp) {
+    if ((storeProductUpdate.rowCount ?? 0) === 0 && isMetadataUpdate && validIncomingTimestamp) {
       // Product exists (we checked earlier), so this must be a timestamp conflict
       const existsCheck = await client.query(
         `SELECT id, metadata_updated_at FROM catalog.store_products WHERE id = $1 AND store_id = $2 AND is_active = true`,
@@ -1035,7 +1041,7 @@ retailerAdminProductsRouter.get("/products/:id/sku.pdf", async (req: Request, re
     // SYNC-PRD-001: Use display_name (store override) for label, fallback to products.name
     const result = await pool.query(
       `SELECT
-        COALESCE(sp.display_name, p.name) as name, p.brand, p.unit,
+        COALESCE(sp.display_name, p.name) as name, COALESCE(sp.brand, p.brand) as brand, p.unit,
         sp.sell_price, sp.product_mode,
         COALESCE(spb.barcode, p.primary_barcode) as barcode
       FROM catalog.store_products sp

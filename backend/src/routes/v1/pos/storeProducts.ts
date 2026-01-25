@@ -229,13 +229,13 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
           sp.metadata_updated_at,
           COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
           p.name,
-          p.brand,
+          COALESCE(sp.brand, p.brand) as brand,
           p.category,
           p.unit,
           p.primary_barcode,
           spb.barcode as store_barcode,
           GREATEST(sp.updated_at, p.updated_at) as updated_at,
-          LOWER(TRIM(COALESCE(sp.display_name, p.name, ''))) || '::' || LOWER(TRIM(COALESCE(p.brand, ''))) as group_key,
+          LOWER(TRIM(COALESCE(sp.display_name, p.name, ''))) || '::' || LOWER(TRIM(COALESCE(sp.brand, p.brand, ''))) as group_key,
           (${scoreExpr}) as priority_score
         FROM catalog.store_products sp
         JOIN catalog.products p ON p.id = sp.product_id
@@ -320,7 +320,7 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
         sp.id as store_product_id,
         sp.product_id,
         p.name,
-        p.brand,
+        COALESCE(sp.brand, p.brand) as brand,
         p.category,
         p.unit,
         p.primary_barcode,
@@ -447,7 +447,7 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
           sp.product_mode,
           sp.metadata_updated_at,
           COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
-          p.brand,
+          COALESCE(sp.brand, p.brand) as brand,
           p.unit,
           p.category,
           GREATEST(sp.updated_at, p.updated_at) as updated_at
