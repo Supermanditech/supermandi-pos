@@ -237,13 +237,18 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
                                  transactionType === 'adjustment_out' ? 'adjustment' :
                                  transactionType;
 
-      // Insert single ledger entry with source tracking
+      // Insert single ledger entry
+      // AUD-074-A FIX: Removed non-existent 'source' column from INSERT
+      // Source info (POS_INVENTORY) is embedded in notes field for traceability
       const invLedgerId = randomUUID();
+      const sourceTrackedNotes = enrichedNotes
+        ? `[source=POS_INVENTORY] ${enrichedNotes}`
+        : '[source=POS_INVENTORY]';
       const ledgerResult = await client.query(
         `INSERT INTO inventory.inventory_ledger
          (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
-          stock_before, stock_after, unit_cost, source, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'POS_INVENTORY', $11)
+          stock_before, stock_after, unit_cost, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING
            id,
            store_id as "storeId",
@@ -266,7 +271,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
           stockBalancesBefore,
           stockBalancesAfter,
           unitCost || null,
-          enrichedNotes,  // ITER2-001: Use enriched notes with supplier info
+          sourceTrackedNotes,  // ITER2-001 + AUD-074-A: Notes with supplier info and source tracking
         ]
       );
 
@@ -420,5 +425,97 @@ posInventoryRouter.post("/inventory/stock/batch", requireDeviceToken, async (req
   } catch (error: any) {
     console.error("[InventoryStock] Batch error:", error.message);
     return res.status(500).json({ error: "Failed to get stock batch" });
+  }
+});
+
+// =============================================================================
+// AUD-074-B: STOCK STATEMENT ENDPOINT
+// Returns actual store inventory from stock_balances (not cached store_products)
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/inventory/statement
+ * Get complete stock statement with actual inventory from inventory.stock_balances
+ * AUD-074-B FIX: Returns ACTUAL store inventory, not supplier/cached stock
+ *
+ * Query params:
+ *   - limit: number (default 200, max 500)
+ *   - includeZeroStock: boolean (default true)
+ *
+ * Returns: { data: Array<{ id, productId, displayName, barcode, sellPrice, purchasePrice, currentStock, stockValue }> }
+ */
+posInventoryRouter.get("/inventory/statement", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  // Parse query params
+  const limitParam = Number(req.query.limit) || 200;
+  const limit = Math.min(Math.max(1, limitParam), 500); // Clamp to 1-500
+  const includeZeroStock = req.query.includeZeroStock !== "false";
+
+  try {
+    // AUD-074-B: Query from inventory.stock_balances (actual inventory)
+    // JOIN with catalog.store_products and catalog.products for product metadata
+    const result = await pool.query(
+      `SELECT
+        sp.id,
+        sp.product_id as "productId",
+        COALESCE(p.name, sp.display_name, 'Unknown') as "displayName",
+        spb.barcode,
+        sp.sell_price as "sellPrice",
+        sp.purchase_price as "purchasePrice",
+        COALESCE(sb.current_qty, sp.current_stock, 0) as "currentStock",
+        sp.mrp,
+        p.unit
+      FROM catalog.store_products sp
+      LEFT JOIN inventory.stock_balances sb
+        ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+      LEFT JOIN catalog.products p
+        ON p.id = sp.product_id
+      LEFT JOIN LATERAL (
+        SELECT barcode FROM catalog.store_product_barcodes
+        WHERE store_id = sp.store_id AND store_product_id = sp.id
+        LIMIT 1
+      ) spb ON true
+      WHERE sp.store_id = $1
+        AND sp.is_active = true
+        ${includeZeroStock ? '' : 'AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0'}
+      ORDER BY p.name, sp.display_name
+      LIMIT $2`,
+      [storeId, limit]
+    );
+
+    // Compute stock value for each item
+    const data = result.rows.map((row: any) => ({
+      id: row.id,
+      productId: row.productId,
+      displayName: row.displayName,
+      barcode: row.barcode || row.productId,
+      sellPrice: row.sellPrice ?? 0,
+      purchasePrice: row.purchasePrice ?? 0,
+      currentStock: row.currentStock ?? 0,
+      stockValue: (row.currentStock ?? 0) * (row.sellPrice ?? 0),
+      mrp: row.mrp ?? 0,
+      unit: row.unit || 'pcs',
+    }));
+
+    return res.json({
+      success: true,
+      data,
+      meta: {
+        count: data.length,
+        limit,
+        includeZeroStock,
+        source: 'inventory.stock_balances', // AUD-074-B: Indicate data source
+      },
+    });
+  } catch (error: any) {
+    console.error("[InventoryStatement] Error:", error.message);
+    return res.status(500).json({ error: "Failed to get stock statement" });
   }
 });

@@ -1085,10 +1085,12 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           const mode = type === "PAYMENT_CASH" ? "CASH" : "DUE";
           const status = mode === "CASH" ? "PAID" : "DUE";
 
-          // AUD-080-D FIX: Include amount_minor in dedup check to detect amount mismatches
-          // If payment exists with different amount, log warning and use the higher amount
+          // AUD-080-D COMPLETE FIX: Include amount_minor in exact match check, always update on mismatch
+          // The NEWER event is authoritative - if amounts differ, the later event is a correction
           const existingPayment = await client.query(
-            `SELECT id, amount_minor FROM payments WHERE sale_id = $1 AND mode = $2 AND status = $3 LIMIT 1`,
+            `SELECT id, amount_minor, created_at FROM payments
+             WHERE sale_id = $1 AND mode = $2 AND status = $3
+             LIMIT 1`,
             [saleId, mode, status]
           );
 
@@ -1106,18 +1108,17 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               saleId
             ]);
           } else {
-            // AUD-080-D FIX: Check for amount mismatch and update if new amount is higher
+            // AUD-080-D COMPLETE FIX: Always use the NEWER amount (this event is more recent)
+            // Later events take precedence since they may be corrections to earlier data
             const existingAmount = existingPayment.rows[0]?.amount_minor ?? 0;
             if (existingAmount !== amountMinor) {
-              console.warn(`[Sync] PAYMENT amount mismatch: sale_id=${saleId}, existing=${existingAmount}, new=${amountMinor}`);
-              // Use the higher amount (customer likely corrected underpayment)
-              if (amountMinor > existingAmount) {
-                await client.query(
-                  `UPDATE payments SET amount_minor = $1, updated_at = NOW() WHERE id = $2`,
-                  [amountMinor, existingPayment.rows[0].id]
-                );
-                console.log(`[Sync] Updated payment amount from ${existingAmount} to ${amountMinor}`);
-              }
+              console.warn(`[Sync] PAYMENT amount mismatch detected: sale_id=${saleId}, existing=${existingAmount}, new=${amountMinor}`);
+              // Always update to the new amount - newer events are authoritative corrections
+              await client.query(
+                `UPDATE payments SET amount_minor = $1, updated_at = NOW() WHERE id = $2`,
+                [amountMinor, existingPayment.rows[0].id]
+              );
+              console.log(`[Sync] Updated payment amount from ${existingAmount} to ${amountMinor} (newer event is authoritative)`);
             }
           }
         } else if (type === "COLLECTION_CREATED") {

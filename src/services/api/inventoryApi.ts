@@ -313,3 +313,68 @@ export async function getSalesHistory(
   });
   return result.entries;
 }
+
+// =============================================================================
+// AUD-074-B: STOCK STATEMENT (ACTUAL INVENTORY)
+// =============================================================================
+
+export interface StockStatementItem {
+  id: string;
+  productId: string;
+  displayName: string;
+  barcode: string;
+  sellPrice: number;
+  purchasePrice: number;
+  currentStock: number;
+  stockValue: number;
+  mrp: number;
+  unit: string;
+}
+
+export interface StockStatementResponse {
+  success: boolean;
+  data: StockStatementItem[];
+  meta: {
+    count: number;
+    limit: number;
+    includeZeroStock: boolean;
+    source: string;
+  };
+}
+
+/**
+ * Get complete stock statement with ACTUAL inventory from inventory.stock_balances
+ * AUD-074-B FIX: Returns real store inventory, not supplier/cached stock
+ * GO-LIVE-008
+ *
+ * @param limit - Maximum items to return (default 200, max 500)
+ * @param includeZeroStock - Include items with 0 stock (default true)
+ */
+export async function getStockStatement(
+  limit: number = 200,
+  includeZeroStock: boolean = true
+): Promise<StockStatementResponse> {
+  const storeId = await getDeviceStoreId();
+  if (!storeId) {
+    throw new Error("Store not configured");
+  }
+
+  if (!(await isOnline())) {
+    // Return empty for offline mode
+    return {
+      success: false,
+      data: [],
+      meta: { count: 0, limit, includeZeroStock, source: 'offline' },
+    };
+  }
+
+  const query = new URLSearchParams();
+  query.set("limit", String(Math.min(limit, 500)));
+  query.set("includeZeroStock", String(includeZeroStock));
+
+  const response = await apiClient.get<StockStatementResponse>(
+    `/api/v1/pos/inventory/statement?${query.toString()}`
+  );
+
+  return response;
+}

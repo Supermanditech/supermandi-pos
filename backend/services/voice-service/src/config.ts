@@ -1,4 +1,5 @@
 // Voice Service Configuration - VOICE-003
+// AUD-076-D: Migrated from OpenAI to Claude/Anthropic API
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
   return process.env[key] || defaultValue;
@@ -16,11 +17,18 @@ export const config = {
   port: getEnvIntOrDefault('VOICE_SERVICE_PORT', 3008),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
-  // OpenAI configuration
+  // AUD-076-D: Claude/Anthropic API configuration (replaces OpenAI)
+  anthropic: {
+    apiKey: getEnvOrDefault('ANTHROPIC_API_KEY', ''),
+    model: getEnvOrDefault('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
+    language: getEnvOrDefault('VOICE_LANGUAGE', 'hi'), // Hindi primary
+  },
+
+  // Legacy OpenAI config (deprecated - kept for backwards compatibility)
   openai: {
-    apiKey: getEnvOrDefault('OPENAI_API_KEY', ''),
-    model: getEnvOrDefault('OPENAI_STT_MODEL', 'whisper-1'),
-    language: getEnvOrDefault('OPENAI_STT_LANGUAGE', 'hi'), // Hindi primary
+    apiKey: '', // AUD-076-D: Disabled - use anthropic.apiKey instead
+    model: 'whisper-1',
+    language: 'hi',
   },
 
   // Database configuration (uses shared pool from @supermandi/common)

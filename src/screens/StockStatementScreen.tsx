@@ -14,8 +14,8 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getCategoryProducts, type CategoryProduct, getStockStatusLabel, getStockStatusColor, type StockStatus } from "../services/api/catalogApi";
-import { getDeviceStoreId } from "../services/deviceSession";
+import { getStockStatusLabel, getStockStatusColor, type StockStatus } from "../services/api/catalogApi";
+import { getStockStatement, type StockStatementItem } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
 
@@ -87,34 +87,33 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
     setError(null);
 
     try {
-      const storeId = await getDeviceStoreId();
-      if (!storeId) {
-        throw new Error("Store not configured");
+      // AUD-074-B FIX: Use getStockStatement to get ACTUAL inventory from inventory.stock_balances
+      // This returns real transactional inventory, not cached/supplier stock
+      const response = await getStockStatement(200, true);
+
+      if (!response.success && response.data.length === 0) {
+        throw new Error("Failed to load inventory data");
       }
 
-      // MED-003 FIX: Use getCategoryProducts to get STORE stock, not supplier stock
-      // The "all" category returns all products with store's current_stock
-      const response = await getCategoryProducts(storeId, "all", { limit: 200, includeZeroStock: true });
-
-      // Compute stock status from store's currentStock
+      // Compute stock status from actual currentStock
       const computeStockStatus = (qty: number): StockStatus => {
         if (qty <= 0) return "out_of_stock";
         if (qty < 10) return "low_stock";
         return "in_stock";
       };
 
-      const items: StockItem[] = response.data.map((product: CategoryProduct) => {
+      const items: StockItem[] = response.data.map((product: StockStatementItem) => {
         const stockQty = product.currentStock ?? 0;
         const unitPrice = product.sellPrice ?? 0;
         return {
           id: product.id,
           name: product.displayName,
-          barcode: product.barcode ?? product.productId ?? product.id,
-          category: "Uncategorized", // CategoryProduct doesn't have category
+          barcode: product.barcode || product.productId || product.id,
+          category: "Uncategorized",
           stockStatus: computeStockStatus(stockQty),
           stockQty,
           unitPrice,
-          stockValue: stockQty * unitPrice,
+          stockValue: product.stockValue ?? (stockQty * unitPrice),
         };
       });
 

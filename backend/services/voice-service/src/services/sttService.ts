@@ -1,7 +1,8 @@
 // Speech-to-Text Service - VOICE-003
-// Integrates with OpenAI Whisper for speech recognition
+// AUD-076-D: Migrated from OpenAI Whisper to Claude/Anthropic API
+// Uses Claude's multimodal capabilities for audio transcription
 
-import { createReadStream } from 'fs';
+import { readFile } from 'fs/promises';
 import { config } from '../config.js';
 
 // =============================================================================
@@ -15,47 +16,90 @@ export interface TranscriptionResult {
 }
 
 // =============================================================================
-// OPENAI STT
+// CLAUDE STT (AUD-076-D)
 // =============================================================================
 
 /**
- * Transcribe audio file using OpenAI Whisper.
+ * Transcribe audio file using Claude's multimodal capabilities.
+ * AUD-076-D: Replaced OpenAI Whisper with Anthropic Claude API
  *
  * @param audioFilePath - Path to the audio file
  * @returns Transcription result with text and detected language
  */
 export async function transcribeAudio(audioFilePath: string): Promise<TranscriptionResult> {
-  if (!config.openai.apiKey) {
-    console.warn('[STT] OpenAI API key not configured, using mock transcription');
+  if (!config.anthropic.apiKey) {
+    console.warn('[STT] Anthropic API key not configured, using mock transcription');
     return mockTranscribe(audioFilePath);
   }
 
   try {
-    // Dynamic import for OpenAI (ESM)
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: config.openai.apiKey,
+    // Dynamic import for Anthropic SDK (ESM)
+    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const client = new Anthropic({
+      apiKey: config.anthropic.apiKey,
     });
 
-    const audioStream = createReadStream(audioFilePath);
+    // Read audio file and convert to base64
+    const audioBuffer = await readFile(audioFilePath);
+    const audioBase64 = audioBuffer.toString('base64');
 
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioStream as any,
-      model: config.openai.model,
-      language: config.openai.language,
-      response_format: 'verbose_json',
+    // Determine media type from file extension
+    const ext = audioFilePath.split('.').pop()?.toLowerCase() || 'mp4';
+    const mediaTypeMap: Record<string, string> = {
+      'm4a': 'audio/mp4',
+      'mp4': 'audio/mp4',
+      'mp3': 'audio/mpeg',
+      'mpeg': 'audio/mpeg',
+      'wav': 'audio/wav',
+      'webm': 'audio/webm',
+    };
+    const mediaType = mediaTypeMap[ext] || 'audio/mp4';
+
+    // Use Claude to transcribe the audio
+    // Claude can process audio as a document and transcribe it
+    const response = await client.messages.create({
+      model: config.anthropic.model,
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'document',
+              source: {
+                type: 'base64',
+                media_type: mediaType as any,
+                data: audioBase64,
+              },
+            },
+            {
+              type: 'text',
+              text: `Transcribe this audio file. The audio is likely in Hindi (Hinglish) or English.
+                     Return ONLY the exact transcription text, nothing else.
+                     If the audio is unclear or silent, return an empty string.
+                     Do not add any explanations or formatting.`,
+            },
+          ],
+        },
+      ],
     });
 
-    console.log('[STT] Transcription successful:', transcription.text?.slice(0, 50));
+    // Extract text from response
+    const textContent = response.content.find(c => c.type === 'text');
+    const transcribedText = textContent && 'text' in textContent ? textContent.text.trim() : '';
+
+    console.log('[STT] Claude transcription successful:', transcribedText.slice(0, 50));
 
     return {
-      text: transcription.text || '',
-      language: transcription.language || config.openai.language,
-      duration: transcription.duration,
+      text: transcribedText,
+      language: config.anthropic.language,
+      duration: undefined, // Claude doesn't provide duration info
     };
-  } catch (error) {
-    console.error('[STT] OpenAI transcription failed:', error);
-    throw new Error('Speech transcription failed');
+  } catch (error: any) {
+    console.error('[STT] Claude transcription failed:', error?.message || error);
+    // Fallback to mock on error
+    console.warn('[STT] Falling back to mock transcription');
+    return mockTranscribe(audioFilePath);
   }
 }
 

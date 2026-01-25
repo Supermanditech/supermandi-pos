@@ -300,10 +300,14 @@ export async function ensureCoreSchema(): Promise<void> {
       android_version TEXT NULL,
       app_version TEXT NULL,
       printing_mode TEXT NULL,
+      device_fingerprint TEXT NULL,
       last_seen_online TIMESTAMPTZ NULL,
       last_sync_at TIMESTAMPTZ NULL,
       pending_outbox_count INTEGER NOT NULL DEFAULT 0,
       scan_lookup_v2_enabled BOOLEAN NULL,
+      re_enrolled BOOLEAN NOT NULL DEFAULT FALSE,
+      re_enrolled_at TIMESTAMPTZ NULL,
+      inventory_sync_status TEXT DEFAULT 'synced',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );

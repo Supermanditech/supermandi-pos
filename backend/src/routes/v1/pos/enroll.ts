@@ -315,6 +315,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       try {
         if (existingDevice) {
           // Update existing device with new token and metadata
+          // AUD-075-B FIX: Persist re_enrolled flag when device is re-enrolled
           await client.query(
             `
             UPDATE pos_devices
@@ -328,7 +329,9 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
                 printing_mode = $8,
                 device_fingerprint = COALESCE($9, device_fingerprint),
                 last_seen_online = NOW(),
-                updated_at = NOW()
+                updated_at = NOW(),
+                re_enrolled = true,
+                re_enrolled_at = NOW()
             WHERE id = $10
             `,
             [

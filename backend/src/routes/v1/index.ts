@@ -32,8 +32,12 @@ import { retailerAdminCsvImportRouter } from "./retailer-admin/csvImport";
 import { retailerAdminSearchRouter } from "./retailer-admin/search";
 import { retailerComplianceRouter } from "./retailer-admin/compliance";
 import { demoRouter } from "./demo";
+import { microserviceHealthRouter } from "./microserviceHealth";
 
 export const v1Router = Router();
+
+// AUD-076-A: Microservice health endpoints (must be before service-specific routers)
+v1Router.use("/", microserviceHealthRouter);
 
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);
