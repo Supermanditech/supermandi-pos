@@ -48,6 +48,10 @@ function buildBillRef(): string {
   return `${ts.slice(-8)}${rand}`; // 8-digit timestamp + 5-char random = 13 chars
 }
 
+// ============================================================================
+// LEGACY FUNCTION - Used by SALE_CREATED for backward compatibility
+// TODO: Migrate SALE_CREATED to catalog schema in MT-6
+// ============================================================================
 async function ensureProductByBarcode(
   client: PoolClient,
   params: {
@@ -97,6 +101,162 @@ async function ensureProductByBarcode(
 
   return variantId;
 }
+
+// ============================================================================
+// CATALOG FUNCTIONS - MT-3: Write to catalog schema instead of legacy tables
+// ============================================================================
+
+/**
+ * Ensure product exists in catalog schema for offline sync
+ * MT-3: Writes to catalog.products, catalog.store_products, catalog.store_product_barcodes
+ * Uses LWW timestamp from event.createdAt for conflict resolution
+ */
+async function ensureCatalogProduct(
+  client: PoolClient,
+  params: {
+    storeId: string;
+    barcode: string;
+    name?: string | null;
+    eventCreatedAt?: string | null; // ISO timestamp from offline event for LWW
+  }
+): Promise<{ productId: string; storeProductId: string }> {
+  const normalizedBarcode = params.barcode.trim();
+  const productName = params.name?.trim() || `Item ${normalizedBarcode.slice(-4) || normalizedBarcode}`;
+
+  // Parse event timestamp for LWW (when the offline event was created)
+  const eventTimestamp = params.eventCreatedAt ? new Date(params.eventCreatedAt) : null;
+  const validEventTimestamp = eventTimestamp && !isNaN(eventTimestamp.getTime()) ? eventTimestamp : null;
+
+  // Step 1: Check if barcode already exists in store_product_barcodes for this store
+  const existingMapping = await client.query(
+    `SELECT sp.id AS store_product_id, sp.product_id
+     FROM catalog.store_product_barcodes spb
+     JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+     WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true
+     LIMIT 1`,
+    [params.storeId, normalizedBarcode]
+  );
+
+  if (existingMapping.rows[0]) {
+    // Already exists - return existing IDs
+    return {
+      productId: existingMapping.rows[0].product_id,
+      storeProductId: existingMapping.rows[0].store_product_id
+    };
+  }
+
+  // Step 2: Check if barcode exists in catalog.products (global catalog)
+  let productId: string;
+  const existingProduct = await client.query(
+    `SELECT id FROM catalog.products WHERE primary_barcode = $1 LIMIT 1`,
+    [normalizedBarcode]
+  );
+
+  if (existingProduct.rows[0]) {
+    productId = existingProduct.rows[0].id;
+  } else {
+    // Create new catalog.products entry (capture RETURNING id for ON CONFLICT case)
+    const newProductId = randomUUID();
+    const insertResult = await client.query(
+      `INSERT INTO catalog.products (id, name, primary_barcode, is_active)
+       VALUES ($1, $2, $3, true)
+       ON CONFLICT (primary_barcode) WHERE primary_barcode IS NOT NULL
+       DO UPDATE SET updated_at = NOW()
+       RETURNING id`,
+      [newProductId, productName, normalizedBarcode]
+    );
+    // Use returned id (works for both INSERT and ON CONFLICT cases)
+    productId = insertResult.rows[0]?.id || newProductId;
+  }
+
+  // Step 3: Auto-assign taxonomy based on product name
+  const taxonomyResult = await client.query(
+    `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
+    [productName]
+  );
+  const taxonomyId = taxonomyResult.rows[0]?.taxonomy_id || null;
+
+  // Step 4: Create or update catalog.store_products with LWW guard
+  const storeProductId = randomUUID();
+
+  // MT-3: Use event timestamp for metadata_updated_at (LWW from offline event)
+  // If no event timestamp, use NOW()
+  const metadataTimestamp = validEventTimestamp ? validEventTimestamp.toISOString() : null;
+
+  await client.query(
+    `INSERT INTO catalog.store_products (
+       id, store_id, product_id, display_name, is_active, current_stock, taxonomy_id,
+       metadata_updated_at, metadata_updated_by, digitisation_mode
+     )
+     VALUES ($1, $2, $3, $4, true, 0, $5, COALESCE($6::timestamptz, NOW()), 'POS_SYNC', 'offline')
+     ON CONFLICT (store_id, product_id) DO UPDATE SET
+       display_name = CASE
+         WHEN catalog.store_products.metadata_updated_at IS NULL
+              OR ($6::timestamptz IS NOT NULL AND catalog.store_products.metadata_updated_at < $6::timestamptz)
+         THEN COALESCE(EXCLUDED.display_name, catalog.store_products.display_name)
+         ELSE catalog.store_products.display_name
+       END,
+       taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
+       is_active = true,
+       updated_at = NOW()`,
+    [storeProductId, params.storeId, productId, productName, taxonomyId, metadataTimestamp]
+  );
+
+  // Get the actual store_product_id (might be existing if ON CONFLICT triggered)
+  const storeProductResult = await client.query(
+    `SELECT id FROM catalog.store_products WHERE store_id = $1 AND product_id = $2`,
+    [params.storeId, productId]
+  );
+  const actualStoreProductId = storeProductResult.rows[0]?.id || storeProductId;
+
+  // Step 5: Create store-scoped barcode binding
+  await client.query(
+    `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+     VALUES ($1, $2, $3, 'retailer_digitisation')
+     ON CONFLICT (store_id, barcode) DO NOTHING`,
+    [params.storeId, actualStoreProductId, normalizedBarcode]
+  );
+
+  return { productId, storeProductId: actualStoreProductId };
+}
+
+/**
+ * Update sell price in catalog.store_products with LWW
+ * MT-3 Iteration 2: Writes to catalog schema instead of retailer_variants
+ */
+async function upsertCatalogPrice(
+  client: PoolClient,
+  params: {
+    storeId: string;
+    storeProductId: string;
+    priceMinor: number;
+    eventCreatedAt?: string | null; // LWW timestamp from offline event
+  }
+): Promise<void> {
+  // Parse event timestamp for LWW
+  const eventTimestamp = params.eventCreatedAt ? new Date(params.eventCreatedAt) : null;
+  const validEventTimestamp = eventTimestamp && !isNaN(eventTimestamp.getTime()) ? eventTimestamp : null;
+  const metadataTimestamp = validEventTimestamp ? validEventTimestamp.toISOString() : null;
+
+  // Update sell_price with LWW guard
+  await client.query(
+    `UPDATE catalog.store_products
+     SET sell_price = CASE
+           WHEN metadata_updated_at IS NULL
+                OR ($3::timestamptz IS NOT NULL AND metadata_updated_at < $3::timestamptz)
+           THEN $2
+           ELSE sell_price
+         END,
+         updated_at = NOW()
+     WHERE id = $1`,
+    [params.storeProductId, params.priceMinor, metadataTimestamp]
+  );
+}
+
+// ============================================================================
+// LEGACY FUNCTIONS - Used by SALE_CREATED for backward compatibility
+// TODO: Migrate SALE_CREATED to catalog schema in MT-6
+// ============================================================================
 
 async function ensureRetailerVariant(
   client: PoolClient,
@@ -251,23 +411,26 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
         }
 
         if (type === "PRODUCT_UPSERT") {
+          // MT-3: Write to catalog schema instead of legacy tables
           const barcode = asTrimmedString((payload as any)?.barcode);
           const name = asTrimmedString((payload as any)?.name);
-          const currency = asTrimmedString((payload as any)?.currency) ?? "INR";
+          const eventCreatedAt = asTrimmedString(raw?.createdAt); // LWW timestamp from offline event
           if (!barcode) {
             throw new Error("barcode is required");
           }
-          const variantId = await ensureProductByBarcode(client, { barcode, name, currency });
-          await ensureRetailerVariant(client, { storeId, variantId });
+          await ensureCatalogProduct(client, { storeId, barcode, name, eventCreatedAt });
         } else if (type === "PRODUCT_PRICE_SET") {
+          // MT-3 Iteration 2: Write to catalog schema instead of legacy tables
           const barcode = asTrimmedString((payload as any)?.barcode);
           const priceMinorRaw = asNumber((payload as any)?.priceMinor);
           const priceMinor = priceMinorRaw === null ? null : Math.round(priceMinorRaw);
+          const eventCreatedAt = asTrimmedString(raw?.createdAt); // LWW timestamp from offline event
           if (!barcode || priceMinor === null || priceMinor <= 0) {
             throw new Error("invalid price");
           }
-          const variantId = await ensureProductByBarcode(client, { barcode, name: null, currency: "INR" });
-          await upsertRetailerPrice(client, { storeId, variantId, priceMinor });
+          // Ensure product exists in catalog, then update price
+          const { storeProductId } = await ensureCatalogProduct(client, { storeId, barcode, name: null, eventCreatedAt });
+          await upsertCatalogPrice(client, { storeId, storeProductId, priceMinor, eventCreatedAt });
         } else if (type === "SALE_CREATED") {
           const saleId = asTrimmedString((payload as any)?.saleId);
           const offlineReceiptRef =
