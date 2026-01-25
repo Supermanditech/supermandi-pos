@@ -79,7 +79,8 @@ INSERT INTO catalog.products (id, name, primary_barcode, category, unit, created
 -- Test barcode from user scan
 ('c0000000-0000-0000-0000-000000000031', 'Test Product 5004', '5004#001000', 'Test', 'piece', NOW())
 
-ON CONFLICT (primary_barcode) DO NOTHING;
+-- Use ON CONFLICT (id) since primary_barcode has only a partial unique index
+ON CONFLICT (id) DO NOTHING;
 
 -- =============================================================================
 -- 3. PRODUCT BARCODES (add to barcode lookup table)
