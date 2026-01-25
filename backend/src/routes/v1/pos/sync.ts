@@ -502,7 +502,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
                   computedSubtotal,
                   discountMinor,
                   computedTotal,
-                  "CREATED",
+                  "completed",
                   createdAt,
                   currency
                 ]
