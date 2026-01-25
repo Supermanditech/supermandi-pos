@@ -193,7 +193,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
 
       const newStock = Math.max(0, currentStock + deltaQty);
 
-      // Update stock
+      // Update store_products stock
       await client.query(
         `UPDATE catalog.store_products
          SET current_stock = $3, updated_at = NOW()
@@ -201,11 +201,28 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
         [status.storeId, productId, newStock]
       );
 
-      // Insert ledger entry to inventory.inventory_ledger
+      // Get current stock_balances for accurate ledger entry
+      const balanceResult = await client.query(
+        `SELECT current_qty FROM inventory.stock_balances
+         WHERE store_id = $1 AND product_id = $2
+         FOR UPDATE`,
+        [status.storeId, productId]
+      );
+      const stockBalancesBefore = balanceResult.rows[0]?.current_qty ?? 0;
+      const stockBalancesAfter = Math.max(0, stockBalancesBefore + deltaQty);
+
+      // Map transaction type for inventory schema check constraint
+      const invTransactionType = transactionType === 'adjustment_in' ? 'adjustment' :
+                                 transactionType === 'adjustment_out' ? 'adjustment' :
+                                 transactionType;
+
+      // Insert single ledger entry with source tracking
+      const invLedgerId = randomUUID();
       const ledgerResult = await client.query(
         `INSERT INTO inventory.inventory_ledger
-         (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id, stock_before, stock_after, unit_cost, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
+          stock_before, stock_after, unit_cost, source, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'POS_INVENTORY', $11)
          RETURNING
            id,
            store_id as "storeId",
@@ -218,43 +235,6 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
            stock_after as "stockAfter",
            created_at as "createdAt"`,
         [
-          status.storeId,
-          productId,
-          deltaQty,
-          transactionType,
-          referenceType || null,
-          referenceId || null,
-          currentStock,
-          newStock,
-          unitCost || null,
-          notes || null,
-        ]
-      );
-
-      // MT-10: Dual-write to inventory.stock_balances for dashboard consistency
-      // Get current stock_balances entry
-      const balanceResult = await client.query(
-        `SELECT current_qty FROM inventory.stock_balances
-         WHERE store_id = $1 AND product_id = $2
-         FOR UPDATE`,
-        [status.storeId, productId]
-      );
-      const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
-      const catalogStockAfter = Math.max(0, catalogStockBefore + deltaQty);
-
-      // Map transaction type for inventory schema
-      const invTransactionType = transactionType === 'adjustment_in' ? 'adjustment' :
-                                 transactionType === 'adjustment_out' ? 'adjustment' :
-                                 transactionType;
-
-      // Insert ledger entry to inventory.inventory_ledger
-      const invLedgerId = randomUUID();
-      await client.query(
-        `INSERT INTO inventory.inventory_ledger
-         (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
-          stock_before, stock_after, unit_cost, source, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'POS_INVENTORY', $11)`,
-        [
           invLedgerId,
           status.storeId,
           productId,
@@ -262,8 +242,8 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
           invTransactionType,
           referenceType || 'manual',
           referenceId || null,
-          catalogStockBefore,
-          catalogStockAfter,
+          stockBalancesBefore,
+          stockBalancesAfter,
           unitCost || null,
           notes || null,
         ]
@@ -277,7 +257,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
            current_qty = GREATEST(0, inventory.stock_balances.current_qty + $5),
            last_ledger_id = $4,
            updated_at = NOW()`,
-        [status.storeId, productId, catalogStockAfter, invLedgerId, deltaQty]
+        [status.storeId, productId, stockBalancesAfter, invLedgerId, deltaQty]
       );
 
       entries.push(ledgerResult.rows[0]);

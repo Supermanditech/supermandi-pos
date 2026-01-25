@@ -161,7 +161,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
       const deltaQty = Math.abs(quantity);
       const newStock = currentStock + deltaQty;
 
-      // Update stock
+      // Update store_products stock
       await client.query(
         `UPDATE catalog.store_products
          SET current_stock = $3, updated_at = NOW()
@@ -169,36 +169,17 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
         [storeId, productId, newStock]
       );
 
-      // Insert ledger entry to inventory.inventory_ledger
-      await client.query(
-        `INSERT INTO inventory.inventory_ledger
-         (store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
-          stock_before, stock_after, unit_cost, notes)
-         VALUES ($1, $2, $3, 'purchase_received', 'po', $4, $5, $6, $7, $8)`,
-        [
-          storeId,
-          productId,
-          deltaQty,
-          ledgerEntryId,
-          currentStock,
-          newStock,
-          buyPrice || null,
-          supplierName || notes || null,
-        ]
-      );
-
-      // MT-10: Dual-write to inventory.stock_balances for dashboard consistency
-      // Get current stock_balances entry
+      // Get current stock_balances for accurate ledger entry
       const balanceResult = await client.query(
         `SELECT current_qty FROM inventory.stock_balances
          WHERE store_id = $1 AND product_id = $2
          FOR UPDATE`,
         [storeId, productId]
       );
-      const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
-      const catalogStockAfter = catalogStockBefore + deltaQty;
+      const stockBalancesBefore = balanceResult.rows[0]?.current_qty ?? 0;
+      const stockBalancesAfter = stockBalancesBefore + deltaQty;
 
-      // Insert ledger entry to inventory.inventory_ledger
+      // Insert single ledger entry to inventory.inventory_ledger with source tracking
       const invLedgerId = randomUUID();
       await client.query(
         `INSERT INTO inventory.inventory_ledger
@@ -211,8 +192,8 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
           productId,
           deltaQty,
           ledgerEntryId,
-          catalogStockBefore,
-          catalogStockAfter,
+          stockBalancesBefore,
+          stockBalancesAfter,
           buyPrice || null,
           supplierName || notes || null,
         ]
@@ -226,7 +207,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res:
            current_qty = inventory.stock_balances.current_qty + $5,
            last_ledger_id = $4,
            updated_at = NOW()`,
-        [storeId, productId, catalogStockAfter, invLedgerId, deltaQty]
+        [storeId, productId, stockBalancesAfter, invLedgerId, deltaQty]
       );
 
       itemsProcessed++;
