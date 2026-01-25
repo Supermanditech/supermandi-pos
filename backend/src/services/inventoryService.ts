@@ -496,7 +496,7 @@ export async function ensureSaleAvailability(params: {
     LEFT JOIN bulk_inventory bi
       ON bi.store_id = $1 AND bi.product_id = v.product_id
     WHERE v.id = ANY($2::text[])
-    FOR UPDATE OF bi
+    FOR UPDATE OF v, rv
     `,
     [storeId, variantIds]
   );
