@@ -77,7 +77,8 @@ export function AddStoreProductModal({
     setInitialStock("1");
     setUnit(prefill?.unit || "pcs");
     setVariant(prefill?.variant || "");
-    setPackSize(prefill?.packSize || "");
+    // CONTRACT-LOCK-STORE-PROD-001: packSize is now number | null from backend
+    setPackSize(prefill?.packSize != null ? String(prefill.packSize) : "");
     setDescription(prefill?.description || "");
     setStockUnknown(false);
     setError(null);
@@ -175,7 +176,8 @@ export function AddStoreProductModal({
         initialStockQty: stockQty,
         unit,
         variant: variant.trim() || undefined,
-        packSize: packSize.trim() || undefined,
+        // CONTRACT-LOCK-STORE-PROD-001: packSize expects number, convert from string
+        packSize: packSize.trim() ? parseInt(packSize.trim(), 10) || undefined : undefined,
         brand: request.prefill?.brand,
         description: description.trim() || request.prefill?.description
       });

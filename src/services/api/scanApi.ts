@@ -36,7 +36,7 @@ type BackendStoreProduct = {
   description: string;
   imageUrl: string;
   variant: string;
-  packSize: string;
+  packSize: number | null; // CONTRACT-LOCK-STORE-PROD-001: Match backend type
 };
 
 type BackendPrefill = {
@@ -47,7 +47,7 @@ type BackendPrefill = {
   imageUrl: string;
   brand: string;
   variant: string;
-  packSize: string;
+  packSize: number | null; // CONTRACT-LOCK-STORE-PROD-001: Match backend type
   source: string;
   confidence: string;
   productId: string | null;
@@ -225,7 +225,7 @@ export interface StoreProductResponse {
   description: string;
   imageUrl: string;
   variant: string;
-  packSize: string;
+  packSize: number | null; // CONTRACT-LOCK-STORE-PROD-001: Match backend type
 }
 
 export interface ScanResolvePrefill {
@@ -236,7 +236,7 @@ export interface ScanResolvePrefill {
   imageUrl: string;
   brand: string;
   variant: string;
-  packSize: string;
+  packSize: number | null; // CONTRACT-LOCK-STORE-PROD-001: Match backend type
   source: PrefillSource;
   confidence: PrefillConfidence;
   productId: string | null;
@@ -272,7 +272,7 @@ export interface CreateStoreProductInput {
   initialStockQty: number;
   unit?: string;
   variant?: string;
-  packSize?: string;
+  packSize?: number; // CONTRACT-LOCK-STORE-PROD-001: Match backend type
   description?: string;
   brand?: string;
 }
