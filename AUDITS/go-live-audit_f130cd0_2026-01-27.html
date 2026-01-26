@@ -1,0 +1,2206 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SuperMandi Go-Live Audit - f130cd0</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --muted: #666666;
+      --border: #dddddd;
+      --pass: #2e7d32;
+      --warn: #ef6c00;
+      --fail: #b00020;
+      --critical: #b00020;
+      --high: #ff6f00;
+      --medium: #1565c0;
+      --low: #2e7d32;
+    }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      color: var(--text);
+      background: var(--bg);
+      display: flex;
+    }
+    nav {
+      width: 320px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      padding: 16px;
+      border-right: 1px solid var(--border);
+      background: #f8f8f8;
+    }
+    main {
+      flex: 1;
+      padding: 24px;
+    }
+    h1, h2, h3 {
+      margin-top: 28px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 12px 0;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      vertical-align: top;
+    }
+    th {
+      background: #fafafa;
+      text-align: left;
+    }
+    code, pre {
+      background: #f3f3f3;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+    }
+    pre {
+      padding: 12px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+    .status.PASS { border-color: var(--pass); color: var(--pass); }
+    .status.WARN { border-color: var(--warn); color: var(--warn); }
+    .status.FAIL { border-color: var(--fail); color: var(--fail); }
+    .severity.CRITICAL { border-color: var(--critical); color: var(--critical); }
+    .severity.HIGH { border-color: var(--high); color: var(--high); }
+    .severity.MEDIUM { border-color: var(--medium); color: var(--medium); }
+    .severity.LOW { border-color: var(--low); color: var(--low); }
+    .muted { color: var(--muted); }
+    .issue {
+      border: 1px solid var(--border);
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 6px;
+    }
+    .issueMeta {
+      margin: 6px 0 12px 0;
+    }
+    .evidence {
+      margin: 8px 0;
+    }
+    .evidenceTitle {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      margin: 6px 0;
+    }
+    ul {
+      padding-left: 18px;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <h3>Contents</h3>
+    <ul>
+      <li><a href="#summary">Summary</a></li>
+      <li><a href="#evidence">Evidence</a></li>
+      <li><a href="#pos">POS Screens</a></li>
+      <li><a href="#retailer">Retailer Dashboard</a></li>
+      <li><a href="#superadmin">SuperAdmin</a></li>
+      <li><a href="#backend">Gateway/Backend</a></li>
+      <li><a href="#db">DB/Schema</a></li>
+      <li><a href="#issues">Issue List</a></li>
+      <li><a href="#deploy">Deployment Checklist</a></li>
+    </ul>
+  </nav>
+  <main>
+    <h1>SuperMandi Go-Live Audit</h1>
+    <p><b>Commit:</b> f130cd0 (f130cd01feb8cbc4593992597d7d396ba3916663)</p>
+    <p><b>Commit log:</b> f130cd0 perf(GO-LIVE): Optimize for 10k stores scale - caching + de-amplify polling</p>
+    <p><b>Audit date:</b> 2026-01-26</p>
+    <p><b>Gateway:</b> http://34.14.220.171:3000 | <b>POS Service:</b> http://34.14.220.171:3009</p>
+    <p class="muted">Ticket PDF references commit 22133df and date 2026-01-27. This report uses commit f130cd0 per user request and local repo state.</p>
+
+    <h2 id="summary">Summary</h2>
+    <p><b>Status:</b> <span class="pill status FAIL">NOT READY</span> (critical issues found)</p>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <div style="min-width:240px;">
+        <h3>Issues by Severity</h3>
+        
+    <table>
+      <thead><tr><th>Severity</th><th>Count</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill severity CRITICAL">CRITICAL</span></td><td>5</td></tr><tr><td><span class="pill severity HIGH">HIGH</span></td><td>0</td></tr><tr><td><span class="pill severity MEDIUM">MEDIUM</span></td><td>1</td></tr><tr><td><span class="pill severity LOW">LOW</span></td><td>0</td></tr>
+      </tbody>
+    </table>
+    
+      </div>
+      <div style="min-width:280px;">
+        <h3>Issues by Area</h3>
+        
+    <table>
+      <thead><tr><th>Area</th><th>Count</th></tr></thead>
+      <tbody>
+        <tr><td>POS/Backend</td><td>3</td></tr><tr><td>Retailer</td><td>1</td></tr><tr><td>SuperAdmin</td><td>0</td></tr><tr><td>Gateway/Deployment</td><td>1</td></tr><tr><td>Backend/POS Service</td><td>1</td></tr><tr><td>DB</td><td>0</td></tr>
+      </tbody>
+    </table>
+    
+      </div>
+    </div>
+
+    <h2 id="evidence">Evidence (Commands and Scans)</h2>
+    
+    <details>
+      <summary>git status -sb</summary>
+      <pre>## main...origin/main</pre>
+    </details>
+    
+
+    <details>
+      <summary>git rev-parse HEAD</summary>
+      <pre>f130cd01feb8cbc4593992597d7d396ba3916663</pre>
+    </details>
+    
+
+    <details>
+      <summary>git log -1 --oneline</summary>
+      <pre>f130cd0 perf(GO-LIVE): Optimize for 10k stores scale - caching + de-amplify polling</pre>
+    </details>
+    
+
+    <details>
+      <summary>Repo directories</summary>
+      <pre>.claude
+.expo
+.githooks
+.tmp
+android
+artifacts
+AUDIT
+AUDITS
+backend
+dist
+docs
+e2e
+logs
+node_modules
+plugins
+RELEASES
+retailer-admin
+screenshots
+scripts
+src
+supermandi-superadmin
+tools
+vm-patches</pre>
+    </details>
+    
+
+    <details>
+      <summary>Package.json scripts (POS, retailer, superadmin, backend, gateway)</summary>
+      <pre># C:\supermandi-pos\package.json
+android: expo run:android
+apk:check: node scripts/apk-readiness-check.js
+build:check: node scripts/build-check.js
+build:release: node scripts/build-release.js
+deploy:vm: node scripts/deploy-vm.js
+dev:demo-code: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/get-demo-code.ps1
+dev:redmi: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi.ps1
+dev:redmi:snapshot: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1
+dev:redmi:snapshot:teststore: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1 -TestStore
+dev:redmi:snapshot:usb: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi-snapshot.ps1 -Usb
+dev:redmi:teststore: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi.ps1 -TestStore
+dev:redmi:teststore:usb: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi.ps1 -TestStore -Usb
+dev:redmi:tunnel: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi.ps1 -Tunnel
+dev:redmi:usb: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Bypass -File tools/dev/redmi.ps1 -Usb
+e2e: maestro test e2e/
+e2e:buy: maestro test e2e/buyFlow.yaml
+e2e:grn: maestro test e2e/grnFlow.yaml
+e2e:reorder: maestro test e2e/reorderFlow.yaml
+e2e:sell: maestro test e2e/sellFlow.yaml
+i18n:audit: node scripts/i18n-audit.js
+i18n:audit:unused: node scripts/i18n-audit.js --check-unused
+i18n:pseudo: node scripts/i18n-audit.js --generate-pseudo
+install:devices: adb devices &amp;&amp; adb install -r android/app/build/outputs/apk/release/app-release.apk
+ios: expo run:ios
+pre-commit-check: node scripts/pre-commit-check.js
+release:gate: node scripts/release-gate.js
+release:tag: node scripts/release-tag.js
+start: expo start
+test:e2e: jest --config e2e/jest.config.js
+test:e2e:watch: jest --config e2e/jest.config.js --watch
+ticket:proof: node scripts/ticket-proof.js
+typecheck: tsc --noEmit
+ui:audit: node scripts/ui-audit.js
+verify: node scripts/verify-launch.js
+verify:launch: node scripts/verify-launch.js
+wip: node scripts/wip.js
+wip:add: node scripts/wip.js add
+wip:list: node scripts/wip.js list
+
+# C:\supermandi-pos\retailer-admin\package.json
+build: tsc &amp;&amp; vite build
+dev: vite
+preview: vite preview
+typecheck: tsc --noEmit
+
+# C:\supermandi-pos\supermandi-superadmin\package.json
+build: tsc -b &amp;&amp; vite build
+dev: vite
+lint: eslint .
+preview: vite preview
+
+# C:\supermandi-pos\backend\package.json
+build: pnpm -r run build
+clean: pnpm -r run clean &amp;&amp; rm -rf node_modules
+dev: pnpm -r --parallel run dev
+docker:down: docker-compose down
+docker:up: docker-compose up -d
+format: prettier --write &quot;**/*.{ts,tsx,json,md}&quot;
+lint: eslint . --ext .ts,.tsx
+lint:fix: eslint . --ext .ts,.tsx --fix
+migrate:down: node scripts/migrate.js down
+migrate:up: node scripts/migrate.js up
+test: jest
+test:coverage: jest --coverage
+test:golden: jest --testPathPattern=goldenPath
+test:watch: jest --watch
+typecheck: pnpm -r run typecheck
+
+# C:\supermandi-pos\backend\services\api-gateway\package.json
+build: tsc
+clean: rm -rf dist
+dev: nodemon --watch src --ext ts --exec ts-node src/index.ts
+start: node dist/index.js
+typecheck: tsc --noEmit</pre>
+    </details>
+    
+
+    <details>
+      <summary>rg base URLs (filtered)</summary>
+      <pre>.\app.json:22:      &quot;API_URL&quot;: &quot;http://34.14.220.171:3000&quot;,
+.\app.json:23:      &quot;POS_API_URL&quot;: &quot;http://34.14.220.171:3009&quot;
+.\supermandi-superadmin\src\App.tsx:2894:        Tip: this dashboard is static-deployable. Set &lt;span className=&quot;mono&quot;&gt;VITE_API_BASE_URL&lt;/span&gt; in hosting env.
+.\retailer-admin\src\lib\api.ts:6: * When VITE_API_BASE_URL is set (e.g. http://34.14.220.171:3000), all relative
+.\retailer-admin\src\lib\api.ts:9:export const API_GATEWAY_BASE = import.meta.env.VITE_API_BASE_URL || '';
+.\supermandi-superadmin\src\api\users.ts:4:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\users.ts:27:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\users.ts:53:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\suppliers.ts:1:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\suppliers.ts:37:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\stores.ts:1:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\stores.ts:25:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\settings.ts:4:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\settings.ts:33:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\settings.ts:58:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\posEvents.ts:1:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\posEvents.ts:22:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\health.ts:1:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\health.ts:8:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\devices.ts:3:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\devices.ts:34:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\devices.ts:67:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\deviceEnrollments.ts:1:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\deviceEnrollments.ts:12:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\barcodeSheets.ts:3:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\barcodeSheets.ts:7:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\analytics.ts:3:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\analytics.ts:7:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\supermandi-superadmin\src\api\ai.ts:1:const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+.\supermandi-superadmin\src\api\ai.ts:6:    throw new Error(&quot;VITE_API_BASE_URL is missing (set it in .env / hosting env vars)&quot;);
+.\src\config\api.ts:21:// Priority for API_URL:
+.\src\config\api.ts:22:// 1. EXPO_PUBLIC_API_URL env var (dev override via redmi.ps1 or .env.local)
+.\src\config\api.ts:23:// 2. extra.API_URL from app.json (production default)
+.\src\config\api.ts:26:const API_URL =
+.\src\config\api.ts:27:  process.env.EXPO_PUBLIC_API_URL ||
+.\src\config\api.ts:28:  extra.API_URL;
+.\src\config\api.ts:30:if (!API_URL) {
+.\src\config\api.ts:31:  throw new Error(&quot;API_URL missing from env or app.json extra&quot;);
+.\src\config\api.ts:34:export const API_BASE_URL = String(API_URL);</pre>
+    </details>
+    
+
+    <details>
+      <summary>rg API calls (filtered)</summary>
+      <pre>.\retailer-admin\src\api\store.ts:5:const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1/retailer-admin';
+.\retailer-admin\src\pages\AllPagesPage.tsx:98:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/auth/firebase-login&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:103:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/store&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:108:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/products&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:113:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/inventory&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:118:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/suppliers&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:123:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/compliance&lt;/td&gt;
+.\retailer-admin\src\pages\SuppliersPage.tsx:271:        ? `/api/v1/retailer-admin/suppliers?query=${encodeURIComponent(query)}`
+.\retailer-admin\src\pages\SuppliersPage.tsx:272:        : '/api/v1/retailer-admin/suppliers';
+.\retailer-admin\src\pages\SuppliersPage.tsx:450:        ? `/api/v1/retailer-admin/suppliers/${editingSupplier.id}`
+.\retailer-admin\src\pages\SuppliersPage.tsx:451:        : '/api/v1/retailer-admin/suppliers';
+.\retailer-admin\src\pages\SuppliersPage.tsx:490:      const response = await authFetch(`/api/v1/retailer-admin/suppliers/${supplierId}`, accessToken, {
+.\retailer-admin\src\pages\InventoryPage.tsx:71:        let url = '/api/v1/retailer-admin/inventory/ledger?limit=100';
+.\retailer-admin\src\pages\ProductsPage.tsx:186:      const url = `/api/v1/retailer-admin/products${params.toString() ? '?' + params.toString() : ''}`;
+.\retailer-admin\src\pages\ProductsPage.tsx:203:      const response = await authFetch('/api/v1/retailer-admin/suppliers', accessToken);
+.\retailer-admin\src\pages\ProductsPage.tsx:304:      const response = await authFetch(`/api/v1/retailer-admin/products/${productId}`, accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:412:        ? `/api/v1/retailer-admin/products/${editingProduct.id}`
+.\retailer-admin\src\pages\ProductsPage.tsx:413:        : '/api/v1/retailer-admin/products';
+.\retailer-admin\src\pages\ProductsPage.tsx:498:      const response = await authFetch('/api/v1/retailer-admin/products/bulk-paste/preview', accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:538:      const response = await authFetch('/api/v1/retailer-admin/products/bulk-paste/commit', accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:679:                      href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
+.\retailer-admin\src\pages\ProductsPage.tsx:1434:                          href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
+.\retailer-admin\src\pages\ImportPage.tsx:62:      const response = await authFetch('/api/v1/retailer-admin/products/import/template', accessToken);
+.\retailer-admin\src\pages\ImportPage.tsx:88:      const uploadResp = await authFetch('/api/v1/retailer-admin/products/import/upload', accessToken, {
+.\retailer-admin\src\pages\ImportPage.tsx:102:        `/api/v1/retailer-admin/products/import/validate?jobId=${newJobId}`,
+.\retailer-admin\src\pages\ImportPage.tsx:130:        `/api/v1/retailer-admin/products/import/commit?jobId=${jobId}`,
+.\retailer-admin\src\pages\DashboardPage.tsx:42:      const response = await authFetch(`/api/v1/retailer-admin/categories/${editingCategory.id}`, accessToken, {
+.\retailer-admin\src\pages\DashboardPage.tsx:70:      const response = await authFetch(`/api/v1/retailer-admin/categories/${category.id}`, accessToken, {
+.\supermandi-superadmin\src\api\analytics.ts:15:  const res = await fetch(`${base}${path}`, {
+.\supermandi-superadmin\src\api\analytics.ts:63:  return getJson&lt;OverviewResponse&gt;(`/api/v1/admin/analytics/overview?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:92:  return getJson&lt;DevicesResponse&gt;(`/api/v1/admin/analytics/devices?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:122:  return getJson&lt;ProductsResponse&gt;(`/api/v1/admin/analytics/products?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:146:  return getJson&lt;PurchasesResponse&gt;(`/api/v1/admin/analytics/purchases?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:164:  return getJson&lt;ConsumerSalesResponse&gt;(`/api/v1/admin/analytics/consumer-sales?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:188:  return getJson&lt;ActivityResponse&gt;(`/api/v1/admin/analytics/activity?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:218:  return getJson&lt;DuesResponse&gt;(`/api/v1/admin/analytics/dues?${qs.toString()}`);
+.\retailer-admin\src\pages\LoginPage.tsx:147:      const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/firebase-login', {
+.\supermandi-superadmin\src\api\ai.ts:17:  const res = await fetch(`${base}/api/v1/admin/ai`, {
+.\supermandi-superadmin\src\api\ai.ts:42:  const res = await fetch(`${base}/api/v1/admin/ai/health`, {
+.\supermandi-superadmin\src\api\users.ts:31:  const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+.\supermandi-superadmin\src\api\users.ts:57:  const res = await fetch(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
+.\supermandi-superadmin\src\api\suppliers.ts:54:  const res = await fetch(`${base}/api/v1/admin/pending-suppliers`, {
+.\supermandi-superadmin\src\api\suppliers.ts:76:  const url = new URL(`${base}/api/v1/admin/verified-suppliers`);
+.\supermandi-superadmin\src\api\suppliers.ts:79:  const res = await fetch(url.toString(), {
+.\supermandi-superadmin\src\api\suppliers.ts:110:  const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/verify`, {
+.\supermandi-superadmin\src\api\suppliers.ts:135:  const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/reject`, {
+.\supermandi-superadmin\src\api\stores.ts:42:  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
+.\supermandi-superadmin\src\api\stores.ts:63:  const res = await fetch(`${base}/api/v1/admin/stores`, {
+.\supermandi-superadmin\src\api\stores.ts:87:  const res = await fetch(`${base}/api/v1/admin/stores`, {
+.\supermandi-superadmin\src\api\stores.ts:122:  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
+.\supermandi-superadmin\src\api\settings.ts:37:  const res = await fetch(`${API_BASE}/api/v1/admin/settings`, {
+.\supermandi-superadmin\src\api\settings.ts:62:  const res = await fetch(`${API_BASE}/api/v1/admin/settings/stats`, {
+.\supermandi-superadmin\src\api\deviceEnrollments.ts:29:  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/device-enrollments`, {
+.\supermandi-superadmin\src\api\barcodeSheets.ts:22:  const res = await fetch(`${base}/api/v1/admin/barcode-sheets?${qs.toString()}`, {
+.\supermandi-superadmin\src\api\posEvents.ts:40:  const res = await fetch(`${base}/api/v1/admin/pos/events?limit=${limit}`, {
+.\supermandi-superadmin\src\api\devices.ts:40:  const res = await fetch(`${API_BASE}/api/v1/admin/devices${qs}`, {
+.\supermandi-superadmin\src\api\devices.ts:71:  const res = await fetch(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}`, {
+.\supermandi-superadmin\src\api\health.ts:16:  const res = await fetch(`${base}/health`, {
+.\src\services\api\authApi.ts:5:  const res = await apiClient.post&lt;{ token: string }&gt;(&quot;/api/auth/login&quot;, { email, password });
+.\src\services\api\authApi.ts:10:  await apiClient.post(&quot;/api/auth/register&quot;, { email, password, name });
+.\src\services\api\authApi.ts:14:  return apiClient.get(&quot;/api/auth/me&quot;);
+.\src\services\api\apiClient.ts:45:    { path: &quot;/api/v1/pos/enroll&quot;, expected: false, desc: &quot;enroll must be PUBLIC&quot; },
+.\src\services\api\apiClient.ts:46:    { path: &quot;/api/v1/pos/ui-status&quot;, expected: true, desc: &quot;ui-status must be PROTECTED&quot; },
+.\src\services\api\apiClient.ts:47:    { path: &quot;/api/v1/pos/orders&quot;, expected: true, desc: &quot;orders must be PROTECTED&quot; },
+.\src\services\api\apiClient.ts:48:    { path: &quot;/api/v1/reorder/suggest&quot;, expected: true, desc: &quot;reorder must be PROTECTED&quot; },
+.\src\services\api\apiClient.ts:84:  const res = await fetch(fullUrl, {
+.\src\services\api\catalogApi.ts:138:const CATALOG_BASE = &quot;/api/v1/catalog&quot;;
+.\src\services\api\catalogApi.ts:169:  return apiClient.get&lt;GetCatalogResponse&gt;(path);
+.\src\services\api\catalogApi.ts:203:  const response = await apiClient.get&lt;GetProductResponse&gt;(path);
+.\src\services\api\catalogApi.ts:225:  const response = await apiClient.get&lt;GetCategoriesResponse&gt;(path);
+.\src\services\api\catalogApi.ts:239:  const response = await apiClient.get&lt;GetFmcgCategoriesResponse&gt;(path);
+.\src\services\api\catalogApi.ts:268:  return apiClient.get&lt;GetCategoryProductsResponse&gt;(path);
+.\src\services\api\dailySummaryApi.ts:43:      ? `/api/v1/pos/daily-summary?date=${date}`
+.\src\services\api\dailySummaryApi.ts:44:      : &quot;/api/v1/pos/daily-summary&quot;;
+.\src\services\api\dailySummaryApi.ts:45:    const response = await apiClient.get&lt;DailySummaryResponse&gt;(path);
+.\src\services\api\demoApi.ts:43:  const response = await apiClient.post&lt;DemoSeedResponse&gt;(&quot;/api/v1/demo/seed&quot;, {
+.\src\services\api\billingApi.ts:15:    const res = await apiClient.get&lt;{
+.\src\services\api\billingApi.ts:25:    }&gt;(&quot;/api/v1/pos/bills&quot;);
+.\src\services\api\billingApi.ts:60:    const res = await apiClient.get&lt;{
+.\src\services\api\billingApi.ts:78:    }&gt;(`/api/v1/pos/bills/${encodeURIComponent(saleId)}`);
+.\src\services\api\enrollApi.ts:63:    const response = await apiClient.post&lt;DeviceEnrollResponse&gt;(&quot;/api/v1/pos/enroll&quot;, requestBody);
+.\src\services\api\inventoryApi.ts:77:  const response = await apiClient.get&lt;{ data: StockLookupResult }&gt;(
+.\src\services\api\inventoryApi.ts:78:    `/api/v1/pos/inventory/stock/${encodeURIComponent(productId)}`
+.\src\services\api\inventoryApi.ts:112:  const response = await apiClient.post&lt;{ data: StockLookupResult[] }&gt;(
+.\src\services\api\inventoryApi.ts:113:    `/api/v1/pos/inventory/stock/batch`,
+.\src\services\api\inventoryApi.ts:144:  const response = await apiClient.post&lt;{ data: InventoryTransactionResponse }&gt;(
+.\src\services\api\inventoryApi.ts:145:    `/api/v1/pos/inventory/transactions`,
+.\src\services\api\inventoryApi.ts:169:  const response = await apiClient.post&lt;{ data: InventoryTransactionResponse }&gt;(
+.\src\services\api\inventoryApi.ts:170:    `/api/v1/pos/inventory/transactions`,
+.\src\services\api\inventoryApi.ts:199:  const response = await apiClient.post&lt;{ data: InventoryTransactionResponse }&gt;(
+.\src\services\api\inventoryApi.ts:200:    `/api/v1/pos/inventory/transactions`,
+.\src\services\api\inventoryApi.ts:263:  const path = `/api/v1/pos/inventory/ledger${queryString ? `?${queryString}` : &quot;&quot;}`;
+.\src\services\api\inventoryApi.ts:266:    const response = await apiClient.get&lt;{ data: LedgerEntry[]; pagination?: any }&gt;(path);
+.\src\services\api\inventoryApi.ts:375:  const response = await apiClient.get&lt;StockStatementResponse&gt;(
+.\src\services\api\inventoryApi.ts:376:    `/api/v1/pos/inventory/statement?${query.toString()}`
+.\src\services\deviceInfo.ts:55:  const response = await fetch(`${API_BASE_URL}/api/v1/pos/devices/me`, { headers });
+.\src\services\deviceInfo.ts:90:    const response = await fetch(`${API_BASE_URL}/api/v1/pos/devices/me`, {
+.\src\services\api\orderApi.ts:212:const ORDER_BASE = &quot;/api/v1/orders&quot;;
+.\src\services\api\orderApi.ts:249:  return apiClient.get&lt;ListOrdersResponse&gt;(path);
+.\src\services\api\orderApi.ts:260:  const response = await apiClient.get&lt;GetOrderResponse&gt;(path);
+.\src\services\api\orderApi.ts:272:  const response = await apiClient.post&lt;CreateOrderResponse&gt;(path, params);
+.\src\services\api\orderApi.ts:284:  const response = await apiClient.get&lt;GetEventsResponse&gt;(path);
+.\src\services\api\orderApi.ts:296:  return apiClient.post&lt;TransitionResponse&gt;(path);
+.\src\services\api\orderApi.ts:311:    const response = await apiClient.post&lt;TransitionResponse&gt;(path, { reason });
+.\src\services\api\orderApi.ts:336:  return apiClient.post&lt;TransitionResponse&gt;(path);
+.\src\services\api\orderApi.ts:348:  return apiClient.post&lt;TransitionResponse&gt;(path, trackingInfo);
+.\src\services\api\orderApi.ts:365:  return apiClient.post&lt;ReceiveGoodsResponse&gt;(path, params);
+.\src\services\api\orderApi.ts:376:  const response = await apiClient.get&lt;ListReceivesResponse&gt;(path);
+.\src\services\api\orderApi.ts:389:  const response = await apiClient.get&lt;GetReceiveResponse&gt;(path);
+.\src\services\dataConsistencyCheck.ts:47:    const response = await apiClient.get&lt;{
+.\src\services\dataConsistencyCheck.ts:52:    }&gt;(`/api/v1/pos/inventory/consistency-check`);
+.\src\services\api\posApi.ts:41:    return apiClient.post&lt;SaleCreateResponse&gt;(&quot;/api/v1/pos/sales&quot;, input);
+.\src\services\api\posApi.ts:82:  return apiClient.post(&quot;/api/v1/pos/payments/upi/init&quot;, input);
+.\src\services\api\posApi.ts:88:  return apiClient.post(&quot;/api/v1/pos/payments/upi/confirm-manual&quot;, input);
+.\src\services\api\posApi.ts:95:    return apiClient.post(&quot;/api/v1/pos/payments/cash&quot;, input);
+.\src\services\api\posApi.ts:115:    return apiClient.post(&quot;/api/v1/pos/payments/due&quot;, input);
+.\src\services\api\posApi.ts:136:    return apiClient.post(`/api/v1/pos/sales/${input.saleId}/cancel`, {});
+.\src\services\api\posApi.ts:150:  return apiClient.post(&quot;/api/v1/pos/collections/upi/init&quot;, input);
+.\src\services\api\posApi.ts:156:  return apiClient.post(&quot;/api/v1/pos/collections/upi/confirm-manual&quot;, input);
+.\src\services\api\posApi.ts:164:    return apiClient.post(&quot;/api/v1/pos/collections/cash&quot;, input);
+.\src\services\api\posApi.ts:180:    return apiClient.post(&quot;/api/v1/pos/collections/due&quot;, input);
+.\src\services\api\productsApi.ts:2:// GO-LIVE FIX: Removed direct fetch() usage - now using apiClient exclusively
+.\src\services\api\productsApi.ts:5:const STORE_PRODUCTS_BASE = &quot;/api/v1/pos/store-products&quot;;
+.\src\services\api\productsApi.ts:78: * GO-LIVE FIX: Refactored to use apiClient instead of direct fetch() calls.
+.\src\services\api\productsApi.ts:79: * This ensures device token is ALWAYS attached via the centralized apiClient.
+.\src\services\api\productsApi.ts:80: * Previous implementation used direct fetch() which sometimes sent requests without token.
+.\src\services\api\productsApi.ts:90:        const res = await apiClient.get&lt;{ success: boolean; data?: StoreProductsListItem }&gt;(`${STORE_PRODUCTS_BASE}/lookup?${lookup.toString()}`);
+.\src\services\api\productsApi.ts:113:        const res = await apiClient.get&lt;{ success: boolean; data?: Array&lt;{ displayName?: string; matches?: Array&lt;{ productId: string; displayName?: string; barcode?: string; sellPrice?: number; currentStock?: number }&gt; }&gt; }&gt;(`${STORE_PRODUCTS_BASE}/search?${searchParams.toString()}`);
+.\src\services\api\productsApi.ts:147:        const res = await apiClient.get&lt;{ success: boolean; data?: StoreProductsListItem[]; total?: number }&gt;(`${STORE_PRODUCTS_BASE}/list?${listParams.toString()}`);
+.\src\services\api\productsApi.ts:179:    const res = await apiClient.get&lt;{
+.\src\services\api\productsApi.ts:223:    const res = await apiClient.get&lt;{
+.\src\services\api\productsApi.ts:314:    const res = await apiClient.post&lt;{ storeProduct: StoreProductPayload }&gt;(
+.\src\services\api\productsApi.ts:387:    const res = await apiClient.post&lt;{ storeProduct: StoreProductPayload }&gt;(
+.\src\services\api\productsApi.ts:443:  const res = await apiClient.patch&lt;{ success: boolean; data?: PriceUpdateResult }&gt;(
+.\src\services\api\productsApi.ts:461:  const res = await apiClient.patch&lt;{ success: boolean; data: { productId: string; stock: number } }&gt;(
+.\src\services\api\productsApi.ts:503:  const res = await apiClient.patch&lt;{ success: boolean; data?: MetadataUpdateResult }&gt;(
+.\src\services\api\readinessGate.ts:42:  suppliers: &quot;/api/v1/pos/suppliers&quot;,
+.\src\services\api\readinessGate.ts:43:  supplierProducts: (supplierId: string) =&gt; `/api/v1/pos/suppliers/${supplierId}/products`,
+.\src\services\api\readinessGate.ts:44:  dailySummary: &quot;/api/v1/pos/daily-summary&quot;,
+.\src\services\api\readinessGate.ts:45:  stockIn: &quot;/api/v1/pos/stock-in&quot;,
+.\src\services\api\readinessGate.ts:116:    const response = await fetch(`${API_BASE_URL}${path}`, {
+.\src\services\api\readinessGate.ts:194:    const response = await fetch(`${API_BASE_URL}${path}`, {
+.\src\services\api\readinessGate.ts:427:        blockers.push(&quot;/api/v1/pos/suppliers (404)&quot;);
+.\src\services\api\readinessGate.ts:429:        blockers.push(&quot;/api/v1/pos/suppliers (auth failed)&quot;);
+.\src\services\api\readinessGate.ts:441:        return &quot;Missing: /api/v1/pos/stock-in (404)&quot;;
+.\src\services\api\readinessGate.ts:444:        return &quot;Missing: /api/v1/pos/stock-in (auth failed)&quot;;
+.\src\services\api\readinessGate.ts:451:        return &quot;Missing: /api/v1/pos/daily-summary (404)&quot;;
+.\src\services\api\readinessGate.ts:454:        return &quot;Missing: /api/v1/pos/daily-summary (auth failed)&quot;;
+.\src\services\api\reorderApi.ts:179:const REORDER_BASE = &quot;/api/v1/reorder&quot;;
+.\src\services\api\reorderApi.ts:207:  return apiClient.get&lt;ListPendingResponse&gt;(path);
+.\src\services\api\reorderApi.ts:218:  const response = await apiClient.get&lt;GetPendingResponse&gt;(path);
+.\src\services\api\reorderApi.ts:231:  return apiClient.post&lt;ApproveResponse&gt;(path, { ids });
+.\src\services\api\reorderApi.ts:243:  return apiClient.post&lt;DismissResponse&gt;(path, { reason });
+.\src\services\api\reorderApi.ts:257:  const response = await apiClient.get&lt;GetSettingsResponse&gt;(path);
+.\src\services\api\reorderApi.ts:269:  const response = await apiClient.patch&lt;UpdateSettingsResponse&gt;(path, settings);
+.\src\services\api\reorderApi.ts:307:  return apiClient.get&lt;ListPoliciesResponse&gt;(path);
+.\src\services\api\reorderApi.ts:318:  const response = await apiClient.get&lt;GetPolicyResponse&gt;(path);
+.\src\services\api\reorderApi.ts:331:  const response = await apiClient.patch&lt;UpdatePolicyResponse&gt;(path, updates);
+.\src\services\api\reorderApi.ts:343:  return apiClient.patch&lt;BulkUpdatePoliciesResponse&gt;(path, request);
+.\src\services\api\scanApi.ts:66:    const backendResponse = await apiClient.post&lt;BackendScanResponse&gt;(&quot;/api/v1/pos/scan/resolve&quot;, {
+.\src\services\api\scanApi.ts:145:    const res = await apiClient.post&lt;{ product: ScanProduct }&gt;(&quot;/api/v1/pos/products/price&quot;, input);
+.\src\services\api\scanApi.ts:176:      const res = await apiClient.get&lt;{ product: ScanProduct }&gt;(
+.\src\services\api\scanApi.ts:177:        `/api/v1/pos/products/lookup?barcode=${encodeURIComponent(trimmed)}`
+.\src\services\api\scanApi.ts:260:  return apiClient.post&lt;DigitisationScanResolveResponse&gt;(&quot;/api/v1/pos/scan/resolve&quot;, {
+.\src\services\api\scanApi.ts:298:    const res = await apiClient.post&lt;CreateStoreProductResponse&gt;(&quot;/api/v1/pos/store-products&quot;, input);
+.\src\services\cloudEventLogger.ts:14: * Sends events to: POST /api/v1/pos/events
+.\src\services\cloudEventLogger.ts:101:    const res = await fetch(`${API_BASE_URL}/api/v1/pos/events`, {
+.\src\services\purchaseDraft.ts:85:    const res = await apiClient.post&lt;PurchaseSubmitResponse&gt;(&quot;/api/v1/pos/purchases&quot;, {
+.\src\services\networkStatus.ts:4:  const state = await NetInfo.fetch();
+.\src\services\offline\sync.ts:41:  const state = await NetInfo.fetch();
+.\src\services\offline\sync.ts:54:  const res = await fetch(`${API_BASE_URL}/api/v1/pos/sync`, {
+.\src\services\api\stockInApi.ts:63:const STOCK_IN_BASE = &quot;/api/v1/pos/stock-in&quot;;
+.\src\services\api\stockInApi.ts:86:    const response = await apiClient.post&lt;StockInResponse&gt;(STOCK_IN_BASE, payload);
+.\src\services\api\stockInApi.ts:137:    const response = await apiClient.get&lt;StockInListResponse&gt;(url);
+.\src\services\api\stockInApi.ts:156:    await apiClient.del(`${STOCK_IN_BASE}/${entryId}`);
+.\src\services\api\storeApi.ts:15:  return apiClient.get&lt;StoreStatusResponse&gt;(`/api/v1/pos/stores/${resolvedStoreId}/status`);
+.\src\services\api\uiStatusApi.ts:108:    const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
+.\src\services\api\sellSearchApi.ts:107:  const response = await apiClient.get&lt;StoreSearchResponse&gt;(
+.\src\services\api\sellSearchApi.ts:108:    `/api/v1/pos/store-products/search?${params}`
+.\src\services\api\sellSearchApi.ts:162:  const response = await apiClient.get&lt;StoreProductListResponse&gt;(
+.\src\services\api\sellSearchApi.ts:163:    `/api/v1/pos/store-products/list?${params}`
+.\src\services\api\sellSearchApi.ts:185:    const response = await apiClient.get&lt;StoreLookupResponse&gt;(
+.\src\services\api\sellSearchApi.ts:186:      `/api/v1/pos/store-products/lookup?barcode=${encodeURIComponent(barcode)}`
+.\src\services\api\sellSearchApi.ts:222:  const response = await apiClient.get&lt;FreshnessResponse&gt;(
+.\src\services\api\sellSearchApi.ts:223:    `/api/v1/pos/store-products/freshness?${params}`
+.\src\services\api\transactionsApi.ts:10:  const res = await apiClient.post&lt;{ transaction: unknown }&gt;(&quot;/api/transactions&quot;, input);
+.\src\services\api\suppliersApi.ts:99:const SUPPLIERS_BASE = &quot;/api/v1/pos/suppliers&quot;;
+.\src\services\api\suppliersApi.ts:111:    const response = await apiClient.get&lt;GetSuppliersResponse&gt;(SUPPLIERS_BASE);
+.\src\services\api\suppliersApi.ts:137:    const response = await apiClient.get&lt;GetSupplierResponse&gt;(
+.\src\services\api\suppliersApi.ts:154:    const response = await apiClient.post&lt;GetSupplierResponse&gt;(
+.\src\services\api\suppliersApi.ts:173:    const response = await apiClient.patch&lt;GetSupplierResponse&gt;(
+.\src\services\api\suppliersApi.ts:189:    await apiClient.del(`${SUPPLIERS_BASE}/${supplierId}`);
+.\src\services\voice\voiceClient.ts:232:  const url = `${API_BASE_URL}/api/v1/voice/interpret`;
+.\src\services\voice\voiceClient.ts:235:  const response = await fetch(url, {
+.\src\services\voice\voiceClient.ts:301:  const url = `${API_BASE_URL}/api/v1/voice/execute`;
+.\src\services\voice\voiceClient.ts:304:  const response = await fetch(url, {</pre>
+    </details>
+    
+
+    <details>
+      <summary>rg navigation (required)</summary>
+      <pre>.\App.tsx:4:import { createNativeStackNavigator } from &quot;@react-navigation/native-stack&quot;;
+.\App.tsx:52:        onSelectOrder={(order) =&gt; navigation.navigate(&quot;OrderDetail&quot;, { orderId: order.id })}
+.\App.tsx:54:        onNavigateToBuy={() =&gt; navigation.navigate(&quot;SellScan&quot;, { initialTab: &quot;BUY&quot; })}
+.\App.tsx:68:        onNavigateToGRN={(orderId) =&gt; navigation.navigate(&quot;GRN&quot;, { orderId })}
+.\App.tsx:79:        onNavigateToPolicies={() =&gt; navigation.navigate(&quot;ReorderPolicies&quot;)}
+.\App.tsx:128:      onNavigateTo={(screen, params) =&gt; navigation.navigate(screen, params)}
+.\App.tsx:139:      onNavigateToInward={() =&gt; navigation.navigate(&quot;Inward&quot;)}
+.\App.tsx:149:      onNavigateToSell={() =&gt; navigation.navigate(&quot;SellScan&quot;)}
+.\App.tsx:172:const Stack = createNativeStackNavigator();
+.\src\utils\featureFlags.ts:26: *   navigation.navigate(&quot;OrderHistory&quot;);
+.\src\screens\SuccessPrintScreenV2.tsx:110:    navigation.navigate(&quot;SellScan&quot;);
+.\src\screens\PaymentScreen.tsx:313:              { text: &quot;OK&quot;, onPress: () =&gt; navigation.navigate(&quot;SellScan&quot;) }
+.\src\screens\PaymentScreen.tsx:390:              { text: &quot;OK&quot;, onPress: () =&gt; navigation.navigate(&quot;SellScan&quot;) }
+.\src\screens\PaymentScreen.tsx:533:      navigation.navigate(&quot;SuccessPrint&quot;, {
+.\src\screens\PaymentScreen.tsx:557:            { text: &quot;OK&quot;, onPress: () =&gt; navigation.navigate(&quot;SellScan&quot;) }
+.\src\screens\SellScanScreen.tsx:2434:    navigation.navigate(&quot;Payment&quot;);
+.\src\screens\MenuScreen.tsx:192:  const goToBills = () =&gt; navigation.navigate(&quot;SalesHistory&quot;);
+.\src\screens\MenuScreen.tsx:193:  const goToOrders = () =&gt; navigation.navigate(&quot;OrderHistory&quot;);
+.\src\screens\MenuScreen.tsx:194:  const goToReorderSettings = () =&gt; navigation.navigate(&quot;ReorderSettings&quot;);
+.\src\screens\MenuScreen.tsx:195:  const goToReorderPolicies = () =&gt; navigation.navigate(&quot;ReorderPolicies&quot;);
+.\src\screens\MenuScreen.tsx:196:  const goToInward = () =&gt; navigation.navigate(&quot;Inward&quot;);
+.\src\screens\MenuScreen.tsx:197:  const goToPurchaseHistory = () =&gt; navigation.navigate(&quot;PurchaseHistory&quot;);
+.\src\screens\MenuScreen.tsx:198:  const goToSalesStatement = () =&gt; navigation.navigate(&quot;SalesStatement&quot;);
+.\src\screens\MenuScreen.tsx:199:  const goToStockStatement = () =&gt; navigation.navigate(&quot;StockStatement&quot;);
+.\src\screens\MenuScreen.tsx:200:  const goToUiShowcase = () =&gt; navigation.navigate(&quot;UiShowcase&quot;);
+.\src\screens\MenuScreen.tsx:356:      &lt;Pressable style={styles.menuItem} onPress={() =&gt; navigation.navigate(&quot;BarcodeSheet&quot;)}&gt;
+.\src\screens\MenuScreen.tsx:388:              &lt;Pressable style={styles.menuItem} onPress={() =&gt; navigation.navigate(&quot;Buy&quot;)}&gt;
+.\src\screens\SalesHistoryScreen.tsx:49:      onPress={() =&gt; navigation.navigate(&quot;BillDetail&quot;, { saleId: item.saleId, billRef: item.billRef })}</pre>
+    </details>
+    
+
+    <details>
+      <summary>rg /api/v1 (filtered)</summary>
+      <pre>.\retailer-admin\src\pages\SuppliersPage.tsx:271:        ? `/api/v1/retailer-admin/suppliers?query=${encodeURIComponent(query)}`
+.\retailer-admin\src\pages\SuppliersPage.tsx:272:        : '/api/v1/retailer-admin/suppliers';
+.\retailer-admin\src\pages\SuppliersPage.tsx:450:        ? `/api/v1/retailer-admin/suppliers/${editingSupplier.id}`
+.\retailer-admin\src\pages\SuppliersPage.tsx:451:        : '/api/v1/retailer-admin/suppliers';
+.\retailer-admin\src\pages\SuppliersPage.tsx:490:      const response = await authFetch(`/api/v1/retailer-admin/suppliers/${supplierId}`, accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:186:      const url = `/api/v1/retailer-admin/products${params.toString() ? '?' + params.toString() : ''}`;
+.\retailer-admin\src\pages\ProductsPage.tsx:203:      const response = await authFetch('/api/v1/retailer-admin/suppliers', accessToken);
+.\retailer-admin\src\pages\ProductsPage.tsx:304:      const response = await authFetch(`/api/v1/retailer-admin/products/${productId}`, accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:412:        ? `/api/v1/retailer-admin/products/${editingProduct.id}`
+.\retailer-admin\src\pages\ProductsPage.tsx:413:        : '/api/v1/retailer-admin/products';
+.\retailer-admin\src\pages\ProductsPage.tsx:498:      const response = await authFetch('/api/v1/retailer-admin/products/bulk-paste/preview', accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:538:      const response = await authFetch('/api/v1/retailer-admin/products/bulk-paste/commit', accessToken, {
+.\retailer-admin\src\pages\ProductsPage.tsx:679:                      href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${createdProduct.productId}/sku.pdf`}
+.\retailer-admin\src\pages\ProductsPage.tsx:1434:                          href={`${API_GATEWAY_BASE}/api/v1/retailer-admin/products/${product.id}/sku.pdf`}
+.\retailer-admin\src\pages\LoginPage.tsx:147:      const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/firebase-login', {
+.\retailer-admin\src\pages\InventoryPage.tsx:71:        let url = '/api/v1/retailer-admin/inventory/ledger?limit=100';
+.\retailer-admin\src\pages\ImportPage.tsx:62:      const response = await authFetch('/api/v1/retailer-admin/products/import/template', accessToken);
+.\retailer-admin\src\pages\ImportPage.tsx:88:      const uploadResp = await authFetch('/api/v1/retailer-admin/products/import/upload', accessToken, {
+.\retailer-admin\src\pages\ImportPage.tsx:102:        `/api/v1/retailer-admin/products/import/validate?jobId=${newJobId}`,
+.\retailer-admin\src\pages\ImportPage.tsx:130:        `/api/v1/retailer-admin/products/import/commit?jobId=${jobId}`,
+.\retailer-admin\src\pages\DashboardPage.tsx:42:      const response = await authFetch(`/api/v1/retailer-admin/categories/${editingCategory.id}`, accessToken, {
+.\retailer-admin\src\pages\DashboardPage.tsx:70:      const response = await authFetch(`/api/v1/retailer-admin/categories/${category.id}`, accessToken, {
+.\retailer-admin\src\pages\AllPagesPage.tsx:98:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/auth/firebase-login&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:103:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/store&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:108:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/products&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:113:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/inventory&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:118:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/suppliers&lt;/td&gt;
+.\retailer-admin\src\pages\AllPagesPage.tsx:123:                &lt;td style={{ fontFamily: 'monospace' }}&gt;/api/v1/retailer-admin/compliance&lt;/td&gt;
+.\retailer-admin\src\lib\api.ts:19:const RETAILER_ADMIN_PATH = '/api/v1/retailer-admin';
+.\retailer-admin\src\lib\api.ts:20:const RETAILER_ADMIN_AUTH_PATH = '/api/v1/retailer-admin/auth';
+.\retailer-admin\src\components\ProtectedLayout.tsx:6:const API_BASE_URL = '/api/v1/retailer-admin';
+.\retailer-admin\src\api\store.ts:5:const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1/retailer-admin';
+.\supermandi-superadmin\src\api\barcodeSheets.ts:22:  const res = await fetch(`${base}/api/v1/admin/barcode-sheets?${qs.toString()}`, {
+.\supermandi-superadmin\src\api\users.ts:31:  const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+.\supermandi-superadmin\src\api\users.ts:57:  const res = await fetch(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
+.\supermandi-superadmin\src\api\suppliers.ts:54:  const res = await fetch(`${base}/api/v1/admin/pending-suppliers`, {
+.\supermandi-superadmin\src\api\suppliers.ts:76:  const url = new URL(`${base}/api/v1/admin/verified-suppliers`);
+.\supermandi-superadmin\src\api\suppliers.ts:110:  const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/verify`, {
+.\supermandi-superadmin\src\api\suppliers.ts:135:  const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/reject`, {
+.\supermandi-superadmin\src\api\stores.ts:42:  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
+.\supermandi-superadmin\src\api\stores.ts:63:  const res = await fetch(`${base}/api/v1/admin/stores`, {
+.\supermandi-superadmin\src\api\stores.ts:87:  const res = await fetch(`${base}/api/v1/admin/stores`, {
+.\supermandi-superadmin\src\api\stores.ts:122:  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
+.\supermandi-superadmin\src\api\settings.ts:37:  const res = await fetch(`${API_BASE}/api/v1/admin/settings`, {
+.\supermandi-superadmin\src\api\settings.ts:62:  const res = await fetch(`${API_BASE}/api/v1/admin/settings/stats`, {
+.\backend\services\api-gateway\src\config.ts:10:  /** Custom path to rewrite to (e.g., '/enroll' for /api/v1/pos/enroll -&gt; /enroll) */
+.\backend\services\api-gateway\src\config.ts:57:    // ADMIN ROUTES - GW-ADMIN-001: Fix gateway routing for /api/v1/admin/*
+.\backend\services\api-gateway\src\config.ts:59:    // stripPrefix: false because backends expect full /api/v1/admin/... path
+.\backend\services\api-gateway\src\config.ts:65:      pathPrefix: '/api/v1/admin/pos',
+.\backend\services\api-gateway\src\config.ts:71:      pathPrefix: '/api/v1/admin/analytics',
+.\backend\services\api-gateway\src\config.ts:77:      pathPrefix: '/api/v1/admin/devices',
+.\backend\services\api-gateway\src\config.ts:83:      pathPrefix: '/api/v1/admin/ai',
+.\backend\services\api-gateway\src\config.ts:89:      pathPrefix: '/api/v1/admin/barcode-sheets',
+.\backend\services\api-gateway\src\config.ts:95:      pathPrefix: '/api/v1/admin/global-products',
+.\backend\services\api-gateway\src\config.ts:101:      pathPrefix: '/api/v1/admin/stores',
+.\backend\services\api-gateway\src\config.ts:107:      pathPrefix: '/api/v1/admin/device-enrollments',
+.\backend\services\api-gateway\src\config.ts:113:      pathPrefix: '/api/v1/admin/pending-suppliers',
+.\backend\services\api-gateway\src\config.ts:119:      pathPrefix: '/api/v1/admin/verified-suppliers',
+.\backend\services\api-gateway\src\config.ts:126:      pathPrefix: '/api/v1/admin/health',
+.\backend\services\api-gateway\src\config.ts:133:      pathPrefix: '/api/v1/admin/users',
+.\backend\services\api-gateway\src\config.ts:140:      pathPrefix: '/api/v1/admin/settings',
+.\backend\services\api-gateway\src\config.ts:147:      pathPrefix: '/api/v1/admin',
+.\backend\services\api-gateway\src\config.ts:207:      pathPrefix: '/api/v1/pos',
+.\backend\services\api-gateway\src\config.ts:223:      pathPrefix: '/api/v1/retailer-admin/auth',
+.\backend\services\api-gateway\src\config.ts:230:      pathPrefix: '/api/v1/retailer-admin/health',
+.\backend\services\api-gateway\src\config.ts:237:      pathPrefix: '/api/v1/retailer-admin/inventory',
+.\backend\services\api-gateway\src\config.ts:244:      pathPrefix: '/api/v1/retailer-admin/categories',
+.\backend\services\api-gateway\src\config.ts:251:      pathPrefix: '/api/v1/retailer-admin/products',
+.\backend\services\api-gateway\src\config.ts:258:      pathPrefix: '/api/v1/retailer-admin/suppliers',
+.\backend\services\api-gateway\src\config.ts:265:      pathPrefix: '/api/v1/retailer-admin/search',
+.\backend\services\api-gateway\src\config.ts:272:      pathPrefix: '/api/v1/retailer-admin',
+.\supermandi-superadmin\src\api\posEvents.ts:40:  const res = await fetch(`${base}/api/v1/admin/pos/events?limit=${limit}`, {
+.\supermandi-superadmin\src\api\devices.ts:40:  const res = await fetch(`${API_BASE}/api/v1/admin/devices${qs}`, {
+.\supermandi-superadmin\src\api\devices.ts:71:  const res = await fetch(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}`, {
+.\supermandi-superadmin\src\api\deviceEnrollments.ts:29:  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/device-enrollments`, {
+.\backend\services\api-gateway\src\middleware\adminAuth.ts:2:// Protects /api/v1/admin/* routes with x-admin-token header check
+.\backend\services\api-gateway\src\middleware\adminAuth.ts:19: * Protects /api/v1/admin/* routes by requiring a valid x-admin-token header.
+.\backend\services\api-gateway\src\middleware\adminAuth.ts:29:  if (!req.path.startsWith('/api/v1/admin')) {
+.\src\services\api\uiStatusApi.ts:108:    const response = await fetch(`${API_BASE_URL}/api/v1/pos/ui-status`, {
+.\backend\services\api-gateway\src\middleware\jwtAuth.ts:40:  '/api/v1/retailer-admin/auth/firebase-login',
+.\backend\services\api-gateway\src\middleware\jwtAuth.ts:41:  '/api/v1/retailer-admin/auth/refresh',
+.\backend\services\api-gateway\src\middleware\jwtAuth.ts:42:  '/api/v1/retailer-admin/health',  // RCAT-DEPLOY-001: Gateway routing verification
+.\backend\services\api-gateway\src\middleware\jwtAuth.ts:69:  if (!req.path.startsWith('/api/v1/retailer-admin')) {
+.\src\services\api\suppliersApi.ts:99:const SUPPLIERS_BASE = &quot;/api/v1/pos/suppliers&quot;;
+.\src\services\api\storeApi.ts:15:  return apiClient.get&lt;StoreStatusResponse&gt;(`/api/v1/pos/stores/${resolvedStoreId}/status`);
+.\supermandi-superadmin\src\api\analytics.ts:63:  return getJson&lt;OverviewResponse&gt;(`/api/v1/admin/analytics/overview?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:92:  return getJson&lt;DevicesResponse&gt;(`/api/v1/admin/analytics/devices?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:122:  return getJson&lt;ProductsResponse&gt;(`/api/v1/admin/analytics/products?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:146:  return getJson&lt;PurchasesResponse&gt;(`/api/v1/admin/analytics/purchases?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:164:  return getJson&lt;ConsumerSalesResponse&gt;(`/api/v1/admin/analytics/consumer-sales?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:188:  return getJson&lt;ActivityResponse&gt;(`/api/v1/admin/analytics/activity?${qs.toString()}`);
+.\supermandi-superadmin\src\api\analytics.ts:218:  return getJson&lt;DuesResponse&gt;(`/api/v1/admin/analytics/dues?${qs.toString()}`);
+.\supermandi-superadmin\src\api\ai.ts:17:  const res = await fetch(`${base}/api/v1/admin/ai`, {
+.\supermandi-superadmin\src\api\ai.ts:42:  const res = await fetch(`${base}/api/v1/admin/ai/health`, {
+.\src\services\api\productsApi.ts:5:const STORE_PRODUCTS_BASE = &quot;/api/v1/pos/store-products&quot;;
+.\src\services\api\inventoryApi.ts:78:    `/api/v1/pos/inventory/stock/${encodeURIComponent(productId)}`
+.\src\services\api\inventoryApi.ts:113:    `/api/v1/pos/inventory/stock/batch`,
+.\src\services\api\inventoryApi.ts:145:    `/api/v1/pos/inventory/transactions`,
+.\src\services\api\inventoryApi.ts:170:    `/api/v1/pos/inventory/transactions`,
+.\src\services\api\inventoryApi.ts:200:    `/api/v1/pos/inventory/transactions`,
+.\src\services\api\inventoryApi.ts:263:  const path = `/api/v1/pos/inventory/ledger${queryString ? `?${queryString}` : &quot;&quot;}`;
+.\src\services\api\inventoryApi.ts:376:    `/api/v1/pos/inventory/statement?${query.toString()}`
+.\src\services\api\apiClient.ts:45:    { path: &quot;/api/v1/pos/enroll&quot;, expected: false, desc: &quot;enroll must be PUBLIC&quot; },
+.\src\services\api\apiClient.ts:46:    { path: &quot;/api/v1/pos/ui-status&quot;, expected: true, desc: &quot;ui-status must be PROTECTED&quot; },
+.\src\services\api\apiClient.ts:47:    { path: &quot;/api/v1/pos/orders&quot;, expected: true, desc: &quot;orders must be PROTECTED&quot; },
+.\src\services\api\enrollApi.ts:63:    const response = await apiClient.post&lt;DeviceEnrollResponse&gt;(&quot;/api/v1/pos/enroll&quot;, requestBody);
+.\src\services\api\dailySummaryApi.ts:43:      ? `/api/v1/pos/daily-summary?date=${date}`
+.\src\services\api\dailySummaryApi.ts:44:      : &quot;/api/v1/pos/daily-summary&quot;;
+.\src\services\api\posApi.ts:41:    return apiClient.post&lt;SaleCreateResponse&gt;(&quot;/api/v1/pos/sales&quot;, input);
+.\src\services\api\posApi.ts:82:  return apiClient.post(&quot;/api/v1/pos/payments/upi/init&quot;, input);
+.\src\services\api\posApi.ts:88:  return apiClient.post(&quot;/api/v1/pos/payments/upi/confirm-manual&quot;, input);
+.\src\services\api\posApi.ts:95:    return apiClient.post(&quot;/api/v1/pos/payments/cash&quot;, input);
+.\src\services\api\posApi.ts:115:    return apiClient.post(&quot;/api/v1/pos/payments/due&quot;, input);
+.\src\services\api\posApi.ts:136:    return apiClient.post(`/api/v1/pos/sales/${input.saleId}/cancel`, {});
+.\src\services\api\posApi.ts:150:  return apiClient.post(&quot;/api/v1/pos/collections/upi/init&quot;, input);
+.\src\services\api\posApi.ts:156:  return apiClient.post(&quot;/api/v1/pos/collections/upi/confirm-manual&quot;, input);
+.\src\services\api\posApi.ts:164:    return apiClient.post(&quot;/api/v1/pos/collections/cash&quot;, input);
+.\src\services\api\posApi.ts:180:    return apiClient.post(&quot;/api/v1/pos/collections/due&quot;, input);
+.\src\services\api\scanApi.ts:66:    const backendResponse = await apiClient.post&lt;BackendScanResponse&gt;(&quot;/api/v1/pos/scan/resolve&quot;, {
+.\src\services\api\scanApi.ts:145:    const res = await apiClient.post&lt;{ product: ScanProduct }&gt;(&quot;/api/v1/pos/products/price&quot;, input);
+.\src\services\api\scanApi.ts:177:        `/api/v1/pos/products/lookup?barcode=${encodeURIComponent(trimmed)}`
+.\src\services\api\scanApi.ts:260:  return apiClient.post&lt;DigitisationScanResolveResponse&gt;(&quot;/api/v1/pos/scan/resolve&quot;, {
+.\src\services\api\scanApi.ts:298:    const res = await apiClient.post&lt;CreateStoreProductResponse&gt;(&quot;/api/v1/pos/store-products&quot;, input);
+.\src\services\api\sellSearchApi.ts:108:    `/api/v1/pos/store-products/search?${params}`
+.\src\services\api\sellSearchApi.ts:163:    `/api/v1/pos/store-products/list?${params}`
+.\src\services\api\sellSearchApi.ts:186:      `/api/v1/pos/store-products/lookup?barcode=${encodeURIComponent(barcode)}`
+.\src\services\api\sellSearchApi.ts:223:    `/api/v1/pos/store-products/freshness?${params}`
+.\src\services\api\billingApi.ts:25:    }&gt;(&quot;/api/v1/pos/bills&quot;);
+.\src\services\api\billingApi.ts:78:    }&gt;(`/api/v1/pos/bills/${encodeURIComponent(saleId)}`);
+.\src\services\api\readinessGate.ts:42:  suppliers: &quot;/api/v1/pos/suppliers&quot;,
+.\src\services\api\readinessGate.ts:43:  supplierProducts: (supplierId: string) =&gt; `/api/v1/pos/suppliers/${supplierId}/products`,
+.\src\services\api\readinessGate.ts:44:  dailySummary: &quot;/api/v1/pos/daily-summary&quot;,
+.\src\services\api\readinessGate.ts:45:  stockIn: &quot;/api/v1/pos/stock-in&quot;,
+.\src\services\api\readinessGate.ts:427:        blockers.push(&quot;/api/v1/pos/suppliers (404)&quot;);
+.\src\services\api\readinessGate.ts:429:        blockers.push(&quot;/api/v1/pos/suppliers (auth failed)&quot;);
+.\src\services\api\readinessGate.ts:441:        return &quot;Missing: /api/v1/pos/stock-in (404)&quot;;
+.\src\services\api\readinessGate.ts:444:        return &quot;Missing: /api/v1/pos/stock-in (auth failed)&quot;;
+.\src\services\api\readinessGate.ts:451:        return &quot;Missing: /api/v1/pos/daily-summary (404)&quot;;
+.\src\services\api\readinessGate.ts:454:        return &quot;Missing: /api/v1/pos/daily-summary (auth failed)&quot;;
+.\src\services\api\stockInApi.ts:63:const STOCK_IN_BASE = &quot;/api/v1/pos/stock-in&quot;;</pre>
+    </details>
+    
+
+    <details>
+      <summary>Gateway config pathPrefix</summary>
+      <pre>7:  pathPrefix: string;
+8:  /** If false, the pathPrefix is NOT stripped when forwarding to backend (default: true) */
+65:      pathPrefix: '/api/v1/admin/pos',
+71:      pathPrefix: '/api/v1/admin/analytics',
+77:      pathPrefix: '/api/v1/admin/devices',
+83:      pathPrefix: '/api/v1/admin/ai',
+89:      pathPrefix: '/api/v1/admin/barcode-sheets',
+95:      pathPrefix: '/api/v1/admin/global-products',
+101:      pathPrefix: '/api/v1/admin/stores',
+107:      pathPrefix: '/api/v1/admin/device-enrollments',
+113:      pathPrefix: '/api/v1/admin/pending-suppliers',
+119:      pathPrefix: '/api/v1/admin/verified-suppliers',
+126:      pathPrefix: '/api/v1/admin/health',
+133:      pathPrefix: '/api/v1/admin/users',
+140:      pathPrefix: '/api/v1/admin/settings',
+147:      pathPrefix: '/api/v1/admin',
+155:      pathPrefix: '/api/v1/auth',
+162:      pathPrefix: '/api/v1/platform',
+169:      pathPrefix: '/api/v1/suppliers',
+176:      pathPrefix: '/api/v1/catalog',
+183:      pathPrefix: '/api/v1/inventory',
+190:      pathPrefix: '/api/v1/orders',
+197:      pathPrefix: '/api/v1/reorder',
+207:      pathPrefix: '/api/v1/pos',
+215:      pathPrefix: '/api/v1/voice',
+223:      pathPrefix: '/api/v1/retailer-admin/auth',
+230:      pathPrefix: '/api/v1/retailer-admin/health',
+237:      pathPrefix: '/api/v1/retailer-admin/inventory',
+244:      pathPrefix: '/api/v1/retailer-admin/categories',
+251:      pathPrefix: '/api/v1/retailer-admin/products',
+258:      pathPrefix: '/api/v1/retailer-admin/suppliers',
+265:      pathPrefix: '/api/v1/retailer-admin/search',
+272:      pathPrefix: '/api/v1/retailer-admin',
+279:      pathPrefix: '/api/v1/demo',</pre>
+    </details>
+    
+
+    <details>
+      <summary>catalogApi.ts excerpt</summary>
+      <pre>context: string;
+}
+
+// =============================================================================
+// API FUNCTIONS
+// =============================================================================
+
+const CATALOG_BASE = &quot;/api/v1/catalog&quot;;
+
+/**
+ * Get paginated catalog for a store.
+ * Returns products mapped via supplier_product_map from linked suppliers.
+ */
+export async function getCatalog(
+  storeId: string,
+  params?: GetCatalogParams
+): Promise&lt;GetCatalogResponse&gt; {
+  const query = new URLSearchParams();
+
+  if (params?.q &amp;&amp; params.q.trim().length &gt;= 2) {
+    query.set(&quot;q&quot;, params.q.trim());
+  }
+  if (params?.category) {
+    query.set(&quot;category&quot;, params.category);
+  }
+  if (params?.inStockOnly) {
+    query.set(&quot;inStockOnly&quot;, &quot;true&quot;);
+  }
+  if (params?.page &amp;&amp; params.page &gt; 0) {
+    query.set(&quot;page&quot;, String(params.page));
+  }
+  if (params?.limit &amp;&amp; params.limit &gt; 0) {
+    query.set(&quot;limit&quot;, String(params.limit));
+  }
+
+  const queryString = query.toString();
+  const path = `${CATALOG_BASE}/stores/${storeId}/catalog${queryString ? `?${queryString}` : &quot;&quot;}`;
+
+  return apiClient.get&lt;GetCatalogResponse&gt;(path);
+}
+
+/**
+ * Search catalog products.
+ * Convenience wrapper around getCatalog with search query.
+ */
+export async function searchCatalog(
+  storeId: string,
+  searchQuery: string,
+  options?: {
+    category?: string;
+    inStockOnly?: boolean;
+    page?: number;
+    limit?: number;
+  }
+): Promise&lt;GetCatalogResponse&gt; {
+  return getCatalog(storeId, {
+    q: searchQuery,
+    category: options?.category,
+    inStockOnly: options?.inStockOnly,
+    page: options?.page,
+    limit: options?.limit,
+  });
+}
+
+/**
+ * Get a single product with all supplier details.
+ */
+export async function getProduct(
+  storeId: string,
+  productId: string
+): Promise&lt;CatalogProduct&gt; {
+  const path = `${CATALOG_BASE}/stores/${storeId}/catalog/${productId}`;
+  const response = await apiClient.get&lt;GetProductResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Get all suppliers for a product.
+ * Returns the suppliers array from the product detail.
+ */</pre>
+    </details>
+    
+
+    <details>
+      <summary>reorderApi.ts excerpt</summary>
+      <pre>success: boolean;
+  data: ReorderPolicy;
+  message: string;
+}
+
+export interface BulkUpdatePoliciesRequest {
+  policies: Array&lt;{
+    productId: string;
+    minThreshold?: number;
+    targetStock?: number;
+    preferredSupplierId?: string | null;
+    isEnabled?: boolean;
+  }&gt;;
+}
+
+export interface BulkUpdatePoliciesResponse {
+  success: boolean;
+  data: {
+    updatedCount: number;
+    policies: ReorderPolicy[];
+  };
+  message: string;
+}
+
+// =============================================================================
+// API FUNCTIONS
+// =============================================================================
+
+const REORDER_BASE = &quot;/api/v1/reorder&quot;;
+
+/**
+ * List pending reorders for a store.
+ */
+export async function listPendingReorders(
+  storeId: string,
+  params?: {
+    status?: PendingReorderStatus;
+    limit?: number;
+    offset?: number;
+  }
+): Promise&lt;ListPendingResponse&gt; {
+  const query = new URLSearchParams();
+
+  if (params?.status) {
+    query.set(&quot;status&quot;, params.status);
+  }
+  if (params?.limit &amp;&amp; params.limit &gt; 0) {
+    query.set(&quot;limit&quot;, String(params.limit));
+  }
+  if (params?.offset &amp;&amp; params.offset &gt; 0) {
+    query.set(&quot;offset&quot;, String(params.offset));
+  }
+
+  const queryString = query.toString();
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending${queryString ? `?${queryString}` : &quot;&quot;}`;
+
+  return apiClient.get&lt;ListPendingResponse&gt;(path);
+}
+
+/**
+ * Get a single pending reorder.
+ */
+export async function getPendingReorder(
+  storeId: string,
+  pendingId: string
+): Promise&lt;PendingReorder&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/${pendingId}`;
+  const response = await apiClient.get&lt;GetPendingResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Approve selected pending reorders.
+ * Returns draft purchase orders grouped by supplier.
+ */
+export async function approvePendingReorders(
+  storeId: string,
+  ids: string[]
+): Promise&lt;ApproveResponse&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/approve`;
+  return apiClient.post&lt;ApproveResponse&gt;(path, { ids });
+}
+
+/**
+ * Dismiss a pending reorder with a reason.
+ */
+export async function dismissPendingReorder(
+  storeId: string,
+  pendingId: string,
+  reason: string
+): Promise&lt;DismissResponse&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/${pendingId}/dismiss`;
+  return apiClient.post&lt;DismissResponse&gt;(path, { reason });
+}
+
+// =============================================================================
+// SETTINGS API FUNCTIONS
+// =============================================================================
+
+/**
+ * Get reorder settings for a store.
+ */
+export async function getReorderSettings(
+  storeId: string
+): Promise&lt;ReorderSettings&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/settings`;
+  const response = await apiClient.get&lt;GetSettingsResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Update reorder settings for a store.
+ */
+export async function updateReorderSettings(
+  storeId: string,
+  settings: UpdateSettingsRequest
+): Promise&lt;ReorderSettings&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/settings`;
+  const response = await apiClient.patch&lt;UpdateSettingsResponse&gt;(path, settings);
+  return response.data;</pre>
+    </details>
+    
+
+    <details>
+      <summary>orderApi.ts excerpt</summary>
+      <pre>}
+  if (params?.limit &amp;&amp; params.limit &gt; 0) {
+    query.set(&quot;limit&quot;, String(params.limit));
+  }
+
+  const queryString = query.toString();
+  const path = `${ORDER_BASE}/stores/${storeId}/orders${queryString ? `?${queryString}` : &quot;&quot;}`;
+
+  return apiClient.get&lt;ListOrdersResponse&gt;(path);
+}
+
+/**
+ * Get a single purchase order with items.
+ */
+export async function getOrder(
+  storeId: string,
+  orderId: string
+): Promise&lt;PurchaseOrderWithItems&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}`;
+  const response = await apiClient.get&lt;GetOrderResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Create a new purchase order.
+ */
+export async function createOrder(
+  storeId: string,
+  params: CreateOrderParams
+): Promise&lt;PurchaseOrderWithItems&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders`;
+  const response = await apiClient.post&lt;CreateOrderResponse&gt;(path, params);
+  return response.data;
+}
+
+/**
+ * Get order events (status timeline).
+ */
+export async function getOrderEvents(
+  storeId: string,
+  orderId: string
+): Promise&lt;OrderEvent[]&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/events`;
+  const response = await apiClient.get&lt;GetEventsResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Submit a draft order.
+ */
+export async function submitOrder(
+  storeId: string,
+  orderId: string
+): Promise&lt;TransitionResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/submit`;
+  return apiClient.post&lt;TransitionResponse&gt;(path);
+}
+
+/**
+ * Cancel an order.
+ * GL-PO-001: Idempotent - absorbs 404/410 without throwing.
+ * Returns { success: true, alreadyDeleted: true } if order was already deleted/cancelled.
+ */
+export async function cancelOrder(
+  storeId: string,
+  orderId: string,
+  reason?: string
+): Promise&lt;CancelOrderResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/cancel`;
+  try {
+    const response = await apiClient.post&lt;TransitionResponse&gt;(path, { reason });
+    return {
+      success: true,
+      alreadyDeleted: false,
+      data: response.data,
+      transition: response.transition,
+    };
+  } catch (error) {
+    // GL-PO-001: Handle 404 (not found) and 410 (gone) as successful idempotent delete
+    if (error instanceof ApiError &amp;&amp; (error.status === 404 || error.status === 410)) {
+      console.log(`[OrderApi] cancelOrder idempotent: orderId=${orderId} already deleted (status=${error.status})`);
+      return { success: true, alreadyDeleted: true };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Confirm a submitted order.
+ */
+export async function confirmOrder(
+  storeId: string,
+  orderId: string
+): Promise&lt;TransitionResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/confirm`;
+  return apiClient.post&lt;TransitionResponse&gt;(path);
+}
+
+/**
+ * Mark order as shipped.
+ */
+export async function shipOrder(
+  storeId: string,
+  orderId: string,
+  trackingInfo?: { trackingNumber?: string; carrier?: string }
+): Promise&lt;TransitionResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/ship`;
+  return apiClient.post&lt;TransitionResponse&gt;(path, trackingInfo);
+}
+
+// =============================================================================
+// GRN (GOODS RECEIVING) API FUNCTIONS
+// =============================================================================
+
+/**
+ * Receive goods for a purchase order (GRN).
+ * Creates a receive record and updates inventory.
+ */
+export async function receiveGoods(
+  storeId: string,</pre>
+    </details>
+    
+
+    <details>
+      <summary>Backend routes: /api/v1/catalog</summary>
+      <pre>/api/v1/catalog/health	GET	backend/src/routes/v1/microserviceHealth.ts</pre>
+    </details>
+    
+
+    <details>
+      <summary>Backend routes: /api/v1/reorder</summary>
+      <pre>/api/v1/reorder/health	GET	backend/src/routes/v1/microserviceHealth.ts
+/api/v1/reorder/stores/:storeId/reorder/pending	GET	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/policies	GET	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/policies/:productId	PATCH	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/settings	GET	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/settings	PATCH	backend/src/routes/v1/reorder.ts</pre>
+    </details>
+    
+
+    <details>
+      <summary>Backend routes: /api/v1/orders</summary>
+      <pre>/api/v1/orders/health	GET	backend/src/routes/v1/microserviceHealth.ts
+/api/v1/orders/stores/:storeId/orders	GET	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId	DELETE	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId	GET	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId/cancel	POST	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId/events	GET	backend/src/routes/v1/orders.ts</pre>
+    </details>
+    
+
+    <details>
+      <summary>UI audit output</summary>
+      <pre>============================================================
+UI VISIBILITY AUDIT - UIVIS-006
+============================================================
+
+Found 24 screen files in src/screens/
+Found 20 registered Stack.Screens
+Found 4 embedded screens in PosRootLayout
+
+------------------------------------------------------------
+CHECKING SCREEN REGISTRATION...
+------------------------------------------------------------
+[REGISTERED] BarcodeSheetScreen.tsx -&gt; &quot;BarcodeSheet&quot;
+[REGISTERED] BillDetailScreen.tsx -&gt; &quot;BillDetail&quot;
+[EMBEDDED] BuyScreen.tsx - used in PosRootLayout
+[REGISTERED] DeviceBlockedScreen.tsx -&gt; &quot;DeviceBlocked&quot;
+[REGISTERED] EnrollDeviceScreen.tsx -&gt; &quot;EnrollDevice&quot;
+[REGISTERED] GRNScreen.tsx -&gt; &quot;GRN&quot;
+[REGISTERED] InwardScreen.tsx -&gt; &quot;Inward&quot;
+[EMBEDDED] MenuScreen.tsx - used in PosRootLayout
+[REGISTERED] OrderDetailScreen.tsx -&gt; &quot;OrderDetail&quot;
+[REGISTERED] OrderHistoryScreen.tsx -&gt; &quot;OrderHistory&quot;
+[REGISTERED] PaymentScreen.tsx -&gt; &quot;Payment&quot;
+[LAYOUT] PosRootLayout.tsx - is a layout container
+[REGISTERED] PurchaseHistoryScreen.tsx -&gt; &quot;PurchaseHistory&quot;
+[EMBEDDED] PurchaseScreen.tsx - used in PosRootLayout
+[REGISTERED] ReorderPoliciesScreen.tsx -&gt; &quot;ReorderPolicies&quot;
+[EMBEDDED] ReorderScreen.tsx - used in PosRootLayout
+[REGISTERED] ReorderSettingsScreen.tsx -&gt; &quot;ReorderSettings&quot;
+[REGISTERED] SalesHistoryScreen.tsx -&gt; &quot;SalesHistory&quot;
+[REGISTERED] SalesStatementScreen.tsx -&gt; &quot;SalesStatement&quot;
+[EMBEDDED] SellScanScreen.tsx - used in PosRootLayout
+[REGISTERED] SplashScreen.tsx -&gt; &quot;Splash&quot;
+[REGISTERED] StockStatementScreen.tsx -&gt; &quot;StockStatement&quot;
+[REGISTERED] SuccessPrintScreenV2.tsx -&gt; &quot;SuccessPrint&quot;
+[REGISTERED] UiShowcaseScreen.tsx -&gt; &quot;UiShowcase&quot;
+
+------------------------------------------------------------
+CHECKING FEATURE FLAG GATING...
+------------------------------------------------------------
+[PASS] Essential operations are not incorrectly gated
+
+============================================================
+AUDIT RESULTS
+============================================================
+
+[AUDIT PASSED] All screens are registered and reachable.</pre>
+    </details>
+    
+
+    <details>
+      <summary>CompliancePage mock data</summary>
+      <pre>import { useState } from 'react';
+
+interface Document {
+  id: string;
+  type: string;
+  fileName: string;
+  uploadedAt: string;
+  status: 'pending' | 'verified' | 'rejected';
+  rejectionReason?: string;
+}
+
+// Mock data
+const mockDocuments: Document[] = [
+  { id: '1', type: 'GSTIN Certificate', fileName: 'gstin_certificate.pdf', uploadedAt: '2024-01-10', status: 'verified' },
+  { id: '2', type: 'FSSAI License', fileName: 'fssai_license.pdf', uploadedAt: '2024-01-12', status: 'verified' },
+  { id: '3', type: 'Shop License', fileName: 'shop_license.pdf', uploadedAt: '2024-01-14', status: 'pending' },
+  { id: '4', type: 'PAN Card', fileName: 'pan_card.jpg', uploadedAt: '2024-01-15', status: 'rejected', rejectionReason: 'Image is blurry, please upload a clear copy' },
+];
+
+const documentTypes = [
+  { value: 'gstin', label: 'GSTIN Certificate' },
+  { value: 'fssai', label: 'FSSAI License' },
+  { value: 'shop_license', label: 'Shop License' },
+  { value: 'pan', label: 'PAN Card' },
+  { value: 'trade_license', label: 'Trade License' },
+];
+
+export default function CompliancePage() {</pre>
+    </details>
+    
+
+    <details>
+      <summary>curl /health (gateway)</summary>
+      <pre>HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+x-correlation-id: 6ba7f742-4ba4-47eb-bfea-4e547ae549d2
+Content-Type: application/json; charset=utf-8
+Content-Length: 57
+ETag: W/&quot;39-zSyGBcH7/6YpP1d/NqY7Ns3i2yw&quot;
+Date: Mon, 26 Jan 2026 19:44:58 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{&quot;status&quot;:&quot;ok&quot;,&quot;service&quot;:&quot;api-gateway&quot;,&quot;version&quot;:&quot;3.0.9&quot;}</pre>
+    </details>
+    
+
+    <details>
+      <summary>curl /health (pos)</summary>
+      <pre>% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0
+curl: (7) Failed to connect to 34.14.220.171 port 3009 after 2315 ms: Could not connect to server</pre>
+    </details>
+    
+
+    <details>
+      <summary>curl /api/v1/pos/ui-status</summary>
+      <pre>HTTP/1.1 401 Unauthorized
+access-control-allow-origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+x-correlation-id: edefc79a-e35e-404e-9a3f-41f226152734
+RateLimit-Policy: 100;w=60
+RateLimit-Limit: 100
+RateLimit-Remaining: 94
+RateLimit-Reset: 23
+x-powered-by: Express
+cache-control: no-store, max-age=0
+pragma: no-cache
+expires: 0
+content-type: application/json; charset=utf-8
+content-length: 31
+etag: W/&quot;1f-fWP/usEo9KChgL7TeD6wx0/qRhw&quot;
+date: Mon, 26 Jan 2026 19:45:10 GMT
+connection: close
+
+{&quot;error&quot;:&quot;device_unauthorized&quot;}</pre>
+    </details>
+    
+
+    <details>
+      <summary>curl /api/v1/pos/enroll</summary>
+      <pre>HTTP/1.1 400 Bad Request
+access-control-allow-origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+x-correlation-id: a41cc2b5-b037-43e4-a2ea-bbbc9d309c28
+ratelimit-policy: 10;w=900
+ratelimit-limit: 10
+ratelimit-remaining: 9
+ratelimit-reset: 900
+x-powered-by: Express
+cache-control: no-store, max-age=0
+pragma: no-cache
+expires: 0
+content-type: application/json; charset=utf-8
+content-length: 74
+etag: W/&quot;4a-ykt8RNdauiJ1W0HkkOlMNeBpgUk&quot;
+date: Mon, 26 Jan 2026 19:45:16 GMT
+connection: close
+
+{&quot;error&quot;:{&quot;code&quot;:&quot;CODE_REQUIRED&quot;,&quot;message&quot;:&quot;Enrollment code is required&quot;}}</pre>
+    </details>
+    
+
+    <details>
+      <summary>curl /api/v1/admin/health</summary>
+      <pre>HTTP/1.1 401 Unauthorized
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+x-correlation-id: 89607e81-395a-4d48-bce7-4ced58d6229b
+RateLimit-Policy: 100;w=60
+RateLimit-Limit: 100
+RateLimit-Remaining: 92
+RateLimit-Reset: 11
+Content-Type: application/json; charset=utf-8
+Content-Length: 157
+ETag: W/&quot;9d-IfnYJBxYhw0jo7cZjqsoE7d+0LE&quot;
+Date: Mon, 26 Jan 2026 19:45:22 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{&quot;error&quot;:{&quot;code&quot;:&quot;UNAUTHORIZED&quot;,&quot;message&quot;:&quot;Missing x-admin-token header. Admin authentication required.&quot;},&quot;requestId&quot;:&quot;89607e81-395a-4d48-bce7-4ced58d6229b&quot;}</pre>
+    </details>
+    
+
+    <h2 id="pos">POS Screens</h2>
+    
+    <table>
+      <thead><tr><th>Screen</th><th>Entry Path</th><th>Auth/Flags</th><th>Key Actions</th><th>API Calls</th><th>Backend Handler</th><th>DB Tables/Columns</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Splash</td><td>Stack.Screen Splash (App.tsx)</td><td>X-Device-Token required after enroll</td><td>Boot sync, route to Enroll or POS</td><td>POST /api/v1/pos/sync; POST /api/v1/pos/events</td><td>backend/src/routes/v1/pos/sync.ts; backend/src/routes/v1/pos/events.ts</td><td>catalog.store_products (store_id, product_id), inventory.inventory_ledger (store_id, product_id, qty_delta), sales/sale_items, pos_devices</td><td><span class="pill status PASS">PASS</span></td><td>401 expected without device token</td></tr><tr><td>EnrollDevice</td><td>Stack.Screen EnrollDevice</td><td>Public enroll; ui-status protected</td><td>Submit enrollment code, register device</td><td>POST /api/v1/pos/enroll; GET /api/v1/pos/ui-status; POST /api/v1/pos/events</td><td>backend/src/routes/v1/pos/enroll.ts; pos/uiStatus.ts; pos/events.ts</td><td>pos_device_enrollments (code, device_id), pos_devices (id, store_id), platform.stores</td><td><span class="pill status PASS">PASS</span></td><td>curl without code returns CODE_REQUIRED</td></tr><tr><td>DeviceBlocked</td><td>Stack.Screen DeviceBlocked</td><td>X-Device-Token required</td><td>Display blocked status</td><td>GET /api/v1/pos/ui-status</td><td>backend/src/routes/v1/pos/uiStatus.ts</td><td>platform.stores (id, flags), pos_devices (blocked_at)</td><td><span class="pill status PASS">PASS</span></td><td>Requires device token</td></tr><tr><td>SellScan</td><td>Embedded in PosRootLayout (SELL tab)</td><td>X-Device-Token required</td><td>Scan/search, add to cart, catalog categories</td><td>POST /api/v1/pos/scan/resolve; GET /api/v1/pos/store-products/*; POST /api/v1/pos/store-products; GET /api/v1/catalog/stores/:storeId/*</td><td>pos/scan.ts; pos/storeProducts.ts; catalog routes missing</td><td>catalog.store_products (store_id, product_id, sell_price, current_stock), catalog.store_product_barcodes</td><td><span class="pill status FAIL">FAIL</span></td><td>Catalog endpoints missing in backend</td></tr><tr><td>Buy</td><td>Embedded in PosRootLayout (BUY tab)</td><td>X-Device-Token required</td><td>Browse catalog, add to purchase cart</td><td>GET /api/v1/catalog/stores/:storeId/catalog; GET /api/v1/catalog/stores/:storeId/categories</td><td>catalog routes missing</td><td>catalog.store_products (store_id, product_id), catalog.products</td><td><span class="pill status FAIL">FAIL</span></td><td>Catalog endpoints missing in backend</td></tr><tr><td>Menu</td><td>Embedded in PosRootLayout (Menu tab)</td><td>X-Device-Token required</td><td>Navigate to history, reorder, statements</td><td>GET /api/v1/pos/daily-summary; GET /api/v1/pos/ui-status; POST /api/v1/pos/events</td><td>pos/sales.ts; pos/uiStatus.ts; pos/events.ts</td><td>sales (store_id, total_minor), pos_devices</td><td><span class="pill status PASS">PASS</span></td><td>Core nav only</td></tr><tr><td>Payment</td><td>Stack.Screen Payment</td><td>X-Device-Token required</td><td>Create sale, take payment, collections</td><td>POST /api/v1/pos/sales; POST /api/v1/pos/payments/*; POST /api/v1/pos/collections/*</td><td>backend/src/routes/v1/pos/sales.ts</td><td>sales (id, store_id), sale_items (sale_id, qty), payments (sale_id, method), collections</td><td><span class="pill status PASS">PASS</span></td><td>Payment flows present</td></tr><tr><td>SuccessPrint</td><td>Stack.Screen SuccessPrint</td><td>X-Device-Token required</td><td>Receipt share/print, event logging</td><td>POST /api/v1/pos/events</td><td>backend/src/routes/v1/pos/events.ts</td><td>pos_events (id, event_type), pos_devices</td><td><span class="pill status PASS">PASS</span></td><td>No blocking issues</td></tr><tr><td>SalesHistory</td><td>Stack.Screen SalesHistory</td><td>X-Device-Token required</td><td>List bills</td><td>GET /api/v1/pos/bills</td><td>backend/src/routes/v1/pos/sales.ts</td><td>sales (id, store_id), sale_items, payments</td><td><span class="pill status PASS">PASS</span></td><td>List endpoint present</td></tr><tr><td>BillDetail</td><td>Stack.Screen BillDetail</td><td>X-Device-Token required</td><td>Bill detail</td><td>GET /api/v1/pos/bills/:saleId</td><td>backend/src/routes/v1/pos/sales.ts</td><td>sales, sale_items, payments</td><td><span class="pill status PASS">PASS</span></td><td>Detail endpoint present</td></tr><tr><td>BarcodeSheet</td><td>Stack.Screen BarcodeSheet</td><td>X-Device-Token required</td><td>Generate barcode sheets</td><td>GET /api/v1/pos/store-products/list</td><td>backend/src/routes/v1/pos/storeProducts.ts</td><td>catalog.store_products (barcode, display_name)</td><td><span class="pill status PASS">PASS</span></td><td>Uses products list</td></tr><tr><td>OrderHistory</td><td>Stack.Screen OrderHistory</td><td>X-Device-Token required</td><td>List purchase orders</td><td>GET /api/v1/orders/stores/:storeId/orders</td><td>backend/src/routes/v1/orders.ts</td><td>orders.purchase_orders, orders.purchase_order_items, supplier.suppliers</td><td><span class="pill status PASS">PASS</span></td><td>List endpoint present</td></tr><tr><td>OrderDetail</td><td>Stack.Screen OrderDetail</td><td>X-Device-Token required</td><td>View order, cancel</td><td>GET /api/v1/orders/stores/:storeId/orders/:orderId; GET /events; POST /cancel</td><td>backend/src/routes/v1/orders.ts</td><td>orders.purchase_orders, orders.order_events, orders.purchase_order_items</td><td><span class="pill status PASS">PASS</span></td><td>Cancel endpoint present</td></tr><tr><td>GRN</td><td>Stack.Screen GRN</td><td>X-Device-Token required</td><td>Receive goods for order</td><td>POST /api/v1/orders/stores/:storeId/orders/:orderId/receive</td><td>missing in backend routes</td><td>orders.purchase_order_items, inventory.inventory_ledger, inventory.stock_balances</td><td><span class="pill status FAIL">FAIL</span></td><td>Receive endpoint missing</td></tr><tr><td>PurchaseHistory</td><td>Stack.Screen PurchaseHistory</td><td>X-Device-Token required</td><td>View stock-in history</td><td>GET /api/v1/pos/inventory/ledger; GET /statement; POST /transactions</td><td>backend/src/routes/v1/pos/inventory.ts</td><td>inventory.inventory_ledger (store_id, qty_delta), inventory.stock_balances</td><td><span class="pill status PASS">PASS</span></td><td>Inventory routes present</td></tr><tr><td>Purchase</td><td>Embedded in PosRootLayout (Purchase tab)</td><td>X-Device-Token required</td><td>Stock-in products</td><td>GET/POST /api/v1/pos/stock-in</td><td>backend/src/routes/v1/pos/stockIn.ts</td><td>inventory.inventory_ledger, inventory.stock_balances, catalog.store_products</td><td><span class="pill status PASS">PASS</span></td><td>Stock-in routes present</td></tr><tr><td>Inward</td><td>Stack.Screen Inward</td><td>X-Device-Token required</td><td>Inventory adjustments, catalog search</td><td>GET /api/v1/pos/inventory/*; POST /transactions; GET /api/v1/pos/suppliers; GET /api/v1/catalog/stores/:storeId/*</td><td>pos/inventory.ts; pos/suppliers.ts; catalog routes missing</td><td>inventory.inventory_ledger, inventory.stock_balances, supplier.suppliers</td><td><span class="pill status FAIL">FAIL</span></td><td>Catalog endpoints missing</td></tr><tr><td>ReorderSettings</td><td>Stack.Screen ReorderSettings</td><td>X-Device-Token required</td><td>View/update reorder settings</td><td>GET/PATCH /api/v1/reorder/stores/:storeId/reorder/settings</td><td>backend/src/routes/v1/reorder.ts</td><td>reorder.store_settings (store_id, reorder_enabled)</td><td><span class="pill status PASS">PASS</span></td><td>Settings endpoints present</td></tr><tr><td>ReorderPolicies</td><td>Stack.Screen ReorderPolicies</td><td>X-Device-Token required</td><td>List/update policies</td><td>GET /api/v1/reorder/stores/:storeId/reorder/policies; PATCH /policies/:productId</td><td>backend/src/routes/v1/reorder.ts</td><td>reorder.product_policies (store_id, product_id), inventory.stock_balances</td><td><span class="pill status PASS">PASS</span></td><td>Policy endpoints present</td></tr><tr><td>Reorder</td><td>Embedded in PosRootLayout (Reorder tab)</td><td>X-Device-Token required</td><td>List pending, approve/dismiss</td><td>GET /api/v1/reorder/stores/:storeId/reorder/pending; POST /pending/approve; POST /pending/:id/dismiss</td><td>missing approve/dismiss routes in backend</td><td>reorder.pending_reorders (store_id, product_id, status)</td><td><span class="pill status FAIL">FAIL</span></td><td>Approve/dismiss endpoints missing</td></tr><tr><td>SalesStatement</td><td>Stack.Screen SalesStatement</td><td>X-Device-Token required</td><td>Statement views</td><td>GET /api/v1/pos/inventory/ledger; GET /statement</td><td>backend/src/routes/v1/pos/inventory.ts</td><td>inventory.inventory_ledger, inventory.stock_balances</td><td><span class="pill status PASS">PASS</span></td><td>Inventory routes present</td></tr><tr><td>StockStatement</td><td>Stack.Screen StockStatement</td><td>X-Device-Token required</td><td>Stock list + catalog metadata</td><td>GET /api/v1/pos/inventory/*; GET /api/v1/catalog/stores/:storeId/*</td><td>pos/inventory.ts; catalog routes missing</td><td>inventory.inventory_ledger, inventory.stock_balances, catalog.products</td><td><span class="pill status FAIL">FAIL</span></td><td>Catalog endpoints missing</td></tr><tr><td>UiShowcase</td><td>Stack.Screen UiShowcase (feature-flag gated)</td><td>X-Device-Token required; QA only</td><td>UI demo and demo data</td><td>POST /api/v1/demo/seed</td><td>backend/src/routes/v1/demo.ts</td><td>catalog.products, catalog.store_products</td><td><span class="pill status WARN">WARN</span></td><td>Ensure feature flag off in production</td></tr>
+      </tbody>
+    </table>
+    
+
+    <h2 id="retailer">Retailer Dashboard</h2>
+    
+    <table>
+      <thead><tr><th>Page</th><th>Entry Path</th><th>Auth</th><th>Key Actions</th><th>API Calls</th><th>Backend Handler</th><th>DB Tables/Columns</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Login</td><td>/s/:storeCode/login</td><td>Public (firebase login)</td><td>Authenticate retailer</td><td>POST /api/v1/retailer-admin/auth/firebase-login</td><td>backend/src/routes/v1/retailer-admin/auth.ts</td><td>auth.store_users (store_id, user_id), auth.users, platform.stores</td><td><span class="pill status PASS">PASS</span></td><td>JWT required for protected routes</td></tr><tr><td>Dashboard</td><td>/s/:storeCode (index)</td><td>Retailer JWT</td><td>Category list and edits</td><td>GET/PATCH/DELETE /api/v1/retailer-admin/categories</td><td>backend/src/routes/v1/retailer-admin/inventory.ts</td><td>catalog.fmcg_taxonomy, catalog.store_category_overrides, platform.stores</td><td><span class="pill status PASS">PASS</span></td><td>Categories route present</td></tr><tr><td>Products</td><td>/s/:storeCode/products</td><td>Retailer JWT</td><td>Create/update products, bulk import</td><td>GET/POST/PATCH/DELETE /api/v1/retailer-admin/products; import/bulk-paste</td><td>backend/src/routes/v1/retailer-admin/products.ts; csvImport.ts</td><td>catalog.store_products, catalog.products, inventory.stock_balances, platform.csv_imports</td><td><span class="pill status PASS">PASS</span></td><td>Import endpoints present</td></tr><tr><td>Inventory</td><td>/s/:storeCode/inventory</td><td>Retailer JWT</td><td>Inventory summary, ledger</td><td>GET /api/v1/retailer-admin/inventory; GET /inventory/ledger</td><td>backend/src/routes/v1/retailer-admin/inventory.ts</td><td>inventory.inventory_ledger, catalog.store_products, platform.stores</td><td><span class="pill status PASS">PASS</span></td><td>Ledger endpoint present</td></tr><tr><td>Suppliers</td><td>/s/:storeCode/suppliers</td><td>Retailer JWT</td><td>Supplier list and create</td><td>GET/POST /api/v1/retailer-admin/suppliers</td><td>backend/src/routes/v1/retailer-admin/suppliers.ts</td><td>supplier.suppliers, supplier.supplier_store_links</td><td><span class="pill status PASS">PASS</span></td><td>Supplier endpoints present</td></tr><tr><td>Import</td><td>/s/:storeCode/import</td><td>Retailer JWT</td><td>CSV template, upload, validate, commit</td><td>GET /products/import/template; POST /products/import/upload; POST /products/import/validate; POST /products/import/commit</td><td>backend/src/routes/v1/retailer-admin/csvImport.ts</td><td>platform.csv_imports, catalog.store_products, inventory.stock_balances</td><td><span class="pill status PASS">PASS</span></td><td>Import endpoints present</td></tr><tr><td>Compliance</td><td>/s/:storeCode/compliance</td><td>Retailer JWT</td><td>Document upload and status</td><td>None (mock data only)</td><td>backend/src/routes/v1/retailer-admin/compliance.ts exists, UI not wired</td><td>platform.compliance_documents (expected)</td><td><span class="pill status FAIL">FAIL</span></td><td>Mock data only - no API calls</td></tr><tr><td>AllPages (dev only)</td><td>/s/:storeCode/_pages (DEV only)</td><td>Retailer JWT</td><td>QA route listing</td><td>Multiple (dev only)</td><td>N/A</td><td>N/A</td><td><span class="pill status WARN">WARN</span></td><td>Hidden in production</td></tr>
+      </tbody>
+    </table>
+    
+
+    <h2 id="superadmin">SuperAdmin</h2>
+    
+    <table>
+      <thead><tr><th>Tab</th><th>Entry</th><th>Auth</th><th>Key Actions</th><th>API Calls</th><th>Backend Handler</th><th>DB Tables/Columns</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Events</td><td>SPA tab: events</td><td>x-admin-token required</td><td>View POS events</td><td>GET /api/v1/admin/pos/events</td><td>backend/src/routes/v1/admin/posEvents.ts</td><td>pos_events (id, event_type, created_at), pos_devices</td><td><span class="pill status PASS">PASS</span></td><td>Auth required</td></tr><tr><td>Devices</td><td>SPA tab: devices</td><td>x-admin-token required</td><td>List devices, view enrollments</td><td>GET /api/v1/admin/devices; POST /api/v1/admin/stores/:storeId/device-enrollments</td><td>backend/src/routes/v1/admin/devices.ts; admin/deviceEnrollments.ts</td><td>pos_devices, pos_device_enrollments, platform.stores</td><td><span class="pill status PASS">PASS</span></td><td>Auth required</td></tr><tr><td>Stores</td><td>SPA tab: stores</td><td>x-admin-token required</td><td>List/create/update stores, barcode sheets</td><td>GET/POST/PATCH /api/v1/admin/stores; GET /api/v1/admin/barcode-sheets</td><td>backend/src/routes/v1/admin/stores.ts; admin/barcodeSheets.ts</td><td>platform.stores, catalog.store_products</td><td><span class="pill status PASS">PASS</span></td><td>Auth required</td></tr><tr><td>Suppliers</td><td>SPA tab: suppliers</td><td>x-admin-token required</td><td>Approve/verify suppliers</td><td>GET /api/v1/admin/pending-suppliers; GET /verified-suppliers; POST verify/reject</td><td>backend/src/routes/v1/admin/suppliers.ts</td><td>supplier.supplier_requests, supplier.suppliers, platform.stores</td><td><span class="pill status PASS">PASS</span></td><td>Auth required</td></tr><tr><td>Analytics</td><td>SPA tab: analytics</td><td>x-admin-token required</td><td>Overview, devices, products, purchases, activity, dues</td><td>GET /api/v1/admin/analytics/*</td><td>backend/src/routes/v1/admin/analytics.ts</td><td>sales, sale_items, payments, collections, pos_devices, purchases, scan_events</td><td><span class="pill status PASS">PASS</span></td><td>Uses analytics service tables</td></tr><tr><td>Payments</td><td>SPA tab: payments</td><td>x-admin-token required</td><td>Payments and dues views</td><td>GET /api/v1/admin/analytics/overview; GET /api/v1/admin/analytics/dues</td><td>backend/src/routes/v1/admin/analytics.ts</td><td>payments, collections, sales</td><td><span class="pill status PASS">PASS</span></td><td>Derived from analytics endpoints</td></tr><tr><td>AI</td><td>SPA tab: ai</td><td>x-admin-token required</td><td>AI insights and health</td><td>POST /api/v1/admin/ai; GET /api/v1/admin/ai/health</td><td>backend/src/routes/v1/admin/ai.ts</td><td>N/A</td><td><span class="pill status PASS">PASS</span></td><td>Ensure AI service is deployed</td></tr><tr><td>Users</td><td>SPA tab: users</td><td>x-admin-token required</td><td>List/admin users</td><td>GET /api/v1/admin/users</td><td>backend/src/routes/v1/admin/users.ts</td><td>auth.users</td><td><span class="pill status PASS">PASS</span></td><td>Auth required</td></tr><tr><td>Settings</td><td>SPA tab: settings</td><td>x-admin-token required</td><td>System settings and stats</td><td>GET /api/v1/admin/settings; GET /api/v1/admin/settings/stats</td><td>backend/src/routes/v1/admin/settings.ts</td><td>platform.stores, auth.users, pos_devices</td><td><span class="pill status PASS">PASS</span></td><td>Auth required</td></tr>
+      </tbody>
+    </table>
+    
+
+    <h2 id="backend">Gateway/Backend Mapping</h2>
+    
+    <table>
+      <thead><tr><th>Frontend Endpoint</th><th>Gateway Route</th><th>Backend Route</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>/api/v1/pos/*</td><td>YES</td><td>YES</td><td>POS routes in backend (sales, inventory, sync)</td></tr><tr><td>/api/v1/catalog/stores/:storeId/*</td><td>YES</td><td>NO</td><td>Gateway routes to main backend, but only /catalog/health exists</td></tr><tr><td>/api/v1/reorder/stores/:storeId/reorder/pending/approve</td><td>YES</td><td>NO</td><td>Approve/dismiss endpoints missing in backend</td></tr><tr><td>/api/v1/orders/stores/:storeId/orders/:orderId/receive</td><td>YES</td><td>NO</td><td>GRN receive endpoint missing</td></tr><tr><td>/api/v1/retailer-admin/*</td><td>YES</td><td>YES</td><td>Retailer admin routes wired to backend</td></tr><tr><td>/api/v1/admin/*</td><td>YES</td><td>YES</td><td>Admin routes wired; requires x-admin-token</td></tr>
+      </tbody>
+    </table>
+    
+
+    <h2 id="db">DB/Schema</h2>
+    
+<h3>Route to tables (from static scan)</h3>
+<pre>backend/src/routes/v1/admin/deviceEnrollments.ts
+  - platform.stores
+  - pos_device_enrollments
+
+backend/src/routes/v1/admin/devices.ts
+  - platform.stores
+  - pos_devices
+
+backend/src/routes/v1/admin/globalProducts.ts
+  - global_products
+
+backend/src/routes/v1/admin/settings.ts
+  - auth.users
+  - platform.stores
+  - public.pos_devices
+
+backend/src/routes/v1/admin/stores.ts
+  - platform.stores
+
+backend/src/routes/v1/admin/suppliers.ts
+  - platform.stores
+  - supplier.supplier_requests
+  - supplier.suppliers
+
+backend/src/routes/v1/admin/users.ts
+  - auth.users
+
+backend/src/routes/v1/demo.ts
+  - catalog.product_barcodes
+  - catalog.products
+  - catalog.store_products
+  - platform.stores
+
+backend/src/routes/v1/orders.ts
+  - catalog.products
+  - catalog.supplier_products
+  - orders.order_events
+  - orders.purchase_order_items
+  - orders.purchase_orders
+  - supplier.suppliers
+
+backend/src/routes/v1/pos/__tests__/enroll.integration.test.ts
+  - pos_device_enrollments
+  - pos_devices
+  - stores
+
+backend/src/routes/v1/pos/__tests__/scan.integration.test.ts
+  - barcodes
+  - products
+  - retailer_variants
+  - variants
+
+backend/src/routes/v1/pos/devices.ts
+  - platform.stores
+  - pos_devices
+
+backend/src/routes/v1/pos/enroll.ts
+  - platform.stores
+  - pos_device_enrollments
+  - pos_devices
+  - public.device_enrollment_events
+
+backend/src/routes/v1/pos/inventory.ts
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - inventory.inventory_ledger
+  - inventory.stock_balances
+  - store_products
+
+backend/src/routes/v1/pos/sales.ts
+  - barcodes
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - collections
+  - global_product_identifiers
+  - global_products
+  - payments
+  - platform.stores
+  - products
+  - retailer_variants
+  - sale_items
+  - sales
+  - store_products
+  - variants
+
+backend/src/routes/v1/pos/stockIn.ts
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - inventory.inventory_ledger
+  - inventory.stock_balances
+  - store_products
+  - supplier.suppliers
+
+backend/src/routes/v1/pos/store.ts
+  - platform.stores
+
+backend/src/routes/v1/pos/storeProducts.ts
+  - catalog.product_barcodes
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - inventory.inventory_ledger
+  - inventory.stock_balances
+
+backend/src/routes/v1/pos/suppliers.ts
+  - catalog.supplier_products
+  - supplier.supplier_store_links
+  - supplier.suppliers
+
+backend/src/routes/v1/pos/sync.ts
+  - barcodes
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - collections
+  - inventory.inventory_ledger
+  - inventory.stock_balances
+  - payments
+  - pos_devices
+  - processed_events
+  - products
+  - purchases
+  - retailer_variants
+  - sale_items
+  - sales
+  - variants
+
+backend/src/routes/v1/pos/translations.ts
+  - catalog.products
+  - catalog.translation_overrides
+
+backend/src/routes/v1/pos/uiStatus.ts
+  - platform.stores
+  - pos_devices
+
+backend/src/routes/v1/reorder.ts
+  - catalog.products
+  - catalog.store_products
+  - inventory.stock_balances
+  - products
+  - reorder.pending_reorders
+  - reorder.product_policies
+  - reorder.store_settings
+
+backend/src/routes/v1/retailer-admin/auth.ts
+  - auth.store_users
+  - auth.users
+  - platform.stores
+
+backend/src/routes/v1/retailer-admin/csvImport.ts
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - inventory.inventory_ledger
+  - inventory.stock_balances
+  - platform.csv_imports
+
+backend/src/routes/v1/retailer-admin/inventory.ts
+  - catalog.fmcg_taxonomy
+  - catalog.products
+  - catalog.store_category_overrides
+  - catalog.store_products
+  - inventory.inventory_ledger
+  - platform.stores
+  - public.sale_items
+  - public.sales
+
+backend/src/routes/v1/retailer-admin/products.ts
+  - catalog.fmcg_taxonomy
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - inventory.inventory_ledger
+  - inventory.stock_balances
+  - supplier.suppliers
+
+backend/src/routes/v1/retailer-admin/search.ts
+  - catalog.products
+  - catalog.store_product_barcodes
+  - catalog.store_products
+  - supplier.supplier_store_links
+  - supplier.suppliers
+
+backend/src/routes/v1/retailer-admin/suppliers.ts
+  - supplier.supplier_store_links
+  - supplier.suppliers</pre>
+<h3>Analytics service tables</h3>
+<pre>backend/src/services/analytics/analyticsService.ts
+  - barcodes
+  - collections
+  - consumer_order_items
+  - consumer_orders
+  - payments
+  - pos_devices
+  - processed_events
+  - products
+  - purchase_items
+  - purchases
+  - sale_items
+  - sales
+  - scan_events
+  - variants</pre>
+<h3>Migrations table list</h3>
+<pre>admin.audit_log
+auth.device_tokens
+auth.password_reset_tokens
+auth.refresh_tokens
+auth.roles
+auth.store_users
+auth.user_roles
+auth.users
+barcodes
+catalog.catalog_mapping_log
+catalog.event_inbox
+catalog.fmcg_taxonomy
+catalog.product_barcodes
+catalog.product_translations
+catalog.products
+catalog.store_category_overrides
+catalog.store_product_barcodes
+catalog.store_products
+catalog.supplier_product_map
+catalog.supplier_products
+catalog.taxonomy_keywords
+catalog.translation_cache
+catalog.translation_glossary
+catalog.translation_overrides
+catalog.translation_quotas
+global_product_identifiers
+global_products
+inventory.event_inbox
+inventory.event_outbox
+inventory.idempotency_keys
+inventory.inventory_ledger
+inventory.stock_balances
+inventory_ledger
+orders.event_outbox
+orders.idempotency_keys
+orders.order_events
+orders.order_sequences
+orders.purchase_order_items
+orders.purchase_orders
+platform.compliance_documents
+platform.csv_imports
+platform.feature_flags
+platform.impersonation_logs
+platform.store_code_counters
+platform.stores
+pos_device_enrollments
+pos_devices
+products
+public.api_idempotency_keys
+public.bill_sequences
+public.collections
+public.customers
+public.device_enrollment_events
+public.payments
+public.pos_devices
+public.sale_items
+public.sales
+public.sync_event_failures
+reorder.event_inbox
+reorder.event_outbox
+reorder.idempotency_keys
+reorder.pending_reorders
+reorder.product_policies
+reorder.reorder_policies
+reorder.reorder_runs
+reorder.store_reorder_settings
+reorder.store_settings
+retailer_variants
+store_inventory
+store_products
+supplier.event_outbox
+supplier.supplier_requests
+supplier.supplier_store_links
+supplier.suppliers
+variants</pre>
+
+
+    <h2 id="issues">Issue List</h2>
+    
+        <div class="issue" id="AUD-GOLIVE-001">
+          <h3>AUD-GOLIVE-001: Deployed revision on VM not verified and gateway reports v3.0.9</h3>
+          <div class="issueMeta"><span class="pill severity CRITICAL">CRITICAL</span> <span class="muted">Area:</span> Gateway/Deployment</div>
+          <ul>
+            <li><b>Screen/Flow:</b> All flows</li>
+            <li><b>Symptom:</b> Gateway health returns version 3.0.9 while repo commit is f130cd0; VM revision is unverified.</li>
+            <li><b>Root cause:</b> Deployment verification not performed on VM; gateway likely running older build.</li>
+            <li><b>Evidence:</b> <div class='evidence'><div class='evidenceTitle'>git rev-parse HEAD</div><pre>f130cd01feb8cbc4593992597d7d396ba3916663</pre></div><div class='evidence'><div class='evidenceTitle'>curl /health (gateway)</div><pre>HTTP/1.1 200 OK
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+x-correlation-id: 6ba7f742-4ba4-47eb-bfea-4e547ae549d2
+Content-Type: application/json; charset=utf-8
+Content-Length: 57
+ETag: W/&quot;39-zSyGBcH7/6YpP1d/NqY7Ns3i2yw&quot;
+Date: Mon, 26 Jan 2026 19:44:58 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{&quot;status&quot;:&quot;ok&quot;,&quot;service&quot;:&quot;api-gateway&quot;,&quot;version&quot;:&quot;3.0.9&quot;}</pre></div></li>
+            <li><b>Fix plan:</b><ol><li>SSH into VM and record deployed commit for each service (docker ps or git rev-parse).</li><li>Redeploy api-gateway and backend to match commit f130cd0.</li><li>Confirm health version and routes after deploy.</li></ol></li>
+            <li><b>Verification:</b><ol><li><code>curl -i http://34.14.220.171:3000/health</code></li><li><code>curl -i http://34.14.220.171:3000/api/v1/admin/health -H &quot;x-admin-token: &lt;token&gt;&quot;</code></li></ol></li>
+            <li><b>Deployment needed:</b> YES (api-gateway, main-backend)</li>
+          </ul>
+        </div>
+        
+
+        <div class="issue" id="AUD-GOLIVE-002">
+          <h3>AUD-GOLIVE-002: POS service health endpoint not reachable on port 3009</h3>
+          <div class="issueMeta"><span class="pill severity CRITICAL">CRITICAL</span> <span class="muted">Area:</span> Backend/POS Service</div>
+          <ul>
+            <li><b>Screen/Flow:</b> POS service direct health check</li>
+            <li><b>Symptom:</b> curl to :3009/health fails to connect.</li>
+            <li><b>Root cause:</b> POS service not running on port 3009 or port is not exposed.</li>
+            <li><b>Evidence:</b> <div class='evidence'><div class='evidenceTitle'>curl /health (pos service)</div><pre>% Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0
+  0     0    0     0    0     0      0      0 --:--:--  0:00:02 --:--:--     0
+curl: (7) Failed to connect to 34.14.220.171 port 3009 after 2315 ms: Could not connect to server</pre></div></li>
+            <li><b>Fix plan:</b><ol><li>Verify POS service process is running and listening on :3009.</li><li>Expose the port or remove the dependency if only gateway is used.</li></ol></li>
+            <li><b>Verification:</b><ol><li><code>curl -i http://34.14.220.171:3009/health</code></li></ol></li>
+            <li><b>Deployment needed:</b> YES (pos service / VM networking)</li>
+          </ul>
+        </div>
+        
+
+        <div class="issue" id="AUD-GOLIVE-003">
+          <h3>AUD-GOLIVE-003: Catalog endpoints used by POS are missing in backend</h3>
+          <div class="issueMeta"><span class="pill severity CRITICAL">CRITICAL</span> <span class="muted">Area:</span> POS/Backend</div>
+          <ul>
+            <li><b>Screen/Flow:</b> Sell, Buy, Inward, Stock Statement</li>
+            <li><b>Symptom:</b> POS calls /api/v1/catalog/stores/:storeId/* but backend only defines /api/v1/catalog/health.</li>
+            <li><b>Root cause:</b> Catalog routes are not implemented in backend monolith, while gateway routes /api/v1/catalog to it.</li>
+            <li><b>Evidence:</b> <div class='evidence'><div class='evidenceTitle'>catalogApi.ts (frontend)</div><pre>context: string;
+}
+
+// =============================================================================
+// API FUNCTIONS
+// =============================================================================
+
+const CATALOG_BASE = &quot;/api/v1/catalog&quot;;
+
+/**
+ * Get paginated catalog for a store.
+ * Returns products mapped via supplier_product_map from linked suppliers.
+ */
+export async function getCatalog(
+  storeId: string,
+  params?: GetCatalogParams
+): Promise&lt;GetCatalogResponse&gt; {
+  const query = new URLSearchParams();
+
+  if (params?.q &amp;&amp; params.q.trim().length &gt;= 2) {
+    query.set(&quot;q&quot;, params.q.trim());
+  }
+  if (params?.category) {
+    query.set(&quot;category&quot;, params.category);
+  }
+  if (params?.inStockOnly) {
+    query.set(&quot;inStockOnly&quot;, &quot;true&quot;);
+  }
+  if (params?.page &amp;&amp; params.page &gt; 0) {
+    query.set(&quot;page&quot;, String(params.page));
+  }
+  if (params?.limit &amp;&amp; params.limit &gt; 0) {
+    query.set(&quot;limit&quot;, String(params.limit));
+  }
+
+  const queryString = query.toString();
+  const path = `${CATALOG_BASE}/stores/${storeId}/catalog${queryString ? `?${queryString}` : &quot;&quot;}`;
+
+  return apiClient.get&lt;GetCatalogResponse&gt;(path);
+}
+
+/**
+ * Search catalog products.
+ * Convenience wrapper around getCatalog with search query.
+ */
+export async function searchCatalog(
+  storeId: string,
+  searchQuery: string,
+  options?: {
+    category?: string;
+    inStockOnly?: boolean;
+    page?: number;
+    limit?: number;
+  }
+): Promise&lt;GetCatalogResponse&gt; {
+  return getCatalog(storeId, {
+    q: searchQuery,
+    category: options?.category,
+    inStockOnly: options?.inStockOnly,
+    page: options?.page,
+    limit: options?.limit,
+  });
+}
+
+/**
+ * Get a single product with all supplier details.
+ */
+export async function getProduct(
+  storeId: string,
+  productId: string
+): Promise&lt;CatalogProduct&gt; {
+  const path = `${CATALOG_BASE}/stores/${storeId}/catalog/${productId}`;
+  const response = await apiClient.get&lt;GetProductResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Get all suppliers for a product.
+ * Returns the suppliers array from the product detail.
+ */</pre></div><div class='evidence'><div class='evidenceTitle'>gateway config pathPrefix</div><pre>7:  pathPrefix: string;
+8:  /** If false, the pathPrefix is NOT stripped when forwarding to backend (default: true) */
+65:      pathPrefix: '/api/v1/admin/pos',
+71:      pathPrefix: '/api/v1/admin/analytics',
+77:      pathPrefix: '/api/v1/admin/devices',
+83:      pathPrefix: '/api/v1/admin/ai',
+89:      pathPrefix: '/api/v1/admin/barcode-sheets',
+95:      pathPrefix: '/api/v1/admin/global-products',
+101:      pathPrefix: '/api/v1/admin/stores',
+107:      pathPrefix: '/api/v1/admin/device-enrollments',
+113:      pathPrefix: '/api/v1/admin/pending-suppliers',
+119:      pathPrefix: '/api/v1/admin/verified-suppliers',
+126:      pathPrefix: '/api/v1/admin/health',
+133:      pathPrefix: '/api/v1/admin/users',
+140:      pathPrefix: '/api/v1/admin/settings',
+147:      pathPrefix: '/api/v1/admin',
+155:      pathPrefix: '/api/v1/auth',
+162:      pathPrefix: '/api/v1/platform',
+169:      pathPrefix: '/api/v1/suppliers',
+176:      pathPrefix: '/api/v1/catalog',
+183:      pathPrefix: '/api/v1/inventory',
+190:      pathPrefix: '/api/v1/orders',
+197:      pathPrefix: '/api/v1/reorder',
+207:      pathPrefix: '/api/v1/pos',
+215:      pathPrefix: '/api/v1/voice',
+223:      pathPrefix: '/api/v1/retailer-admin/auth',
+230:      pathPrefix: '/api/v1/retailer-admin/health',
+237:      pathPrefix: '/api/v1/retailer-admin/inventory',
+244:      pathPrefix: '/api/v1/retailer-admin/categories',
+251:      pathPrefix: '/api/v1/retailer-admin/products',
+258:      pathPrefix: '/api/v1/retailer-admin/suppliers',
+265:      pathPrefix: '/api/v1/retailer-admin/search',
+272:      pathPrefix: '/api/v1/retailer-admin',
+279:      pathPrefix: '/api/v1/demo',</pre></div><div class='evidence'><div class='evidenceTitle'>backend route map for /api/v1/catalog</div><pre>/api/v1/catalog/health	GET	backend/src/routes/v1/microserviceHealth.ts</pre></div></li>
+            <li><b>Fix plan:</b><ol><li>Implement /api/v1/catalog routes in backend or route gateway to the catalog service.</li><li>Add store isolation (store_id) to all catalog queries.</li><li>Add tests for categories, catalog list, category products.</li></ol></li>
+            <li><b>Verification:</b><ol><li><code>curl -i http://34.14.220.171:3000/api/v1/catalog/stores/&lt;storeId&gt;/categories -H &quot;X-Device-Token: &lt;token&gt;&quot;</code></li><li><code>curl -i http://34.14.220.171:3000/api/v1/catalog/stores/&lt;storeId&gt;/catalog?limit=20 -H &quot;X-Device-Token: &lt;token&gt;&quot;</code></li></ol></li>
+            <li><b>Deployment needed:</b> YES (backend and/or gateway routing)</li>
+          </ul>
+        </div>
+        
+
+        <div class="issue" id="AUD-GOLIVE-004">
+          <h3>AUD-GOLIVE-004: Reorder approve/dismiss endpoints missing in backend</h3>
+          <div class="issueMeta"><span class="pill severity CRITICAL">CRITICAL</span> <span class="muted">Area:</span> POS/Backend</div>
+          <ul>
+            <li><b>Screen/Flow:</b> Reorder tab</li>
+            <li><b>Symptom:</b> UI calls approve/dismiss endpoints that are not present in backend routes.</li>
+            <li><b>Root cause:</b> reorder.ts implements pending list and settings, but not approve/dismiss/detail endpoints.</li>
+            <li><b>Evidence:</b> <div class='evidence'><div class='evidenceTitle'>reorderApi.ts (frontend)</div><pre>success: boolean;
+  data: ReorderPolicy;
+  message: string;
+}
+
+export interface BulkUpdatePoliciesRequest {
+  policies: Array&lt;{
+    productId: string;
+    minThreshold?: number;
+    targetStock?: number;
+    preferredSupplierId?: string | null;
+    isEnabled?: boolean;
+  }&gt;;
+}
+
+export interface BulkUpdatePoliciesResponse {
+  success: boolean;
+  data: {
+    updatedCount: number;
+    policies: ReorderPolicy[];
+  };
+  message: string;
+}
+
+// =============================================================================
+// API FUNCTIONS
+// =============================================================================
+
+const REORDER_BASE = &quot;/api/v1/reorder&quot;;
+
+/**
+ * List pending reorders for a store.
+ */
+export async function listPendingReorders(
+  storeId: string,
+  params?: {
+    status?: PendingReorderStatus;
+    limit?: number;
+    offset?: number;
+  }
+): Promise&lt;ListPendingResponse&gt; {
+  const query = new URLSearchParams();
+
+  if (params?.status) {
+    query.set(&quot;status&quot;, params.status);
+  }
+  if (params?.limit &amp;&amp; params.limit &gt; 0) {
+    query.set(&quot;limit&quot;, String(params.limit));
+  }
+  if (params?.offset &amp;&amp; params.offset &gt; 0) {
+    query.set(&quot;offset&quot;, String(params.offset));
+  }
+
+  const queryString = query.toString();
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending${queryString ? `?${queryString}` : &quot;&quot;}`;
+
+  return apiClient.get&lt;ListPendingResponse&gt;(path);
+}
+
+/**
+ * Get a single pending reorder.
+ */
+export async function getPendingReorder(
+  storeId: string,
+  pendingId: string
+): Promise&lt;PendingReorder&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/${pendingId}`;
+  const response = await apiClient.get&lt;GetPendingResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Approve selected pending reorders.
+ * Returns draft purchase orders grouped by supplier.
+ */
+export async function approvePendingReorders(
+  storeId: string,
+  ids: string[]
+): Promise&lt;ApproveResponse&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/approve`;
+  return apiClient.post&lt;ApproveResponse&gt;(path, { ids });
+}
+
+/**
+ * Dismiss a pending reorder with a reason.
+ */
+export async function dismissPendingReorder(
+  storeId: string,
+  pendingId: string,
+  reason: string
+): Promise&lt;DismissResponse&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/pending/${pendingId}/dismiss`;
+  return apiClient.post&lt;DismissResponse&gt;(path, { reason });
+}
+
+// =============================================================================
+// SETTINGS API FUNCTIONS
+// =============================================================================
+
+/**
+ * Get reorder settings for a store.
+ */
+export async function getReorderSettings(
+  storeId: string
+): Promise&lt;ReorderSettings&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/settings`;
+  const response = await apiClient.get&lt;GetSettingsResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Update reorder settings for a store.
+ */
+export async function updateReorderSettings(
+  storeId: string,
+  settings: UpdateSettingsRequest
+): Promise&lt;ReorderSettings&gt; {
+  const path = `${REORDER_BASE}/stores/${storeId}/reorder/settings`;
+  const response = await apiClient.patch&lt;UpdateSettingsResponse&gt;(path, settings);
+  return response.data;</pre></div><div class='evidence'><div class='evidenceTitle'>backend route map for /api/v1/reorder</div><pre>/api/v1/reorder/health	GET	backend/src/routes/v1/microserviceHealth.ts
+/api/v1/reorder/stores/:storeId/reorder/pending	GET	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/policies	GET	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/policies/:productId	PATCH	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/settings	GET	backend/src/routes/v1/reorder.ts
+/api/v1/reorder/stores/:storeId/reorder/settings	PATCH	backend/src/routes/v1/reorder.ts</pre></div></li>
+            <li><b>Fix plan:</b><ol><li>Add POST /reorder/pending/approve and POST /reorder/pending/:id/dismiss handlers.</li><li>Add GET /reorder/pending/:id if UI expects detail view.</li><li>Add tests and verify store isolation.</li></ol></li>
+            <li><b>Verification:</b><ol><li><code>curl -i -X POST http://34.14.220.171:3000/api/v1/reorder/stores/&lt;storeId&gt;/reorder/pending/approve -H &quot;X-Device-Token: &lt;token&gt;&quot;</code></li><li><code>curl -i -X POST http://34.14.220.171:3000/api/v1/reorder/stores/&lt;storeId&gt;/reorder/pending/&lt;id&gt;/dismiss -H &quot;X-Device-Token: &lt;token&gt;&quot;</code></li></ol></li>
+            <li><b>Deployment needed:</b> YES (backend)</li>
+          </ul>
+        </div>
+        
+
+        <div class="issue" id="AUD-GOLIVE-005">
+          <h3>AUD-GOLIVE-005: GRN receive endpoint missing in backend</h3>
+          <div class="issueMeta"><span class="pill severity CRITICAL">CRITICAL</span> <span class="muted">Area:</span> POS/Backend</div>
+          <ul>
+            <li><b>Screen/Flow:</b> GRN (Receive Goods)</li>
+            <li><b>Symptom:</b> UI calls /api/v1/orders/.../receive but backend routes do not include receive endpoints.</li>
+            <li><b>Root cause:</b> orders.ts defines list/get/cancel/events only; GRN receive flow is not implemented.</li>
+            <li><b>Evidence:</b> <div class='evidence'><div class='evidenceTitle'>orderApi.ts (frontend)</div><pre>}
+  if (params?.limit &amp;&amp; params.limit &gt; 0) {
+    query.set(&quot;limit&quot;, String(params.limit));
+  }
+
+  const queryString = query.toString();
+  const path = `${ORDER_BASE}/stores/${storeId}/orders${queryString ? `?${queryString}` : &quot;&quot;}`;
+
+  return apiClient.get&lt;ListOrdersResponse&gt;(path);
+}
+
+/**
+ * Get a single purchase order with items.
+ */
+export async function getOrder(
+  storeId: string,
+  orderId: string
+): Promise&lt;PurchaseOrderWithItems&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}`;
+  const response = await apiClient.get&lt;GetOrderResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Create a new purchase order.
+ */
+export async function createOrder(
+  storeId: string,
+  params: CreateOrderParams
+): Promise&lt;PurchaseOrderWithItems&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders`;
+  const response = await apiClient.post&lt;CreateOrderResponse&gt;(path, params);
+  return response.data;
+}
+
+/**
+ * Get order events (status timeline).
+ */
+export async function getOrderEvents(
+  storeId: string,
+  orderId: string
+): Promise&lt;OrderEvent[]&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/events`;
+  const response = await apiClient.get&lt;GetEventsResponse&gt;(path);
+  return response.data;
+}
+
+/**
+ * Submit a draft order.
+ */
+export async function submitOrder(
+  storeId: string,
+  orderId: string
+): Promise&lt;TransitionResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/submit`;
+  return apiClient.post&lt;TransitionResponse&gt;(path);
+}
+
+/**
+ * Cancel an order.
+ * GL-PO-001: Idempotent - absorbs 404/410 without throwing.
+ * Returns { success: true, alreadyDeleted: true } if order was already deleted/cancelled.
+ */
+export async function cancelOrder(
+  storeId: string,
+  orderId: string,
+  reason?: string
+): Promise&lt;CancelOrderResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/cancel`;
+  try {
+    const response = await apiClient.post&lt;TransitionResponse&gt;(path, { reason });
+    return {
+      success: true,
+      alreadyDeleted: false,
+      data: response.data,
+      transition: response.transition,
+    };
+  } catch (error) {
+    // GL-PO-001: Handle 404 (not found) and 410 (gone) as successful idempotent delete
+    if (error instanceof ApiError &amp;&amp; (error.status === 404 || error.status === 410)) {
+      console.log(`[OrderApi] cancelOrder idempotent: orderId=${orderId} already deleted (status=${error.status})`);
+      return { success: true, alreadyDeleted: true };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Confirm a submitted order.
+ */
+export async function confirmOrder(
+  storeId: string,
+  orderId: string
+): Promise&lt;TransitionResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/confirm`;
+  return apiClient.post&lt;TransitionResponse&gt;(path);
+}
+
+/**
+ * Mark order as shipped.
+ */
+export async function shipOrder(
+  storeId: string,
+  orderId: string,
+  trackingInfo?: { trackingNumber?: string; carrier?: string }
+): Promise&lt;TransitionResponse&gt; {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/ship`;
+  return apiClient.post&lt;TransitionResponse&gt;(path, trackingInfo);
+}
+
+// =============================================================================
+// GRN (GOODS RECEIVING) API FUNCTIONS
+// =============================================================================
+
+/**
+ * Receive goods for a purchase order (GRN).
+ * Creates a receive record and updates inventory.
+ */
+export async function receiveGoods(
+  storeId: string,</pre></div><div class='evidence'><div class='evidenceTitle'>backend route map for /api/v1/orders</div><pre>/api/v1/orders/health	GET	backend/src/routes/v1/microserviceHealth.ts
+/api/v1/orders/stores/:storeId/orders	GET	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId	DELETE	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId	GET	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId/cancel	POST	backend/src/routes/v1/orders.ts
+/api/v1/orders/stores/:storeId/orders/:orderId/events	GET	backend/src/routes/v1/orders.ts</pre></div></li>
+            <li><b>Fix plan:</b><ol><li>Implement POST /orders/:orderId/receive in backend.</li><li>Create receive records and update inventory stock balances.</li><li>Add tests for receive flow and order status transitions.</li></ol></li>
+            <li><b>Verification:</b><ol><li><code>curl -i -X POST http://34.14.220.171:3000/api/v1/orders/stores/&lt;storeId&gt;/orders/&lt;orderId&gt;/receive -H &quot;X-Device-Token: &lt;token&gt;&quot;</code></li></ol></li>
+            <li><b>Deployment needed:</b> YES (backend)</li>
+          </ul>
+        </div>
+        
+
+        <div class="issue" id="AUD-GOLIVE-006">
+          <h3>AUD-GOLIVE-006: Compliance page uses mock data and no API integration</h3>
+          <div class="issueMeta"><span class="pill severity MEDIUM">MEDIUM</span> <span class="muted">Area:</span> Retailer</div>
+          <ul>
+            <li><b>Screen/Flow:</b> Retailer Compliance</li>
+            <li><b>Symptom:</b> Compliance UI renders static mockDocuments and simulated upload.</li>
+            <li><b>Root cause:</b> CompliancePage.tsx uses mock data and does not call /api/v1/retailer-admin/compliance endpoints.</li>
+            <li><b>Evidence:</b> <div class='evidence'><div class='evidenceTitle'>CompliancePage.tsx (mock data)</div><pre>import { useState } from 'react';
+
+interface Document {
+  id: string;
+  type: string;
+  fileName: string;
+  uploadedAt: string;
+  status: 'pending' | 'verified' | 'rejected';
+  rejectionReason?: string;
+}
+
+// Mock data
+const mockDocuments: Document[] = [
+  { id: '1', type: 'GSTIN Certificate', fileName: 'gstin_certificate.pdf', uploadedAt: '2024-01-10', status: 'verified' },
+  { id: '2', type: 'FSSAI License', fileName: 'fssai_license.pdf', uploadedAt: '2024-01-12', status: 'verified' },
+  { id: '3', type: 'Shop License', fileName: 'shop_license.pdf', uploadedAt: '2024-01-14', status: 'pending' },
+  { id: '4', type: 'PAN Card', fileName: 'pan_card.jpg', uploadedAt: '2024-01-15', status: 'rejected', rejectionReason: 'Image is blurry, please upload a clear copy' },
+];
+
+const documentTypes = [
+  { value: 'gstin', label: 'GSTIN Certificate' },
+  { value: 'fssai', label: 'FSSAI License' },
+  { value: 'shop_license', label: 'Shop License' },
+  { value: 'pan', label: 'PAN Card' },
+  { value: 'trade_license', label: 'Trade License' },
+];
+
+export default function CompliancePage() {</pre></div></li>
+            <li><b>Fix plan:</b><ol><li>Wire CompliancePage to /api/v1/retailer-admin/compliance and upload endpoints.</li><li>Persist documents to storage and return status updates.</li></ol></li>
+            <li><b>Verification:</b><ol><li><code>curl -i http://34.14.220.171:3000/api/v1/retailer-admin/compliance -H &quot;Authorization: Bearer &lt;token&gt;&quot;</code></li></ol></li>
+            <li><b>Deployment needed:</b> YES (retailer-admin frontend; backend if endpoints incomplete)</li>
+          </ul>
+        </div>
+        
+
+    <h2 id="deploy">Deployment Checklist</h2>
+    
+<ol>
+  <li>Verify VM revision (docker ps or git rev-parse in each deployed folder).</li>
+  <li>Redeploy backend and gateway to commit f130cd0.</li>
+  <li>Run database migrations if needed (backend/scripts/migrate.js).</li>
+  <li>Rebuild and deploy retailer-admin and superadmin (vite build outputs).</li>
+  <li>Post-deploy health checks:
+    <ul>
+      <li><code>curl -i http://34.14.220.171:3000/health</code></li>
+      <li><code>curl -i http://34.14.220.171:3000/api/v1/pos/ui-status -H "X-Device-Token: &lt;token&gt;"</code></li>
+      <li><code>curl -i http://34.14.220.171:3000/api/v1/admin/health -H "x-admin-token: &lt;token&gt;"</code></li>
+      <li><code>curl -i http://34.14.220.171:3000/api/v1/catalog/stores/&lt;storeId&gt;/categories -H "X-Device-Token: &lt;token&gt;"</code></li>
+    </ul>
+  </li>
+</ol>
+
+  </main>
+</body>
+</html>
