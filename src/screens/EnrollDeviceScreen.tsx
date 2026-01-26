@@ -30,6 +30,45 @@ import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
 import { useSettingsStore } from "../stores/settingsStore";
 
+/**
+ * POS-ENROLL-401-FIX: Integration Smoke Test Checklist
+ *
+ * Before Go-Live, verify these scenarios manually:
+ *
+ * 1. FRESH INSTALL / CLEARED STORAGE:
+ *    - Clear app data (Settings > Apps > SuperMandi POS > Clear Data)
+ *    - Open app → should show EnrollDeviceScreen
+ *    - Enter valid enrollment code (e.g., SM-DEMO01)
+ *    - Enter device label (e.g., Counter-1)
+ *    - Tap "Enroll Device"
+ *    - EXPECTED: Enrollment succeeds, navigates to SellScan
+ *    - VERIFY LOGS:
+ *      [api_debug] POST /api/v1/pos/enroll (no BLOCKED message)
+ *      [Enroll] Success: token saved (len=...)
+ *      [api_debug] X-Device-Token: <first 8 chars>...
+ *
+ * 2. PROTECTED ENDPOINT AFTER ENROLL:
+ *    - After successful enrollment, app should call ui-status
+ *    - VERIFY LOGS:
+ *      [api_debug] GET /api/v1/pos/ui-status
+ *      [api_debug] X-Device-Token: <first 8 chars>...(len=...)
+ *      [api_debug] status: 200
+ *
+ * 3. WRONG/EXPIRED ENROLLMENT CODE:
+ *    - Clear app data
+ *    - Enter invalid code (e.g., "WRONG-CODE")
+ *    - EXPECTED: Alert shows "Enrollment code is invalid"
+ *    - App stays on EnrollDeviceScreen (no navigation)
+ *    - No token stored (verify with subsequent attempt)
+ *
+ * 4. REINSTALL / TOKEN CLEARED:
+ *    - Uninstall and reinstall app
+ *    - Should show EnrollDeviceScreen (no crash)
+ *    - Should be able to enroll again
+ *
+ * See: apiClient.ts for PUBLIC_ENDPOINT_PATTERNS and guard assertions
+ */
+
 type RootStackParamList = {
   EnrollDevice: undefined;
   SellScan: undefined;
@@ -307,6 +346,9 @@ export default function EnrollDeviceScreen() {
       }
       navigation.replace("SellScan");
     } catch (error) {
+      // POS-ENROLL-401-FIX Acceptance #3: Wrong enrollment code
+      // On error, we reach this catch block BEFORE saveDeviceSession is called,
+      // so no token is stored. User stays on EnrollDeviceScreen.
       let errorKey = "enrollment_failed";
       let rawMessage = "";
 
