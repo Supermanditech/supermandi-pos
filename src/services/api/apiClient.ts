@@ -24,7 +24,8 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
 
   const fullUrl = `${API_BASE_URL}${path}`;
   console.log(`[api_debug] ${method} ${fullUrl}`);
-  console.log(`[api_debug] X-Device-Token: ${deviceToken ? deviceToken.slice(0, 8) + "..." : "none"}`);
+  // GO-LIVE DEBUG: Log token length to verify full token is being sent
+  console.log(`[api_debug] X-Device-Token: ${deviceToken ? `${deviceToken.slice(0, 8)}...(len=${deviceToken.length})` : "none"}`);
   if (body) console.log(`[api_debug] body: ${JSON.stringify(body).slice(0, 200)}`);
 
   // CACHE-000: Prevent stale API responses from HTTP cache

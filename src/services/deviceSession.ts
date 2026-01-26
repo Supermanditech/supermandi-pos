@@ -36,7 +36,11 @@ export async function getDeviceSession(): Promise<DeviceSession | null> {
       const raw = await SecureStore.getItemAsync(SESSION_KEY);
       if (raw) {
         const parsed = normalizeSession(JSON.parse(raw));
-        if (parsed) return parsed;
+        if (parsed) {
+          // GO-LIVE DEBUG: Log retrieved session
+          console.log(`[deviceSession] Retrieved from SecureStore: deviceId=${parsed.deviceId}, tokenLen=${parsed.deviceToken?.length ?? 0}`);
+          return parsed;
+        }
       }
     } catch {
       // Fall through to AsyncStorage
@@ -45,7 +49,12 @@ export async function getDeviceSession(): Promise<DeviceSession | null> {
   try {
     const raw = await AsyncStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return normalizeSession(JSON.parse(raw));
+    const parsed = normalizeSession(JSON.parse(raw));
+    if (parsed) {
+      // GO-LIVE DEBUG: Log retrieved session
+      console.log(`[deviceSession] Retrieved from AsyncStorage: deviceId=${parsed.deviceId}, tokenLen=${parsed.deviceToken?.length ?? 0}`);
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -54,15 +63,19 @@ export async function getDeviceSession(): Promise<DeviceSession | null> {
 export async function saveDeviceSession(session: DeviceSession): Promise<void> {
   const secureAvailable = await secureStoreAvailable();
   const payload = JSON.stringify(session);
+  // GO-LIVE DEBUG: Log session save details to diagnose token storage issues
+  console.log(`[deviceSession] Saving session: deviceId=${session.deviceId}, storeId=${session.storeId}, tokenLen=${session.deviceToken?.length ?? 0}`);
   if (secureAvailable) {
     try {
       await SecureStore.setItemAsync(SESSION_KEY, payload);
+      console.log(`[deviceSession] Saved to SecureStore (payloadLen=${payload.length})`);
       return;
-    } catch {
-      // Fall back to AsyncStorage
+    } catch (e) {
+      console.warn(`[deviceSession] SecureStore save failed, falling back to AsyncStorage:`, e);
     }
   }
   await AsyncStorage.setItem(SESSION_KEY, payload);
+  console.log(`[deviceSession] Saved to AsyncStorage (payloadLen=${payload.length})`);
 }
 
 export async function clearDeviceSession(): Promise<void> {
