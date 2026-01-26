@@ -163,7 +163,7 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
   const updateSql = `
     UPDATE pos_devices
     SET ${updates.join(", ")}
-    WHERE id = $${params.length + 1}::uuid
+    WHERE id = $${params.length + 1}
     RETURNING id,
               store_id,
               active,
