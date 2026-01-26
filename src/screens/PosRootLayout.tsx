@@ -262,6 +262,21 @@ export default function PosRootLayout() {
     };
   }, []);
 
+  // GO-LIVE FIX: Check session validity on mount - redirect to EnrollDevice if no token
+  useEffect(() => {
+    let cancelled = false;
+    const checkSession = async () => {
+      const session = await getDeviceSession();
+      if (cancelled) return;
+      if (!session || !session.deviceToken) {
+        console.log("[PosRootLayout] No valid session, redirecting to EnrollDevice");
+        navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+      }
+    };
+    void checkSession();
+    return () => { cancelled = true; };
+  }, [navigation]);
+
   useEffect(() => {
     if (reorderPulseAnimationRef.current) {
       reorderPulseAnimationRef.current.stop();
@@ -376,6 +391,13 @@ export default function PosRootLayout() {
       if (uiStatusAppStateRef.current !== "active") return;
       uiStatusInFlightRef.current = true;
       try {
+        // GO-LIVE FIX: Check session before making API calls - redirect if cleared
+        const session = await getDeviceSession();
+        if (!session || !session.deviceToken) {
+          console.log("[PosRootLayout/loadStatus] No valid session, redirecting to EnrollDevice");
+          navigation.reset({ index: 0, routes: [{ name: "EnrollDevice" }] });
+          return;
+        }
         const status = await fetchUiStatus();
         if (cancelled) return;
         // UI-REVEAL: Clear connection error on successful API call
