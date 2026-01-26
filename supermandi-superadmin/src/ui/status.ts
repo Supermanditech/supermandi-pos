@@ -24,7 +24,7 @@ export function getDeviceTone(status: DeviceStatus): StatusTone {
 
 export function composeDeviceMessage(status: DeviceStatus): string {
   if (!status.active) {
-    return "Device is disabled. Enable it in Superadmin to resume billing.";
+    return "Device is disabled. Enable it in SuperAdmin to resume billing.";
   }
   if (!isDeviceOnline(status.lastSeenOnline)) {
     return "Device is offline. Ask staff to reconnect so bills can sync.";
