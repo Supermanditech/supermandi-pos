@@ -34,7 +34,8 @@ export type ReadinessFeature = "liveSuppliers" | "stockIn" | "dailySummary";
 // =============================================================================
 
 const PROBE_TIMEOUT_MS = 2000;  // 2s timeout per endpoint
-const CACHE_TTL_MS = 5 * 60 * 1000;  // 5 minute cache
+// POS-HEALTH-002: Increased from 5 min to 15 min for 10k scale
+const CACHE_TTL_MS = 15 * 60 * 1000;  // 15 minute cache
 
 // Phase-1 endpoints to probe
 const ENDPOINTS = {

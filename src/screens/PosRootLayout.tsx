@@ -462,12 +462,13 @@ export default function PosRootLayout() {
       }
     };
 
+    // POS-HEALTH-002: De-amplify uiStatus polling (was 15s, now 60s)
     const startPolling = () => {
       if (uiStatusIntervalRef.current) return;
       void loadStatus();
       uiStatusIntervalRef.current = setInterval(() => {
         void loadStatus();
-      }, 15000);
+      }, 60000); // 60s instead of 15s for 10k scale
     };
 
     const stopPolling = () => {

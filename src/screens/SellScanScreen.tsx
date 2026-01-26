@@ -914,11 +914,11 @@ export default function SellScanScreen({
     });
   }, []);
 
-  // R5: Periodic catalog freshness check - detect dashboard edits and re-sync
+  // R5: Catalog freshness check - detect dashboard edits and re-sync
+  // POS-HEALTH-002: Removed continuous 30s polling - now only on screen enter + app resume
   const lastSyncedAtRef = useRef<string | null>(new Date().toISOString());
   useEffect(() => {
     let cancelled = false;
-    const FRESHNESS_INTERVAL_MS = 30_000; // Check every 30s
 
     const checkFreshness = async () => {
       if (cancelled) return;
@@ -939,9 +939,10 @@ export default function SellScanScreen({
       }
     };
 
-    const interval = setInterval(checkFreshness, FRESHNESS_INTERVAL_MS);
+    // POS-HEALTH-002: Check freshness once on screen mount (not continuously)
+    checkFreshness();
 
-    // RCAT-SYNC-001: Immediate freshness check when app returns to foreground
+    // RCAT-SYNC-001: Freshness check when app returns to foreground
     const handleAppState = (nextState: string) => {
       if (nextState === "active" && !cancelled) {
         checkFreshness();
@@ -951,7 +952,6 @@ export default function SellScanScreen({
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
       appStateSub.remove();
     };
   }, []);
@@ -1364,13 +1364,15 @@ export default function SellScanScreen({
     }
   };
 
+  // POS-PRICE-003: Gate debug logging behind __DEV__ to prevent spam in production
   const logPriceDebug = useCallback((item: SkuItem, resolved: productsApi.PriceResolution) => {
+    if (!__DEV__) return; // Skip in production
     const productId = item.productId ?? item.barcode;
     const key = `${productId}:${resolved.priceMinor}:${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`;
     if (priceLogRef.current.has(key)) return;
     priceLogRef.current.add(key);
     console.log(
-      `[PRICE_DEBUG] ${productId} ${resolved.priceMinor} ${resolved.inventoryPrice ?? "null"} ${resolved.variantPrice ?? "null"} ${resolved.mrp ?? "null"}`
+      `[PRICE_DEBUG] ${productId} ${resolved.priceMinor} ${resolved.inventoryPrice ?? "null"}:${resolved.variantPrice ?? "null"}:${resolved.mrp ?? "null"}`
     );
   }, []);
 
