@@ -34,6 +34,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   // GO-LIVE-REVEAL-001: Feature flags for tab visibility (default enabled for live testing)
   let buyEnabled = true;
   let reorderEnabled = true;
+  // CONTRACT-LOCK-UI-STATUS-001: Add missing feature flags expected by frontend
+  let inventoryEnabled = true;
+  let suppliersEnabled = true;
   if (status.storeId) {
     try {
       const storeRes = await pool.query(
@@ -115,6 +118,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       // GO-LIVE-REVEAL-001: Feature flags for POS tab visibility
       buyEnabled,
       reorderEnabled,
+      // CONTRACT-LOCK-UI-STATUS-001: Missing feature flags
+      inventoryEnabled,
+      suppliersEnabled,
       // Legacy alias for buyEnabled
       ordersEnabled: buyEnabled
     }
