@@ -32,6 +32,7 @@ type RootStackParamList = {
   SalesStatement: undefined;
   StockStatement: undefined;
   UiShowcase: undefined;
+  Buy: undefined; // AUD-POS-NAV-002: Wire BuyScreen to navigation
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -371,16 +372,30 @@ export default function MenuScreen() {
           </View>
 
           {buyEnabled && (
-            <Pressable style={styles.menuItem} onPress={goToOrders}>
-              <View style={styles.menuIcon}>
-                <MaterialCommunityIcons name={"clipboard-list" as any} size={20} color={theme.colors.primary} />
-              </View>
-              <View style={styles.menuText}>
-                <Text style={styles.menuTitle}>{t('menu.purchaseOrders')}</Text>
-                <Text style={styles.menuSubtitle}>{t('menu.purchaseOrdersSubtitle')}</Text>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
-            </Pressable>
+            <>
+              <Pressable style={styles.menuItem} onPress={goToOrders}>
+                <View style={styles.menuIcon}>
+                  <MaterialCommunityIcons name={"clipboard-list" as any} size={20} color={theme.colors.primary} />
+                </View>
+                <View style={styles.menuText}>
+                  <Text style={styles.menuTitle}>{t('menu.purchaseOrders')}</Text>
+                  <Text style={styles.menuSubtitle}>{t('menu.purchaseOrdersSubtitle')}</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+              </Pressable>
+
+              {/* AUD-POS-NAV-002: Wire BuyScreen to navigation */}
+              <Pressable style={styles.menuItem} onPress={() => navigation.navigate("Buy")}>
+                <View style={styles.menuIcon}>
+                  <MaterialCommunityIcons name={"storefront-outline" as any} size={20} color={theme.colors.primary} />
+                </View>
+                <View style={styles.menuText}>
+                  <Text style={styles.menuTitle}>{t('menu.productCatalog', { defaultValue: 'Product Catalog' })}</Text>
+                  <Text style={styles.menuSubtitle}>{t('menu.productCatalogSubtitle', { defaultValue: 'Browse and add products to purchase' })}</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+              </Pressable>
+            </>
           )}
 
           {reorderEnabled && (

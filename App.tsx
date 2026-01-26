@@ -37,6 +37,8 @@ import { FeatureGate } from "./src/components/FeatureGate";
 import PurchaseHistoryScreen from "./src/screens/PurchaseHistoryScreen";
 import SalesStatementScreen from "./src/screens/SalesStatementScreen";
 import StockStatementScreen from "./src/screens/StockStatementScreen";
+// AUD-POS-NAV-002: Wire BuyScreen to navigation
+import { BuyScreen } from "./src/screens/BuyScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -154,6 +156,16 @@ function StockStatementWrapper() {
   return <StockStatementScreen onBack={() => navigation.goBack()} />;
 }
 
+// AUD-POS-NAV-002: BuyScreen wrapper with feature gate
+function BuyScreenWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <FeatureGate feature="buy" onBack={() => navigation.goBack()}>
+      <BuyScreen />
+    </FeatureGate>
+  );
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
 
@@ -243,6 +255,8 @@ export default function App() {
           <Stack.Screen name="PurchaseHistory" component={PurchaseHistoryWrapper} />
           <Stack.Screen name="SalesStatement" component={SalesStatementWrapper} />
           <Stack.Screen name="StockStatement" component={StockStatementWrapper} />
+          {/* AUD-POS-NAV-002: BuyScreen now wired to navigation */}
+          <Stack.Screen name="Buy" component={BuyScreenWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
       </GestureHandlerRootView>
