@@ -1,5 +1,6 @@
-// Proxy Routes - V3.0.9 compliant
+// Proxy Routes - V3.0.10 compliant
 // Routes requests to appropriate backend services
+// P1-001: Fixed body forwarding for PATCH/POST/PUT requests
 
 import { Router, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -12,6 +13,7 @@ const router: Router = Router();
 
 /**
  * Create proxy options for a service
+ * P1-001: Added proper body forwarding for PATCH/POST/PUT requests
  */
 function createProxyOptions(service: ServiceConfig): Options {
   // GW-ADMIN-001: Support stripPrefix option (default: true for backward compatibility)
@@ -32,10 +34,25 @@ function createProxyOptions(service: ServiceConfig): Options {
     target: service.url,
     changeOrigin: true,
     pathRewrite,
+    // P1-001: Set timeout to 30s to prevent premature connection drops
+    proxyTimeout: 30000,
+    timeout: 30000,
     onProxyReq: (proxyReq: ClientRequest, req: Request) => {
       // Forward correlation ID to backend service
       if (req.correlationId) {
         proxyReq.setHeader(CORRELATION_ID_HEADER, req.correlationId);
+      }
+
+      // P1-001: Handle body forwarding for POST/PUT/PATCH requests
+      // When express.json() or body-parser middleware has already parsed the body,
+      // the raw stream is consumed. We need to re-serialize and write it to the proxy request.
+      if (req.body && Object.keys(req.body).length > 0) {
+        const bodyData = JSON.stringify(req.body);
+        // Update content-length header to match the actual body size
+        proxyReq.setHeader('Content-Type', 'application/json');
+        proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+        // Write the body data to the proxy request
+        proxyReq.write(bodyData);
       }
 
       // Log proxy request

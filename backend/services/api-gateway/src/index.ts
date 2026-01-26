@@ -1,5 +1,6 @@
-// API Gateway - V3.0.9 compliant
+// API Gateway - V3.0.10 compliant
 // Main entry point for all backend API requests
+// P1-001: Added JSON body parsing for PATCH/POST/PUT request forwarding
 
 import express from 'express';
 import helmet from 'helmet';
@@ -34,6 +35,11 @@ app.use((req, res, next) => {
 
 // Security headers
 app.use(helmet());
+
+// P1-001: Parse JSON bodies for PATCH/POST/PUT requests
+// This allows the proxy to re-serialize and forward the body to backend services
+// The proxy's onProxyReq handler will write req.body back to the proxy request
+app.use(express.json({ limit: '10mb' }));
 
 // Correlation ID (must be first for logging)
 app.use(correlationIdMiddleware);
@@ -71,7 +77,7 @@ app.get('/health', (_req, res) => {
   res.status(200).json({
     status: 'ok',
     service: 'api-gateway',
-    version: '3.0.9',
+    version: '3.0.10',
   });
 });
 
@@ -124,9 +130,10 @@ app.use(
 app.listen(config.port, () => {
   console.log(`
 ====================================================
-  SuperMandi API Gateway v3.0.9
+  SuperMandi API Gateway v3.0.10
   Running on port ${config.port}
   Environment: ${config.env}
+  P1-001: PATCH/POST/PUT body forwarding enabled
 ====================================================
   `);
 });

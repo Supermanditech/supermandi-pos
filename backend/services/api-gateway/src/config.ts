@@ -119,6 +119,27 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/admin/verified-suppliers',
       stripPrefix: false,
     },
+    // P1-002: Explicit admin health route -> main backend
+    {
+      name: 'admin-health',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/admin/health',
+      stripPrefix: false,
+    },
+    // ADM-SCR-002: Admin users route -> main backend
+    {
+      name: 'admin-users',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/admin/users',
+      stripPrefix: false,
+    },
+    // ADM-SCR-003: Admin settings route -> main backend
+    {
+      name: 'admin-settings',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/admin/settings',
+      stripPrefix: false,
+    },
     // AUD-042-A: All other admin routes -> main backend (monolith deployment)
     {
       name: 'admin',
