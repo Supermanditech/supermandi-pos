@@ -24,7 +24,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       buyEnabled: true, // BUY tab enabled by default
-      reorderEnabled: false,
+      reorderEnabled: true, // P1-UI-004: Match backend default for go-live
       categoryBrowsingEnabled: true, // CAT-005: Category browsing enabled by default for Demo Store
       voiceEnabled: true, // VOICE-009: Voice enabled by default for Demo Store, OFF for others
       language: 'en', // Default language
