@@ -11,7 +11,11 @@ import {
   fetchAnalyticsDevices,
   fetchAnalyticsProducts,
   fetchAnalyticsPurchases,
-  fetchAnalyticsConsumerSales
+  fetchAnalyticsConsumerSales,
+  fetchAnalyticsActivity,
+  fetchAnalyticsDues,
+  type ActivityResponse,
+  type DuesResponse
 } from "./api/analytics";
 import { fetchBarcodeSheetPdf } from "./api/barcodeSheets";
 import {
@@ -30,7 +34,7 @@ import "./App.css";
 
 type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings";
 type GroupKey = "none" | "transactionId" | "billId";
-type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer";
+type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
 type DeviceType = "OEM_HANDHELD" | "SUPMANDI_PHONE" | "RETAILER_PHONE";
 
@@ -195,6 +199,8 @@ export default function App() {
   const [analyticsProducts, setAnalyticsProducts] = useState<any>(null);
   const [analyticsPurchases, setAnalyticsPurchases] = useState<any>(null);
   const [analyticsConsumerSales, setAnalyticsConsumerSales] = useState<any>(null);
+  const [analyticsActivity, setAnalyticsActivity] = useState<ActivityResponse["activity"] | null>(null);
+  const [analyticsDues, setAnalyticsDues] = useState<DuesResponse["dues"] | null>(null);
   const [productsGroupBy, setProductsGroupBy] = useState<string>("day");
 
   // Suppliers state
@@ -520,6 +526,14 @@ export default function App() {
       if (activeTab === "consumer") {
         const res = await fetchAnalyticsConsumerSales({ storeId, from, to });
         setAnalyticsConsumerSales(res.consumer_sales);
+      }
+      if (activeTab === "activity") {
+        const res = await fetchAnalyticsActivity({ storeId, from, to });
+        setAnalyticsActivity(res.activity);
+      }
+      if (activeTab === "dues") {
+        const res = await fetchAnalyticsDues({ storeId, from, to });
+        setAnalyticsDues(res.dues);
       }
     } catch (e: any) {
       setAnalyticsError(e?.message ? String(e.message) : "Failed to fetch analytics");
@@ -2029,13 +2043,13 @@ export default function App() {
             </div>
 
             <div className="subTabs" style={{ marginTop: 12 }}>
-              {(["overview", "devices", "products", "payments", "purchases", "consumer"] as AnalyticsTabKey[]).map((key) => (
+              {(["overview", "devices", "products", "payments", "purchases", "consumer", "activity", "dues"] as AnalyticsTabKey[]).map((key) => (
                 <button
                   key={key}
                   className={analyticsTab === key ? "tab tabActive" : "tab"}
                   onClick={() => setAnalyticsTab(key)}
                 >
-                  {key === "consumer" ? "Consumer Sales" : key === "payments" ? "Payments & Dues" : key[0].toUpperCase() + key.slice(1)}
+                  {key === "consumer" ? "Consumer Sales" : key === "payments" ? "Payments & Dues" : key === "activity" ? "Activity Logs" : key === "dues" ? "Dues Tracking" : key[0].toUpperCase() + key.slice(1)}
                 </button>
               ))}
             </div>
@@ -2349,6 +2363,107 @@ export default function App() {
                           <td className="mono">{s.count}</td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* P2-SADM-001: Activity Logs */}
+            {analyticsTab === "activity" && analyticsActivity && (
+              <div style={{ marginTop: 12 }}>
+                <div className="cardHeader" style={{ paddingTop: 0 }}>
+                  <div className="cardTitle">Activity Logs</div>
+                  <div className="muted">
+                    {analyticsActivity.range.from.slice(0, 10)} to {analyticsActivity.range.to.slice(0, 10)} (grouped by {analyticsActivity.groupBy})
+                  </div>
+                </div>
+                <div className="tableWrap" style={{ paddingTop: 0 }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Time Bucket</th>
+                        <th>Scans</th>
+                        <th>Sales</th>
+                        <th>Collections</th>
+                        <th>New Products</th>
+                        <th>Offline Synced</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsActivity.buckets.length === 0 ? (
+                        <tr><td colSpan={6} className="empty">No activity in this period.</td></tr>
+                      ) : (
+                        analyticsActivity.buckets.map((b) => (
+                          <tr key={b.bucket}>
+                            <td className="mono">{new Date(b.bucket).toLocaleString()}</td>
+                            <td className="mono">{b.scans}</td>
+                            <td className="mono">{b.sales}</td>
+                            <td className="mono">{b.collections}</td>
+                            <td className="mono">{b.new_products_created}</td>
+                            <td className="mono">{b.offline_events_synced}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* P2-SADM-002: Dues Tracking */}
+            {analyticsTab === "dues" && analyticsDues && (
+              <div style={{ marginTop: 12 }}>
+                <div className="analyticsGrid">
+                  <div className="analyticsCard">
+                    <div className="analyticsLabel">Outstanding Total</div>
+                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.outstanding_total_minor)}</div>
+                  </div>
+                  <div className="analyticsCard">
+                    <div className="analyticsLabel">0-1 Days</div>
+                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d0_1)}</div>
+                  </div>
+                  <div className="analyticsCard">
+                    <div className="analyticsLabel">2-7 Days</div>
+                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d2_7)}</div>
+                  </div>
+                  <div className="analyticsCard">
+                    <div className="analyticsLabel">8-30 Days</div>
+                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d8_30)}</div>
+                  </div>
+                  <div className="analyticsCard">
+                    <div className="analyticsLabel">30+ Days</div>
+                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d30_plus)}</div>
+                  </div>
+                </div>
+                <div className="cardHeader" style={{ paddingTop: 0 }}>
+                  <div className="cardTitle">Outstanding Dues ({analyticsDues.total} records)</div>
+                </div>
+                <div className="tableWrap" style={{ paddingTop: 0 }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Sale ID</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Created</th>
+                        <th>Age (Days)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analyticsDues.dues.length === 0 ? (
+                        <tr><td colSpan={5} className="empty">No outstanding dues.</td></tr>
+                      ) : (
+                        analyticsDues.dues.map((d) => (
+                          <tr key={d.sale_id}>
+                            <td className="mono">{d.sale_id.slice(0, 8)}</td>
+                            <td>{d.customer_name ?? "-"}</td>
+                            <td className="mono">{formatMoneyMinor(d.amount_minor)}</td>
+                            <td className="mono">{new Date(d.created_at).toLocaleDateString()}</td>
+                            <td className="mono">{d.age_days}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

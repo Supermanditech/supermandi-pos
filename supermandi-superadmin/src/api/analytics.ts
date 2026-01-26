@@ -163,3 +163,57 @@ export async function fetchAnalyticsConsumerSales(params: { storeId?: string; fr
   if (params.to) qs.set("to", params.to);
   return getJson<ConsumerSalesResponse>(`/api/v1/admin/analytics/consumer-sales?${qs.toString()}`);
 }
+
+// P2-SADM-001: Activity Logs
+export type ActivityResponse = {
+  activity: {
+    range: { from: string; to: string };
+    groupBy: string;
+    buckets: Array<{
+      bucket: string;
+      scans: number;
+      sales: number;
+      collections: number;
+      new_products_created: number;
+      offline_events_synced: number;
+    }>;
+  };
+};
+
+export async function fetchAnalyticsActivity(params: { storeId?: string; from?: string; to?: string }) {
+  const qs = new URLSearchParams();
+  if (params.storeId) qs.set("storeId", params.storeId);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return getJson<ActivityResponse>(`/api/v1/admin/analytics/activity?${qs.toString()}`);
+}
+
+// P2-SADM-002: Dues Tracking
+export type DuesResponse = {
+  dues: {
+    range: { from: string; to: string };
+    outstanding_total_minor: number;
+    aging: {
+      d0_1: number;
+      d2_7: number;
+      d8_30: number;
+      d30_plus: number;
+    };
+    dues: Array<{
+      sale_id: string;
+      customer_name: string | null;
+      amount_minor: number;
+      created_at: string;
+      age_days: number;
+    }>;
+    total: number;
+  };
+};
+
+export async function fetchAnalyticsDues(params: { storeId?: string; from?: string; to?: string }) {
+  const qs = new URLSearchParams();
+  if (params.storeId) qs.set("storeId", params.storeId);
+  if (params.from) qs.set("from", params.from);
+  if (params.to) qs.set("to", params.to);
+  return getJson<DuesResponse>(`/api/v1/admin/analytics/dues?${qs.toString()}`);
+}
