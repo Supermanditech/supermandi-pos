@@ -195,29 +195,37 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* GO-LIVE-REVEAL-001: Firebase not configured warning */}
+      {/* P2-RD-003: Firebase validation - error in production, warning in dev */}
       {!isFirebaseReady() && (
         <div style={{
-          background: '#fef3c7',
-          border: '1px solid #f59e0b',
-          color: '#92400e',
+          background: import.meta.env.PROD ? '#fee2e2' : '#fef3c7',
+          border: `1px solid ${import.meta.env.PROD ? '#ef4444' : '#f59e0b'}`,
+          color: import.meta.env.PROD ? '#991b1b' : '#92400e',
           padding: '1rem',
           borderRadius: '0.5rem',
           marginBottom: '1rem',
           maxWidth: '400px',
         }}>
-          <strong>Firebase Configuration Required</strong>
-          <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
-            Set the following environment variables in <code>retailer-admin/.env</code>:
-          </p>
-          <ul style={{ margin: '0.5rem 0', paddingLeft: '1.25rem', fontSize: '0.8rem' }}>
-            <li>VITE_FIREBASE_API_KEY</li>
-            <li>VITE_FIREBASE_AUTH_DOMAIN</li>
-            <li>VITE_FIREBASE_PROJECT_ID</li>
-          </ul>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: '#78350f' }}>
-            Then restart the dev server.
-          </p>
+          <strong>{import.meta.env.PROD ? 'Authentication Unavailable' : 'Firebase Configuration Required'}</strong>
+          {import.meta.env.PROD ? (
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
+              Login is currently unavailable. Please contact support if this issue persists.
+            </p>
+          ) : (
+            <>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem' }}>
+                Set the following environment variables in <code>retailer-admin/.env</code>:
+              </p>
+              <ul style={{ margin: '0.5rem 0', paddingLeft: '1.25rem', fontSize: '0.8rem' }}>
+                <li>VITE_FIREBASE_API_KEY</li>
+                <li>VITE_FIREBASE_AUTH_DOMAIN</li>
+                <li>VITE_FIREBASE_PROJECT_ID</li>
+              </ul>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#78350f' }}>
+                Then restart the dev server.
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -257,7 +265,7 @@ export default function LoginPage() {
               type="submit"
               className="btn btn-primary"
               style={{ width: '100%' }}
-              disabled={isLoading}
+              disabled={isLoading || (import.meta.env.PROD && !isFirebaseReady() && !demoMode)}
             >
               {isLoading ? 'Sending...' : 'Send OTP'}
             </button>

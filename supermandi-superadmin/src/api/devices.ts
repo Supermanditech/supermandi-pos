@@ -14,6 +14,7 @@ export type DeviceRecord = {
   android_version?: string | null;
   app_version?: string | null;
   printing_mode?: string | null;
+  scan_lookup_v2_enabled?: boolean | null; // P1-SADM-001: V2 scan lookup toggle
   last_seen_online: string | null;
   last_sync_at: string | null;
   pending_outbox_count: number;
@@ -56,6 +57,7 @@ export type DevicePatchInput = {
   label?: string;
   deviceType?: string;
   printingMode?: string;
+  scanLookupV2Enabled?: boolean; // P1-SADM-001: V2 scan lookup toggle
   active?: boolean;
   resetToken?: boolean;
 };

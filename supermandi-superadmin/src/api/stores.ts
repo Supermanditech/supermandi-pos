@@ -102,9 +102,19 @@ export async function createStore(input: { storeName: string; storeId?: string }
   return (data?.store ?? {}) as StoreRecord;
 }
 
+// P1-SADM-002: Extended store update input with contact fields
+export type StoreUpdateInput = {
+  upiVpa?: string;
+  storeName?: string;
+  address?: string;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+};
+
 export async function updateStore(
   storeId: string,
-  input: { upiVpa?: string; storeName?: string }
+  input: StoreUpdateInput
 ): Promise<StoreRecord> {
   const base = requireApiBase();
   const token = getAdminToken();

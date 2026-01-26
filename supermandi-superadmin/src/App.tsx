@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
@@ -161,6 +161,9 @@ export default function App() {
   const [storeNameEdits, setStoreNameEdits] = useState<Record<string, string>>({});
   const [storeNameSaving, setStoreNameSaving] = useState<Record<string, boolean>>({});
   const [storeNameError, setStoreNameError] = useState<string>("");
+  // P1-SADM-002: Store contact fields
+  const [storeContactEdits, setStoreContactEdits] = useState<Record<string, { address: string; contactName: string; contactPhone: string; contactEmail: string }>>({});
+  const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
 
   // Store creation
   const [createStoreName, setCreateStoreName] = useState<string>("");
@@ -178,7 +181,7 @@ export default function App() {
 
   const [deviceRecords, setDeviceRecords] = useState<DeviceRecord[]>([]);
   const [devicesError, setDevicesError] = useState<string>("");
-  const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; printingMode: string; active: boolean }>>({});
+  const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; printingMode: string; scanLookupV2Enabled: boolean; active: boolean }>>({});
   const [deviceSaving, setDeviceSaving] = useState<Record<string, boolean>>({});
   const [deviceActionError, setDeviceActionError] = useState<string>("");
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
@@ -617,6 +620,7 @@ export default function App() {
             label: device.label ?? "",
             deviceType: (device.device_type as DeviceType) ?? "RETAILER_PHONE",
             printingMode: device.printing_mode ?? "NONE",
+            scanLookupV2Enabled: device.scan_lookup_v2_enabled ?? false,
             active: Boolean(device.active)
           };
         }
@@ -763,15 +767,32 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function updateDeviceDraft(deviceId: string, patch: Partial<{ label: string; deviceType: DeviceType; printingMode: string; active: boolean }>) {
+  function updateDeviceDraft(deviceId: string, patch: Partial<{ label: string; deviceType: DeviceType; printingMode: string; scanLookupV2Enabled: boolean; active: boolean }>) {
     setDeviceEdits((prev) => ({
       ...prev,
-      [deviceId]: { ...(prev[deviceId] ?? { label: "", deviceType: "RETAILER_PHONE", printingMode: "NONE", active: true }), ...patch }
+      [deviceId]: { ...(prev[deviceId] ?? { label: "", deviceType: "RETAILER_PHONE", printingMode: "NONE", scanLookupV2Enabled: false, active: true }), ...patch }
     }));
   }
 
   function updateStoreNameDraft(storeId: string, name: string) {
     setStoreNameEdits((prev) => ({ ...prev, [storeId]: name }));
+  }
+
+  // P1-SADM-002: Store contact editing
+  function updateStoreContactDraft(storeId: string, patch: Partial<{ address: string; contactName: string; contactPhone: string; contactEmail: string }>) {
+    setStoreContactEdits((prev) => {
+      const existing = prev[storeId] ?? { address: "", contactName: "", contactPhone: "", contactEmail: "" };
+      return { ...prev, [storeId]: { ...existing, ...patch } };
+    });
+  }
+
+  function getStoreContactDraft(s: StoreRecord) {
+    return storeContactEdits[s.id] ?? {
+      address: s.address ?? "",
+      contactName: s.contact_name ?? "",
+      contactPhone: s.contact_phone ?? "",
+      contactEmail: s.contact_email ?? ""
+    };
   }
 
   async function handleStoreNameSave(storeId: string) {
@@ -783,11 +804,21 @@ export default function App() {
     setStoreNameError("");
     setStoreNameSaving((prev) => ({ ...prev, [storeId]: true }));
     try {
-      const updated = await updateStore(storeId, { storeName: nextName });
+      // P1-SADM-002: Include contact fields in update
+      const contactDraft = storeContactEdits[storeId];
+      const updated = await updateStore(storeId, {
+        storeName: nextName,
+        ...(contactDraft ? {
+          address: contactDraft.address,
+          contactName: contactDraft.contactName,
+          contactPhone: contactDraft.contactPhone,
+          contactEmail: contactDraft.contactEmail
+        } : {})
+      });
       setStoreDirectory((prev) => prev.map((s) => (s.id === storeId ? updated : s)));
       setStoreNameEdits((prev) => ({ ...prev, [storeId]: updated.name ?? updated.storeName ?? nextName }));
     } catch (e: any) {
-      setStoreNameError(e?.message ? String(e.message) : "Failed to update store name.");
+      setStoreNameError(e?.message ? String(e.message) : "Failed to update store.");
     } finally {
       setStoreNameSaving((prev) => ({ ...prev, [storeId]: false }));
     }
@@ -880,6 +911,7 @@ export default function App() {
         label: draft.label.trim(),
         deviceType: draft.deviceType,
         printingMode: draft.printingMode,
+        scanLookupV2Enabled: draft.scanLookupV2Enabled,
         active: draft.active
       });
       setDeviceRecords((prev) => prev.map((d) => (d.id === deviceId ? updated : d)));
@@ -889,6 +921,7 @@ export default function App() {
           label: updated.label ?? "",
           deviceType: (updated.device_type as DeviceType) ?? draft.deviceType,
           printingMode: updated.printing_mode ?? draft.printingMode,
+          scanLookupV2Enabled: updated.scan_lookup_v2_enabled ?? draft.scanLookupV2Enabled,
           active: Boolean(updated.active)
         }
       }));
@@ -1384,6 +1417,7 @@ export default function App() {
                     label: d.label ?? "",
                     deviceType: (d.device_type as DeviceType) ?? "RETAILER_PHONE",
                     printingMode: d.printing_mode ?? "NONE",
+                    scanLookupV2Enabled: d.scan_lookup_v2_enabled ?? false,
                     active: Boolean(d.active)
                   };
                   const pending = d.pending_outbox_count ?? 0;
@@ -1485,6 +1519,15 @@ export default function App() {
                           <option value="SHARE_TO_PRINTER_APP">Printer App</option>
                           <option value="NONE">None</option>
                         </select>
+
+                        <label className="toggle" title="Enable V2 Scan Lookup (faster barcode resolution)">
+                          V2 Scan
+                          <input
+                            type="checkbox"
+                            checked={draft.scanLookupV2Enabled}
+                            onChange={(e) => updateDeviceDraft(d.id, { scanLookupV2Enabled: e.target.checked })}
+                          />
+                        </label>
 
                         <label className="toggle">
                           Active
@@ -1676,30 +1719,91 @@ export default function App() {
                   <tr>
                     <th>Store ID</th>
                     <th>Store Name</th>
+                    <th>Contact</th>
                     <th>Status</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {storeDirectory.map((s) => (
-                    <tr key={s.id}>
-                      <td className="mono">{s.id}</td>
-                      <td>
-                        <input
-                          className="tableInput"
-                          value={storeNameEdits[s.id] ?? s.name ?? s.storeName ?? ""}
-                          onChange={(e) => updateStoreNameDraft(s.id, e.target.value)}
-                          placeholder="Store name"
-                        />
-                      </td>
-                      <td className="mono">{s.active ? "active" : "inactive"}</td>
-                      <td>
-                        <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
-                          {storeNameSaving[s.id] ? "Saving..." : "Save"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {storeDirectory.map((s) => {
+                    const contactDraft = getStoreContactDraft(s);
+                    const isExpanded = expandedStoreId === s.id;
+                    return (
+                      <React.Fragment key={s.id}>
+                        <tr>
+                          <td className="mono">{s.id}</td>
+                          <td>
+                            <input
+                              className="tableInput"
+                              value={storeNameEdits[s.id] ?? s.name ?? s.storeName ?? ""}
+                              onChange={(e) => updateStoreNameDraft(s.id, e.target.value)}
+                              placeholder="Store name"
+                            />
+                          </td>
+                          <td>
+                            <button
+                              className="btnGhost"
+                              onClick={() => setExpandedStoreId(isExpanded ? null : s.id)}
+                              title={isExpanded ? "Hide contact info" : "Edit contact info"}
+                            >
+                              {s.contact_name || s.contact_phone ? `${s.contact_name ?? ""}` : "(none)"}
+                              {isExpanded ? " ▲" : " ▼"}
+                            </button>
+                          </td>
+                          <td className="mono">{s.active ? "active" : "inactive"}</td>
+                          <td>
+                            <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
+                              {storeNameSaving[s.id] ? "Saving..." : "Save"}
+                            </button>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={5} style={{ background: "#f9fafb", padding: "12px" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", maxWidth: "600px" }}>
+                                <div>
+                                  <label style={{ fontSize: "12px", color: "#666" }}>Contact Name</label>
+                                  <input
+                                    className="tableInput"
+                                    value={contactDraft.contactName}
+                                    onChange={(e) => updateStoreContactDraft(s.id, { contactName: e.target.value })}
+                                    placeholder="Contact name"
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "12px", color: "#666" }}>Phone</label>
+                                  <input
+                                    className="tableInput"
+                                    value={contactDraft.contactPhone}
+                                    onChange={(e) => updateStoreContactDraft(s.id, { contactPhone: e.target.value })}
+                                    placeholder="+91..."
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "12px", color: "#666" }}>Email</label>
+                                  <input
+                                    className="tableInput"
+                                    value={contactDraft.contactEmail}
+                                    onChange={(e) => updateStoreContactDraft(s.id, { contactEmail: e.target.value })}
+                                    placeholder="email@example.com"
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: "12px", color: "#666" }}>Address</label>
+                                  <input
+                                    className="tableInput"
+                                    value={contactDraft.address}
+                                    onChange={(e) => updateStoreContactDraft(s.id, { address: e.target.value })}
+                                    placeholder="Store address"
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1953,7 +2057,7 @@ export default function App() {
                           {s.verificationStatus}
                         </span>
                       </td>
-                      <td className="mono">{s.rating?.toFixed(1) || "-"}</td>
+                      <td className="mono">{typeof s.rating === "number" ? s.rating.toFixed(1) : "-"}</td>
                     </tr>
                   ))}
                 </tbody>

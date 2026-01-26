@@ -82,7 +82,8 @@ function AppRoutes() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="compliance" element={<CompliancePage />} />
-          <Route path="_pages" element={<AllPagesPage />} />
+          {/* P2-RD-002: QA page hidden in production */}
+          {import.meta.env.DEV && <Route path="_pages" element={<AllPagesPage />} />}
         </Route>
 
         {/* Catch-all */}

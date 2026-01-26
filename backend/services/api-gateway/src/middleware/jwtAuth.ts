@@ -35,7 +35,7 @@ const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // Routes that don't require JWT authentication
-// RCAT-DEPLOY-001: Added retailer-admin health endpoint for gateway verification
+// Only auth endpoints are public - all other routes require valid JWT
 const PUBLIC_PATHS = [
   '/api/v1/retailer-admin/auth/firebase-login',
   '/api/v1/retailer-admin/auth/refresh',

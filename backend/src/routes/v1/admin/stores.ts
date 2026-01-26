@@ -271,7 +271,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     values.push(value);
   };
 
-  // Only update columns that exist in production DB: name, status
+  // P1-SADM-002: Update all supported store fields
   if (storeName !== undefined) addUpdate("name", typeof storeName === "string" ? storeName.trim() : storeName);
   else if (name !== undefined) addUpdate("name", typeof name === "string" ? name.trim() : name);
 
@@ -288,6 +288,12 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     addUpdate("status", normalized ? "active" : "inactive");
   }
 
+  // Contact and address fields
+  if (typeof address === "string") addUpdate("address", address.trim());
+  if (typeof contactName === "string") addUpdate("contact_name", contactName.trim());
+  if (typeof contactPhone === "string") addUpdate("contact_phone", contactPhone.trim());
+  if (typeof contactEmail === "string") addUpdate("contact_email", contactEmail.trim().toLowerCase());
+
   if (updates.length === 0) {
     return res.status(400).json({ error: "No fields to update" });
   }
@@ -303,7 +309,7 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
       UPDATE platform.stores
       SET ${updates.join(", ")}
       WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `UPPER(code) = UPPER($${values.length + 1})`}
-      RETURNING id::TEXT as id, name, code, status, created_at, updated_at
+      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, created_at, updated_at
     `;
     values.push(storeId);
 
@@ -313,7 +319,15 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
       return res.status(404).json({ error: "store not found" });
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "active" } });
+    return res.json({ store: {
+      ...store,
+      storeName: store.name,
+      storeCode: store.code,
+      active: store.status === "active",
+      contactName: store.contact_name,
+      contactPhone: store.contact_phone,
+      contactEmail: store.contact_email
+    } });
   } catch (err: any) {
     console.error("[admin/stores PATCH] Update failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store" });

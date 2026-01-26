@@ -427,7 +427,7 @@ export default function ProductsPage() {
 
       // AUD-025-B: Handle 409 CONFLICT (stale update rejected by LWW)
       if (response.status === 409) {
-        const conflictData = await response.json() as { error: string; message: string; serverTimestamp?: string };
+        await response.json(); // consume response body
         throw new Error('This product was updated elsewhere. Please refresh and try again.');
       }
 

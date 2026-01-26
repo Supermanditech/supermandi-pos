@@ -33,6 +33,7 @@ import { retailerAdminProductsRouter } from "./retailer-admin/products";
 import { retailerAdminCsvImportRouter } from "./retailer-admin/csvImport";
 import { retailerAdminSearchRouter } from "./retailer-admin/search";
 import { retailerComplianceRouter } from "./retailer-admin/compliance";
+import { retailerAdminAuthRouter } from "./retailer-admin/auth";
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 
@@ -75,4 +76,5 @@ v1Router.use("/retailer-admin", retailerAdminProductsRouter);
 v1Router.use("/retailer-admin", retailerAdminCsvImportRouter);
 v1Router.use("/retailer-admin", retailerAdminSearchRouter);
 v1Router.use("/retailer-admin", retailerComplianceRouter);
+v1Router.use("/retailer-admin", retailerAdminAuthRouter);
 v1Router.use("/demo", demoRouter);
