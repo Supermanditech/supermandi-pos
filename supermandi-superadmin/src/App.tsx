@@ -174,7 +174,7 @@ export default function App() {
 
   const [deviceRecords, setDeviceRecords] = useState<DeviceRecord[]>([]);
   const [devicesError, setDevicesError] = useState<string>("");
-  const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; active: boolean }>>({});
+  const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; printingMode: string; active: boolean }>>({});
   const [deviceSaving, setDeviceSaving] = useState<Record<string, boolean>>({});
   const [deviceActionError, setDeviceActionError] = useState<string>("");
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
@@ -533,7 +533,7 @@ export default function App() {
     const existing = getAdminToken();
     setAdminTokenInput(existing ? "********" : "");
 
-    const shouldRefreshEvents = tab === "events" || tab === "devices";
+    const shouldRefreshEvents = tab === "events" || tab === "devices" || tab === "payments"; // P0-DEPLOY-002: Include payments
     const shouldRefreshDevices = tab === "devices";
     const shouldRefreshStores = tab === "stores";
     const shouldRefreshSuppliers = tab === "suppliers";
@@ -602,6 +602,7 @@ export default function App() {
           next[device.id] = {
             label: device.label ?? "",
             deviceType: (device.device_type as DeviceType) ?? "RETAILER_PHONE",
+            printingMode: device.printing_mode ?? "NONE",
             active: Boolean(device.active)
           };
         }
@@ -748,10 +749,10 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
-  function updateDeviceDraft(deviceId: string, patch: Partial<{ label: string; deviceType: DeviceType; active: boolean }>) {
+  function updateDeviceDraft(deviceId: string, patch: Partial<{ label: string; deviceType: DeviceType; printingMode: string; active: boolean }>) {
     setDeviceEdits((prev) => ({
       ...prev,
-      [deviceId]: { ...(prev[deviceId] ?? { label: "", deviceType: "RETAILER_PHONE", active: true }), ...patch }
+      [deviceId]: { ...(prev[deviceId] ?? { label: "", deviceType: "RETAILER_PHONE", printingMode: "NONE", active: true }), ...patch }
     }));
   }
 
@@ -864,6 +865,7 @@ export default function App() {
       const updated = await patchDevice(deviceId, {
         label: draft.label.trim(),
         deviceType: draft.deviceType,
+        printingMode: draft.printingMode,
         active: draft.active
       });
       setDeviceRecords((prev) => prev.map((d) => (d.id === deviceId ? updated : d)));
@@ -872,6 +874,7 @@ export default function App() {
         [deviceId]: {
           label: updated.label ?? "",
           deviceType: (updated.device_type as DeviceType) ?? draft.deviceType,
+          printingMode: updated.printing_mode ?? draft.printingMode,
           active: Boolean(updated.active)
         }
       }));
@@ -1366,6 +1369,7 @@ export default function App() {
                   const draft = deviceEdits[d.id] ?? {
                     label: d.label ?? "",
                     deviceType: (d.device_type as DeviceType) ?? "RETAILER_PHONE",
+                    printingMode: d.printing_mode ?? "NONE",
                     active: Boolean(d.active)
                   };
                   const pending = d.pending_outbox_count ?? 0;
@@ -1455,6 +1459,17 @@ export default function App() {
                               {opt.label}
                             </option>
                           ))}
+                        </select>
+
+                        <select
+                          className="selectSmall"
+                          value={draft.printingMode}
+                          onChange={(e) => updateDeviceDraft(d.id, { printingMode: e.target.value })}
+                          title="Printing Mode"
+                        >
+                          <option value="DIRECT_ESC_POS">Direct ESC/POS</option>
+                          <option value="SHARE_TO_PRINTER_APP">Printer App</option>
+                          <option value="NONE">None</option>
                         </select>
 
                         <label className="toggle">
