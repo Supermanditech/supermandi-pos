@@ -33,7 +33,7 @@ import PurchaseScreen from "./PurchaseScreen";
 import ReorderScreen from "./ReorderScreen";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import * as reorderApi from "../services/api/reorderApi";
-import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo } from "../services/deviceInfo";
+import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo, updateDeviceMetadata } from "../services/deviceInfo";
 import { clearDeviceSession, getDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -513,6 +513,8 @@ export default function PosRootLayout() {
         const info = await fetchDeviceInfo();
         applyInfo(info);
         await cacheDeviceInfo(info);
+        // P3-001: Update device metadata on backend (captures info for pre-existing devices)
+        void updateDeviceMetadata();
       } catch (error) {
         if (error instanceof ApiError) {
           await handleDeviceAuthError(error);

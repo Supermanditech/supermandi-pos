@@ -10,6 +10,7 @@ import {
   Platform
 } from "react-native";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -175,12 +176,12 @@ export default function EnrollDeviceScreen() {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // P3-001: Use expo-device for reliable device metadata capture
   const deviceMeta = useMemo(() => {
-    const androidMeta = (Constants.platform as any)?.android ?? {};
     return {
-      manufacturer: androidMeta.manufacturer ?? null,
-      model: androidMeta.model ?? Constants.deviceName ?? null,
-      androidVersion: Platform.OS === "android" ? String(Platform.Version) : null,
+      manufacturer: Device.manufacturer ?? null,
+      model: Device.modelName ?? Device.deviceName ?? Constants.deviceName ?? null,
+      androidVersion: Platform.OS === "android" ? String(Platform.Version) : Device.osVersion ?? null,
       appVersion: getAppVersion(),
       label: labelInput.trim() || null,
       deviceType,
