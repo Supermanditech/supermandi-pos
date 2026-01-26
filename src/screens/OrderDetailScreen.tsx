@@ -113,7 +113,9 @@ export default function OrderDetailScreen({
             setCancelling(true);
             try {
               const result = await orderApi.cancelOrder(storeId, orderId);
-              setOrder((prev) => (prev ? { ...prev, status: result.data.status } : prev));
+              if (result.data) {
+                setOrder((prev) => (prev ? { ...prev, status: result.data!.status } : prev));
+              }
               // Reload events
               const eventsData = await orderApi.getOrderEvents(storeId, orderId);
               setEvents(eventsData);

@@ -58,6 +58,10 @@ const FEATURE_DISPLAY_NAMES: Record<FeatureKey, { title: string; description: st
     title: "Category Browsing",
     description: "Category browsing in the SELL screen is not enabled for this store.",
   },
+  voice: {
+    title: "Voice Assistant",
+    description: "Voice assistant features are not enabled for this store.",
+  },
   qa_menu: {
     title: "QA Tools",
     description: "Developer/QA features are only available in development builds.",
