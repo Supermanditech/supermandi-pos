@@ -50,7 +50,7 @@ adminSettingsRouter.get("/settings/stats", async (_req, res) => {
   try {
     const [storesResult, devicesResult, usersResult] = await Promise.all([
       pool.query("SELECT COUNT(*) as count FROM platform.stores"),
-      pool.query("SELECT COUNT(*) as count FROM platform.devices"),
+      pool.query("SELECT COUNT(*) as count FROM public.pos_devices"),
       pool.query("SELECT COUNT(*) as count FROM auth.users"),
     ]);
 
