@@ -1,29 +1,20 @@
 // Reorder Routes - V3.0.10 compliant
 // Store reorder settings and policies endpoints
-// ITER2-001: Added store-scoped authentication via x-actor-id
+// GO-LIVE: Uses requireDeviceToken middleware for POS device authentication
 
 import { Router, Request, Response, NextFunction } from "express";
 import { getPool } from "../../db/client";
+import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
 
 export const reorderRouter = Router();
 
 /**
- * ITER2-001: Get and validate store ID from gateway-provided x-actor-id header
- * Returns null if not authenticated or if path storeId doesn't match actor's store
+ * GO-LIVE: Get store ID from device token (set by requireDeviceToken middleware)
+ * The middleware already validates store isolation via enforceStoreBinding
  */
-function getAndValidateStoreId(req: Request, pathStoreId: string): { storeId: string } | { error: string; status: number } {
-  const actorId = req.headers['x-actor-id'];
-  if (typeof actorId !== 'string' || !actorId) {
-    return { error: "Unauthorized: Store not identified", status: 401 };
-  }
-
-  // Store isolation: Verify the requested storeId matches the authenticated user's store
-  if (actorId !== pathStoreId) {
-    console.warn(`[Reorder] Store isolation violation: actor=${actorId} tried to access store=${pathStoreId}`);
-    return { error: "Forbidden: Cannot access another store's data", status: 403 };
-  }
-
-  return { storeId: actorId };
+function getStoreIdFromDevice(req: Request): string {
+  const posDevice = (req as any).posDevice as PosDeviceContext;
+  return posDevice.storeId!;
 }
 
 // =============================================================================
@@ -34,18 +25,13 @@ function getAndValidateStoreId(req: Request, pathStoreId: string): { storeId: st
  * GET /api/v1/reorder/stores/:storeId/reorder/settings
  * Get or initialize reorder settings for a store.
  * Returns default settings if none exist.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-reorderRouter.get("/stores/:storeId/reorder/settings", async (req, res) => {
+reorderRouter.get("/stores/:storeId/reorder/settings", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
 
   try {
     // Check if settings exist
@@ -114,18 +100,13 @@ reorderRouter.get("/stores/:storeId/reorder/settings", async (req, res) => {
 /**
  * PATCH /api/v1/reorder/stores/:storeId/reorder/settings
  * Update reorder settings for a store.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-reorderRouter.patch("/stores/:storeId/reorder/settings", async (req, res) => {
+reorderRouter.patch("/stores/:storeId/reorder/settings", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { reorderEnabled, requireApproval, autoApproveThreshold, defaultLeadDays } = req.body;
 
   try {
@@ -170,18 +151,13 @@ reorderRouter.patch("/stores/:storeId/reorder/settings", async (req, res) => {
 /**
  * GET /api/v1/reorder/stores/:storeId/reorder/policies
  * List reorder policies for a store.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-reorderRouter.get("/stores/:storeId/reorder/policies", async (req, res) => {
+reorderRouter.get("/stores/:storeId/reorder/policies", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { search, isEnabled, limit = "50", offset = "0" } = req.query;
 
   try {
@@ -285,18 +261,13 @@ reorderRouter.get("/stores/:storeId/reorder/policies", async (req, res) => {
 /**
  * PATCH /api/v1/reorder/stores/:storeId/reorder/policies/:productId
  * Update a reorder policy for a specific product.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-reorderRouter.patch("/stores/:storeId/reorder/policies/:productId", async (req, res) => {
+reorderRouter.patch("/stores/:storeId/reorder/policies/:productId", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { productId } = req.params;
   const { minThreshold, targetStock, preferredSupplierId, isEnabled } = req.body;
 
@@ -351,18 +322,13 @@ reorderRouter.patch("/stores/:storeId/reorder/policies/:productId", async (req, 
 /**
  * GET /api/v1/reorder/stores/:storeId/reorder/pending
  * List pending reorders for a store.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-reorderRouter.get("/stores/:storeId/reorder/pending", async (req, res) => {
+reorderRouter.get("/stores/:storeId/reorder/pending", requireDeviceToken, async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { status, limit = "50", offset = "0" } = req.query;
 
   try {

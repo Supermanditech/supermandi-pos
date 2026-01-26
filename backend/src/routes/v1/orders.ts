@@ -1,29 +1,20 @@
 // Orders Routes - V3.0.10 compliant
 // Purchase orders and GRN endpoints
-// ITER2-001: Added store-scoped authentication via x-actor-id
+// GO-LIVE: Uses requireDeviceToken middleware for POS device authentication
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
+import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
 
 export const ordersRouter = Router();
 
 /**
- * ITER2-001: Get and validate store ID from gateway-provided x-actor-id header
- * Returns null if not authenticated or if path storeId doesn't match actor's store
+ * GO-LIVE: Get store ID from device token (set by requireDeviceToken middleware)
+ * The middleware already validates store isolation via enforceStoreBinding
  */
-function getAndValidateStoreId(req: Request, pathStoreId: string): { storeId: string } | { error: string; status: number } {
-  const actorId = req.headers['x-actor-id'];
-  if (typeof actorId !== 'string' || !actorId) {
-    return { error: "Unauthorized: Store not identified", status: 401 };
-  }
-
-  // Store isolation: Verify the requested storeId matches the authenticated user's store
-  if (actorId !== pathStoreId) {
-    console.warn(`[Orders] Store isolation violation: actor=${actorId} tried to access store=${pathStoreId}`);
-    return { error: "Forbidden: Cannot access another store's data", status: 403 };
-  }
-
-  return { storeId: actorId };
+function getStoreIdFromDevice(req: Request): string {
+  const posDevice = (req as any).posDevice as PosDeviceContext;
+  return posDevice.storeId!;
 }
 
 // =============================================================================
@@ -33,18 +24,13 @@ function getAndValidateStoreId(req: Request, pathStoreId: string): { storeId: st
 /**
  * GET /api/v1/orders/stores/:storeId/orders
  * List purchase orders for a store.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-ordersRouter.get("/stores/:storeId/orders", async (req: Request, res: Response) => {
+ordersRouter.get("/stores/:storeId/orders", requireDeviceToken, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { status, supplierId, fromDate, toDate, page = "1", limit = "20" } = req.query;
 
   try {
@@ -155,18 +141,13 @@ ordersRouter.get("/stores/:storeId/orders", async (req: Request, res: Response) 
 /**
  * GET /api/v1/orders/stores/:storeId/orders/:orderId
  * Get a single purchase order with items.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-ordersRouter.get("/stores/:storeId/orders/:orderId", async (req: Request, res: Response) => {
+ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { orderId } = req.params;
 
   try {
@@ -260,17 +241,12 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", async (req: Request, res: R
 /**
  * GET /api/v1/orders/stores/:storeId/orders/:orderId/events
  * Get order status history.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-ordersRouter.get("/stores/:storeId/orders/:orderId/events", async (req: Request, res: Response) => {
+ordersRouter.get("/stores/:storeId/orders/:orderId/events", requireDeviceToken, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
   const { orderId } = req.params;
 
   try {
@@ -317,18 +293,13 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/events", async (req: Request,
  * POST /api/v1/orders/stores/:storeId/orders/:orderId/cancel
  * GL-PO-001: Cancel a purchase order (idempotent).
  * Returns 200 success even if order was already cancelled/deleted.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", async (req: Request, res: Response) => {
+ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", requireDeviceToken, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { orderId } = req.params;
   const { reason } = req.body || {};
 
@@ -435,18 +406,13 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/cancel", async (req: Request
  * DELETE /api/v1/orders/stores/:storeId/orders/:orderId
  * GL-PO-001: Delete a draft purchase order (idempotent).
  * Returns 200/204 even if order was already deleted.
- * ITER2-001: Requires x-actor-id authentication + store isolation
+ * GO-LIVE: Requires device token authentication
  */
-ordersRouter.delete("/stores/:storeId/orders/:orderId", async (req: Request, res: Response) => {
+ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  // ITER2-001: Authenticate and validate store access
-  const authResult = getAndValidateStoreId(req, req.params.storeId);
-  if ('error' in authResult) {
-    return res.status(authResult.status).json({ success: false, error: authResult.error });
-  }
-  const { storeId } = authResult;
+  const storeId = getStoreIdFromDevice(req);
   const { orderId } = req.params;
 
   try {
