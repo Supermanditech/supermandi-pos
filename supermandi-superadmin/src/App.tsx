@@ -23,11 +23,12 @@ import {
   type VerifiedSupplier
 } from "./api/suppliers";
 import { fetchUsers, patchUser, type UserRecord } from "./api/users";
+import { fetchSettings, fetchSystemStats, type SystemSettings, type SystemStats } from "./api/settings";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
 
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer";
 
@@ -217,6 +218,13 @@ export default function App() {
   const [userActionError, setUserActionError] = useState<string>("");
   const usersInFlightRef = useRef(false);
 
+  // Settings state (ADM-SCR-003)
+  const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState<boolean>(false);
+  const [settingsError, setSettingsError] = useState<string>("");
+  const settingsInFlightRef = useRef(false);
+
   const setRateLimit = (until: number | null) => {
     rateLimitedUntilRef.current = until;
     setRateLimitedUntil(until);
@@ -401,6 +409,34 @@ export default function App() {
     }
   }
 
+  // ADM-SCR-003: Fetch settings
+  async function refreshSettings() {
+    if (isRateLimited() || settingsInFlightRef.current) return;
+    settingsInFlightRef.current = true;
+    setSettingsLoading(true);
+    setSettingsError("");
+    try {
+      const [settings, stats] = await Promise.all([
+        fetchSettings(),
+        fetchSystemStats()
+      ]);
+      setSystemSettings(settings);
+      setSystemStats(stats);
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
+    } catch (e: any) {
+      const message = e?.message ? String(e.message) : "Failed to fetch settings";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      setSettingsError(message);
+    } finally {
+      settingsInFlightRef.current = false;
+      setSettingsLoading(false);
+    }
+  }
+
   async function handleVerifySupplier(requestId: string) {
     const supplierId = selectedSupplierForLink[requestId];
     if (!supplierId) {
@@ -502,6 +538,7 @@ export default function App() {
     const shouldRefreshStores = tab === "stores";
     const shouldRefreshSuppliers = tab === "suppliers";
     const shouldRefreshUsers = tab === "users";
+    const shouldRefreshSettings = tab === "settings";
     const shouldRefreshAi = tab === "ai";
 
     refreshHealth();
@@ -510,6 +547,7 @@ export default function App() {
     if (shouldRefreshStores) refreshStores();
     if (shouldRefreshSuppliers) refreshSuppliers();
     if (shouldRefreshUsers) refreshUsers();
+    if (shouldRefreshSettings) refreshSettings();
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
@@ -524,6 +562,7 @@ export default function App() {
       if (shouldRefreshStores) refreshStores();
       if (shouldRefreshSuppliers) refreshSuppliers();
       if (shouldRefreshUsers) refreshUsers();
+      if (shouldRefreshSettings) refreshSettings();
       if (shouldRefreshAi) {
         fetchAiHealth()
           .then((res) => setAiConfigured(res.configured))
@@ -1084,6 +1123,9 @@ export default function App() {
         </button>
         <button className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>
           Users
+        </button>
+        <button className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>
+          Settings
         </button>
 
         <div className="tabsRight muted">
@@ -2515,6 +2557,101 @@ export default function App() {
                 )}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {/* ADM-SCR-003: Settings Tab */}
+      {tab === "settings" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">System Settings</div>
+            <div className="muted">Platform configuration and statistics</div>
+          </div>
+
+          <div className="tableWrap">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+              <button onClick={refreshSettings} disabled={settingsLoading}>
+                {settingsLoading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+
+            {settingsError && <div className="errorText" style={{ marginBottom: 8 }}>{settingsError}</div>}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
+              {/* System Info Card */}
+              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>System Information</h4>
+                {systemSettings ? (
+                  <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Version:</span>
+                      <span className="mono">{systemSettings.version}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Environment:</span>
+                      <span className={`badge ${systemSettings.environment === "production" ? "badgeOk" : "badgeWarn"}`}>
+                        {systemSettings.environment}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Database:</span>
+                      <span className={`badge ${systemSettings.database.connected ? "badgeOk" : "badgeErr"}`}>
+                        {systemSettings.database.connected ? "Connected" : "Disconnected"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
+                )}
+              </div>
+
+              {/* Features Card */}
+              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>Features</h4>
+                {systemSettings ? (
+                  <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>AI Assistant:</span>
+                      <span className={`badge ${systemSettings.features.aiEnabled ? "badgeOk" : "badgeWarn"}`}>
+                        {systemSettings.features.aiEnabled ? "Enabled" : "Disabled"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Analytics:</span>
+                      <span className={`badge ${systemSettings.features.analyticsEnabled ? "badgeOk" : "badgeWarn"}`}>
+                        {systemSettings.features.analyticsEnabled ? "Enabled" : "Disabled"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
+                )}
+              </div>
+
+              {/* Statistics Card */}
+              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>Platform Statistics</h4>
+                {systemStats ? (
+                  <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Total Stores:</span>
+                      <span style={{ fontWeight: 600 }}>{systemStats.totalStores.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Total Devices:</span>
+                      <span style={{ fontWeight: 600 }}>{systemStats.totalDevices.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{ color: "#666" }}>Total Users:</span>
+                      <span style={{ fontWeight: 600 }}>{systemStats.totalUsers.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       )}
