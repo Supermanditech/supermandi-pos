@@ -574,114 +574,11 @@ retailerAdminInventoryRouter.get("/categories", async (req: Request, res: Respon
   }
 });
 
-/**
- * GET /api/v1/retailer-admin/categories/:categoryId/products
- * Get products in a specific category
- *
- * Path params:
- * - categoryId: FMCG taxonomy ID (or 'all' for all products)
- *
- * Query params:
- * - limit: page size (default 50, max 200)
- * - offset: pagination offset
- * - search: filter by product name
- */
-retailerAdminInventoryRouter.get("/categories/:categoryId/products", async (req: Request, res: Response) => {
-  const pool = getPool();
-  if (!pool) return res.status(503).json({ error: "database unavailable" });
-
-  const storeId = getStoreId(req);
-  if (!storeId) {
-    return res.status(401).json({ error: "Store not identified" });
-  }
-
-  const { categoryId } = req.params;
-  const { limit = "50", offset = "0", search } = req.query;
-
-  try {
-    let whereClause = "WHERE sp.store_id = $1 AND (sp.is_active = true OR sp.is_active IS NULL)";
-    const params: any[] = [storeId];
-    let paramIndex = 2;
-
-    // Filter by category (unless 'all' or the "Sab" category ID)
-    const isAllCategory = categoryId === 'all' || categoryId === 'f0000000-0000-0000-0000-000000000001';
-    if (!isAllCategory) {
-      // Handle "Baaki" (Others) category - products with null taxonomy_id
-      if (categoryId === 'f0000000-0000-0000-0000-00000000000f') {
-        whereClause += ` AND sp.taxonomy_id IS NULL`;
-      } else {
-        whereClause += ` AND sp.taxonomy_id = $${paramIndex}`;
-        params.push(categoryId);
-        paramIndex++;
-      }
-    }
-
-    // Search filter
-    if (search && typeof search === "string") {
-      whereClause += ` AND (COALESCE(sp.display_name, p.name) ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex})`;
-      params.push(`%${search}%`);
-      paramIndex++;
-    }
-
-    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
-    // AUD-064-B FIX: Ensure offset is non-negative
-    const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
-
-    // Get total count
-    const countResult = await pool.query(
-      `SELECT COUNT(*) as total FROM catalog.store_products sp ${whereClause}`,
-      params
-    );
-    const total = parseInt(countResult.rows[0]?.total || "0", 10);
-
-    // Get products
-    const result = await pool.query(
-      `SELECT
-        sp.product_id as "productId",
-        COALESCE(sp.display_name, p.name) as "productName",
-        p.primary_barcode as "barcode",
-        p.brand,
-        sp.sell_price as "sellPrice",
-        sp.mrp,
-        COALESCE(sp.current_stock, 0) as "currentStock",
-        sp.taxonomy_id as "taxonomyId",
-        'PACKAGED' as "mode",
-        p.unit
-      FROM catalog.store_products sp
-      LEFT JOIN catalog.products p ON p.id = sp.product_id
-      ${whereClause}
-      ORDER BY COALESCE(sp.display_name, p.name) ASC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...params, limitNum, offsetNum]
-    );
-
-    return res.json({
-      success: true,
-      data: result.rows,
-      pagination: {
-        total,
-        limit: limitNum,
-        offset: offsetNum,
-        hasMore: offsetNum + result.rows.length < total,
-      },
-    });
-  } catch (error: any) {
-    console.error("[RetailerCategoryProducts] Error:", error.message);
-
-    if (error.code === "42P01") {
-      return res.json({
-        success: true,
-        data: [],
-        pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
-      });
-    }
-
-    return res.status(500).json({
-      success: false,
-      error: "Failed to load category products",
-    });
-  }
-});
+// =============================================================================
+// AUD-RWEB-UNUSED-001: Removed GET /categories/:categoryId/products endpoint
+// Per RCAT-DEPLOYMENT-CHECKLIST.md: "Not in API-RCAT spec, risks divergence"
+// Products should be fetched via /products endpoint with category filter instead
+// =============================================================================
 
 // =============================================================================
 // PATCH /api/v1/retailer-admin/categories/:categoryId
