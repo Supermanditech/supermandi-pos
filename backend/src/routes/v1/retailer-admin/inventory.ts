@@ -44,6 +44,186 @@ function getStoreId(req: Request): string | null {
 }
 
 // =============================================================================
+// STORE INFO - AUD-RWEB-API-001
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/store
+ * Get store information for the authenticated retailer
+ *
+ * Returns: { storeId, storeName, storeCode, isActive }
+ */
+retailerAdminInventoryRouter.get("/store", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: "Store not identified" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        id as "storeId",
+        name as "storeName",
+        code as "storeCode",
+        (status = 'active') as "isActive"
+      FROM platform.stores
+      WHERE id = $1`,
+      [storeId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Store not found" },
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error: any) {
+    console.error("[RetailerStore] Error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to load store info" },
+    });
+  }
+});
+
+// =============================================================================
+// DAILY SUMMARY - AUD-RWEB-API-001
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/daily-summary
+ * Get daily sales summary for the authenticated retailer's store
+ *
+ * Query params:
+ * - date: ISO date string (YYYY-MM-DD), defaults to today
+ *
+ * Returns: { date, totalSales, totalBills, averageBillValue, paymentBreakdown, itemsSold, topSellingItems }
+ */
+retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: "Store not identified" });
+  }
+
+  // Parse date parameter, default to today in IST
+  const dateParam = req.query.date as string | undefined;
+  const targetDate = dateParam || new Date().toISOString().split('T')[0];
+
+  try {
+    // Get sales summary for the day
+    const salesResult = await pool.query(
+      `SELECT
+        COUNT(*)::integer as "totalBills",
+        COALESCE(SUM(total_minor), 0)::bigint as "totalSales",
+        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint as "cashTotal",
+        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::bigint as "upiTotal",
+        COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::bigint as "cardTotal",
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint as "creditTotal"
+      FROM public.sales
+      WHERE store_id = $1
+        AND status = 'completed'
+        AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2::date`,
+      [storeId, targetDate]
+    );
+
+    const salesRow = salesResult.rows[0] || {};
+    const totalBills = Number(salesRow.totalBills) || 0;
+    const totalSales = Number(salesRow.totalSales) || 0;
+    const averageBillValue = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
+
+    // Get items sold count
+    const itemsResult = await pool.query(
+      `SELECT COALESCE(SUM(si.quantity), 0)::integer as "itemsSold"
+      FROM public.sale_items si
+      JOIN public.sales s ON s.id = si.sale_id
+      WHERE s.store_id = $1
+        AND s.status = 'completed'
+        AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date`,
+      [storeId, targetDate]
+    );
+    const itemsSold = Number(itemsResult.rows[0]?.itemsSold) || 0;
+
+    // Get top selling items (top 10)
+    // Note: sale_items uses variant_id (not product_id) and stores name/item_name
+    const topItemsResult = await pool.query(
+      `SELECT
+        si.variant_id as "productId",
+        COALESCE(si.name, si.item_name, 'Unknown Product') as "productName",
+        SUM(si.quantity)::integer as "quantitySold",
+        SUM(si.line_total_minor)::bigint as "totalAmount"
+      FROM public.sale_items si
+      JOIN public.sales s ON s.id = si.sale_id
+      WHERE s.store_id = $1
+        AND s.status = 'completed'
+        AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date
+      GROUP BY si.variant_id, si.name, si.item_name
+      ORDER BY SUM(si.quantity) DESC
+      LIMIT 10`,
+      [storeId, targetDate]
+    );
+
+    const topSellingItems = topItemsResult.rows.map(row => ({
+      productId: row.productId,
+      productName: row.productName,
+      quantitySold: Number(row.quantitySold) || 0,
+      totalAmount: Number(row.totalAmount) || 0,
+    }));
+
+    return res.json({
+      success: true,
+      data: {
+        date: targetDate,
+        totalSales,
+        totalBills,
+        averageBillValue,
+        paymentBreakdown: {
+          cash: Number(salesRow.cashTotal) || 0,
+          upi: Number(salesRow.upiTotal) || 0,
+          card: Number(salesRow.cardTotal) || 0,
+          credit: Number(salesRow.creditTotal) || 0,
+        },
+        itemsSold,
+        topSellingItems,
+      },
+    });
+  } catch (error: any) {
+    console.error("[RetailerDailySummary] Error:", error.message);
+
+    // If tables don't exist yet, return empty summary
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: {
+          date: targetDate,
+          totalSales: 0,
+          totalBills: 0,
+          averageBillValue: 0,
+          paymentBreakdown: { cash: 0, upi: 0, card: 0, credit: 0 },
+          itemsSold: 0,
+          topSellingItems: [],
+        },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to load daily summary" },
+    });
+  }
+});
+
+// =============================================================================
 // INVENTORY OVERVIEW - FE-RETAILER-INVENTORY-001
 // =============================================================================
 
