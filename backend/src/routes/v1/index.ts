@@ -15,6 +15,7 @@ import { posStockInRouter } from "./pos/stockIn";
 import posTranslationsRouter from "./pos/translations";
 import { reorderRouter } from "./reorder";
 import { ordersRouter } from "./orders";
+import { catalogRouter } from "./catalog";
 import { adminHealthRouter } from "./admin/health";
 import { adminPosEventsRouter } from "./admin/posEvents";
 import { adminAiRouter } from "./admin/ai";
@@ -58,6 +59,7 @@ v1Router.use("/pos", posStockInRouter);
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
+v1Router.use("/catalog", catalogRouter);  // AUD-GOLIVE-003: Store catalog endpoints
 v1Router.use("/admin", adminHealthRouter);  // MED-011: Public health check (no auth)
 v1Router.use("/admin", adminPosEventsRouter);
 v1Router.use("/admin", adminAiRouter);

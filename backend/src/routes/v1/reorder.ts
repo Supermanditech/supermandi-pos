@@ -418,3 +418,243 @@ reorderRouter.get("/stores/:storeId/reorder/pending", requireDeviceToken, async 
     });
   }
 });
+
+/**
+ * POST /api/v1/reorder/stores/:storeId/reorder/pending/approve
+ * AUD-GOLIVE-004: Approve selected pending reorders.
+ * Creates draft purchase orders grouped by supplier.
+ * GO-LIVE: Requires device token authentication
+ */
+reorderRouter.post("/stores/:storeId/reorder/pending/approve", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { ids } = req.body;
+
+  // Validate input
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "ids must be a non-empty array of pending reorder IDs",
+    });
+  }
+
+  try {
+    // Start transaction
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Get pending reorders to approve
+      const pendingResult = await client.query(
+        `SELECT
+          pr.id,
+          pr.product_id as "productId",
+          pr.suggested_supplier_id as "supplierId",
+          pr.suggested_quantity as "quantity",
+          pr.suggested_unit_price as "unitPrice",
+          pr.supplier_product_id as "supplierProductId"
+        FROM reorder.pending_reorders pr
+        WHERE pr.id = ANY($1::uuid[])
+          AND pr.store_id = $2
+          AND pr.status = 'pending'`,
+        [ids, storeId]
+      );
+
+      if (pendingResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: "No valid pending reorders found",
+        });
+      }
+
+      // Group by supplier
+      const bySupplier = new Map<string, typeof pendingResult.rows>();
+      for (const row of pendingResult.rows) {
+        const supplierId = row.supplierId || "unknown";
+        if (!bySupplier.has(supplierId)) {
+          bySupplier.set(supplierId, []);
+        }
+        bySupplier.get(supplierId)!.push(row);
+      }
+
+      // Create draft POs for each supplier
+      const draftPurchaseOrders: Array<{
+        id: string;
+        orderNumber: string;
+        supplierId: string;
+        itemCount: number;
+        totalAmount: number;
+      }> = [];
+
+      for (const [supplierId, items] of bySupplier) {
+        // Generate order number
+        const orderNumber = `PO-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+        // Calculate totals
+        let totalAmount = 0;
+        for (const item of items) {
+          totalAmount += (item.quantity || 0) * (item.unitPrice || 0);
+        }
+
+        // Create draft PO
+        const poResult = await client.query(
+          `INSERT INTO orders.purchase_orders
+            (store_id, supplier_id, order_number, order_type, status, total_amount, item_count)
+           VALUES ($1, $2, $3, 'reorder', 'draft', $4, $5)
+           RETURNING id, order_number as "orderNumber"`,
+          [storeId, supplierId === "unknown" ? null : supplierId, orderNumber, totalAmount, items.length]
+        );
+
+        const poId = poResult.rows[0].id;
+
+        // Create PO items
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO orders.purchase_order_items
+              (order_id, supplier_product_id, product_id, ordered_quantity, unit_price, total_price, status)
+             VALUES ($1, $2, $3, $4, $5, $6, 'pending')`,
+            [
+              poId,
+              item.supplierProductId,
+              item.productId,
+              item.quantity || 0,
+              item.unitPrice || 0,
+              (item.quantity || 0) * (item.unitPrice || 0),
+            ]
+          );
+        }
+
+        draftPurchaseOrders.push({
+          id: poId,
+          orderNumber: poResult.rows[0].orderNumber,
+          supplierId,
+          itemCount: items.length,
+          totalAmount,
+        });
+      }
+
+      // Update pending reorders status to approved
+      const approvedIds = pendingResult.rows.map((r) => r.id);
+      await client.query(
+        `UPDATE reorder.pending_reorders
+         SET status = 'approved', updated_at = NOW()
+         WHERE id = ANY($1::uuid[])`,
+        [approvedIds]
+      );
+
+      await client.query("COMMIT");
+
+      return res.json({
+        success: true,
+        data: {
+          approvedCount: approvedIds.length,
+          draftPurchaseOrders,
+        },
+        message: `Approved ${approvedIds.length} pending reorders. Created ${draftPurchaseOrders.length} draft purchase orders.`,
+      });
+    } catch (innerError) {
+      await client.query("ROLLBACK");
+      throw innerError;
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error("[ReorderApprove] Error:", error.message);
+
+    // If table doesn't exist
+    if (error.code === "42P01") {
+      return res.status(400).json({
+        success: false,
+        error: "Reorder system not initialized",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to approve pending reorders",
+    });
+  }
+});
+
+/**
+ * POST /api/v1/reorder/stores/:storeId/reorder/pending/:pendingId/dismiss
+ * AUD-GOLIVE-004: Dismiss a pending reorder with a reason.
+ * GO-LIVE: Requires device token authentication
+ */
+reorderRouter.post("/stores/:storeId/reorder/pending/:pendingId/dismiss", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { pendingId } = req.params;
+  const { reason } = req.body;
+
+  // Validate reason
+  if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "reason is required",
+    });
+  }
+
+  try {
+    // Check if pending reorder exists and belongs to this store
+    const checkResult = await pool.query(
+      `SELECT id, status FROM reorder.pending_reorders
+       WHERE id = $1 AND store_id = $2`,
+      [pendingId, storeId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Pending reorder not found",
+      });
+    }
+
+    if (checkResult.rows[0].status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot dismiss reorder in '${checkResult.rows[0].status}' status`,
+      });
+    }
+
+    // Update to dismissed
+    const result = await pool.query(
+      `UPDATE reorder.pending_reorders
+       SET status = 'dismissed', dismissed_reason = $3, updated_at = NOW()
+       WHERE id = $1 AND store_id = $2
+       RETURNING
+         id,
+         store_id as "storeId",
+         product_id as "productId",
+         status,
+         dismissed_reason as "dismissedReason",
+         updated_at as "updatedAt"`,
+      [pendingId, storeId, reason.trim()]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows[0],
+      message: "Pending reorder dismissed successfully",
+    });
+  } catch (error: any) {
+    console.error("[ReorderDismiss] Error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.status(404).json({
+        success: false,
+        error: "Pending reorder not found",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to dismiss pending reorder",
+    });
+  }
+});

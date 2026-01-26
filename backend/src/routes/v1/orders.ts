@@ -473,3 +473,392 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
     });
   }
 });
+
+// =============================================================================
+// GRN (GOODS RECEIVE) ENDPOINTS - AUD-GOLIVE-005
+// =============================================================================
+
+/**
+ * POST /api/v1/orders/stores/:storeId/orders/:orderId/receive
+ * AUD-GOLIVE-005: Receive goods for a purchase order (GRN).
+ * Creates a receive record and updates inventory.
+ * GO-LIVE: Requires device token authentication
+ */
+ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { orderId } = req.params;
+  const { items, notes } = req.body;
+
+  // Validate items array
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "items array is required and must not be empty",
+    });
+  }
+
+  // Validate each item
+  for (const item of items) {
+    if (!item.orderItemId) {
+      return res.status(400).json({
+        success: false,
+        error: "Each item must have orderItemId",
+      });
+    }
+    if (typeof item.quantityReceived !== "number" || item.quantityReceived <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Each item must have quantityReceived > 0",
+      });
+    }
+  }
+
+  try {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Verify order exists and belongs to this store
+      const orderResult = await client.query(
+        `SELECT id, status, order_number FROM orders.purchase_orders
+         WHERE id = $1 AND store_id = $2`,
+        [orderId, storeId]
+      );
+
+      if (orderResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({
+          success: false,
+          error: "Order not found",
+        });
+      }
+
+      const order = orderResult.rows[0];
+
+      // Only allow receiving for orders in valid status
+      const receivableStatuses = ["confirmed", "shipped", "partially_received"];
+      if (!receivableStatuses.includes(order.status)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: `Cannot receive goods for order in '${order.status}' status`,
+        });
+      }
+
+      // Create receive record
+      const receiveResult = await client.query(
+        `INSERT INTO orders.order_receives (order_id, notes)
+         VALUES ($1, $2)
+         RETURNING id, created_at as "createdAt"`,
+        [orderId, notes || null]
+      );
+
+      const receiveId = receiveResult.rows[0].id;
+      const receiveCreatedAt = receiveResult.rows[0].createdAt;
+
+      // Process each item
+      const updatedItems: Array<{
+        id: string;
+        productName: string;
+        orderedQuantity: number;
+        receivedQuantity: number;
+        status: string;
+      }> = [];
+
+      for (const item of items) {
+        // Get order item details
+        const itemResult = await client.query(
+          `SELECT
+            poi.id,
+            poi.product_id,
+            poi.ordered_quantity,
+            poi.received_quantity,
+            COALESCE(p.name, 'Unknown Product') as "productName"
+          FROM orders.purchase_order_items poi
+          LEFT JOIN catalog.products p ON p.id = poi.product_id
+          WHERE poi.id = $1 AND poi.order_id = $2`,
+          [item.orderItemId, orderId]
+        );
+
+        if (itemResult.rows.length === 0) {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            success: false,
+            error: `Order item not found: ${item.orderItemId}`,
+          });
+        }
+
+        const orderItem = itemResult.rows[0];
+        const newReceivedQty = (orderItem.received_quantity || 0) + item.quantityReceived;
+
+        // Determine item status
+        let itemStatus = "partially_received";
+        if (newReceivedQty >= orderItem.ordered_quantity) {
+          itemStatus = "received";
+        }
+
+        // Update order item
+        await client.query(
+          `UPDATE orders.purchase_order_items
+           SET received_quantity = $1, status = $2, updated_at = NOW()
+           WHERE id = $3`,
+          [newReceivedQty, itemStatus, item.orderItemId]
+        );
+
+        // Create receive item record
+        await client.query(
+          `INSERT INTO orders.order_receive_items (receive_id, order_item_id, quantity_received, notes)
+           VALUES ($1, $2, $3, $4)`,
+          [receiveId, item.orderItemId, item.quantityReceived, item.notes || null]
+        );
+
+        // Update inventory (stock balance)
+        if (orderItem.product_id) {
+          await client.query(
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (store_id, product_id)
+             DO UPDATE SET current_qty = inventory.stock_balances.current_qty + $3, updated_at = NOW()`,
+            [storeId, orderItem.product_id, item.quantityReceived]
+          );
+
+          // Also update catalog.store_products if it exists
+          await client.query(
+            `UPDATE catalog.store_products
+             SET current_stock = COALESCE(current_stock, 0) + $3, updated_at = NOW()
+             WHERE store_id = $1 AND product_id = $2`,
+            [storeId, orderItem.product_id, item.quantityReceived]
+          );
+        }
+
+        updatedItems.push({
+          id: item.orderItemId,
+          productName: orderItem.productName,
+          orderedQuantity: orderItem.ordered_quantity,
+          receivedQuantity: newReceivedQty,
+          status: itemStatus,
+        });
+      }
+
+      // Check if all items are fully received
+      const remainingResult = await client.query(
+        `SELECT COUNT(*) as remaining
+         FROM orders.purchase_order_items
+         WHERE order_id = $1 AND status != 'received'`,
+        [orderId]
+      );
+
+      const remainingItems = parseInt(remainingResult.rows[0].remaining, 10);
+      const newOrderStatus = remainingItems === 0 ? "received" : "partially_received";
+
+      // Update order status
+      await client.query(
+        `UPDATE orders.purchase_orders
+         SET status = $1, updated_at = NOW()
+         WHERE id = $2`,
+        [newOrderStatus, orderId]
+      );
+
+      // Log the receive event
+      await client.query(
+        `INSERT INTO orders.order_events (order_id, event_type, from_status, to_status, actor_type, metadata)
+         VALUES ($1, 'goods_received', $2, $3, 'pos_device', $4)`,
+        [
+          orderId,
+          order.status,
+          newOrderStatus,
+          JSON.stringify({ receiveId, itemCount: items.length }),
+        ]
+      );
+
+      await client.query("COMMIT");
+
+      return res.status(201).json({
+        success: true,
+        data: {
+          receiveRecord: {
+            id: receiveId,
+            orderId,
+            notes: notes || null,
+            createdAt: receiveCreatedAt,
+          },
+          order: {
+            id: orderId,
+            orderNumber: order.order_number,
+            status: newOrderStatus,
+          },
+          itemsUpdated: updatedItems,
+        },
+      });
+    } catch (innerError) {
+      await client.query("ROLLBACK");
+      throw innerError;
+    } finally {
+      client.release();
+    }
+  } catch (error: any) {
+    console.error("[Orders] Receive error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.status(400).json({
+        success: false,
+        error: "Order system not fully initialized",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to receive goods",
+    });
+  }
+});
+
+/**
+ * GET /api/v1/orders/stores/:storeId/orders/:orderId/receives
+ * AUD-GOLIVE-005: Get receive history for an order.
+ * GO-LIVE: Requires device token authentication
+ */
+ordersRouter.get("/stores/:storeId/orders/:orderId/receives", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { orderId } = req.params;
+
+  try {
+    // Verify order belongs to this store
+    const orderCheck = await pool.query(
+      `SELECT id FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
+      [orderId, storeId]
+    );
+
+    if (orderCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Order not found",
+      });
+    }
+
+    // Get receive records
+    const result = await pool.query(
+      `SELECT
+        id,
+        order_id as "orderId",
+        notes,
+        created_at as "createdAt"
+      FROM orders.order_receives
+      WHERE order_id = $1
+      ORDER BY created_at DESC`,
+      [orderId]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error: any) {
+    console.error("[Orders] List receives error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: [],
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load receive records",
+    });
+  }
+});
+
+/**
+ * GET /api/v1/orders/stores/:storeId/orders/:orderId/receives/:receiveId
+ * AUD-GOLIVE-005: Get a specific receive record with items.
+ * GO-LIVE: Requires device token authentication
+ */
+ordersRouter.get("/stores/:storeId/orders/:orderId/receives/:receiveId", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { orderId, receiveId } = req.params;
+
+  try {
+    // Verify order belongs to this store
+    const orderCheck = await pool.query(
+      `SELECT id FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
+      [orderId, storeId]
+    );
+
+    if (orderCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Order not found",
+      });
+    }
+
+    // Get receive record
+    const receiveResult = await pool.query(
+      `SELECT
+        id,
+        order_id as "orderId",
+        notes,
+        created_at as "createdAt"
+      FROM orders.order_receives
+      WHERE id = $1 AND order_id = $2`,
+      [receiveId, orderId]
+    );
+
+    if (receiveResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Receive record not found",
+      });
+    }
+
+    const receive = receiveResult.rows[0];
+
+    // Get receive items
+    const itemsResult = await pool.query(
+      `SELECT
+        ori.id,
+        ori.order_item_id as "orderItemId",
+        ori.quantity_received as "quantityReceived",
+        ori.notes,
+        COALESCE(p.name, 'Unknown Product') as "productName",
+        COALESCE(p.primary_barcode, '') as "barcode"
+      FROM orders.order_receive_items ori
+      LEFT JOIN orders.purchase_order_items poi ON poi.id = ori.order_item_id
+      LEFT JOIN catalog.products p ON p.id = poi.product_id
+      WHERE ori.receive_id = $1`,
+      [receiveId]
+    );
+
+    return res.json({
+      success: true,
+      data: {
+        ...receive,
+        items: itemsResult.rows,
+      },
+    });
+  } catch (error: any) {
+    console.error("[Orders] Get receive error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.status(404).json({
+        success: false,
+        error: "Receive record not found",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load receive record",
+    });
+  }
+});
