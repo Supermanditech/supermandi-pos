@@ -83,7 +83,9 @@
     "itemsSold": "Items Sold",
     "paymentModes": "Payment Modes",
     "noSalesYet": "No sales yet today",
-    "viewFullReport": "View Full Report"
+    "viewFullReport": "View Full Report",
+    "productCatalog": "Product Catalog",
+    "productCatalogSubtitle": "Browse and search store products"
   },
   "tabs": {
     "menu": "MENU",

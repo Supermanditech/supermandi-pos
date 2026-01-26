@@ -83,7 +83,9 @@
     "itemsSold": "बेचे गए आइटम",
     "paymentModes": "भुगतान विधियां",
     "noSalesYet": "आज अभी तक कोई बिक्री नहीं",
-    "viewFullReport": "पूरी रिपोर्ट देखें"
+    "viewFullReport": "पूरी रिपोर्ट देखें",
+    "productCatalog": "उत्पाद कैटलॉग",
+    "productCatalogSubtitle": "स्टोर उत्पाद ब्राउज़ और खोजें"
   },
   "tabs": {
     "menu": "मेनू",
