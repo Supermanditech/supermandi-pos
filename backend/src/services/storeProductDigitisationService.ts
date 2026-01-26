@@ -48,9 +48,10 @@ export interface ScanResolvePrefill {
   brand: string;
 }
 
+// CONTRACT-LOCK-SCAN-001: barcode at root level for all non-FOUND statuses
 export type ScanResolveResult =
   | { status: "FOUND"; storeProduct: StoreProductResponse }
-  | { status: "NEEDS_CREATE"; prefill: ScanResolvePrefill }
+  | { status: "NEEDS_CREATE"; barcode: string; prefill: ScanResolvePrefill }
   | { status: "NOT_FOUND"; barcode: string };
 
 export interface CreateStoreProductInput {
@@ -284,8 +285,10 @@ export async function resolveScanForDigitisation(
 
   if (externalData) {
     // External lookup found data - return NEEDS_CREATE with prefill
+    // CONTRACT-LOCK-SCAN-001: Include barcode at root level
     return {
       status: "NEEDS_CREATE",
+      barcode: normalizedBarcode,
       prefill: {
         barcode: normalizedBarcode,
         name: externalData.name,
