@@ -250,6 +250,7 @@ export default function EnrollDeviceScreen() {
         deviceToken: res.deviceToken,
         deviceType
       });
+      console.log(`[Enroll] Success: token saved (len=${res.deviceToken?.length ?? 0})`);
 
       // GO-LIVE INVARIANT CHECK: Immediately verify token works after enrollment
       // This prevents silent failures where token is saved but doesn't actually work

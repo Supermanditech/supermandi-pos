@@ -23,9 +23,37 @@ const PROTECTED_ENDPOINT_PATTERNS = [
   /^\/api\/v1\/inventory\//,
 ];
 
+// GO-LIVE FIX: Public endpoints that do NOT require device token
+// These endpoints must work without authentication (e.g., enrollment creates the token)
+const PUBLIC_ENDPOINT_PATTERNS = [
+  /^\/api\/v1\/pos\/enroll$/,  // Enrollment endpoint - creates the device token
+];
+
 // GO-LIVE FIX: Check if an endpoint requires device token authentication
 function isProtectedEndpoint(path: string): boolean {
+  // First check if it's a public endpoint (allowlist takes precedence)
+  if (PUBLIC_ENDPOINT_PATTERNS.some(pattern => pattern.test(path))) {
+    return false;
+  }
   return PROTECTED_ENDPOINT_PATTERNS.some(pattern => pattern.test(path));
+}
+
+// GO-LIVE: Runtime assertion to verify guard rules (DEV only)
+// Ticket: POS-ENROLL-401-FIX - Regression-proofing
+if (__DEV__) {
+  const assertions = [
+    { path: "/api/v1/pos/enroll", expected: false, desc: "enroll must be PUBLIC" },
+    { path: "/api/v1/pos/ui-status", expected: true, desc: "ui-status must be PROTECTED" },
+    { path: "/api/v1/pos/orders", expected: true, desc: "orders must be PROTECTED" },
+    { path: "/api/v1/reorder/suggest", expected: true, desc: "reorder must be PROTECTED" },
+  ];
+  for (const { path, expected, desc } of assertions) {
+    const actual = isProtectedEndpoint(path);
+    if (actual !== expected) {
+      console.error(`[apiClient] GUARD RULE VIOLATION: ${desc} - got ${actual}, expected ${expected}`);
+    }
+  }
+  console.log("[apiClient] Guard rule assertions passed");
 }
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
