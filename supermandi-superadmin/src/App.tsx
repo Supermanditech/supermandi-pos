@@ -22,11 +22,12 @@ import {
   type PendingSupplierRequest,
   type VerifiedSupplier
 } from "./api/suppliers";
+import { fetchUsers, patchUser, type UserRecord } from "./api/users";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
 
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer";
 
@@ -207,6 +208,15 @@ export default function App() {
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const suppliersInFlightRef = useRef(false);
 
+  // Users state (ADM-SCR-002)
+  const [userRecords, setUserRecords] = useState<UserRecord[]>([]);
+  const [usersLoading, setUsersLoading] = useState<boolean>(false);
+  const [usersError, setUsersError] = useState<string>("");
+  const [userSearch, setUserSearch] = useState<string>("");
+  const [userStatusSaving, setUserStatusSaving] = useState<Record<string, boolean>>({});
+  const [userActionError, setUserActionError] = useState<string>("");
+  const usersInFlightRef = useRef(false);
+
   const setRateLimit = (until: number | null) => {
     rateLimitedUntilRef.current = until;
     setRateLimitedUntil(until);
@@ -353,6 +363,44 @@ export default function App() {
     }
   }
 
+  // ADM-SCR-002: Fetch users
+  async function refreshUsers() {
+    if (isRateLimited() || usersInFlightRef.current) return;
+    usersInFlightRef.current = true;
+    setUsersLoading(true);
+    setUsersError("");
+    try {
+      const users = await fetchUsers();
+      setUserRecords(users);
+      if (rateLimitedUntilRef.current) {
+        setRateLimit(null);
+      }
+    } catch (e: any) {
+      const message = e?.message ? String(e.message) : "Failed to fetch users";
+      if (isRateLimitMessage(message)) {
+        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
+      }
+      setUsersError(message);
+    } finally {
+      usersInFlightRef.current = false;
+      setUsersLoading(false);
+    }
+  }
+
+  // ADM-SCR-002: Handle user status change
+  async function handleUserStatusChange(userId: string, newStatus: "active" | "inactive" | "suspended") {
+    setUserActionError("");
+    setUserStatusSaving((prev) => ({ ...prev, [userId]: true }));
+    try {
+      const updated = await patchUser(userId, { status: newStatus });
+      setUserRecords((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+    } catch (e: any) {
+      setUserActionError(e?.message ? String(e.message) : "Failed to update user");
+    } finally {
+      setUserStatusSaving((prev) => ({ ...prev, [userId]: false }));
+    }
+  }
+
   async function handleVerifySupplier(requestId: string) {
     const supplierId = selectedSupplierForLink[requestId];
     if (!supplierId) {
@@ -453,6 +501,7 @@ export default function App() {
     const shouldRefreshDevices = tab === "devices";
     const shouldRefreshStores = tab === "stores";
     const shouldRefreshSuppliers = tab === "suppliers";
+    const shouldRefreshUsers = tab === "users";
     const shouldRefreshAi = tab === "ai";
 
     refreshHealth();
@@ -460,6 +509,7 @@ export default function App() {
     if (shouldRefreshDevices) refreshDevices();
     if (shouldRefreshStores) refreshStores();
     if (shouldRefreshSuppliers) refreshSuppliers();
+    if (shouldRefreshUsers) refreshUsers();
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
@@ -473,6 +523,7 @@ export default function App() {
       if (shouldRefreshDevices) refreshDevices();
       if (shouldRefreshStores) refreshStores();
       if (shouldRefreshSuppliers) refreshSuppliers();
+      if (shouldRefreshUsers) refreshUsers();
       if (shouldRefreshAi) {
         fetchAiHealth()
           .then((res) => setAiConfigured(res.configured))
@@ -1030,6 +1081,9 @@ export default function App() {
         <button className={tab === "ai" ? "tab tabActive" : "tab"} onClick={() => setTab("ai")}>
           <span className="brandPill">SuperMandi</span>
           AI
+        </button>
+        <button className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>
+          Users
         </button>
 
         <div className="tabsRight muted">
@@ -2373,6 +2427,94 @@ export default function App() {
                 </pre>
               )}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ADM-SCR-002: Users Management Tab */}
+      {tab === "users" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">Users Management</div>
+            <div className="muted">Manage platform users and their access</div>
+          </div>
+
+          <div className="tableWrap">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <input
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Search by name, email, or phone..."
+                style={{ flex: 1, minWidth: 200 }}
+              />
+              <button onClick={refreshUsers} disabled={usersLoading}>
+                {usersLoading ? "Loading..." : "Refresh"}
+              </button>
+            </div>
+
+            {userActionError && <div className="errorText" style={{ marginBottom: 8 }}>{userActionError}</div>}
+            {usersError && <div className="errorText" style={{ marginBottom: 8 }}>{usersError}</div>}
+
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {userRecords
+                  .filter((u) => {
+                    if (!userSearch.trim()) return true;
+                    const q = userSearch.toLowerCase().trim();
+                    return (
+                      u.name.toLowerCase().includes(q) ||
+                      (u.email && u.email.toLowerCase().includes(q)) ||
+                      (u.phone && u.phone.includes(q))
+                    );
+                  })
+                  .map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.name}</td>
+                      <td>{user.email ?? "-"}</td>
+                      <td>{user.phone ?? "-"}</td>
+                      <td>
+                        <span className="badge">{user.actor_type}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeErr" : "badgeWarn"}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <select
+                          value={user.status}
+                          onChange={(e) => handleUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")}
+                          disabled={userStatusSaving[user.id]}
+                          style={{ minWidth: 100 }}
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                          <option value="suspended">Suspended</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                {userRecords.length === 0 && !usersLoading && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: "center", color: "#888" }}>
+                      No users found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
