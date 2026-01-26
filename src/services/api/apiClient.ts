@@ -14,6 +14,20 @@ export class ApiError extends Error {
   }
 }
 
+// GO-LIVE FIX: Define protected endpoint patterns that REQUIRE device token
+// Requests to these endpoints will be blocked if token is missing (not sent with empty token)
+const PROTECTED_ENDPOINT_PATTERNS = [
+  /^\/api\/v1\/pos\//,
+  /^\/api\/v1\/reorder\//,
+  /^\/api\/v1\/catalog\//,
+  /^\/api\/v1\/inventory\//,
+];
+
+// GO-LIVE FIX: Check if an endpoint requires device token authentication
+function isProtectedEndpoint(path: string): boolean {
+  return PROTECTED_ENDPOINT_PATTERNS.some(pattern => pattern.test(path));
+}
+
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
@@ -27,6 +41,16 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   // GO-LIVE DEBUG: Log token length to verify full token is being sent
   console.log(`[api_debug] X-Device-Token: ${deviceToken ? `${deviceToken.slice(0, 8)}...(len=${deviceToken.length})` : "none"}`);
   if (body) console.log(`[api_debug] body: ${JSON.stringify(body).slice(0, 200)}`);
+
+  // GO-LIVE FIX: Block requests to protected endpoints if token is missing
+  // This prevents 401 errors from being sent with empty token
+  if (isProtectedEndpoint(path) && !deviceToken) {
+    console.error(`[api_debug] BLOCKED: Protected endpoint ${path} called without device token`);
+    throw new ApiError(401, "DEVICE_SESSION_MISSING", {
+      error: "DEVICE_SESSION_MISSING",
+      message: "Device token is required but not available. Please re-enroll the device."
+    });
+  }
 
   // CACHE-000: Prevent stale API responses from HTTP cache
   const res = await fetch(fullUrl, {

@@ -18,8 +18,9 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 const Updates = { channel: null as string | null };
 
 import { enrollDevice } from "../services/api/enrollApi";
-import { getDeviceSession, saveDeviceSession } from "../services/deviceSession";
+import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
+import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { theme } from "../theme";
 import { API_BASE_URL, BUILD_INFO, TEST_STORE_CONFIG } from "../config/api";
@@ -249,6 +250,40 @@ export default function EnrollDeviceScreen() {
         deviceToken: res.deviceToken,
         deviceType
       });
+
+      // GO-LIVE INVARIANT CHECK: Immediately verify token works after enrollment
+      // This prevents silent failures where token is saved but doesn't actually work
+      try {
+        console.log("[Enroll] Running Go-Live invariant check: calling ui-status...");
+        const uiStatus = await fetchUiStatus();
+        // If we get here, token worked. Check for inactive store
+        if (uiStatus.storeActive === false) {
+          console.log("[Enroll] Invariant check passed but store is inactive");
+          // Will show inactive alert below
+        } else {
+          console.log("[Enroll] Invariant check PASSED: ui-status returned successfully");
+        }
+      } catch (invariantError) {
+        // Token didn't work! This is the critical bug we're trying to prevent
+        console.error("[Enroll] INVARIANT CHECK FAILED:", invariantError);
+
+        // Check if it's a 401 (token invalid) or DEVICE_SESSION_MISSING
+        const is401 = invariantError instanceof ApiError &&
+          (invariantError.status === 401 || invariantError.message === "DEVICE_SESSION_MISSING" || invariantError.message === "device_unauthorized");
+
+        if (is401) {
+          // Critical: Token was saved but doesn't work! Clear it and block enrollment
+          await clearDeviceSession();
+          Alert.alert(
+            "Enrollment Failed",
+            "Token was saved but is not valid. This is a critical error.\n\nPlease try enrolling again. If this persists, contact support.",
+            [{ text: "OK" }]
+          );
+          return; // Block navigation to SellScan
+        }
+        // Other errors (network, etc.) - log but don't block
+        console.warn("[Enroll] Non-critical invariant check error:", invariantError);
+      }
 
       // GO-LIVE: Persist store name for offline display (SuperAdmin source of truth)
       const { setStoreName, setStoreCode } = useSettingsStore.getState();

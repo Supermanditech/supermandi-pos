@@ -1,6 +1,6 @@
 import { ApiError, apiClient } from "./apiClient";
-import { API_BASE_URL } from "../../config/api";
-import { getDeviceToken } from "../deviceSession";
+// GO-LIVE FIX: Removed direct fetch() usage - now using apiClient exclusively
+// API_BASE_URL and getDeviceToken are handled internally by apiClient
 
 const STORE_PRODUCTS_BASE = "/api/v1/pos/store-products";
 
@@ -74,70 +74,96 @@ const mapStoreProductToApiProduct = (item: StoreProductsListItem): ApiProduct =>
   };
 };
 
+/**
+ * GO-LIVE FIX: Refactored to use apiClient instead of direct fetch() calls.
+ * This ensures device token is ALWAYS attached via the centralized apiClient.
+ * Previous implementation used direct fetch() which sometimes sent requests without token.
+ */
 export async function listProducts(params?: { barcode?: string; q?: string; storeId?: string }): Promise<ApiProduct[]> {
   try {
-    const token = await getDeviceToken();
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers["X-Device-Token"] = token;
-
     const trimmedQuery = params?.q?.trim();
+
+    // Barcode lookup
     if (params?.barcode) {
       const lookup = new URLSearchParams({ barcode: params.barcode });
-      const response = await fetch(`${API_BASE_URL}${STORE_PRODUCTS_BASE}/lookup?${lookup.toString()}`, { headers });
-      if (!response.ok) return [];
-      const res = await response.json();
-      if (!res?.data) return [];
-      return [mapStoreProductToApiProduct({
-        productId: res.data.productId,
-        name: res.data.name,
-        barcode: res.data.barcode ?? null,
-        sellPrice: res.data.sellPrice ?? null,
-        currentStock: res.data.currentStock ?? null
-      })];
+      try {
+        const res = await apiClient.get<{ success: boolean; data?: StoreProductsListItem }>(`${STORE_PRODUCTS_BASE}/lookup?${lookup.toString()}`);
+        if (!res?.data) return [];
+        return [mapStoreProductToApiProduct({
+          productId: res.data.productId,
+          name: res.data.name,
+          barcode: res.data.barcode ?? null,
+          sellPrice: res.data.sellPrice ?? null,
+          currentStock: res.data.currentStock ?? null
+        })];
+      } catch (error) {
+        // Return empty array on 404 or DEVICE_SESSION_MISSING
+        if (error instanceof ApiError && (error.status === 404 || error.message === "DEVICE_SESSION_MISSING")) {
+          console.log(`[listProducts] Lookup failed: ${error.message}`);
+          return [];
+        }
+        throw error;
+      }
     }
 
+    // Search query
     if (trimmedQuery && trimmedQuery.length >= 2) {
       const searchParams = new URLSearchParams({ q: trimmedQuery, limit: "100", includeZeroStock: "true" });
-      const response = await fetch(`${API_BASE_URL}${STORE_PRODUCTS_BASE}/search?${searchParams.toString()}`, { headers });
-      if (!response.ok) return [];
-      const res = await response.json();
-      const groups = Array.isArray(res?.data) ? res.data : [];
-      const byProductId = new Map<string, ApiProduct>();
-      for (const group of groups) {
-        const matches = Array.isArray(group?.matches) ? group.matches : [];
-        for (const match of matches) {
-          const productId = match?.productId;
-          if (!productId || byProductId.has(productId)) continue;
-          byProductId.set(productId, mapStoreProductToApiProduct({
-            productId,
-            name: match?.displayName || group?.displayName || "",
-            barcode: match?.barcode ?? null,
-            sellPrice: match?.sellPrice ?? null,
-            currentStock: match?.currentStock ?? null
-          }));
+      try {
+        const res = await apiClient.get<{ success: boolean; data?: Array<{ displayName?: string; matches?: Array<{ productId: string; displayName?: string; barcode?: string; sellPrice?: number; currentStock?: number }> }> }>(`${STORE_PRODUCTS_BASE}/search?${searchParams.toString()}`);
+        const groups = Array.isArray(res?.data) ? res.data : [];
+        const byProductId = new Map<string, ApiProduct>();
+        for (const group of groups) {
+          const matches = Array.isArray(group?.matches) ? group.matches : [];
+          for (const match of matches) {
+            const productId = match?.productId;
+            if (!productId || byProductId.has(productId)) continue;
+            byProductId.set(productId, mapStoreProductToApiProduct({
+              productId,
+              name: match?.displayName || group?.displayName || "",
+              barcode: match?.barcode ?? null,
+              sellPrice: match?.sellPrice ?? null,
+              currentStock: match?.currentStock ?? null
+            }));
+          }
         }
+        return Array.from(byProductId.values());
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 404 || error.message === "DEVICE_SESSION_MISSING")) {
+          console.log(`[listProducts] Search failed: ${error.message}`);
+          return [];
+        }
+        throw error;
       }
-      return Array.from(byProductId.values());
     }
 
+    // List all products with pagination
     const limit = 100;
     let offset = 0;
     const items: StoreProductsListItem[] = [];
     for (;;) {
       const listParams = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-      const response = await fetch(`${API_BASE_URL}${STORE_PRODUCTS_BASE}/list?${listParams.toString()}`, { headers });
-      if (!response.ok) break;
-      const res = await response.json();
-      const page = Array.isArray(res?.data) ? res.data : [];
-      items.push(...page);
+      try {
+        const res = await apiClient.get<{ success: boolean; data?: StoreProductsListItem[]; total?: number }>(`${STORE_PRODUCTS_BASE}/list?${listParams.toString()}`);
+        const page = Array.isArray(res?.data) ? res.data : [];
+        items.push(...page);
 
-      if (page.length < limit) break;
-      const total = typeof res?.total === "number" ? res.total : null;
-      if (total !== null && items.length >= total) break;
-      offset += limit;
+        if (page.length < limit) break;
+        const total = typeof res?.total === "number" ? res.total : null;
+        if (total !== null && items.length >= total) break;
+        offset += limit;
+      } catch (error) {
+        // Break pagination loop on error, return what we have so far
+        if (error instanceof ApiError) {
+          console.log(`[listProducts] List page failed: ${error.message}`);
+        }
+        break;
+      }
     }
     return items.map(mapStoreProductToApiProduct);
-  } catch {
+  } catch (error) {
+    // GO-LIVE: Log the error for debugging but return empty array for graceful degradation
+    console.error(`[listProducts] Unexpected error:`, error);
     return [];
   }
 }

@@ -26,12 +26,19 @@ export const storeScopedStorage = {
       const scopedKey = await getStoreScopedKey(key);
       const value = await AsyncStorage.getItem(scopedKey);
 
-      // AUD-058-A FIX: Validate JSON is parseable before returning
-      // This prevents createJSONStorage from failing silently with corrupted data
-      if (value !== null) {
+      // GO-LIVE FIX: Only validate JSON for keys that are expected to contain JSON
+      // Plain string values (like PosMode "SELL"/"PURCHASE") should NOT be JSON-validated
+      // This was causing false "corrupted JSON" errors for valid non-JSON string values
+      if (value !== null && (value.startsWith("{") || value.startsWith("["))) {
         try {
-          JSON.parse(value); // Validate JSON
+          JSON.parse(value); // Validate JSON only for object/array values
         } catch (parseError) {
+          // GO-LIVE FIX: Only clear this specific key, NEVER clear session keys
+          // Verify we're not accidentally touching the device session
+          if (scopedKey.includes("device.session")) {
+            console.error(`[StoreScope] CRITICAL: Attempted to clear session key ${scopedKey}, aborting`);
+            return null;
+          }
           console.error(`[StoreScope] Corrupted JSON in storage key ${scopedKey}, clearing:`, parseError);
           await AsyncStorage.removeItem(scopedKey);
           return null;
