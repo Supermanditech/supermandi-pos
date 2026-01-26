@@ -18,7 +18,7 @@ export async function fetchHealth(): Promise<HealthResponse> {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "X-Admin-Token": token } : {})
+      ...(token ? { "x-admin-token": token } : {})
     }
   });
 
