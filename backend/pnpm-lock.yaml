@@ -400,6 +400,43 @@ importers:
         specifier: ^5.3.2
         version: 5.9.3
 
+  services/payment-service:
+    dependencies:
+      '@supermandi/common':
+        specifier: workspace:*
+        version: link:../../packages/common
+      express:
+        specifier: ^4.18.2
+        version: 4.22.1
+      helmet:
+        specifier: ^7.1.0
+        version: 7.2.0
+      pg:
+        specifier: ^8.11.3
+        version: 8.16.3
+      razorpay:
+        specifier: ^2.9.4
+        version: 2.9.6
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.25
+      '@types/node':
+        specifier: ^20.10.0
+        version: 20.19.28
+      '@types/pg':
+        specifier: ^8.10.9
+        version: 8.16.0
+      nodemon:
+        specifier: ^3.0.2
+        version: 3.1.11
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@20.19.28)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.3.2
+        version: 5.9.3
+
   services/platform-service:
     dependencies:
       '@supermandi/common':
@@ -2405,6 +2442,16 @@ packages:
     engines: {node: '>= 0.4'}
     dependencies:
       possible-typed-array-names: 1.1.0
+
+  /axios@1.13.3:
+    resolution: {integrity: sha512-ERT8kdX7DZjtUm7IitEyV7InTHAF42iJuMArIiDIV5YtPanJkgw4hw5Dyg9fh0mihdWNn1GKaeIWErfe56UQ1g==}
+    dependencies:
+      follow-redirects: 1.15.11
+      form-data: 4.0.5
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+    dev: false
 
   /babel-jest@29.7.0(@babel/core@7.28.6):
     resolution: {integrity: sha512-BrvGY3xZSwEcCzKvKsCi2GgHqDqsYkOP4/by5xCgIwGXQxIEh+8ew3gmrE1y7XRR6LHZIj6yLYnUi/mm2KXKBg==}
@@ -6447,6 +6494,10 @@ packages:
       ipaddr.js: 1.9.1
     dev: false
 
+  /proxy-from-env@1.1.0:
+    resolution: {integrity: sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==}
+    dev: false
+
   /pstree.remy@1.1.8:
     resolution: {integrity: sha512-77DZwxQmxKnu3aR542U+X8FypNzbfJ+C5XQDk3uWjWxn6151aIMGthWYRXTqT1E5oJvg+ljaa2OJi+VfvCOQ8w==}
     dev: true
@@ -6494,6 +6545,14 @@ packages:
       http-errors: 2.0.1
       iconv-lite: 0.4.24
       unpipe: 1.0.0
+    dev: false
+
+  /razorpay@2.9.6:
+    resolution: {integrity: sha512-zsHAQzd6e1Cc6BNoCNZQaf65ElL6O6yw0wulxmoG5VQDr363fZC90Mp1V5EktVzG45yPyNomNXWlf4cQ3622gQ==}
+    dependencies:
+      axios: 1.13.3
+    transitivePeerDependencies:
+      - debug
     dev: false
 
   /react-is@18.3.1:
