@@ -14,6 +14,7 @@ import { posSuppliersRouter } from "./pos/suppliers";
 import { posStockInRouter } from "./pos/stockIn";
 import { posPaymentsRouter } from "./pos/payments";
 import { posBnplRouter } from "./pos/bnpl";  // SM-019: BNPL drawdowns
+import { posCreditRouter } from "./pos/credit";  // SM-021: Credit offers
 import posTranslationsRouter from "./pos/translations";
 import { reorderRouter } from "./reorder";
 import { ordersRouter } from "./orders";
@@ -61,6 +62,7 @@ v1Router.use("/pos", posSuppliersRouter);
 v1Router.use("/pos", posStockInRouter);
 v1Router.use("/pos", posPaymentsRouter);  // SM-010: SELL UPI + Cash + DUE payments
 v1Router.use("/pos", posBnplRouter);  // SM-019: BNPL drawdowns
+v1Router.use("/pos", posCreditRouter);  // SM-021: Credit offers
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
