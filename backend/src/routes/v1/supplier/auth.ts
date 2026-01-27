@@ -4,7 +4,7 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { getPool } from "../../../db/client";
 
 // =============================================================================
