@@ -611,3 +611,201 @@ adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, asyn
     client.release();
   }
 });
+
+// =============================================================================
+// SM-009: SuperAdmin Edit SKU + Set Margin + BNPL API
+// =============================================================================
+
+/**
+ * PUT /api/v1/admin/products/:productId/edit
+ * Edit product details, set margin, and configure BNPL eligibility
+ *
+ * Request body:
+ * - editedName: string (override supplier product name)
+ * - editedCategory: string (override category)
+ * - superMandiMarginMinor: number (fixed margin in paise, mutually exclusive with marginPercent)
+ * - marginPercent: number (percentage margin, mutually exclusive with superMandiMarginMinor)
+ * - bnplEligible: boolean
+ * - bnplMaxDays: number
+ *
+ * Response:
+ * - productId, editedName, superMandiMarginMinor, bnplEligible, retailerPrice
+ */
+adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, async (req, res) => {
+  const { productId } = req.params;
+  const {
+    editedName,
+    editedCategory,
+    superMandiMarginMinor,
+    marginPercent,
+    bnplEligible,
+    bnplMaxDays
+  } = req.body || {};
+  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
+
+  if (!productId) {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  // Validate: margin types are mutually exclusive
+  if (superMandiMarginMinor !== undefined && superMandiMarginMinor !== null &&
+      marginPercent !== undefined && marginPercent !== null) {
+    return res.status(400).json({
+      error: "superMandiMarginMinor and marginPercent are mutually exclusive. Provide only one."
+    });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Get current product data for comparison
+    const checkResult = await client.query(
+      `SELECT
+        id, name, category, purchase_price,
+        edited_name, edited_category,
+        supermandi_margin_minor, margin_percent,
+        bnpl_eligible, bnpl_max_days,
+        approval_status
+       FROM catalog.supplier_products
+       WHERE id = $1::uuid`,
+      [productId]
+    );
+
+    if (checkResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const current = checkResult.rows[0];
+    const purchasePrice = current.purchase_price;
+
+    // Build dynamic update query
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Track changes for audit log
+    const changes: Record<string, { from: any; to: any }> = {};
+
+    if (editedName !== undefined) {
+      updates.push(`edited_name = $${paramIndex++}`);
+      values.push(editedName);
+      if (current.edited_name !== editedName) {
+        changes.editedName = { from: current.edited_name, to: editedName };
+      }
+    }
+
+    if (editedCategory !== undefined) {
+      updates.push(`edited_category = $${paramIndex++}`);
+      values.push(editedCategory);
+      if (current.edited_category !== editedCategory) {
+        changes.editedCategory = { from: current.edited_category, to: editedCategory };
+      }
+    }
+
+    if (superMandiMarginMinor !== undefined) {
+      updates.push(`supermandi_margin_minor = $${paramIndex++}`);
+      values.push(superMandiMarginMinor);
+      updates.push(`margin_percent = NULL`); // Clear percentage when fixed margin set
+      if (current.supermandi_margin_minor !== superMandiMarginMinor) {
+        changes.superMandiMarginMinor = { from: current.supermandi_margin_minor, to: superMandiMarginMinor };
+      }
+    } else if (marginPercent !== undefined) {
+      updates.push(`margin_percent = $${paramIndex++}`);
+      values.push(marginPercent);
+      updates.push(`supermandi_margin_minor = NULL`); // Clear fixed margin when percentage set
+      if (current.margin_percent !== marginPercent) {
+        changes.marginPercent = { from: current.margin_percent, to: marginPercent };
+      }
+    }
+
+    if (bnplEligible !== undefined) {
+      updates.push(`bnpl_eligible = $${paramIndex++}`);
+      values.push(bnplEligible);
+      if (current.bnpl_eligible !== bnplEligible) {
+        changes.bnplEligible = { from: current.bnpl_eligible, to: bnplEligible };
+      }
+    }
+
+    if (bnplMaxDays !== undefined) {
+      updates.push(`bnpl_max_days = $${paramIndex++}`);
+      values.push(bnplMaxDays);
+      if (current.bnpl_max_days !== bnplMaxDays) {
+        changes.bnplMaxDays = { from: current.bnpl_max_days, to: bnplMaxDays };
+      }
+    }
+
+    if (updates.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    // Add productId as last parameter
+    values.push(productId);
+
+    // Execute update
+    const updateResult = await client.query(
+      `UPDATE catalog.supplier_products
+       SET ${updates.join(", ")}, updated_at = NOW()
+       WHERE id = $${paramIndex}::uuid
+       RETURNING
+         id,
+         name,
+         edited_name as "editedName",
+         edited_category as "editedCategory",
+         purchase_price as "purchasePrice",
+         supermandi_margin_minor as "superMandiMarginMinor",
+         margin_percent as "marginPercent",
+         bnpl_eligible as "bnplEligible",
+         bnpl_max_days as "bnplMaxDays"`,
+      values
+    );
+
+    const updated = updateResult.rows[0];
+
+    // Calculate retailer price
+    let calculatedMargin = 0;
+    if (updated.superMandiMarginMinor !== null && updated.superMandiMarginMinor !== undefined) {
+      calculatedMargin = updated.superMandiMarginMinor;
+    } else if (updated.marginPercent !== null && updated.marginPercent !== undefined) {
+      calculatedMargin = Math.round((purchasePrice * updated.marginPercent) / 100);
+    }
+    const retailerPrice = purchasePrice + calculatedMargin;
+
+    // Log the edit action with changes
+    if (Object.keys(changes).length > 0) {
+      await client.query(
+        `INSERT INTO supplier.approval_logs
+         (entity_type, entity_id, action, actor_id, changes)
+         VALUES ('product', $1::uuid, 'edit', $2::uuid, $3::jsonb)`,
+        [productId, adminId, JSON.stringify(changes)]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return res.json({
+      productId: updated.id,
+      editedName: updated.editedName || updated.name,
+      editedCategory: updated.editedCategory,
+      superMandiMarginMinor: updated.superMandiMarginMinor,
+      marginPercent: updated.marginPercent,
+      bnplEligible: updated.bnplEligible,
+      bnplMaxDays: updated.bnplMaxDays,
+      purchasePrice: purchasePrice,
+      retailerPrice: retailerPrice
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    console.error("[admin/products/edit] Error:", err);
+    return res.status(500).json({ error: "Failed to edit product" });
+  } finally {
+    client.release();
+  }
+});
