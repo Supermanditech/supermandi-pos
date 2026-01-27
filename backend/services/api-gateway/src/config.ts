@@ -309,7 +309,20 @@ export const config: GatewayConfig = {
       stripPrefix: false,
     },
     // ==========================================================================
-    // SM-004: Payment service routes -> payment-service microservice
+    // GL-AUD-003: Payment Service Routing Clarification
+    // ==========================================================================
+    // ARCHITECTURE DECISION (2026-01-27):
+    // - SELL payment routes (/api/v1/pos/payments/*) -> main-backend (handled above)
+    // - BUY payment routes (/api/v1/orders/*/pay) -> main-backend (handled above)
+    // - Payment webhooks (/api/v1/webhooks/razorpay/*) -> main-backend (handled above)
+    //
+    // The payment-service microservice is scaffolded for future extraction but
+    // currently only exposes health endpoints. All payment logic remains in
+    // main-backend for Go-Live. This route is kept for:
+    // 1. Health checks via /api/v1/payments/health
+    // 2. Future microservice migration
+    //
+    // SM-004: Payment service routes -> payment-service microservice (FUTURE USE)
     // ==========================================================================
     {
       name: 'payments',
