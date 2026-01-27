@@ -1,0 +1,1811 @@
+<h1>SUPERMANDI GO-LIVE USER WORKFLOW AUDIT REPORT</h1>
+<p><strong>Audit Date:</strong> 2026-01-28
+<strong>Branch:</strong> main
+<strong>Commit:</strong> b6c2257
+<strong>Auditor:</strong> Claude (Automated Audit)</p>
+<hr>
+<h2>EXECUTIVE SUMMARY</h2>
+<p>This comprehensive audit identified <strong>67 workflow gaps</strong> across all SuperMandi applications that could block Go-Live for 10,000 stores/users.</p>
+<table>
+<thead>
+<tr>
+<th>Severity</th>
+<th>Count</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CRITICAL</td>
+<td>18</td>
+<td>Go-Live blockers requiring immediate fix</td>
+</tr>
+<tr>
+<td>HIGH</td>
+<td>29</td>
+<td>Significant issues affecting core workflows</td>
+</tr>
+<tr>
+<td>MEDIUM</td>
+<td>20</td>
+<td>Operational issues affecting user experience</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>1. USER WORKFLOW MAPS</h2>
+<h3>1.1 RETAILER JOURNEY (POS Mobile App)</h3>
+<pre><code>Retailer Login
+    ├── Device Enrollment ✓
+    │   └── Scan QR → Enter Label → Enroll
+    │       ✓ Screen exists
+    │       ✓ Submit handler works
+    │       ⚠ No duplicate label detection
+    │
+    ├── Sell Flow ✓
+    │   └── Scan → Add Item → Payment → Receipt
+    │       ✓ Barcode scanning works
+    │       ✓ Cart management works
+    │       ⚠ Price resolution errors not shown
+    │       ❌ Split payment doesn&#39;t verify success
+    │
+    ├── Buy Flow ⚠
+    │   └── Browse Catalog → Add to Cart → Checkout
+    │       ✓ Product browsing works
+    │       ✓ Cart management works
+    │       ❌ Add to Order button non-functional (LiveSuppliersView)
+    │       ❌ Checkout flow incomplete from cart modal
+    │
+    ├── Payment Flows ⚠
+    │   ├── Cash ✓ Complete
+    │   ├── UPI ⚠ UTR manual entry, no verification
+    │   ├── Due ✓ Complete
+    │   └── BNPL ⚠ Manual UTR entry required
+    │
+    ├── Store Settings ❌
+    │   └── ❌ No settings page in retailer-admin
+    │   └── ❌ Cannot configure UPI VPA, tax, preferences
+    │
+    └── Ledger &amp; Summary ⚠
+        ├── Inventory Ledger ✓ Works
+        └── Daily Summary ⚠ API exists but UI doesn&#39;t call it
+</code></pre>
+<h3>1.2 SUPPLIER JOURNEY (Supplier Portal)</h3>
+<pre><code>Supplier Registration
+    ├── Account Creation ⚠
+    │   ├── ✓ Multi-step form works
+    │   ├── ⚠ GSTIN optional but validated
+    │   └── ❌ No email verification step
+    │
+    ├── Login ⚠
+    │   ├── ✓ Authentication works
+    │   └── ❌ No password reset flow
+    │
+    ├── Product Creation ⚠
+    │   ├── ✓ Manual creation works
+    │   ├── ✓ CSV upload works
+    │   ├── ❌ No barcode format validation
+    │   ├── ❌ MRP &lt; Purchase price not prevented
+    │   └── ❌ Category is free-text, not dropdown
+    │
+    ├── Approval Visibility ⚠
+    │   ├── ✓ Pending count shown
+    │   ├── ❌ No rejection reason displayed
+    │   └── ❌ No re-submission workflow
+    │
+    ├── Order Management ⚠
+    │   ├── ✓ Order list works
+    │   ├── ✓ Status updates work
+    │   ├── ❌ No item-level tracking
+    │   └── ❌ No shipment integration
+    │
+    └── Bank Details ❌
+        ├── ✓ Form exists
+        ├── ❌ No account verification
+        ├── ❌ IFSC format not validated
+        └── ❌ No payout readiness indicator
+</code></pre>
+<h3>1.3 SUPERADMIN JOURNEY (Control Plane)</h3>
+<pre><code>Admin Login
+    └── ✓ Token-based auth works
+
+Supplier Approval ✓
+    └── ✓ Approve/Reject/Link workflows work
+
+Product Approval ❌
+    └── ❌ COMPLETELY MISSING - No UI, No API endpoints
+
+Margin/BNPL/Credit Controls ❌
+    └── ❌ COMPLETELY MISSING - No UI, No API endpoints
+
+Analytics ✓
+    └── ✓ Read-only dashboards work
+
+Store Management ⚠
+    ├── ✓ Create store works
+    ├── ✓ UPI VPA config works
+    └── ⚠ No bulk operations
+
+User Management ⚠
+    ├── ✓ Status change works
+    └── ❌ No user creation/deletion
+</code></pre>
+<h3>1.4 CROSS-APP WORKFLOWS</h3>
+<pre><code>Supplier Product → Admin Approval → Retailer Visibility → POS
+    ├── Step 1: Supplier Creates ✓
+    ├── Step 2: Admin Approves ✓
+    ├── Step 3: ❌ BREAK - Retailer cannot see approved products
+    └── Step 4: ❌ BREAK - POS never receives products
+
+Retailer Config → POS Behavior
+    ├── UPI VPA ✓ Works end-to-end
+    ├── BNPL Flag ✓ Syncs correctly
+    └── Credit Flag ❌ BREAK - Not in POS ui-status endpoint
+
+POS Action → Retailer Dashboard
+    ├── Sale Creation ✓ Works
+    ├── Inventory Ledger ⚠ Partial - data drift possible
+    └── Stock Sync ❌ BREAK - stock_balances vs store_products not synced
+
+Admin Action → Supplier/Retailer Impact
+    ├── Supplier Approval ✓ Visible in portal
+    └── Store Settings ⚠ Partial - credit flag not propagated
+</code></pre>
+<hr>
+<h2>2. GAP MATRIX (GLOBAL)</h2>
+<table>
+<thead>
+<tr>
+<th>App</th>
+<th>Workflow</th>
+<th>Step</th>
+<th>Status</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>POS</td>
+<td>Sell</td>
+<td>Payment (Split)</td>
+<td>PARTIAL</td>
+<td>Split payment success not verified</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Sell</td>
+<td>Price Display</td>
+<td>PARTIAL</td>
+<td>Price resolution errors not shown</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Buy</td>
+<td>Checkout</td>
+<td>BROKEN</td>
+<td>PurchaseCartModal has no checkout path</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Buy</td>
+<td>Add to Order</td>
+<td>BROKEN</td>
+<td>LiveSuppliersView button non-functional</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Payment</td>
+<td>UPI Verify</td>
+<td>MISSING</td>
+<td>UTR never verified with backend</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Payment</td>
+<td>Credit</td>
+<td>BROKEN</td>
+<td>Items removed before payment confirmed</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>BNPL</td>
+<td>Payment</td>
+<td>PARTIAL</td>
+<td>Manual UTR entry required</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>State</td>
+<td>Cart Lock</td>
+<td>MISSING</td>
+<td>Lock state not persisted</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>State</td>
+<td>Inward Store</td>
+<td>MISSING</td>
+<td>No persistence, lost on restart</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Offline</td>
+<td>Stock</td>
+<td>BROKEN</td>
+<td>Returns 0 stock when offline</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Offline</td>
+<td>Inventory TX</td>
+<td>BROKEN</td>
+<td>Transactions silently fail offline</td>
+</tr>
+<tr>
+<td>POS</td>
+<td>Service</td>
+<td>Printing</td>
+<td>STUB</td>
+<td>All printer methods are stubs</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Settings</td>
+<td>UPI/Tax</td>
+<td>MISSING</td>
+<td>No settings page exists</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Settings</td>
+<td>Store Config</td>
+<td>MISSING</td>
+<td>No configuration UI</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Products</td>
+<td>BNPL Toggle</td>
+<td>MISSING</td>
+<td>Cannot toggle BNPL per product</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Credit</td>
+<td>Customer Dues</td>
+<td>MISSING</td>
+<td>No customer credit page</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Summary</td>
+<td>Daily Sales</td>
+<td>UNUSED</td>
+<td>API exists but UI doesn&#39;t call</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Compliance</td>
+<td>Doc Upload</td>
+<td>MOCK</td>
+<td>Handler just resets form</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Export</td>
+<td>Data Export</td>
+<td>MISSING</td>
+<td>Button exists, no handler</td>
+</tr>
+<tr>
+<td>Retailer</td>
+<td>Admin</td>
+<td>Role Check</td>
+<td>MISSING</td>
+<td>Admin routes accessible to all</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Register</td>
+<td>Email Verify</td>
+<td>MISSING</td>
+<td>No verification step</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Login</td>
+<td>Password Reset</td>
+<td>MISSING</td>
+<td>No recovery flow</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Products</td>
+<td>Barcode Valid</td>
+<td>MISSING</td>
+<td>No GTIN format validation</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Products</td>
+<td>Price Valid</td>
+<td>MISSING</td>
+<td>MRP &lt; Price allowed</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Products</td>
+<td>Category</td>
+<td>PARTIAL</td>
+<td>Free-text instead of dropdown</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Products</td>
+<td>Re-submit</td>
+<td>MISSING</td>
+<td>No workflow for rejected items</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Products</td>
+<td>Rejection</td>
+<td>MISSING</td>
+<td>No reason displayed</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Orders</td>
+<td>Item Track</td>
+<td>MISSING</td>
+<td>No per-item status</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Orders</td>
+<td>Shipment</td>
+<td>MISSING</td>
+<td>No tracking integration</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Bank</td>
+<td>Verification</td>
+<td>MISSING</td>
+<td>No account validation</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Bank</td>
+<td>IFSC</td>
+<td>MISSING</td>
+<td>No format validation</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Bank</td>
+<td>Account#</td>
+<td>MISSING</td>
+<td>No format validation</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Payout</td>
+<td>Readiness</td>
+<td>MISSING</td>
+<td>No checklist/status</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Payout</td>
+<td>History</td>
+<td>MISSING</td>
+<td>No earnings page</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>KYC</td>
+<td>Documents</td>
+<td>MISSING</td>
+<td>No upload workflow</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Security</td>
+<td>Token</td>
+<td>RISK</td>
+<td>Stored in localStorage</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Security</td>
+<td>CSRF</td>
+<td>MISSING</td>
+<td>No CSRF protection</td>
+</tr>
+<tr>
+<td>Supplier</td>
+<td>Config</td>
+<td>API URL</td>
+<td>CRITICAL</td>
+<td>Localhost fallback in prod</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Products</td>
+<td>Approval</td>
+<td>MISSING</td>
+<td>No endpoints, no UI</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Margin</td>
+<td>Controls</td>
+<td>MISSING</td>
+<td>No configuration UI</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>BNPL</td>
+<td>Controls</td>
+<td>MISSING</td>
+<td>No configuration UI</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Credit</td>
+<td>Limits</td>
+<td>MISSING</td>
+<td>No configuration UI</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Users</td>
+<td>Create</td>
+<td>MISSING</td>
+<td>Cannot create new users</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Users</td>
+<td>Delete</td>
+<td>MISSING</td>
+<td>Cannot delete users</td>
+</tr>
+<tr>
+<td>Admin</td>
+<td>Audit</td>
+<td>Trail</td>
+<td>MISSING</td>
+<td>No action logging</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Response</td>
+<td>Format</td>
+<td>INCONSISTENT</td>
+<td>No standard envelope</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Validation</td>
+<td>Library</td>
+<td>MISSING</td>
+<td>Inline validation only</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Error</td>
+<td>Codes</td>
+<td>INCONSISTENT</td>
+<td>Format varies by service</td>
+</tr>
+<tr>
+<td>Cross-App</td>
+<td>Catalog</td>
+<td>Sync</td>
+<td>BROKEN</td>
+<td>Approved products not visible to retailers</td>
+</tr>
+<tr>
+<td>Cross-App</td>
+<td>Stock</td>
+<td>Sync</td>
+<td>BROKEN</td>
+<td>POS stock not in retailer dashboard</td>
+</tr>
+<tr>
+<td>Cross-App</td>
+<td>Credit</td>
+<td>Flag</td>
+<td>BROKEN</td>
+<td>Not in POS ui-status</td>
+</tr>
+<tr>
+<td>Cross-App</td>
+<td>Settings</td>
+<td>Propagation</td>
+<td>PARTIAL</td>
+<td>Some settings don&#39;t sync</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>3. GO-LIVE MICRO-TICKETS</h2>
+<h3>CRITICAL SEVERITY (18 Tickets)</h3>
+<hr>
+<h4>GL-WF-001</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Sell → Payment
+<strong>Step:</strong> Split Payment Confirmation
+<strong>Problem:</strong> Split payment success callback in PaymentScreen.tsx (lines 732-749) doesn&#39;t verify <code>result.paymentStatus</code>. Payment marked complete without backend confirmation.
+<strong>Impact:</strong> Users see success even if payment failed. Financial reconciliation impossible.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add <code>if (!result.paymentStatus === &#39;completed&#39;) return;</code> guard before completing sale</li>
+<li>API: Return clear payment status in split payment response</li>
+<li>DB: Ensure payment_status column is set correctly
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-002</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Buy → Checkout
+<strong>Step:</strong> Add to Order Button
+<strong>Problem:</strong> LiveSuppliersView.tsx line 318-320 - &quot;Add to Order&quot; button has NO <code>onPress</code> handler. Button is decorative only.
+<strong>Impact:</strong> Users cannot add supplier products to purchase order. Buy workflow completely broken.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Implement <code>onPress</code> handler that adds selected items to purchase cart</li>
+<li>API: Call appropriate order creation endpoint</li>
+<li>DB: Order record created with selected items
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-003</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Buy → Checkout
+<strong>Step:</strong> Cart to Order
+<strong>Problem:</strong> PurchaseCartModal (line 252) calls <code>removeSupplierItems()</code> BEFORE payment confirmation. If payment API fails, items already removed from cart with no rollback.
+<strong>Impact:</strong> Data loss - cart cleared even when payment fails. Users must re-add all items.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Only remove items AFTER payment succeeds</li>
+<li>API: Return clear success/failure status</li>
+<li>DB: Transaction should be atomic
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-004</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Buy → Payment
+<strong>Step:</strong> Credit Payment
+<strong>Problem:</strong> PurchaseCartModal line 276 shows success alert but <code>creditApi.deductCredit()</code> is NEVER called. Credit payment is UI-only.
+<strong>Impact:</strong> Credit balance never deducted. Financial loss for platform.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Call credit deduction API before showing success</li>
+<li>API: Implement credit deduction endpoint if missing</li>
+<li>DB: Credit balance updated, transaction logged
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-005</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State Management
+<strong>Step:</strong> Inward Store Persistence
+<strong>Problem:</strong> inwardStore.ts has NO <code>persist()</code> middleware. Manual stock inward cart lost on app restart.
+<strong>Impact:</strong> Users lose all scanned items when app restarts. Must re-scan entire stock.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Cart persists across app restarts</li>
+<li>API: N/A (local state)</li>
+<li>DB: Local storage saves inward cart state
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-006</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Offline
+<strong>Step:</strong> Stock Lookups
+<strong>Problem:</strong> inventoryApi.ts lines 68-75, 99-110 return <code>currentQty: 0</code> when offline instead of using stockCache.
+<strong>Impact:</strong> Cart normalization removes ALL items when offline. Cannot use POS without network.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show cached stock when offline</li>
+<li>API: Fall back to stockCache instead of returning 0</li>
+<li>DB: stockCache properly updated when online
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-007</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Offline
+<strong>Step:</strong> Inventory Transactions
+<strong>Problem:</strong> inventoryApi.ts lines 138-141, 165-167 return empty success <code>{ entries: [] }</code> when offline. Transactions silently lost.
+<strong>Impact:</strong> Stock changes made offline never sync. Inventory data permanently wrong.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Queue transactions for later sync</li>
+<li>API: Enqueue to outbox for async sync</li>
+<li>DB: Transactions eventually applied when online
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-008</h4>
+<p><strong>App:</strong> Supplier Portal
+<strong>Workflow:</strong> Bank Details
+<strong>Step:</strong> Account Verification
+<strong>Problem:</strong> No bank account verification API called. Any account number accepted without validation.
+<strong>Impact:</strong> Payouts may fail or go to wrong accounts. Legal/compliance risk.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show verification status, implement micro-deposit or IFSC lookup</li>
+<li>API: Call bank verification service before saving</li>
+<li>DB: Store verification status with bank details
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-009</h4>
+<p><strong>App:</strong> Supplier Portal
+<strong>Workflow:</strong> Configuration
+<strong>Step:</strong> API Base URL
+<strong>Problem:</strong> api.ts line 2 falls back to <code>localhost:3000</code> if env vars missing in production.
+<strong>Impact:</strong> Production portal makes requests to localhost. Complete service failure.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Remove localhost fallback, fail explicitly if not configured</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-010</h4>
+<p><strong>App:</strong> SuperAdmin
+<strong>Workflow:</strong> Product Approval
+<strong>Step:</strong> Entire Workflow
+<strong>Problem:</strong> Product approval workflow COMPLETELY MISSING. No UI tab, no API endpoints, no database operations.
+<strong>Impact:</strong> Cannot approve supplier products. Core marketplace functionality blocked.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add Products tab with pending list, approve/reject buttons</li>
+<li>API: Implement GET /pending, POST /approve, POST /reject endpoints</li>
+<li>DB: Update approval_status, log approver info
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-011</h4>
+<p><strong>App:</strong> SuperAdmin
+<strong>Workflow:</strong> Margin Controls
+<strong>Step:</strong> Configuration UI
+<strong>Problem:</strong> Margin/BNPL/Credit controls COMPLETELY MISSING. No endpoints, no UI.
+<strong>Impact:</strong> Cannot configure business parameters. Platform margins not controllable.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add Controls tab with margin %, BNPL settings, credit limits</li>
+<li>API: Implement CRUD endpoints for all control types</li>
+<li>DB: Store settings per store/supplier with audit trail
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-012</h4>
+<p><strong>App:</strong> Cross-App
+<strong>Workflow:</strong> Supplier → Retailer
+<strong>Step:</strong> Approved Product Visibility
+<strong>Problem:</strong> retailer-admin products endpoint queries <code>store_products</code> only. NO mechanism to see approved <code>supplier_products</code>.
+<strong>Impact:</strong> Retailers cannot discover or add approved supplier products. Supply chain broken.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add &quot;Supplier Catalog&quot; tab in retailer-admin showing approved products</li>
+<li>API: Add GET /retailer-admin/suppliers/catalog endpoint</li>
+<li>DB: Query supplier_products WHERE approval_status=&#39;approved&#39;
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-013</h4>
+<p><strong>App:</strong> Cross-App
+<strong>Workflow:</strong> POS → Retailer
+<strong>Step:</strong> Stock Synchronization
+<strong>Problem:</strong> POS updates <code>inventory.stock_balances</code>. Retailer-admin reads <code>catalog.store_products.current_stock</code>. No sync between them.
+<strong>Impact:</strong> Retailer dashboard shows stale inventory. Stock discrepancies across apps.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Stock values consistent between POS and retailer-admin</li>
+<li>API: Trigger sync after POS sale completion</li>
+<li>DB: Update store_products.current_stock from stock_balances
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-014</h4>
+<p><strong>App:</strong> Cross-App
+<strong>Workflow:</strong> Settings Propagation
+<strong>Step:</strong> Credit Flag in POS
+<strong>Problem:</strong> pos/uiStatus.ts hard-codes <code>creditEnabled = false</code>. Never reads <code>platform.stores.credit_enabled</code>.
+<strong>Impact:</strong> Credit feature always disabled in POS regardless of admin settings.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Credit toggle reflects actual store setting</li>
+<li>API: Include credit_enabled in ui-status response</li>
+<li>DB: Query credit_enabled from platform.stores
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-015</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Store Settings
+<strong>Step:</strong> Settings Page
+<strong>Problem:</strong> No store settings page exists in retailer-admin. No route, no component, no API calls.
+<strong>Impact:</strong> Retailers cannot configure UPI VPA, tax rates, store preferences.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Create SettingsPage.tsx with UPI VPA, tax, preference forms</li>
+<li>API: Wire to existing settings endpoints</li>
+<li>DB: Settings persist to platform.stores
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-016</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Sell → Payment
+<strong>Step:</strong> UPI Verification
+<strong>Problem:</strong> PaymentOptionsSheet.tsx line 136-140 and SplitPaymentModal.tsx line 138-140 accept manual UTR entry without backend verification.
+<strong>Impact:</strong> Users can enter any UTR and mark payment complete. Fraud vector.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add &quot;Verify Payment&quot; step with backend confirmation</li>
+<li>API: Implement payment verification endpoint</li>
+<li>DB: Store verified payment status
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-017</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> Price Validation
+<strong>Problem:</strong> products/page.tsx allows MRP &lt; Purchase Price. No validation at lines 264-275.
+<strong>Impact:</strong> Products with impossible pricing (loss on every sale) can be created.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Validate MRP &gt;= Purchase Price before submit</li>
+<li>API: Backend validation as second check</li>
+<li>DB: Constraint or trigger to prevent invalid pricing
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h4>GL-WF-018</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> KYC
+<strong>Step:</strong> Document Upload
+<strong>Problem:</strong> No KYC document upload workflow exists in supplier portal. Required for compliance.
+<strong>Impact:</strong> Cannot verify supplier identity. Regulatory compliance blocked.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add KYC tab with document upload forms</li>
+<li>API: Implement document upload and verification endpoints</li>
+<li>DB: Store document references, verification status
+<strong>Severity:</strong> CRITICAL</li>
+</ul>
+<hr>
+<h3>HIGH SEVERITY (29 Tickets)</h3>
+<hr>
+<h4>GL-WF-019</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State
+<strong>Step:</strong> Cart Lock Persistence
+<strong>Problem:</strong> cartStore.ts line 679-682 partialize doesn&#39;t include <code>locked</code> state. Lock lost on app crash during payment.
+<strong>Impact:</strong> Cart can be modified after crash even if payment was in progress.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Cart lock persists across app restarts</li>
+<li>API: N/A</li>
+<li>DB: Include <code>locked</code> in persisted state
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-020</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Sell
+<strong>Step:</strong> Price Resolution
+<strong>Problem:</strong> SellScanScreen.tsx doesn&#39;t show error when <code>resolveSkuPrice()</code> returns null.
+<strong>Impact:</strong> Users add items without understanding price failures.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show Alert for &quot;Price not available for this product&quot;</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-021</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Enrollment
+<strong>Step:</strong> Duplicate Detection
+<strong>Problem:</strong> EnrollDeviceScreen.tsx lines 259-268 don&#39;t check for duplicate device labels.
+<strong>Impact:</strong> Same device can be enrolled multiple times with empty labels.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Check enrollment history before accepting label</li>
+<li>API: Validate label uniqueness per store</li>
+<li>DB: Unique constraint on store_id + label
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-022</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> BNPL
+<strong>Step:</strong> Payment Confirmation
+<strong>Problem:</strong> BnplDuesScreen.tsx lines 445-454 require manual UTR entry. No automatic polling.
+<strong>Impact:</strong> Error-prone, users must manually enter transaction reference.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Auto-poll payment status after UPI deep link</li>
+<li>API: Implement payment status polling endpoint</li>
+<li>DB: Update payment status via webhook or poll
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-023</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Menu
+<strong>Step:</strong> Placeholder Buttons
+<strong>Problem:</strong> MenuScreen.tsx lines 344-355 - Download/Reprint/Share buttons all navigate to goToBills() with no actual handler.
+<strong>Impact:</strong> Buttons appear clickable but do nothing. Poor UX.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Either implement handlers or disable buttons with explanation</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-024</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State
+<strong>Step:</strong> Settings Sync
+<strong>Problem:</strong> settingsStore.ts lines 34-44 use hard-coded defaults. No <code>loadSettings()</code> action to fetch from API.
+<strong>Impact:</strong> BNPL/Credit limits not synced with backend. Stale limits used.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Call loadSettings() on app start</li>
+<li>API: Fetch current limits from BNPL API</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-025</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Service
+<strong>Step:</strong> Printing
+<strong>Problem:</strong> printerService.ts line 19+ - ALL methods are stubs. Always returns <code>connected: false</code>.
+<strong>Impact:</strong> Receipt printing completely non-functional.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Either implement real printer integration or remove from workflows</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-026</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State
+<strong>Step:</strong> Product Store Error
+<strong>Problem:</strong> productsStore.ts lines 93-96 sets both <code>error</code> and <code>products</code> after failure. Confusing state.
+<strong>Impact:</strong> UI shows both error and fallback data simultaneously.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Clear error if fallback succeeded, or show fallback message</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-027</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State
+<strong>Step:</strong> Purchase Draft Validation
+<strong>Problem:</strong> purchaseDraftLogic.ts lines 35-50 marks draft COMPLETE without supplier info.
+<strong>Impact:</strong> Cannot submit digitized items without supplier selection.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add supplier to COMPLETE check</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-028</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Session
+<strong>Step:</strong> Pre-expiry Warning
+<strong>Problem:</strong> AuthContext.tsx has idle timeout (30 min) but no warning before expiration.
+<strong>Impact:</strong> Users surprise-logged-out in middle of work.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show 5-minute warning modal before idle timeout</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-029</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> BNPL Toggle
+<strong>Problem:</strong> No BNPL toggle in ProductsPage.tsx form. Admin-only feature.
+<strong>Impact:</strong> Retailers cannot enable BNPL per product.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add &quot;BNPL Eligible&quot; toggle to product form</li>
+<li>API: Include bnpl_eligible in product PATCH</li>
+<li>DB: Update store_products.bnpl_eligible
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-030</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Summary
+<strong>Step:</strong> Daily Summary UI
+<strong>Problem:</strong> fetchDailySummary() in store.ts lines 285-299 defined but never called in UI.
+<strong>Impact:</strong> Wasted feature. Retailers cannot see daily sales summary.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add Dashboard card calling fetchDailySummary()</li>
+<li>API: Already implemented</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-031</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Export
+<strong>Step:</strong> Data Export
+<strong>Problem:</strong> DashboardPage.tsx lines 692-719 - Export button has NO <code>onClick</code> handler.
+<strong>Impact:</strong> Button exists but does nothing. Misleading UI.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Implement export handler or remove button</li>
+<li>API: Add CSV export endpoint if needed</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-032</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Compliance
+<strong>Step:</strong> Document Upload
+<strong>Problem:</strong> CompliancePage.tsx line 44-50 - <code>handleUpload()</code> just resets form. No actual upload.
+<strong>Impact:</strong> Cannot upload compliance documents. Regulatory risk.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Implement real upload logic</li>
+<li>API: Add document upload endpoint</li>
+<li>DB: Store document references
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-033</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Admin Routes
+<strong>Step:</strong> Role Check
+<strong>Problem:</strong> App.tsx lines 88-90 - Admin routes accessible without role verification.
+<strong>Impact:</strong> Regular retailers can attempt admin actions (backend rejects but UX is broken).
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add role checking in ProtectedRoute component</li>
+<li>API: N/A (already enforced)</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-034</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Registration
+<strong>Step:</strong> Email Verification
+<strong>Problem:</strong> register/page.tsx completes immediately without email verification.
+<strong>Impact:</strong> Unverified emails in system. Spam accounts possible.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add verification step post-registration</li>
+<li>API: Send verification email, check verification status</li>
+<li>DB: Track email_verified status
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-035</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Login
+<strong>Step:</strong> Password Reset
+<strong>Problem:</strong> No &quot;Forgot Password?&quot; link on login page.
+<strong>Impact:</strong> Users cannot recover locked accounts.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add forgot password link and flow</li>
+<li>API: Implement password reset endpoints</li>
+<li>DB: Store reset tokens with expiry
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-036</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> Rejection Reason
+<strong>Problem:</strong> products/page.tsx line 437-443 shows &quot;rejected&quot; status but no reason.
+<strong>Impact:</strong> Users don&#39;t know what to fix for re-submission.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Display rejection_reason field</li>
+<li>API: Include reason in product response</li>
+<li>DB: Already stored in rejection_reason column
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-037</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> Re-submission
+<strong>Problem:</strong> Edit flow (lines 108-122) doesn&#39;t trigger re-approval workflow.
+<strong>Impact:</strong> Unclear if edit triggers re-review. Silent failure after edit.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show &quot;Submit for Re-approval&quot; button after editing rejected product</li>
+<li>API: Reset approval_status to &#39;pending&#39; on edit</li>
+<li>DB: Track re-submission timestamp
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-038</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Orders
+<strong>Step:</strong> Item-level Tracking
+<strong>Problem:</strong> Orders modal shows items (lines 243-286) but no per-item status.
+<strong>Impact:</strong> Partial shipments not trackable.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add status per item in order detail</li>
+<li>API: Include item statuses in order response</li>
+<li>DB: Track status per order_item
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-039</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Orders
+<strong>Step:</strong> Shipment Integration
+<strong>Problem:</strong> No tracking number entry, carrier selection, or label generation.
+<strong>Impact:</strong> Manual shipment management required.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add tracking number input, carrier dropdown</li>
+<li>API: Store tracking info, optionally integrate with carrier APIs</li>
+<li>DB: tracking_number, carrier columns on orders
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-040</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Bank
+<strong>Step:</strong> IFSC Validation
+<strong>Problem:</strong> profile/page.tsx line 310-318 only does uppercase conversion. No format validation.
+<strong>Impact:</strong> Invalid IFSC codes accepted.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Validate IFSC format (^[A-Z]{4}0[A-Z0-9]{6}$)</li>
+<li>API: Backend validation as second check</li>
+<li>DB: Store only valid IFSC codes
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-041</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Bank
+<strong>Step:</strong> Account Number Validation
+<strong>Problem:</strong> profile/page.tsx line 296-305 has no format validation.
+<strong>Impact:</strong> Invalid account numbers accepted.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Validate numeric, 9-18 digits</li>
+<li>API: Backend validation</li>
+<li>DB: Store only valid account numbers
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-042</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Bank
+<strong>Step:</strong> Status Indicator
+<strong>Problem:</strong> No indicator if bank details are verified/pending/rejected.
+<strong>Impact:</strong> Users unsure if payouts will work.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show verification status badge</li>
+<li>API: Include verification_status in profile response</li>
+<li>DB: Track bank_verification_status
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-043</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Payout
+<strong>Step:</strong> Readiness Dashboard
+<strong>Problem:</strong> No payout prerequisites checklist on dashboard.
+<strong>Impact:</strong> Users don&#39;t know requirements for receiving payouts.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add payout readiness checklist card</li>
+<li>API: Return completeness status for each requirement</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-044</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Payout
+<strong>Step:</strong> History
+<strong>Problem:</strong> No payout history, earnings page, or wallet status.
+<strong>Impact:</strong> Users can&#39;t track earnings or payment status.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add Earnings/Payouts page</li>
+<li>API: Implement payout history endpoint</li>
+<li>DB: Query payout records
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-045</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Security
+<strong>Step:</strong> Token Storage
+<strong>Problem:</strong> api.ts line 18, 23 stores auth token in localStorage.
+<strong>Impact:</strong> XSS vulnerability - tokens compromised if XSS found.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Move token to HTTP-only secure cookie</li>
+<li>API: Set cookie in auth response</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-046</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Security
+<strong>Step:</strong> 401 Handling
+<strong>Problem:</strong> No handler for expired token responses.
+<strong>Impact:</strong> Silent failures when token expires mid-session.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Intercept 401 responses, redirect to login</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h4>GL-WF-047</h4>
+<p><strong>App:</strong> Admin
+<strong>Workflow:</strong> Users
+<strong>Step:</strong> User Creation
+<strong>Problem:</strong> No user creation UI - admin cannot create new users.
+<strong>Impact:</strong> All users must self-register. No admin onboarding.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add &quot;Create User&quot; form in Users tab</li>
+<li>API: Implement POST /admin/users endpoint</li>
+<li>DB: Insert into users table with role
+<strong>Severity:</strong> HIGH</li>
+</ul>
+<hr>
+<h3>MEDIUM SEVERITY (20 Tickets)</h3>
+<hr>
+<h4>GL-WF-048</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Sell
+<strong>Step:</strong> Validation Feedback
+<strong>Problem:</strong> StockInView.tsx line 166 validation allows qty=0 items.
+<strong>Impact:</strong> Empty items can be submitted.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Require qty &gt; 0 for all items</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-049</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Buy
+<strong>Step:</strong> BNPL Due Date
+<strong>Problem:</strong> SupplierCartSection.tsx line 77 uses hardcoded 7-day <code>bnplMaxDays</code>.
+<strong>Impact:</strong> Dynamic backend value ignored.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Read bnplMaxDays from backend</li>
+<li>API: Include in relevant responses</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-050</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> Feature
+<strong>Step:</strong> Feature Re-detection
+<strong>Problem:</strong> FeatureGate.tsx line 105 calls useFeatureEnabled() once on render. Changes not detected.
+<strong>Impact:</strong> Feature flag changes ignored until component remounts.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Periodically check feature flags or add retry button</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-051</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State
+<strong>Step:</strong> Stock Cache Expiry
+<strong>Problem:</strong> stockCache.ts line 78 returns null when cache expired.
+<strong>Impact:</strong> Items may be incorrectly marked as &quot;no stock&quot;.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show &quot;stock unknown&quot; instead of removing items</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-052</h4>
+<p><strong>App:</strong> POS
+<strong>Workflow:</strong> State
+<strong>Step:</strong> Mutation History
+<strong>Problem:</strong> cartStore.ts line 61, 679-682 - mutationHistory not persisted.
+<strong>Impact:</strong> Undo history lost on app restart.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Persist mutationHistory (optional)</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-053</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Logout
+<strong>Step:</strong> Confirmation
+<strong>Problem:</strong> ProtectedLayout.tsx lines 19-21 - no confirmation dialog before logout.
+<strong>Impact:</strong> Accidental logouts possible.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add confirmation modal</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-054</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Customer
+<strong>Step:</strong> Credit Page
+<strong>Problem:</strong> No customer credit accounts page.
+<strong>Impact:</strong> Cannot track customer dues.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Create CustomerCreditsPage.tsx</li>
+<li>API: Implement customer dues endpoints</li>
+<li>DB: Query customer_dues table
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-055</h4>
+<p><strong>App:</strong> Retailer
+<strong>Workflow:</strong> Import
+<strong>Step:</strong> Error Clarity
+<strong>Problem:</strong> ImportPage.tsx lines 254-256 - Commit disabled without clear reason.
+<strong>Impact:</strong> Users don&#39;t know why they can&#39;t proceed.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show specific reason why commit is disabled</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-056</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> Barcode Validation
+<strong>Problem:</strong> products/page.tsx lines 226-234 accepts any string as barcode.
+<strong>Impact:</strong> Invalid product codes in system.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Validate GTIN format (8, 12, 13, or 14 digits)</li>
+<li>API: Backend validation</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-057</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> Category Dropdown
+<strong>Problem:</strong> products/page.tsx line 214-222 - category is free-text.
+<strong>Impact:</strong> Inconsistent categorization, filtering issues.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Replace with dropdown from backend categories</li>
+<li>API: Provide categories list endpoint</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-058</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Products
+<strong>Step:</strong> Visibility Indicator
+<strong>Problem:</strong> dashboard/page.tsx line 74-81 doesn&#39;t show if pending products visible to retailers.
+<strong>Impact:</strong> Users unclear about visibility before approval.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add &quot;Pending products not visible to retailers&quot; message</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-059</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Upload
+<strong>Step:</strong> File Size
+<strong>Problem:</strong> upload/page.tsx line 170 says &quot;max 10MB&quot; but not enforced.
+<strong>Impact:</strong> Large files sent to backend.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Check file.size before upload</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-060</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Upload
+<strong>Step:</strong> CSV Preview
+<strong>Problem:</strong> No client-side CSV format validation before upload.
+<strong>Impact:</strong> Errors only shown after upload completes.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Parse and preview CSV before upload</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-061</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Logout
+<strong>Step:</strong> Confirmation
+<strong>Problem:</strong> layout.tsx line 97-102 - logout button has no confirmation.
+<strong>Impact:</strong> Accidental logouts.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add confirmation dialog</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-062</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Forms
+<strong>Step:</strong> Unsaved Warning
+<strong>Problem:</strong> No warning when navigating away with unsaved changes.
+<strong>Impact:</strong> Data loss without warning.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add beforeunload handler and route change warning</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-063</h4>
+<p><strong>App:</strong> Supplier
+<strong>Workflow:</strong> Lists
+<strong>Step:</strong> Pagination
+<strong>Problem:</strong> orders/page.tsx, products/page.tsx load all records at once.
+<strong>Impact:</strong> Performance issues with 1000+ records.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Add pagination controls</li>
+<li>API: Support limit/offset parameters</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-064</h4>
+<p><strong>App:</strong> Admin
+<strong>Workflow:</strong> Login
+<strong>Step:</strong> Token Security
+<strong>Problem:</strong> Admin token stored in localStorage as plaintext.
+<strong>Impact:</strong> Security concern for admin sessions.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Use session storage or secure cookie</li>
+<li>API: N/A</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-065</h4>
+<p><strong>App:</strong> Admin
+<strong>Workflow:</strong> Suppliers
+<strong>Step:</strong> Audit Trail
+<strong>Problem:</strong> No logging of who approved/rejected suppliers and when.
+<strong>Impact:</strong> No accountability for admin actions.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: Show approver info in supplier details</li>
+<li>API: Log admin_id, timestamp on all actions</li>
+<li>DB: audit_logs table with action details
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-066</h4>
+<p><strong>App:</strong> Backend
+<strong>Workflow:</strong> API
+<strong>Step:</strong> Response Format
+<strong>Problem:</strong> Inconsistent response envelope across endpoints.
+<strong>Impact:</strong> Frontend must handle variable formats.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: N/A</li>
+<li>API: Standardize on <code>{ data, error, meta }</code> envelope</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h4>GL-WF-067</h4>
+<p><strong>App:</strong> Backend
+<strong>Workflow:</strong> API
+<strong>Step:</strong> Validation Library
+<strong>Problem:</strong> No centralized validation - inline validation in every handler.
+<strong>Impact:</strong> Code duplication, maintenance burden.
+<strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>UI: N/A</li>
+<li>API: Implement Zod or similar schema validation</li>
+<li>DB: N/A
+<strong>Severity:</strong> MEDIUM</li>
+</ul>
+<hr>
+<h2>4. EXECUTION PRIORITY</h2>
+<h3>Phase 1: Critical (Before Go-Live)</h3>
+<table>
+<thead>
+<tr>
+<th>Ticket</th>
+<th>Est. Effort</th>
+<th>Dependencies</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>GL-WF-012 (Catalog Sync)</td>
+<td>2 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-010 (Product Approval)</td>
+<td>3 days</td>
+<td>GL-WF-012</td>
+</tr>
+<tr>
+<td>GL-WF-011 (Margin Controls)</td>
+<td>2 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-001 (Split Payment)</td>
+<td>0.5 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-002 (Add to Order)</td>
+<td>1 day</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-003 (Cart Rollback)</td>
+<td>1 day</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-004 (Credit Payment)</td>
+<td>1 day</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-016 (UPI Verify)</td>
+<td>2 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-013 (Stock Sync)</td>
+<td>1 day</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-014 (Credit Flag)</td>
+<td>0.5 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-015 (Settings Page)</td>
+<td>2 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-005 (Inward Persist)</td>
+<td>0.5 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-006 (Offline Stock)</td>
+<td>1 day</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-007 (Offline TX)</td>
+<td>1 day</td>
+<td>GL-WF-006</td>
+</tr>
+<tr>
+<td>GL-WF-008 (Bank Verify)</td>
+<td>2 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-009 (API URL)</td>
+<td>0.5 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-017 (Price Valid)</td>
+<td>0.5 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>GL-WF-018 (KYC Upload)</td>
+<td>3 days</td>
+<td>None</td>
+</tr>
+</tbody></table>
+<h3>Phase 2: High Priority (Post Go-Live Sprint 1)</h3>
+<p>All HIGH severity tickets (GL-WF-019 through GL-WF-047)</p>
+<h3>Phase 3: Medium Priority (Post Go-Live Sprint 2)</h3>
+<p>All MEDIUM severity tickets (GL-WF-048 through GL-WF-067)</p>
+<hr>
+<h2>5. APPENDIX: FILES REQUIRING CHANGES</h2>
+<h3>POS Mobile App</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Tickets</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>src/components/sell/SplitPaymentModal.tsx</td>
+<td>GL-WF-001, GL-WF-016</td>
+</tr>
+<tr>
+<td>src/components/buy/PaymentOptionsSheet.tsx</td>
+<td>GL-WF-016</td>
+</tr>
+<tr>
+<td>src/components/buy/PurchaseCartModal.tsx</td>
+<td>GL-WF-003, GL-WF-004</td>
+</tr>
+<tr>
+<td>src/components/purchase/LiveSuppliersView.tsx</td>
+<td>GL-WF-002</td>
+</tr>
+<tr>
+<td>src/screens/PaymentScreen.tsx</td>
+<td>GL-WF-001, GL-WF-020</td>
+</tr>
+<tr>
+<td>src/screens/SellScanScreen.tsx</td>
+<td>GL-WF-020</td>
+</tr>
+<tr>
+<td>src/screens/EnrollDeviceScreen.tsx</td>
+<td>GL-WF-021</td>
+</tr>
+<tr>
+<td>src/screens/BnplDuesScreen.tsx</td>
+<td>GL-WF-022</td>
+</tr>
+<tr>
+<td>src/screens/MenuScreen.tsx</td>
+<td>GL-WF-023</td>
+</tr>
+<tr>
+<td>src/stores/cartStore.ts</td>
+<td>GL-WF-019, GL-WF-052</td>
+</tr>
+<tr>
+<td>src/stores/inwardStore.ts</td>
+<td>GL-WF-005</td>
+</tr>
+<tr>
+<td>src/stores/settingsStore.ts</td>
+<td>GL-WF-024</td>
+</tr>
+<tr>
+<td>src/stores/productsStore.ts</td>
+<td>GL-WF-026</td>
+</tr>
+<tr>
+<td>src/stores/purchaseDraftLogic.ts</td>
+<td>GL-WF-027</td>
+</tr>
+<tr>
+<td>src/services/printerService.ts</td>
+<td>GL-WF-025</td>
+</tr>
+<tr>
+<td>src/services/api/inventoryApi.ts</td>
+<td>GL-WF-006, GL-WF-007</td>
+</tr>
+<tr>
+<td>src/services/stockCache.ts</td>
+<td>GL-WF-051</td>
+</tr>
+<tr>
+<td>src/components/FeatureGate.tsx</td>
+<td>GL-WF-050</td>
+</tr>
+</tbody></table>
+<h3>Retailer Admin</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Tickets</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>src/pages/SettingsPage.tsx (NEW)</td>
+<td>GL-WF-015</td>
+</tr>
+<tr>
+<td>src/pages/ProductsPage.tsx</td>
+<td>GL-WF-029</td>
+</tr>
+<tr>
+<td>src/pages/DashboardPage.tsx</td>
+<td>GL-WF-030, GL-WF-031</td>
+</tr>
+<tr>
+<td>src/pages/CompliancePage.tsx</td>
+<td>GL-WF-032</td>
+</tr>
+<tr>
+<td>src/App.tsx</td>
+<td>GL-WF-033</td>
+</tr>
+<tr>
+<td>src/lib/AuthContext.tsx</td>
+<td>GL-WF-028</td>
+</tr>
+<tr>
+<td>src/components/ProtectedLayout.tsx</td>
+<td>GL-WF-053</td>
+</tr>
+</tbody></table>
+<h3>Supplier Portal</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Tickets</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>src/lib/api.ts</td>
+<td>GL-WF-009, GL-WF-045, GL-WF-046</td>
+</tr>
+<tr>
+<td>src/app/(auth)/register/page.tsx</td>
+<td>GL-WF-034</td>
+</tr>
+<tr>
+<td>src/app/(auth)/login/page.tsx</td>
+<td>GL-WF-035</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/products/page.tsx</td>
+<td>GL-WF-017, GL-WF-036, GL-WF-037, GL-WF-056, GL-WF-057</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/orders/page.tsx</td>
+<td>GL-WF-038, GL-WF-039, GL-WF-063</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/profile/page.tsx</td>
+<td>GL-WF-008, GL-WF-040, GL-WF-041, GL-WF-042</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/dashboard/page.tsx</td>
+<td>GL-WF-043, GL-WF-058</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/upload/page.tsx</td>
+<td>GL-WF-059, GL-WF-060</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/layout.tsx</td>
+<td>GL-WF-061</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/earnings/page.tsx (NEW)</td>
+<td>GL-WF-044</td>
+</tr>
+<tr>
+<td>src/app/(dashboard)/kyc/page.tsx (NEW)</td>
+<td>GL-WF-018</td>
+</tr>
+</tbody></table>
+<h3>SuperAdmin Dashboard</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Tickets</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>src/App.tsx</td>
+<td>GL-WF-010, GL-WF-011, GL-WF-047, GL-WF-064, GL-WF-065</td>
+</tr>
+<tr>
+<td>src/api/products.ts (NEW)</td>
+<td>GL-WF-010</td>
+</tr>
+<tr>
+<td>src/api/controls.ts (NEW)</td>
+<td>GL-WF-011</td>
+</tr>
+</tbody></table>
+<h3>Backend</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Tickets</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>backend/src/routes/v1/pos/uiStatus.ts</td>
+<td>GL-WF-014</td>
+</tr>
+<tr>
+<td>backend/src/routes/v1/retailer-admin/products.ts</td>
+<td>GL-WF-012</td>
+</tr>
+<tr>
+<td>backend/src/routes/v1/retailer-admin/suppliers.ts (NEW)</td>
+<td>GL-WF-012</td>
+</tr>
+<tr>
+<td>backend/src/routes/v1/admin/products.ts (NEW)</td>
+<td>GL-WF-010</td>
+</tr>
+<tr>
+<td>backend/src/routes/v1/admin/controls.ts (NEW)</td>
+<td>GL-WF-011</td>
+</tr>
+<tr>
+<td>backend/src/middleware/responseEnvelope.ts (NEW)</td>
+<td>GL-WF-066</td>
+</tr>
+</tbody></table>
+<hr>
+<p><strong>Report Generated:</strong> 2026-01-28
+<strong>Total Issues:</strong> 67
+<strong>Critical:</strong> 18 | <strong>High:</strong> 29 | <strong>Medium:</strong> 20
+<strong>Estimated Total Effort:</strong> ~50 engineering days for Critical + High priority items</p>

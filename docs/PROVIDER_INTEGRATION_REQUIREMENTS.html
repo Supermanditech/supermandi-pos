@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provider Integration Requirements Audit - SuperMandi POS</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: var(--gray-50);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: 0 0 1rem 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header .subtitle {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+
+        .meta-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--gray-600);
+            font-weight: 600;
+        }
+
+        .meta-value {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            color: var(--gray-900);
+        }
+
+        .toc {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .toc h2 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--gray-800);
+        }
+
+        .toc ul {
+            list-style: none;
+        }
+
+        .toc li {
+            margin-bottom: 0.5rem;
+        }
+
+        .toc a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .section {
+            background: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: var(--gray-800);
+            margin: 1.5rem 0 1rem;
+        }
+
+        h4 {
+            font-size: 1rem;
+            color: var(--gray-700);
+            margin: 1rem 0 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid var(--gray-200);
+        }
+
+        th {
+            background: var(--gray-100);
+            font-weight: 600;
+            color: var(--gray-700);
+        }
+
+        tr:nth-child(even) {
+            background: var(--gray-50);
+        }
+
+        code {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            background: var(--gray-100);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.85em;
+            color: var(--primary-dark);
+        }
+
+        pre {
+            background: var(--gray-900);
+            color: #e5e7eb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .state-machine {
+            background: var(--gray-100);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9rem;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .checklist-table td:first-child {
+            font-weight: 500;
+        }
+
+        .check-yes {
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .check-no {
+            color: var(--danger);
+            font-weight: bold;
+        }
+
+        .check-partial {
+            color: var(--warning);
+            font-weight: bold;
+        }
+
+        .env-vars {
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+        }
+
+        .env-vars .comment {
+            color: #8b949e;
+        }
+
+        .env-vars .var-name {
+            color: #79c0ff;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-left: 4px solid var(--primary);
+        }
+
+        .alert-danger {
+            background: #fee2e2;
+            border-left: 4px solid var(--danger);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-card {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .summary-card h4 {
+            margin-top: 0;
+        }
+
+        @media print {
+            .container {
+                max-width: none;
+                padding: 1rem;
+            }
+
+            header {
+                background: var(--primary);
+                -webkit-print-color-adjust: exact;
+            }
+
+            .section {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Provider Integration Requirements Audit</h1>
+            <p class="subtitle">SuperMandi POS - UPI SELL + BNPL + CREDIT / OCEN</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="meta-info">
+            <div class="meta-item">
+                <span class="meta-label">Audit Date</span>
+                <span class="meta-value">2026-01-27</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Branch</span>
+                <span class="meta-value">main</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Commit</span>
+                <span class="meta-value">96796f0</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">API Gateway</span>
+                <span class="meta-value">http://34.14.220.171:3000</span>
+            </div>
+        </div>
+
+        <div class="toc">
+            <h2>Table of Contents</h2>
+            <ul>
+                <li><strong>Deliverable 1:</strong> Integration Surface Map
+                    <ul>
+                        <li><a href="#upi-sell">1. UPI SELL Integration</a></li>
+                        <li><a href="#bnpl">2. BNPL Integration</a></li>
+                        <li><a href="#credit">3. CREDIT / OCEN Integration</a></li>
+                    </ul>
+                </li>
+                <li><strong>Deliverable 2:</strong> <a href="#provider-requirements">Provider Requirements Spec</a></li>
+                <li><strong>Deliverable 3:</strong> <a href="#provider-checklist">Provider Matching Checklist</a></li>
+                <li><strong>Deliverable 4:</strong> <a href="#production-values">Required Values for Production</a></li>
+            </ul>
+        </div>
+
+        <!-- DELIVERABLE 1: INTEGRATION SURFACE MAP -->
+        <section class="section" id="upi-sell">
+            <h2>1. UPI SELL Integration Surface Map</h2>
+
+            <h3>A) User Flow (POS UI)</h3>
+            <p><strong>Screens:</strong> <code>PaymentScreen.tsx</code>, <code>SplitPaymentModal</code></p>
+
+            <h4>User Actions & Expected Outcomes</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Step</th>
+                        <th>User Action</th>
+                        <th>System Response</th>
+                        <th>Expected Outcome</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>Selects "UPI" payment mode</td>
+                        <td>Checks store UPI config</td>
+                        <td>QR code generation begins</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>System generates QR</td>
+                        <td>Calls <code>/payments/upi/generate</code></td>
+                        <td>QR displayed with 15-min expiry</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>Customer scans QR</td>
+                        <td>Pays via UPI app</td>
+                        <td>Payment captured by provider</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td>Clicks "Payment Received"</td>
+                        <td>Calls <code>/payments/upi/confirm-manual</code></td>
+                        <td>Sale marked complete</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td>(Alt) Split Payment</td>
+                        <td>Calls <code>/payments/split</code></td>
+                        <td>UPI QR + Cash collection flow</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>Failure Cases</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Scenario</th>
+                        <th>Error Code</th>
+                        <th>UI Behavior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>QR Expiry (15 min)</td>
+                        <td><code>expired</code></td>
+                        <td>Status auto-set to failed, prompt retry</td>
+                    </tr>
+                    <tr>
+                        <td>UPI Offline</td>
+                        <td><code>upi_offline_blocked</code></td>
+                        <td>Alert shown, auto-switch to Cash</td>
+                    </tr>
+                    <tr>
+                        <td>UPI VPA Missing</td>
+                        <td><code>upi_vpa_missing</code></td>
+                        <td>Alert shown, auto-switch to Cash</td>
+                    </tr>
+                    <tr>
+                        <td>Store Inactive</td>
+                        <td><code>store_inactive</code></td>
+                        <td>Navigate back to SellScan</td>
+                    </tr>
+                    <tr>
+                        <td>Duplicate Payment</td>
+                        <td>HTTP 409</td>
+                        <td>Reuse existing payment if &lt; 15 min</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>B) Backend Contract (UPI Endpoints)</h3>
+
+            <h4>POST <code>/api/v1/pos/payments/upi/generate</code> (SM-010)</h4>
+            <p>Generate UPI QR code for SELL payment</p>
+
+            <p><strong>Headers:</strong></p>
+            <pre><code>X-Device-Token: &lt;device_jwt&gt; (required)
+Content-Type: application/json</code></pre>
+
+            <p><strong>Request:</strong></p>
+            <pre><code>{
+  "saleId": "string (UUID, required)",
+  "amountMinor": "integer (positive, paise, required)"
+}</code></pre>
+
+            <p><strong>Response (200):</strong></p>
+            <pre><code>{
+  "paymentId": "UUID",
+  "orderId": "SM_&lt;timestamp&gt;_&lt;random&gt;",
+  "qrData": "upi://pay?pa=&lt;vpa&gt;&pn=&lt;name&gt;&am=&lt;amount&gt;&cu=INR&tr=&lt;txnId&gt;",
+  "upiVpa": "store@upi",
+  "expiresAt": "ISO-8601 (15 min from now)"
+}</code></pre>
+
+            <p><strong>Status Codes:</strong></p>
+            <table>
+                <tr><td>200</td><td>Success</td></tr>
+                <tr><td>400</td><td>Missing/invalid saleId or amountMinor; sale already paid</td></tr>
+                <tr><td>402</td><td>UPI not configured for store</td></tr>
+                <tr><td>409</td><td>Duplicate payment (idempotency violation)</td></tr>
+                <tr><td>503</td><td>Database unavailable</td></tr>
+            </table>
+
+            <h4>GET <code>/api/v1/pos/payments/upi/:paymentId/status</code> (SM-011)</h4>
+            <p>Poll UPI payment status</p>
+
+            <p><strong>Response (200):</strong></p>
+            <pre><code>{
+  "status": "initiated | completed | failed | awaiting_cash",
+  "upiTxnRef": "string | null",
+  "payerVpa": "string | null",
+  "failureReason": "string | null"
+}</code></pre>
+
+            <h4>POST <code>/api/v1/webhooks/razorpay/payments</code> (GL-AUD-002)</h4>
+            <p>Receive Razorpay payment webhook</p>
+
+            <p><strong>Headers:</strong></p>
+            <pre><code>x-razorpay-signature: &lt;HMAC-SHA256 of body&gt;</code></pre>
+
+            <p><strong>Events Handled:</strong></p>
+            <ul>
+                <li><code>payment.captured</code> - Updates sell_payments.status to 'completed'</li>
+                <li><code>payment.failed</code> - Updates with error_description</li>
+                <li><code>payment.authorized</code> - Logged, no action</li>
+            </ul>
+
+            <h3>C) DB State Machine (UPI SELL)</h3>
+            <p><strong>Table:</strong> <code>payments.sell_payments</code></p>
+
+            <div class="state-machine">
+pending -> initiated -> completed (success)
+                     -> failed (with failure_reason)
+                     -> awaiting_cash (split payment)
+                     -> expired (15 min timeout)
+            </div>
+
+            <p><strong>Key Columns:</strong></p>
+            <table>
+                <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+                <tr><td>id</td><td>UUID</td><td>Primary key</td></tr>
+                <tr><td>sale_id</td><td>UUID</td><td>FK to sales</td></tr>
+                <tr><td>mode</td><td>VARCHAR(20)</td><td>'CASH', 'UPI', 'DUE', 'SPLIT'</td></tr>
+                <tr><td>upi_order_id</td><td>VARCHAR(100)</td><td>Provider order ID (SM_xxx)</td></tr>
+                <tr><td>upi_payment_id</td><td>VARCHAR(100)</td><td>Razorpay payment ID</td></tr>
+                <tr><td>status</td><td>VARCHAR(20)</td><td>Payment status</td></tr>
+                <tr><td>idempotency_key</td><td>VARCHAR(100)</td><td>Unique (deduplication)</td></tr>
+                <tr><td>webhook_payload</td><td>JSONB</td><td>Full Razorpay webhook</td></tr>
+            </table>
+        </section>
+
+        <section class="section" id="bnpl">
+            <h2>2. BNPL Integration Surface Map</h2>
+
+            <h3>A) User Flow (POS UI)</h3>
+            <p><strong>Screens:</strong> <code>BnplDuesScreen.tsx</code>, <code>BuyScreen.tsx</code> (BNPL badge)</p>
+
+            <h4>User Actions & Expected Outcomes</h4>
+            <table>
+                <thead>
+                    <tr><th>Step</th><th>User Action</th><th>System Response</th><th>Outcome</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td>Views BUY screen</td><td>Checks BNPL enabled</td><td>Shows "BNPL" badge if enabled</td></tr>
+                    <tr><td>2</td><td>Selects PO for payment</td><td>Calls payment-options API</td><td>Shows BNPL option if eligible</td></tr>
+                    <tr><td>3</td><td>Chooses BNPL mode</td><td>Creates drawdown</td><td>PO marked as bnpl_pending</td></tr>
+                    <tr><td>4</td><td>Views BNPL Dues screen</td><td>Fetches active drawdowns</td><td>Lists outstanding dues</td></tr>
+                    <tr><td>5</td><td>Clicks "Pay Now"</td><td>Initiates repayment</td><td>UPI deep link or cash option</td></tr>
+                    <tr><td>6</td><td>Completes UPI payment</td><td>Enters UTR</td><td>Drawdown marked as paid</td></tr>
+                </tbody>
+            </table>
+
+            <h3>B) Backend Contract (BNPL Endpoints)</h3>
+
+            <h4>GET <code>/api/v1/pos/bnpl/active</code></h4>
+            <p><strong>Response (200):</strong></p>
+            <pre><code>{
+  "success": true,
+  "drawdowns": [
+    {
+      "id": "uuid",
+      "supplierId": "uuid",
+      "supplierName": "Supplier ABC",
+      "principalMinor": 500000,
+      "dueDate": "2026-02-03",
+      "status": "active",
+      "daysRemaining": 7,
+      "isOverdue": false
+    }
+  ],
+  "totalOutstanding": 1500000,
+  "creditLimit": 5000000,
+  "availableCredit": 3500000,
+  "bnplEnabled": true,
+  "maxDays": 7
+}</code></pre>
+
+            <h4>POST <code>/api/v1/pos/bnpl/:drawdownId/pay</code></h4>
+            <p><strong>Request:</strong></p>
+            <pre><code>{
+  "mode": "UPI | CASH",
+  "amountMinor": 500000
+}</code></pre>
+
+            <h3>C) DB State Machine (BNPL)</h3>
+            <p><strong>Table:</strong> <code>payments.bnpl_drawdowns</code></p>
+
+            <div class="state-machine">
+active -> paid (successful repayment)
+       -> overdue (due_date passed)
+       -> defaulted (enforcement action)
+            </div>
+
+            <p><strong>Configuration:</strong> <code>payments.bnpl_settings</code></p>
+            <ul>
+                <li>Default credit limit: Rs 50,000</li>
+                <li>Default tenure: 7 days</li>
+                <li>Interest: 0% (interest-free BNPL)</li>
+            </ul>
+        </section>
+
+        <section class="section" id="credit">
+            <h2>3. CREDIT / OCEN Integration Surface Map</h2>
+
+            <h3>A) User Flow (POS UI)</h3>
+            <p><strong>Screen:</strong> <code>CreditScreen.tsx</code></p>
+
+            <div class="alert alert-warning">
+                <strong>Note:</strong> OCEN integration is NOT implemented. Current implementation is in-house credit scoring only.
+            </div>
+
+            <h4>Credit Scoring Factors</h4>
+            <table>
+                <tr><th>Factor</th><th>Points</th><th>Criteria</th></tr>
+                <tr><td>Monthly GMV</td><td>0-30</td><td>Rs 1L+ = 30 pts</td></tr>
+                <tr><td>Transaction Count</td><td>0-20</td><td>500+ = 20 pts</td></tr>
+                <tr><td>BNPL Repayment</td><td>0-30</td><td>100% rate = 30 pts</td></tr>
+                <tr><td>Account Age</td><td>0-20</td><td>12+ months = 20 pts</td></tr>
+            </table>
+
+            <h4>Score Tiers</h4>
+            <table>
+                <tr><th>Score</th><th>Points</th><th>Eligible Amount</th><th>Interest</th></tr>
+                <tr><td><span class="badge badge-success">EXCELLENT</span></td><td>80+</td><td>Rs 2,00,000</td><td>15% p.a.</td></tr>
+                <tr><td><span class="badge badge-success">GOOD</span></td><td>60-79</td><td>Rs 1,00,000</td><td>18% p.a.</td></tr>
+                <tr><td><span class="badge badge-warning">FAIR</span></td><td>40-59</td><td>Rs 50,000</td><td>21% p.a.</td></tr>
+                <tr><td><span class="badge badge-danger">POOR</span></td><td>&lt;40</td><td>Rs 25,000</td><td>Rejected</td></tr>
+            </table>
+
+            <h3>B) Backend Contract (Credit Endpoints)</h3>
+
+            <h4>GET <code>/api/v1/pos/credit/offers</code></h4>
+            <pre><code>{
+  "success": true,
+  "offers": [
+    {
+      "id": "uuid",
+      "source": "SUPERMANDI",
+      "amountMinor": 5000000,
+      "tenureMonths": 12,
+      "interestRateAnnual": 21.0,
+      "emiMinor": 458333,
+      "validUntil": "2026-02-26"
+    }
+  ],
+  "creditScore": "FAIR",
+  "eligibleAmount": 5000000
+}</code></pre>
+
+            <h4>POST <code>/api/v1/pos/credit/:applicationId/kyc</code></h4>
+            <p><strong>Request:</strong></p>
+            <pre><code>{
+  "panNumber": "ABCDE1234F",
+  "aadhaarLast4": "1234"
+}</code></pre>
+
+            <h3>C) OCEN Status: NOT IMPLEMENTED</h3>
+            <div class="alert alert-danger">
+                <strong>Missing OCEN Components:</strong>
+                <ul>
+                    <li>No OCEN API gateway integration</li>
+                    <li>No consent artifacts handling</li>
+                    <li>No AA (Account Aggregator) integration</li>
+                    <li>No LSP/NBFC partner routing</li>
+                    <li>No KFS (Key Fact Statement) generation</li>
+                    <li>No sanction letter automation</li>
+                    <li>No repayment schedule generation</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- DELIVERABLE 2: PROVIDER REQUIREMENTS SPEC -->
+        <section class="section" id="provider-requirements">
+            <h2>Deliverable 2: Provider Requirements Spec</h2>
+
+            <h3>1. SELL UPI Provider Requirements</h3>
+
+            <h4>Integration Types Supported</h4>
+            <table>
+                <tr><th>Type</th><th>Status</th><th>Notes</th></tr>
+                <tr><td>Dynamic QR</td><td><span class="check-yes">IMPLEMENTED</span></td><td>Per-transaction QR</td></tr>
+                <tr><td>Static QR</td><td><span class="check-no">NOT SUPPORTED</span></td><td>Would need store-level QR</td></tr>
+                <tr><td>UPI Intent</td><td><span class="check-yes">IMPLEMENTED</span></td><td>upi://pay deep links</td></tr>
+                <tr><td>Order + Capture</td><td><span class="check-yes">IMPLEMENTED</span></td><td>Razorpay flow</td></tr>
+                <tr><td>Polling</td><td><span class="check-yes">IMPLEMENTED</span></td><td>Status endpoint</td></tr>
+                <tr><td>Webhooks</td><td><span class="check-yes">IMPLEMENTED</span></td><td>payment.captured/failed</td></tr>
+            </table>
+
+            <h4>Required Provider Objects</h4>
+            <table>
+                <tr><th>Object</th><th>Format</th><th>Example</th></tr>
+                <tr><td>order_id</td><td><code>SM_&lt;base36_ts&gt;_&lt;8char&gt;</code></td><td>SM_LK4M2N_ABC12345</td></tr>
+                <tr><td>payment_id</td><td>Provider format</td><td>pay_xxxxxxxxxxxx</td></tr>
+                <tr><td>signature</td><td>HMAC-SHA256 hex</td><td>64-char string</td></tr>
+            </table>
+
+            <h4>Required Environment Configuration</h4>
+            <div class="env-vars">
+<span class="comment"># UPI Payment Provider (Razorpay)</span>
+<span class="var-name">RAZORPAY_KEY_ID</span>=rzp_live_xxxxxxxxxxxx
+<span class="var-name">RAZORPAY_KEY_SECRET</span>=xxxxxxxxxxxxxxxxxxxx
+<span class="var-name">RAZORPAY_WEBHOOK_SECRET</span>=xxxxxxxxxxxxxxxxxxxx
+<span class="var-name">RAZORPAY_ACCOUNT_NUMBER</span>=xxxxxxxxxxxx
+            </div>
+
+            <h4>Required Webhook Events</h4>
+            <table>
+                <tr><th>Event</th><th>Purpose</th><th>Handler</th></tr>
+                <tr><td><code>payment.captured</code></td><td>Mark payment complete</td><td>Updates sell_payments.status</td></tr>
+                <tr><td><code>payment.failed</code></td><td>Record failure reason</td><td>Updates with error_description</td></tr>
+                <tr><td><code>payment.authorized</code></td><td>Optional logging</td><td>Logged, no action</td></tr>
+            </table>
+
+            <h4>Webhook URL to Register</h4>
+            <pre><code>POST https://&lt;domain&gt;/api/v1/webhooks/razorpay/payments</code></pre>
+
+            <h3>2. BNPL Provider Requirements</h3>
+
+            <div class="alert alert-info">
+                <strong>Current Implementation:</strong> In-house SuperMandi BNPL (no external provider)
+            </div>
+
+            <h4>Integration Model</h4>
+            <table>
+                <tr><th>Model</th><th>Status</th></tr>
+                <tr><td>Pre-approved offers</td><td><span class="check-no">NOT USED</span></td></tr>
+                <tr><td>On-demand underwriting</td><td><span class="check-no">NOT USED</span></td></tr>
+                <tr><td>Line of credit</td><td><span class="check-yes">IMPLEMENTED</span> (store-level)</td></tr>
+                <tr><td>Invoice financing</td><td><span class="check-yes">IMPLEMENTED</span> (PO-based)</td></tr>
+            </table>
+
+            <h4>KFS Requirements (Missing)</h4>
+            <div class="alert alert-warning">
+                <strong>NOT IMPLEMENTED</strong> - Required for RBI compliance:
+                <ul>
+                    <li>Loan amount display</li>
+                    <li>Interest rate (0% for BNPL)</li>
+                    <li>Tenure and schedule</li>
+                    <li>Fees and charges</li>
+                    <li>Prepayment terms</li>
+                    <li>Default consequences</li>
+                </ul>
+            </div>
+
+            <h3>3. CREDIT / OCEN Provider Requirements</h3>
+
+            <h4>Code Alignment Assessment</h4>
+            <table>
+                <tr><th>Model</th><th>Aligned</th></tr>
+                <tr><td>Direct NBFC Integration</td><td><span class="check-no">NO</span></td></tr>
+                <tr><td>OCEN via LSP</td><td><span class="check-no">NO</span></td></tr>
+                <tr><td>OCEN via Gateway</td><td><span class="check-no">NO</span></td></tr>
+                <tr><td>In-house Credit</td><td><span class="check-yes">YES</span> (current)</td></tr>
+            </table>
+
+            <h4>Required OCEN Artifacts (If Implementing)</h4>
+            <table>
+                <tr><th>Artifact</th><th>Status</th><th>Purpose</th></tr>
+                <tr><td>Consent Artifacts</td><td><span class="check-no">NOT IMPL</span></td><td>User consent for data sharing</td></tr>
+                <tr><td>AA Integration</td><td><span class="check-no">NOT IMPL</span></td><td>Financial data fetch</td></tr>
+                <tr><td>KFS</td><td><span class="check-no">NOT IMPL</span></td><td>RBI disclosure</td></tr>
+                <tr><td>Sanction Letter</td><td><span class="check-no">NOT IMPL</span></td><td>Loan approval document</td></tr>
+                <tr><td>Repayment Schedule</td><td><span class="check-partial">PARTIAL</span></td><td>No amortization table</td></tr>
+            </table>
+        </section>
+
+        <!-- DELIVERABLE 3: PROVIDER MATCHING CHECKLIST -->
+        <section class="section" id="provider-checklist">
+            <h2>Deliverable 3: Provider Matching Checklist</h2>
+
+            <h3>UPI PSP Provider Checklist</h3>
+            <table class="checklist-table">
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Must Have</th>
+                        <th>Razorpay</th>
+                        <th>PhonePe</th>
+                        <th>Paytm</th>
+                        <th>Cashfree</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="6"><strong>APIs</strong></td></tr>
+                    <tr><td>Create Order</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td>Generate QR</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td>UPI Intent Support</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td>Payment Status API</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td>Refund API</td><td class="check-partial">Opt</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td colspan="6"><strong>Webhooks</strong></td></tr>
+                    <tr><td>payment.captured</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td>payment.failed</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td colspan="6"><strong>Auth Model</strong></td></tr>
+                    <tr><td>API Key + Secret</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td colspan="6"><strong>Compliance</strong></td></tr>
+                    <tr><td>PCI DSS</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td>Indian Data Residency</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                    <tr><td colspan="6"><strong>Sandbox</strong></td></tr>
+                    <tr><td>Test Environment</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td></tr>
+                </tbody>
+            </table>
+
+            <h3>BNPL Provider Checklist</h3>
+            <table class="checklist-table">
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Must Have</th>
+                        <th>Current (In-house)</th>
+                        <th>External BNPL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Eligibility Check</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td>Required</td></tr>
+                    <tr><td>Create Drawdown</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td>Required</td></tr>
+                    <tr><td>Repayment Collection</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td>Required</td></tr>
+                    <tr><td>KFS Generation</td><td class="check-yes">Yes</td><td class="check-no">No</td><td>Required</td></tr>
+                    <tr><td>RBI Compliance</td><td class="check-yes">Yes</td><td class="check-partial">Partial</td><td>Required</td></tr>
+                </tbody>
+            </table>
+
+            <h3>OCEN/LSP Credit Provider Checklist</h3>
+            <table class="checklist-table">
+                <thead>
+                    <tr>
+                        <th>Requirement</th>
+                        <th>Must Have</th>
+                        <th>Current</th>
+                        <th>OCEN/LSP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Borrower Profile API</td><td class="check-yes">Yes</td><td class="check-partial">Basic</td><td>Required</td></tr>
+                    <tr><td>Fetch Offers API</td><td class="check-yes">Yes</td><td class="check-yes">Internal</td><td>Required</td></tr>
+                    <tr><td>Loan Application</td><td class="check-yes">Yes</td><td class="check-yes">Yes</td><td>Required</td></tr>
+                    <tr><td>KYC Submission</td><td class="check-yes">Yes</td><td class="check-yes">PAN/Aadhaar</td><td>Required</td></tr>
+                    <tr><td>Repayment Schedule</td><td class="check-yes">Yes</td><td class="check-no">No</td><td>Required</td></tr>
+                    <tr><td>AA Integration</td><td class="check-yes">Yes</td><td class="check-no">No</td><td>Required</td></tr>
+                    <tr><td>Consent Artifacts</td><td class="check-yes">Yes</td><td class="check-no">No</td><td>Required</td></tr>
+                    <tr><td>KFS</td><td class="check-yes">Yes</td><td class="check-no">No</td><td>Required</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- DELIVERABLE 4: PRODUCTION VALUES -->
+        <section class="section" id="production-values">
+            <h2>Deliverable 4: Required Values for Production</h2>
+
+            <h3>1. UPI Payment Provider (Razorpay)</h3>
+            <div class="env-vars">
+<span class="comment"># Environment Variables Required</span>
+<span class="var-name">RAZORPAY_KEY_ID</span>=           <span class="comment"># Format: rzp_live_xxxxxxxxxxxx</span>
+<span class="var-name">RAZORPAY_KEY_SECRET</span>=       <span class="comment"># Format: xxxxxxxxxxxxxxxxxxxxxxxx</span>
+<span class="var-name">RAZORPAY_WEBHOOK_SECRET</span>=   <span class="comment"># Format: xxxxxxxxxxxxxxxxxxxxxxxx</span>
+<span class="var-name">RAZORPAY_ACCOUNT_NUMBER</span>=   <span class="comment"># Format: xxxxxxxxxxxx (for payouts)</span>
+            </div>
+
+            <h4>Webhook URLs to Register</h4>
+            <pre><code>Production: https://&lt;your-domain&gt;/api/v1/webhooks/razorpay/payments
+Staging:    https://&lt;staging-domain&gt;/api/v1/webhooks/razorpay/payments</code></pre>
+
+            <h4>Webhook Events to Enable</h4>
+            <ul>
+                <li><code>payment.captured</code></li>
+                <li><code>payment.failed</code></li>
+                <li><code>payment.authorized</code></li>
+            </ul>
+
+            <h3>2. Supplier Payouts (Razorpay X)</h3>
+            <div class="env-vars">
+<span class="comment"># Additional Environment Variables</span>
+<span class="var-name">PAYOUT_PROCESS_API_KEY</span>=    <span class="comment"># Internal API key for payout trigger</span>
+                           <span class="comment"># Change from default sm_payout_dev_key!</span>
+            </div>
+
+            <h4>Payout Webhook Events</h4>
+            <ul>
+                <li><code>payout.processed</code></li>
+                <li><code>payout.failed</code></li>
+                <li><code>payout.reversed</code></li>
+                <li><code>payout.queued</code></li>
+            </ul>
+
+            <h3>3. Per-Store Configuration</h3>
+            <p>Each store requires these columns populated in <code>platform.stores</code>:</p>
+            <table>
+                <tr><th>Column</th><th>Purpose</th><th>Example</th></tr>
+                <tr><td>upi_vpa</td><td>Store's UPI VPA for SELL payments</td><td>store123@upi</td></tr>
+                <tr><td>razorpay_account_id</td><td>Razorpay account ID</td><td>acc_xxxxx</td></tr>
+                <tr><td>bnpl_enabled</td><td>Enable BNPL</td><td>true/false</td></tr>
+                <tr><td>bnpl_credit_limit</td><td>Credit limit in paise</td><td>5000000 (Rs 50k)</td></tr>
+                <tr><td>credit_enabled</td><td>Enable credit features</td><td>true/false</td></tr>
+            </table>
+
+            <h3>4. BNPL Collection</h3>
+            <div class="env-vars">
+<span class="comment"># For BNPL repayment collection</span>
+<span class="var-name">SUPERMANDI_COLLECTION_VPA</span>= <span class="comment"># Format: supermandi@upi</span>
+            </div>
+
+            <h3>5. Sandbox vs Production</h3>
+            <table>
+                <tr><th>Variable</th><th>Development</th><th>Staging</th><th>Production</th></tr>
+                <tr><td>NODE_ENV</td><td>development</td><td>staging</td><td>production</td></tr>
+                <tr><td>RAZORPAY_KEY_ID</td><td>rzp_test_xxx</td><td>rzp_test_xxx</td><td>rzp_live_xxx</td></tr>
+                <tr><td>Webhook Signature</td><td>Optional</td><td>Optional</td><td><strong>REQUIRED</strong></td></tr>
+            </table>
+
+            <h3>6. IP Whitelisting</h3>
+            <pre><code>Server IP: 34.14.220.171 (current VM)</code></pre>
+
+            <h3>Summary: Go-Live Checklist</h3>
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <h4>UPI Payments</h4>
+                    <ul>
+                        <li>[ ] RAZORPAY_KEY_ID</li>
+                        <li>[ ] RAZORPAY_KEY_SECRET</li>
+                        <li>[ ] RAZORPAY_WEBHOOK_SECRET</li>
+                        <li>[ ] Register webhook URL</li>
+                        <li>[ ] Configure store UPI VPAs</li>
+                    </ul>
+                </div>
+                <div class="summary-card">
+                    <h4>Supplier Payouts</h4>
+                    <ul>
+                        <li>[ ] RAZORPAY_ACCOUNT_NUMBER</li>
+                        <li>[ ] PAYOUT_PROCESS_API_KEY</li>
+                        <li>[ ] Register payout webhook</li>
+                        <li>[ ] Configure fund accounts</li>
+                    </ul>
+                </div>
+                <div class="summary-card">
+                    <h4>BNPL</h4>
+                    <ul>
+                        <li>[ ] SUPERMANDI_COLLECTION_VPA</li>
+                        <li>[ ] Enable bnpl_enabled per store</li>
+                        <li>[ ] Set credit limits</li>
+                        <li>[ ] Implement KFS (compliance)</li>
+                    </ul>
+                </div>
+                <div class="summary-card">
+                    <h4>Credit (If OCEN)</h4>
+                    <ul>
+                        <li>[ ] OCEN gateway credentials</li>
+                        <li>[ ] LSP registration</li>
+                        <li>[ ] AA provider setup</li>
+                        <li>[ ] NBFC partner agreements</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer style="text-align: center; padding: 2rem; color: var(--gray-600);">
+            <p>Generated by Claude Code Audit | 2026-01-27</p>
+            <p>SuperMandi POS - Provider Integration Requirements</p>
+        </footer>
+    </div>
+</body>
+</html>
