@@ -140,23 +140,23 @@ test_endpoint \
 echo ""
 
 # =============================================================================
-# 3. AUTH ENDPOINTS (expect 401 without credentials)
+# 3. AUTH ENDPOINTS (expect 401/422 without credentials)
 # =============================================================================
 echo "--- Auth Endpoints ---"
-
-test_endpoint \
-  "Admin Login (no creds = 401)" \
-  "POST" \
-  "/api/v1/auth/login" \
-  "401" \
-  "-H 'Content-Type: application/json'" \
-  '{"email":"","password":""}'
 
 test_endpoint \
   "Retailer Login (no creds = 401)" \
   "POST" \
   "/api/v1/retailer-admin/auth/login" \
   "401" \
+  "-H 'Content-Type: application/json'" \
+  '{"email":"","password":""}'
+
+test_endpoint \
+  "Supplier Login (no creds = 422)" \
+  "POST" \
+  "/api/v1/supplier/auth/login" \
+  "422" \
   "-H 'Content-Type: application/json'" \
   '{"email":"","password":""}'
 
