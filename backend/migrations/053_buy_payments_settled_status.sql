@@ -29,3 +29,11 @@ ALTER TABLE payments.supplier_payouts
 CREATE INDEX IF NOT EXISTS idx_supplier_payouts_processing
   ON payments.supplier_payouts(status, processed_at)
   WHERE status = 'processing';
+
+-- Update purchase_orders payment_status constraint to include 'settled'
+ALTER TABLE orders.purchase_orders
+  DROP CONSTRAINT IF EXISTS chk_po_payment_status;
+
+ALTER TABLE orders.purchase_orders
+  ADD CONSTRAINT chk_po_payment_status
+  CHECK (payment_status IN ('pending', 'partial', 'paid', 'settled', 'bnpl_pending', 'credit_used'));
