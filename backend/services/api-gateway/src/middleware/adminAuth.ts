@@ -30,6 +30,11 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
     return next();
   }
 
+  // GL-AUD-006: Allow health endpoints through without auth (for monitoring/smoke tests)
+  if (req.path === '/api/v1/admin/health') {
+    return next();
+  }
+
   // Check if ADMIN_TOKEN is configured
   if (!ADMIN_TOKEN) {
     console.error('[ADMIN-AUTH] ADMIN_TOKEN env var not set - admin APIs disabled');
