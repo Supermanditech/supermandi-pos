@@ -298,7 +298,8 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, async (_req, r
  */
 adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, async (req, res) => {
   const { supplierId } = req.params;
-  const adminId = (req as any).adminId || 'system';
+  // Use a fixed system admin UUID when no admin ID is available
+  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
 
   if (!supplierId) {
     return res.status(400).json({ error: "supplierId is required" });
@@ -368,7 +369,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, a
 adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, async (req, res) => {
   const { supplierId } = req.params;
   const { reason } = req.body || {};
-  const adminId = (req as any).adminId || 'system';
+  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
 
   if (!supplierId) {
     return res.status(400).json({ error: "supplierId is required" });
@@ -479,7 +480,7 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, async (_req, re
  */
 adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, async (req, res) => {
   const { productId } = req.params;
-  const adminId = (req as any).adminId || 'system';
+  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
 
   if (!productId) {
     return res.status(400).json({ error: "productId is required" });
@@ -549,7 +550,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, asy
 adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, async (req, res) => {
   const { productId } = req.params;
   const { reason } = req.body || {};
-  const adminId = (req as any).adminId || 'system';
+  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
 
   if (!productId) {
     return res.status(400).json({ error: "productId is required" });
