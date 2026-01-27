@@ -243,3 +243,370 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
     return res.status(500).json({ error: "Failed to reject supplier" });
   }
 });
+
+// =============================================================================
+// SM-008: SuperAdmin Approval APIs for self-registered suppliers
+// =============================================================================
+
+/**
+ * GET /api/v1/admin/suppliers/pending
+ * List all self-registered suppliers pending verification (from SM-005)
+ */
+adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, async (_req, res) => {
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        s.id,
+        s.business_name as "businessName",
+        s.gstin,
+        s.primary_email as "email",
+        s.primary_phone as "phone",
+        s.created_at as "createdAt",
+        COALESCE(pc.product_count, 0) as "productCount"
+      FROM supplier.suppliers s
+      LEFT JOIN (
+        SELECT supplier_id, COUNT(*) as product_count
+        FROM catalog.supplier_products
+        GROUP BY supplier_id
+      ) pc ON pc.supplier_id = s.id
+      WHERE s.verification_status = 'pending'
+      ORDER BY s.created_at DESC
+      LIMIT 100`
+    );
+
+    return res.json({
+      data: result.rows,
+      count: result.rowCount
+    });
+  } catch (err: any) {
+    console.error("[admin/suppliers/pending] Error:", err);
+    if (err.code === "42P01") {
+      return res.json({ data: [], count: 0 });
+    }
+    return res.status(500).json({ error: "Failed to fetch pending suppliers" });
+  }
+});
+
+/**
+ * POST /api/v1/admin/suppliers/:supplierId/approve
+ * Approve a self-registered supplier
+ */
+adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, async (req, res) => {
+  const { supplierId } = req.params;
+  const adminId = (req as any).adminId || 'system';
+
+  if (!supplierId) {
+    return res.status(400).json({ error: "supplierId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Check supplier exists and is pending
+    const checkResult = await client.query(
+      `SELECT id, verification_status FROM supplier.suppliers WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    if (checkResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    if (checkResult.rows[0].verification_status !== 'pending') {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Supplier is not pending verification" });
+    }
+
+    // Update supplier to verified
+    const updateResult = await client.query(
+      `UPDATE supplier.suppliers
+       SET verification_status = 'verified', verified_at = NOW(), status = 'active'
+       WHERE id = $1::uuid
+       RETURNING id, verification_status as "status", verified_at as "verifiedAt"`,
+      [supplierId]
+    );
+
+    // Log the approval
+    await client.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
+       VALUES ('supplier', $1::uuid, 'approve', 'pending', 'verified', $2::uuid)`,
+      [supplierId, adminId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      supplierId: updateResult.rows[0].id,
+      status: updateResult.rows[0].status,
+      verifiedAt: updateResult.rows[0].verifiedAt
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    console.error("[admin/suppliers/approve] Error:", err);
+    return res.status(500).json({ error: "Failed to approve supplier" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * POST /api/v1/admin/suppliers/:supplierId/reject
+ * Reject a self-registered supplier
+ */
+adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, async (req, res) => {
+  const { supplierId } = req.params;
+  const { reason } = req.body || {};
+  const adminId = (req as any).adminId || 'system';
+
+  if (!supplierId) {
+    return res.status(400).json({ error: "supplierId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Check supplier exists and is pending
+    const checkResult = await client.query(
+      `SELECT id, verification_status FROM supplier.suppliers WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    if (checkResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    if (checkResult.rows[0].verification_status !== 'pending') {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Supplier is not pending verification" });
+    }
+
+    // Update supplier to rejected
+    const updateResult = await client.query(
+      `UPDATE supplier.suppliers
+       SET verification_status = 'rejected', status = 'inactive'
+       WHERE id = $1::uuid
+       RETURNING id, verification_status as "status"`,
+      [supplierId]
+    );
+
+    // Log the rejection
+    await client.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
+       VALUES ('supplier', $1::uuid, 'reject', 'pending', 'rejected', $2::uuid, $3)`,
+      [supplierId, adminId, reason || null]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      supplierId: updateResult.rows[0].id,
+      status: updateResult.rows[0].status
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    console.error("[admin/suppliers/reject] Error:", err);
+    return res.status(500).json({ error: "Failed to reject supplier" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * GET /api/v1/admin/products/pending
+ * List all products pending approval
+ */
+adminSuppliersRouter.get("/products/pending", requireAdminToken, async (_req, res) => {
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        sp.id,
+        sp.name as "productName",
+        sp.supplier_sku as "skuCode",
+        sp.barcode,
+        sp.purchase_price as "purchasePrice",
+        sp.mrp,
+        sp.moq,
+        sp.created_at as "createdAt",
+        s.id as "supplierId",
+        s.business_name as "supplierName"
+      FROM catalog.supplier_products sp
+      JOIN supplier.suppliers s ON s.id = sp.supplier_id
+      WHERE sp.approval_status = 'pending'
+      ORDER BY sp.created_at DESC
+      LIMIT 100`
+    );
+
+    return res.json({
+      data: result.rows,
+      count: result.rowCount
+    });
+  } catch (err: any) {
+    console.error("[admin/products/pending] Error:", err);
+    if (err.code === "42P01") {
+      return res.json({ data: [], count: 0 });
+    }
+    return res.status(500).json({ error: "Failed to fetch pending products" });
+  }
+});
+
+/**
+ * POST /api/v1/admin/products/:productId/approve
+ * Approve a product for catalog visibility
+ */
+adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, async (req, res) => {
+  const { productId } = req.params;
+  const adminId = (req as any).adminId || 'system';
+
+  if (!productId) {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Check product exists and is pending
+    const checkResult = await client.query(
+      `SELECT id, approval_status, supplier_id FROM catalog.supplier_products WHERE id = $1::uuid`,
+      [productId]
+    );
+
+    if (checkResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (checkResult.rows[0].approval_status !== 'pending') {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Product is not pending approval" });
+    }
+
+    // Update product to approved
+    const updateResult = await client.query(
+      `UPDATE catalog.supplier_products
+       SET approval_status = 'approved', approved_at = NOW(), approved_by = $2::uuid
+       WHERE id = $1::uuid
+       RETURNING id, approval_status as "approvalStatus", approved_at as "approvedAt"`,
+      [productId, adminId]
+    );
+
+    // Log the approval
+    await client.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
+       VALUES ('product', $1::uuid, 'approve', 'pending', 'approved', $2::uuid)`,
+      [productId, adminId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      productId: updateResult.rows[0].id,
+      approvalStatus: updateResult.rows[0].approvalStatus,
+      approvedAt: updateResult.rows[0].approvedAt
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    console.error("[admin/products/approve] Error:", err);
+    return res.status(500).json({ error: "Failed to approve product" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * POST /api/v1/admin/products/:productId/reject
+ * Reject a product
+ */
+adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, async (req, res) => {
+  const { productId } = req.params;
+  const { reason } = req.body || {};
+  const adminId = (req as any).adminId || 'system';
+
+  if (!productId) {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Check product exists and is pending
+    const checkResult = await client.query(
+      `SELECT id, approval_status FROM catalog.supplier_products WHERE id = $1::uuid`,
+      [productId]
+    );
+
+    if (checkResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    if (checkResult.rows[0].approval_status !== 'pending') {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ error: "Product is not pending approval" });
+    }
+
+    // Update product to rejected
+    const updateResult = await client.query(
+      `UPDATE catalog.supplier_products
+       SET approval_status = 'rejected', rejection_reason = $2
+       WHERE id = $1::uuid
+       RETURNING id, approval_status as "approvalStatus"`,
+      [productId, reason || null]
+    );
+
+    // Log the rejection
+    await client.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
+       VALUES ('product', $1::uuid, 'reject', 'pending', 'rejected', $2::uuid, $3)`,
+      [productId, adminId, reason || null]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      productId: updateResult.rows[0].id,
+      approvalStatus: updateResult.rows[0].approvalStatus
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    console.error("[admin/products/reject] Error:", err);
+    return res.status(500).json({ error: "Failed to reject product" });
+  } finally {
+    client.release();
+  }
+});
