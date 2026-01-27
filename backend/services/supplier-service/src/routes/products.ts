@@ -688,11 +688,11 @@ router.post(
 
           if (result) {
             imported++;
-            // Log the bulk import submission
+            // Log the bulk import submission (use 'submit' action with csv_upload flag)
             await query(
               `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, to_status, actor_id, changes)
-               VALUES ('product', $1, 'bulk_import', 'pending', $2, $3)`,
-              [result.id, supplier.supplierId, JSON.stringify({ source: 'csv_upload' })]
+               VALUES ('product', $1, 'submit', 'pending', $2, $3)`,
+              [result.id, supplier.supplierId, JSON.stringify({ source: 'csv_upload', sku: product.skuCode })]
             );
           }
         } catch (dbError) {
