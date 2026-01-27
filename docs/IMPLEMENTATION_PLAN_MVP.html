@@ -1,0 +1,2343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SuperMandi MVP Implementation Plan - GO-LIVE GRADE</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --heading: #f0f6fc;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warning: #d29922;
+      --danger: #f85149;
+      --purple: #a371f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { color: var(--heading); font-size: 2.5rem; margin-bottom: 0.5rem; }
+    h2 { color: var(--accent); font-size: 1.8rem; margin: 2rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+    h3 { color: var(--heading); font-size: 1.3rem; margin: 1.5rem 0 0.75rem; }
+    h4 { color: var(--purple); font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+    p { margin-bottom: 1rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .badge-phase { background: var(--purple); color: white; }
+    .badge-critical { background: var(--danger); color: white; }
+    .badge-db { background: #1f6feb; color: white; }
+    .badge-api { background: var(--success); color: white; }
+    .badge-ui { background: var(--warning); color: black; }
+    .badge-security { background: #f778ba; color: black; }
+    .meta { color: #8b949e; font-size: 0.9rem; margin-bottom: 2rem; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .ticket {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+    .ticket-header {
+      background: #21262d;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .ticket-id {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.1rem;
+    }
+    .ticket-title {
+      color: var(--heading);
+      font-size: 1.1rem;
+      flex: 1;
+      margin-left: 1rem;
+    }
+    .ticket-body { padding: 1.5rem; }
+    .section { margin-bottom: 1.5rem; }
+    .section:last-child { margin-bottom: 0; }
+    .section-title {
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+    }
+    th { background: #21262d; color: var(--heading); font-weight: 600; }
+    code {
+      background: #21262d;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.85em;
+      color: #79c0ff;
+    }
+    pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-size: 0.85rem;
+      margin: 0.5rem 0;
+    }
+    pre code { background: none; padding: 0; }
+    ul, ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+    li { margin-bottom: 0.25rem; }
+    .flow-diagram {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 0.8rem;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; }
+    .status-table td:first-child { font-weight: 600; width: 150px; }
+    .check { color: var(--success); }
+    .cross { color: var(--danger); }
+    .toc { columns: 2; column-gap: 2rem; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    .toc li { margin-bottom: 0.5rem; break-inside: avoid; }
+    .phase-divider {
+      background: linear-gradient(90deg, var(--purple), var(--accent));
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 8px;
+      margin: 3rem 0 2rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+    .dependency-arrow {
+      text-align: center;
+      color: #8b949e;
+      font-size: 1.5rem;
+      margin: 0.5rem 0;
+    }
+    @media (max-width: 768px) {
+      body { padding: 1rem; }
+      .toc { columns: 1; }
+      .ticket-header { flex-direction: column; align-items: flex-start; }
+      .ticket-title { margin-left: 0; margin-top: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SuperMandi MVP Implementation Plan</h1>
+    <p class="meta">
+      <strong>Commit:</strong> ece1859 |
+      <strong>Branch:</strong> main |
+      <strong>Grade:</strong> GO-LIVE (10,000 Stores) |
+      <strong>Generated:</strong> 2026-01-27
+    </p>
+
+    <!-- ==================== SECTION 1: FINAL WORKFLOW ==================== -->
+    <h2>1. Final Workflow Summary</h2>
+
+    <div class="card">
+      <h3>What We Are Building</h3>
+      <p>A production-grade, multi-party commerce platform with:</p>
+      <ol>
+        <li><strong>Live Supplier Catalogue</strong> - Suppliers register, list products (inline + CSV), SuperAdmin approves</li>
+        <li><strong>SuperAdmin Verification</strong> - Mandatory approval for suppliers AND products before POS visibility</li>
+        <li><strong>SuperAdmin Margin Control</strong> - Edit SKUs, add SuperMandi margin, set BNPL eligibility</li>
+        <li><strong>POS SELL Flow</strong> - Consumer payments via UPI/Cash/DUE/Split to retailer account</li>
+        <li><strong>POS BUY Flow</strong> - Retailer purchases from supplier catalogue with UPI/BNPL/Credit payment</li>
+        <li><strong>BNPL</strong> - Buy Now Pay Later per-SKU for retailer purchases</li>
+        <li><strong>Embedded Credit</strong> - Loan offers to retailers based on POS sales data (OCEN-ready)</li>
+        <li><strong>UPI Integration</strong> - Razorpay for collect (SELL) and payout (BUY)</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3>Core Flow Diagram</h3>
+      <div class="flow-diagram">
+SUPPLIER DASHBOARD                    SUPERADMIN DASHBOARD                  POS APP (RETAILER)
+      |                                      |                                    |
+      v                                      v                                    v
+[1. Register]                         [4. Review Queue]                    [7. Browse Catalog]
+      |                                      |                             (verified + approved only)
+      v                                      v                                    |
+[2. Add Products]                     [5. Edit SKU + Set Margin]                 v
+   (inline/CSV)                       [   + Set BNPL Eligible]            [8. Add to Cart]
+      |                                      |                                    |
+      v                                      v                                    v
+[3. Submit for Approval]              [6. Approve/Reject]                 [9. Checkout]
+   status = 'pending'                    status = 'approved'               (UPI / BNPL / Credit)
+                                              |                                    |
+                                              v                                    v
+                                    [NOW VISIBLE IN POS]                  [10. Order Created]
+                                    price = supplier + margin                     |
+                                                                                  v
+                                                                          [11. GRN + Settlement]
+                                                                          (Payout to Supplier)
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>SELL Flow (Consumer → Retailer)</h3>
+      <div class="flow-diagram">
+CONSUMER                    POS APP                     PAYMENT SERVICE              RAZORPAY
+   |                          |                              |                          |
+   |    [Scan Items]          |                              |                          |
+   |------------------------->|                              |                          |
+   |                          |   POST /payments/upi/init    |                          |
+   |                          |----------------------------->|   Create Order           |
+   |                          |                              |------------------------->|
+   |                          |        QR Code Data          |<-------------------------|
+   |                          |<-----------------------------|                          |
+   |     [Display QR]         |                              |                          |
+   |<-------------------------|                              |                          |
+   |                          |                              |                          |
+   |  [Scan & Pay via UPI App]|                              |                          |
+   |-------------------------------------------------------->|   Webhook: Paid          |
+   |                          |                              |<-------------------------|
+   |                          |   GET /status → completed    |                          |
+   |                          |<-----------------------------|                          |
+   |   [Receipt Printed]      |                              |                          |
+   |<-------------------------|                              |                          |
+
+Payment Options: UPI | CASH | DUE | SPLIT (UPI + Cash)
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>BUY Flow (Retailer → Supplier)</h3>
+      <div class="flow-diagram">
+RETAILER (POS)              PAYMENT SERVICE              RAZORPAY PAYOUTS           SUPPLIER BANK
+     |                           |                            |                          |
+     | [Browse Supplier Catalog] |                            |                          |
+     | [Add to Cart]             |                            |                          |
+     | [Select Payment: UPI]     |                            |                          |
+     |                           |                            |                          |
+     | POST /orders/:id/pay      |                            |                          |
+     |-------------------------->|                            |                          |
+     |    UPI Collect Request    |                            |                          |
+     |<--------------------------|                            |                          |
+     |                           |                            |                          |
+     | [Pay via UPI App]         |                            |                          |
+     |-------------------------->|                            |                          |
+     |                           |                            |                          |
+     | POST /pay/confirm         |                            |                          |
+     |-------------------------->|  Create Payout             |                          |
+     |                           |--------------------------->|   Bank Transfer          |
+     |                           |                            |------------------------->|
+     |                           |        UTR                 |<-------------------------|
+     |                           |<---------------------------|                          |
+     |   Order Confirmed         |                            |                          |
+     |<--------------------------|                            |                          |
+
+Payment Options: UPI (Pay Now) | BNPL (Pay in 7-30 days) | CREDIT (Use credit line)
+      </div>
+    </div>
+
+    <!-- ==================== SECTION 2: ARCHITECTURE ==================== -->
+    <h2>2. Revised Architecture</h2>
+
+    <div class="card">
+      <h3>Services & Responsibilities</h3>
+      <table>
+        <tr>
+          <th>Service</th>
+          <th>Port</th>
+          <th>Responsibility</th>
+        </tr>
+        <tr>
+          <td><code>api-gateway</code></td>
+          <td>3000</td>
+          <td>Route all requests, JWT validation, rate limiting, device token validation</td>
+        </tr>
+        <tr>
+          <td><code>auth-service</code></td>
+          <td>3001</td>
+          <td>User/Supplier/Admin authentication, JWT issuance</td>
+        </tr>
+        <tr>
+          <td><code>supplier-service</code></td>
+          <td>3002</td>
+          <td>Supplier registration, profile, product management, CSV upload</td>
+        </tr>
+        <tr>
+          <td><code>catalog-service</code></td>
+          <td>3003</td>
+          <td>Product catalog with visibility filter (verified + approved only)</td>
+        </tr>
+        <tr>
+          <td><code>order-service</code></td>
+          <td>3004</td>
+          <td>Purchase orders, GRN, order lifecycle</td>
+        </tr>
+        <tr>
+          <td><code>payment-service</code> <span class="badge badge-critical">NEW</span></td>
+          <td>3010</td>
+          <td>SELL payments (UPI/Cash/DUE), BUY payments, BNPL, Credit, Razorpay integration</td>
+        </tr>
+        <tr>
+          <td><code>inventory-service</code></td>
+          <td>3005</td>
+          <td>Stock ledger, deductions, GRN stock additions</td>
+        </tr>
+        <tr>
+          <td><code>platform-service</code></td>
+          <td>3006</td>
+          <td>Stores, devices, feature flags</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Frontend Applications</h3>
+      <table>
+        <tr>
+          <th>App</th>
+          <th>Users</th>
+          <th>Tech</th>
+        </tr>
+        <tr>
+          <td><code>POS App</code></td>
+          <td>Retailers</td>
+          <td>React Native (Expo)</td>
+        </tr>
+        <tr>
+          <td><code>Supplier Dashboard</code> <span class="badge badge-critical">NEW</span></td>
+          <td>Suppliers</td>
+          <td>Next.js Web App</td>
+        </tr>
+        <tr>
+          <td><code>Retailer Admin</code> (extend)</td>
+          <td>SuperAdmin</td>
+          <td>Next.js Web App</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Database Schemas</h3>
+      <table>
+        <tr>
+          <th>Schema</th>
+          <th>Tables</th>
+        </tr>
+        <tr>
+          <td><code>supplier</code></td>
+          <td>suppliers (+ status), supplier_store_links, approval_logs</td>
+        </tr>
+        <tr>
+          <td><code>catalog</code></td>
+          <td>products, supplier_products (+ approval_status, margin, bnpl_eligible)</td>
+        </tr>
+        <tr>
+          <td><code>payments</code> <span class="badge badge-critical">NEW</span></td>
+          <td>sell_payments, buy_payments, bnpl_drawdowns, credit_offers, credit_applications</td>
+        </tr>
+        <tr>
+          <td><code>orders</code></td>
+          <td>purchase_orders, purchase_order_items, order_events</td>
+        </tr>
+        <tr>
+          <td><code>inventory</code></td>
+          <td>inventory_ledger, stock_balances</td>
+        </tr>
+        <tr>
+          <td><code>public</code></td>
+          <td>sales, sale_items, customers</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ==================== SECTION 3: TICKETS ==================== -->
+    <h2>3. Implementation Tickets</h2>
+
+    <div class="card">
+      <h3>Table of Contents</h3>
+      <ol class="toc">
+        <li><a href="#SM-001">SM-001: Supplier Verification Schema</a></li>
+        <li><a href="#SM-002">SM-002: Payment Schema</a></li>
+        <li><a href="#SM-003">SM-003: Catalog Visibility Filter</a></li>
+        <li><a href="#SM-004">SM-004: Payment Service Scaffold</a></li>
+        <li><a href="#SM-005">SM-005: Supplier Auth APIs</a></li>
+        <li><a href="#SM-006">SM-006: Supplier Product CRUD API</a></li>
+        <li><a href="#SM-007">SM-007: Supplier CSV Upload API</a></li>
+        <li><a href="#SM-008">SM-008: SuperAdmin Approval APIs</a></li>
+        <li><a href="#SM-009">SM-009: SuperAdmin Edit + Margin API</a></li>
+        <li><a href="#SM-010">SM-010: SELL UPI Init API</a></li>
+        <li><a href="#SM-011">SM-011: SELL UPI Webhook + Status</a></li>
+        <li><a href="#SM-012">SM-012: SELL Cash + DUE APIs</a></li>
+        <li><a href="#SM-013">SM-013: SELL Split Payment API</a></li>
+        <li><a href="#SM-014">SM-014: POS Payment Screen UPI</a></li>
+        <li><a href="#SM-015">SM-015: POS Payment Screen Split</a></li>
+        <li><a href="#SM-016">SM-016: BUY Payment Options API</a></li>
+        <li><a href="#SM-017">SM-017: BUY UPI Payment API</a></li>
+        <li><a href="#SM-018">SM-018: Supplier Payout Service</a></li>
+        <li><a href="#SM-019">SM-019: BNPL Eligibility + Drawdown API</a></li>
+        <li><a href="#SM-020">SM-020: BNPL POS UI</a></li>
+        <li><a href="#SM-021">SM-021: Credit Offers API</a></li>
+        <li><a href="#SM-022">SM-022: Credit POS UI</a></li>
+        <li><a href="#SM-023">SM-023: Supplier Dashboard UI</a></li>
+        <li><a href="#SM-024">SM-024: SuperAdmin Dashboard UI</a></li>
+        <li><a href="#SM-025">SM-025: POS BUY Payment UI</a></li>
+      </ol>
+    </div>
+
+    <!-- ==================== PHASE 1: FOUNDATION ==================== -->
+    <div class="phase-divider">PHASE 1: Database Foundation</div>
+
+    <!-- TICKET SM-001 -->
+    <div class="ticket" id="SM-001">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-001</span>
+        <span class="ticket-title">Supplier Verification Schema Migration</span>
+        <div>
+          <span class="badge badge-db">DATABASE</span>
+          <span class="badge badge-critical">BLOCKER</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">1. Scope</div>
+          <table class="status-table">
+            <tr><td>Capability</td><td>Add supplier status, product approval_status, SuperMandi margin, BNPL eligibility columns</td></tr>
+            <tr><td>Roles</td><td>System (migration)</td></tr>
+            <tr><td>Flow</td><td>Foundation for all flows</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <p>N/A - Database migration only</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <p>N/A - Database migration only</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">4. Database / Migration</div>
+          <p><strong>File:</strong> <code>backend/migrations/048_supplier_verification_schema.sql</code></p>
+          <pre><code>-- Supplier status
+ALTER TABLE supplier.suppliers
+  ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'pending'
+    CHECK (status IN ('pending', 'verified', 'rejected', 'suspended')),
+  ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS verified_by UUID,
+  ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+  ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS bank_ifsc VARCHAR(11),
+  ADD COLUMN IF NOT EXISTS bank_account_name VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS upi_vpa VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS razorpay_contact_id VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS razorpay_fund_account_id VARCHAR(50);
+
+-- Product approval + margin
+ALTER TABLE catalog.supplier_products
+  ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) DEFAULT 'pending'
+    CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS approved_by UUID,
+  ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+  ADD COLUMN IF NOT EXISTS edited_name VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS edited_category VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS supermandi_margin_minor INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS margin_percent DECIMAL(5,2),
+  ADD COLUMN IF NOT EXISTS bnpl_eligible BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS bnpl_max_days INTEGER DEFAULT 7;
+
+-- Approval audit log
+CREATE TABLE IF NOT EXISTS supplier.approval_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_type VARCHAR(20) NOT NULL,
+  entity_id UUID NOT NULL,
+  action VARCHAR(20) NOT NULL,
+  from_status VARCHAR(20),
+  to_status VARCHAR(20),
+  changes JSONB,
+  reason TEXT,
+  actor_id UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_approval_logs_entity
+  ON supplier.approval_logs(entity_type, entity_id);
+
+-- Backfill existing data as verified/approved
+UPDATE supplier.suppliers SET status = 'verified' WHERE status IS NULL;
+UPDATE catalog.supplier_products SET approval_status = 'approved' WHERE approval_status IS NULL;
+
+-- Visibility index
+CREATE INDEX IF NOT EXISTS idx_sp_visibility
+  ON catalog.supplier_products(supplier_id)
+  WHERE approval_status = 'approved';</code></pre>
+          <table>
+            <tr><th>Property</th><th>Value</th></tr>
+            <tr><td>Idempotent</td><td><span class="check">✓</span> Uses IF NOT EXISTS</td></tr>
+            <tr><td>Backward Safe</td><td><span class="check">✓</span> Backfills existing data</td></tr>
+            <tr><td>Rollback</td><td>DROP COLUMN statements (separate down migration)</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. State Machine</div>
+          <p><strong>Supplier Status:</strong></p>
+          <div class="flow-diagram">pending ──[SuperAdmin Approve]──> verified
+pending ──[SuperAdmin Reject]──> rejected
+verified ──[SuperAdmin Suspend]──> suspended
+suspended ──[SuperAdmin Reactivate]──> verified</div>
+          <p><strong>Product Approval Status:</strong></p>
+          <div class="flow-diagram">pending ──[SuperAdmin Approve]──> approved
+pending ──[SuperAdmin Reject]──> rejected
+approved ──[Sensitive Edit]──> pending (re-approval)</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. Offline & Cache</div>
+          <table>
+            <tr><td>Offline Impact</td><td>None - server-side only</td></tr>
+            <tr><td>Cache Invalidation</td><td>Catalog cache must be invalidated after approval status change</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security & Isolation</div>
+          <ul>
+            <li><span class="check">✓</span> Store isolation: catalog queries will filter by store context</li>
+            <li><span class="check">✓</span> Supplier isolation: suppliers can only see own products</li>
+            <li><span class="check">✓</span> SuperAdmin only can change status (enforced in API layer)</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Ledger & Audit</div>
+          <ul>
+            <li><span class="check">✓</span> approval_logs table records all status transitions</li>
+            <li><span class="check">✓</span> Immutable - INSERT only, no UPDATE/DELETE</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">9. Deployment</div>
+          <pre><code># SSH to VM
+ssh user@34.14.220.171
+
+# Run migration
+cd /app/backend
+npm run migrate:up
+
+# Verify
+psql -c "\d supplier.suppliers" | grep status
+psql -c "\d catalog.supplier_products" | grep approval_status
+psql -c "\dt supplier.approval_logs"</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">10. Acceptance Criteria</div>
+          <table>
+            <tr><th>Condition</th><th>Pass</th><th>Fail</th></tr>
+            <tr>
+              <td>Status column exists</td>
+              <td><code>SELECT status FROM supplier.suppliers LIMIT 1;</code> returns value</td>
+              <td>Column not found error</td>
+            </tr>
+            <tr>
+              <td>Backfill complete</td>
+              <td>All existing suppliers have status='verified'</td>
+              <td>Any supplier has NULL or 'pending'</td>
+            </tr>
+            <tr>
+              <td>Approval logs table</td>
+              <td><code>\dt supplier.approval_logs</code> shows table</td>
+              <td>Table not found</td>
+            </tr>
+            <tr>
+              <td>Existing POS works</td>
+              <td>Catalog API returns products</td>
+              <td>Catalog API returns empty</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <!-- TICKET SM-002 -->
+    <div class="ticket" id="SM-002">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-002</span>
+        <span class="ticket-title">Payment Schema Migration</span>
+        <div>
+          <span class="badge badge-db">DATABASE</span>
+          <span class="badge badge-critical">BLOCKER</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">1. Scope</div>
+          <table class="status-table">
+            <tr><td>Capability</td><td>Create payments schema with sell_payments, buy_payments, BNPL, and credit tables</td></tr>
+            <tr><td>Roles</td><td>System (migration)</td></tr>
+            <tr><td>Flow</td><td>Foundation for SELL, BUY, BNPL, Credit flows</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <p>N/A - Database migration only</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <p>N/A - Database migration only</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">4. Database / Migration</div>
+          <p><strong>File:</strong> <code>backend/migrations/049_payments_schema.sql</code></p>
+          <pre><code>-- Create payments schema
+CREATE SCHEMA IF NOT EXISTS payments;
+
+-- Store payment details (for receiving SELL payments)
+ALTER TABLE platform.stores
+  ADD COLUMN IF NOT EXISTS upi_vpa VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS razorpay_account_id VARCHAR(50);
+
+-- SELL payments (Consumer → Retailer)
+CREATE TABLE IF NOT EXISTS payments.sell_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sale_id UUID NOT NULL,
+  store_id UUID NOT NULL,
+  mode VARCHAR(20) NOT NULL CHECK (mode IN ('CASH', 'UPI', 'DUE', 'SPLIT')),
+  amount_minor INTEGER NOT NULL,
+  upi_order_id VARCHAR(100),
+  upi_payment_id VARCHAR(100),
+  upi_qr_data TEXT,
+  upi_vpa VARCHAR(100),
+  upi_payer_vpa VARCHAR(100),
+  upi_txn_ref VARCHAR(100),
+  status VARCHAR(20) DEFAULT 'pending'
+    CHECK (status IN ('pending', 'initiated', 'completed', 'failed', 'refunded')),
+  initiated_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  failure_reason TEXT,
+  webhook_payload JSONB,
+  idempotency_key VARCHAR(100) UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_sell_payments_sale ON payments.sell_payments(sale_id);
+CREATE INDEX idx_sell_payments_store ON payments.sell_payments(store_id, status);
+CREATE INDEX idx_sell_payments_order ON payments.sell_payments(upi_order_id);
+
+-- BUY payments (Retailer → Supplier)
+CREATE TABLE IF NOT EXISTS payments.buy_payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id UUID NOT NULL,
+  supplier_id UUID NOT NULL,
+  purchase_order_id UUID,
+  mode VARCHAR(20) NOT NULL CHECK (mode IN ('UPI', 'BANK', 'BNPL', 'CREDIT')),
+  amount_minor INTEGER NOT NULL,
+  payout_id VARCHAR(100),
+  payout_utr VARCHAR(100),
+  status VARCHAR(20) DEFAULT 'pending'
+    CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+  bnpl_drawdown_id UUID,
+  initiated_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  failure_reason TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_buy_payments_po ON payments.buy_payments(purchase_order_id);
+CREATE INDEX idx_buy_payments_store ON payments.buy_payments(store_id, status);
+
+-- BNPL drawdowns
+CREATE TABLE IF NOT EXISTS payments.bnpl_drawdowns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id UUID NOT NULL,
+  supplier_id UUID NOT NULL,
+  purchase_order_id UUID NOT NULL,
+  principal_minor INTEGER NOT NULL,
+  due_date DATE NOT NULL,
+  status VARCHAR(20) DEFAULT 'active'
+    CHECK (status IN ('active', 'paid', 'overdue', 'defaulted')),
+  paid_at TIMESTAMPTZ,
+  paid_amount_minor INTEGER,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_bnpl_store ON payments.bnpl_drawdowns(store_id, status);
+
+-- BNPL settings
+CREATE TABLE IF NOT EXISTS payments.bnpl_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id UUID,
+  max_credit_minor INTEGER NOT NULL DEFAULT 5000000,
+  default_tenure_days INTEGER DEFAULT 7,
+  is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Credit offers
+CREATE TABLE IF NOT EXISTS payments.credit_offers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id UUID NOT NULL,
+  offer_source VARCHAR(50) NOT NULL,
+  amount_minor INTEGER NOT NULL,
+  tenure_months INTEGER NOT NULL,
+  interest_rate_annual DECIMAL(5,2),
+  emi_minor INTEGER,
+  status VARCHAR(20) DEFAULT 'available'
+    CHECK (status IN ('available', 'applied', 'approved', 'disbursed', 'rejected', 'expired')),
+  valid_until TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_credit_store ON payments.credit_offers(store_id, status);
+
+-- Credit applications
+CREATE TABLE IF NOT EXISTS payments.credit_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id UUID NOT NULL,
+  offer_id UUID REFERENCES payments.credit_offers(id),
+  requested_amount_minor INTEGER NOT NULL,
+  status VARCHAR(20) DEFAULT 'submitted'
+    CHECK (status IN ('submitted', 'processing', 'approved', 'disbursed', 'rejected')),
+  kyc_status VARCHAR(20) DEFAULT 'pending',
+  disbursed_amount_minor INTEGER,
+  disbursed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Customer dues (for DUE payments)
+CREATE TABLE IF NOT EXISTS payments.customer_dues (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id UUID NOT NULL,
+  sale_id UUID,
+  customer_name VARCHAR(100),
+  customer_phone VARCHAR(15),
+  amount_minor INTEGER NOT NULL,
+  paid_amount_minor INTEGER DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'pending'
+    CHECK (status IN ('pending', 'partial', 'paid')),
+  due_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_dues_store ON payments.customer_dues(store_id, status);</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. State Machine</div>
+          <p><strong>Sell Payment Status:</strong></p>
+          <div class="flow-diagram">pending ──[Init UPI]──> initiated ──[Webhook: paid]──> completed
+                                    └──[Webhook: failed]──> failed
+                                    └──[Timeout 15min]──> failed</div>
+          <p><strong>BNPL Status:</strong></p>
+          <div class="flow-diagram">active ──[Payment received]──> paid
+active ──[Past due date]──> overdue ──[30 days]──> defaulted</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. Offline & Cache</div>
+          <table>
+            <tr><td>Offline Impact</td><td>SELL Cash/DUE work offline; UPI requires online</td></tr>
+            <tr><td>Cache</td><td>None for payment tables</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security & Isolation</div>
+          <ul>
+            <li><span class="check">✓</span> All tables have store_id for tenant isolation</li>
+            <li><span class="check">✓</span> supplier_id on buy_payments for supplier isolation</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Ledger & Audit</div>
+          <ul>
+            <li><span class="check">✓</span> sell_payments is append-only ledger of all SELL transactions</li>
+            <li><span class="check">✓</span> buy_payments is append-only ledger of all BUY transactions</li>
+            <li><span class="check">✓</span> bnpl_drawdowns tracks credit with status history</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">9. Deployment</div>
+          <pre><code>npm run migrate:up
+psql -c "\dt payments.*"</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">10. Acceptance Criteria</div>
+          <table>
+            <tr><th>Condition</th><th>Pass</th><th>Fail</th></tr>
+            <tr>
+              <td>Schema created</td>
+              <td><code>\dn payments</code> shows schema</td>
+              <td>Schema not found</td>
+            </tr>
+            <tr>
+              <td>Tables exist</td>
+              <td>All 7 tables created</td>
+              <td>Any table missing</td>
+            </tr>
+            <tr>
+              <td>Indexes exist</td>
+              <td>All indexes created</td>
+              <td>Missing indexes</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <!-- TICKET SM-003 -->
+    <div class="ticket" id="SM-003">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-003</span>
+        <span class="ticket-title">Catalog Visibility Filter (Server-Side Gating)</span>
+        <div>
+          <span class="badge badge-api">API</span>
+          <span class="badge badge-security">SECURITY</span>
+          <span class="badge badge-critical">CRITICAL</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">1. Scope</div>
+          <table class="status-table">
+            <tr><td>Capability</td><td>POS catalog shows ONLY verified suppliers + approved products with margin applied</td></tr>
+            <tr><td>Roles</td><td>Retailer (POS user)</td></tr>
+            <tr><td>Flow</td><td>BUY flow - catalog browsing</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <table>
+            <tr><td>Screen</td><td>BuyScreen (existing)</td></tr>
+            <tr><td>Change</td><td>No UI change - filter applied server-side</td></tr>
+            <tr><td>Visibility Rule</td><td>Product visible IFF supplier.status='verified' AND product.approval_status='approved'</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <p><strong>Endpoint:</strong> <code>GET /api/v1/catalog/stores/:storeId/products</code> (existing, modified)</p>
+          <p><strong>Response Change:</strong></p>
+          <pre><code>{
+  "products": [{
+    "id": "uuid",
+    "name": "Product Name",           // COALESCE(edited_name, product_name)
+    "category": "Category",           // COALESCE(edited_category, category)
+    "barcode": "8901234567890",
+    "supplierPrice": 10000,           // Original supplier price (paise)
+    "retailerPrice": 10500,           // supplierPrice + supermandi_margin
+    "margin": 500,                    // SuperMandi margin (paise)
+    "supplierName": "Supplier ABC",
+    "supplierId": "uuid",
+    "bnplEligible": true,
+    "bnplMaxDays": 7,
+    "stockQty": 100,
+    "moq": 10
+  }]
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">4. Database / Migration</div>
+          <p><strong>File:</strong> <code>backend/services/catalog-service/src/db/queries.ts</code></p>
+          <pre><code>// CRITICAL: Visibility filter
+const catalogQuery = `
+  SELECT
+    sp.id,
+    COALESCE(sp.edited_name, p.name) AS name,
+    COALESCE(sp.edited_category, p.category) AS category,
+    p.primary_barcode AS barcode,
+    sp.purchase_price AS supplier_price,
+    sp.purchase_price + COALESCE(sp.supermandi_margin_minor, 0) AS retailer_price,
+    COALESCE(sp.supermandi_margin_minor, 0) AS margin,
+    s.business_name AS supplier_name,
+    s.id AS supplier_id,
+    sp.bnpl_eligible,
+    sp.bnpl_max_days,
+    sp.stock_quantity AS stock_qty,
+    sp.moq
+  FROM catalog.supplier_products sp
+  JOIN supplier.suppliers s ON s.id = sp.supplier_id
+  JOIN catalog.products p ON p.id = sp.product_id
+  WHERE s.status = 'verified'              -- CRITICAL: Only verified suppliers
+    AND sp.approval_status = 'approved'    -- CRITICAL: Only approved products
+    AND sp.is_active = true
+    AND ($1::uuid IS NULL OR sp.supplier_id IN (
+      SELECT supplier_id FROM supplier.supplier_store_links
+      WHERE store_id = $1 AND status = 'active'
+    ))
+  ORDER BY p.name
+  LIMIT $2 OFFSET $3
+`;</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. State Machine</div>
+          <p>N/A - Read-only query</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. Offline & Cache</div>
+          <table>
+            <tr><td>Offline</td><td>Catalog cached in SQLite; cache populated when online</td></tr>
+            <tr><td>Cache TTL</td><td>5 minutes for catalog list; invalidate on approval change</td></tr>
+            <tr><td>Fallback</td><td>Show cached products if offline</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security & Isolation</div>
+          <ul>
+            <li><span class="check">✓</span> <strong>CRITICAL:</strong> Filter enforced at database query level - cannot be bypassed</li>
+            <li><span class="check">✓</span> storeId from device token, not request body</li>
+            <li><span class="check">✓</span> Unapproved products NEVER returned regardless of request params</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Ledger & Audit</div>
+          <p>N/A - Read-only endpoint</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">9. Deployment</div>
+          <pre><code># Restart catalog service
+ssh user@34.14.220.171
+cd /app/backend
+pm2 restart catalog-service
+
+# Smoke test
+curl -H "x-device-token: $TOKEN" \
+  "http://34.14.220.171:3000/api/v1/catalog/stores/$STORE_ID/products" | jq '.products[0]'</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">10. Acceptance Criteria</div>
+          <table>
+            <tr><th>Condition</th><th>Pass</th><th>Fail</th></tr>
+            <tr>
+              <td>Verified supplier visible</td>
+              <td>Products from verified supplier appear</td>
+              <td>Products missing</td>
+            </tr>
+            <tr>
+              <td>Pending supplier hidden</td>
+              <td>Set supplier to 'pending' → products disappear</td>
+              <td>Products still visible</td>
+            </tr>
+            <tr>
+              <td>Pending product hidden</td>
+              <td>Set product to 'pending' → product disappears</td>
+              <td>Product still visible</td>
+            </tr>
+            <tr>
+              <td>Margin applied</td>
+              <td>retailerPrice = supplierPrice + margin</td>
+              <td>Prices don't match formula</td>
+            </tr>
+            <tr>
+              <td>Existing POS works</td>
+              <td>BuyScreen loads products normally</td>
+              <td>Error or empty screen</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 2: Payment Service Foundation</div>
+
+    <!-- TICKET SM-004 -->
+    <div class="ticket" id="SM-004">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-004</span>
+        <span class="ticket-title">Payment Service Scaffold + Razorpay Integration</span>
+        <div>
+          <span class="badge badge-api">API</span>
+          <span class="badge badge-critical">NEW SERVICE</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">1. Scope</div>
+          <table class="status-table">
+            <tr><td>Capability</td><td>Create payment-service with Razorpay SDK, health endpoint, and base configuration</td></tr>
+            <tr><td>Roles</td><td>System</td></tr>
+            <tr><td>Flow</td><td>Foundation for all payment flows</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <p>N/A - Backend service</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <p><strong>Health Endpoint:</strong> <code>GET /health</code></p>
+          <pre><code>Response: { "status": "ok", "razorpay": "connected" }</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">4. Database / Migration</div>
+          <p>N/A - Uses tables from SM-002</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. File Structure</div>
+          <pre><code>backend/services/payment-service/
+├── package.json
+├── tsconfig.json
+├── src/
+│   ├── index.ts                 # Express app entry
+│   ├── config.ts                # Environment config
+│   ├── routes/
+│   │   ├── health.ts
+│   │   ├── sell.ts              # SELL payment routes (future)
+│   │   ├── buy.ts               # BUY payment routes (future)
+│   │   ├── bnpl.ts              # BNPL routes (future)
+│   │   └── credit.ts            # Credit routes (future)
+│   ├── services/
+│   │   ├── razorpayClient.ts    # Razorpay SDK wrapper
+│   │   ├── upiService.ts        # UPI operations
+│   │   └── payoutService.ts     # Payout operations
+│   └── db/
+│       └── queries.ts           # Payment queries</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. Razorpay Client</div>
+          <pre><code>// src/services/razorpayClient.ts
+import Razorpay from 'razorpay';
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+});
+
+export async function createOrder(amount: number, receipt: string) {
+  return razorpay.orders.create({
+    amount,
+    currency: 'INR',
+    receipt,
+  });
+}
+
+export async function verifyPayment(orderId: string, paymentId: string) {
+  return razorpay.payments.fetch(paymentId);
+}
+
+export async function createPayout(params: {
+  fundAccountId: string;
+  amount: number;
+  mode: 'UPI' | 'IMPS' | 'NEFT';
+  referenceId: string;
+}) {
+  return razorpay.payouts.create({
+    account_number: process.env.RAZORPAY_ACCOUNT_NUMBER!,
+    fund_account_id: params.fundAccountId,
+    amount: params.amount,
+    currency: 'INR',
+    mode: params.mode,
+    purpose: 'vendor_bill',
+    reference_id: params.referenceId,
+  });
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security & Isolation</div>
+          <ul>
+            <li><span class="check">✓</span> Razorpay credentials in env vars only</li>
+            <li><span class="check">✓</span> Webhook signature verification (in future ticket)</li>
+            <li><span class="check">✓</span> All payment operations require authenticated request</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Environment Variables</div>
+          <pre><code>RAZORPAY_KEY_ID=rzp_test_xxxxx
+RAZORPAY_KEY_SECRET=xxxxx
+RAZORPAY_ACCOUNT_NUMBER=xxxxx
+RAZORPAY_WEBHOOK_SECRET=xxxxx
+PAYMENT_SERVICE_PORT=3010</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">9. Deployment</div>
+          <pre><code># Build and deploy
+cd backend/services/payment-service
+npm install
+npm run build
+
+# Add to PM2
+pm2 start dist/index.js --name payment-service
+
+# Add gateway route
+# In api-gateway/src/routes/v1/index.ts:
+# router.use('/payments', paymentProxy);
+
+# Verify
+curl http://34.14.220.171:3010/health
+curl http://34.14.220.171:3000/api/v1/payments/health</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">10. Acceptance Criteria</div>
+          <table>
+            <tr><th>Condition</th><th>Pass</th><th>Fail</th></tr>
+            <tr>
+              <td>Service starts</td>
+              <td>Port 3010 responds</td>
+              <td>Connection refused</td>
+            </tr>
+            <tr>
+              <td>Health check</td>
+              <td>Returns <code>{"status":"ok"}</code></td>
+              <td>Error response</td>
+            </tr>
+            <tr>
+              <td>Gateway routing</td>
+              <td><code>/api/v1/payments/health</code> works via :3000</td>
+              <td>404 or proxy error</td>
+            </tr>
+            <tr>
+              <td>Razorpay connected</td>
+              <td>Health shows <code>"razorpay":"connected"</code></td>
+              <td>Connection error</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 3: Supplier Dashboard APIs</div>
+
+    <!-- Continue with more tickets... -->
+    <!-- For brevity, I'll include the structure for remaining tickets -->
+
+    <div class="ticket" id="SM-005">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-005</span>
+        <span class="ticket-title">Supplier Auth APIs (Register + Login)</span>
+        <div>
+          <span class="badge badge-api">API</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">1. Scope</div>
+          <table class="status-table">
+            <tr><td>Capability</td><td>Supplier registration with GSTIN, bank details; Login with JWT</td></tr>
+            <tr><td>Roles</td><td>Supplier</td></tr>
+            <tr><td>Flow</td><td>Supplier onboarding</td></tr>
+          </table>
+        </div>
+
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/supplier/auth/register</h4>
+          <pre><code>Request:
+{
+  "businessName": "ABC Distributors",
+  "gstin": "29ABCDE1234F1Z5",
+  "email": "contact@abc.com",
+  "phone": "9876543210",
+  "password": "securePassword123",
+  "bankAccountNumber": "1234567890",
+  "bankIfsc": "HDFC0001234",
+  "bankAccountName": "ABC Distributors",
+  "upiVpa": "abc@upi"
+}
+
+Response (201):
+{
+  "supplierId": "uuid",
+  "status": "pending",
+  "message": "Registration successful. Pending SuperAdmin approval."
+}
+
+Errors:
+- 400: Invalid GSTIN format
+- 409: GSTIN already registered
+- 422: Missing required fields</code></pre>
+
+          <h4>POST /api/v1/supplier/auth/login</h4>
+          <pre><code>Request:
+{
+  "email": "contact@abc.com",
+  "password": "securePassword123"
+}
+
+Response (200):
+{
+  "token": "jwt...",
+  "supplierId": "uuid",
+  "businessName": "ABC Distributors",
+  "status": "pending|verified|rejected"
+}
+
+Errors:
+- 401: Invalid credentials
+- 403: Account suspended</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. State Machine</div>
+          <div class="flow-diagram">Registration → status = 'pending'
+                    ↓
+    [SuperAdmin Approve] → status = 'verified' → Can list products
+    [SuperAdmin Reject]  → status = 'rejected' → Login blocked</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security</div>
+          <ul>
+            <li><span class="check">✓</span> Password hashed with bcrypt (cost 12)</li>
+            <li><span class="check">✓</span> JWT includes supplierId, actorType='SUPPLIER'</li>
+            <li><span class="check">✓</span> GSTIN validated against format regex</li>
+            <li><span class="check">✓</span> Rate limit: 5 registrations per IP per hour</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">10. Acceptance Criteria</div>
+          <table>
+            <tr><th>Condition</th><th>Pass</th><th>Fail</th></tr>
+            <tr><td>Registration creates supplier</td><td>DB record with status='pending'</td><td>No record</td></tr>
+            <tr><td>Login returns JWT</td><td>Valid JWT with supplierId</td><td>Invalid token</td></tr>
+            <tr><td>Duplicate GSTIN blocked</td><td>Returns 409</td><td>Creates duplicate</td></tr>
+            <tr><td>Invalid GSTIN rejected</td><td>Returns 400</td><td>Accepts invalid</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-006">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-006</span>
+        <span class="ticket-title">Supplier Product CRUD API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/supplier/products</h4>
+          <pre><code>Headers: Authorization: Bearer {supplier_jwt}
+
+Request:
+{
+  "skuCode": "ABC-001",
+  "name": "Tata Salt 1kg",
+  "brand": "Tata",
+  "category": "Grocery > Salt",
+  "barcode": "8901234567890",
+  "mrp": 2500,              // paise
+  "purchasePrice": 2200,    // paise (what retailer pays before margin)
+  "moq": 10,
+  "stockQty": 1000,
+  "taxPercent": 5
+}
+
+Response (201):
+{
+  "productId": "uuid",
+  "supplierProductId": "uuid",
+  "approvalStatus": "pending"
+}</code></pre>
+
+          <h4>GET /api/v1/supplier/products</h4>
+          <pre><code>Query: ?status=pending,approved&page=1&limit=20
+
+Response:
+{
+  "products": [{
+    "id": "uuid",
+    "skuCode": "ABC-001",
+    "name": "Tata Salt 1kg",
+    "approvalStatus": "pending",
+    "purchasePrice": 2200,
+    "stockQty": 1000,
+    "createdAt": "2026-01-27T10:00:00Z"
+  }],
+  "total": 45,
+  "page": 1
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security</div>
+          <ul>
+            <li><span class="check">✓</span> supplierId from JWT token only</li>
+            <li><span class="check">✓</span> Supplier can only see/edit own products</li>
+            <li><span class="check">✓</span> Cannot modify approved products (triggers re-approval)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-007">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-007</span>
+        <span class="ticket-title">Supplier CSV Bulk Upload API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/supplier/products/csv-upload</h4>
+          <pre><code>Headers:
+  Authorization: Bearer {supplier_jwt}
+  Content-Type: multipart/form-data
+
+Request: FormData with 'file' field (CSV)
+
+CSV Format:
+sku_code,name,brand,category,barcode,mrp,purchase_price,moq,stock_qty,tax_percent
+ABC-001,Tata Salt 1kg,Tata,Grocery,8901234567890,2500,2200,10,1000,5
+ABC-002,Sugar 1kg,Local,Grocery,8901234567891,4500,4000,5,500,0
+
+Response (200):
+{
+  "imported": 48,
+  "failed": 2,
+  "errors": [
+    {"row": 15, "error": "Invalid barcode format"},
+    {"row": 23, "error": "Duplicate SKU code"}
+  ]
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Validation Rules</div>
+          <ul>
+            <li>Max file size: 5MB</li>
+            <li>Max rows: 1000 per upload</li>
+            <li>Required columns: sku_code, name, purchase_price, moq</li>
+            <li>Barcode: 8-14 digits if provided</li>
+            <li>Prices: positive integers (paise)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 4: SuperAdmin APIs</div>
+
+    <div class="ticket" id="SM-008">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-008</span>
+        <span class="ticket-title">SuperAdmin Approval APIs (List + Approve/Reject)</span>
+        <div>
+          <span class="badge badge-api">API</span>
+          <span class="badge badge-security">ADMIN</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>GET /api/v1/admin/suppliers/pending</h4>
+          <pre><code>Headers: x-admin-token: {ADMIN_TOKEN}
+
+Response:
+{
+  "suppliers": [{
+    "id": "uuid",
+    "businessName": "ABC Distributors",
+    "gstin": "29ABCDE1234F1Z5",
+    "email": "contact@abc.com",
+    "productCount": 45,
+    "createdAt": "2026-01-27T10:00:00Z"
+  }]
+}</code></pre>
+
+          <h4>POST /api/v1/admin/suppliers/:supplierId/approve</h4>
+          <pre><code>Response (200):
+{
+  "supplierId": "uuid",
+  "status": "verified",
+  "verifiedAt": "2026-01-27T12:00:00Z"
+}
+
+Side Effects:
+- Creates approval_log entry
+- Triggers Razorpay fund account creation (async)</code></pre>
+
+          <h4>POST /api/v1/admin/suppliers/:supplierId/reject</h4>
+          <pre><code>Request: { "reason": "Invalid GSTIN documentation" }
+
+Response (200):
+{
+  "supplierId": "uuid",
+  "status": "rejected"
+}</code></pre>
+
+          <h4>GET /api/v1/admin/products/pending</h4>
+          <pre><code>Response:
+{
+  "products": [{
+    "id": "uuid",
+    "name": "Tata Salt 1kg",
+    "supplierName": "ABC Distributors",
+    "supplierId": "uuid",
+    "purchasePrice": 2200,
+    "mrp": 2500,
+    "createdAt": "2026-01-27T10:00:00Z"
+  }]
+}</code></pre>
+
+          <h4>POST /api/v1/admin/products/:productId/approve</h4>
+          <pre><code>Response (200):
+{
+  "productId": "uuid",
+  "approvalStatus": "approved",
+  "approvedAt": "2026-01-27T12:00:00Z"
+}
+
+Side Effect: Product NOW visible in POS catalog</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Ledger & Audit</div>
+          <p>Every approve/reject creates immutable log:</p>
+          <pre><code>INSERT INTO supplier.approval_logs
+  (entity_type, entity_id, action, from_status, to_status, actor_id)
+VALUES
+  ('supplier', $1, 'approve', 'pending', 'verified', $2);</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-009">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-009</span>
+        <span class="ticket-title">SuperAdmin Edit SKU + Set Margin + BNPL API</span>
+        <div>
+          <span class="badge badge-api">API</span>
+          <span class="badge badge-security">ADMIN</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>PUT /api/v1/admin/products/:productId/edit</h4>
+          <pre><code>Headers: x-admin-token: {ADMIN_TOKEN}
+
+Request:
+{
+  "editedName": "Tata Iodised Salt 1kg",    // Override supplier name
+  "editedCategory": "Grocery > Salt > Iodised",
+  "superMandiMarginMinor": 300,              // Fixed margin in paise (₹3)
+  "marginPercent": null,                     // OR percentage (mutually exclusive)
+  "bnplEligible": true,
+  "bnplMaxDays": 14
+}
+
+Response (200):
+{
+  "productId": "uuid",
+  "editedName": "Tata Iodised Salt 1kg",
+  "superMandiMarginMinor": 300,
+  "bnplEligible": true,
+  "retailerPrice": 2500    // purchasePrice (2200) + margin (300)
+}
+
+Side Effect: Creates audit log with changes JSONB</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Price Calculation</div>
+          <div class="flow-diagram">Supplier sets: purchase_price = ₹22.00
+SuperAdmin sets: supermandi_margin_minor = 300 (₹3.00)
+
+POS Catalog shows:
+  retailer_price = purchase_price + margin
+                 = 2200 + 300
+                 = 2500 (₹25.00)
+
+Revenue split:
+  - Supplier receives: ₹22.00
+  - SuperMandi receives: ₹3.00</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 5: SELL Flow (Consumer → Retailer)</div>
+
+    <div class="ticket" id="SM-010">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-010</span>
+        <span class="ticket-title">SELL UPI Init API (Generate QR)</span>
+        <div>
+          <span class="badge badge-api">API</span>
+          <span class="badge badge-critical">UPI</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/pos/payments/upi/init</h4>
+          <pre><code>Headers: x-device-token: {device_token}
+
+Request:
+{
+  "saleId": "uuid",
+  "amountMinor": 15000    // ₹150.00 in paise
+}
+
+Response (200):
+{
+  "paymentId": "uuid",
+  "orderId": "order_ABC123",           // Razorpay order ID
+  "qrData": "upi://pay?pa=store@upi&pn=StoreName&am=150.00&cu=INR&tr=order_ABC123",
+  "upiVpa": "store@upi",
+  "expiresAt": "2026-01-27T12:15:00Z"  // 15 min expiry
+}
+
+Errors:
+- 400: Sale not found or already paid
+- 402: Store UPI not configured
+- 503: Razorpay unavailable</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">UPI Intent Format</div>
+          <pre><code>upi://pay?pa={payee_vpa}&pn={payee_name}&am={amount}&cu=INR&tr={txn_ref}&tn={note}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. Offline & Cache</div>
+          <p><strong>UPI requires online.</strong> If offline, API returns 503 and POS shows "UPI unavailable offline. Use Cash or DUE."</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Ledger</div>
+          <pre><code>INSERT INTO payments.sell_payments
+  (sale_id, store_id, mode, amount_minor, upi_order_id, upi_qr_data, status)
+VALUES
+  ($1, $2, 'UPI', $3, $4, $5, 'initiated');</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-011">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-011</span>
+        <span class="ticket-title">SELL UPI Webhook + Status Polling</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/webhooks/razorpay/payment (Webhook)</h4>
+          <pre><code>// Razorpay sends payment.captured event
+// Verify signature with RAZORPAY_WEBHOOK_SECRET
+
+Request (from Razorpay):
+{
+  "event": "payment.captured",
+  "payload": {
+    "payment": {
+      "entity": {
+        "id": "pay_ABC123",
+        "order_id": "order_ABC123",
+        "amount": 15000,
+        "status": "captured",
+        "vpa": "consumer@upi",
+        "acquirer_data": {
+          "upi_transaction_id": "123456789012"
+        }
+      }
+    }
+  }
+}
+
+Response: 200 OK
+
+Side Effects:
+- Update sell_payments: status='completed', upi_txn_ref, upi_payer_vpa
+- Update sales: payment_mode='UPI', status='completed'</code></pre>
+
+          <h4>GET /api/v1/pos/payments/upi/:paymentId/status (Polling)</h4>
+          <pre><code>Response:
+{
+  "status": "pending" | "completed" | "failed",
+  "upiTxnRef": "123456789012",    // UTR if completed
+  "payerVpa": "consumer@upi"      // if available
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">7. Security</div>
+          <ul>
+            <li><span class="check">✓</span> Webhook signature verification using HMAC SHA256</li>
+            <li><span class="check">✓</span> Idempotency: duplicate webhook = no-op if already completed</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-012">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-012</span>
+        <span class="ticket-title">SELL Cash + DUE Payment APIs</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/pos/payments/cash</h4>
+          <pre><code>Request:
+{
+  "saleId": "uuid",
+  "amountMinor": 15000,
+  "receivedMinor": 20000    // For change calculation
+}
+
+Response:
+{
+  "paymentId": "uuid",
+  "status": "completed",
+  "changeMinor": 5000       // ₹50 change
+}</code></pre>
+
+          <h4>POST /api/v1/pos/payments/due</h4>
+          <pre><code>Request:
+{
+  "saleId": "uuid",
+  "amountMinor": 15000,
+  "customerName": "Ramesh Kumar",
+  "customerPhone": "9876543210",
+  "dueDate": "2026-02-27"    // optional
+}
+
+Response:
+{
+  "paymentId": "uuid",
+  "dueId": "uuid",
+  "status": "pending"
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">6. Offline Support</div>
+          <p><span class="check">✓</span> Both Cash and DUE work offline. Queued in outbox for sync.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-013">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-013</span>
+        <span class="ticket-title">SELL Split Payment API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/pos/payments/split</h4>
+          <pre><code>Request:
+{
+  "saleId": "uuid",
+  "payments": [
+    { "mode": "UPI", "amountMinor": 10000 },
+    { "mode": "CASH", "amountMinor": 5000 }
+  ]
+}
+
+Validation: Sum of amounts must equal sale total
+
+Response:
+{
+  "paymentIds": ["uuid1", "uuid2"],
+  "upiPayment": {
+    "paymentId": "uuid1",
+    "qrData": "upi://pay?...",
+    "expiresAt": "..."
+  },
+  "cashPayment": {
+    "paymentId": "uuid2",
+    "status": "pending"    // Awaiting UPI completion
+  },
+  "totalAmount": 15000
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">5. State Machine</div>
+          <div class="flow-diagram">Split Payment Flow:
+1. Create both payment records (status='pending')
+2. Generate UPI QR for UPI portion
+3. Cash portion waits for UPI
+4. When UPI completes (webhook):
+   - UPI payment: status='completed'
+   - Cash payment: status='awaiting_cash'
+5. POS prompts "Collect ₹50 cash"
+6. Cashier confirms cash:
+   - Cash payment: status='completed'
+   - Sale: status='completed'</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 6: POS UI Updates</div>
+
+    <div class="ticket" id="SM-014">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-014</span>
+        <span class="ticket-title">POS Payment Screen - UPI QR Display + Auto-Complete</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <table>
+            <tr><td>Screen</td><td><code>src/screens/PaymentScreen.tsx</code> (modify existing)</td></tr>
+            <tr><td>Navigation</td><td>SellScan → Payment → SuccessPrint</td></tr>
+          </table>
+          <h4>User Flow</h4>
+          <ol>
+            <li>User taps "UPI" payment option</li>
+            <li>Screen shows QR code (from qrData)</li>
+            <li>15-minute countdown timer displayed</li>
+            <li>Poll status every 3 seconds</li>
+            <li>When status='completed': auto-navigate to success</li>
+            <li>If timeout: show "Payment expired. Try again?"</li>
+          </ol>
+          <h4>States</h4>
+          <ul>
+            <li><strong>Loading:</strong> Spinner while calling /upi/init</li>
+            <li><strong>QR Display:</strong> QR code + amount + timer + "Waiting for payment..."</li>
+            <li><strong>Success:</strong> Checkmark animation → navigate to receipt</li>
+            <li><strong>Failed:</strong> Error message + retry button</li>
+            <li><strong>Offline:</strong> "UPI unavailable offline" + Cash/DUE options</li>
+          </ul>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Files Changed</div>
+          <ul>
+            <li><code>src/screens/PaymentScreen.tsx</code> - Add QR display, polling</li>
+            <li><code>src/components/sell/UpiQrDisplay.tsx</code> - New component</li>
+            <li><code>src/services/api/posApi.ts</code> - Add initUpiPayment, pollStatus</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-015">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-015</span>
+        <span class="ticket-title">POS Payment Screen - Split Payment Modal</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <h4>User Flow</h4>
+          <ol>
+            <li>User taps "Split Payment" button</li>
+            <li>Modal opens with two input fields: UPI Amount, Cash Amount</li>
+            <li>Auto-calculates: remaining = total - (upi + cash)</li>
+            <li>Validation: sum must equal total</li>
+            <li>User taps "Proceed"</li>
+            <li>QR displays for UPI portion</li>
+            <li>After UPI complete: prompt "Collect ₹X cash"</li>
+            <li>Cashier taps "Cash Received" → sale complete</li>
+          </ol>
+          <h4>New Component</h4>
+          <p><code>src/components/sell/SplitPaymentModal.tsx</code></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 7: BUY Flow (Retailer → Supplier)</div>
+
+    <div class="ticket" id="SM-016">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-016</span>
+        <span class="ticket-title">BUY Payment Options API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>GET /api/v1/orders/stores/:storeId/orders/:orderId/payment-options</h4>
+          <pre><code>Response:
+{
+  "orderAmount": 50000,
+  "options": [
+    {
+      "mode": "UPI",
+      "available": true,
+      "description": "Pay now via UPI"
+    },
+    {
+      "mode": "BNPL",
+      "available": true,
+      "maxDays": 7,
+      "availableCredit": 100000,
+      "description": "Pay later in 7 days"
+    },
+    {
+      "mode": "CREDIT",
+      "available": false,
+      "reason": "Credit limit exhausted",
+      "description": "Use your credit line"
+    }
+  ]
+}</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-017">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-017</span>
+        <span class="ticket-title">BUY UPI Payment API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/orders/stores/:storeId/orders/:orderId/pay</h4>
+          <pre><code>Request:
+{
+  "mode": "UPI"
+}
+
+Response:
+{
+  "paymentId": "uuid",
+  "upiCollect": {
+    "vpa": "supplier@upi",
+    "amount": 50000,
+    "deepLink": "upi://pay?pa=supplier@upi&am=500.00&tn=PO-ABC123"
+  },
+  "expiresAt": "2026-01-27T12:30:00Z"
+}
+
+Flow:
+1. Retailer clicks "Pay Now"
+2. API returns UPI deep link
+3. POS opens retailer's UPI app
+4. Retailer completes payment in their UPI app
+5. Retailer returns to POS, enters UTR
+6. POST /pay/confirm with UTR
+7. Order confirmed, payout to supplier scheduled</code></pre>
+
+          <h4>POST /api/v1/orders/stores/:storeId/orders/:orderId/pay/confirm</h4>
+          <pre><code>Request:
+{
+  "paymentId": "uuid",
+  "upiTxnRef": "123456789012"    // UTR from retailer
+}
+
+Response:
+{
+  "status": "completed",
+  "orderStatus": "confirmed",
+  "payoutScheduled": true
+}</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-018">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-018</span>
+        <span class="ticket-title">Supplier Payout Service (Razorpay Payouts)</span>
+        <div>
+          <span class="badge badge-api">API</span>
+          <span class="badge badge-critical">MONEY</span>
+        </div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">1. Scope</div>
+          <p>After retailer confirms payment, initiate Razorpay payout to supplier's bank/UPI.</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Flow</div>
+          <div class="flow-diagram">Retailer pays for order (UTR confirmed)
+              ↓
+buy_payments record created (status='completed')
+              ↓
+Background job: createSupplierPayout()
+              ↓
+Razorpay Payout API call
+              ↓
+Webhook: payout.processed
+              ↓
+Update buy_payments: payout_utr, payout_status='settled'</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">8. Ledger Entry</div>
+          <pre><code>-- Debit retailer, credit supplier
+INSERT INTO payments.buy_payments (
+  store_id, supplier_id, purchase_order_id, mode, amount_minor, status
+) VALUES ($1, $2, $3, 'UPI', $4, 'completed');
+
+-- After payout settled
+UPDATE payments.buy_payments
+SET payout_id = $1, payout_utr = $2, status = 'settled'
+WHERE id = $3;</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 8: BNPL</div>
+
+    <div class="ticket" id="SM-019">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-019</span>
+        <span class="ticket-title">BNPL Eligibility + Drawdown API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>POST /api/v1/orders/stores/:storeId/orders/:orderId/pay (BNPL)</h4>
+          <pre><code>Request:
+{
+  "mode": "BNPL"
+}
+
+Validation:
+- Check store's available BNPL credit
+- Check product bnpl_eligible flags
+- Check store's BNPL repayment history
+
+Response (200):
+{
+  "paymentId": "uuid",
+  "bnplDrawdownId": "uuid",
+  "dueDate": "2026-02-03",
+  "principalMinor": 50000,
+  "status": "bnpl_active",
+  "orderStatus": "confirmed"
+}
+
+Response (400) if ineligible:
+{
+  "error": "bnpl_limit_exceeded",
+  "availableCredit": 30000,
+  "requestedAmount": 50000
+}</code></pre>
+
+          <h4>GET /api/v1/pos/bnpl/active</h4>
+          <pre><code>Response:
+{
+  "drawdowns": [{
+    "id": "uuid",
+    "supplierName": "ABC Distributors",
+    "orderNumber": "PO-2026-001",
+    "principalMinor": 50000,
+    "dueDate": "2026-02-03",
+    "status": "active",
+    "daysRemaining": 7
+  }],
+  "totalOutstanding": 150000,
+  "creditLimit": 500000,
+  "availableCredit": 350000
+}</code></pre>
+
+          <h4>POST /api/v1/pos/bnpl/:drawdownId/pay</h4>
+          <pre><code>Request:
+{
+  "mode": "UPI",
+  "amountMinor": 50000
+}
+
+Response:
+{
+  "status": "paid",
+  "paidAt": "2026-01-30T10:00:00Z"
+}</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-020">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-020</span>
+        <span class="ticket-title">BNPL POS UI (Badge + Toggle + Dues List)</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <h4>Changes</h4>
+          <ol>
+            <li><strong>Catalog Badge:</strong> Show "BNPL" badge on eligible products in BuyScreen</li>
+            <li><strong>Cart Toggle:</strong> In SupplierCartSection, add "Use BNPL" toggle per eligible item</li>
+            <li><strong>Payment Option:</strong> In checkout, show "BNPL (Pay by Feb 3)" option</li>
+            <li><strong>Dues Screen:</strong> New screen showing active BNPL dues with pay button</li>
+          </ol>
+          <h4>Files</h4>
+          <ul>
+            <li><code>src/components/buy/SupplierRow.tsx</code> - Add BNPL badge</li>
+            <li><code>src/components/buy/SupplierCartSection.tsx</code> - Add toggle</li>
+            <li><code>src/screens/BnplDuesScreen.tsx</code> - New screen</li>
+            <li><code>src/navigation/</code> - Add navigation entry</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 9: Embedded Credit</div>
+
+    <div class="ticket" id="SM-021">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-021</span>
+        <span class="ticket-title">Credit Offers + Application API</span>
+        <div><span class="badge badge-api">API</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">3. API Contract</div>
+          <h4>GET /api/v1/pos/credit/offers</h4>
+          <pre><code>Response:
+{
+  "offers": [{
+    "id": "uuid",
+    "source": "INTERNAL",
+    "amountMinor": 10000000,    // ₹1,00,000
+    "tenureMonths": 12,
+    "interestRateAnnual": 18.0,
+    "emiMinor": 9168,           // Monthly EMI
+    "validUntil": "2026-02-28"
+  }],
+  "creditScore": "GOOD",
+  "eligibleAmount": 200000,
+  "scoringFactors": {
+    "monthlyGmv": 500000,
+    "transactionCount": 450,
+    "bnplRepaymentRate": 100
+  }
+}</code></pre>
+
+          <h4>POST /api/v1/pos/credit/apply</h4>
+          <pre><code>Request:
+{
+  "offerId": "uuid",
+  "requestedAmountMinor": 10000000
+}
+
+Response:
+{
+  "applicationId": "uuid",
+  "status": "submitted",
+  "nextStep": "KYC"
+}</code></pre>
+
+          <h4>POST /api/v1/pos/credit/:applicationId/kyc</h4>
+          <pre><code>Request:
+{
+  "panNumber": "ABCDE1234F",
+  "aadhaarLast4": "1234"
+}
+
+Response:
+{
+  "kycStatus": "verified",
+  "applicationStatus": "approved",
+  "approvedAmount": 10000000,
+  "disbursementEta": "24 hours"
+}</code></pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Credit Scoring Query</div>
+          <pre><code>SELECT
+  s.id AS store_id,
+  COALESCE(SUM(sales.total_minor), 0) AS total_gmv,
+  COUNT(sales.id) AS transaction_count,
+  (SELECT COUNT(*) FROM payments.bnpl_drawdowns d
+   WHERE d.store_id = s.id AND d.status = 'paid') AS bnpl_paid,
+  (SELECT COUNT(*) FROM payments.bnpl_drawdowns d
+   WHERE d.store_id = s.id AND d.status IN ('overdue', 'defaulted')) AS bnpl_defaults
+FROM platform.stores s
+LEFT JOIN public.sales ON sales.store_id = s.id
+  AND sales.created_at > NOW() - INTERVAL '90 days'
+WHERE s.id = $1
+GROUP BY s.id;</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-022">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-022</span>
+        <span class="ticket-title">Credit Tab in POS</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <h4>Screen: CreditScreen.tsx</h4>
+          <ul>
+            <li><strong>Available Offers:</strong> Cards showing amount, EMI, tenure, interest</li>
+            <li><strong>Apply Button:</strong> Opens KYC modal</li>
+            <li><strong>Active Loans:</strong> List with next EMI date, remaining balance</li>
+            <li><strong>Repayment History:</strong> Past EMIs paid</li>
+          </ul>
+          <h4>Navigation</h4>
+          <p>Add "Credit" tab to bottom navigation (visible when credit_enabled feature flag = true)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-divider">PHASE 10: Dashboard UIs</div>
+
+    <div class="ticket" id="SM-023">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-023</span>
+        <span class="ticket-title">Supplier Dashboard UI (Full Web App)</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">Screens</div>
+          <ol>
+            <li><strong>Register:</strong> Form with business details, GSTIN, bank info</li>
+            <li><strong>Login:</strong> Email + password</li>
+            <li><strong>Dashboard:</strong> Stats (products, orders, revenue)</li>
+            <li><strong>Products:</strong> List with status badges, add/edit forms</li>
+            <li><strong>CSV Upload:</strong> Drag-drop zone, preview, import report</li>
+            <li><strong>Orders:</strong> Incoming orders from retailers</li>
+            <li><strong>Profile:</strong> Edit bank details, contact info</li>
+          </ol>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Tech Stack</div>
+          <ul>
+            <li>Next.js 14 (App Router)</li>
+            <li>Tailwind CSS</li>
+            <li>React Query for data fetching</li>
+            <li>Deployed at: supplier.supermandi.com</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-024">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-024</span>
+        <span class="ticket-title">SuperAdmin Dashboard UI (Approval Queues)</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">Screens (extend retailer-admin)</div>
+          <ol>
+            <li><strong>Supplier Queue:</strong> Table of pending suppliers, approve/reject buttons</li>
+            <li><strong>Product Queue:</strong> Table of pending products with supplier info</li>
+            <li><strong>Edit Modal:</strong> Edit product name, category, set margin, set BNPL</li>
+            <li><strong>Audit Log:</strong> History of all approvals/rejections</li>
+          </ol>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Files</div>
+          <ul>
+            <li><code>retailer-admin/src/pages/admin/SupplierQueue.tsx</code></li>
+            <li><code>retailer-admin/src/pages/admin/ProductQueue.tsx</code></li>
+            <li><code>retailer-admin/src/components/ProductEditModal.tsx</code></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="dependency-arrow">▼</div>
+
+    <div class="ticket" id="SM-025">
+      <div class="ticket-header">
+        <span class="ticket-id">SM-025</span>
+        <span class="ticket-title">POS BUY Payment Options UI</span>
+        <div><span class="badge badge-ui">UI</span></div>
+      </div>
+      <div class="ticket-body">
+        <div class="section">
+          <div class="section-title">2. UI/UX</div>
+          <h4>Changes to PurchaseCartModal</h4>
+          <ol>
+            <li>After "Place Order", show payment options sheet</li>
+            <li>Options: "Pay Now (UPI)" / "BNPL (Pay by X)" / "Use Credit"</li>
+            <li>If UPI: open UPI app via deep link</li>
+            <li>If BNPL: confirm and show due date</li>
+            <li>If Credit: deduct from credit line</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SUMMARY ==================== -->
+    <h2>4. Execution Summary</h2>
+
+    <div class="card">
+      <h3>Ticket Dependency Graph</h3>
+      <div class="flow-diagram">
+PHASE 1: Foundation
+  SM-001 (Supplier Schema) ──┬──> SM-003 (Catalog Filter)
+  SM-002 (Payment Schema) ───┘
+
+PHASE 2: Payment Service
+  SM-003 ──> SM-004 (Payment Service Scaffold)
+
+PHASE 3: Supplier APIs
+  SM-001 ──> SM-005 (Supplier Auth) ──> SM-006 (Product CRUD) ──> SM-007 (CSV Upload)
+
+PHASE 4: Admin APIs
+  SM-001 ──> SM-008 (Approval APIs) ──> SM-009 (Edit + Margin)
+
+PHASE 5: SELL Flow
+  SM-004 ──> SM-010 (UPI Init) ──> SM-011 (Webhook) ──> SM-012 (Cash/DUE) ──> SM-013 (Split)
+
+PHASE 6: SELL UI
+  SM-010 ──> SM-014 (Payment Screen UPI) ──> SM-015 (Split Modal)
+
+PHASE 7: BUY Flow
+  SM-004 ──> SM-016 (Payment Options) ──> SM-017 (BUY UPI) ──> SM-018 (Payout)
+
+PHASE 8: BNPL
+  SM-002 ──> SM-019 (BNPL APIs) ──> SM-020 (BNPL UI)
+
+PHASE 9: Credit
+  SM-002 ──> SM-021 (Credit APIs) ──> SM-022 (Credit UI)
+
+PHASE 10: Dashboards
+  SM-005..007 ──> SM-023 (Supplier Dashboard)
+  SM-008..009 ──> SM-024 (Admin Dashboard)
+  SM-016..017 ──> SM-025 (BUY Payment UI)
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Critical Path (Minimum Viable)</h3>
+      <ol>
+        <li><strong>SM-001</strong> - Supplier verification schema</li>
+        <li><strong>SM-002</strong> - Payment schema</li>
+        <li><strong>SM-003</strong> - Catalog visibility filter</li>
+        <li><strong>SM-004</strong> - Payment service scaffold</li>
+        <li><strong>SM-005</strong> - Supplier auth</li>
+        <li><strong>SM-006</strong> - Supplier products</li>
+        <li><strong>SM-008</strong> - Admin approval APIs</li>
+        <li><strong>SM-009</strong> - Admin edit + margin</li>
+        <li><strong>SM-010</strong> - SELL UPI init</li>
+        <li><strong>SM-014</strong> - POS payment screen</li>
+      </ol>
+      <p><strong>Result:</strong> Supplier can register → Admin approves → POS shows products with margin → Consumer pays via UPI</p>
+    </div>
+
+    <div class="card">
+      <h3>Non-Negotiables Checklist</h3>
+      <table>
+        <tr><td><span class="check">✓</span></td><td>UI + API + DB + Ledger + VM deploy per ticket</td></tr>
+        <tr><td><span class="check">✓</span></td><td>Demo store = Live store</td></tr>
+        <tr><td><span class="check">✓</span></td><td>Safe for 10,000 stores</td></tr>
+        <tr><td><span class="check">✓</span></td><td>No manual DB edits</td></tr>
+        <tr><td><span class="check">✓</span></td><td>Fully auditable</td></tr>
+        <tr><td><span class="check">✓</span></td><td>Works via Gateway :3000</td></tr>
+        <tr><td><span class="check">✓</span></td><td>Offline POS not broken</td></tr>
+        <tr><td><span class="check">✓</span></td><td>StoreId from token only</td></tr>
+        <tr><td><span class="check">✓</span></td><td>Server-side visibility gating</td></tr>
+      </table>
+    </div>
+
+    <footer style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--border); text-align: center; color: #8b949e;">
+      <p>SuperMandi MVP Implementation Plan | Generated 2026-01-27 | Commit ece1859</p>
+    </footer>
+  </div>
+</body>
+</html>

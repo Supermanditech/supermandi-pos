@@ -1,0 +1,12 @@
+{
+  "/(auth)/login/page": "/login",
+  "/(auth)/register/page": "/register",
+  "/(dashboard)/dashboard/page": "/dashboard",
+  "/(dashboard)/orders/page": "/orders",
+  "/(dashboard)/products/page": "/products",
+  "/(dashboard)/profile/page": "/profile",
+  "/(dashboard)/upload/page": "/upload",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/page": "/"
+}
