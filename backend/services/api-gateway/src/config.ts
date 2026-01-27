@@ -43,6 +43,15 @@ function getMainBackendUrl(): string {
     || 'http://localhost:3001';
 }
 
+/**
+ * SM-004: Get payment service URL
+ * Production: http://supermandi-payment-service:3010
+ * Local dev: http://localhost:3010
+ */
+function getPaymentServiceUrl(): string {
+  return process.env['PAYMENT_SERVICE_URL'] || 'http://localhost:3010';
+}
+
 export const config: GatewayConfig = {
   port: getEnvIntOrDefault('API_GATEWAY_PORT', 3000),
   env: getEnvOrDefault('NODE_ENV', 'development'),
@@ -278,6 +287,15 @@ export const config: GatewayConfig = {
       url: getMainBackendUrl(),
       pathPrefix: '/api/v1/demo',
       stripPrefix: false,
+    },
+    // ==========================================================================
+    // SM-004: Payment service routes -> payment-service microservice
+    // ==========================================================================
+    {
+      name: 'payments',
+      url: getPaymentServiceUrl(),
+      pathPrefix: '/api/v1/payments',
+      stripPrefix: true,
     },
   ],
 };
