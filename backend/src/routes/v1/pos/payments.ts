@@ -6,9 +6,14 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
-import { requireDeviceToken, type DeviceTokenRequest } from "../../../middleware/deviceToken";
+import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 
 export const posPaymentsRouter = Router();
+
+// Extended request type with posDevice from middleware
+interface PosRequest extends Request {
+  posDevice: PosDeviceContext;
+}
 
 // =============================================================================
 // TYPES
@@ -72,7 +77,7 @@ posPaymentsRouter.post(
   "/payments/upi/init",
   requireDeviceToken,
   async (req: Request, res: Response, _next: NextFunction) => {
-    const { storeId, deviceId } = (req as DeviceTokenRequest).device;
+    const { storeId, deviceId } = (req as unknown as PosRequest).posDevice;
     const { saleId, amountMinor } = req.body as UpiInitRequest;
 
     // Validate request
@@ -249,7 +254,7 @@ posPaymentsRouter.get(
   "/payments/upi/:paymentId/status",
   requireDeviceToken,
   async (req: Request, res: Response, _next: NextFunction) => {
-    const { storeId } = (req as DeviceTokenRequest).device;
+    const { storeId } = (req as unknown as PosRequest).posDevice;
     const { paymentId } = req.params;
 
     if (!paymentId) {
@@ -320,7 +325,7 @@ posPaymentsRouter.post(
   "/payments/cash",
   requireDeviceToken,
   async (req: Request, res: Response, _next: NextFunction) => {
-    const { storeId } = (req as DeviceTokenRequest).device;
+    const { storeId } = (req as unknown as PosRequest).posDevice;
     const { saleId, amountMinor, receivedMinor } = req.body;
 
     if (!saleId) {
@@ -408,7 +413,7 @@ posPaymentsRouter.post(
   "/payments/due",
   requireDeviceToken,
   async (req: Request, res: Response, _next: NextFunction) => {
-    const { storeId } = (req as DeviceTokenRequest).device;
+    const { storeId } = (req as unknown as PosRequest).posDevice;
     const { saleId, amountMinor, customerName, customerPhone, dueDate } = req.body;
 
     if (!saleId) {
