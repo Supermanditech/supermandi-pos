@@ -106,16 +106,20 @@ router.get(
     try {
       const { storeId } = req.params;
 
+      // SM-003: Add visibility filter for verified suppliers + approved products
       const categoriesSql = `
         SELECT DISTINCT p.category
         FROM catalog.products p
         JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
         JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
+        JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
         WHERE ssl.store_id = $1
           AND ssl.status = 'active'
           AND p.is_active = true
           AND p.category IS NOT NULL
+          AND s.verification_status = 'verified'
+          AND sp.approval_status = 'approved'
         ORDER BY p.category ASC
       `;
 

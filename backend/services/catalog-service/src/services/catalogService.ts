@@ -35,12 +35,20 @@ export interface CatalogSupplierInfo {
   supplierName: string;
   supplierProductId: string;
   purchasePrice: number;
+  /** SM-003: Retailer price = purchasePrice + SuperMandi margin */
+  retailerPrice: number;
+  /** SM-003: SuperMandi margin in minor units (paise) */
+  margin: number;
   mrp?: number;
   moq: number;
   maxQty?: number;
   stockQuantity: number;
   stockStatus: string;
   isPreferred: boolean;
+  /** SM-003: BNPL eligibility from product approval */
+  bnplEligible: boolean;
+  /** SM-003: Max BNPL days if eligible */
+  bnplMaxDays?: number;
 }
 
 export interface GetCatalogInput {
@@ -91,6 +99,10 @@ interface SupplierDetailRow {
   stock_quantity: number;
   stock_status: string;
   is_preferred: boolean;
+  // SM-003: Margin and BNPL fields
+  supermandi_margin_minor: number | null;
+  bnpl_eligible: boolean | null;
+  bnpl_max_days: number | null;
 }
 
 // =============================================================================
@@ -165,11 +177,14 @@ async function fetchStoreCatalog(
   const { search, category, inStockOnly, limit, offset } = options;
 
   // Build WHERE clauses
+  // SM-003: CRITICAL visibility filter - only verified suppliers + approved products
   const whereClauses: string[] = [
     'ssl.store_id = $1',
     'ssl.status = $2',
     'p.is_active = true',
     'sp.is_active = true',
+    "s.verification_status = 'verified'",      // SM-003: Only verified suppliers
+    "sp.approval_status = 'approved'",          // SM-003: Only approved products
   ];
   const params: unknown[] = [storeId, 'active'];
   let paramIndex = 3;
@@ -208,11 +223,13 @@ async function fetchStoreCatalog(
   const whereClause = whereClauses.join(' AND ');
 
   // Count query - count distinct products
+  // SM-003: Join with suppliers table for verification_status filter
   const countSql = `
     SELECT COUNT(DISTINCT p.id) as count
     FROM catalog.products p
     JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
     JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
+    JOIN supplier.suppliers s ON s.id = sp.supplier_id
     JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
     WHERE ${whereClause}
   `;
@@ -224,6 +241,7 @@ async function fetchStoreCatalog(
   }
 
   // Main query - get products with aggregated supplier info
+  // SM-003: Join with suppliers for verification_status filter
   const mainSql = `
     SELECT
       p.id as product_id,
@@ -244,6 +262,7 @@ async function fetchStoreCatalog(
     FROM catalog.products p
     JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
     JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
+    JOIN supplier.suppliers s ON s.id = sp.supplier_id
     JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
     WHERE ${whereClause}
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
@@ -262,6 +281,7 @@ async function fetchStoreCatalog(
   }
 
   // Get supplier details for these products
+  // SM-003: Include margin, BNPL fields, and visibility filters
   const productIds = productRows.map((r) => r.product_id);
   const supplierDetailsSql = `
     SELECT
@@ -275,7 +295,10 @@ async function fetchStoreCatalog(
       sp.max_qty,
       sp.stock_quantity,
       sp.stock_status,
-      COALESCE(ssl.is_preferred, false) as is_preferred
+      COALESCE(ssl.is_preferred, false) as is_preferred,
+      COALESCE(sp.supermandi_margin_minor, 0) as supermandi_margin_minor,
+      COALESCE(sp.bnpl_eligible, false) as bnpl_eligible,
+      sp.bnpl_max_days
     FROM catalog.products p
     JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
     JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
@@ -284,6 +307,8 @@ async function fetchStoreCatalog(
     WHERE ssl.store_id = $1
       AND ssl.status = 'active'
       AND p.id = ANY($2::uuid[])
+      AND s.verification_status = 'verified'
+      AND sp.approval_status = 'approved'
     ORDER BY sp.purchase_price ASC
   `;
 
@@ -293,20 +318,27 @@ async function fetchStoreCatalog(
   );
 
   // Group supplier details by product
+  // SM-003: Include margin and BNPL fields in response
   const suppliersByProduct = new Map<string, CatalogSupplierInfo[]>();
   for (const row of supplierRows) {
     const suppliers = suppliersByProduct.get(row.product_id) || [];
+    const purchasePrice = parseFloat(row.purchase_price);
+    const margin = row.supermandi_margin_minor ?? 0;
     suppliers.push({
       supplierId: row.supplier_id,
       supplierName: row.supplier_name,
       supplierProductId: row.supplier_product_id,
-      purchasePrice: parseFloat(row.purchase_price),
+      purchasePrice,
+      retailerPrice: purchasePrice + margin,  // SM-003: Apply margin
+      margin,
       mrp: row.mrp ? parseFloat(row.mrp) : undefined,
       moq: row.moq,
       maxQty: row.max_qty ?? undefined,
       stockQuantity: row.stock_quantity,
       stockStatus: row.stock_status,
       isPreferred: row.is_preferred,
+      bnplEligible: row.bnpl_eligible ?? false,
+      bnplMaxDays: row.bnpl_max_days ?? undefined,
     });
     suppliersByProduct.set(row.product_id, suppliers);
   }
@@ -364,16 +396,20 @@ export async function getStoreCatalogProduct(
   }
 
   // Check if product is in store's catalog (mapped and linked)
+  // SM-003: Add visibility filter for verified suppliers + approved products
   const checkSql = `
     SELECT COUNT(*) as count
     FROM catalog.products p
     JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
     JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
+    JOIN supplier.suppliers s ON s.id = sp.supplier_id
     JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
     WHERE ssl.store_id = $1
       AND ssl.status = 'active'
       AND p.id = $2
       AND p.is_active = true
+      AND s.verification_status = 'verified'
+      AND sp.approval_status = 'approved'
   `;
   const checkRow = await queryOne<{ count: string }>(checkSql, [storeId, productId]);
 
@@ -392,6 +428,7 @@ export async function getStoreCatalogProduct(
   });
 
   // Filter to the specific product
+  // SM-003: Add visibility filter for verified suppliers + approved products
   const sql = `
     SELECT
       p.id as product_id,
@@ -412,12 +449,15 @@ export async function getStoreCatalogProduct(
     FROM catalog.products p
     JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
     JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
+    JOIN supplier.suppliers s ON s.id = sp.supplier_id
     JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
     WHERE ssl.store_id = $1
       AND ssl.status = 'active'
       AND p.id = $2
       AND p.is_active = true
       AND sp.is_active = true
+      AND s.verification_status = 'verified'
+      AND sp.approval_status = 'approved'
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
              p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active
   `;
@@ -433,6 +473,7 @@ export async function getStoreCatalogProduct(
   }
 
   // Get supplier details
+  // SM-003: Add visibility filter and margin/BNPL fields
   const supplierDetailsSql = `
     SELECT
       p.id as product_id,
@@ -445,7 +486,10 @@ export async function getStoreCatalogProduct(
       sp.max_qty,
       sp.stock_quantity,
       sp.stock_status,
-      COALESCE(ssl.is_preferred, false) as is_preferred
+      COALESCE(ssl.is_preferred, false) as is_preferred,
+      COALESCE(sp.supermandi_margin_minor, 0) as supermandi_margin_minor,
+      COALESCE(sp.bnpl_eligible, false) as bnpl_eligible,
+      sp.bnpl_max_days
     FROM catalog.products p
     JOIN catalog.supplier_product_map spm ON spm.product_id = p.id
     JOIN catalog.supplier_products sp ON sp.id = spm.supplier_product_id
@@ -454,6 +498,8 @@ export async function getStoreCatalogProduct(
     WHERE ssl.store_id = $1
       AND ssl.status = 'active'
       AND p.id = $2
+      AND s.verification_status = 'verified'
+      AND sp.approval_status = 'approved'
     ORDER BY sp.purchase_price ASC
   `;
 
@@ -462,18 +508,26 @@ export async function getStoreCatalogProduct(
     [storeId, productId]
   );
 
-  const suppliers: CatalogSupplierInfo[] = supplierRows.map((row) => ({
-    supplierId: row.supplier_id,
-    supplierName: row.supplier_name,
-    supplierProductId: row.supplier_product_id,
-    purchasePrice: parseFloat(row.purchase_price),
-    mrp: row.mrp ? parseFloat(row.mrp) : undefined,
-    moq: row.moq,
-    maxQty: row.max_qty ?? undefined,
-    stockQuantity: row.stock_quantity,
-    stockStatus: row.stock_status,
-    isPreferred: row.is_preferred,
-  }));
+  const suppliers: CatalogSupplierInfo[] = supplierRows.map((row) => {
+    const purchasePrice = parseFloat(row.purchase_price);
+    const margin = row.supermandi_margin_minor ?? 0;
+    return {
+      supplierId: row.supplier_id,
+      supplierName: row.supplier_name,
+      supplierProductId: row.supplier_product_id,
+      purchasePrice,
+      retailerPrice: purchasePrice + margin,
+      margin,
+      mrp: row.mrp ? parseFloat(row.mrp) : undefined,
+      moq: row.moq,
+      maxQty: row.max_qty ?? undefined,
+      stockQuantity: row.stock_quantity,
+      stockStatus: row.stock_status,
+      isPreferred: row.is_preferred,
+      bnplEligible: row.bnpl_eligible ?? false,
+      bnplMaxDays: row.bnpl_max_days ?? undefined,
+    };
+  });
 
   const totalStock = parseInt(productRow.total_stock || '0', 10);
   let stockStatus: CatalogProduct['stockStatus'] = 'out_of_stock';
