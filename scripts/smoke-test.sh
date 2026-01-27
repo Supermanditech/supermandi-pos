@@ -153,10 +153,10 @@ test_endpoint \
   '{"email":"","password":""}'
 
 test_endpoint \
-  "Supplier Login (no creds = 422)" \
+  "Supplier Login (no creds = 400)" \
   "POST" \
   "/api/v1/supplier/auth/login" \
-  "422" \
+  "400" \
   "-H 'Content-Type: application/json'" \
   '{"email":"","password":""}'
 
