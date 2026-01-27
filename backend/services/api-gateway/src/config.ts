@@ -300,6 +300,15 @@ export const config: GatewayConfig = {
       stripPrefix: false,
     },
     // ==========================================================================
+    // GL-AUD-002: Webhook routes -> main backend (handles Razorpay callbacks)
+    // ==========================================================================
+    {
+      name: 'webhooks',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/webhooks',
+      stripPrefix: false,
+    },
+    // ==========================================================================
     // SM-004: Payment service routes -> payment-service microservice
     // ==========================================================================
     {
