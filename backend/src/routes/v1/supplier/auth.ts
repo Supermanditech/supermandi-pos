@@ -19,6 +19,34 @@ const BCRYPT_ROUNDS = 10;
 const router = Router();
 
 // =============================================================================
+// GL-AUD-008: Bank Detail Validation Functions
+// =============================================================================
+
+/**
+ * Validate Indian bank account number (9-18 digits)
+ */
+function isValidBankAccountNumber(accountNumber: string): boolean {
+  const trimmed = accountNumber.replace(/\s/g, '');
+  return /^\d{9,18}$/.test(trimmed);
+}
+
+/**
+ * Validate IFSC code (4 letters + 0 + 6 alphanumeric)
+ */
+function isValidIfscCode(ifsc: string): boolean {
+  const trimmed = ifsc.toUpperCase().trim();
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(trimmed);
+}
+
+/**
+ * Validate UPI VPA (username@bankhandle)
+ */
+function isValidUpiVpa(vpa: string): boolean {
+  const trimmed = vpa.trim().toLowerCase();
+  return /^[a-z0-9._-]+@[a-z0-9]+$/.test(trimmed) && trimmed.length <= 100;
+}
+
+// =============================================================================
 // MIDDLEWARE: Supplier Auth
 // =============================================================================
 
@@ -86,6 +114,11 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
       city,
       state,
       pincode,
+      // GL-AUD-008: Bank detail fields
+      bankAccountNumber,
+      bankIfsc,
+      bankAccountName,
+      upiVpa,
     } = req.body;
 
     // Validation
@@ -107,6 +140,36 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
     if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'Invalid GSTIN format' }
+      });
+      return;
+    }
+
+    // GL-AUD-008: Bank detail validation
+    if (bankAccountNumber && !isValidBankAccountNumber(bankAccountNumber)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid bank account number. Must be 9-18 digits.' }
+      });
+      return;
+    }
+
+    if (bankIfsc && !isValidIfscCode(bankIfsc)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid IFSC code. Format: 4 letters + 0 + 6 alphanumeric (e.g., SBIN0001234)' }
+      });
+      return;
+    }
+
+    if (upiVpa && !isValidUpiVpa(upiVpa)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid UPI VPA format. Must be username@bankhandle (e.g., merchant@paytm)' }
+      });
+      return;
+    }
+
+    // Require IFSC when bank account is provided
+    if (bankAccountNumber && !bankIfsc) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'IFSC code is required when bank account number is provided' }
       });
       return;
     }
@@ -148,7 +211,7 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
     // Hash password
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
-    // Create supplier
+    // Create supplier (GL-AUD-008: includes bank details)
     const result = await pool.query(
       `INSERT INTO supplier.suppliers (
         primary_email,
@@ -160,9 +223,13 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
         city,
         state,
         pincode,
+        bank_account_number,
+        bank_ifsc,
+        bank_account_name,
+        upi_vpa,
         verification_status,
         status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', 'active')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', 'active')
       RETURNING id, primary_email, business_name, gstin, verification_status`,
       [
         email.toLowerCase(),
@@ -174,6 +241,10 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
         city || null,
         state || null,
         pincode || null,
+        bankAccountNumber || null,
+        bankIfsc?.toUpperCase() || null,
+        bankAccountName || null,
+        upiVpa?.toLowerCase() || null,
       ]
     );
 
