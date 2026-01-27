@@ -38,6 +38,7 @@ import { retailerComplianceRouter } from "./retailer-admin/compliance";
 import { retailerAdminAuthRouter } from "./retailer-admin/auth";
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
+import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
 
 export const v1Router = Router();
 
@@ -82,3 +83,4 @@ v1Router.use("/retailer-admin", retailerAdminSearchRouter);
 v1Router.use("/retailer-admin", retailerComplianceRouter);
 v1Router.use("/retailer-admin", retailerAdminAuthRouter);
 v1Router.use("/demo", demoRouter);
+v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
