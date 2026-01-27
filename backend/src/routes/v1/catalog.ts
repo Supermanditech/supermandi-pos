@@ -293,6 +293,292 @@ catalogRouter.get("/stores/:storeId/catalog/:productId", requireDeviceToken, asy
 });
 
 // =============================================================================
+// SM-003: BUY FLOW CATALOG - Supplier Products for Purchase
+// CRITICAL: Only shows verified suppliers + approved products
+// =============================================================================
+
+/**
+ * GET /api/v1/catalog/stores/:storeId/buy-catalog
+ * SM-003: Get supplier products available for retailer to purchase.
+ * VISIBILITY RULES:
+ * - Only suppliers with status='verified'
+ * - Only products with approval_status='approved'
+ * - Only products from suppliers linked to this store
+ * - Prices include SuperMandi margin
+ */
+catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const q = req.query.q as string | undefined;
+  const category = req.query.category as string | undefined;
+  const supplierId = req.query.supplierId as string | undefined;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+  const offset = (page - 1) * limit;
+
+  try {
+    let whereClause = `
+      WHERE s.status = 'verified'
+        AND sp.approval_status = 'approved'
+        AND sp.is_active = true
+        AND ssl.store_id = $1
+        AND ssl.status = 'active'
+    `;
+    const params: any[] = [storeId];
+    let paramIndex = 2;
+
+    // Search filter
+    if (q && q.trim().length >= 2) {
+      whereClause += ` AND (
+        COALESCE(sp.edited_name, sp.name) ILIKE $${paramIndex}
+        OR sp.barcode ILIKE $${paramIndex}
+        OR sp.supplier_sku ILIKE $${paramIndex}
+      )`;
+      params.push(`%${q.trim()}%`);
+      paramIndex++;
+    }
+
+    // Category filter
+    if (category && category.trim().length > 0) {
+      whereClause += ` AND COALESCE(sp.edited_category, sp.category) = $${paramIndex}`;
+      params.push(category.trim());
+      paramIndex++;
+    }
+
+    // Supplier filter
+    if (supplierId) {
+      whereClause += ` AND sp.supplier_id = $${paramIndex}`;
+      params.push(supplierId);
+      paramIndex++;
+    }
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM catalog.supplier_products sp
+       JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
+       ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    // Get paginated products with margin applied
+    const result = await pool.query(
+      `SELECT
+        sp.id,
+        COALESCE(sp.edited_name, sp.name) AS name,
+        COALESCE(sp.edited_category, sp.category) AS category,
+        sp.brand,
+        sp.barcode,
+        sp.supplier_sku AS "supplierSku",
+        sp.purchase_price AS "supplierPrice",
+        sp.purchase_price + COALESCE(sp.supermandi_margin_minor, 0) AS "retailerPrice",
+        COALESCE(sp.supermandi_margin_minor, 0) AS margin,
+        COALESCE(sp.margin_percent, 0) AS "marginPercent",
+        s.business_name AS "supplierName",
+        s.id AS "supplierId",
+        sp.bnpl_eligible AS "bnplEligible",
+        sp.bnpl_max_days AS "bnplMaxDays",
+        sp.stock_quantity AS "stockQty",
+        sp.stock_status AS "stockStatus",
+        sp.moq,
+        sp.unit,
+        sp.mrp
+      FROM catalog.supplier_products sp
+      JOIN supplier.suppliers s ON s.id = sp.supplier_id
+      JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
+      ${whereClause}
+      ORDER BY COALESCE(sp.edited_name, sp.name) ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limit, offset]
+    );
+
+    const products = result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      brand: row.brand,
+      barcode: row.barcode,
+      supplierSku: row.supplierSku,
+      supplierPrice: row.supplierPrice,
+      retailerPrice: row.retailerPrice,
+      margin: row.margin,
+      marginPercent: parseFloat(row.marginPercent) || 0,
+      supplierName: row.supplierName,
+      supplierId: row.supplierId,
+      bnplEligible: row.bnplEligible || false,
+      bnplMaxDays: row.bnplMaxDays || 0,
+      stockQty: row.stockQty || 0,
+      stockStatus: row.stockStatus || 'available',
+      moq: row.moq || 1,
+      unit: row.unit || 'PCS',
+      mrp: row.mrp,
+    }));
+
+    return res.json({
+      success: true,
+      data: products,
+      pagination: {
+        page,
+        limit,
+        total,
+        hasMore: offset + products.length < total,
+      },
+      filters: {
+        search: q?.trim() || null,
+        category: category || null,
+        supplierId: supplierId || null,
+      },
+      context: "BUY",
+    });
+  } catch (error: any) {
+    console.error("[SM-003] Buy catalog error:", error.message);
+
+    // If tables don't exist yet, return empty response
+    if (error.code === "42P01" || error.code === "42703") {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: { page: 1, limit: 50, total: 0, hasMore: false },
+        filters: { search: null, category: null, supplierId: null },
+        context: "BUY",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load buy catalog",
+    });
+  }
+});
+
+/**
+ * GET /api/v1/catalog/stores/:storeId/buy-catalog/categories
+ * SM-003: Get categories available in buy catalog (only from approved products)
+ */
+catalogRouter.get("/stores/:storeId/buy-catalog/categories", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+
+  try {
+    const result = await pool.query(
+      `SELECT DISTINCT COALESCE(sp.edited_category, sp.category) AS category
+       FROM catalog.supplier_products sp
+       JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
+       WHERE s.status = 'verified'
+         AND sp.approval_status = 'approved'
+         AND sp.is_active = true
+         AND ssl.store_id = $1
+         AND ssl.status = 'active'
+         AND COALESCE(sp.edited_category, sp.category) IS NOT NULL
+         AND COALESCE(sp.edited_category, sp.category) != ''
+       ORDER BY category ASC`,
+      [storeId]
+    );
+
+    const categories = result.rows.map((r) => r.category);
+
+    return res.json({
+      success: true,
+      data: categories,
+      count: categories.length,
+    });
+  } catch (error: any) {
+    console.error("[SM-003] Buy catalog categories error:", error.message);
+
+    if (error.code === "42P01" || error.code === "42703") {
+      return res.json({
+        success: true,
+        data: [],
+        count: 0,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load categories",
+    });
+  }
+});
+
+/**
+ * GET /api/v1/catalog/stores/:storeId/buy-catalog/suppliers
+ * SM-003: Get verified suppliers linked to this store
+ */
+catalogRouter.get("/stores/:storeId/buy-catalog/suppliers", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        s.id,
+        s.business_name AS "businessName",
+        s.trade_name AS "tradeName",
+        s.city,
+        s.rating,
+        ssl.credit_days AS "creditDays",
+        ssl.min_order_value AS "minOrderValue",
+        ssl.is_preferred AS "isPreferred",
+        COUNT(sp.id) AS "productCount"
+       FROM supplier.suppliers s
+       JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
+       LEFT JOIN catalog.supplier_products sp ON sp.supplier_id = s.id
+         AND sp.approval_status = 'approved'
+         AND sp.is_active = true
+       WHERE s.status = 'verified'
+         AND ssl.store_id = $1
+         AND ssl.status = 'active'
+       GROUP BY s.id, s.business_name, s.trade_name, s.city, s.rating,
+                ssl.credit_days, ssl.min_order_value, ssl.is_preferred
+       ORDER BY ssl.is_preferred DESC, s.business_name ASC`,
+      [storeId]
+    );
+
+    const suppliers = result.rows.map((r) => ({
+      id: r.id,
+      businessName: r.businessName,
+      tradeName: r.tradeName,
+      city: r.city,
+      rating: parseFloat(r.rating) || 3.0,
+      creditDays: r.creditDays || 0,
+      minOrderValue: r.minOrderValue || 0,
+      isPreferred: r.isPreferred || false,
+      productCount: parseInt(r.productCount) || 0,
+    }));
+
+    return res.json({
+      success: true,
+      data: suppliers,
+      count: suppliers.length,
+    });
+  } catch (error: any) {
+    console.error("[SM-003] Buy catalog suppliers error:", error.message);
+
+    if (error.code === "42P01" || error.code === "42703") {
+      return res.json({
+        success: true,
+        data: [],
+        count: 0,
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load suppliers",
+    });
+  }
+});
+
+// =============================================================================
 // FMCG TAXONOMY ENDPOINTS (CAT-003)
 // =============================================================================
 

@@ -39,6 +39,8 @@ import SalesStatementScreen from "./src/screens/SalesStatementScreen";
 import StockStatementScreen from "./src/screens/StockStatementScreen";
 // AUD-POS-NAV-002: Wire BuyScreen to navigation
 import { BuyScreen } from "./src/screens/BuyScreen";
+// SM-020: BNPL Dues Screen
+import { BnplDuesScreen } from "./src/screens/BnplDuesScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -166,6 +168,14 @@ function BuyScreenWrapper() {
   );
 }
 
+// SM-020: BnplDuesScreen wrapper
+function BnplDuesWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <BnplDuesScreen onBack={() => navigation.goBack()} />
+  );
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
 
@@ -257,6 +267,8 @@ export default function App() {
           <Stack.Screen name="StockStatement" component={StockStatementWrapper} />
           {/* AUD-POS-NAV-002: BuyScreen now wired to navigation */}
           <Stack.Screen name="Buy" component={BuyScreenWrapper} />
+          {/* SM-020: BNPL Dues Screen */}
+          <Stack.Screen name="BnplDues" component={BnplDuesWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
       </GestureHandlerRootView>

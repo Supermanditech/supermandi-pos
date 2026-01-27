@@ -10,6 +10,9 @@ import InventoryPage from './pages/InventoryPage';
 import SuppliersPage from './pages/SuppliersPage';
 import CompliancePage from './pages/CompliancePage';
 import AllPagesPage from './pages/AllPagesPage';
+// SM-024: Admin approval queue pages
+import SupplierQueuePage from './pages/admin/SupplierQueuePage';
+import ProductQueuePage from './pages/admin/ProductQueuePage';
 
 // Normalize trailing slashes
 function TrailingSlashRedirect() {
@@ -82,6 +85,9 @@ function AppRoutes() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="suppliers" element={<SuppliersPage />} />
           <Route path="compliance" element={<CompliancePage />} />
+          {/* SM-024: SuperAdmin approval queue pages */}
+          <Route path="admin/suppliers" element={<SupplierQueuePage />} />
+          <Route path="admin/products" element={<ProductQueuePage />} />
           {/* P2-RD-002: QA page hidden in production */}
           {import.meta.env.DEV && <Route path="_pages" element={<AllPagesPage />} />}
         </Route>

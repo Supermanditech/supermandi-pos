@@ -22,6 +22,7 @@ export type UiStatusResponse = {
     inventoryEnabled?: boolean;
     suppliersEnabled?: boolean;
     ordersEnabled?: boolean;
+    creditEnabled?: boolean; // SM-022: Credit/Loans feature flag
   };
 };
 

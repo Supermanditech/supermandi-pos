@@ -187,3 +187,63 @@ export async function recordCollectionDue(input: {
   });
   return { status: "DUE", collectionId: offline.collectionId };
 }
+
+// =============================================================================
+// SM-015: Split Payment APIs
+// =============================================================================
+
+export type SplitPaymentItem = {
+  mode: "UPI" | "CASH";
+  amountMinor: number;
+};
+
+export type SplitPaymentResponse = {
+  paymentIds: string[];
+  upiPayment?: {
+    paymentId: string;
+    qrData: string;
+    expiresAt: string;
+  };
+  cashPayment?: {
+    paymentId: string;
+    status: string;
+  };
+  totalAmount: number;
+};
+
+/**
+ * SM-015: Create a split payment for a sale (part UPI + part Cash)
+ */
+export async function createSplitPayment(input: {
+  saleId: string;
+  payments: SplitPaymentItem[];
+}): Promise<SplitPaymentResponse> {
+  if (!(await isOnline())) {
+    throw new ApiError(0, "split_offline_blocked");
+  }
+  return apiClient.post<SplitPaymentResponse>("/api/v1/pos/payments/split", input);
+}
+
+/**
+ * SM-015: Confirm cash portion of split payment after UPI completes
+ */
+export async function confirmSplitCash(input: {
+  paymentId: string;
+}): Promise<{ status: string; saleCompleted: boolean }> {
+  return apiClient.post(`/api/v1/pos/payments/split/${input.paymentId}/confirm-cash`, {});
+}
+
+/**
+ * SM-015: Poll split payment status
+ */
+export async function getSplitPaymentStatus(input: {
+  saleId: string;
+}): Promise<{
+  upiStatus: string;
+  cashStatus: string;
+  saleStatus: string;
+  awaitingCash: boolean;
+  cashAmount?: number;
+}> {
+  return apiClient.get(`/api/v1/pos/payments/split/${input.saleId}/status`);
+}

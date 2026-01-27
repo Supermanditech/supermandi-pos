@@ -38,6 +38,12 @@ export default function ProtectedLayout() {
     { path: 'compliance', label: 'Compliance', icon: '📑' },
   ];
 
+  // SM-024: Admin approval queue navigation
+  const adminNavItems = [
+    { path: 'admin/suppliers', label: 'Supplier Queue', icon: '✅' },
+    { path: 'admin/products', label: 'Product Queue', icon: '📝' },
+  ];
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
       {/* Sidebar */}
@@ -125,6 +131,64 @@ export default function ProtectedLayout() {
               {item.label}
             </a>
           ))}
+
+          {/* SM-024: Admin Section Divider */}
+          <div style={{
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            margin: '0.75rem 0',
+            paddingTop: '0.75rem',
+          }}>
+            <div style={{
+              fontSize: '0.7rem',
+              color: '#64748b',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              padding: '0 1rem',
+              marginBottom: '0.5rem',
+            }}>
+              SuperAdmin
+            </div>
+            {adminNavItems.map((item) => (
+              <a
+                key={item.path}
+                href={`/s/${storeCode}/${item.path}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.875rem 1rem',
+                  color: 'white',
+                  textDecoration: 'none',
+                  borderRadius: '10px',
+                  background: isActive(item.path)
+                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))'
+                    : 'transparent',
+                  border: isActive(item.path)
+                    ? '1px solid rgba(139, 92, 246, 0.3)'
+                    : '1px solid transparent',
+                  fontWeight: isActive(item.path) ? '500' : '400',
+                  fontSize: '0.95rem',
+                  transition: 'all 0.2s',
+                  opacity: isActive(item.path) ? 1 : 0.7,
+                }}
+                onMouseOver={(e) => {
+                  if (!isActive(item.path)) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!isActive(item.path)) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.opacity = '0.7';
+                  }
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
+                {item.label}
+              </a>
+            ))}
+          </div>
         </nav>
 
         {/* Footer */}

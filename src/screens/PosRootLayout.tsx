@@ -31,6 +31,7 @@ import MenuScreen from "./MenuScreen";
 import SellScanScreen from "./SellScanScreen";
 import PurchaseScreen from "./PurchaseScreen";
 import ReorderScreen from "./ReorderScreen";
+import CreditScreen from "./CreditScreen";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import * as reorderApi from "../services/api/reorderApi";
 import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo, updateDeviceMetadata } from "../services/deviceInfo";
@@ -70,7 +71,7 @@ type RootStackParamList = {
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "SellScan">;
 
-type PosTab = "MENU" | "SELL" | "PURCHASE" | "REORDER";
+type PosTab = "MENU" | "SELL" | "PURCHASE" | "REORDER" | "CREDIT";
 type TabLayout = { x: number; y: number; width: number; height: number };
 
 const TABS: Array<{ id: PosTab; label: string }> = [
@@ -78,6 +79,7 @@ const TABS: Array<{ id: PosTab; label: string }> = [
   { id: "SELL", label: "SELL" },
   { id: "PURCHASE", label: "PURCHASE" },
   { id: "REORDER", label: "REORDER" },
+  { id: "CREDIT", label: "CREDIT" },
 ];
 
 const HID_ACTIVE_WINDOW_MS = 60000;
@@ -105,6 +107,7 @@ export default function PosRootLayout() {
   const tabIndicatorReadyRef = useRef(false);
   const buyEnabled = useSettingsStore((state) => state.buyEnabled);
   const reorderEnabled = useSettingsStore((state) => state.reorderEnabled);
+  const creditEnabled = useSettingsStore((state) => state.creditEnabled);
   const cartItemCount = usePurchaseCartStore((state) => state.items.length);
   const [pendingReorderCount, setPendingReorderCount] = useState(0);
   const [reduceMotionEnabled, setReduceMotionEnabled] = useState(false);
@@ -181,6 +184,7 @@ export default function PosRootLayout() {
     SELL: t('tabs.sell'),
     PURCHASE: t('tabs.purchase', { defaultValue: 'PURCHASE' }),
     REORDER: reorderLabel,
+    CREDIT: t('tabs.credit', { defaultValue: 'CREDIT' }),
   };
   // Always show Menu text on handheld POS devices for better usability
   const showMenuText = true;
@@ -423,12 +427,14 @@ export default function PosRootLayout() {
         }
         // GO-LIVE-002: Sync feature flags to settingsStore
         if (status.features) {
-          const { setBuyEnabled, setReorderEnabled } = useSettingsStore.getState();
+          const { setBuyEnabled, setReorderEnabled, setCreditEnabled } = useSettingsStore.getState();
           // buyEnabled defaults to ordersEnabled if not explicitly set
           const buyFlag = status.features.buyEnabled ?? status.features.ordersEnabled ?? true;
           const reorderFlag = status.features.reorderEnabled ?? false;
+          const creditFlag = status.features.creditEnabled ?? false; // SM-022
           setBuyEnabled(buyFlag);
           setReorderEnabled(reorderFlag);
+          setCreditEnabled(creditFlag); // SM-022
         }
         // GATE-000: Probe Phase-1 endpoints on startup (after ui-status succeeds)
         // This runs asynchronously and caches results for 5 minutes
@@ -999,8 +1005,9 @@ export default function PosRootLayout() {
           const active = effectiveMode === tab.id;
           const isReorder = tab.id === "REORDER";
           const isPurchase = tab.id === "PURCHASE";
+          const isCredit = tab.id === "CREDIT";
           // UI-REVEAL: Feature-disabled tabs are shown but disabled (not hidden)
-          const isFeatureDisabled = (isPurchase && !buyEnabled) || (isReorder && !reorderEnabled);
+          const isFeatureDisabled = (isPurchase && !buyEnabled) || (isReorder && !reorderEnabled) || (isCredit && !creditEnabled);
           // DEV-055: Disable non-MENU tabs when store is inactive
           const isStoreDisabled = storeActive === false && tab.id !== "MENU";
           const isDisabled = isStoreDisabled || isFeatureDisabled;
@@ -1033,14 +1040,14 @@ export default function PosRootLayout() {
               onPress={() => {
                 // UI-REVEAL: Show toast for feature-disabled tabs instead of hiding them
                 if (isFeatureDisabled) {
-                  const featureName = isPurchase ? "Purchase Orders" : "Reorder";
+                  const featureName = isPurchase ? "Purchase Orders" : isReorder ? "Reorder" : "Credit";
                   ToastAndroid.show(`${featureName} is not enabled for this store`, ToastAndroid.SHORT);
                   return;
                 }
                 setSelectedMode(tab.id);
               }}
               disabled={isStoreDisabled}
-              testID={isReorder ? "tab-reorder" : isPurchase ? "tab-buy" : undefined}
+              testID={isReorder ? "tab-reorder" : isPurchase ? "tab-buy" : isCredit ? "tab-credit" : undefined}
               accessibilityLabel={
                 isReorder ? `Reorder ${reorderStatusLabel}` : tab.id === "MENU" ? "Menu" : undefined
               }
@@ -1140,6 +1147,9 @@ export default function PosRootLayout() {
         ) : null}
         {effectiveMode === "REORDER" ? (
           <ReorderScreen onNavigateToBuy={() => setSelectedModeInternal("PURCHASE")} />
+        ) : null}
+        {effectiveMode === "CREDIT" ? (
+          <CreditScreen onBack={() => setSelectedModeInternal("MENU")} />
         ) : null}
       </View>
 

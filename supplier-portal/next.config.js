@@ -1,0 +1,18 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // SM-023: Supplier Portal config
+  env: {
+    API_BASE_URL: process.env.API_BASE_URL || 'http://localhost:3000',
+  },
+  // Allow images from any domain for product images
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+    ],
+  },
+};
+
+module.exports = nextConfig;

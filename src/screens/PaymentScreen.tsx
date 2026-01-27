@@ -32,6 +32,7 @@ import { formatStoreName } from "../utils/storeName";
 import { uuidv4 } from "../utils/uuid";
 import { buildStockDeductionLogs, partitionSaleItems } from "../services/saleScope";
 import { theme } from "../theme";
+import { SplitPaymentModal } from "../components/sell/SplitPaymentModal";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -131,6 +132,7 @@ const PaymentScreen = () => {
   const [upiStoreName, setUpiStoreName] = useState<string | null>(null);
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [upiStatusLoading, setUpiStatusLoading] = useState(true);
+  const [showSplitModal, setShowSplitModal] = useState(false);
 
   const saleItemIds = route.params?.saleItemIds;
   const { saleItems: computedSaleItems, isPartial: isPartialSale } = useMemo(
@@ -643,6 +645,22 @@ const PaymentScreen = () => {
         {renderModeTab("DUE", "Due", "calendar-clock")}
       </View>
 
+      {/* SM-015: Split Payment Button */}
+      {isOnline && !upiDisabled && (
+        <TouchableOpacity
+          style={styles.splitButton}
+          onPress={() => setShowSplitModal(true)}
+          disabled={!saleId || loadingSale}
+        >
+          <MaterialCommunityIcons
+            name="call-split"
+            size={18}
+            color={theme.colors.primary}
+          />
+          <Text style={styles.splitButtonText}>Split Payment (UPI + Cash)</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.content}>
         {selectedMode === "UPI" ? (
           <View style={styles.qrStage}>
@@ -703,6 +721,33 @@ const PaymentScreen = () => {
           <Text style={styles.primaryCtaText}>{ctaLabel}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* SM-015: Split Payment Modal */}
+      <SplitPaymentModal
+        visible={showSplitModal}
+        totalAmountMinor={totalMinor}
+        currency={currency}
+        saleId={saleId || ""}
+        onClose={() => setShowSplitModal(false)}
+        onComplete={() => {
+          setShowSplitModal(false);
+          finalized.current = true;
+          if (isPartialSale) {
+            for (const item of saleItems) {
+              removeItem(item.id, true);
+            }
+          }
+          navigation.navigate("SuccessPrint", {
+            paymentMode: "CASH", // Split shows as CASH on receipt
+            transactionId,
+            billId: billRef || "",
+            saleItems: isPartialSale ? saleItems : undefined,
+            saleTotalMinor: isPartialSale ? totalMinor : undefined,
+            saleCurrency: isPartialSale ? currency : undefined,
+            partialSale: isPartialSale ? true : undefined
+          });
+        }}
+      />
     </View>
   );
 };
@@ -796,6 +841,25 @@ const styles = StyleSheet.create({
   },
   modeTabTextDisabled: {
     color: theme.colors.textTertiary
+  },
+  splitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderStyle: "dashed",
+    backgroundColor: theme.colors.surface
+  },
+  splitButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary
   },
   content: {
     flex: 1,

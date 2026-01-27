@@ -30,6 +30,7 @@ export interface SupplierRowProps {
   }) => void;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  bnplEligible?: boolean; // SM-020: Show BNPL badge when true
 }
 
 // =============================================================================
@@ -45,6 +46,7 @@ export function SupplierRow({
   onAddToCart,
   expanded = false,
   onToggleExpand,
+  bnplEligible = false,
 }: SupplierRowProps) {
   const [quantity, setQuantity] = useState(supplier.moq);
   const stockColor = getStockStatusColor(
@@ -87,6 +89,17 @@ export function SupplierRow({
                   color={theme.colors.warning}
                 />
                 <Text style={styles.preferredText}>Preferred</Text>
+              </View>
+            )}
+            {/* SM-020: BNPL badge */}
+            {bnplEligible && (
+              <View style={styles.bnplBadge}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={10}
+                  color={theme.colors.accent}
+                />
+                <Text style={styles.bnplText}>BNPL</Text>
               </View>
             )}
           </View>
@@ -261,6 +274,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     color: theme.colors.warning,
+  },
+  // SM-020: BNPL badge styles
+  bnplBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.accentSoft,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.sm,
+    gap: 2,
+  },
+  bnplText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.accent,
   },
   priceRow: {
     flexDirection: "row",

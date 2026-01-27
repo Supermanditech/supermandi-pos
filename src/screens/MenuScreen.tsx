@@ -33,6 +33,7 @@ type RootStackParamList = {
   StockStatement: undefined;
   UiShowcase: undefined;
   Buy: undefined; // AUD-POS-NAV-002: Wire BuyScreen to navigation
+  BnplDues: undefined; // SM-020: BNPL Dues screen
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -198,6 +199,7 @@ export default function MenuScreen() {
   const goToSalesStatement = () => navigation.navigate("SalesStatement");
   const goToStockStatement = () => navigation.navigate("StockStatement");
   const goToUiShowcase = () => navigation.navigate("UiShowcase");
+  const goToBnplDues = () => navigation.navigate("BnplDues"); // SM-020
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -392,6 +394,18 @@ export default function MenuScreen() {
                 <View style={styles.menuText}>
                   <Text style={styles.menuTitle}>{t('menu.productCatalog', { defaultValue: 'Product Catalog' })}</Text>
                   <Text style={styles.menuSubtitle}>{t('menu.productCatalogSubtitle', { defaultValue: 'Browse and add products to purchase' })}</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+              </Pressable>
+
+              {/* SM-020: BNPL Dues Screen */}
+              <Pressable style={styles.menuItem} onPress={goToBnplDues}>
+                <View style={[styles.menuIcon, styles.menuIconBnpl]}>
+                  <MaterialCommunityIcons name={"clock-outline" as any} size={20} color={theme.colors.accent} />
+                </View>
+                <View style={styles.menuText}>
+                  <Text style={styles.menuTitle}>{t('menu.bnplDues', { defaultValue: 'BNPL Dues' })}</Text>
+                  <Text style={styles.menuSubtitle}>{t('menu.bnplDuesSubtitle', { defaultValue: 'View and pay pending BNPL dues' })}</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
               </Pressable>
@@ -724,6 +738,11 @@ const styles = StyleSheet.create({
   menuIconDanger: {
     borderColor: theme.colors.error,
     backgroundColor: theme.colors.error + "15"
+  },
+  // SM-020: BNPL menu icon style
+  menuIconBnpl: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accent + "15"
   },
   languageToggle: {
     flexDirection: "row",

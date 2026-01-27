@@ -33,6 +33,7 @@ export const colors = {
   warningSoft: "#FFF7ED",
   errorSoft: "#FEF2F2",
   accentSoft: "#ECFEFF",
+  primarySoft: "#EFF6FF", // SM-022: Soft blue for credit screens
 
   // Borders
   border: "#E2E8F0",

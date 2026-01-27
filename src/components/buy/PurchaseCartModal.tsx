@@ -1,7 +1,7 @@
 // PurchaseCartModal - V3.0.9 compliant
 // Full cart modal with items grouped by supplier
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,8 +18,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { SupplierCartSection } from "./SupplierCartSection";
-import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
+import { PaymentOptionsSheet, type PaymentMode } from "./PaymentOptionsSheet";
+import { usePurchaseCartStore, type SupplierGroup } from "../../stores/purchaseCartStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import * as orderApi from "../../services/api/orderApi";
+import * as bnplApi from "../../services/api/bnplApi";
+import * as creditApi from "../../services/api/creditApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
 
 // =============================================================================
@@ -60,6 +64,70 @@ export function PurchaseCartModal({
   const [placingOrderFor, setPlacingOrderFor] = useState<string | null>(null);
   const [placingAllOrders, setPlacingAllOrders] = useState(false);
 
+  // SM-020: BNPL state
+  const [bnplToggleState, setBnplToggleState] = useState<Record<string, boolean>>({});
+  const [bnplSummary, setBnplSummary] = useState<{
+    bnplEnabled: boolean;
+    availableCredit: number;
+    maxDays: number;
+  } | null>(null);
+
+  // SM-025: Payment options sheet state
+  const [paymentSheet, setPaymentSheet] = useState<{
+    visible: boolean;
+    group: SupplierGroup | null;
+  }>({ visible: false, group: null });
+
+  // SM-025: Credit summary state
+  const [creditSummary, setCreditSummary] = useState<{
+    creditEnabled: boolean;
+    availableCredit: number;
+  } | null>(null);
+
+  // Settings store for BNPL and Credit updates
+  const setBnplEnabled = useSettingsStore((state) => state.setBnplEnabled);
+  const setBnplAvailableCredit = useSettingsStore((state) => state.setBnplAvailableCredit);
+  const creditEnabled = useSettingsStore((state) => state.creditEnabled);
+
+  // SM-020/SM-025: Fetch BNPL and Credit summary when modal opens
+  useEffect(() => {
+    if (visible && items.length > 0) {
+      // Fetch BNPL summary
+      void (async () => {
+        try {
+          const summary = await bnplApi.getBnplSummary();
+          setBnplSummary({
+            bnplEnabled: summary.bnplEnabled,
+            availableCredit: summary.availableCredit,
+            maxDays: 7, // Default max days
+          });
+          // Update settings store
+          setBnplEnabled(summary.bnplEnabled);
+          setBnplAvailableCredit(summary.availableCredit);
+        } catch (error) {
+          console.log("[PurchaseCartModal] BNPL summary fetch failed:", error);
+          setBnplSummary({ bnplEnabled: false, availableCredit: 0, maxDays: 7 });
+        }
+      })();
+
+      // SM-025: Fetch Credit summary if enabled
+      if (creditEnabled) {
+        void (async () => {
+          try {
+            const offers = await creditApi.getCreditOffers();
+            setCreditSummary({
+              creditEnabled: true,
+              availableCredit: offers.eligibleAmount,
+            });
+          } catch (error) {
+            console.log("[PurchaseCartModal] Credit summary fetch failed:", error);
+            setCreditSummary({ creditEnabled: false, availableCredit: 0 });
+          }
+        })();
+      }
+    }
+  }, [visible, items.length, setBnplEnabled, setBnplAvailableCredit, creditEnabled]);
+
   // Get grouped items
   const supplierGroups = useMemo(() => getItemsBySupplier(), [items, getItemsBySupplier]);
   const totals = useMemo(() => getTotals(), [items, getTotals]);
@@ -72,6 +140,27 @@ export function PurchaseCartModal({
       return !hasInvalidMoq && !isBelowMinOrder;
     });
   }, [supplierGroups]);
+
+  // SM-020: Check BNPL eligibility for a supplier group
+  const isBnplEligible = useCallback(
+    (groupTotalMinor: number): boolean => {
+      if (!bnplSummary?.bnplEnabled) return false;
+      // Total in minor units (paise) - group.totalAmount is in rupees
+      return bnplSummary.availableCredit >= groupTotalMinor * 100;
+    },
+    [bnplSummary]
+  );
+
+  // SM-020: Handle BNPL toggle for a supplier
+  const handleBnplToggle = useCallback(
+    (supplierId: string, enabled: boolean) => {
+      setBnplToggleState((prev) => ({
+        ...prev,
+        [supplierId]: enabled,
+      }));
+    },
+    []
+  );
 
   // Handle update quantity
   const handleUpdateQuantity = useCallback(
@@ -100,10 +189,29 @@ export function PurchaseCartModal({
     [removeItem]
   );
 
-  // Handle place order for supplier
-  const handlePlaceOrder = useCallback(
-    async (supplierId: string) => {
-      setPlacingOrderFor(supplierId);
+  // SM-025: Show payment options sheet for supplier
+  const handleShowPaymentOptions = useCallback(
+    (supplierId: string) => {
+      const group = supplierGroups.find((g) => g.supplierId === supplierId);
+      if (group) {
+        setPaymentSheet({ visible: true, group });
+      }
+    },
+    [supplierGroups]
+  );
+
+  // SM-025: Close payment options sheet
+  const handleClosePaymentSheet = useCallback(() => {
+    setPaymentSheet({ visible: false, group: null });
+  }, []);
+
+  // SM-025: Handle payment selection from sheet
+  const handleSelectPayment = useCallback(
+    async (mode: PaymentMode): Promise<{ success: boolean; upiDeepLink?: string; error?: string }> => {
+      const group = paymentSheet.group;
+      if (!group) {
+        return { success: false, error: "No supplier selected" };
+      }
 
       try {
         const storeId = await getDeviceStoreId();
@@ -111,47 +219,131 @@ export function PurchaseCartModal({
           throw new Error("Store not found");
         }
 
-        // Get items for this supplier from the groups
-        const supplierGroup = supplierGroups.find((g) => g.supplierId === supplierId);
-        if (!supplierGroup || supplierGroup.items.length === 0) {
-          throw new Error("No items found for supplier");
+        // Determine payment notes based on mode
+        let storeNotes: string | undefined;
+        switch (mode) {
+          case "BNPL":
+            storeNotes = "BNPL_REQUESTED";
+            break;
+          case "CREDIT":
+            storeNotes = "CREDIT_PAYMENT";
+            break;
+          case "UPI":
+            storeNotes = "UPI_PAYMENT";
+            break;
+          case "COD":
+            storeNotes = "CASH_ON_DELIVERY";
+            break;
         }
 
         // Create the order via API
         await orderApi.createOrder(storeId, {
-          supplierId,
+          supplierId: group.supplierId,
           orderType: "manual",
-          items: supplierGroup.items.map((item) => ({
+          items: group.items.map((item) => ({
             supplierProductId: item.supplierProductId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
           })),
+          storeNotes,
         });
 
         // Remove items for this supplier from cart
-        removeSupplierItems(supplierId);
+        removeSupplierItems(group.supplierId);
+
+        // Clear BNPL toggle for this supplier
+        setBnplToggleState((prev) => {
+          const updated = { ...prev };
+          delete updated[group.supplierId];
+          return updated;
+        });
 
         // Notify parent
-        onOrderPlaced?.(supplierId);
+        onOrderPlaced?.(group.supplierId);
 
-        // Show success
-        Alert.alert(
-          "Order Placed",
-          "Your purchase order has been created as a draft. Go to Orders to review and submit.",
-          [{ text: "OK" }]
-        );
-      } catch (error) {
+        // For UPI, we would return a deep link (mocked for now)
+        if (mode === "UPI") {
+          // In production, this would come from a payment API
+          const upiDeepLink = `upi://pay?pa=supplier@upi&pn=${encodeURIComponent(group.supplierName)}&am=${group.totalAmount}&cu=INR`;
+          return { success: true, upiDeepLink };
+        }
+
+        // Show success message for other modes
+        let successMessage = "Your purchase order has been created.";
+        if (mode === "BNPL") {
+          successMessage += " BNPL payment will be set up when the order is confirmed.";
+        } else if (mode === "CREDIT") {
+          successMessage += " Payment will be deducted from your credit line.";
+        } else if (mode === "COD") {
+          successMessage += " Pay when goods are delivered.";
+        }
+
+        Alert.alert("Order Placed", successMessage, [{ text: "OK" }]);
+
+        return { success: true };
+      } catch (error: any) {
         console.error("[PurchaseCartModal] Failed to place order:", error);
-        Alert.alert(
-          "Order Failed",
-          "Failed to place order. Please try again.",
-          [{ text: "OK" }]
-        );
-      } finally {
-        setPlacingOrderFor(null);
+        return { success: false, error: error.message || "Failed to place order" };
       }
     },
-    [removeSupplierItems, onOrderPlaced, supplierGroups]
+    [paymentSheet.group, removeSupplierItems, onOrderPlaced]
+  );
+
+  // Handle place order for supplier (legacy - now shows payment sheet)
+  const handlePlaceOrder = useCallback(
+    async (supplierId: string, useBnpl?: boolean) => {
+      // SM-025: If BNPL is toggled, skip payment sheet and use BNPL directly
+      if (useBnpl) {
+        setPlacingOrderFor(supplierId);
+
+        try {
+          const storeId = await getDeviceStoreId();
+          if (!storeId) {
+            throw new Error("Store not found");
+          }
+
+          const supplierGroup = supplierGroups.find((g) => g.supplierId === supplierId);
+          if (!supplierGroup || supplierGroup.items.length === 0) {
+            throw new Error("No items found for supplier");
+          }
+
+          await orderApi.createOrder(storeId, {
+            supplierId,
+            orderType: "manual",
+            items: supplierGroup.items.map((item) => ({
+              supplierProductId: item.supplierProductId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+            })),
+            storeNotes: "BNPL_REQUESTED",
+          });
+
+          removeSupplierItems(supplierId);
+          setBnplToggleState((prev) => {
+            const updated = { ...prev };
+            delete updated[supplierId];
+            return updated;
+          });
+          onOrderPlaced?.(supplierId);
+
+          Alert.alert(
+            "Order Placed",
+            "Your purchase order has been created. BNPL payment will be set up when the order is confirmed.",
+            [{ text: "OK" }]
+          );
+        } catch (error) {
+          console.error("[PurchaseCartModal] Failed to place order:", error);
+          Alert.alert("Order Failed", "Failed to place order. Please try again.", [{ text: "OK" }]);
+        } finally {
+          setPlacingOrderFor(null);
+        }
+        return;
+      }
+
+      // Show payment options sheet for non-BNPL orders
+      handleShowPaymentOptions(supplierId);
+    },
+    [supplierGroups, removeSupplierItems, onOrderPlaced, handleShowPaymentOptions]
   );
 
   // Handle place all orders
@@ -315,6 +507,11 @@ export function PurchaseCartModal({
                   onRemoveItem={handleRemoveItem}
                   onPlaceOrder={handlePlaceOrder}
                   placingOrder={placingOrderFor === group.supplierId}
+                  // SM-020: BNPL props
+                  bnplEligible={isBnplEligible(group.totalAmount)}
+                  bnplEnabled={bnplToggleState[group.supplierId] ?? false}
+                  onBnplToggle={handleBnplToggle}
+                  bnplMaxDays={bnplSummary?.maxDays ?? 7}
                 />
               ))}
             </ScrollView>
@@ -355,6 +552,21 @@ export function PurchaseCartModal({
           </>
         )}
       </View>
+
+      {/* SM-025: Payment Options Sheet */}
+      {paymentSheet.group && (
+        <PaymentOptionsSheet
+          visible={paymentSheet.visible}
+          onClose={handleClosePaymentSheet}
+          supplierName={paymentSheet.group.supplierName}
+          amount={paymentSheet.group.totalAmount}
+          bnplEligible={isBnplEligible(paymentSheet.group.totalAmount)}
+          bnplMaxDays={bnplSummary?.maxDays ?? 7}
+          creditEligible={creditSummary?.creditEnabled ?? false}
+          availableCredit={creditSummary?.availableCredit ?? 0}
+          onSelectPayment={handleSelectPayment}
+        />
+      )}
     </Modal>
   );
 }

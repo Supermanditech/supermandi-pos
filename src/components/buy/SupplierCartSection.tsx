@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from "react-native";
@@ -25,8 +26,13 @@ export interface SupplierCartSectionProps {
   minOrderValue?: number;
   onUpdateQuantity: (supplierProductId: string, quantity: number) => void;
   onRemoveItem: (supplierProductId: string) => void;
-  onPlaceOrder: (supplierId: string) => void;
+  onPlaceOrder: (supplierId: string, useBnpl?: boolean) => void;
   placingOrder?: boolean;
+  // SM-020: BNPL props
+  bnplEligible?: boolean; // Whether this supplier order is eligible for BNPL
+  bnplEnabled?: boolean; // Current toggle state
+  onBnplToggle?: (supplierId: string, enabled: boolean) => void; // Toggle callback
+  bnplMaxDays?: number; // Max days for BNPL payment (default 7)
 }
 
 // =============================================================================
@@ -40,6 +46,10 @@ export function SupplierCartSection({
   onRemoveItem,
   onPlaceOrder,
   placingOrder = false,
+  bnplEligible = false,
+  bnplEnabled = false,
+  onBnplToggle,
+  bnplMaxDays = 7,
 }: SupplierCartSectionProps) {
   // Check if any item is below MOQ
   const hasInvalidMoq = useMemo(() => {
@@ -52,12 +62,28 @@ export function SupplierCartSection({
   // Can place order?
   const canPlaceOrder = !hasInvalidMoq && !isBelowMinOrder && !placingOrder;
 
+  // SM-020: Handle BNPL toggle
+  const handleBnplToggle = useCallback(
+    (value: boolean) => {
+      onBnplToggle?.(group.supplierId, value);
+    },
+    [group.supplierId, onBnplToggle]
+  );
+
+  // SM-020: Calculate BNPL due date
+  const bnplDueDate = useMemo(() => {
+    if (!bnplEnabled) return null;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + bnplMaxDays);
+    return dueDate.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+  }, [bnplEnabled, bnplMaxDays]);
+
   // Handle place order
   const handlePlaceOrder = useCallback(() => {
     if (canPlaceOrder) {
-      onPlaceOrder(group.supplierId);
+      onPlaceOrder(group.supplierId, bnplEnabled);
     }
-  }, [canPlaceOrder, group.supplierId, onPlaceOrder]);
+  }, [canPlaceOrder, group.supplierId, onPlaceOrder, bnplEnabled]);
 
   return (
     <View style={styles.container}>
@@ -123,6 +149,37 @@ export function SupplierCartSection({
         </View>
       )}
 
+      {/* SM-020: BNPL Toggle */}
+      {bnplEligible && (
+        <View style={styles.bnplSection}>
+          <View style={styles.bnplToggleRow}>
+            <View style={styles.bnplInfo}>
+              <View style={styles.bnplIconRow}>
+                <MaterialCommunityIcons
+                  name="clock-outline"
+                  size={16}
+                  color={bnplEnabled ? theme.colors.accent : theme.colors.textTertiary}
+                />
+                <Text style={[styles.bnplLabel, bnplEnabled && styles.bnplLabelActive]}>
+                  Pay Later (BNPL)
+                </Text>
+              </View>
+              {bnplEnabled && bnplDueDate && (
+                <Text style={styles.bnplDueDate}>
+                  Pay by {bnplDueDate}
+                </Text>
+              )}
+            </View>
+            <Switch
+              value={bnplEnabled}
+              onValueChange={handleBnplToggle}
+              trackColor={{ false: theme.colors.border, true: theme.colors.accentLight }}
+              thumbColor={bnplEnabled ? theme.colors.accent : theme.colors.textTertiary}
+            />
+          </View>
+        </View>
+      )}
+
       {/* Footer with subtotal and place order */}
       <View style={styles.footer}>
         <View style={styles.subtotalSection}>
@@ -130,12 +187,18 @@ export function SupplierCartSection({
           <Text style={styles.subtotalValue}>
             {formatMoney(group.totalAmount * 100)}
           </Text>
+          {bnplEnabled && (
+            <Text style={styles.bnplPayLaterHint}>
+              Pay by {bnplDueDate}
+            </Text>
+          )}
         </View>
 
         <Pressable
           style={[
             styles.placeOrderButton,
             !canPlaceOrder && styles.placeOrderButtonDisabled,
+            bnplEnabled && styles.placeOrderButtonBnpl,
           ]}
           onPress={handlePlaceOrder}
           disabled={!canPlaceOrder}
@@ -145,11 +208,13 @@ export function SupplierCartSection({
           ) : (
             <>
               <MaterialCommunityIcons
-                name="send"
+                name={bnplEnabled ? "clock-outline" : "send"}
                 size={16}
                 color={theme.colors.textInverse}
               />
-              <Text style={styles.placeOrderText}>Place Order</Text>
+              <Text style={styles.placeOrderText}>
+                {bnplEnabled ? "Order with BNPL" : "Place Order"}
+              </Text>
             </>
           )}
         </Pressable>
@@ -255,6 +320,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: theme.colors.textInverse,
+  },
+  // SM-020: BNPL button variant
+  placeOrderButtonBnpl: {
+    backgroundColor: theme.colors.accent,
+  },
+  // SM-020: BNPL section styles
+  bnplSection: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.accentSoft,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  bnplToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bnplInfo: {
+    flex: 1,
+  },
+  bnplIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+  },
+  bnplLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textTertiary,
+  },
+  bnplLabelActive: {
+    color: theme.colors.accent,
+  },
+  bnplDueDate: {
+    fontSize: 12,
+    color: theme.colors.accent,
+    marginTop: 2,
+    marginLeft: 22,
+  },
+  bnplPayLaterHint: {
+    fontSize: 11,
+    color: theme.colors.accent,
+    marginTop: 2,
   },
 });
 
