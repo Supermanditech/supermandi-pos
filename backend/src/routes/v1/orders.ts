@@ -813,20 +813,79 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
       });
     }
 
-    // 3. Handle BNPL payment
+    // 3. Handle BNPL payment (SM-019: Full BNPL flow)
     if (mode === 'BNPL') {
-      const paymentId = randomUUID();
+      // SM-019: Check BNPL eligibility
+      // 1. Check store's BNPL credit limit and usage
+      const storeResult = await client.query(
+        `SELECT bnpl_enabled, bnpl_credit_limit, bnpl_max_days
+         FROM platform.stores WHERE id = $1`,
+        [storeId]
+      );
 
-      // Create BNPL payment record (pending until due date)
+      if (storeResult.rows.length === 0 || !storeResult.rows[0].bnpl_enabled) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: "bnpl_not_enabled",
+          message: "BNPL is not enabled for this store"
+        });
+      }
+
+      const store = storeResult.rows[0];
+      const bnplCreditLimit = store.bnpl_credit_limit || 5000000; // Default 50k
+      const bnplMaxDays = store.bnpl_max_days || 7;
+
+      // 2. Check current BNPL usage (active drawdowns)
+      const usageResult = await client.query(
+        `SELECT COALESCE(SUM(principal_minor), 0) as used
+         FROM payments.bnpl_drawdowns
+         WHERE store_id = $1 AND status = 'active'`,
+        [storeId]
+      );
+      const bnplUsed = parseInt(usageResult.rows[0]?.used || '0', 10);
+      const bnplAvailable = Math.max(0, bnplCreditLimit - bnplUsed);
+
+      if (bnplAvailable < order.total_amount) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: "bnpl_limit_exceeded",
+          message: "Insufficient BNPL credit",
+          availableCredit: bnplAvailable,
+          requestedAmount: order.total_amount,
+          creditLimit: bnplCreditLimit
+        });
+      }
+
+      // 3. Check if products in order are BNPL eligible (optional strict mode)
+      // For MVP, we trust the payment-options API already validated this
+
+      // 4. Create BNPL drawdown record
+      const paymentId = randomUUID();
+      const drawdownId = randomUUID();
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + bnplMaxDays);
+      const dueDateStr = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      // Create drawdown
+      await client.query(
+        `INSERT INTO payments.bnpl_drawdowns (
+          id, store_id, supplier_id, purchase_order_id, principal_minor, due_date, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'active')`,
+        [drawdownId, storeId, order.supplier_id, orderId, order.total_amount, dueDateStr]
+      );
+
+      // Create BNPL payment record linked to drawdown
       await client.query(
         `INSERT INTO payments.buy_payments (
           id, purchase_order_id, store_id, supplier_id, mode, amount_minor,
-          status, initiated_at
-        ) VALUES ($1, $2, $3, $4, 'BNPL', $5, 'pending', NOW())`,
-        [paymentId, orderId, storeId, order.supplier_id, order.total_amount]
+          bnpl_drawdown_id, status, initiated_at
+        ) VALUES ($1, $2, $3, $4, 'BNPL', $5, $6, 'pending', NOW())`,
+        [paymentId, orderId, storeId, order.supplier_id, order.total_amount, drawdownId]
       );
 
-      // Update order to paid (BNPL = pay later)
+      // Update order payment status
       await client.query(
         `UPDATE orders.purchase_orders SET payment_status = 'bnpl_pending' WHERE id = $1`,
         [orderId]
@@ -834,14 +893,17 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
 
       await client.query("COMMIT");
 
-      console.log(`[SM-017] BUY BNPL payment created: paymentId=${paymentId}, orderId=${orderId}`);
+      console.log(`[SM-019] BNPL drawdown created: drawdownId=${drawdownId}, paymentId=${paymentId}, dueDate=${dueDateStr}`);
 
       return res.json({
         success: true,
         paymentId,
-        mode: 'BNPL',
-        status: 'pending',
-        message: 'BNPL payment recorded. Payment due within credit period.'
+        bnplDrawdownId: drawdownId,
+        dueDate: dueDateStr,
+        principalMinor: order.total_amount,
+        status: "bnpl_active",
+        orderStatus: "confirmed",
+        message: `BNPL payment recorded. Due by ${dueDateStr}.`
       });
     }
 
