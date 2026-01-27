@@ -22,7 +22,6 @@ interface CreateProductBody {
   purchasePrice: number;
   moq: number;
   stockQty?: number;
-  taxPercent?: number;
 }
 
 interface UpdateProductBody {
@@ -34,7 +33,6 @@ interface UpdateProductBody {
   purchasePrice?: number;
   moq?: number;
   stockQty?: number;
-  taxPercent?: number;
 }
 
 interface SupplierProductRow {
@@ -49,7 +47,6 @@ interface SupplierProductRow {
   purchase_price: number;
   stock_quantity: number;
   moq: number;
-  tax_percent: number | null;
   approval_status: string;
   is_active: boolean;
   created_at: string;
@@ -126,10 +123,10 @@ router.post(
       const result = await queryOne<{ id: string }>(
         `INSERT INTO catalog.supplier_products (
           supplier_id, supplier_sku, barcode, name, category, brand,
-          mrp, purchase_price, stock_quantity, moq, tax_percent,
+          mrp, purchase_price, stock_quantity, moq,
           approval_status, is_active
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', true
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true
         ) RETURNING id`,
         [
           supplier.supplierId,
@@ -142,7 +139,6 @@ router.post(
           body.purchasePrice,
           body.stockQty || 0,
           body.moq,
-          body.taxPercent || null,
         ]
       );
 
@@ -214,7 +210,7 @@ router.get(
       params.push(limit, offset);
       const products = await query<SupplierProductRow>(
         `SELECT id, supplier_id, supplier_sku, barcode, name, category, brand,
-                mrp, purchase_price, stock_quantity, moq, tax_percent,
+                mrp, purchase_price, stock_quantity, moq,
                 approval_status, is_active, created_at, updated_at
          FROM catalog.supplier_products
          WHERE supplier_id = $1 ${statusFilter}
@@ -235,7 +231,6 @@ router.get(
           purchasePrice: p.purchase_price,
           stockQty: p.stock_quantity,
           moq: p.moq,
-          taxPercent: p.tax_percent,
           approvalStatus: p.approval_status,
           isActive: p.is_active,
           createdAt: p.created_at,
@@ -265,7 +260,7 @@ router.get(
 
       const product = await queryOne<SupplierProductRow>(
         `SELECT id, supplier_id, supplier_sku, barcode, name, category, brand,
-                mrp, purchase_price, stock_quantity, moq, tax_percent,
+                mrp, purchase_price, stock_quantity, moq,
                 approval_status, is_active, created_at, updated_at
          FROM catalog.supplier_products
          WHERE id = $1 AND supplier_id = $2`,
@@ -287,7 +282,6 @@ router.get(
         purchasePrice: product.purchase_price,
         stockQty: product.stock_quantity,
         moq: product.moq,
-        taxPercent: product.tax_percent,
         approvalStatus: product.approval_status,
         isActive: product.is_active,
         createdAt: product.created_at,
@@ -369,10 +363,6 @@ router.put(
       if (body.stockQty !== undefined) {
         updates.push(`stock_quantity = $${paramIndex++}`);
         values.push(body.stockQty);
-      }
-      if (body.taxPercent !== undefined) {
-        updates.push(`tax_percent = $${paramIndex++}`);
-        values.push(body.taxPercent);
       }
 
       if (updates.length === 0) {
