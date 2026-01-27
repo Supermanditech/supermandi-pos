@@ -475,6 +475,186 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
 });
 
 // =============================================================================
+// SM-016: BUY Payment Options API
+// =============================================================================
+
+/**
+ * GET /api/v1/orders/stores/:storeId/orders/:orderId/payment-options
+ * SM-016: Get available payment options for a purchase order
+ * Returns UPI, BNPL, and Credit availability based on store eligibility
+ */
+ordersRouter.get("/stores/:storeId/orders/:orderId/payment-options", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { orderId } = req.params;
+
+  try {
+    // 1. Get order details
+    const orderResult = await pool.query(
+      `SELECT
+        po.id,
+        po.total_amount as "totalAmount",
+        po.status,
+        po.supplier_id as "supplierId",
+        COALESCE(s.business_name, s.trade_name, 'Unknown Supplier') as "supplierName",
+        s.upi_vpa as "supplierUpiVpa"
+      FROM orders.purchase_orders po
+      LEFT JOIN supplier.suppliers s ON s.id = po.supplier_id
+      WHERE po.id = $1 AND po.store_id = $2`,
+      [orderId, storeId]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Order not found"
+      });
+    }
+
+    const order = orderResult.rows[0];
+
+    // Only allow payment for orders in specific statuses
+    const payableStatuses = ['confirmed', 'shipped', 'received', 'partially_received'];
+    if (!payableStatuses.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        error: `Order in '${order.status}' status cannot be paid`
+      });
+    }
+
+    // 2. Get store BNPL/Credit settings
+    let bnplAvailable = false;
+    let bnplMaxDays = 7;
+    let bnplCreditLimit = 0;
+    let bnplUsedCredit = 0;
+    let creditAvailable = false;
+    let creditLimit = 0;
+    let creditUsed = 0;
+    let creditReason = '';
+
+    try {
+      const storeResult = await pool.query(
+        `SELECT
+          bnpl_enabled,
+          bnpl_max_days,
+          bnpl_credit_limit,
+          credit_enabled,
+          credit_limit
+        FROM platform.stores
+        WHERE id = $1`,
+        [storeId]
+      );
+
+      if (storeResult.rows.length > 0) {
+        const store = storeResult.rows[0];
+        bnplAvailable = store.bnpl_enabled === true;
+        bnplMaxDays = store.bnpl_max_days || 7;
+        bnplCreditLimit = store.bnpl_credit_limit || 0;
+        creditAvailable = store.credit_enabled === true;
+        creditLimit = store.credit_limit || 0;
+      }
+
+      // Get current BNPL usage (pending dues)
+      const bnplUsage = await pool.query(
+        `SELECT COALESCE(SUM(amount_minor), 0) as used
+         FROM payments.buy_payments
+         WHERE store_id = $1 AND mode = 'BNPL' AND status = 'pending'`,
+        [storeId]
+      );
+      bnplUsedCredit = parseInt(bnplUsage.rows[0]?.used || '0', 10);
+
+      // Get current credit usage
+      const creditUsage = await pool.query(
+        `SELECT COALESCE(SUM(amount_minor), 0) as used
+         FROM payments.buy_payments
+         WHERE store_id = $1 AND mode = 'CREDIT' AND status IN ('pending', 'approved')`,
+        [storeId]
+      );
+      creditUsed = parseInt(creditUsage.rows[0]?.used || '0', 10);
+
+    } catch (e: any) {
+      // If tables don't exist, continue with defaults
+      console.log('[SM-016] Store settings query failed, using defaults:', e.code);
+    }
+
+    // 3. Build payment options
+    const options: Array<{
+      mode: string;
+      available: boolean;
+      description: string;
+      reason?: string;
+      maxDays?: number;
+      availableCredit?: number;
+    }> = [];
+
+    // UPI Option - always available if supplier has VPA
+    const upiAvailable = !!order.supplierUpiVpa;
+    options.push({
+      mode: 'UPI',
+      available: upiAvailable,
+      description: 'Pay now via UPI',
+      reason: upiAvailable ? undefined : 'Supplier UPI not configured'
+    });
+
+    // BNPL Option
+    const bnplAvailableCredit = Math.max(0, bnplCreditLimit - bnplUsedCredit);
+    const bnplCanPay = bnplAvailable && bnplAvailableCredit >= order.totalAmount;
+    options.push({
+      mode: 'BNPL',
+      available: bnplCanPay,
+      maxDays: bnplMaxDays,
+      availableCredit: bnplAvailableCredit,
+      description: `Pay later in ${bnplMaxDays} days`,
+      reason: !bnplAvailable ? 'BNPL not enabled for store' :
+              bnplAvailableCredit < order.totalAmount ? 'Insufficient BNPL credit' : undefined
+    });
+
+    // Credit Option
+    const creditAvailableAmount = Math.max(0, creditLimit - creditUsed);
+    const creditCanPay = creditAvailable && creditAvailableAmount >= order.totalAmount;
+    if (!creditAvailable) {
+      creditReason = 'Credit not enabled for store';
+    } else if (creditAvailableAmount < order.totalAmount) {
+      creditReason = 'Credit limit exhausted';
+    }
+    options.push({
+      mode: 'CREDIT',
+      available: creditCanPay,
+      availableCredit: creditAvailableAmount,
+      description: 'Use your credit line',
+      reason: creditReason || undefined
+    });
+
+    console.log(`[SM-016] Payment options: orderId=${orderId}, storeId=${storeId}, amount=${order.totalAmount}`);
+
+    return res.json({
+      success: true,
+      orderAmount: order.totalAmount,
+      supplierId: order.supplierId,
+      supplierName: order.supplierName,
+      options
+    });
+
+  } catch (error: any) {
+    console.error("[SM-016] Payment options error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.status(400).json({
+        success: false,
+        error: "Order system not initialized"
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to get payment options"
+    });
+  }
+});
+
+// =============================================================================
 // GRN (GOODS RECEIVE) ENDPOINTS - AUD-GOLIVE-005
 // =============================================================================
 
