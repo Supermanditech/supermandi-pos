@@ -12,6 +12,42 @@ import { config } from '../config.js';
 const router: RouterType = Router();
 
 // =============================================================================
+// GL-AUD-008: Bank Detail Validation Functions
+// =============================================================================
+
+/**
+ * Validate Indian bank account number
+ * Indian bank account numbers are typically 9-18 digits
+ */
+function isValidBankAccountNumber(accountNumber: string): boolean {
+  const trimmed = accountNumber.replace(/\s/g, '');
+  // Must be 9-18 digits only
+  return /^\d{9,18}$/.test(trimmed);
+}
+
+/**
+ * Validate IFSC code
+ * Format: 4 letters (bank code) + 0 + 6 alphanumeric characters (branch code)
+ * Example: SBIN0001234, HDFC0000001
+ */
+function isValidIfscCode(ifsc: string): boolean {
+  const trimmed = ifsc.toUpperCase().trim();
+  // 4 letters + 0 + 6 alphanumeric
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(trimmed);
+}
+
+/**
+ * Validate UPI VPA
+ * Format: username@bankhandle
+ * Example: merchant@paytm, shop123@ybl
+ */
+function isValidUpiVpa(vpa: string): boolean {
+  const trimmed = vpa.trim().toLowerCase();
+  // Must have @ separator, username and handle both non-empty
+  return /^[a-z0-9._-]+@[a-z0-9]+$/.test(trimmed) && trimmed.length <= 100;
+}
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -111,6 +147,40 @@ router.post(
           422,
           ERROR_CODES.VALIDATION_ERROR,
           'Invalid email format'
+        );
+      }
+
+      // GL-AUD-008: Validate bank details if provided
+      if (body.bankAccountNumber && !isValidBankAccountNumber(body.bankAccountNumber)) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Invalid bank account number. Must be 9-18 digits.'
+        );
+      }
+
+      if (body.bankIfsc && !isValidIfscCode(body.bankIfsc)) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Invalid IFSC code. Format: 4 letters + 0 + 6 alphanumeric (e.g., SBIN0001234)'
+        );
+      }
+
+      if (body.upiVpa && !isValidUpiVpa(body.upiVpa)) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Invalid UPI VPA format. Must be username@bankhandle (e.g., merchant@paytm)'
+        );
+      }
+
+      // Validate that if bank account is provided, IFSC should also be provided
+      if (body.bankAccountNumber && !body.bankIfsc) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'IFSC code is required when bank account number is provided'
         );
       }
 
