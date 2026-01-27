@@ -117,9 +117,9 @@ test_endpoint \
   "-H 'X-Device-Token: $DEMO_TOKEN' -H 'Content-Type: application/json'"
 
 test_endpoint \
-  "POS Store Products" \
+  "POS Store Products List" \
   "GET" \
-  "/api/v1/pos/store-products" \
+  "/api/v1/pos/store-products/list" \
   "200" \
   "-H 'X-Device-Token: $DEMO_TOKEN' -H 'Content-Type: application/json'"
 
