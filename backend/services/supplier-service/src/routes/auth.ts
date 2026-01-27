@@ -1,0 +1,349 @@
+// Supplier Auth Routes
+// SM-005: Supplier registration and login APIs
+
+import { Router, Request, Response, NextFunction } from 'express';
+import type { Router as RouterType } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
+import { validateGstin } from '../utils/gstin.js';
+import { config } from '../config.js';
+
+const router: RouterType = Router();
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface RegisterBody {
+  businessName: string;
+  gstin: string;
+  email: string;
+  phone: string;
+  password: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  bankAccountName?: string;
+  upiVpa?: string;
+}
+
+interface LoginBody {
+  email: string;
+  password: string;
+}
+
+interface SupplierRow {
+  id: string;
+  gstin: string;
+  business_name: string;
+  primary_email: string;
+  primary_phone: string;
+  password_hash: string | null;
+  verification_status: string;
+  status: string;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+const BCRYPT_COST = 12;
+
+function generateSupplierToken(supplierId: string, email: string): string {
+  const payload = {
+    supplierId,
+    email,
+    actorType: 'SUPPLIER',
+  };
+
+  return jwt.sign(payload, config.jwtSecret, {
+    expiresIn: '7d',
+    issuer: 'supermandi-supplier-service',
+  });
+}
+
+// =============================================================================
+// AUTH ENDPOINTS
+// =============================================================================
+
+/**
+ * POST /auth/register
+ * Register a new supplier with GSTIN, bank details, and password
+ */
+router.post(
+  '/auth/register',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body as RegisterBody;
+
+      // Validate required fields
+      if (!body.businessName || !body.gstin || !body.email || !body.phone || !body.password) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Missing required fields: businessName, gstin, email, phone, password'
+        );
+      }
+
+      // Validate GSTIN format
+      const gstinResult = validateGstin(body.gstin);
+      if (!gstinResult.isValid) {
+        throw new ApiError(
+          400,
+          ERROR_CODES.VALIDATION_ERROR,
+          `Invalid GSTIN format: ${gstinResult.errors.join(', ')}`
+        );
+      }
+
+      // Validate password strength (minimum 8 characters)
+      if (body.password.length < 8) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Password must be at least 8 characters'
+        );
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.email)) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Invalid email format'
+        );
+      }
+
+      // Check if GSTIN already registered
+      const existingGstin = await queryOne<{ id: string }>(
+        'SELECT id FROM supplier.suppliers WHERE gstin = $1',
+        [body.gstin.toUpperCase()]
+      );
+
+      if (existingGstin) {
+        throw new ApiError(
+          409,
+          ERROR_CODES.CONFLICT,
+          'GSTIN already registered'
+        );
+      }
+
+      // Check if email already registered
+      const existingEmail = await queryOne<{ id: string }>(
+        'SELECT id FROM supplier.suppliers WHERE primary_email = $1',
+        [body.email.toLowerCase()]
+      );
+
+      if (existingEmail) {
+        throw new ApiError(
+          409,
+          ERROR_CODES.CONFLICT,
+          'Email already registered'
+        );
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(body.password, BCRYPT_COST);
+
+      // Insert supplier
+      const result = await queryOne<{ id: string }>(
+        `INSERT INTO supplier.suppliers (
+          gstin, pan, business_name, primary_email, primary_phone,
+          password_hash, bank_account_number, bank_ifsc, bank_account_name, upi_vpa,
+          verification_status, status
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', 'active'
+        ) RETURNING id`,
+        [
+          body.gstin.toUpperCase(),
+          gstinResult.pan,  // Extract PAN from GSTIN
+          body.businessName,
+          body.email.toLowerCase(),
+          body.phone,
+          passwordHash,
+          body.bankAccountNumber || null,
+          body.bankIfsc || null,
+          body.bankAccountName || null,
+          body.upiVpa || null,
+        ]
+      );
+
+      if (!result) {
+        throw new ApiError(
+          500,
+          ERROR_CODES.INTERNAL_ERROR,
+          'Failed to create supplier'
+        );
+      }
+
+      // Log the registration
+      await query(
+        `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, to_status, actor_id)
+         VALUES ('supplier', $1, 'submit', 'pending', $1)`,
+        [result.id]
+      );
+
+      res.status(201).json({
+        supplierId: result.id,
+        status: 'pending',
+        message: 'Registration successful. Pending SuperAdmin approval.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /auth/login
+ * Login with email and password, returns JWT
+ */
+router.post(
+  '/auth/login',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body as LoginBody;
+
+      // Validate required fields
+      if (!body.email || !body.password) {
+        throw new ApiError(
+          422,
+          ERROR_CODES.VALIDATION_ERROR,
+          'Missing required fields: email, password'
+        );
+      }
+
+      // Find supplier by email
+      const supplier = await queryOne<SupplierRow>(
+        `SELECT id, gstin, business_name, primary_email, primary_phone,
+                password_hash, verification_status, status
+         FROM supplier.suppliers
+         WHERE primary_email = $1`,
+        [body.email.toLowerCase()]
+      );
+
+      if (!supplier) {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Invalid credentials'
+        );
+      }
+
+      // Check if account is suspended
+      if (supplier.status === 'suspended') {
+        throw new ApiError(
+          403,
+          ERROR_CODES.FORBIDDEN,
+          'Account suspended'
+        );
+      }
+
+      // Check if password hash exists (supplier registered via new flow)
+      if (!supplier.password_hash) {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Invalid credentials'
+        );
+      }
+
+      // Verify password
+      const passwordValid = await bcrypt.compare(body.password, supplier.password_hash);
+      if (!passwordValid) {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Invalid credentials'
+        );
+      }
+
+      // Generate JWT
+      const token = generateSupplierToken(supplier.id, supplier.primary_email);
+
+      res.json({
+        token,
+        supplierId: supplier.id,
+        businessName: supplier.business_name,
+        status: supplier.verification_status,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /auth/me
+ * Get current supplier info from JWT token
+ */
+router.get(
+  '/auth/me',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Missing or invalid authorization header'
+        );
+      }
+
+      const token = authHeader.substring(7);
+
+      // Verify and decode token
+      let decoded: { supplierId: string; email: string; actorType: string };
+      try {
+        decoded = jwt.verify(token, config.jwtSecret) as typeof decoded;
+      } catch {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Invalid or expired token'
+        );
+      }
+
+      // Verify actorType
+      if (decoded.actorType !== 'SUPPLIER') {
+        throw new ApiError(
+          403,
+          ERROR_CODES.FORBIDDEN,
+          'Invalid token type'
+        );
+      }
+
+      // Get supplier info
+      const supplier = await queryOne<SupplierRow>(
+        `SELECT id, gstin, business_name, primary_email, primary_phone,
+                verification_status, status
+         FROM supplier.suppliers
+         WHERE id = $1`,
+        [decoded.supplierId]
+      );
+
+      if (!supplier) {
+        throw new ApiError(
+          404,
+          ERROR_CODES.NOT_FOUND,
+          'Supplier not found'
+        );
+      }
+
+      res.json({
+        supplierId: supplier.id,
+        gstin: supplier.gstin,
+        businessName: supplier.business_name,
+        email: supplier.primary_email,
+        phone: supplier.primary_phone,
+        status: supplier.verification_status,
+        accountStatus: supplier.status,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+export default router;

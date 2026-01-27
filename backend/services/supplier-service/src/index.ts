@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
 import { config } from './config.js';
 import supplierRoutes from './routes/suppliers.js';
+import authRoutes from './routes/auth.js';
 
 const app = express();
 
@@ -50,6 +51,12 @@ app.get('/healthz', (_req: Request, res: Response) => {
 // =============================================================================
 // API ROUTES
 // =============================================================================
+
+// Auth routes (SM-005):
+// POST /auth/register - Register new supplier
+// POST /auth/login - Login and get JWT
+// GET /auth/me - Get current supplier info
+app.use(authRoutes);
 
 // Supplier routes:
 // GET /suppliers/search - Global supplier search

@@ -16,6 +16,9 @@ export const config = {
   port: getEnvIntOrDefault('SUPPLIER_SERVICE_PORT', 3002),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
+  // JWT configuration for supplier auth (SM-005)
+  jwtSecret: getEnvOrDefault('JWT_SECRET', 'supermandi-dev-secret-change-in-production'),
+
   // Database configuration (uses shared pool from @supermandi/common)
   database: {
     host: getEnvOrDefault('DB_HOST', 'localhost'),

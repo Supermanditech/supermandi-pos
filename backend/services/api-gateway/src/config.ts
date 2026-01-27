@@ -52,6 +52,15 @@ function getPaymentServiceUrl(): string {
   return process.env['PAYMENT_SERVICE_URL'] || 'http://localhost:3011';
 }
 
+/**
+ * SM-005: Get supplier service URL
+ * Production: http://supermandi-supplier-service:3003
+ * Local dev: http://localhost:3002
+ */
+function getSupplierServiceUrl(): string {
+  return process.env['SUPPLIER_SERVICE_URL'] || 'http://localhost:3002';
+}
+
 export const config: GatewayConfig = {
   port: getEnvIntOrDefault('API_GATEWAY_PORT', 3000),
   env: getEnvOrDefault('NODE_ENV', 'development'),
@@ -170,6 +179,17 @@ export const config: GatewayConfig = {
       url: getMainBackendUrl(),
       pathPrefix: '/api/v1/platform',
       stripPrefix: false,
+    },
+    // ==========================================================================
+    // SM-005: Supplier auth routes -> supplier-service microservice
+    // Must come before general /api/v1/suppliers route for specificity
+    // ==========================================================================
+    {
+      name: 'supplier-auth',
+      url: getSupplierServiceUrl(),
+      pathPrefix: '/api/v1/supplier/auth',
+      stripPrefix: true,
+      rewriteTo: '/auth',
     },
     // AUD-042-A: Supplier routes -> main backend (monolith deployment)
     {
