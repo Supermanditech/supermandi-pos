@@ -34,7 +34,7 @@ function getRequiredEnv(key: string): string {
 }
 
 export const config: PaymentConfig = {
-  port: getEnvIntOrDefault('PAYMENT_SERVICE_PORT', 3010),
+  port: getEnvIntOrDefault('PAYMENT_SERVICE_PORT', 3011),
   env: getEnvOrDefault('NODE_ENV', 'development'),
   razorpay: {
     keyId: getRequiredEnv('RAZORPAY_KEY_ID'),

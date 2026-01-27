@@ -45,11 +45,11 @@ function getMainBackendUrl(): string {
 
 /**
  * SM-004: Get payment service URL
- * Production: http://supermandi-payment-service:3010
- * Local dev: http://localhost:3010
+ * Production: http://supermandi-payment-service:3011
+ * Local dev: http://localhost:3011
  */
 function getPaymentServiceUrl(): string {
-  return process.env['PAYMENT_SERVICE_URL'] || 'http://localhost:3010';
+  return process.env['PAYMENT_SERVICE_URL'] || 'http://localhost:3011';
 }
 
 export const config: GatewayConfig = {
