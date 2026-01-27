@@ -1,7 +1,7 @@
 // POS Payments Routes
 // SM-010: SELL UPI Init API (Generate QR)
 // SM-011: UPI Status Polling
-// SM-012: Cash + DUE Payment APIs
+// Note: Cash + DUE payments are handled in sales.ts with stock deduction
 
 import { Router, Request, Response, NextFunction } from "express";
 import { randomUUID } from "crypto";
@@ -101,10 +101,11 @@ posPaymentsRouter.post(
       await client.query("BEGIN");
 
       // 1. Verify sale exists and belongs to this store
+      // Note: sales.id is varchar, not uuid
       const saleResult = await client.query(
         `SELECT s.id, s.store_id, s.total_minor, s.status, s.payment_mode
          FROM public.sales s
-         WHERE s.id = $1::uuid AND s.store_id = $2::uuid`,
+         WHERE s.id = $1 AND s.store_id = $2::uuid`,
         [saleId, storeId]
       );
 
@@ -149,7 +150,7 @@ posPaymentsRouter.post(
       const existingPayment = await client.query(
         `SELECT id, upi_order_id, upi_qr_data, status, created_at
          FROM payments.sell_payments
-         WHERE sale_id = $1::uuid AND mode = 'UPI' AND status IN ('pending', 'initiated')
+         WHERE sale_id = $1 AND mode = 'UPI' AND status IN ('pending', 'initiated')
          ORDER BY created_at DESC
          LIMIT 1`,
         [saleId]
@@ -309,187 +310,6 @@ posPaymentsRouter.get(
     } catch (err: any) {
       console.error("[SM-011] UPI status error:", err);
       return res.status(500).json({ error: "Failed to get payment status" });
-    }
-  }
-);
-
-// =============================================================================
-// SM-012: SELL Cash Payment API
-// =============================================================================
-
-/**
- * POST /api/v1/pos/payments/cash
- * Record a cash payment for a sale
- *
- * Request: { saleId, amountMinor, receivedMinor }
- * Response: { paymentId, status, changeMinor }
- */
-posPaymentsRouter.post(
-  "/payments/cash",
-  requireDeviceToken,
-  async (req: Request, res: Response, _next: NextFunction) => {
-    const { storeId } = (req as unknown as PosRequest).posDevice;
-    const { saleId, amountMinor, receivedMinor } = req.body;
-
-    if (!saleId) {
-      return res.status(400).json({ error: "saleId is required" });
-    }
-    if (!amountMinor || typeof amountMinor !== 'number' || amountMinor <= 0) {
-      return res.status(400).json({ error: "amountMinor must be a positive number" });
-    }
-
-    const pool = getPool();
-    if (!pool) {
-      return res.status(503).json({ error: "database unavailable" });
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-
-      // Verify sale exists and is not already paid
-      const saleResult = await client.query(
-        `SELECT id, status, payment_mode FROM public.sales WHERE id = $1::uuid AND store_id = $2::uuid`,
-        [saleId, storeId]
-      );
-
-      if (saleResult.rowCount === 0) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({ error: "Sale not found" });
-      }
-
-      const sale = saleResult.rows[0];
-      if (sale.status === 'completed') {
-        await client.query("ROLLBACK");
-        return res.status(400).json({ error: "Sale is already completed" });
-      }
-
-      // Calculate change
-      const received = receivedMinor || amountMinor;
-      const changeMinor = Math.max(0, received - amountMinor);
-
-      // Create payment record
-      const paymentId = randomUUID();
-      await client.query(
-        `INSERT INTO payments.sell_payments (
-          id, sale_id, store_id, mode, amount_minor, status, completed_at
-        ) VALUES ($1, $2, $3, 'CASH', $4, 'completed', NOW())`,
-        [paymentId, saleId, storeId, amountMinor]
-      );
-
-      // Update sale status
-      await client.query(
-        `UPDATE public.sales SET status = 'completed', payment_mode = 'CASH' WHERE id = $1`,
-        [saleId]
-      );
-
-      await client.query("COMMIT");
-
-      return res.json({
-        paymentId,
-        status: 'completed',
-        changeMinor
-      });
-
-    } catch (err: any) {
-      await client.query("ROLLBACK");
-      console.error("[SM-012] Cash payment error:", err);
-      return res.status(500).json({ error: "Failed to process cash payment" });
-    } finally {
-      client.release();
-    }
-  }
-);
-
-// =============================================================================
-// SM-012: SELL DUE Payment API
-// =============================================================================
-
-/**
- * POST /api/v1/pos/payments/due
- * Record a DUE (credit) payment for a sale
- *
- * Request: { saleId, amountMinor, customerName, customerPhone, dueDate? }
- * Response: { paymentId, dueId, status }
- */
-posPaymentsRouter.post(
-  "/payments/due",
-  requireDeviceToken,
-  async (req: Request, res: Response, _next: NextFunction) => {
-    const { storeId } = (req as unknown as PosRequest).posDevice;
-    const { saleId, amountMinor, customerName, customerPhone, dueDate } = req.body;
-
-    if (!saleId) {
-      return res.status(400).json({ error: "saleId is required" });
-    }
-    if (!amountMinor || typeof amountMinor !== 'number' || amountMinor <= 0) {
-      return res.status(400).json({ error: "amountMinor must be a positive number" });
-    }
-
-    const pool = getPool();
-    if (!pool) {
-      return res.status(503).json({ error: "database unavailable" });
-    }
-
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-
-      // Verify sale exists and is not already paid
-      const saleResult = await client.query(
-        `SELECT id, status, payment_mode FROM public.sales WHERE id = $1::uuid AND store_id = $2::uuid`,
-        [saleId, storeId]
-      );
-
-      if (saleResult.rowCount === 0) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({ error: "Sale not found" });
-      }
-
-      const sale = saleResult.rows[0];
-      if (sale.status === 'completed') {
-        await client.query("ROLLBACK");
-        return res.status(400).json({ error: "Sale is already completed" });
-      }
-
-      // Create payment record
-      const paymentId = randomUUID();
-      await client.query(
-        `INSERT INTO payments.sell_payments (
-          id, sale_id, store_id, mode, amount_minor, status, initiated_at
-        ) VALUES ($1, $2, $3, 'DUE', $4, 'pending', NOW())`,
-        [paymentId, saleId, storeId, amountMinor]
-      );
-
-      // Create customer due record
-      const dueId = randomUUID();
-      await client.query(
-        `INSERT INTO payments.customer_dues (
-          id, store_id, sale_id, customer_name, customer_phone, amount_minor, status, due_date
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)`,
-        [dueId, storeId, saleId, customerName || null, customerPhone || null, amountMinor, dueDate || null]
-      );
-
-      // Update sale status
-      await client.query(
-        `UPDATE public.sales SET status = 'completed', payment_mode = 'DUE' WHERE id = $1`,
-        [saleId]
-      );
-
-      await client.query("COMMIT");
-
-      return res.json({
-        paymentId,
-        dueId,
-        status: 'pending'
-      });
-
-    } catch (err: any) {
-      await client.query("ROLLBACK");
-      console.error("[SM-012] DUE payment error:", err);
-      return res.status(500).json({ error: "Failed to process DUE payment" });
-    } finally {
-      client.release();
     }
   }
 );
