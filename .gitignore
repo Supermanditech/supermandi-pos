@@ -54,6 +54,10 @@ fastlane/test_output
 dist/
 web-build/
 
+# Next.js
+.next/
+out/
+
 # Tooling artifacts (do not commit)
 screenshots/
 artifacts/
