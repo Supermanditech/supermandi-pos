@@ -23,6 +23,7 @@ export type UiStatusResponse = {
     suppliersEnabled?: boolean;
     ordersEnabled?: boolean;
     creditEnabled?: boolean; // SM-022: Credit/Loans feature flag
+    bnplEnabled?: boolean; // GL-AUD-007: BNPL badge on BUY screen
   };
 };
 

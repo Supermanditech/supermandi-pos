@@ -37,15 +37,19 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   // CONTRACT-LOCK-UI-STATUS-001: Add missing feature flags expected by frontend
   let inventoryEnabled = true;
   let suppliersEnabled = true;
+  // GL-AUD-007: BNPL status for BUY screen badge
+  let bnplEnabled = false;
   if (status.storeId) {
     try {
       const storeRes = await pool.query(
-        `SELECT name, code, status FROM platform.stores WHERE id = $1::uuid`,
+        `SELECT name, code, status, bnpl_enabled FROM platform.stores WHERE id = $1::uuid`,
         [status.storeId]
       );
       const storeRow = storeRes.rows[0];
       storeName = storeRow?.name ? String(storeRow.name) : null;
       storeCode = storeRow?.code ? String(storeRow.code) : null;
+      // GL-AUD-007: BNPL enabled status
+      bnplEnabled = storeRow?.bnpl_enabled === true;
     } catch (storeErr: any) {
       console.error("[uiStatus] Store lookup failed:", storeErr?.message);
     }
@@ -121,6 +125,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       // CONTRACT-LOCK-UI-STATUS-001: Missing feature flags
       inventoryEnabled,
       suppliersEnabled,
+      // GL-AUD-007: BNPL availability for BUY screen badge
+      bnplEnabled,
       // Legacy alias for buyEnabled
       ordersEnabled: buyEnabled
     }

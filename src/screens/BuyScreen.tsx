@@ -27,6 +27,7 @@ import * as catalogApi from "../services/api/catalogApi";
 import type { CatalogProduct } from "../services/api/catalogApi";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import { getDeviceStoreId } from "../services/deviceSession";
+import { fetchUiStatus } from "../services/api/uiStatusApi";
 
 // =============================================================================
 // TYPES
@@ -85,6 +86,9 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
+  // GL-AUD-007: BNPL badge state
+  const [bnplEnabled, setBnplEnabled] = useState(false);
+
   // Get cart quantity for a product
   const getCartQuantity = useCallback(
     (productId: string): number => {
@@ -95,9 +99,15 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     [cartItems]
   );
 
-  // Load store ID on mount
+  // Load store ID and features on mount
   useEffect(() => {
     getDeviceStoreId().then(setStoreId);
+    // GL-AUD-007: Fetch BNPL status for badge
+    fetchUiStatus().then((status) => {
+      setBnplEnabled(status.features?.bnplEnabled ?? false);
+    }).catch(() => {
+      // Ignore errors - badge just won't show
+    });
   }, []);
 
   // Debounce search query
@@ -402,6 +412,18 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
             />
           </Pressable>
         )}
+
+        {/* GL-AUD-007: BNPL Badge */}
+        {bnplEnabled && (
+          <View style={styles.bnplBadge}>
+            <MaterialCommunityIcons
+              name="credit-card-clock"
+              size={14}
+              color={theme.colors.success}
+            />
+            <Text style={styles.bnplBadgeText}>{t('buy.bnplAvailable', { defaultValue: 'BNPL' })}</Text>
+          </View>
+        )}
       </View>
 
       {/* Category Filter */}
@@ -636,6 +658,21 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // GL-AUD-007: BNPL Badge Styles
+  bnplBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.successSoft,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.md,
+    gap: 4,
+  },
+  bnplBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.success,
   },
   gridContent: {
     paddingHorizontal: theme.spacing.xs,
