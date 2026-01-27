@@ -63,18 +63,21 @@ function generateOrderId(): string {
 }
 
 // =============================================================================
-// SM-010: SELL UPI Init API
+// SM-010: SELL UPI Init API (Server-side QR generation)
+// Note: /payments/upi/init exists in sales.ts for client-side intent generation.
+// This endpoint generates server-side QR with Razorpay order tracking.
 // =============================================================================
 
 /**
- * POST /api/v1/pos/payments/upi/init
- * Initialize UPI payment for a sale and generate QR code data
+ * POST /api/v1/pos/payments/upi/generate
+ * Initialize UPI payment for a sale and generate server-side QR code data
+ * Creates a Razorpay order and sell_payments ledger entry
  *
  * Request: { saleId: string, amountMinor: number }
  * Response: { paymentId, orderId, qrData, upiVpa, expiresAt }
  */
 posPaymentsRouter.post(
-  "/payments/upi/init",
+  "/payments/upi/generate",
   requireDeviceToken,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId, deviceId } = (req as unknown as PosRequest).posDevice;
