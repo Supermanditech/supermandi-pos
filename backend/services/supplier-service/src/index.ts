@@ -7,6 +7,7 @@ import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
 import { config } from './config.js';
 import supplierRoutes from './routes/suppliers.js';
 import authRoutes from './routes/auth.js';
+import productsRoutes from './routes/products.js';
 
 const app = express();
 
@@ -66,6 +67,14 @@ app.use(authRoutes);
 // POST /stores/:storeId/suppliers/request - Request new supplier
 // GET /stores/:storeId/suppliers/requests - Get supplier requests
 app.use(supplierRoutes);
+
+// Product routes (SM-006):
+// POST /products - Create new product
+// GET /products - List supplier's products
+// GET /products/:productId - Get single product
+// PUT /products/:productId - Update product (triggers re-approval)
+// PATCH /products/:productId/stock - Update stock only
+app.use(productsRoutes);
 
 // =============================================================================
 // ERROR HANDLING

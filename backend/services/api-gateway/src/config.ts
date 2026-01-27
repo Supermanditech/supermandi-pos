@@ -191,6 +191,14 @@ export const config: GatewayConfig = {
       stripPrefix: true,
       rewriteTo: '/auth',
     },
+    // SM-006: Supplier product routes -> supplier-service microservice
+    {
+      name: 'supplier-products',
+      url: getSupplierServiceUrl(),
+      pathPrefix: '/api/v1/supplier/products',
+      stripPrefix: true,
+      rewriteTo: '/products',
+    },
     // AUD-042-A: Supplier routes -> main backend (monolith deployment)
     {
       name: 'supplier',
