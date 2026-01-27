@@ -1,10 +1,31 @@
 // Supplier Products Routes
 // SM-006: Supplier Product CRUD API
+// SM-007: Supplier CSV Bulk Upload API
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
+import multer from 'multer';
+import { parse } from 'csv-parse/sync';
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
 import { supplierAuth, AuthenticatedRequest } from '../middleware/supplierAuth.js';
+
+// =============================================================================
+// MULTER CONFIGURATION (SM-007)
+// =============================================================================
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only CSV files are allowed'));
+    }
+  },
+});
 
 const router: RouterType = Router();
 
@@ -455,6 +476,252 @@ router.patch(
         message: 'Stock updated successfully.',
       });
     } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// =============================================================================
+// CSV BULK UPLOAD (SM-007)
+// =============================================================================
+
+interface CsvRow {
+  sku_code: string;
+  name: string;
+  brand?: string;
+  category?: string;
+  barcode?: string;
+  mrp?: string;
+  purchase_price: string;
+  moq: string;
+  stock_qty?: string;
+}
+
+interface CsvError {
+  row: number;
+  error: string;
+}
+
+/**
+ * POST /products/csv-upload
+ * Bulk upload products from CSV file
+ * Max file size: 5MB, Max rows: 1000
+ */
+router.post(
+  '/products/csv-upload',
+  supplierAuth,
+  upload.single('file'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { supplier } = req as AuthenticatedRequest;
+      const file = req.file;
+
+      if (!file) {
+        throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'No CSV file provided');
+      }
+
+      // Parse CSV content
+      const csvContent = file.buffer.toString('utf-8');
+      let records: CsvRow[];
+
+      try {
+        records = parse(csvContent, {
+          columns: true,
+          skip_empty_lines: true,
+          trim: true,
+          relax_column_count: true,
+        }) as CsvRow[];
+      } catch (parseError) {
+        throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'Invalid CSV format');
+      }
+
+      // Validate row count
+      if (records.length === 0) {
+        throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'CSV file is empty');
+      }
+
+      if (records.length > 1000) {
+        throw new ApiError(
+          400,
+          ERROR_CODES.VALIDATION_ERROR,
+          `CSV file has ${records.length} rows, maximum allowed is 1000`
+        );
+      }
+
+      // Get existing SKUs for this supplier to check duplicates
+      const existingSkus = await query<{ supplier_sku: string }>(
+        `SELECT supplier_sku FROM catalog.supplier_products WHERE supplier_id = $1`,
+        [supplier.supplierId]
+      );
+      const existingSkuSet = new Set(existingSkus.map(r => r.supplier_sku));
+
+      // Process each row
+      const errors: CsvError[] = [];
+      const validProducts: Array<{
+        skuCode: string;
+        name: string;
+        brand: string | null;
+        category: string | null;
+        barcode: string | null;
+        mrp: number | null;
+        purchasePrice: number;
+        moq: number;
+        stockQty: number;
+      }> = [];
+      const seenSkus = new Set<string>();
+
+      for (let i = 0; i < records.length; i++) {
+        const row = records[i];
+        const rowNum = i + 2; // +2 because row 1 is header, and we're 0-indexed
+
+        // Validate required fields
+        if (!row.sku_code || row.sku_code.trim() === '') {
+          errors.push({ row: rowNum, error: 'Missing required field: sku_code' });
+          continue;
+        }
+        if (!row.name || row.name.trim() === '') {
+          errors.push({ row: rowNum, error: 'Missing required field: name' });
+          continue;
+        }
+        if (!row.purchase_price || row.purchase_price.trim() === '') {
+          errors.push({ row: rowNum, error: 'Missing required field: purchase_price' });
+          continue;
+        }
+        if (!row.moq || row.moq.trim() === '') {
+          errors.push({ row: rowNum, error: 'Missing required field: moq' });
+          continue;
+        }
+
+        const skuCode = row.sku_code.trim();
+        const name = row.name.trim();
+        const brand = row.brand?.trim() || null;
+        const category = row.category?.trim() || null;
+        const barcode = row.barcode?.trim() || null;
+
+        // Parse numeric values
+        const purchasePrice = parseInt(row.purchase_price, 10);
+        const moq = parseInt(row.moq, 10);
+        const mrp = row.mrp ? parseInt(row.mrp, 10) : null;
+        const stockQty = row.stock_qty ? parseInt(row.stock_qty, 10) : 0;
+
+        // Validate purchase price
+        if (isNaN(purchasePrice) || purchasePrice < 0) {
+          errors.push({ row: rowNum, error: 'purchase_price must be a positive integer (in paise)' });
+          continue;
+        }
+
+        // Validate MOQ
+        if (isNaN(moq) || moq < 1) {
+          errors.push({ row: rowNum, error: 'moq must be a positive integer >= 1' });
+          continue;
+        }
+
+        // Validate MRP if provided
+        if (mrp !== null && (isNaN(mrp) || mrp < 0)) {
+          errors.push({ row: rowNum, error: 'mrp must be a positive integer (in paise)' });
+          continue;
+        }
+
+        // Validate stock qty
+        if (isNaN(stockQty) || stockQty < 0) {
+          errors.push({ row: rowNum, error: 'stock_qty must be a non-negative integer' });
+          continue;
+        }
+
+        // Validate barcode format (8-14 digits)
+        if (barcode && !/^\d{8,14}$/.test(barcode)) {
+          errors.push({ row: rowNum, error: 'Invalid barcode format (must be 8-14 digits)' });
+          continue;
+        }
+
+        // Check for duplicate SKU in existing products
+        if (existingSkuSet.has(skuCode)) {
+          errors.push({ row: rowNum, error: `Duplicate SKU code: ${skuCode} already exists` });
+          continue;
+        }
+
+        // Check for duplicate SKU within this CSV
+        if (seenSkus.has(skuCode)) {
+          errors.push({ row: rowNum, error: `Duplicate SKU code: ${skuCode} appears multiple times in CSV` });
+          continue;
+        }
+
+        seenSkus.add(skuCode);
+        validProducts.push({
+          skuCode,
+          name,
+          brand,
+          category,
+          barcode,
+          mrp,
+          purchasePrice,
+          moq,
+          stockQty,
+        });
+      }
+
+      // Insert valid products
+      let imported = 0;
+      for (const product of validProducts) {
+        try {
+          const result = await queryOne<{ id: string }>(
+            `INSERT INTO catalog.supplier_products (
+              supplier_id, supplier_sku, barcode, name, category, brand,
+              mrp, purchase_price, stock_quantity, moq,
+              approval_status, is_active
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true
+            ) RETURNING id`,
+            [
+              supplier.supplierId,
+              product.skuCode,
+              product.barcode,
+              product.name,
+              product.category,
+              product.brand,
+              product.mrp,
+              product.purchasePrice,
+              product.stockQty,
+              product.moq,
+            ]
+          );
+
+          if (result) {
+            imported++;
+            // Log the bulk import submission
+            await query(
+              `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, to_status, actor_id, changes)
+               VALUES ('product', $1, 'bulk_import', 'pending', $2, $3)`,
+              [result.id, supplier.supplierId, JSON.stringify({ source: 'csv_upload' })]
+            );
+          }
+        } catch (dbError) {
+          // If insertion fails (e.g., race condition), add to errors
+          const errorMessage = dbError instanceof Error ? dbError.message : 'Database error';
+          errors.push({
+            row: validProducts.indexOf(product) + 2,
+            error: `Failed to insert: ${errorMessage}`,
+          });
+        }
+      }
+
+      res.json({
+        imported,
+        failed: errors.length,
+        errors: errors.slice(0, 100), // Limit error response to 100 errors
+      });
+    } catch (error) {
+      // Handle multer errors
+      if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            error: {
+              code: ERROR_CODES.VALIDATION_ERROR,
+              message: 'File size exceeds 5MB limit',
+            },
+          });
+        }
+      }
       next(error);
     }
   }
