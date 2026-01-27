@@ -2,11 +2,12 @@
 // SM-004: Health endpoint with Razorpay connection status
 
 import { Router, Request, Response } from 'express';
+import type { Router as RouterType } from 'express';
 import { healthCheck } from '@supermandi/common';
 import { checkRazorpayConnection } from '../services/razorpayClient.js';
 import { config } from '../config.js';
 
-const router = Router();
+const router: RouterType = Router();
 
 /**
  * GET /health

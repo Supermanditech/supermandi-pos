@@ -3,7 +3,7 @@
 
 import express from 'express';
 import helmet from 'helmet';
-import { initDb, closeDb } from '@supermandi/common';
+import { getPool, closePool } from '@supermandi/common';
 import { config } from './config.js';
 import healthRoutes from './routes/health.js';
 
@@ -27,7 +27,7 @@ app.use('/', healthRoutes);
 // Graceful shutdown
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received. Shutting down gracefully...`);
-  await closeDb();
+  await closePool();
   process.exit(0);
 };
 
@@ -37,9 +37,9 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 // Start server
 const startServer = async () => {
   try {
-    // Initialize database connection
-    await initDb();
-    console.log('Database connection established');
+    // Initialize database connection pool
+    getPool();
+    console.log('Database connection pool initialized');
 
     app.listen(config.port, () => {
       console.log(`Payment service running on port ${config.port}`);
