@@ -1,6 +1,7 @@
 // POS Payments Routes
 // SM-010: SELL UPI Init API (Generate QR)
 // SM-011: UPI Status Polling
+// SM-013: SELL Split Payment API
 // Note: Cash + DUE payments are handled in sales.ts with stock deduction
 
 import { Router, Request, Response, NextFunction } from "express";
@@ -310,6 +311,367 @@ posPaymentsRouter.get(
     } catch (err: any) {
       console.error("[SM-011] UPI status error:", err);
       return res.status(500).json({ error: "Failed to get payment status" });
+    }
+  }
+);
+
+// =============================================================================
+// SM-013: SELL Split Payment API
+// =============================================================================
+
+interface SplitPaymentItem {
+  mode: 'UPI' | 'CASH' | 'DUE';
+  amountMinor: number;
+}
+
+interface SplitPaymentRequest {
+  saleId: string;
+  payments: SplitPaymentItem[];
+}
+
+/**
+ * POST /api/v1/pos/payments/split
+ * Create a split payment for a sale (e.g., part UPI + part Cash)
+ *
+ * Request: { saleId, payments: [{ mode: "UPI", amountMinor }, { mode: "CASH", amountMinor }] }
+ * Response: { paymentIds, upiPayment?, cashPayment?, totalAmount }
+ */
+posPaymentsRouter.post(
+  "/payments/split",
+  requireDeviceToken,
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const { storeId } = (req as unknown as PosRequest).posDevice;
+    const { saleId, payments } = req.body as SplitPaymentRequest;
+
+    // Validate request
+    if (!saleId) {
+      return res.status(400).json({ error: "saleId is required" });
+    }
+    if (!payments || !Array.isArray(payments) || payments.length < 2) {
+      return res.status(400).json({ error: "payments must be an array with at least 2 payment methods" });
+    }
+
+    // Validate each payment
+    const validModes = ['UPI', 'CASH', 'DUE'];
+    for (const p of payments) {
+      if (!validModes.includes(p.mode)) {
+        return res.status(400).json({ error: `Invalid payment mode: ${p.mode}` });
+      }
+      if (!p.amountMinor || typeof p.amountMinor !== 'number' || p.amountMinor <= 0) {
+        return res.status(400).json({ error: "Each payment must have a positive amountMinor" });
+      }
+    }
+
+    // Check for duplicate modes
+    const modes = payments.map(p => p.mode);
+    if (new Set(modes).size !== modes.length) {
+      return res.status(400).json({ error: "Duplicate payment modes not allowed" });
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      return res.status(503).json({ error: "database unavailable" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // 1. Verify sale exists and get total
+      const saleResult = await client.query(
+        `SELECT id, store_id, total_minor, status, payment_mode
+         FROM public.sales
+         WHERE id = $1 AND store_id = $2::uuid`,
+        [saleId, storeId]
+      );
+
+      if (saleResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Sale not found" });
+      }
+
+      const sale = saleResult.rows[0];
+
+      // Check if sale is already paid
+      if (sale.status === 'PAID' || sale.status === 'completed' || sale.payment_mode) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Sale is already paid" });
+      }
+
+      // 2. Validate total matches
+      const totalPayment = payments.reduce((sum, p) => sum + p.amountMinor, 0);
+      if (totalPayment !== sale.total_minor) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          error: "Payment total does not match sale total",
+          expected: sale.total_minor,
+          received: totalPayment
+        });
+      }
+
+      // 3. Get store info for UPI VPA
+      const storeResult = await client.query(
+        `SELECT id, name, upi_vpa FROM platform.stores WHERE id = $1::uuid`,
+        [storeId]
+      );
+
+      if (storeResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Store not found" });
+      }
+
+      const store = storeResult.rows[0];
+
+      // Check if UPI is in split and store has VPA
+      const hasUpi = payments.some(p => p.mode === 'UPI');
+      if (hasUpi && !store.upi_vpa) {
+        await client.query("ROLLBACK");
+        return res.status(402).json({
+          error: "Store UPI not configured",
+          code: "UPI_NOT_CONFIGURED"
+        });
+      }
+
+      // 4. Create payment records
+      const paymentIds: string[] = [];
+      let upiPayment: { paymentId: string; orderId: string; qrData: string; expiresAt: string } | null = null;
+      let cashPayment: { paymentId: string; status: string } | null = null;
+      let duePayment: { paymentId: string; status: string } | null = null;
+
+      for (const p of payments) {
+        const paymentId = randomUUID();
+        paymentIds.push(paymentId);
+
+        if (p.mode === 'UPI') {
+          // Generate UPI QR
+          const orderId = generateOrderId();
+          const amountRupees = p.amountMinor / 100;
+          const qrData = generateUpiIntentString({
+            vpa: store.upi_vpa,
+            payeeName: store.name || 'SuperMandi Store',
+            amountRupees,
+            txnRef: orderId,
+            note: `Split ${saleId.substring(0, 8)}`
+          });
+
+          const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+          const idempotencyKey = `split_upi_${saleId}_${Date.now()}`;
+
+          await client.query(
+            `INSERT INTO payments.sell_payments (
+              id, sale_id, store_id, mode, amount_minor,
+              upi_order_id, upi_qr_data, upi_vpa,
+              status, initiated_at, idempotency_key, is_split
+            ) VALUES ($1, $2, $3, 'UPI', $4, $5, $6, $7, 'initiated', NOW(), $8, true)`,
+            [paymentId, saleId, storeId, p.amountMinor, orderId, qrData, store.upi_vpa, idempotencyKey]
+          );
+
+          upiPayment = {
+            paymentId,
+            orderId,
+            qrData,
+            expiresAt: expiresAt.toISOString()
+          };
+
+        } else if (p.mode === 'CASH') {
+          // Cash payment - awaits UPI completion
+          await client.query(
+            `INSERT INTO payments.sell_payments (
+              id, sale_id, store_id, mode, amount_minor,
+              status, initiated_at, is_split
+            ) VALUES ($1, $2, $3, 'CASH', $4, 'pending', NOW(), true)`,
+            [paymentId, saleId, storeId, p.amountMinor]
+          );
+
+          cashPayment = {
+            paymentId,
+            status: 'pending'  // Will become 'awaiting_cash' after UPI completes
+          };
+
+        } else if (p.mode === 'DUE') {
+          // DUE payment
+          await client.query(
+            `INSERT INTO payments.sell_payments (
+              id, sale_id, store_id, mode, amount_minor,
+              status, initiated_at, is_split
+            ) VALUES ($1, $2, $3, 'DUE', $4, 'pending', NOW(), true)`,
+            [paymentId, saleId, storeId, p.amountMinor]
+          );
+
+          duePayment = {
+            paymentId,
+            status: 'pending'
+          };
+        }
+      }
+
+      // 5. Update sale to indicate split payment in progress
+      await client.query(
+        `UPDATE public.sales SET payment_mode = 'SPLIT' WHERE id = $1`,
+        [saleId]
+      );
+
+      await client.query("COMMIT");
+
+      console.log(`[SM-013] Split payment initiated: saleId=${saleId}, payments=${payments.length}, storeId=${storeId}`);
+
+      const response: Record<string, unknown> = {
+        paymentIds,
+        totalAmount: totalPayment
+      };
+
+      if (upiPayment) {
+        response.upiPayment = upiPayment;
+      }
+      if (cashPayment) {
+        response.cashPayment = cashPayment;
+      }
+      if (duePayment) {
+        response.duePayment = duePayment;
+      }
+
+      return res.json(response);
+
+    } catch (err: any) {
+      await client.query("ROLLBACK");
+      console.error("[SM-013] Split payment error:", err);
+
+      if (err.code === '23505') {
+        return res.status(409).json({ error: "Duplicate payment request" });
+      }
+
+      return res.status(500).json({ error: "Failed to create split payment" });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// =============================================================================
+// SM-013: Confirm Cash Portion of Split Payment
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/payments/split/:paymentId/confirm-cash
+ * Confirm cash collection for split payment after UPI completes
+ *
+ * Request: { receivedMinor?: number }
+ * Response: { status, changeMinor }
+ */
+posPaymentsRouter.post(
+  "/payments/split/:paymentId/confirm-cash",
+  requireDeviceToken,
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const { storeId } = (req as unknown as PosRequest).posDevice;
+    const { paymentId } = req.params;
+    const { receivedMinor } = req.body as { receivedMinor?: number };
+
+    if (!paymentId) {
+      return res.status(400).json({ error: "paymentId is required" });
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      return res.status(503).json({ error: "database unavailable" });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Get payment and verify it's a CASH split payment
+      const paymentResult = await client.query(
+        `SELECT sp.id, sp.sale_id, sp.mode, sp.amount_minor, sp.status, sp.is_split
+         FROM payments.sell_payments sp
+         WHERE sp.id = $1::uuid AND sp.store_id = $2::uuid`,
+        [paymentId, storeId]
+      );
+
+      if (paymentResult.rowCount === 0) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      const payment = paymentResult.rows[0];
+
+      if (payment.mode !== 'CASH') {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "This endpoint is only for cash payments" });
+      }
+
+      if (!payment.is_split) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "This is not a split payment" });
+      }
+
+      if (payment.status === 'completed') {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "Payment already completed" });
+      }
+
+      // Check if UPI portion is completed
+      const upiCheck = await client.query(
+        `SELECT id, status FROM payments.sell_payments
+         WHERE sale_id = $1 AND mode = 'UPI' AND is_split = true`,
+        [payment.sale_id]
+      );
+
+      if (upiCheck.rowCount && upiCheck.rows[0]) {
+        const upiPayment = upiCheck.rows[0];
+        if (upiPayment.status !== 'completed') {
+          await client.query("ROLLBACK");
+          return res.status(400).json({
+            error: "UPI payment must complete before collecting cash",
+            upiStatus: upiPayment.status
+          });
+        }
+      }
+
+      // Calculate change
+      const received = receivedMinor || payment.amount_minor;
+      const changeMinor = Math.max(0, received - payment.amount_minor);
+
+      // Update cash payment to completed
+      await client.query(
+        `UPDATE payments.sell_payments
+         SET status = 'completed', completed_at = NOW()
+         WHERE id = $1`,
+        [paymentId]
+      );
+
+      // Check if all payments for this sale are completed
+      const pendingPayments = await client.query(
+        `SELECT COUNT(*) as pending FROM payments.sell_payments
+         WHERE sale_id = $1 AND status != 'completed' AND is_split = true`,
+        [payment.sale_id]
+      );
+
+      const pendingCount = parseInt(pendingPayments.rows[0]?.pending || '0', 10);
+
+      if (pendingCount === 0) {
+        // All payments complete - update sale status
+        await client.query(
+          `UPDATE public.sales SET status = 'completed' WHERE id = $1`,
+          [payment.sale_id]
+        );
+      }
+
+      await client.query("COMMIT");
+
+      console.log(`[SM-013] Cash confirmed: paymentId=${paymentId}, change=${changeMinor}`);
+
+      return res.json({
+        status: 'completed',
+        changeMinor,
+        saleComplete: pendingCount === 0
+      });
+
+    } catch (err: any) {
+      await client.query("ROLLBACK");
+      console.error("[SM-013] Confirm cash error:", err);
+      return res.status(500).json({ error: "Failed to confirm cash payment" });
+    } finally {
+      client.release();
     }
   }
 );
