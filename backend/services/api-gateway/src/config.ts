@@ -181,23 +181,14 @@ export const config: GatewayConfig = {
       stripPrefix: false,
     },
     // ==========================================================================
-    // SM-005: Supplier auth routes -> supplier-service microservice
-    // Must come before general /api/v1/suppliers route for specificity
+    // SM-005/SM-006/SM-007: Supplier Portal routes -> main-backend (monolith)
+    // Handles supplier auth, products, profile, orders, dashboard
     // ==========================================================================
     {
-      name: 'supplier-auth',
-      url: getSupplierServiceUrl(),
-      pathPrefix: '/api/v1/supplier/auth',
-      stripPrefix: true,
-      rewriteTo: '/auth',
-    },
-    // SM-006: Supplier product routes -> supplier-service microservice
-    {
-      name: 'supplier-products',
-      url: getSupplierServiceUrl(),
-      pathPrefix: '/api/v1/supplier/products',
-      stripPrefix: true,
-      rewriteTo: '/products',
+      name: 'supplier-portal',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/supplier',
+      stripPrefix: false,
     },
     // AUD-042-A: Supplier routes -> main backend (monolith deployment)
     {
