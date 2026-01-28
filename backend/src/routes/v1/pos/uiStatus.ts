@@ -39,10 +39,12 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let suppliersEnabled = true;
   // GL-AUD-007: BNPL status for BUY screen badge
   let bnplEnabled = false;
+  // CA-1.4-005: Credit enabled status for credit/loans feature
+  let creditEnabled = false;
   if (status.storeId) {
     try {
       const storeRes = await pool.query(
-        `SELECT name, code, status, bnpl_enabled FROM platform.stores WHERE id = $1::uuid`,
+        `SELECT name, code, status, bnpl_enabled, credit_enabled FROM platform.stores WHERE id = $1::uuid`,
         [status.storeId]
       );
       const storeRow = storeRes.rows[0];
@@ -50,6 +52,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       storeCode = storeRow?.code ? String(storeRow.code) : null;
       // GL-AUD-007: BNPL enabled status
       bnplEnabled = storeRow?.bnpl_enabled === true;
+      // CA-1.4-005: Credit enabled status from store settings
+      creditEnabled = storeRow?.credit_enabled === true;
     } catch (storeErr: any) {
       console.error("[uiStatus] Store lookup failed:", storeErr?.message);
     }
@@ -127,6 +131,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       suppliersEnabled,
       // GL-AUD-007: BNPL availability for BUY screen badge
       bnplEnabled,
+      // CA-1.4-005: Credit/Loans feature flag from store settings
+      creditEnabled,
       // Legacy alias for buyEnabled
       ordersEnabled: buyEnabled
     }
