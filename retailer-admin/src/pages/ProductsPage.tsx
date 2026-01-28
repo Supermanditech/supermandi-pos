@@ -331,6 +331,34 @@ export default function ProductsPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // GL-CRIT-0035: Barcode validation for common formats
+  // Accepts: EAN-13, EAN-8, UPC-A (12 digits), UPC-E (8 digits), or alphanumeric internal codes
+  const validateBarcode = (barcode: string): string | null => {
+    if (!barcode || !barcode.trim()) return null; // Empty is allowed
+    const trimmed = barcode.trim();
+
+    // Allow only alphanumeric, hyphens, and underscores (common for internal SKUs)
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+      return 'Barcode can only contain letters, numbers, hyphens, and underscores';
+    }
+
+    // If all numeric, validate length for standard formats
+    if (/^\d+$/.test(trimmed)) {
+      const len = trimmed.length;
+      // Standard barcode lengths: EAN-8 (8), UPC-A (12), EAN-13 (13), ITF-14 (14)
+      if (len < 8 || (len > 8 && len < 12) || len > 14) {
+        return 'Numeric barcodes should be 8, 12, 13, or 14 digits (EAN-8, UPC-A, EAN-13, ITF-14)';
+      }
+    }
+
+    // Length check for all barcodes
+    if (trimmed.length > 50) {
+      return 'Barcode is too long (max 50 characters)';
+    }
+
+    return null; // Valid
+  };
+
   const handleModeChange = (mode: 'PACKAGED' | 'LOOSE_BULK') => {
     setFormData(prev => ({
       ...prev,
@@ -365,6 +393,14 @@ export default function ProductsPage() {
       // Purchase price is now required per E2E Go-Live spec
       if (!formData.purchasePrice || parseFloat(formData.purchasePrice) <= 0) {
         throw new Error('Valid purchase price is required for ledger tracking');
+      }
+
+      // GL-CRIT-0035: Validate barcode format
+      if (formData.mode === 'PACKAGED' && formData.barcode) {
+        const barcodeError = validateBarcode(formData.barcode);
+        if (barcodeError) {
+          throw new Error(barcodeError);
+        }
       }
 
       // CRITICAL: Convert rupees to paise (integer minor units)
@@ -1073,8 +1109,15 @@ export default function ProductsPage() {
                       min="0"
                       value={formData.openingStockQty}
                       onChange={handleInputChange}
+                      // GL-CRIT-0040: Disable in edit mode to prevent inventory ledger bypass
+                      disabled={!!editingProduct}
+                      style={editingProduct ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : undefined}
                     />
-                    <small style={{ color: 'var(--text-muted)' }}>Creates ledger entry if &gt; 0</small>
+                    <small style={{ color: 'var(--text-muted)' }}>
+                      {editingProduct
+                        ? 'Cannot modify opening stock for existing products (use inventory adjustments)'
+                        : 'Creates ledger entry if > 0'}
+                    </small>
                   </div>
 
                   <div className="form-group">

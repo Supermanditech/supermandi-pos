@@ -61,7 +61,12 @@ export default function SupplierCatalogPage() {
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch supplier catalog');
       const data = await response.json();
-      setProducts(data.data || []);
+      // GL-CRIT-0037: Append products when loading more (offset > 0), replace on new search (offset = 0)
+      if (offset > 0) {
+        setProducts(prev => [...prev, ...(data.data || [])]);
+      } else {
+        setProducts(data.data || []);
+      }
       setPagination(data.pagination || { total: 0, limit: 50, offset: 0, hasMore: false });
     } catch (err) {
       console.error('Error fetching catalog:', err);

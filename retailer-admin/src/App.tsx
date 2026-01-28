@@ -32,8 +32,9 @@ function TrailingSlashRedirect() {
 }
 
 // Protected route wrapper
+// GL-CRIT-0023: Validates that URL storeCode matches authenticated user's store
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, store } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -44,15 +45,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Extract storeCode from current path
+  const match = location.pathname.match(/^\/s\/([^/]+)/);
+  const urlStoreCode = match?.[1];
+
   if (!isAuthenticated) {
-    // Extract storeCode from current path
-    const match = location.pathname.match(/^\/s\/([^/]+)/);
-    const storeCode = match?.[1];
-    if (!storeCode) {
+    if (!urlStoreCode) {
       return <Navigate to="/" replace />;
     }
     // Redirect to login, preserving the intended destination
-    return <Navigate to={`/s/${storeCode}/login`} state={{ from: location }} replace />;
+    return <Navigate to={`/s/${urlStoreCode}/login`} state={{ from: location }} replace />;
+  }
+
+  // GL-CRIT-0023: Validate URL storeCode matches user's authenticated store
+  // This prevents users from accessing other stores' dashboards via URL manipulation
+  if (store && urlStoreCode && urlStoreCode.toLowerCase() !== store.code.toLowerCase()) {
+    console.warn(`[GL-CRIT-0023] URL storeCode "${urlStoreCode}" doesn't match user's store "${store.code}". Redirecting.`);
+    // Redirect to user's actual store
+    return <Navigate to={`/s/${store.code}`} replace />;
   }
 
   return <>{children}</>;

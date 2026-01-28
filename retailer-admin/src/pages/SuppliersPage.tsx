@@ -402,6 +402,21 @@ export default function SuppliersPage() {
         throw new Error('Primary phone is required');
       }
 
+      // GL-CRIT-0036: Phone number validation
+      // Accept Indian phone numbers: 10 digits, optionally with +91 or 0 prefix
+      const validatePhone = (phone: string): boolean => {
+        const cleaned = phone.replace(/[\s\-()]/g, ''); // Remove spaces, dashes, parentheses
+        // Match: 10 digits, or +91 followed by 10 digits, or 0 followed by 10 digits
+        return /^(\+91|0)?[6-9]\d{9}$/.test(cleaned);
+      };
+
+      if (!validatePhone(formData.primaryPhone)) {
+        throw new Error('Primary phone must be a valid 10-digit Indian mobile number');
+      }
+      if (formData.secondaryPhone.trim() && !validatePhone(formData.secondaryPhone)) {
+        throw new Error('Secondary phone must be a valid 10-digit Indian mobile number');
+      }
+
       const payload = {
         name: formData.businessName.trim(),
         supplierType: formData.supplierType || undefined,

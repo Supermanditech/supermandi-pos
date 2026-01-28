@@ -14,6 +14,8 @@ export default function DashboardPage() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // GL-CRIT-0038: Track current search to ignore stale responses
+  const currentSearchRef = useRef<string>('');
   const [showAddProductMenu, setShowAddProductMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -40,9 +42,12 @@ export default function DashboardPage() {
   const [showHiddenCategories, setShowHiddenCategories] = useState(false);
 
   // RCAT-CAT-002: Rename category (store override)
+  // GL-CRIT-0039: Error handling with user feedback
+  const [catEditError, setCatEditError] = useState<string | null>(null);
   const handleCategoryRename = async () => {
     if (!editingCategory || !accessToken) return;
     setCatEditSaving(true);
+    setCatEditError(null);
     try {
       const response = await authFetch(`/api/v1/retailer-admin/categories/${editingCategory.id}`, accessToken, {
         method: 'PATCH',
@@ -53,16 +58,22 @@ export default function DashboardPage() {
         }),
       });
       if (response.ok) {
-        // Update local state
+        // Update local state only on success
         setCategories(prev => prev.map(c =>
           c.id === editingCategory.id
             ? { ...c, labelEn: catEditNameEn.trim() || c.labelEn, labelHi: catEditNameHi.trim() || c.labelHi }
             : c
         ));
         setEditingCategory(null);
+      } else {
+        // GL-CRIT-0039: Show error to user on API failure
+        const data = await response.json().catch(() => ({}));
+        setCatEditError(data.error?.message || 'Failed to rename category. Please try again.');
       }
     } catch (err) {
       console.error('Failed to rename category:', err);
+      // GL-CRIT-0039: Show network error to user
+      setCatEditError('Network error. Please check your connection and try again.');
     } finally {
       setCatEditSaving(false);
     }
@@ -157,21 +168,33 @@ export default function DashboardPage() {
   }, []);
 
   // RCAT-SEARCH-001: Debounced search
+  // GL-CRIT-0038: Fixed to ignore stale responses from older searches
   const doSearch = useCallback(async (term: string) => {
     if (!accessToken || term.length < 2) {
       setSearchResults(null);
       setShowSearchResults(false);
+      currentSearchRef.current = '';
       return;
     }
+    // Track which search this is so we can ignore stale responses
+    currentSearchRef.current = term;
     setSearchLoading(true);
     try {
       const result = await fetchSearch(accessToken, term, 10);
-      setSearchResults(result.data || null);
-      setShowSearchResults(true);
+      // GL-CRIT-0038: Only update if this is still the current search
+      // This prevents race conditions where older results overwrite newer ones
+      if (currentSearchRef.current === term) {
+        setSearchResults(result.data || null);
+        setShowSearchResults(true);
+      }
     } catch {
-      setSearchResults(null);
+      if (currentSearchRef.current === term) {
+        setSearchResults(null);
+      }
     } finally {
-      setSearchLoading(false);
+      if (currentSearchRef.current === term) {
+        setSearchLoading(false);
+      }
     }
   }, [accessToken]);
 
