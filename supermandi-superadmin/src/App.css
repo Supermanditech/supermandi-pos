@@ -414,6 +414,18 @@
   border: 1px solid var(--color-border);
 }
 
+/* GL-CRIT-0021/0022/0052: Danger button for destructive actions */
+.btnDanger {
+  background: var(--color-error);
+  color: white;
+  border: 1px solid var(--color-error);
+}
+
+.btnDanger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
 .errorText {
   color: var(--color-error);
   font-weight: 600;

@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 import { getAdminToken } from "./authToken";
+import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type PendingSupplierRequest = {
   id: string;
@@ -40,11 +41,13 @@ function requireApiBase(): string {
 }
 
 async function parseError(res: Response): Promise<string> {
+  const fallback = `Request failed (${res.status})`;
   const data = await res.json().catch(() => ({}));
   if (data && typeof data === "object" && "error" in data) {
-    return String((data as any).error);
+    // GL-CRIT-0055: Sanitize error messages
+    return sanitizeErrorMessage(String((data as any).error), fallback);
   }
-  return `Request failed (${res.status})`;
+  return fallback;
 }
 
 export async function fetchPendingSuppliers(): Promise<PendingSupplierRequest[]> {

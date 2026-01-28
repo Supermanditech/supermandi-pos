@@ -1,4 +1,5 @@
 import { getAdminToken } from "./authToken";
+import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
@@ -25,11 +26,12 @@ async function getJson<T>(path: string): Promise<T> {
     if (res.status === 401) {
       throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
     }
-    const msg =
-      (data && typeof data === "object" && "error" in data
-        ? String((data as any).error)
-        : `Request failed (${res.status})`);
-    throw new Error(msg);
+    const fallback = `Request failed (${res.status})`;
+    // GL-CRIT-0055: Sanitize error messages
+    const rawError = data && typeof data === "object" && "error" in data
+      ? String((data as any).error)
+      : null;
+    throw new Error(sanitizeErrorMessage(rawError, fallback));
   }
   return data as T;
 }

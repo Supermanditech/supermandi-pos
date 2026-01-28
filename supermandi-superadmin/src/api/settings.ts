@@ -1,5 +1,6 @@
 // ADM-SCR-003: Settings API Module
 import { getAdminToken } from "./authToken";
+import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 
@@ -22,10 +23,12 @@ export type SystemStats = {
 };
 
 async function parseError(res: Response): Promise<string> {
+  const fallback = `Request failed (${res.status})`;
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (res.status === 503 && data.error === "admin_disabled") return "Admin disabled (ADMIN_TOKEN missing)";
   if (res.status === 401) return "Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)";
-  return data.error ? String(data.error) : `Request failed (${res.status})`;
+  // GL-CRIT-0055: Sanitize error messages
+  return sanitizeErrorMessage(data.error, fallback);
 }
 
 export async function fetchSettings(): Promise<SystemSettings> {

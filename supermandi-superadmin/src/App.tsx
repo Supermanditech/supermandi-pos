@@ -190,6 +190,12 @@ export default function App() {
   const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; printingMode: string; scanLookupV2Enabled: boolean; active: boolean }>>({});
   const [deviceSaving, setDeviceSaving] = useState<Record<string, boolean>>({});
   const [deviceActionError, setDeviceActionError] = useState<string>("");
+  // GL-CRIT-0022 & GL-CRIT-0052: Device action confirmation states
+  const [pendingDeviceAction, setPendingDeviceAction] = useState<{
+    deviceId: string;
+    deviceLabel?: string;
+    action: "deactivate" | "resetToken";
+  } | null>(null);
   const [enrollStoreId, setEnrollStoreId] = useState<string>("");
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string>("");
@@ -439,8 +445,27 @@ export default function App() {
     }
   }
 
-  // ADM-SCR-002: Handle user status change
-  async function handleUserStatusChange(userId: string, newStatus: "active" | "inactive" | "suspended") {
+  // GL-CRIT-0021: Pending status change requiring confirmation
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    userId: string;
+    newStatus: "active" | "inactive" | "suspended";
+    userName?: string;
+  } | null>(null);
+
+  // ADM-SCR-002: Handle user status change with GL-CRIT-0021 confirmation
+  function requestUserStatusChange(userId: string, newStatus: "active" | "inactive" | "suspended") {
+    // GL-CRIT-0021: Require confirmation for suspension
+    if (newStatus === "suspended") {
+      const user = userRecords.find((u) => u.id === userId);
+      setPendingStatusChange({ userId, newStatus, userName: user?.name });
+      return;
+    }
+    // Non-critical status changes proceed immediately
+    executeUserStatusChange(userId, newStatus);
+  }
+
+  async function executeUserStatusChange(userId: string, newStatus: "active" | "inactive" | "suspended") {
+    setPendingStatusChange(null);
     setUserActionError("");
     setUserStatusSaving((prev) => ({ ...prev, [userId]: true }));
     try {
@@ -1062,13 +1087,40 @@ export default function App() {
     }
   }
 
-  async function handleDeviceSave(deviceId: string) {
+  // GL-CRIT-0022: Request device save with deactivation confirmation
+  function requestDeviceSave(deviceId: string) {
     const draft = deviceEdits[deviceId];
+    const currentDevice = deviceRecords.find((d) => d.id === deviceId);
     if (!draft) return;
-    if (!draft.label.trim()) {
+
+    // GL-CRIT-0054: Validate label length (1-50 characters)
+    const trimmedLabel = draft.label.trim();
+    if (!trimmedLabel) {
       setDeviceActionError("Device label is required.");
       return;
     }
+    if (trimmedLabel.length > 50) {
+      setDeviceActionError("Device label must be 50 characters or less.");
+      return;
+    }
+
+    // GL-CRIT-0022: Require confirmation when deactivating an active device
+    if (currentDevice?.active && !draft.active) {
+      setPendingDeviceAction({
+        deviceId,
+        deviceLabel: currentDevice.label ?? deviceId,
+        action: "deactivate"
+      });
+      return;
+    }
+
+    executeDeviceSave(deviceId);
+  }
+
+  async function executeDeviceSave(deviceId: string) {
+    setPendingDeviceAction(null);
+    const draft = deviceEdits[deviceId];
+    if (!draft) return;
     setDeviceActionError("");
     setDeviceSaving((prev) => ({ ...prev, [deviceId]: true }));
     try {
@@ -1097,7 +1149,18 @@ export default function App() {
     }
   }
 
-  async function handleDeviceReset(deviceId: string) {
+  // GL-CRIT-0052: Request device reset with confirmation
+  function requestDeviceReset(deviceId: string) {
+    const device = deviceRecords.find((d) => d.id === deviceId);
+    setPendingDeviceAction({
+      deviceId,
+      deviceLabel: device?.label ?? deviceId,
+      action: "resetToken"
+    });
+  }
+
+  async function executeDeviceReset(deviceId: string) {
+    setPendingDeviceAction(null);
     setDeviceActionError("");
     setDeviceSaving((prev) => ({ ...prev, [deviceId]: true }));
     try {
@@ -1704,10 +1767,10 @@ export default function App() {
                           />
                         </label>
 
-                        <button onClick={() => handleDeviceSave(d.id)} disabled={deviceSaving[d.id]}>
+                        <button onClick={() => requestDeviceSave(d.id)} disabled={deviceSaving[d.id]}>
                           {deviceSaving[d.id] ? "Saving..." : "Save"}
                         </button>
-                        <button className="btnGhost" onClick={() => handleDeviceReset(d.id)} disabled={deviceSaving[d.id]}>
+                        <button className="btnGhost" onClick={() => requestDeviceReset(d.id)} disabled={deviceSaving[d.id]}>
                           Reset Token
                         </button>
                       </div>
@@ -3220,7 +3283,7 @@ export default function App() {
                       <td>
                         <select
                           value={user.status}
-                          onChange={(e) => handleUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")}
+                          onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")}
                           disabled={userStatusSaving[user.id]}
                           style={{ minWidth: 100 }}
                         >
@@ -3337,6 +3400,73 @@ export default function App() {
             </div>
           </div>
         </section>
+      )}
+
+      {/* GL-CRIT-0021: User Suspension Confirmation Modal */}
+      {pendingStatusChange && pendingStatusChange.newStatus === "suspended" && (
+        <div className="modalOverlay" onClick={() => setPendingStatusChange(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h3>Confirm User Suspension</h3>
+            </div>
+            <div className="modalBody">
+              <p>Are you sure you want to suspend user <strong>{pendingStatusChange.userName || pendingStatusChange.userId}</strong>?</p>
+              <p className="muted">This action will prevent the user from accessing the system.</p>
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setPendingStatusChange(null)}>Cancel</button>
+              <button
+                className="btnDanger"
+                onClick={() => executeUserStatusChange(pendingStatusChange.userId, pendingStatusChange.newStatus)}
+              >
+                Suspend User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GL-CRIT-0022 & GL-CRIT-0052: Device Action Confirmation Modal */}
+      {pendingDeviceAction && (
+        <div className="modalOverlay" onClick={() => setPendingDeviceAction(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h3>
+                {pendingDeviceAction.action === "deactivate"
+                  ? "Confirm Device Deactivation"
+                  : "Confirm Token Reset"}
+              </h3>
+            </div>
+            <div className="modalBody">
+              {pendingDeviceAction.action === "deactivate" ? (
+                <>
+                  <p>Are you sure you want to deactivate device <strong>{pendingDeviceAction.deviceLabel}</strong>?</p>
+                  <p className="muted">This will prevent the device from accessing the system until reactivated.</p>
+                </>
+              ) : (
+                <>
+                  <p>Are you sure you want to reset the token for device <strong>{pendingDeviceAction.deviceLabel}</strong>?</p>
+                  <p className="muted">The device will need to be re-enrolled with a new QR code.</p>
+                </>
+              )}
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setPendingDeviceAction(null)}>Cancel</button>
+              <button
+                className="btnDanger"
+                onClick={() => {
+                  if (pendingDeviceAction.action === "deactivate") {
+                    executeDeviceSave(pendingDeviceAction.deviceId);
+                  } else {
+                    executeDeviceReset(pendingDeviceAction.deviceId);
+                  }
+                }}
+              >
+                {pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : "Reset Token"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <footer className="footer muted">
