@@ -1121,9 +1121,19 @@ export default function DashboardPage() {
                 }}
               />
             </div>
+            {/* GL-CRIT-0039: Display error message */}
+            {catEditError && (
+              <div style={{
+                padding: '8px 12px', marginBottom: '0.75rem',
+                background: '#fef2f2', border: '1px solid #fecaca',
+                borderRadius: '6px', color: '#dc2626', fontSize: '0.85rem',
+              }}>
+                {catEditError}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
               <button
-                onClick={() => setEditingCategory(null)}
+                onClick={() => { setEditingCategory(null); setCatEditError(null); }}
                 style={{
                   padding: '8px 16px', border: '1px solid #e2e8f0', background: 'white',
                   borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem',
