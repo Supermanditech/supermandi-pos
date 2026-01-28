@@ -16,6 +16,8 @@ export interface GatewayConfig {
   env: string;
   rateLimitWindowMs: number;
   rateLimitMax: number;
+  // GL-CRIT-0027: Stricter rate limit for auth endpoints
+  authRateLimitMax: number;
   services: ServiceConfig[];
 }
 
@@ -57,9 +59,11 @@ export const config: GatewayConfig = {
   port: getEnvIntOrDefault('API_GATEWAY_PORT', 3000),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
-  // Rate limiting
+  // Rate limiting - GL-CRIT-0027: Reduced from 100 to 30/min for public APIs
   rateLimitWindowMs: getEnvIntOrDefault('RATE_LIMIT_WINDOW_MS', 60000), // 1 minute
-  rateLimitMax: getEnvIntOrDefault('RATE_LIMIT_MAX', 100), // 100 requests per window
+  rateLimitMax: getEnvIntOrDefault('RATE_LIMIT_MAX', 30), // 30 requests per window
+  // Auth endpoints have stricter limit
+  authRateLimitMax: getEnvIntOrDefault('AUTH_RATE_LIMIT_MAX', 5), // 5 auth attempts per window
 
   // Backend services
   services: [

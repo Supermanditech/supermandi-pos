@@ -3,9 +3,10 @@
  *
  * Priority:
  * 1) Build-time token from Vite env (`VITE_ADMIN_TOKEN`)
- * 2) Runtime token set in the browser (localStorage)
+ * 2) Runtime token set in the browser (sessionStorage)
  *
  * This prevents needing to hardcode secrets into the repo.
+ * GL-CRIT-0020: Use sessionStorage instead of localStorage for security
  */
 
 const ENV_ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN as string | undefined;
@@ -17,7 +18,8 @@ export function getAdminToken(): string | undefined {
   if (envToken) return envToken;
 
   try {
-    const v = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+    // GL-CRIT-0020: Use sessionStorage instead of localStorage
+    const v = sessionStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
     const token = (v ?? "").trim();
     if (token) return token;
   } catch {

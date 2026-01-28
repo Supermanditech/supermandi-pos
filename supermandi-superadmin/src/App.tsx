@@ -1250,10 +1250,11 @@ export default function App() {
               onClick={() => {
                 try {
                   const v = adminTokenInput.trim();
+                  // GL-CRIT-0020: Use sessionStorage instead of localStorage
                   if (!v || v === "********") {
-                    localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+                    sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
                   } else {
-                    localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, v);
+                    sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, v);
                   }
                 } catch {
                   // ignore

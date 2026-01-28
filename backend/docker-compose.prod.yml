@@ -21,8 +21,9 @@ services:
       - postgres-data:/var/lib/postgresql/data
       # NOTE: Migrations are applied by main-backend on startup (scripts/migrate-prod.js)
       # Do NOT mount to docker-entrypoint-initdb.d to avoid double-run and ordering issues
+    # GL-CRIT-0017: Bind to localhost only - no external access
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-supermandi} -d ${POSTGRES_DB:-supermandi}"]
       interval: 10s
@@ -34,8 +35,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '1.0'
           memory: 1G
         reservations:
+          cpus: '0.25'
           memory: 512M
 
   redis:
@@ -54,8 +58,9 @@ services:
       --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis-data:/data
+    # GL-CRIT-0018: Bind to localhost only - no external access
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -67,8 +72,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 512M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -119,8 +127,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -165,8 +176,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -201,8 +215,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -240,8 +257,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '1.0'
           memory: 512M
         reservations:
+          cpus: '0.25'
           memory: 256M
 
   # ---------------------------------------------------------------------------
@@ -282,8 +302,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -324,8 +347,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -366,8 +392,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -408,8 +437,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -450,8 +482,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
   # ---------------------------------------------------------------------------
@@ -481,8 +516,11 @@ services:
     deploy:
       resources:
         limits:
+          # GL-CRIT-0025: Add CPU limits
+          cpus: '0.5'
           memory: 256M
         reservations:
+          cpus: '0.1'
           memory: 128M
 
 # =============================================================================
