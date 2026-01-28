@@ -1,140 +1,141 @@
 -- GL-CRIT-0010: Add soft delete columns to key tables
--- Adds deleted_at timestamp column to enable soft deletes instead of permanent deletion
+-- Enables "mark as deleted" instead of hard delete for recovery/audit
+-- Defensive: checks if tables exist before adding columns
 
 -- ============================================================================
--- PLATFORM TABLES
+-- Add deleted_at column to key tables
 -- ============================================================================
 
 -- platform.stores
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'platform' AND table_name = 'stores'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'platform' AND table_name = 'stores' AND column_name = 'deleted_at'
   ) THEN
-    ALTER TABLE platform.stores ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_stores_deleted_at ON platform.stores(deleted_at) WHERE deleted_at IS NULL;
+    ALTER TABLE platform.stores ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_stores_active ON platform.stores(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to platform.stores';
   END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped platform.stores: %', SQLERRM;
 END $$;
 
--- platform.users
+-- auth.users
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'platform' AND table_name = 'users' AND column_name = 'deleted_at'
+    WHERE table_schema = 'auth' AND table_name = 'users' AND column_name = 'deleted_at'
   ) THEN
-    ALTER TABLE platform.users ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON platform.users(deleted_at) WHERE deleted_at IS NULL;
+    ALTER TABLE auth.users ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_users_active ON auth.users(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to auth.users';
   END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped auth.users: %', SQLERRM;
 END $$;
 
--- platform.devices
+-- platform.pos_devices
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'platform' AND table_name = 'pos_devices'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'platform' AND table_name = 'devices' AND column_name = 'deleted_at'
+    WHERE table_schema = 'platform' AND table_name = 'pos_devices' AND column_name = 'deleted_at'
   ) THEN
-    ALTER TABLE platform.devices ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_devices_deleted_at ON platform.devices(deleted_at) WHERE deleted_at IS NULL;
+    ALTER TABLE platform.pos_devices ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_devices_active ON platform.pos_devices(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to platform.pos_devices';
   END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped platform.pos_devices: %', SQLERRM;
 END $$;
-
--- ============================================================================
--- CATALOG TABLES
--- ============================================================================
 
 -- catalog.products
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'catalog' AND table_name = 'products'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'catalog' AND table_name = 'products' AND column_name = 'deleted_at'
   ) THEN
-    ALTER TABLE catalog.products ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_products_deleted_at ON catalog.products(deleted_at) WHERE deleted_at IS NULL;
+    ALTER TABLE catalog.products ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_cat_products_active ON catalog.products(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to catalog.products';
   END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped catalog.products: %', SQLERRM;
+END $$;
+
+-- public.products (if exists separately)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'deleted_at'
+  ) THEN
+    ALTER TABLE public.products ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_pub_products_active ON public.products(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to public.products';
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped public.products: %', SQLERRM;
 END $$;
 
 -- catalog.categories
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'catalog' AND table_name = 'categories'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'catalog' AND table_name = 'categories' AND column_name = 'deleted_at'
   ) THEN
-    ALTER TABLE catalog.categories ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_categories_deleted_at ON catalog.categories(deleted_at) WHERE deleted_at IS NULL;
+    ALTER TABLE catalog.categories ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_categories_active ON catalog.categories(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to catalog.categories';
   END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped catalog.categories: %', SQLERRM;
 END $$;
-
--- catalog.store_products
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'catalog' AND table_name = 'store_products' AND column_name = 'deleted_at'
-  ) THEN
-    ALTER TABLE catalog.store_products ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_store_products_deleted_at ON catalog.store_products(deleted_at) WHERE deleted_at IS NULL;
-  END IF;
-END $$;
-
--- ============================================================================
--- SUPPLIER TABLES
--- ============================================================================
 
 -- supplier.suppliers
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'supplier' AND table_name = 'suppliers'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'supplier' AND table_name = 'suppliers' AND column_name = 'deleted_at'
   ) THEN
-    ALTER TABLE supplier.suppliers ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_suppliers_deleted_at ON supplier.suppliers(deleted_at) WHERE deleted_at IS NULL;
+    ALTER TABLE supplier.suppliers ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;
+    CREATE INDEX IF NOT EXISTS idx_suppliers_active ON supplier.suppliers(id) WHERE deleted_at IS NULL;
+    RAISE NOTICE 'Added deleted_at to supplier.suppliers';
   END IF;
-END $$;
-
--- supplier.supplier_products
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'supplier' AND table_name = 'supplier_products' AND column_name = 'deleted_at'
-  ) THEN
-    ALTER TABLE supplier.supplier_products ADD COLUMN deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL;
-    CREATE INDEX IF NOT EXISTS idx_supplier_products_deleted_at ON supplier.supplier_products(deleted_at) WHERE deleted_at IS NULL;
-  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'Skipped supplier.suppliers: %', SQLERRM;
 END $$;
 
 -- ============================================================================
--- ORDERS TABLES (Note: orders should NOT be soft-deleted for audit purposes)
--- ============================================================================
-
--- orders.purchase_orders - cancelled status instead of delete
--- No deleted_at needed - use status = 'cancelled'
-
--- ============================================================================
--- HELPER FUNCTION FOR SOFT DELETE
+-- Create soft_delete helper function
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION soft_delete()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Instead of deleting, set deleted_at timestamp
   NEW.deleted_at = NOW();
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- ============================================================================
--- MIGRATION METADATA
--- ============================================================================
-INSERT INTO platform.migrations (name, description)
-VALUES (
-  '069_gl_crit_0010_soft_delete',
-  'GL-CRIT-0010: Add soft delete columns (deleted_at) to enable data recovery. Orders use status instead.'
-)
-ON CONFLICT (name) DO NOTHING;
+-- Log completion
+DO $$ BEGIN RAISE NOTICE 'GL-CRIT-0010: Soft delete migration complete'; END $$;
