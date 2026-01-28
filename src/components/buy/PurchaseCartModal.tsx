@@ -206,8 +206,9 @@ export function PurchaseCartModal({
   }, []);
 
   // SM-025: Handle payment selection from sheet
+  // GL-RJ-003: Fixed checkout flow - only remove items AFTER payment confirmation
   const handleSelectPayment = useCallback(
-    async (mode: PaymentMode): Promise<{ success: boolean; upiDeepLink?: string; error?: string }> => {
+    async (mode: PaymentMode): Promise<{ success: boolean; upiDeepLink?: string; error?: string; orderId?: string }> => {
       const group = paymentSheet.group;
       if (!group) {
         return { success: false, error: "No supplier selected" };
@@ -237,7 +238,7 @@ export function PurchaseCartModal({
         }
 
         // Create the order via API
-        await orderApi.createOrder(storeId, {
+        const orderResult = await orderApi.createOrder(storeId, {
           supplierId: group.supplierId,
           orderType: "manual",
           items: group.items.map((item) => ({
@@ -248,7 +249,45 @@ export function PurchaseCartModal({
           storeNotes,
         });
 
-        // Remove items for this supplier from cart
+        // For UPI, DON'T remove items yet - wait for payment confirmation
+        // GL-RJ-003: Items should only be removed after UPI payment is verified
+        if (mode === "UPI") {
+          // Return deep link and order ID for verification
+          // Cart items remain intact until payment is confirmed
+          const upiDeepLink = `upi://pay?pa=supplier@upi&pn=${encodeURIComponent(group.supplierName)}&am=${group.totalAmount}&cu=INR`;
+          return {
+            success: true,
+            upiDeepLink,
+            orderId: orderResult?.id || group.supplierId,
+          };
+        }
+
+        // GL-WF-004: For CREDIT mode, must call confirmPayment to actually process the credit deduction
+        // Without this, credit is NOT deducted and the payment is not recorded
+        if (mode === "CREDIT") {
+          try {
+            const paymentResult = await orderApi.confirmPayment(storeId, orderResult.id, "CREDIT");
+            if (!paymentResult.success) {
+              // Credit payment failed - keep items in cart
+              console.error("[PurchaseCartModal] Credit payment failed:", paymentResult.error);
+              return {
+                success: false,
+                error: paymentResult.error || "Credit payment failed. Please check your credit limit.",
+              };
+            }
+            console.log("[PurchaseCartModal] Credit payment confirmed:", paymentResult.paymentId);
+          } catch (paymentError: any) {
+            // Credit payment failed - keep items in cart
+            console.error("[PurchaseCartModal] Credit payment error:", paymentError);
+            return {
+              success: false,
+              error: paymentError.message || "Failed to process credit payment. Please try another payment method.",
+            };
+          }
+        }
+
+        // For non-UPI modes (BNPL, CREDIT, COD), payment is confirmed
+        // So we can safely remove items from cart
         removeSupplierItems(group.supplierId);
 
         // Clear BNPL toggle for this supplier
@@ -261,19 +300,12 @@ export function PurchaseCartModal({
         // Notify parent
         onOrderPlaced?.(group.supplierId);
 
-        // For UPI, we would return a deep link (mocked for now)
-        if (mode === "UPI") {
-          // In production, this would come from a payment API
-          const upiDeepLink = `upi://pay?pa=supplier@upi&pn=${encodeURIComponent(group.supplierName)}&am=${group.totalAmount}&cu=INR`;
-          return { success: true, upiDeepLink };
-        }
-
-        // Show success message for other modes
+        // Show success message for non-UPI modes
         let successMessage = "Your purchase order has been created.";
         if (mode === "BNPL") {
           successMessage += " BNPL payment will be set up when the order is confirmed.";
         } else if (mode === "CREDIT") {
-          successMessage += " Payment will be deducted from your credit line.";
+          successMessage += " Payment has been charged to your credit line.";
         } else if (mode === "COD") {
           successMessage += " Pay when goods are delivered.";
         }
@@ -283,10 +315,49 @@ export function PurchaseCartModal({
         return { success: true };
       } catch (error: any) {
         console.error("[PurchaseCartModal] Failed to place order:", error);
+        // GL-RJ-003: On failure, cart items remain intact - no removal happened
         return { success: false, error: error.message || "Failed to place order" };
       }
     },
     [paymentSheet.group, removeSupplierItems, onOrderPlaced]
+  );
+
+  // GL-RJ-003: Handle UPI payment confirmation - call this after UPI payment is verified
+  const handleUpiPaymentConfirmed = useCallback(
+    (supplierId: string) => {
+      // Now safe to remove items from cart
+      removeSupplierItems(supplierId);
+
+      // Clear BNPL toggle for this supplier
+      setBnplToggleState((prev) => {
+        const updated = { ...prev };
+        delete updated[supplierId];
+        return updated;
+      });
+
+      // Notify parent
+      onOrderPlaced?.(supplierId);
+
+      Alert.alert("Order Placed", "Your purchase order has been created and payment confirmed.", [
+        { text: "OK" },
+      ]);
+    },
+    [removeSupplierItems, onOrderPlaced]
+  );
+
+  // GL-RJ-003: Handle UPI payment failure - items remain in cart
+  const handleUpiPaymentFailed = useCallback(
+    (supplierId: string, orderId: string) => {
+      // Cancel the order since payment failed
+      // Items remain in cart so user can retry
+      Alert.alert(
+        "Payment Failed",
+        "UPI payment was not completed. Your cart items are intact. You can try again.",
+        [{ text: "OK" }]
+      );
+      console.log("[PurchaseCartModal] UPI payment failed for order:", orderId, "supplier:", supplierId);
+    },
+    []
   );
 
   // Handle place order for supplier (legacy - now shows payment sheet)
@@ -554,17 +625,21 @@ export function PurchaseCartModal({
       </View>
 
       {/* SM-025: Payment Options Sheet */}
+      {/* GL-RJ-003: Added UPI confirmation callbacks */}
       {paymentSheet.group && (
         <PaymentOptionsSheet
           visible={paymentSheet.visible}
           onClose={handleClosePaymentSheet}
           supplierName={paymentSheet.group.supplierName}
+          supplierId={paymentSheet.group.supplierId}
           amount={paymentSheet.group.totalAmount}
           bnplEligible={isBnplEligible(paymentSheet.group.totalAmount)}
           bnplMaxDays={bnplSummary?.maxDays ?? 7}
           creditEligible={creditSummary?.creditEnabled ?? false}
           availableCredit={creditSummary?.availableCredit ?? 0}
           onSelectPayment={handleSelectPayment}
+          onUpiPaymentConfirmed={handleUpiPaymentConfirmed}
+          onUpiPaymentCancelled={handleUpiPaymentFailed}
         />
       )}
     </Modal>

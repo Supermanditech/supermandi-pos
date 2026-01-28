@@ -200,6 +200,24 @@ export interface ListReceivesResponse {
   data: ReceiveRecord[];
 }
 
+// GL-WF-004: Payment confirmation types
+export type BuyPaymentMode = "UPI" | "BNPL" | "CREDIT" | "COD";
+
+export interface ConfirmPaymentResponse {
+  success: boolean;
+  paymentId?: string;
+  mode?: BuyPaymentMode;
+  status?: string;
+  message?: string;
+  error?: string;
+  // UPI specific
+  upiCollect?: {
+    deepLink: string;
+    vpa: string;
+  };
+  expiresAt?: string;
+}
+
 export interface GetReceiveResponse {
   success: boolean;
   data: ReceiveRecordWithItems;
@@ -346,6 +364,28 @@ export async function shipOrder(
 ): Promise<TransitionResponse> {
   const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/ship`;
   return apiClient.post<TransitionResponse>(path, trackingInfo);
+}
+
+// =============================================================================
+// GL-WF-004: PAYMENT FUNCTIONS
+// =============================================================================
+
+/**
+ * Confirm payment for a purchase order.
+ * GL-WF-004: This must be called to actually process credit/UPI/BNPL payments.
+ * Without calling this, the payment is NOT recorded in the system.
+ *
+ * @param storeId - The store ID
+ * @param orderId - The order ID to pay for
+ * @param mode - Payment mode: UPI, BNPL, CREDIT, or COD
+ */
+export async function confirmPayment(
+  storeId: string,
+  orderId: string,
+  mode: BuyPaymentMode
+): Promise<ConfirmPaymentResponse> {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/pay`;
+  return apiClient.post<ConfirmPaymentResponse>(path, { mode });
 }
 
 // =============================================================================
