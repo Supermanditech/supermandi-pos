@@ -2,7 +2,7 @@
 // Logs all admin actions to admin.audit_log table
 
 import { Request, Response, NextFunction } from 'express';
-import { query } from '@supermandi/common';
+import { getPool } from '../db/client';
 
 // Sensitive fields to redact from request body
 const SENSITIVE_FIELDS = ['password', 'pin', 'token', 'secret', 'apiKey'];
@@ -138,7 +138,8 @@ async function writeAuditLog(params: {
   errorMessage?: string;
 }): Promise<void> {
   try {
-    await query(
+    const pool = getPool();
+    await pool.query(
       `INSERT INTO admin.audit_log (
         actor_user_id, actor_ip, actor_user_agent,
         action, resource_type, resource_id, store_id,
