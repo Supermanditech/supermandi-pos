@@ -86,7 +86,7 @@ export default function KycPage() {
     onSuccess: (data) => {
       setIfscData(data);
       setIfscError('');
-      setBankForm((prev) => ({ ...prev, accountName: prev.accountName }));
+      // GL-CRIT-0098: Removed dead code that did nothing
     },
     onError: (error: Error) => {
       setIfscData(null);
@@ -345,23 +345,29 @@ export default function KycPage() {
             <div>
               {/* GL-WF-042: Show current verification status */}
               {kycStatus?.requirements.bankVerified ? (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                /* GL-CRIT-0097: Show read-only state after verification - no form needed */
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">✓</span>
+                    <span className="text-3xl">✓</span>
                     <div>
-                      <p className="font-medium text-green-800">Bank Account Verified</p>
-                      <p className="text-sm text-green-700">Your bank account is verified and ready for payouts.</p>
+                      <p className="font-semibold text-green-800 text-lg">Bank Account Verified</p>
+                      <p className="text-sm text-green-700 mt-1">
+                        Your bank account is verified and ready for payouts.
+                      </p>
+                      <p className="text-xs text-green-600 mt-2">
+                        To update bank details, please contact support.
+                      </p>
                     </div>
                   </div>
                 </div>
               ) : (
+                <>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                   <p className="text-sm text-yellow-700">
                     <strong>Important:</strong> Verify your bank account to receive payouts.
                     Ensure the account is in your business name.
                   </p>
                 </div>
-              )}
 
               <form onSubmit={handleBankVerify} className="space-y-6">
                 {/* IFSC Code with Lookup */}
@@ -462,6 +468,8 @@ export default function KycPage() {
                   </button>
                 </div>
               </form>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -74,7 +74,8 @@ export default function ProductsPage() {
   });
 
   // GL-WF-063: Paginated products query
-  const { data: productsResponse, isLoading } = useQuery({
+  // GL-CRIT-0034: Track error state for API failures
+  const { data: productsResponse, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['products', currentPage, pageSize],
     queryFn: () => getProducts({ page: currentPage, limit: pageSize }),
   });
@@ -248,7 +249,8 @@ export default function ProductsPage() {
       ...prev,
       [name]:
         name === 'purchasePrice' || name === 'mrp'
-          ? Math.round(parseFloat(value || '0') * 100)
+          // GL-CRIT-0033: Fix floating point precision (450.99 * 100 = 45098.99999...)
+          ? Math.round((parseFloat(value || '0') + Number.EPSILON) * 100)
           : name === 'moq'
           ? parseInt(value) || 1
           : value,
@@ -486,6 +488,22 @@ export default function ProductsPage() {
         {isLoading ? (
           <div className="p-8 text-center text-slate-500">
             Loading products...
+          </div>
+        ) : isError ? (
+          /* GL-CRIT-0034: Show error state with retry button */
+          <div className="p-8 text-center">
+            <div className="text-red-600 font-medium mb-2">
+              Failed to load products
+            </div>
+            <p className="text-slate-500 text-sm mb-4">
+              {error instanceof Error ? error.message : 'An error occurred while loading your products.'}
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="btn btn-primary"
+            >
+              Retry
+            </button>
           </div>
         ) : filteredProducts && filteredProducts.length > 0 ? (
           <table className="w-full">

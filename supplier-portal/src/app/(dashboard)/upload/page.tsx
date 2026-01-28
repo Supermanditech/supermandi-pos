@@ -127,13 +127,12 @@ export default function UploadPage() {
             </tbody>
           </table>
         </div>
-        <a
-          href="/api/template/products.csv"
-          download="products_template.csv"
+        {/* GL-CRIT-0096: Template download handled client-side (no server endpoint needed) */}
+        <button
+          type="button"
           className="btn btn-secondary inline-flex items-center gap-2"
-          onClick={(e) => {
-            e.preventDefault();
-            // Generate and download template
+          onClick={() => {
+            // Generate and download template client-side
             const template =
               'name,purchase_price,mrp,barcode,sku,category,moq,unit\nBasmati Rice 5kg,450,520,8901234567890,RICE-BAS-5KG,Grocery,10,PCS\n';
             const blob = new Blob([template], { type: 'text/csv' });
@@ -146,7 +145,7 @@ export default function UploadPage() {
           }}
         >
           <span>📄</span> Download Template
-        </a>
+        </button>
       </div>
 
       {/* Upload Zone */}

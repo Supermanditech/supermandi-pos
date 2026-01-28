@@ -17,8 +17,8 @@ export default function EarningsPage() {
     queryFn: getPayoutSummary,
   });
 
-  // Fetch payout history with pagination
-  const { data: payoutsData, isLoading: payoutsLoading } = useQuery({
+  // GL-CRIT-0061: Track error state for API failures
+  const { data: payoutsData, isLoading: payoutsLoading, isError: payoutsError, refetch: refetchPayouts } = useQuery({
     queryKey: ['payouts', page],
     queryFn: () => getPayouts({ page, limit }),
   });
@@ -139,6 +139,20 @@ export default function EarningsPage() {
         {payoutsLoading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          </div>
+        ) : payoutsError ? (
+          /* GL-CRIT-0061: Show explicit error state with retry */
+          <div className="text-center py-8">
+            <div className="text-red-600 font-medium mb-2">Failed to load payout history</div>
+            <p className="text-sm text-slate-500 mb-4">
+              There was an error loading your payouts. Please try again.
+            </p>
+            <button
+              onClick={() => refetchPayouts()}
+              className="btn btn-primary"
+            >
+              Retry
+            </button>
           </div>
         ) : payouts.length === 0 ? (
           <div className="text-center py-8 text-slate-500">

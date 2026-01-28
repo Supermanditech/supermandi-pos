@@ -69,8 +69,10 @@ export default function RegisterPage() {
       newErrors.businessName = 'Business name is required';
     }
 
-    if (formData.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(formData.gstin)) {
-      newErrors.gstin = 'Please enter a valid GSTIN';
+    // GL-CRIT-0031: Fixed GSTIN regex - position 14 can be any alphanumeric, not just 'Z'
+    // Format: 2 digits (state) + 5 letters (PAN) + 4 digits + 1 letter + 1 alphanumeric + 1 alphanumeric + 1 checksum
+    if (formData.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/.test(formData.gstin)) {
+      newErrors.gstin = 'Please enter a valid 15-character GSTIN';
     }
 
     if (!formData.phone.trim()) {

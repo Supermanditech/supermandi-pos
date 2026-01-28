@@ -4,12 +4,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { requestPasswordReset, resetPassword } from '@/lib/api';
 
 type Step = 'request' | 'verify';
 
 export default function ForgotPasswordPage() {
+  // GL-CRIT-0057: Use router for smooth navigation instead of window.location
+  const router = useRouter();
   const [step, setStep] = useState<Step>('request');
   const [email, setEmail] = useState('');
   const [token, setToken] = useState('');
@@ -65,9 +68,9 @@ export default function ForgotPasswordPage() {
     try {
       const result = await resetPassword(email, token, newPassword);
       toast.success(result.message || 'Password reset successfully!');
-      // Redirect to login after short delay
+      // GL-CRIT-0057: Use router.push for smooth redirect without page flash
       setTimeout(() => {
-        window.location.href = '/login';
+        router.push('/login');
       }, 2000);
     } catch (error: any) {
       toast.error(error.message || 'Failed to reset password');

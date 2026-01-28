@@ -73,15 +73,19 @@ export default function DashboardPage() {
   });
   const products = productsResponse?.data;
 
-  // Mock stats if API not ready
-  const displayStats = stats || {
-    totalProducts: products?.length || 0,
-    pendingProducts: products?.filter((p) => p.approvalStatus === 'pending').length || 0,
-    approvedProducts: products?.filter((p) => p.approvalStatus === 'approved').length || 0,
-    totalOrders: recentOrders?.length || 0,
-    pendingOrders: recentOrders?.filter((o) => o.status === 'pending').length || 0,
-    totalRevenue: recentOrders?.reduce((sum, o) => sum + o.totalAmount, 0) || 0,
-  };
+  // GL-CRIT-0099: Always prefer server-provided totals over client calculations
+  // Client-side calculation from paginated data is inaccurate (only shows first page)
+  const displayStats = stats
+    ? stats
+    : {
+        // Fallback to pagination totals if available, then client-side as last resort
+        totalProducts: productsResponse?.pagination?.total ?? products?.length ?? 0,
+        pendingProducts: products?.filter((p) => p.approvalStatus === 'pending').length ?? 0,
+        approvedProducts: products?.filter((p) => p.approvalStatus === 'approved').length ?? 0,
+        totalOrders: ordersResponse?.pagination?.total ?? recentOrders?.length ?? 0,
+        pendingOrders: recentOrders?.filter((o) => o.status === 'pending').length ?? 0,
+        totalRevenue: recentOrders?.reduce((sum, o) => sum + o.totalAmount, 0) ?? 0,
+      };
 
   return (
     <div>

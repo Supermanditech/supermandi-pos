@@ -94,8 +94,14 @@ export function withAuth<P extends object>(Component: React.ComponentType<P>) {
       );
     }
 
+    // GL-CRIT-0065: Show redirect message instead of null
     if (!isAuthenticated) {
-      return null;
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen text-slate-500">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4" />
+          <p className="text-sm">Redirecting to login...</p>
+        </div>
+      );
     }
 
     return <Component {...props} />;

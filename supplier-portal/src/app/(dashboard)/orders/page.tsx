@@ -38,8 +38,9 @@ const itemStatusColors: Record<string, string> = {
   rejected: 'bg-red-100 text-red-700',
 };
 
+// GL-CRIT-0062: Allow shipment entry for pending status (not just confirmed)
 const statusFlow: Record<string, string[]> = {
-  pending: ['confirmed', 'cancelled'],
+  pending: ['confirmed', 'shipped', 'cancelled'],
   confirmed: ['shipped', 'cancelled'],
   shipped: ['delivered'],
   delivered: [],
@@ -130,7 +131,9 @@ export default function OrdersPage() {
     (order) => statusFilter === 'all' || order.status === statusFilter
   );
 
-  const statusCounts = orders?.reduce(
+  // GL-CRIT-0060: Use API-provided total counts if available, fallback to page counts
+  // Note: For accurate totals, backend should return statusCounts in pagination response
+  const statusCounts = (ordersResponse as any)?.statusCounts || orders?.reduce(
     (acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1;
       acc.all = (acc.all || 0) + 1;
@@ -138,6 +141,10 @@ export default function OrdersPage() {
     },
     {} as Record<string, number>
   ) || {};
+  // Add total count from pagination if available
+  if (pagination?.total && !statusCounts.all) {
+    statusCounts.all = pagination.total;
+  }
 
   return (
     <div>
@@ -372,7 +379,9 @@ export default function OrdersPage() {
                             max={item.quantity}
                             value={item.receivedQuantity || 0}
                             onChange={(e) => {
-                              const qty = parseInt(e.target.value) || 0;
+                              // GL-CRIT-0032: Cap received quantity at ordered quantity
+                              const raw = parseInt(e.target.value) || 0;
+                              const qty = Math.max(0, Math.min(raw, item.quantity));
                               const newStatus = qty === 0 ? 'pending' : qty < item.quantity ? 'partial' : 'received';
                               itemStatusMutation.mutate({
                                 orderId: selectedOrder.id,
@@ -439,8 +448,8 @@ export default function OrdersPage() {
               </table>
             </div>
 
-            {/* GL-WF-039: Shipment Form */}
-            {showShipmentForm && selectedOrder.status === 'confirmed' && (
+            {/* GL-WF-039: Shipment Form - GL-CRIT-0062: Allow from pending or confirmed */}
+            {showShipmentForm && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending') && (
               <div className="border border-slate-200 rounded-lg p-4 mb-6 bg-slate-50">
                 <h3 className="font-medium text-slate-800 mb-3">Add Shipment Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -505,7 +514,16 @@ export default function OrdersPage() {
                     <button
                       key={newStatus}
                       onClick={() => {
-                        if (newStatus === 'shipped' && selectedOrder.status === 'confirmed') {
+                        // GL-CRIT-0062: Allow shipment from pending or confirmed status
+                        if (newStatus === 'shipped' && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending')) {
+                          // GL-CRIT-0063: Warn if any items still pending
+                          const pendingItems = selectedOrder.items.filter(item => item.status === 'pending' || !item.receivedQuantity);
+                          if (pendingItems.length > 0) {
+                            const confirm = window.confirm(
+                              `${pendingItems.length} item(s) have not been marked as received. Ship anyway?`
+                            );
+                            if (!confirm) return;
+                          }
                           // GL-WF-039: Show shipment form instead of directly updating
                           setShowShipmentForm(true);
                         } else {

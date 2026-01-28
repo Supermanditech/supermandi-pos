@@ -34,11 +34,15 @@ export function clearAuthToken(): void {
 }
 
 // GL-WF-046: Handle 401 responses by redirecting to login
+// GL-CRIT-0064: Use async cleanup with replace() instead of synchronous href
 function handle401Response(): void {
   if (typeof window !== 'undefined') {
     clearAuthToken();
-    // Redirect to login page
-    window.location.href = '/login';
+    // Use replace to prevent back button returning to protected page
+    // Use setTimeout to ensure token is cleared before redirect
+    setTimeout(() => {
+      window.location.replace('/login');
+    }, 0);
   }
 }
 
