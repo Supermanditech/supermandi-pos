@@ -93,7 +93,8 @@ services:
       REORDER_SERVICE_URL: http://reorder-service:3007
       POS_SERVICE_URL: http://main-backend:3010
       VOICE_SERVICE_URL: http://voice-service:3008
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-0d57d3b70e8cab31e2cc50faf363a5c0}
+      # GL-CRIT-0006: ADMIN_TOKEN must be set in .env - no fallback for security
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
@@ -219,7 +220,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-0d57d3b70e8cab31e2cc50faf363a5c0}
+      # GL-CRIT-0006: ADMIN_TOKEN must be set in .env - no fallback for security
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy

@@ -1,9 +1,11 @@
 // Pending Reorders Routes - V3.0.9 compliant
 // Pending reorder management endpoints
+// GL-CRIT-0003: Added authentication middleware
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   getPendingById,
   listPending,
@@ -21,6 +23,7 @@ const router: RouterType = Router();
 /**
  * GET /stores/:storeId/reorder/pending
  * List pending reorders for a store.
+ * GL-CRIT-0003: Protected with authenticate + requireStoreAccess
  *
  * Query params:
  * - status: Filter by status (default: 'pending')
@@ -29,6 +32,8 @@ const router: RouterType = Router();
  */
 router.get(
   '/stores/:storeId/reorder/pending',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -71,9 +76,12 @@ router.get(
 /**
  * GET /stores/:storeId/reorder/pending/:pendingId
  * Get a single pending reorder by ID.
+ * GL-CRIT-0003: Protected with authenticate + requireStoreAccess
  */
 router.get(
   '/stores/:storeId/reorder/pending/:pendingId',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, pendingId } = req.params;
@@ -102,12 +110,15 @@ router.get(
  * POST /stores/:storeId/reorder/pending/approve
  * Approve selected pending reorders.
  * Creates draft POs grouped by supplier.
+ * GL-CRIT-0003: Protected with authenticate + requireStoreAccess
  *
  * Body:
  * - ids: string[] - Array of pending reorder IDs to approve
  */
 router.post(
   '/stores/:storeId/reorder/pending/approve',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -141,12 +152,15 @@ router.post(
 /**
  * POST /stores/:storeId/reorder/pending/:pendingId/dismiss
  * Dismiss a pending reorder with a reason.
+ * GL-CRIT-0003: Protected with authenticate + requireStoreAccess
  *
  * Body:
  * - reason: string - Reason for dismissing
  */
 router.post(
   '/stores/:storeId/reorder/pending/:pendingId/dismiss',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, pendingId } = req.params;

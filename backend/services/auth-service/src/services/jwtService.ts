@@ -23,6 +23,12 @@ export interface RefreshTokenPayload {
   type: 'refresh';
 }
 
+// GL-CRIT-0007: Service-to-service authentication
+export interface ServiceTokenPayload {
+  serviceName: string; // e.g., 'order-service'
+  type: 'service';
+}
+
 export interface TokenPair {
   accessToken: string;
   refreshToken: string;
@@ -225,4 +231,76 @@ export function getRefreshTokenExpiry(): Date {
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + config.jwt.refreshTokenExpiresInDays);
   return expiry;
+}
+
+// =============================================================================
+// GL-CRIT-0007: SERVICE-TO-SERVICE AUTHENTICATION
+// =============================================================================
+
+const ALLOWED_INTERNAL_SERVICES = [
+  'api-gateway',
+  'order-service',
+  'inventory-service',
+  'reorder-service',
+  'platform-service',
+  'catalog-service',
+  'supplier-service',
+  'auth-service',
+];
+
+/**
+ * Generate a service-to-service JWT token
+ * Used by services when calling internal endpoints on other services
+ *
+ * @param serviceName - The name of the calling service
+ * @returns A signed JWT token with 5-minute expiry
+ */
+export function generateServiceToken(serviceName: string): string {
+  if (!ALLOWED_INTERNAL_SERVICES.includes(serviceName)) {
+    throw new Error(`Unknown service: ${serviceName}`);
+  }
+
+  return jwt.sign(
+    {
+      serviceName,
+      type: 'service',
+    },
+    config.jwt.secret,
+    {
+      expiresIn: 300, // 5 minutes - short-lived for security
+      issuer: config.jwt.issuer,
+    }
+  );
+}
+
+/**
+ * Verify a service-to-service JWT token
+ * Used by services to validate internal requests
+ *
+ * @param token - The JWT token from the request
+ * @returns The service token payload if valid, null otherwise
+ */
+export function verifyServiceToken(token: string): ServiceTokenPayload | null {
+  try {
+    const decoded = jwt.verify(token, config.jwt.secret, {
+      issuer: config.jwt.issuer,
+    }) as jwt.JwtPayload;
+
+    // Validate it's a service token
+    if (decoded.type !== 'service' || !decoded.serviceName) {
+      return null;
+    }
+
+    // Validate service name is in allowed list
+    if (!ALLOWED_INTERNAL_SERVICES.includes(decoded.serviceName)) {
+      return null;
+    }
+
+    return {
+      serviceName: decoded.serviceName,
+      type: 'service',
+    };
+  } catch {
+    return null;
+  }
 }

@@ -12,6 +12,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@supermandi/auth-service": "workspace:*",
     "@supermandi/common": "workspace:*",
     "bcryptjs": "^2.4.3",
     "csv-parse": "^5.5.3",

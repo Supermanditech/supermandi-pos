@@ -5,9 +5,24 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js",
-    "./middleware": "./dist/middleware/index.js",
-    "./exports": "./dist/exports.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware/index.d.ts",
+      "default": "./dist/middleware/index.js"
+    },
+    "./exports": {
+      "types": "./dist/exports.d.ts",
+      "default": "./dist/exports.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "exports": ["./dist/exports.d.ts"],
+      "middleware": ["./dist/middleware/index.d.ts"]
+    }
   },
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",

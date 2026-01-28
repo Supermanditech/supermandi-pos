@@ -1,9 +1,11 @@
 // Mapping Routes - V3.0.9 compliant
 // Product mapping endpoints: unmatched queue, manual map, unmap, auto-map
+// GL-CRIT-0004: Added authentication middleware
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   getUnmatchedProducts,
   createMapping,
@@ -35,6 +37,7 @@ interface DeleteMappingBody {
 /**
  * GET /stores/:storeId/catalog/unmatched
  * Get supplier products that haven't been mapped to master catalog products.
+ * GL-CRIT-0004: Protected with authenticate + requireStoreAccess
  *
  * Query params:
  * - supplierId: Filter by supplier (optional)
@@ -43,6 +46,8 @@ interface DeleteMappingBody {
  */
 router.get(
   '/stores/:storeId/catalog/unmatched',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -80,6 +85,7 @@ router.get(
 /**
  * POST /stores/:storeId/catalog/map
  * Create a manual product mapping.
+ * GL-CRIT-0004: Protected with authenticate + requireStoreAccess
  *
  * Body:
  * - supplierProductId: The supplier product to map
@@ -87,6 +93,8 @@ router.get(
  */
 router.post(
   '/stores/:storeId/catalog/map',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -134,9 +142,12 @@ router.post(
 /**
  * GET /stores/:storeId/catalog/map/:mapId
  * Get a specific mapping by ID.
+ * GL-CRIT-0004: Protected with authenticate + requireStoreAccess
  */
 router.get(
   '/stores/:storeId/catalog/map/:mapId',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { mapId } = req.params;
@@ -160,12 +171,15 @@ router.get(
 /**
  * DELETE /stores/:storeId/catalog/map/:mapId
  * Delete a product mapping (unmap).
+ * GL-CRIT-0004: Protected with authenticate + requireStoreAccess
  *
  * Body (optional):
  * - reason: Reason for unmapping
  */
 router.delete(
   '/stores/:storeId/catalog/map/:mapId',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, mapId } = req.params;
@@ -194,9 +208,12 @@ router.delete(
 /**
  * POST /stores/:storeId/catalog/map/:mapId/verify
  * Verify an auto-mapped product (mark as reviewed).
+ * GL-CRIT-0004: Protected with authenticate + requireStoreAccess
  */
 router.post(
   '/stores/:storeId/catalog/map/:mapId/verify',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { mapId } = req.params;
@@ -224,12 +241,15 @@ router.post(
 /**
  * POST /stores/:storeId/catalog/auto-map
  * Trigger auto-mapping for unmatched products based on barcode.
+ * GL-CRIT-0004: Protected with authenticate + requireStoreAccess
  *
  * Query params:
  * - supplierId: Only auto-map products from this supplier (optional)
  */
 router.post(
   '/stores/:storeId/catalog/auto-map',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;

@@ -1,9 +1,11 @@
 // Purchase Order Routes - V3.0.9 compliant
 // REST API endpoints for purchase order management
+// GL-CRIT-0001: Added authentication middleware
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   createPurchaseOrderFromCart,
   createPurchaseOrderFromReorders,
@@ -45,9 +47,12 @@ interface ListOrdersQuery {
 /**
  * POST /stores/:storeId/orders
  * Create a new purchase order (manual or from reorders)
+ * GL-CRIT-0001: Protected with authenticate + requireStoreAccess
  */
 router.post(
   '/stores/:storeId/orders',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -140,6 +145,7 @@ router.post(
  * GET /stores/:storeId/orders
  * List purchase orders with filters.
  * V3.0.9: Supports multi-status filter via comma-separated values.
+ * GL-CRIT-0001: Protected with authenticate + requireStoreAccess
  *
  * Query params:
  * - status: Comma-separated list (e.g., "draft,submitted,confirmed")
@@ -151,6 +157,8 @@ router.post(
  */
 router.get(
   '/stores/:storeId/orders',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -184,9 +192,12 @@ router.get(
 /**
  * GET /stores/:storeId/orders/:orderId
  * Get a purchase order with its items.
+ * GL-CRIT-0001: Protected with authenticate + requireStoreAccess
  */
 router.get(
   '/stores/:storeId/orders/:orderId',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;

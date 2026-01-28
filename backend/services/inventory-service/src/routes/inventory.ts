@@ -1,5 +1,5 @@
 // Inventory Routes - V3.0.9 compliant
-// Public inventory lookup endpoints
+// GL-CRIT-0005: Protected inventory endpoints (no longer public)
 
 import { Router, Request, Response, NextFunction } from 'express';
 import {
@@ -9,8 +9,13 @@ import {
   getProductLedgerHistory,
   getStoreRecentActivity,
 } from '../services/ledgerService.js';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 
 const router: Router = Router();
+
+// GL-CRIT-0005: Apply authentication to all inventory routes
+router.use(authenticate);
+router.use(requireStoreAccess);
 
 // =============================================================================
 // ASYNC HANDLER

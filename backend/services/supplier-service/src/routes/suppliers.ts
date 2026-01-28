@@ -1,9 +1,11 @@
 // Supplier Routes - V3.0.9 compliant
 // REST API endpoints for supplier operations
+// GL-CRIT-0002: Added authentication middleware
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   searchSuppliersService,
   getStoreSuppliers,
@@ -57,6 +59,7 @@ interface UnlinkSupplierBody {
 /**
  * GET /suppliers/search
  * Search suppliers globally by GSTIN or business name.
+ * GL-CRIT-0002: Protected with authenticate
  *
  * Query params:
  * - q: Search query (required, min 2 chars)
@@ -66,6 +69,7 @@ interface UnlinkSupplierBody {
  */
 router.get(
   '/suppliers/search',
+  authenticate,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const q = req.query.q as string;
@@ -141,6 +145,7 @@ router.post(
 /**
  * GET /stores/:storeId/suppliers
  * Get all suppliers linked to a store.
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  *
  * Query params:
  * - status: Filter by link status (default 'active')
@@ -148,6 +153,8 @@ router.post(
  */
 router.get(
   '/stores/:storeId/suppliers',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -173,6 +180,7 @@ router.get(
 /**
  * POST /stores/:storeId/suppliers/link
  * Link an existing supplier to a store.
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  *
  * Body:
  * - supplierId: UUID of supplier to link (required)
@@ -184,6 +192,8 @@ router.get(
  */
 router.post(
   '/stores/:storeId/suppliers/link',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -228,6 +238,7 @@ router.post(
 /**
  * PUT /stores/:storeId/suppliers/:supplierId
  * Update a supplier-store link settings.
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  *
  * Body:
  * - creditDays: Credit terms in days
@@ -238,6 +249,8 @@ router.post(
  */
 router.put(
   '/stores/:storeId/suppliers/:supplierId',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, supplierId } = req.params;
@@ -274,12 +287,15 @@ router.put(
 /**
  * DELETE /stores/:storeId/suppliers/:supplierId/unlink
  * Unlink a supplier from a store (soft delete).
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  *
  * Body (optional):
  * - reason: Reason for unlinking
  */
 router.delete(
   '/stores/:storeId/suppliers/:supplierId/unlink',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, supplierId } = req.params;
@@ -312,9 +328,12 @@ router.delete(
 /**
  * POST /stores/:storeId/suppliers/:supplierId/reactivate
  * Reactivate a previously unlinked supplier.
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  */
 router.post(
   '/stores/:storeId/suppliers/:supplierId/reactivate',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, supplierId } = req.params;
@@ -345,6 +364,7 @@ router.post(
 /**
  * POST /stores/:storeId/suppliers/request
  * Request a new supplier to be added to the system.
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  *
  * Body:
  * - gstin: GSTIN of the supplier (optional but validated if provided)
@@ -356,6 +376,8 @@ router.post(
  */
 router.post(
   '/stores/:storeId/suppliers/request',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -387,12 +409,15 @@ router.post(
 /**
  * GET /stores/:storeId/suppliers/requests
  * Get supplier requests for a store.
+ * GL-CRIT-0002: Protected with authenticate + requireStoreAccess
  *
  * Query params:
  * - status: Filter by request status ('pending', 'approved', 'rejected')
  */
 router.get(
   '/stores/:storeId/suppliers/requests',
+  authenticate,
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;

@@ -12,6 +12,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@supermandi/auth-service": "workspace:*",
     "@supermandi/common": "workspace:*",
     "bullmq": "^4.14.0",
     "express": "^4.18.2",

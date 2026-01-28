@@ -6,6 +6,9 @@ export {
   verifyAccessToken,
   verifyRefreshToken,
   decodeToken,
+  // GL-CRIT-0007: Service-to-service authentication
+  generateServiceToken,
+  verifyServiceToken,
 } from './services/jwtService';
 
 // Authentication middleware
