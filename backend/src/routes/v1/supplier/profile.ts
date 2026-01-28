@@ -23,6 +23,7 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
       return;
     }
 
+    // GL-WF-034: Include email_verified in profile query
     const result = await pool.query(
       `SELECT
         id,
@@ -38,6 +39,7 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
         state,
         pincode,
         verification_status,
+        email_verified,
         status,
         rating,
         bank_account_number,
@@ -72,6 +74,7 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
         state: supplier.state,
         pincode: supplier.pincode,
         verificationStatus: supplier.verification_status,
+        emailVerified: supplier.email_verified || false, // GL-WF-034
         status: supplier.status,
         rating: parseFloat(supplier.rating),
         bankDetails: supplier.bank_account_number ? {

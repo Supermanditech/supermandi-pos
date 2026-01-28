@@ -84,9 +84,11 @@ function enforceStoreBinding(req: Request, res: Response, status: PosDeviceStatu
 const TOKEN_EXPIRY_DAYS = 90;
 
 // FINDING-026: Extended device status context with token expiry info
+// GL-WF-045-A: Added tokenRevoked for revocation check
 type PosDeviceStatusContextExtended = PosDeviceStatusContext & {
   tokenExpiresAt: Date | null;
   tokenExpired: boolean;
+  tokenRevoked: boolean;
 };
 
 async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosDeviceStatusContextExtended | null> {
@@ -103,11 +105,13 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
   }
 
   // FINDING-026: Include token_expires_at in query
+  // GL-WF-045-A: Include token_revoked_at for revocation check
   const result = await pool.query(
     `
     SELECT d.id AS device_id, d.store_id, d.active AS device_active,
            (s.status = 'active') AS store_active,
-           d.token_expires_at
+           d.token_expires_at,
+           d.token_revoked_at
     FROM pos_devices d
     LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
     WHERE d.device_token = $1
@@ -133,13 +137,17 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
   const tokenExpiresAt = row.token_expires_at ? new Date(row.token_expires_at) : null;
   const tokenExpired = tokenExpiresAt ? tokenExpiresAt.getTime() < Date.now() : false;
 
+  // GL-WF-045-A: Check token revocation
+  const tokenRevoked = row.token_revoked_at != null;
+
   return {
     deviceId: String(row.device_id),
     storeId,
     deviceActive: Boolean(row.device_active),
     storeActive,
     tokenExpiresAt,
-    tokenExpired
+    tokenExpired,
+    tokenRevoked
   };
 }
 
@@ -229,6 +237,16 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
       error: "token_expired",
       message: "Device token has expired. Please re-enroll the device.",
       code: "TOKEN_EXPIRED"
+    });
+    return;
+  }
+
+  // GL-WF-045-A: Check token revocation - require re-enrollment if revoked
+  if (status.tokenRevoked) {
+    res.status(401).json({
+      error: "token_revoked",
+      message: "Device token has been revoked. Please re-enroll the device.",
+      code: "TOKEN_REVOKED"
     });
     return;
   }
