@@ -847,6 +847,7 @@ export default function SuppliersPage() {
       <div className="grid grid-2" style={{ gap: '1rem' }}>
         <div className="form-group">
           <label className="form-label">Min Order Value (₹)</label>
+          {/* GL-CRIT-0105: Added step and explicit min/max to prevent invalid values */}
           <input
             type="number"
             name="minOrderValue"
@@ -855,18 +856,26 @@ export default function SuppliersPage() {
             value={formData.minOrderValue}
             onChange={handleInputChange}
             min={0}
+            max={1000000}
+            step={1}
           />
+          <small style={{ color: 'var(--text-muted)' }}>Minimum order amount in rupees (0 = no minimum)</small>
         </div>
         <div className="form-group">
-          <label className="form-label">Delivery Charges</label>
+          <label className="form-label">Delivery Charges (₹)</label>
+          {/* GL-CRIT-0104: Changed to numeric input with "free above" option */}
           <input
-            type="text"
+            type="number"
             name="deliveryCharges"
             className="form-input"
-            placeholder="e.g., Free, ₹50 flat, Free above ₹1000"
+            placeholder="0 for free delivery"
             value={formData.deliveryCharges}
             onChange={handleInputChange}
+            min={0}
+            max={10000}
+            step={1}
           />
+          <small style={{ color: 'var(--text-muted)' }}>Flat rate in rupees (0 = free delivery)</small>
         </div>
       </div>
 

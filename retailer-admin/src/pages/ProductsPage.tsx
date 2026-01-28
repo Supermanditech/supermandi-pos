@@ -472,15 +472,39 @@ export default function ProductsPage() {
       if (response.status === 401) return;
 
       // AUD-025-B: Handle 409 CONFLICT (stale update rejected by LWW)
+      // GL-CRIT-0101: Differentiate error handling by status code
+      if (response.status === 401) {
+        throw new Error('Session expired. Please log in again.');
+      }
+      if (response.status === 403) {
+        throw new Error('You do not have permission to perform this action.');
+      }
+      if (response.status === 404) {
+        throw new Error('Product not found. It may have been deleted.');
+      }
       if (response.status === 409) {
         await response.json(); // consume response body
         throw new Error('This product was updated elsewhere. Please refresh and try again.');
+      }
+      if (response.status === 422) {
+        const errData = await response.json() as { error?: { message?: string; details?: Record<string, string> } };
+        const details = errData.error?.details;
+        if (details && Object.keys(details).length > 0) {
+          const fieldErrors = Object.entries(details).map(([k, v]) => `${k}: ${v}`).join(', ');
+          throw new Error(`Validation error: ${fieldErrors}`);
+        }
+        throw new Error(errData.error?.message || 'Validation failed. Please check your input.');
       }
 
       const data = await response.json() as ProductCreateResponse;
 
       if (!response.ok) {
-        throw new Error((data as unknown as { error?: { message?: string } }).error?.message || `Failed to ${isEdit ? 'update' : 'create'} product`);
+        // GL-CRIT-0101: Differentiate 4xx client errors from 5xx server errors
+        const errMsg = (data as unknown as { error?: { message?: string } }).error?.message;
+        if (response.status >= 500) {
+          throw new Error(errMsg || 'Server error. Please try again later or contact support.');
+        }
+        throw new Error(errMsg || `Failed to ${isEdit ? 'update' : 'create'} product`);
       }
 
       if (isEdit) {

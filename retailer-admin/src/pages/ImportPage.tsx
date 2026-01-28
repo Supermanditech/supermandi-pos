@@ -105,13 +105,26 @@ export default function ImportPage() {
       );
       if (!validateResp.ok) {
         const data = await validateResp.json();
-        throw new Error(data.error?.message || 'Validation failed');
+        // GL-CRIT-0102: Show specific error type and row number if available
+        const errorDetails = data.error;
+        if (errorDetails?.row !== undefined) {
+          throw new Error(`Row ${errorDetails.row}: ${errorDetails.message || 'Invalid data'}`);
+        }
+        if (errorDetails?.errors && Array.isArray(errorDetails.errors) && errorDetails.errors.length > 0) {
+          // Format multiple errors with row numbers
+          const formattedErrors = errorDetails.errors.slice(0, 5).map((e: { row?: number; message?: string }) =>
+            e.row !== undefined ? `Row ${e.row}: ${e.message}` : e.message
+          ).join('\n');
+          throw new Error(formattedErrors + (errorDetails.errors.length > 5 ? `\n...and ${errorDetails.errors.length - 5} more errors` : ''));
+        }
+        throw new Error(errorDetails?.message || 'Validation failed. Please check your file format.');
       }
       const validateData = await validateResp.json();
       setValidation(validateData.data);
       setStep('review');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed');
+      // GL-CRIT-0102: Preserve detailed error messages
+      setError(err instanceof Error ? err.message : 'Import failed. Please ensure your file is a valid CSV/Excel file.');
       setStep('upload');
     } finally {
       setIsProcessing(false);

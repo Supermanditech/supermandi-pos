@@ -35,9 +35,12 @@ const USER_KEY = 'retailer_user';
 const STORE_KEY = 'retailer_store';
 // RCAT-AUTH-001: Idle timeout configuration
 const LAST_ACTIVITY_KEY = 'retailer_last_activity';
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-// GL-WF-028: Warning 5 minutes before timeout
-const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes before timeout
+// GL-CRIT-0076: Make idle timeout configurable via environment variable
+// Default: 30 minutes, can be overridden with VITE_IDLE_TIMEOUT_MINUTES
+const IDLE_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || '30', 10);
+const IDLE_TIMEOUT_MS = Math.max(5, IDLE_TIMEOUT_MINUTES) * 60 * 1000; // Minimum 5 minutes
+// GL-WF-028: Warning 5 minutes before timeout (or 1/6 of timeout if timeout is short)
+const WARNING_BEFORE_MS = Math.min(5 * 60 * 1000, IDLE_TIMEOUT_MS / 6);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
