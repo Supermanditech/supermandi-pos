@@ -32,6 +32,8 @@ import { adminGlobalProductsRouter } from "./admin/globalProducts";
 import { adminSuppliersRouter } from "./admin/suppliers";
 import { adminUsersRouter } from "./admin/users";
 import { adminSettingsRouter } from "./admin/settings";
+import { adminAuditRouter } from "./admin/audit";  // GL-CRIT-0049: Audit log endpoint
+import { adminAuditMiddleware } from "../../middleware/adminAudit";  // GL-CRIT-0049: Audit logging
 import { retailerAdminInventoryRouter } from "./retailer-admin/inventory";
 import { retailerAdminSuppliersRouter } from "./retailer-admin/suppliers";
 import { retailerAdminProductsRouter } from "./retailer-admin/products";
@@ -72,6 +74,8 @@ v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
 v1Router.use("/catalog", catalogRouter);  // AUD-GOLIVE-003: Store catalog endpoints
 v1Router.use("/admin", adminHealthRouter);  // MED-011: Public health check (no auth)
+// GL-CRIT-0049: Apply audit middleware to all admin mutation routes
+v1Router.use("/admin", adminAuditMiddleware());
 v1Router.use("/admin", adminPosEventsRouter);
 v1Router.use("/admin", adminAiRouter);
 v1Router.use("/admin", adminStoresRouter);
@@ -83,6 +87,7 @@ v1Router.use("/admin", adminGlobalProductsRouter);
 v1Router.use("/admin", adminSuppliersRouter);
 v1Router.use("/admin", adminUsersRouter);
 v1Router.use("/admin", adminSettingsRouter);
+v1Router.use("/admin", adminAuditRouter);  // GL-CRIT-0049: Audit log fetch endpoint
 v1Router.use("/retailer-admin", retailerAdminInventoryRouter);
 v1Router.use("/retailer-admin", retailerAdminSuppliersRouter);
 v1Router.use("/retailer-admin", retailerAdminProductsRouter);

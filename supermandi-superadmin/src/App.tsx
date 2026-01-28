@@ -265,6 +265,14 @@ export default function App() {
   const [createUserLoading, setCreateUserLoading] = useState<boolean>(false);
   const [createUserError, setCreateUserError] = useState<string>("");
   const [createUserSuccess, setCreateUserSuccess] = useState<string>("");
+  // GL-CRIT-0053: Admin user verification state
+  const [pendingAdminUser, setPendingAdminUser] = useState<{
+    name: string;
+    email?: string;
+    phone?: string;
+    actor_type: string;
+  } | null>(null);
+  const [adminVerificationReason, setAdminVerificationReason] = useState<string>("");
 
   // Settings state (ADM-SCR-003)
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
@@ -479,7 +487,8 @@ export default function App() {
   }
 
   // SA-1.3-004: Handle user creation
-  async function handleCreateUser() {
+  // GL-CRIT-0053: Require verification for platform admin user creation
+  function requestCreateUser() {
     setCreateUserError("");
     setCreateUserSuccess("");
 
@@ -493,18 +502,36 @@ export default function App() {
       return;
     }
 
-    setCreateUserLoading(true);
-    try {
-      const input: UserCreateInput = {
+    // GL-CRIT-0053: Platform users require verification
+    if (actor_type === "platform") {
+      setPendingAdminUser({
         name: name.trim(),
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
-        actor_type: actor_type || "store"
-      };
+        actor_type: "platform"
+      });
+      setAdminVerificationReason("");
+      return;
+    }
+
+    // Non-platform users can be created immediately
+    executeCreateUser({
+      name: name.trim(),
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      actor_type: actor_type || "store"
+    });
+  }
+
+  async function executeCreateUser(input: UserCreateInput) {
+    setPendingAdminUser(null);
+    setCreateUserLoading(true);
+    try {
       const newUser = await createUser(input);
       setUserRecords((prev) => [newUser, ...prev]);
       setCreateUserSuccess(`User "${newUser.name}" created successfully!`);
       setCreateUserForm({ name: "", email: "", phone: "", actor_type: "store" });
+      setAdminVerificationReason("");
       // Auto-close form after short delay
       setTimeout(() => {
         setShowCreateUser(false);
@@ -515,6 +542,21 @@ export default function App() {
     } finally {
       setCreateUserLoading(false);
     }
+  }
+
+  function confirmAdminUserCreation() {
+    if (!pendingAdminUser) return;
+    if (adminVerificationReason.trim().length < 10) {
+      setCreateUserError("Reason must be at least 10 characters");
+      return;
+    }
+    executeCreateUser({
+      ...pendingAdminUser,
+      admin_verification: {
+        reason: adminVerificationReason.trim(),
+        confirmed: true
+      }
+    });
   }
 
   // ADM-SCR-003: Fetch settings
@@ -3206,13 +3248,18 @@ export default function App() {
                   >
                     <option value="store">Store</option>
                     <option value="supplier">Supplier</option>
-                    <option value="admin">Admin</option>
+                    <option value="platform">Platform Admin</option>
                   </select>
                 </div>
               </div>
+              {createUserForm.actor_type === "platform" && (
+                <div className="muted" style={{ marginTop: 8, color: "#b45309", background: "#fef3c7", padding: 8, borderRadius: 4 }}>
+                  Creating a Platform Admin grants full system access. Additional verification required.
+                </div>
+              )}
               <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
                 <button
-                  onClick={handleCreateUser}
+                  onClick={requestCreateUser}
                   disabled={createUserLoading}
                   style={{ background: "#22c55e", color: "white" }}
                 >
@@ -3463,6 +3510,49 @@ export default function App() {
                 }}
               >
                 {pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : "Reset Token"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GL-CRIT-0053: Admin User Verification Modal */}
+      {pendingAdminUser && (
+        <div className="modalOverlay" onClick={() => setPendingAdminUser(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h3>Confirm Platform Admin Creation</h3>
+            </div>
+            <div className="modalBody">
+              <p>You are about to create a <strong>Platform Admin</strong> user:</p>
+              <ul style={{ margin: "12px 0", paddingLeft: 20 }}>
+                <li><strong>Name:</strong> {pendingAdminUser.name}</li>
+                {pendingAdminUser.email && <li><strong>Email:</strong> {pendingAdminUser.email}</li>}
+                {pendingAdminUser.phone && <li><strong>Phone:</strong> {pendingAdminUser.phone}</li>}
+              </ul>
+              <p className="muted" style={{ color: "#b45309" }}>
+                Platform admins have full system access. This action is logged for audit compliance.
+              </p>
+              <div className="control" style={{ marginTop: 12 }}>
+                <label>Reason for creating this admin user *</label>
+                <textarea
+                  value={adminVerificationReason}
+                  onChange={(e) => setAdminVerificationReason(e.target.value)}
+                  placeholder="Enter reason (minimum 10 characters)..."
+                  rows={3}
+                  style={{ width: "100%", resize: "vertical" }}
+                />
+              </div>
+              {createUserError && <p className="errorText" style={{ marginTop: 8 }}>{createUserError}</p>}
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => { setPendingAdminUser(null); setCreateUserError(""); }}>Cancel</button>
+              <button
+                className="btnDanger"
+                onClick={confirmAdminUserCreation}
+                disabled={createUserLoading || adminVerificationReason.trim().length < 10}
+              >
+                {createUserLoading ? "Creating..." : "Confirm & Create Admin"}
               </button>
             </div>
           </div>

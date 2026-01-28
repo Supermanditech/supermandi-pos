@@ -79,12 +79,17 @@ export async function patchUser(userId: string, input: UserPatchInput): Promise<
 }
 
 // SA-1.3-004: Create a new user
+// GL-CRIT-0053: Add admin_verification for platform user creation
 export type UserCreateInput = {
   name: string;
   email?: string;
   phone?: string;
   actor_type?: string;
   actor_id?: string;
+  admin_verification?: {
+    reason: string;
+    confirmed: boolean;
+  };
 };
 
 export async function createUser(input: UserCreateInput): Promise<UserRecord> {

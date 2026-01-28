@@ -143,13 +143,18 @@ adminUsersRouter.patch("/users/:userId", async (req, res) => {
 });
 
 // SA-1.3-004: POST /api/v1/admin/users - Create a new user
+// GL-CRIT-0053: Require verification for admin (platform) user creation
 adminUsersRouter.post("/users", async (req, res) => {
-  const { name, email, phone, actor_type, actor_id } = req.body as {
+  const { name, email, phone, actor_type, actor_id, admin_verification } = req.body as {
     name?: string;
     email?: string;
     phone?: string;
     actor_type?: string;
     actor_id?: string;
+    admin_verification?: {
+      reason?: string;
+      confirmed?: boolean;
+    };
   };
 
   // Validation: name required
@@ -183,6 +188,23 @@ adminUsersRouter.post("/users", async (req, res) => {
   }
   if ((finalActorType === 'store' || finalActorType === 'supplier') && !finalActorId) {
     return res.status(400).json({ error: "actor_id_required_for_store_or_supplier" });
+  }
+
+  // GL-CRIT-0053: Require verification for platform (admin) user creation
+  if (finalActorType === 'platform') {
+    if (!admin_verification?.confirmed) {
+      return res.status(400).json({
+        error: "admin_verification_required",
+        message: "Creating platform admin users requires explicit verification."
+      });
+    }
+    if (!admin_verification?.reason || admin_verification.reason.trim().length < 10) {
+      return res.status(400).json({
+        error: "admin_verification_reason_required",
+        message: "A reason of at least 10 characters is required for creating platform admin users."
+      });
+    }
+    console.log(`[admin/users] GL-CRIT-0053: Platform user creation verified. Reason: ${admin_verification.reason}`);
   }
 
   const pool = getPool();
