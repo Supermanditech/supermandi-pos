@@ -58,12 +58,17 @@ export type CartMutation =
       previousDiscount: CartDiscount | null;
     };
 
+// GL-CRIT-0011: Cart lock timeout (5 minutes) to auto-unlock after payment failure
+const CART_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
+
 interface CartState {
   items: CartItem[];
   discount: CartDiscount | null;
   mutationHistory: CartMutation[];
   locked: boolean;
+  lockedAt: number | null; // GL-CRIT-0011: Timestamp when cart was locked
   stockLimitEvent: StockLimitEvent | null;
+  lastStockAdjustments: StockAdjustment[] | null; // GL-CRIT-0014: Last stock adjustments for UI notification
   
   // Computed values
   subtotal: number;
@@ -87,9 +92,12 @@ interface CartState {
   removeDiscount: () => void;
   lockCart: () => void;
   unlockCart: () => void;
+  autoUnlockIfExpired: () => boolean; // GL-CRIT-0011: Auto-unlock if lock timed out
+  isCartLocked: () => boolean; // GL-CRIT-0011: Check if locked (respects timeout)
   resetForStore: () => void;
-  normalizeItemsToStock: () => boolean;
-  
+  normalizeItemsToStock: () => { changed: boolean; adjustments: StockAdjustment[] }; // GL-CRIT-0014: Return adjustments for notification
+  clearLastStockAdjustments: () => void; // GL-CRIT-0014: Clear after UI has shown notification
+
   // Internal
   recalculate: () => void;
 }
@@ -187,11 +195,27 @@ const buildStockLimitEvent = (
   at: Date.now()
 });
 
+// GL-CRIT-0014: Track details of stock adjustments for user notification
+export type StockAdjustment = {
+  itemId: string;
+  itemName: string;
+  previousQty: number;
+  newQty: number;
+  removed: boolean;
+};
+
+type NormalizeResult = {
+  items: CartItem[];
+  changed: boolean;
+  adjustments: StockAdjustment[]; // GL-CRIT-0014: Details of adjustments
+};
+
 const normalizeItemsForStock = (
   items: CartItem[]
-): { items: CartItem[]; changed: boolean } => {
+): NormalizeResult => {
   let changed = false;
   const nextItems: CartItem[] = [];
+  const adjustments: StockAdjustment[] = []; // GL-CRIT-0014
 
   for (const item of items) {
     const availableStock = resolveItemAvailableStock(item);
@@ -200,18 +224,34 @@ const normalizeItemsForStock = (
 
     if (nextQty <= 0) {
       changed = true;
+      // GL-CRIT-0014: Track removed items
+      adjustments.push({
+        itemId: item.id,
+        itemName: item.name,
+        previousQty: item.quantity,
+        newQty: 0,
+        removed: true
+      });
       continue;
     }
 
     if (nextQty !== item.quantity) {
       changed = true;
+      // GL-CRIT-0014: Track quantity adjustments
+      adjustments.push({
+        itemId: item.id,
+        itemName: item.name,
+        previousQty: item.quantity,
+        newQty: nextQty,
+        removed: false
+      });
       nextItems.push({ ...item, quantity: nextQty });
     } else {
       nextItems.push(item);
     }
   }
 
-  return { items: nextItems, changed };
+  return { items: nextItems, changed, adjustments };
 };
 
 export const useCartStore = create<CartState>()(
@@ -221,7 +261,9 @@ export const useCartStore = create<CartState>()(
       discount: null,
       mutationHistory: [],
       locked: false,
+      lockedAt: null, // GL-CRIT-0011: Track when cart was locked
       stockLimitEvent: null,
+      lastStockAdjustments: null, // GL-CRIT-0014
       subtotal: 0,
       itemDiscountAmount: 0,
       cartDiscountAmount: 0,
@@ -632,11 +674,46 @@ export const useCartStore = create<CartState>()(
   },
 
   lockCart: () => {
-    set({ locked: true });
+    // GL-CRIT-0011: Track when cart was locked for timeout-based auto-unlock
+    set({ locked: true, lockedAt: Date.now() });
   },
 
   unlockCart: () => {
-    set({ locked: false });
+    set({ locked: false, lockedAt: null });
+  },
+
+  // GL-CRIT-0011: Auto-unlock cart if lock has expired (timeout after 5 min)
+  autoUnlockIfExpired: () => {
+    const state = get();
+    if (!state.locked || !state.lockedAt) return false;
+
+    const elapsed = Date.now() - state.lockedAt;
+    if (elapsed >= CART_LOCK_TIMEOUT_MS) {
+      console.warn(`[CartStore] GL-CRIT-0011: Auto-unlocking cart after ${Math.round(elapsed / 1000)}s timeout`);
+      set({ locked: false, lockedAt: null });
+      eventLogger.log('CART_AUTO_UNLOCKED', { elapsedMs: elapsed });
+      return true;
+    }
+    return false;
+  },
+
+  // GL-CRIT-0011: Check if cart is locked (auto-unlocks if timed out)
+  isCartLocked: () => {
+    const state = get();
+    if (!state.locked) return false;
+
+    // Check for timeout
+    if (state.lockedAt) {
+      const elapsed = Date.now() - state.lockedAt;
+      if (elapsed >= CART_LOCK_TIMEOUT_MS) {
+        // Auto-unlock
+        console.warn(`[CartStore] GL-CRIT-0011: Cart lock expired after ${Math.round(elapsed / 1000)}s`);
+        set({ locked: false, lockedAt: null });
+        eventLogger.log('CART_AUTO_UNLOCKED', { elapsedMs: elapsed });
+        return false;
+      }
+    }
+    return true;
   },
 
   resetForStore: () => {
@@ -645,6 +722,8 @@ export const useCartStore = create<CartState>()(
       discount: null,
       mutationHistory: [],
       locked: false,
+      lockedAt: null, // GL-CRIT-0011
+      lastStockAdjustments: null, // GL-CRIT-0014
       subtotal: 0,
       itemDiscountAmount: 0,
       cartDiscountAmount: 0,
@@ -654,13 +733,31 @@ export const useCartStore = create<CartState>()(
     });
   },
 
+  // GL-CRIT-0014: Return adjustments so UI can notify user
   normalizeItemsToStock: () => {
     const state = get();
-    const { items: nextItems, changed } = normalizeItemsForStock(state.items);
-    if (!changed) return false;
-    set({ items: nextItems });
+    const { items: nextItems, changed, adjustments } = normalizeItemsForStock(state.items);
+    if (!changed) return { changed: false, adjustments: [] };
+    // GL-CRIT-0014: Store adjustments in state for UI to read
+    set({ items: nextItems, lastStockAdjustments: adjustments.length > 0 ? adjustments : null });
     get().recalculate();
-    return true;
+    // Log adjustments for debugging
+    if (adjustments.length > 0) {
+      eventLogger.log('CART_STOCK_ADJUSTMENT', {
+        adjustments: adjustments.map(a => ({
+          itemId: a.itemId,
+          previousQty: a.previousQty,
+          newQty: a.newQty,
+          removed: a.removed
+        }))
+      });
+    }
+    return { changed: true, adjustments };
+  },
+
+  // GL-CRIT-0014: Clear adjustments after UI has shown notification
+  clearLastStockAdjustments: () => {
+    set({ lastStockAdjustments: null });
   },
   
   recalculate: () => {

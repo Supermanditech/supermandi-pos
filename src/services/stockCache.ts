@@ -1,14 +1,10 @@
 import { normalizeStoreScope, storeScopedStorage } from "./storeScope";
 
 const STOCK_CACHE_KEY = "supermandi.stock.cache.v1";
-// CACHE-000: Keep 6h TTL for offline cart safety. Truth-first is enforced by:
-// - cache:"no-store" on all fetches (no HTTP caching)
-// - AppState foreground listener (refreshes products on resume)
-// - Each online scan calls upsertStockEntries() with fresh API values
-// The stock TTL only gates the cart's stock-cap check; a short TTL would block
-// offline cart additions once entries expire (capAddQuantity returns addedQty:0
-// for null/unknown stock).
-const STOCK_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+// GL-CRIT-0013: Reduced TTL to 5 minutes to prevent showing stale stock
+// Previous 6h TTL caused issues where sold-out items still showed as available.
+// Offline safety is maintained by allowing cart operations when stock is unknown (null).
+const STOCK_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 type StockCacheEntry = {
   stock: number;
@@ -78,6 +74,32 @@ export function getCachedStock(key: string): number | null {
   if (Date.now() - entry.updatedAt > STOCK_CACHE_TTL_MS) return null;
   return Math.max(0, Math.floor(entry.stock));
 }
+
+// GL-CRIT-0013: Check if any cache entries are stale (for triggering refresh)
+export function hasStaleEntries(): boolean {
+  const state = getState();
+  if (!state.loaded) return false;
+  const now = Date.now();
+  for (const entry of Object.values(state.entries)) {
+    if (now - entry.updatedAt > STOCK_CACHE_TTL_MS) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// GL-CRIT-0013: Get the age of the oldest cache entry
+export function getOldestEntryAge(): number | null {
+  const state = getState();
+  if (!state.loaded) return null;
+  const entries = Object.values(state.entries);
+  if (entries.length === 0) return null;
+  const oldest = Math.min(...entries.map(e => e.updatedAt));
+  return Date.now() - oldest;
+}
+
+// GL-CRIT-0013: Export TTL for use in refresh logic
+export const STOCK_TTL_MS = STOCK_CACHE_TTL_MS;
 
 export function updateStockCacheEntries(entries: Array<{ key: string; stock: number }>): void {
   const state = getState();

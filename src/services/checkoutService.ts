@@ -11,6 +11,7 @@ import {
   recordSaleTransaction,
   InventoryTransactionItem,
 } from "./api/inventoryApi";
+import { enqueueEvent } from "./offline/outbox"; // GL-CRIT-0016: For retry queue
 
 // =============================================================================
 // TYPES
@@ -90,12 +91,35 @@ export async function completeCheckout(
 
     console.log(`[Checkout] Inventory deducted for sale ${saleId}, ${items.length} items`);
   } catch (inventoryError) {
-    // Inventory deduction failed - log warning but don't fail checkout
-    // Backend will reconcile via event outbox or manual reconciliation
+    // GL-CRIT-0016: Inventory deduction failed - enqueue for retry
+    // Don't fail checkout, but ensure inventory is eventually deducted
     console.warn(
-      `[Checkout] Inventory deduction failed for sale ${saleId}:`,
+      `[Checkout] Inventory deduction failed for sale ${saleId}, queueing for retry:`,
       inventoryError
     );
+
+    // GL-CRIT-0016: Add to offline outbox for retry
+    try {
+      await enqueueEvent("SALE_CREATED", {
+        saleId,
+        billRef,
+        items: items.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+          unitCost: item.priceMinor,
+        })),
+        retryInventoryDeduction: true, // Flag for sync processor to handle
+        originalError: inventoryError instanceof Error ? inventoryError.message : String(inventoryError),
+        queuedAt: new Date().toISOString(),
+      });
+      console.log(`[Checkout] GL-CRIT-0016: Queued inventory deduction retry for sale ${saleId}`);
+    } catch (queueError) {
+      // If even queueing fails, log critical error
+      console.error(
+        `[Checkout] CRITICAL: Failed to queue inventory retry for sale ${saleId}:`,
+        queueError
+      );
+    }
   }
 
   // Step 3: Return result

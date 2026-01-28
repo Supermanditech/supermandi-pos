@@ -470,9 +470,35 @@ const PaymentScreen = () => {
     setSelectedMode(mode);
   };
 
+  // GL-CRIT-0047: Ref to track if partial sale was confirmed
+  const partialSaleConfirmedRef = useRef(false);
+
   const handleCompletePayment = async () => {
     if (!saleId || !billRef) {
       Alert.alert("Payment Error", "Sale is not ready yet.");
+      return;
+    }
+
+    // GL-CRIT-0047: Show confirmation for partial sales
+    if (isPartialSale && !partialSaleConfirmedRef.current) {
+      const remainingItemCount = items.length - saleItems.length;
+      Alert.alert(
+        "Partial Sale",
+        `${remainingItemCount} item(s) will remain in cart after this sale. Continue?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel"
+          },
+          {
+            text: "Continue",
+            onPress: () => {
+              partialSaleConfirmedRef.current = true;
+              handleCompletePayment(); // Retry with confirmation
+            }
+          }
+        ]
+      );
       return;
     }
 
@@ -561,8 +587,28 @@ const PaymentScreen = () => {
           return;
         }
         if (error.message === "insufficient_stock") {
-          const message = resolveStockErrorMessage(error) ?? "Stock changed. Please review the cart.";
-          Alert.alert("Stock changed", message);
+          // GL-CRIT-0100: Auto-update cart when stock error received
+          const { normalizeItemsToStock } = useCartStore.getState();
+          const { changed, adjustments } = normalizeItemsToStock();
+
+          let message = "";
+          if (changed && adjustments.length > 0) {
+            const removed = adjustments.filter(a => a.removed).length;
+            const reduced = adjustments.filter(a => !a.removed).length;
+            if (removed > 0 && reduced > 0) {
+              message = `Stock changed: ${removed} item(s) removed, ${reduced} item(s) reduced. Cart has been updated.`;
+            } else if (removed > 0) {
+              message = `Stock changed: ${removed} item(s) removed from cart.`;
+            } else if (reduced > 0) {
+              message = `Stock changed: ${reduced} item(s) had quantity reduced.`;
+            }
+          } else {
+            message = resolveStockErrorMessage(error) ?? "Stock changed. Please review the cart.";
+          }
+
+          Alert.alert("Cart Updated", message, [
+            { text: "Review Cart", onPress: () => navigation.navigate("SellScan") }
+          ]);
           return;
         }
       }

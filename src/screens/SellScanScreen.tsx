@@ -27,7 +27,7 @@ import { useTranslation } from "react-i18next";
 
 import { AppText, ButtonText, PriceText, LabelText } from "../components/ui/AppText";
 import { useCartStore } from "../stores/cartStore";
-import type { CartItem } from "../stores/cartStore";
+import type { CartItem, StockAdjustment } from "../stores/cartStore";
 import { useProductsStore } from "../stores/productsStore";
 import { formatMoney } from "../utils/money";
 import * as productsApi from "../services/api/productsApi";
@@ -35,6 +35,7 @@ import * as sellSearchApi from "../services/api/sellSearchApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
 import { offlineDb } from "../services/offline/localDb";
+import { setCorruptedEventsCallback, failedOutboxCount, clearCorruptedEvents } from "../services/offline/outbox"; // GL-CRIT-0012
 import { onBarcodeScanned, type SellFirstOnboardingRequest } from "../services/scan/handleScan";
 import { submitSellFirstOnboarding } from "../services/scan/sellFirstOnboarding";
 import {
@@ -42,7 +43,9 @@ import {
   resolveStockForCartItem,
   resolveStockForSku,
   subscribeStockUpdates,
-  upsertStockEntries
+  upsertStockEntries,
+  startStockAutoRefresh, // GL-CRIT-0013
+  stopStockAutoRefresh // GL-CRIT-0013
 } from "../services/stockService";
 import {
   feedHidKey,
@@ -716,6 +719,9 @@ export default function SellScanScreen({
     stockLimitEvent,
     undoLastAction,
     locked,
+    autoUnlockIfExpired, // GL-CRIT-0011
+    lastStockAdjustments, // GL-CRIT-0014
+    clearLastStockAdjustments, // GL-CRIT-0014
     updateQuantity,
     updatePrice,
     updateItemDetails,
@@ -726,6 +732,92 @@ export default function SellScanScreen({
     removeDiscount,
     clearCart,
   } = useCartStore();
+
+  // GL-CRIT-0011: Auto-unlock cart if lock has expired (e.g., app crashed during payment)
+  useEffect(() => {
+    autoUnlockIfExpired();
+  }, [autoUnlockIfExpired]);
+
+  // GL-CRIT-0014: Show notification when cart items are adjusted due to stock changes
+  useEffect(() => {
+    if (!lastStockAdjustments || lastStockAdjustments.length === 0) return;
+
+    // Build user-friendly message
+    const removed = lastStockAdjustments.filter(a => a.removed);
+    const adjusted = lastStockAdjustments.filter(a => !a.removed);
+
+    let message = "";
+    if (removed.length > 0 && adjusted.length > 0) {
+      message = `${removed.length} item(s) removed and ${adjusted.length} item(s) reduced due to stock changes.`;
+    } else if (removed.length > 0) {
+      message = removed.length === 1
+        ? `"${removed[0].itemName}" removed from cart - out of stock.`
+        : `${removed.length} items removed from cart - out of stock.`;
+    } else if (adjusted.length > 0) {
+      message = adjusted.length === 1
+        ? `"${adjusted[0].itemName}" reduced to ${adjusted[0].newQty} (stock changed).`
+        : `${adjusted.length} items had quantities reduced due to stock changes.`;
+    }
+
+    if (message) {
+      if (Platform.OS === "android") {
+        ToastAndroid.show(message, ToastAndroid.LONG);
+      } else {
+        Alert.alert("Cart Updated", message);
+      }
+    }
+
+    // Clear after showing notification
+    clearLastStockAdjustments();
+  }, [lastStockAdjustments, clearLastStockAdjustments]);
+
+  // GL-CRIT-0012: Check for corrupted offline sales on mount and set up notification callback
+  useEffect(() => {
+    // Check for existing corrupted sales
+    void failedOutboxCount().then((count) => {
+      if (count > 0) {
+        Alert.alert(
+          "Sync Issue Detected",
+          `${count} offline sale(s) could not be synced due to data corruption. Please contact support if sales are missing from your reports.`,
+          [
+            { text: "Dismiss", style: "cancel" },
+            {
+              text: "Clear Failed Sales",
+              style: "destructive",
+              onPress: () => {
+                void clearCorruptedEvents().then((cleared) => {
+                  if (Platform.OS === "android") {
+                    ToastAndroid.show(`Cleared ${cleared} failed sales`, ToastAndroid.SHORT);
+                  }
+                });
+              }
+            }
+          ]
+        );
+      }
+    });
+
+    // Set up callback for newly detected corrupted events
+    setCorruptedEventsCallback((count) => {
+      Alert.alert(
+        "Sync Error",
+        `${count} sale(s) could not sync due to data issues. The affected sales have been logged for review.`,
+        [{ text: "OK" }]
+      );
+    });
+
+    return () => {
+      setCorruptedEventsCallback(null);
+    };
+  }, []);
+
+  // GL-CRIT-0013: Start periodic stock cache refresh
+  useEffect(() => {
+    startStockAutoRefresh();
+    return () => {
+      stopStockAutoRefresh();
+    };
+  }, []);
 
   useEffect(() => {
     if (products.length === 0) {

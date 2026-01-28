@@ -1,6 +1,14 @@
 import { offlineDb } from "./localDb";
 import { uuidv4 } from "../../utils/uuid";
 
+// GL-CRIT-0012: Callback for corrupted event notification
+type CorruptedEventsCallback = (count: number) => void;
+let corruptedEventsCallback: CorruptedEventsCallback | null = null;
+
+export function setCorruptedEventsCallback(callback: CorruptedEventsCallback | null): void {
+  corruptedEventsCallback = callback;
+}
+
 export type OfflineEventType =
   | "PRODUCT_UPSERT"
   | "PRODUCT_PRICE_SET"
@@ -70,6 +78,10 @@ export async function getPendingEvents(limit = 50): Promise<OfflineEvent[]> {
   // Mark corrupted events with error flag so they're skipped in future batches
   if (corruptedEventIds.length > 0) {
     await markEventsCorrupted(corruptedEventIds);
+    // GL-CRIT-0012: Notify callback about corrupted events
+    if (corruptedEventsCallback) {
+      corruptedEventsCallback(corruptedEventIds.length);
+    }
   }
 
   return validEvents;

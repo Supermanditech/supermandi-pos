@@ -1,6 +1,6 @@
 import * as productsApi from "./api/productsApi";
 import { getStock, getStockBatch } from "./api/inventoryApi";
-import { getCachedStock, updateStockCacheEntries } from "./stockCache";
+import { getCachedStock, updateStockCacheEntries, hasStaleEntries, STOCK_TTL_MS } from "./stockCache";
 import { isOnline } from "./networkStatus";
 
 type StockEntry = { key: string; stock: number };
@@ -199,4 +199,51 @@ export async function refreshCartStock(
   } catch {
     return false;
   }
+}
+
+// =============================================================================
+// GL-CRIT-0013: PERIODIC STOCK REFRESH
+// =============================================================================
+
+let autoRefreshInterval: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * GL-CRIT-0013: Start periodic stock cache refresh
+ * Automatically refreshes stock every 5 minutes when online
+ */
+export function startStockAutoRefresh(): void {
+  if (autoRefreshInterval) return; // Already running
+
+  // Check and refresh every 2 minutes (half the TTL) if cache has stale entries
+  autoRefreshInterval = setInterval(async () => {
+    try {
+      if (!(await isOnline())) return;
+      if (hasStaleEntries()) {
+        console.log("[Stock] GL-CRIT-0013: Auto-refreshing stale stock entries");
+        await refreshStockSnapshot();
+      }
+    } catch (error) {
+      console.warn("[Stock] Auto-refresh failed:", error);
+    }
+  }, Math.floor(STOCK_TTL_MS / 2.5)); // Check at ~2 minutes
+
+  console.log("[Stock] GL-CRIT-0013: Auto-refresh started");
+}
+
+/**
+ * GL-CRIT-0013: Stop periodic stock cache refresh
+ */
+export function stopStockAutoRefresh(): void {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+    console.log("[Stock] GL-CRIT-0013: Auto-refresh stopped");
+  }
+}
+
+/**
+ * GL-CRIT-0013: Check if stock cache needs refresh (has stale entries)
+ */
+export function needsStockRefresh(): boolean {
+  return hasStaleEntries();
 }

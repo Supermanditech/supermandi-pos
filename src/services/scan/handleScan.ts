@@ -175,8 +175,19 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
       return false;
     }
 
-    // Ensure valid price
+    // GL-CRIT-0046: Block items with invalid or zero price
     const safePriceMinor = typeof priceMinor === "number" && Number.isFinite(priceMinor) ? priceMinor : 0;
+
+    if (safePriceMinor <= 0) {
+      console.warn(`scan_invalid_price:${productBarcode || productId},price=${priceMinor}`);
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Price not set for this item. Cannot add to cart.", ToastAndroid.LONG);
+      } else {
+        // For iOS, the caller should handle showing an alert
+        console.warn("[Scan] GL-CRIT-0046: Item blocked due to invalid price");
+      }
+      return false;
+    }
 
     console.log(`scan_add_to_cart:${productBarcode || productId},price=${safePriceMinor}`);
     cartState.addItem({
