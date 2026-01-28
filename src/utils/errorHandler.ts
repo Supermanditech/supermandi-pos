@@ -50,14 +50,68 @@ export class NetworkError extends Error {
 // ERROR PARSING
 // =============================================================================
 
+// GL-CRIT-0042: Robust network error detection patterns
+const NETWORK_ERROR_PATTERNS = [
+  "network",
+  "failed to fetch",
+  "fetch failed",
+  "networkerror",
+  "network request failed",
+  "unable to connect",
+  "connection refused",
+  "connection failed",
+  "no internet",
+  "offline",
+  "timeout",
+  "timed out",
+  "econnrefused",
+  "enotfound",
+  "dns",
+  "socket",
+] as const;
+
+function isNetworkErrorMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return NETWORK_ERROR_PATTERNS.some((pattern) => lower.includes(pattern));
+}
+
+function isLikelyNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  // AbortError from fetch timeout
+  if (error.name === "AbortError") return true;
+
+  // TypeError is commonly thrown by fetch on network failure
+  if (error instanceof TypeError) {
+    // Check error message for network-related strings
+    if (isNetworkErrorMessage(error.message)) return true;
+    // On React Native, fetch failures often just say "Network request failed"
+    // But can also be generic TypeErrors, so be conservative
+    return error.message.includes("request") || error.message.includes("fetch");
+  }
+
+  // Check error name for network-related types
+  if (error.name === "NetworkError" || error.name === "FetchError") return true;
+
+  // Check message content
+  return isNetworkErrorMessage(error.message);
+}
+
 /**
  * Parse any error into a standardized ParsedApiError.
  */
 export function parseError(error: unknown): ParsedApiError {
-  // Network error (fetch failed)
-  if (error instanceof TypeError && error.message.includes("Network")) {
+  // GL-CRIT-0042: Robust network error detection
+  if (isLikelyNetworkError(error)) {
+    const isTimeout = error instanceof Error && (
+      error.name === "AbortError" ||
+      error.message.toLowerCase().includes("timeout") ||
+      error.message.toLowerCase().includes("timed out")
+    );
     return {
-      message: "Network error. Please check your connection.",
+      message: isTimeout
+        ? "Request timed out. Please try again."
+        : "Network error. Please check your connection.",
       status: 0,
       fieldErrors: {},
       isNetworkError: true,

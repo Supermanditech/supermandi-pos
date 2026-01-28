@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+// GL-CRIT-0086: Minimum loading display time to prevent flash
+const MIN_LOADING_DISPLAY_MS = 300;
 import {
   View,
   Text,
@@ -126,6 +129,9 @@ const PaymentScreen = () => {
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [loadingSale, setLoadingSale] = useState(false);
   const [loadingUpi, setLoadingUpi] = useState(false);
+  // GL-CRIT-0086: Track when loading started for minimum display time
+  const loadingSaleStartRef = useRef<number>(0);
+  const loadingUpiStartRef = useRef<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [upiVpa, setUpiVpa] = useState<string | null>(null);
@@ -262,6 +268,8 @@ const PaymentScreen = () => {
 
     let cancelled = false;
     setLoadingSale(true);
+    // GL-CRIT-0086: Track start time for minimum display
+    loadingSaleStartRef.current = Date.now();
 
     if (!pendingSaleIdRef.current) {
       pendingSaleIdRef.current = uuidv4();
@@ -324,7 +332,15 @@ const PaymentScreen = () => {
         Alert.alert("Sale Error", "Unable to start payment. Please try again.");
       })
       .finally(() => {
-        if (!cancelled) setLoadingSale(false);
+        if (cancelled) return;
+        // GL-CRIT-0086: Ensure minimum display time to prevent flash
+        const elapsed = Date.now() - loadingSaleStartRef.current;
+        const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
+        if (remaining > 0) {
+          setTimeout(() => setLoadingSale(false), remaining);
+        } else {
+          setLoadingSale(false);
+        }
       });
 
     return () => {
@@ -347,6 +363,8 @@ const PaymentScreen = () => {
 
     let cancelled = false;
     setLoadingUpi(true);
+    // GL-CRIT-0086: Track start time for minimum display
+    loadingUpiStartRef.current = Date.now();
 
     initUpiPayment({ saleId, transactionId })
       .then((res) => {
@@ -411,7 +429,15 @@ const PaymentScreen = () => {
         Alert.alert("UPI Error", "UPI ID not configured or QR failed.");
       })
       .finally(() => {
-        if (!cancelled) setLoadingUpi(false);
+        if (cancelled) return;
+        // GL-CRIT-0086: Ensure minimum display time to prevent flash
+        const elapsed = Date.now() - loadingUpiStartRef.current;
+        const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
+        if (remaining > 0) {
+          setTimeout(() => setLoadingUpi(false), remaining);
+        } else {
+          setLoadingUpi(false);
+        }
       });
 
     return () => {

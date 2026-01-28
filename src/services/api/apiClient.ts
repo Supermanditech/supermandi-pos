@@ -58,6 +58,9 @@ if (__DEV__) {
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
+// GL-CRIT-0043: Default timeout for API requests (30 seconds)
+const API_TIMEOUT_MS = 30000;
+
 async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken();
   const deviceToken = await getDeviceToken();
@@ -80,44 +83,54 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
     });
   }
 
-  // CACHE-000: Prevent stale API responses from HTTP cache
-  const res = await fetch(fullUrl, {
-    method,
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "Accept-Language": locale,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(deviceToken ? { "x-device-token": deviceToken } : {})
-    },
-    body: body === undefined ? undefined : JSON.stringify(body)
-  });
+  // GL-CRIT-0043: Add timeout using AbortController
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
-  const text = await res.text();
-  console.log(`[api_debug] status: ${res.status}, body: ${text.slice(0, 300)}`);
-  const parsed = text ? (JSON.parse(text) as unknown) : undefined;
+  try {
+    // CACHE-000: Prevent stale API responses from HTTP cache
+    const res = await fetch(fullUrl, {
+      method,
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "Accept-Language": locale,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(deviceToken ? { "x-device-token": deviceToken } : {})
+      },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
 
-  if (!res.ok) {
-    // DEV-071: Handle structured error format { error: { code, message } } or { error: "string" }
-    let message = `Request failed (${res.status})`;
-    if (parsed && typeof parsed === "object" && parsed !== null && "error" in parsed) {
-      const errorField = (parsed as any).error;
-      if (typeof errorField === "string") {
-        // Legacy format: { error: "string" }
-        message = errorField;
-      } else if (typeof errorField === "object" && errorField !== null && "code" in errorField) {
-        // New format: { error: { code: "...", message: "..." } }
-        message = errorField.code;
+    const text = await res.text();
+    console.log(`[api_debug] status: ${res.status}, body: ${text.slice(0, 300)}`);
+    const parsed = text ? (JSON.parse(text) as unknown) : undefined;
+
+    if (!res.ok) {
+      // DEV-071: Handle structured error format { error: { code, message } } or { error: "string" }
+      let message = `Request failed (${res.status})`;
+      if (parsed && typeof parsed === "object" && parsed !== null && "error" in parsed) {
+        const errorField = (parsed as any).error;
+        if (typeof errorField === "string") {
+          // Legacy format: { error: "string" }
+          message = errorField;
+        } else if (typeof errorField === "object" && errorField !== null && "code" in errorField) {
+          // New format: { error: { code: "...", message: "..." } }
+          message = errorField.code;
+        }
       }
+      if (message === "device_unauthorized") {
+        await clearDeviceSession();
+      }
+      throw new ApiError(res.status, message, parsed);
     }
-    if (message === "device_unauthorized") {
-      await clearDeviceSession();
-    }
-    throw new ApiError(res.status, message, parsed);
-  }
 
-  return parsed as T;
+    return parsed as T;
+  } finally {
+    // GL-CRIT-0043: Always clear the timeout to prevent memory leaks
+    clearTimeout(timeoutId);
+  }
 }
 
 export const apiClient = {

@@ -50,19 +50,22 @@ export type ScanRuntime = {
   onStoreInactive?: () => void;
 };
 
-const DUPLICATE_WINDOW_MS = 1200;
-// DEV-060: Debounce rapid scans at 500ms per ticket
-const DEFAULT_DUPLICATE_GUARD_MS = 500;
-const STORM_WINDOW_MS = 3000;
-const STORM_MAX_SCANS = 8;
-const STORM_COOLDOWN_MS = 2000;
+// GL-CRIT-0045: Unified duplicate detection window (consolidated from two overlapping windows)
+// Single 1000ms window provides clear, predictable behavior for duplicate barcode detection.
+// Previously had DUPLICATE_WINDOW_MS=1200ms and duplicateGuard=500ms which caused confusion
+// when time was between 500-1200ms (one would pass, one would block).
+const DUPLICATE_WINDOW_MS = 1000;
+// GL-CRIT-0024: Per-barcode storm detection to allow rapid scanning of different items
+// Only triggers when the SAME barcode is scanned 5+ times in 2 seconds
+const STORM_WINDOW_MS = 2000;
+const STORM_MAX_SCANS_PER_BARCODE = 5;
+const STORM_COOLDOWN_MS = 1500;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
 let lastScan: { key: string; ts: number } | null = null;
-let lastBarcodeSeen: { value: string; ts: number } | null = null;
-let recentScans: number[] = [];
-let stormUntil = 0;
+// GL-CRIT-0024: Track scans per barcode instead of globally
+const recentScansByBarcode = new Map<string, number[]>();
+const stormUntilByBarcode = new Map<string, number>();
 let lastStormNotice = 0;
-let duplicateGuardWindowMs = DEFAULT_DUPLICATE_GUARD_MS;
 const warnedNewItems = new Set<string>();
 let purchaseConfirmActive = false;
 
@@ -83,14 +86,17 @@ export function setScanRuntime(next: Partial<ScanRuntime>): void {
   runtime = { ...runtime, ...next };
 }
 
-export function setScanDuplicateGuardWindowMs(windowMs: number): void {
-  duplicateGuardWindowMs = Math.max(0, Math.round(windowMs));
+// GL-CRIT-0045: Deprecated - duplicate guard consolidated into isDuplicate()
+// Kept for backwards compatibility but does nothing
+export function setScanDuplicateGuardWindowMs(_windowMs: number): void {
+  // No-op: duplicate detection now uses single DUPLICATE_WINDOW_MS
 }
 
 function notify(notice: ScanNotice | null): void {
   runtime.onNotice?.(notice);
 }
 
+// GL-CRIT-0045: Unified duplicate detection - checks barcode+intent+mode
 function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boolean {
   const key = `${intent}:${mode}:${barcode}`;
   const now = Date.now();
@@ -101,33 +107,43 @@ function isDuplicate(barcode: string, intent: ScanIntent, mode: ScanMode): boole
   return false;
 }
 
-function isDuplicateGuard(barcode: string): boolean {
+// GL-CRIT-0024: Per-barcode storm detection
+// Only blocks if the SAME barcode is scanned too rapidly
+function isScanStorm(barcode: string): boolean {
   const now = Date.now();
-  if (lastBarcodeSeen && lastBarcodeSeen.value === barcode) {
-    if (now - lastBarcodeSeen.ts < duplicateGuardWindowMs) {
-      return true;
-    }
-  }
-  lastBarcodeSeen = { value: barcode, ts: now };
-  return false;
-}
+  const key = barcode.toUpperCase();
 
-function isScanStorm(): boolean {
-  const now = Date.now();
-  recentScans = recentScans.filter((ts) => now - ts < STORM_WINDOW_MS);
-  recentScans.push(now);
-
-  if (now < stormUntil) {
+  // Check if this specific barcode is in cooldown
+  const cooldownUntil = stormUntilByBarcode.get(key) ?? 0;
+  if (now < cooldownUntil) {
     return true;
   }
 
-  if (recentScans.length > STORM_MAX_SCANS) {
-    stormUntil = now + STORM_COOLDOWN_MS;
+  // Get or create scan history for this barcode
+  let scans = recentScansByBarcode.get(key) ?? [];
+  scans = scans.filter((ts) => now - ts < STORM_WINDOW_MS);
+  scans.push(now);
+  recentScansByBarcode.set(key, scans);
+
+  // Check if this barcode has been scanned too many times
+  if (scans.length > STORM_MAX_SCANS_PER_BARCODE) {
+    stormUntilByBarcode.set(key, now + STORM_COOLDOWN_MS);
     if (now - lastStormNotice > STORM_COOLDOWN_MS) {
       lastStormNotice = now;
       notify({ tone: "warning", message: POS_MESSAGES.scanStorm });
     }
     return true;
+  }
+
+  // Cleanup old entries periodically (every 100 scans)
+  if (recentScansByBarcode.size > 100) {
+    for (const [k, timestamps] of recentScansByBarcode.entries()) {
+      const filtered = timestamps.filter((ts) => now - ts < STORM_WINDOW_MS);
+      if (filtered.length === 0) {
+        recentScansByBarcode.delete(k);
+        stormUntilByBarcode.delete(k);
+      }
+    }
   }
 
   return false;
@@ -298,13 +314,8 @@ export async function onBarcodeScanned(rawText: string, format?: string, source:
 
     console.log(`scan_barcode_received:${trimmed}`);
 
-    if (duplicateGuardWindowMs > 0 && isDuplicateGuard(trimmed)) {
-      console.log("scan_duplicate_ignored");
-      if (Platform.OS === "android") {
-        ToastAndroid.show("Wait before re-scanning", ToastAndroid.SHORT);
-      }
-      return;
-    }
+    // GL-CRIT-0045: Duplicate detection is now done in handleScan() using unified window
+    // Previously had a separate "duplicate guard" here that caused confusion
 
     const intent = runtime.intent;
     console.log(`scan_routed:${intent}`);
@@ -349,7 +360,8 @@ async function handleScan(
     return;
   }
 
-  if (isScanStorm()) {
+  // GL-CRIT-0024: Per-barcode storm detection
+  if (isScanStorm(trimmed)) {
     return;
   }
 

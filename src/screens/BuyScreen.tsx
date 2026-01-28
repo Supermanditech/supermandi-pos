@@ -46,6 +46,7 @@ type StockStatusFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 // =============================================================================
 
 const NUM_COLUMNS = 2;
+// GL-CRIT-0089: Centralized pagination - consider using "../config/pagination"
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 400;
 

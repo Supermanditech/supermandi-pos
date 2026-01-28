@@ -213,9 +213,12 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
   }
 }
 
-const PAGE_SIZE = 40;
+// GL-CRIT-0089: Use centralized pagination constant
+const PAGE_SIZE = 40; // TODO: import from "../config/pagination" when ready
 const NUM_COLUMNS = 2;
-const CATEGORY_AUTO_COLLAPSE_MS = 30000;
+// GL-CRIT-0090: Disabled auto-collapse as it was confusing to users.
+// Category rail stays expanded until user manually collapses (back button or tap outside).
+const CATEGORY_AUTO_COLLAPSE_MS = 0; // 0 = disabled
 const SCAN_SEGMENT_DOCKED_WIDTH = 64;
 const PRICE_AUTO_SAVE_DELAY_MS = 300;
 const DISCOUNT_AUTO_APPLY_DELAY_MS = 300;
@@ -908,7 +911,8 @@ export default function SellScanScreen({
   const voiceDurationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const resetCategoryAutoCollapse = useCallback(() => {
-    if (!categoryRailExpanded) return;
+    // GL-CRIT-0090: Auto-collapse disabled (CATEGORY_AUTO_COLLAPSE_MS = 0)
+    if (!categoryRailExpanded || CATEGORY_AUTO_COLLAPSE_MS <= 0) return;
     if (categoryAutoCollapseRef.current) {
       clearTimeout(categoryAutoCollapseRef.current);
     }

@@ -82,8 +82,10 @@ const TABS: Array<{ id: PosTab; label: string }> = [
   { id: "CREDIT", label: "CREDIT" },
 ];
 
-const HID_ACTIVE_WINDOW_MS = 60000;
-const CAMERA_IDLE_TIMEOUT_MS = 5000;
+// GL-CRIT-0091: Reduced HID scanner timeout from 60s to 15s for faster camera fallback
+const HID_ACTIVE_WINDOW_MS = 15000;
+// GL-CRIT-0092: Increased camera idle timeout from 5s to 45s for better usability
+const CAMERA_IDLE_TIMEOUT_MS = 45000;
 const CAMERA_SCAN_COOLDOWN_MS = 700;
 const POS_DEVICE_HINTS = ["sunmi", "pax", "urovo", "newland", "zebra", "honeywell", "datalogic"];
 const TAB_PILL_ANIMATION_MS = 200;

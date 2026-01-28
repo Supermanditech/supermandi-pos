@@ -777,10 +777,14 @@ export const useCartStore = create<CartState>()(
       name: CART_STORAGE_KEY,
       storage: createJSONStorage(() => storeScopedStorage),
       // GL-WF-019: Include locked state in persistence to prevent cart modification after crash during payment
+      // GL-CRIT-0044: mutationHistory is intentionally NOT persisted.
+      // Undo is disabled after restart because stale mutation history could cause issues.
+      // The UI only shows undo for mutations made in the current session.
       partialize: (state) => ({
         items: state.items,
         discount: state.discount,
-        locked: state.locked
+        locked: state.locked,
+        lockedAt: state.lockedAt  // GL-CRIT-0011: Persist for timeout-based auto-unlock
       }),
       // AUD-058-A FIX: Add error boundary for cart deserialization
       onRehydrateStorage: () => (state, error) => {
