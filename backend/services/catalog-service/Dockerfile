@@ -15,8 +15,9 @@ RUN corepack enable && corepack prepare pnpm@8.11.0 --activate
 COPY pnpm-workspace.yaml ./
 COPY package.json pnpm-lock.yaml ./
 
-# Copy service and common package files
+# Copy service, common, and auth-service package files
 COPY packages/common/package.json ./packages/common/
+COPY services/auth-service/package.json ./services/auth-service/
 COPY services/catalog-service/package.json ./services/catalog-service/
 
 # Install dependencies
@@ -24,11 +25,16 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY packages/common ./packages/common
+COPY services/auth-service ./services/auth-service
 COPY services/catalog-service ./services/catalog-service
 COPY tsconfig.base.json ./
 
 # Build common package first
 WORKDIR /app/packages/common
+RUN pnpm run build
+
+# Build auth-service (for exports used by catalog-service)
+WORKDIR /app/services/auth-service
 RUN pnpm run build
 
 # Build service
@@ -55,6 +61,7 @@ COPY package.json pnpm-lock.yaml ./
 
 # Copy package files for production install
 COPY packages/common/package.json ./packages/common/
+COPY services/auth-service/package.json ./services/auth-service/
 COPY services/catalog-service/package.json ./services/catalog-service/
 
 # Install production dependencies only
@@ -62,6 +69,7 @@ RUN pnpm install --frozen-lockfile --prod
 
 # Copy built artifacts
 COPY --from=builder /app/packages/common/dist ./packages/common/dist
+COPY --from=builder /app/services/auth-service/dist ./services/auth-service/dist
 COPY --from=builder /app/services/catalog-service/dist ./services/catalog-service/dist
 
 # Set ownership
