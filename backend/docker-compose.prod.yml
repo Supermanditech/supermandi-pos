@@ -263,6 +263,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # GL-CRIT-0002: Required for auth middleware
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
     depends_on:
       postgres:
         condition: service_healthy
@@ -302,6 +305,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # GL-CRIT-0004/0007: Required for auth middleware
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
     depends_on:
       postgres:
         condition: service_healthy
@@ -341,6 +347,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # GL-CRIT-0005: Required for auth middleware
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
     depends_on:
       postgres:
         condition: service_healthy
@@ -380,6 +389,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # GL-CRIT-0001: Required for auth middleware
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
     depends_on:
       postgres:
         condition: service_healthy
@@ -419,6 +431,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: redis
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      # GL-CRIT-0003: Required for auth middleware
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
     depends_on:
       postgres:
         condition: service_healthy
