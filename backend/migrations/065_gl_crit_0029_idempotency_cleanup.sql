@@ -9,51 +9,51 @@ BEGIN;
 -- This function should be called periodically (e.g., daily via cron)
 -- ============================================================================
 CREATE OR REPLACE FUNCTION cleanup_expired_idempotency_keys()
-RETURNS TABLE(schema_name TEXT, table_name TEXT, rows_deleted BIGINT) AS $$
+RETURNS TABLE(out_schema_name TEXT, out_table_name TEXT, out_rows_deleted BIGINT) AS $$
 DECLARE
     del_count BIGINT;
 BEGIN
     -- Clean inventory.idempotency_keys
-    IF EXISTS (SELECT 1 FROM information_schema.tables
-               WHERE table_schema = 'inventory' AND table_name = 'idempotency_keys') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables t
+               WHERE t.table_schema = 'inventory' AND t.table_name = 'idempotency_keys') THEN
         DELETE FROM inventory.idempotency_keys WHERE expires_at < NOW();
         GET DIAGNOSTICS del_count = ROW_COUNT;
-        schema_name := 'inventory';
-        table_name := 'idempotency_keys';
-        rows_deleted := del_count;
+        out_schema_name := 'inventory';
+        out_table_name := 'idempotency_keys';
+        out_rows_deleted := del_count;
         RETURN NEXT;
     END IF;
 
     -- Clean orders.idempotency_keys
-    IF EXISTS (SELECT 1 FROM information_schema.tables
-               WHERE table_schema = 'orders' AND table_name = 'idempotency_keys') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables t
+               WHERE t.table_schema = 'orders' AND t.table_name = 'idempotency_keys') THEN
         DELETE FROM orders.idempotency_keys WHERE expires_at < NOW();
         GET DIAGNOSTICS del_count = ROW_COUNT;
-        schema_name := 'orders';
-        table_name := 'idempotency_keys';
-        rows_deleted := del_count;
+        out_schema_name := 'orders';
+        out_table_name := 'idempotency_keys';
+        out_rows_deleted := del_count;
         RETURN NEXT;
     END IF;
 
     -- Clean reorder.idempotency_keys
-    IF EXISTS (SELECT 1 FROM information_schema.tables
-               WHERE table_schema = 'reorder' AND table_name = 'idempotency_keys') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables t
+               WHERE t.table_schema = 'reorder' AND t.table_name = 'idempotency_keys') THEN
         DELETE FROM reorder.idempotency_keys WHERE expires_at < NOW();
         GET DIAGNOSTICS del_count = ROW_COUNT;
-        schema_name := 'reorder';
-        table_name := 'idempotency_keys';
-        rows_deleted := del_count;
+        out_schema_name := 'reorder';
+        out_table_name := 'idempotency_keys';
+        out_rows_deleted := del_count;
         RETURN NEXT;
     END IF;
 
     -- Clean payments.idempotency_keys if exists
-    IF EXISTS (SELECT 1 FROM information_schema.tables
-               WHERE table_schema = 'payments' AND table_name = 'idempotency_keys') THEN
+    IF EXISTS (SELECT 1 FROM information_schema.tables t
+               WHERE t.table_schema = 'payments' AND t.table_name = 'idempotency_keys') THEN
         DELETE FROM payments.idempotency_keys WHERE expires_at < NOW();
         GET DIAGNOSTICS del_count = ROW_COUNT;
-        schema_name := 'payments';
-        table_name := 'idempotency_keys';
-        rows_deleted := del_count;
+        out_schema_name := 'payments';
+        out_table_name := 'idempotency_keys';
+        out_rows_deleted := del_count;
         RETURN NEXT;
     END IF;
 
