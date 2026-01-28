@@ -233,12 +233,32 @@ export class HealthChecker {
 
 /**
  * Create health check router.
+ * GL-CRIT-0048: Split health endpoints - /health returns minimal info,
+ * /health/detailed returns full info (should be protected by auth at service level)
  */
 export function createHealthRouter(checker: HealthChecker): Router {
   const router = Router();
 
-  // Basic health endpoint
+  // GL-CRIT-0048: Basic health endpoint - minimal info to reduce reconnaissance risk
+  // Returns only status, no infrastructure details
   router.get('/health', async (_req: Request, res: Response) => {
+    try {
+      const health = await checker.getHealth();
+      const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+      // Return minimal info - just status
+      res.status(statusCode).json({
+        status: health.status === 'unhealthy' ? 'error' : 'ok',
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: 'error',
+      });
+    }
+  });
+
+  // GL-CRIT-0048: Detailed health endpoint - should be protected by auth middleware
+  // Services should mount this under /admin/health with authentication
+  router.get('/health/detailed', async (_req: Request, res: Response) => {
     try {
       const health = await checker.getHealth();
       const statusCode = health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
@@ -270,8 +290,9 @@ export function createHealthRouter(checker: HealthChecker): Router {
     }
   });
 
-  // Detailed metrics (for monitoring dashboards)
-  router.get('/metrics', async (_req: Request, res: Response) => {
+  // GL-CRIT-0048: Detailed metrics (for monitoring dashboards)
+  // This endpoint exposes system details - should be protected by auth at service level
+  router.get('/health/metrics', async (_req: Request, res: Response) => {
     try {
       const health = await checker.getHealth();
       const memoryUsage = process.memoryUsage();
@@ -298,6 +319,21 @@ export function createHealthRouter(checker: HealthChecker): Router {
     } catch (error) {
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Keep /metrics for backwards compatibility but with minimal info
+  router.get('/metrics', async (_req: Request, res: Response) => {
+    try {
+      const health = await checker.getHealth();
+      res.status(200).json({
+        status: health.status,
+        uptime: health.uptime,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
       });
     }
   });

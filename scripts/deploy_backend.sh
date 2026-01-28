@@ -19,13 +19,18 @@ cd "$REPO_DIR"
 git pull
 
 cd "$BACKEND_DIR"
-ORIG_NODE_ENV="${NODE_ENV:-}"
-unset NODE_ENV
-npm ci --include=dev
+
+# GL-CRIT-0081: Install only production dependencies for deployment
+# Build step requires dev dependencies, so we do a two-phase install
+echo "Installing dev dependencies for build..."
+npm ci
+
+echo "Building application..."
 npm run build
-if [[ -n "$ORIG_NODE_ENV" ]]; then
-  export NODE_ENV="$ORIG_NODE_ENV"
-fi
+
+# After build, reinstall without dev dependencies for smaller footprint
+echo "Reinstalling without dev dependencies..."
+npm ci --omit=dev
 
 node -e "const { ensureCoreSchema } = require('./dist/db/ensureSchema'); ensureCoreSchema().then(()=>process.exit(0)).catch((e)=>{ console.error(e); process.exit(1); });"
 

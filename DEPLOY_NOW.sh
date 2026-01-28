@@ -2,6 +2,15 @@
 # MANUAL DEPLOYMENT SCRIPT FOR GOOGLE VM
 # Run this script directly on the VM (SSH in first)
 
+# GL-CRIT-0079: Add strict mode and input validation
+set -eu
+set -o pipefail
+
+# GL-CRIT-0079: Configurable parameters with defaults
+BACKEND_DIR="${BACKEND_DIR:-$HOME/supermandi-backend}"
+EXPECTED_COMMIT="${EXPECTED_COMMIT:-3b632ca}"
+SKIP_VALIDATION="${SKIP_VALIDATION:-false}"
+
 echo "=========================================="
 echo "SUPERMANDI POS - BACKEND DEPLOYMENT"
 echo "=========================================="
@@ -13,11 +22,31 @@ echo ""
 echo "=========================================="
 echo ""
 
-# Navigate to backend directory
+# GL-CRIT-0079: Validate backend directory exists
+echo "📂 Validating backend directory..."
+if [[ ! -d "$BACKEND_DIR" ]]; then
+  echo "❌ ERROR: Backend directory not found at $BACKEND_DIR"
+  echo "Set BACKEND_DIR environment variable to override."
+  exit 1
+fi
+
+if [[ ! -f "$BACKEND_DIR/package.json" ]]; then
+  echo "❌ ERROR: $BACKEND_DIR/package.json not found"
+  echo "Directory exists but doesn't appear to be a valid Node.js project"
+  exit 1
+fi
+
+# GL-CRIT-0079: Validate required commands are available
+for cmd in git npm pm2; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "❌ ERROR: Required command '$cmd' not found"
+    exit 1
+  fi
+done
+
 echo "📂 Navigating to backend directory..."
-cd ~/supermandi-backend || {
-  echo "❌ ERROR: Backend directory not found at ~/supermandi-backend"
-  echo "Please check the path and try again."
+cd "$BACKEND_DIR" || {
+  echo "❌ ERROR: Failed to navigate to $BACKEND_DIR"
   exit 1
 }
 

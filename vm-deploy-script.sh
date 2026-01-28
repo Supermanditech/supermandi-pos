@@ -2,7 +2,9 @@
 # Supermandi Backend Deployment Script
 # Run this script on the VM: bash vm-deploy-script.sh
 
-set -e  # Exit on any error
+# GL-CRIT-0080: Added set -u for unset variable protection
+set -eu  # Exit on any error or unset variable
+set -o pipefail  # Fail on pipe errors
 
 echo "=========================================="
 echo "SUPERMANDI BACKEND DEPLOYMENT"
@@ -12,10 +14,25 @@ echo "Target Commit: 3b632caf63f2f0cc2391690c4680d5af9ba4b030"
 echo "Tag: pos-retailer-variants-fix-2026-01-11-0153IST"
 echo ""
 
-# Step 1: Navigate to backend directory
-echo "📂 Step 1: Navigating to backend directory..."
-cd ~/supermandi-backend || {
-    echo "❌ ERROR: Directory ~/supermandi-backend not found"
+# GL-CRIT-0082: Validate directory exists before operations
+BACKEND_DIR="${HOME}/supermandi-backend"
+
+# Step 1: Validate and navigate to backend directory
+echo "📂 Step 1: Validating backend directory..."
+if [[ ! -d "$BACKEND_DIR" ]]; then
+    echo "❌ ERROR: Directory $BACKEND_DIR not found"
+    echo "Please ensure the repository is cloned to ~/supermandi-backend"
+    exit 1
+fi
+
+if [[ ! -f "$BACKEND_DIR/package.json" ]]; then
+    echo "❌ ERROR: $BACKEND_DIR/package.json not found"
+    echo "Directory exists but doesn't appear to be a valid Node.js project"
+    exit 1
+fi
+
+cd "$BACKEND_DIR" || {
+    echo "❌ ERROR: Failed to navigate to $BACKEND_DIR"
     exit 1
 }
 echo "✅ Current directory: $(pwd)"
