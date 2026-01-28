@@ -426,15 +426,18 @@ export default function PosRootLayout() {
           if (status.storeCode) persistStoreCode(status.storeCode);
         }
         // GO-LIVE-002: Sync feature flags to settingsStore
+        // CA-1.4-006: Unified settings propagation from backend
         if (status.features) {
-          const { setBuyEnabled, setReorderEnabled, setCreditEnabled } = useSettingsStore.getState();
+          const { setBuyEnabled, setReorderEnabled, setCreditEnabled, setBnplEnabled } = useSettingsStore.getState();
           // buyEnabled defaults to ordersEnabled if not explicitly set
           const buyFlag = status.features.buyEnabled ?? status.features.ordersEnabled ?? true;
           const reorderFlag = status.features.reorderEnabled ?? false;
           const creditFlag = status.features.creditEnabled ?? false; // SM-022
+          const bnplFlag = status.features.bnplEnabled ?? false; // GL-AUD-007
           setBuyEnabled(buyFlag);
           setReorderEnabled(reorderFlag);
           setCreditEnabled(creditFlag); // SM-022
+          setBnplEnabled(bnplFlag); // GL-AUD-007
         }
         // GATE-000: Probe Phase-1 endpoints on startup (after ui-status succeeds)
         // This runs asynchronously and caches results for 5 minutes

@@ -247,3 +247,41 @@ export async function getSplitPaymentStatus(input: {
 }> {
   return apiClient.get(`/api/v1/pos/payments/split/${input.saleId}/status`);
 }
+
+// =============================================================================
+// GL-RJ-004: UTR Verification APIs
+// =============================================================================
+
+export type UtrVerificationResponse = {
+  verified: boolean;
+  status: "SUCCESS" | "PENDING" | "FAILED" | "NOT_FOUND";
+  transactionId?: string;
+  verifiedAt?: string;
+  payerVpa?: string;
+  amountMinor?: number;
+  errorMessage?: string;
+};
+
+/**
+ * GL-RJ-004: Verify a UPI UTR (Unique Transaction Reference)
+ * This verifies with the payment gateway that the UTR is valid
+ */
+export async function verifyUtr(input: {
+  utr: string;
+  amountMinor: number;
+  paymentId?: string;
+}): Promise<UtrVerificationResponse> {
+  if (!(await isOnline())) {
+    throw new ApiError(0, "verification_offline_blocked");
+  }
+  return apiClient.post<UtrVerificationResponse>("/api/v1/pos/payments/upi/verify-utr", input);
+}
+
+/**
+ * GL-RJ-004: Poll UTR verification status (for async verification)
+ */
+export async function getUtrVerificationStatus(input: {
+  verificationId: string;
+}): Promise<UtrVerificationResponse> {
+  return apiClient.get(`/api/v1/pos/payments/upi/verify-utr/${input.verificationId}/status`);
+}

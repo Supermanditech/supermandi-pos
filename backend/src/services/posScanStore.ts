@@ -45,7 +45,57 @@ async function fetchStoreProductByBarcode(
 
   const trimmed = barcode.trim();
   const lookupBarcode = isSupermandiBarcode(trimmed) ? trimmed.toUpperCase() : trimmed;
-  const res = await pool.query(
+
+  // GL-POS-002: Query new schema FIRST (store_product_barcodes → store_products)
+  // This fixes products added via Supplier Catalog → Retailer Catalog not being found
+  const newSchemaRes = await pool.query(
+    `
+    SELECT
+      sp.id,
+      COALESCE(sp.display_name, p.name) as name,
+      COALESCE(spb.barcode, p.primary_barcode) AS barcode,
+      'INR' as currency,
+      sp.sell_price as selling_price_minor,
+      true as digitised_by_retailer,
+      COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock
+    FROM catalog.store_products sp
+    JOIN catalog.products p ON p.id = sp.product_id
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+    LEFT JOIN catalog.store_product_barcodes spb
+      ON spb.store_product_id = sp.id AND spb.store_id = sp.store_id AND spb.barcode = $1
+    WHERE sp.store_id = $2
+      AND sp.is_active = true
+      AND p.is_active = true
+      AND (
+        spb.barcode IS NOT NULL
+        OR p.primary_barcode = $1
+        OR EXISTS (
+          SELECT 1 FROM catalog.product_barcodes pb
+          WHERE pb.product_id = p.id AND pb.barcode = $1
+        )
+      )
+    ORDER BY sp.updated_at DESC
+    LIMIT 1
+    `,
+    [lookupBarcode, storeId]
+  );
+
+  if (newSchemaRes.rows[0]) {
+    const row = newSchemaRes.rows[0];
+    return {
+      id: row.id,
+      name: row.name,
+      barcode: row.barcode || lookupBarcode,
+      currency: row.currency,
+      priceMinor: row.selling_price_minor ?? null,
+      digitisedByRetailer: Boolean(row.digitised_by_retailer)
+    };
+  }
+
+  // GL-POS-002: Fallback to legacy schema for backward compatibility
+  // This supports products digitised via old POS flow (barcodes → variants → retailer_variants)
+  const legacyRes = await pool.query(
     `
     SELECT
       v.id,
@@ -67,7 +117,7 @@ async function fetchStoreProductByBarcode(
     [lookupBarcode, storeId]
   );
 
-  const row = res.rows[0];
+  const row = legacyRes.rows[0];
   if (!row) return null;
 
   return {

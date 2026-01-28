@@ -1,9 +1,12 @@
 // Inventory API - V3.0.9 compliant
 // Frontend API client for inventory-service endpoints
+// GL-WF-006: Use stockCache when offline instead of returning 0
 
 import { apiClient } from "./apiClient";
 import { isOnline } from "../networkStatus";
 import { getDeviceStoreId } from "../deviceSession";
+import { getCachedStock } from "../stockCache";
+import { queueOfflineTransaction } from "../offlineQueue";
 
 // =============================================================================
 // TYPES
@@ -14,6 +17,7 @@ export interface StockLookupResult {
   productId: string;
   currentQty: number;
   lastUpdated?: string;
+  _cached?: boolean; // GL-WF-006: Flag to indicate this is cached data
 }
 
 export interface StockBatchResult {
@@ -66,11 +70,14 @@ export async function getStock(productId: string): Promise<StockLookupResult> {
   }
 
   if (!(await isOnline())) {
-    // Return cached/offline stock or 0
+    // GL-WF-006: Use cached stock when offline instead of returning 0
+    const cachedQty = getCachedStock(productId);
     return {
       storeId,
       productId,
-      currentQty: 0,
+      currentQty: cachedQty ?? 0,
+      // Flag to indicate this is cached data
+      _cached: true,
     };
   }
 
@@ -97,13 +104,14 @@ export async function getStockBatch(
   }
 
   if (!(await isOnline())) {
-    // Return empty stock for offline mode
+    // GL-WF-006: Use cached stock when offline instead of returning 0
     const result: StockBatchResult = {};
     for (const productId of productIds) {
+      const cachedQty = getCachedStock(productId);
       result[productId] = {
         storeId,
         productId,
-        currentQty: 0,
+        currentQty: cachedQty ?? 0,
       };
     }
     return result;
@@ -136,8 +144,18 @@ export async function recordSaleTransaction(
   notes?: string
 ): Promise<InventoryTransactionResponse> {
   if (!(await isOnline())) {
-    // Queue for offline sync - for now just return empty
-    // Offline sales will sync inventory when device comes online
+    // GL-WF-007: Queue transaction for later sync instead of silently discarding
+    await queueOfflineTransaction({
+      type: "inventory_sale",
+      payload: {
+        items,
+        transactionType: "sale",
+        referenceType: "sale",
+        referenceId: saleId,
+        notes,
+      },
+    });
+    // Return empty but transaction is queued for later
     return { entries: [] };
   }
 
@@ -163,6 +181,17 @@ export async function recordSaleReturnTransaction(
   notes?: string
 ): Promise<InventoryTransactionResponse> {
   if (!(await isOnline())) {
+    // GL-WF-007: Queue transaction for later sync
+    await queueOfflineTransaction({
+      type: "inventory_return",
+      payload: {
+        items,
+        transactionType: "sale_return",
+        referenceType: "return",
+        referenceId: returnId,
+        notes,
+      },
+    });
     return { entries: [] };
   }
 

@@ -64,6 +64,18 @@ export interface BnplPayConfirmResponse {
   paidAt: string;
 }
 
+// GL-RJ-008: BNPL payment status polling response
+export interface BnplPaymentStatusResponse {
+  success: boolean;
+  repaymentId: string;
+  drawdownId: string;
+  status: "pending" | "processing" | "completed" | "failed" | "expired";
+  amountMinor: number;
+  utr?: string;
+  paidAt?: string;
+  errorMessage?: string;
+}
+
 // =============================================================================
 // API FUNCTIONS
 // =============================================================================
@@ -121,6 +133,91 @@ export async function confirmBnplPayment(
       upiTxnRef,
     }
   );
+}
+
+// =============================================================================
+// GL-RJ-008: BNPL Payment Auto-Polling
+// =============================================================================
+
+/**
+ * GL-RJ-008: Get BNPL payment status for polling
+ * Used to auto-detect when UPI payment completes instead of requiring manual UTR
+ */
+export async function getBnplPaymentStatus(
+  drawdownId: string,
+  repaymentId: string
+): Promise<BnplPaymentStatusResponse> {
+  return apiClient.get<BnplPaymentStatusResponse>(
+    `${BNPL_BASE}/${drawdownId}/pay/${repaymentId}/status`
+  );
+}
+
+/**
+ * GL-RJ-008: Poll BNPL payment status until completion or timeout
+ * @param drawdownId The drawdown being paid
+ * @param repaymentId The repayment ID from payBnpl
+ * @param options Polling options
+ * @returns Promise that resolves when payment completes or rejects on timeout/failure
+ */
+export async function pollBnplPaymentStatus(
+  drawdownId: string,
+  repaymentId: string,
+  options: {
+    intervalMs?: number;
+    maxAttempts?: number;
+    onStatusUpdate?: (status: BnplPaymentStatusResponse) => void;
+  } = {}
+): Promise<BnplPaymentStatusResponse> {
+  const {
+    intervalMs = 3000, // Check every 3 seconds
+    maxAttempts = 60, // 3 minutes max
+    onStatusUpdate,
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        const status = await getBnplPaymentStatus(drawdownId, repaymentId);
+
+        onStatusUpdate?.(status);
+
+        if (status.status === "completed") {
+          if (pollTimer) clearInterval(pollTimer);
+          resolve(status);
+          return;
+        }
+
+        if (status.status === "failed" || status.status === "expired") {
+          if (pollTimer) clearInterval(pollTimer);
+          reject(new Error(status.errorMessage || `Payment ${status.status}`));
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          if (pollTimer) clearInterval(pollTimer);
+          reject(new Error("Payment verification timed out. Please verify manually."));
+          return;
+        }
+      } catch (error) {
+        console.warn("[pollBnplPaymentStatus] Check failed:", error);
+        // Don't stop polling on network errors, let it retry
+        if (attempts >= maxAttempts) {
+          if (pollTimer) clearInterval(pollTimer);
+          reject(error);
+        }
+      }
+    };
+
+    // Initial check immediately
+    void checkStatus();
+
+    // Then poll at interval
+    pollTimer = setInterval(checkStatus, intervalMs);
+  });
 }
 
 // =============================================================================

@@ -19,6 +19,7 @@ import { useTranslation } from "react-i18next";
 
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
+import { verifyUtr } from "../../services/api/posApi";
 
 // =============================================================================
 // TYPES
@@ -30,6 +31,7 @@ export interface PaymentOptionsSheetProps {
   visible: boolean;
   onClose: () => void;
   supplierName: string;
+  supplierId: string; // GL-RJ-003: Added for tracking
   amount: number; // Amount in rupees
   // Payment eligibility
   bnplEligible: boolean;
@@ -40,8 +42,12 @@ export interface PaymentOptionsSheetProps {
   onSelectPayment: (mode: PaymentMode) => Promise<{
     success: boolean;
     upiDeepLink?: string;
+    orderId?: string;
     error?: string;
   }>;
+  // GL-RJ-003: UPI payment confirmation callbacks
+  onUpiPaymentConfirmed?: (supplierId: string, utr: string) => void;
+  onUpiPaymentCancelled?: (supplierId: string, orderId: string) => void;
 }
 
 // =============================================================================
@@ -52,12 +58,15 @@ export function PaymentOptionsSheet({
   visible,
   onClose,
   supplierName,
+  supplierId,
   amount,
   bnplEligible,
   bnplMaxDays,
   creditEligible,
   availableCredit,
   onSelectPayment,
+  onUpiPaymentConfirmed,
+  onUpiPaymentCancelled,
 }: PaymentOptionsSheetProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -68,6 +77,9 @@ export function PaymentOptionsSheet({
   const [upiStep, setUpiStep] = useState<"select" | "confirm">("select");
   const [upiDeepLink, setUpiDeepLink] = useState<string | null>(null);
   const [utrInput, setUtrInput] = useState("");
+  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null); // GL-RJ-003: Track pending order
+  const [verifying, setVerifying] = useState(false); // GL-RJ-004: UTR verification state
+  const [verificationStatus, setVerificationStatus] = useState<"idle" | "verified" | "failed">("idle");
 
   // Calculate BNPL due date
   const bnplDueDate = (() => {
@@ -91,6 +103,7 @@ export function PaymentOptionsSheet({
         if (result.success) {
           if (mode === "UPI" && result.upiDeepLink) {
             setUpiDeepLink(result.upiDeepLink);
+            setPendingOrderId(result.orderId || null); // GL-RJ-003: Store order ID
             setUpiStep("confirm");
             // Try to open UPI app
             const canOpen = await Linking.canOpenURL(result.upiDeepLink);
@@ -122,7 +135,54 @@ export function PaymentOptionsSheet({
     [onSelectPayment, onClose, t]
   );
 
-  // Handle UPI confirmation
+  // GL-RJ-004: Verify UTR with backend before confirming
+  const handleVerifyUtr = useCallback(async () => {
+    if (!utrInput.trim()) {
+      Alert.alert(
+        t("payment.enterUtr", "Enter UTR"),
+        t("payment.utrRequired", "Please enter the UPI transaction reference.")
+      );
+      return;
+    }
+
+    setVerifying(true);
+    setVerificationStatus("idle");
+
+    try {
+      const result = await verifyUtr({
+        utr: utrInput.trim(),
+        amountMinor: amount * 100, // Convert to paise
+      });
+
+      if (result.verified && result.status === "SUCCESS") {
+        setVerificationStatus("verified");
+      } else if (result.status === "PENDING") {
+        // Payment still processing
+        Alert.alert(
+          t("payment.verificationPending", "Verification Pending"),
+          t("payment.utrPending", "The payment is still being processed. Please wait a moment and try again.")
+        );
+        setVerificationStatus("idle");
+      } else {
+        setVerificationStatus("failed");
+        Alert.alert(
+          t("payment.verificationFailed", "Verification Failed"),
+          result.errorMessage || t("payment.utrNotFound", "Could not verify this UTR. Please check and try again.")
+        );
+      }
+    } catch (error: any) {
+      console.error("[PaymentOptionsSheet] UTR verification error:", error);
+      setVerificationStatus("failed");
+      Alert.alert(
+        t("payment.verificationError", "Verification Error"),
+        error.message || t("payment.verificationGenericError", "Could not verify payment. Please try again.")
+      );
+    } finally {
+      setVerifying(false);
+    }
+  }, [utrInput, amount, t]);
+
+  // Handle UPI confirmation - GL-RJ-003/GL-RJ-004: Verify UTR, then notify parent to clear cart
   const handleConfirmUpi = useCallback(() => {
     if (!utrInput.trim()) {
       Alert.alert(
@@ -131,14 +191,29 @@ export function PaymentOptionsSheet({
       );
       return;
     }
-    // For now, just close after confirmation
-    // In production, this would verify the UTR with the backend
-    Alert.alert(
-      t("payment.paymentRecorded", "Payment Recorded"),
-      t("payment.upiConfirmed", "Your UPI payment has been recorded."),
-      [{ text: "OK", onPress: onClose }]
-    );
-  }, [utrInput, onClose, t]);
+
+    // GL-RJ-004: Only allow confirmation if UTR is verified
+    if (verificationStatus !== "verified") {
+      Alert.alert(
+        t("payment.verifyFirst", "Verify First"),
+        t("payment.pleaseVerifyUtr", "Please verify the UTR before confirming the payment.")
+      );
+      return;
+    }
+
+    // GL-RJ-003: Notify parent that UPI payment is confirmed
+    // Parent will then clear cart items for this supplier
+    onUpiPaymentConfirmed?.(supplierId, utrInput.trim());
+
+    // Reset state and close
+    setSelectedMode(null);
+    setUpiStep("select");
+    setUpiDeepLink(null);
+    setUtrInput("");
+    setPendingOrderId(null);
+    setVerificationStatus("idle");
+    onClose();
+  }, [utrInput, verificationStatus, onClose, t, supplierId, onUpiPaymentConfirmed]);
 
   // Handle reopen UPI app
   const handleReopenUpi = useCallback(async () => {
@@ -150,14 +225,21 @@ export function PaymentOptionsSheet({
     }
   }, [upiDeepLink]);
 
-  // Reset state when closing
+  // Reset state when closing - GL-RJ-003: Handle UPI cancellation
   const handleClose = useCallback(() => {
+    // GL-RJ-003: If closing while in UPI confirmation step, notify parent about cancellation
+    // This allows parent to handle the abandoned order appropriately
+    if (upiStep === "confirm" && pendingOrderId) {
+      onUpiPaymentCancelled?.(supplierId, pendingOrderId);
+    }
+
     setSelectedMode(null);
     setUpiStep("select");
     setUpiDeepLink(null);
     setUtrInput("");
+    setPendingOrderId(null);
     onClose();
-  }, [onClose]);
+  }, [onClose, upiStep, pendingOrderId, supplierId, onUpiPaymentCancelled]);
 
   return (
     <Modal
@@ -310,28 +392,84 @@ export function PaymentOptionsSheet({
               </Pressable>
             </View>
           ) : (
-            /* UPI Confirmation Step */
+            /* UPI Confirmation Step - GL-RJ-004: Added UTR verification */
             <View style={styles.upiConfirmSection}>
               <Text style={styles.upiInstructions}>
                 {t(
                   "payment.upiInstructions",
-                  "Complete the payment in your UPI app, then enter the UTR (transaction reference) below to confirm."
+                  "Complete the payment in your UPI app, then enter the UTR (transaction reference) below and verify."
                 )}
               </Text>
 
-              <TextInput
-                style={styles.utrInput}
-                placeholder={t("payment.utrPlaceholder", "Enter UTR / Transaction Reference")}
-                placeholderTextColor={theme.colors.textTertiary}
-                value={utrInput}
-                onChangeText={setUtrInput}
-                autoCapitalize="characters"
-              />
+              {/* UTR Input with verification status */}
+              <View style={styles.utrInputRow}>
+                <TextInput
+                  style={[
+                    styles.utrInput,
+                    styles.utrInputFlex,
+                    verificationStatus === "verified" && styles.utrInputVerified,
+                    verificationStatus === "failed" && styles.utrInputFailed,
+                  ]}
+                  placeholder={t("payment.utrPlaceholder", "Enter UTR / Transaction Reference")}
+                  placeholderTextColor={theme.colors.textTertiary}
+                  value={utrInput}
+                  onChangeText={(text) => {
+                    setUtrInput(text);
+                    // Reset verification when UTR changes
+                    if (verificationStatus !== "idle") {
+                      setVerificationStatus("idle");
+                    }
+                  }}
+                  autoCapitalize="characters"
+                  editable={!verifying}
+                />
+                {verificationStatus === "verified" && (
+                  <View style={styles.verifiedBadge}>
+                    <MaterialCommunityIcons name="check-circle" size={20} color={theme.colors.success} />
+                  </View>
+                )}
+              </View>
 
+              {/* Verification status text */}
+              {verificationStatus === "verified" && (
+                <Text style={styles.verifiedText}>
+                  {t("payment.utrVerified", "UTR verified successfully")}
+                </Text>
+              )}
+              {verificationStatus === "failed" && (
+                <Text style={styles.failedText}>
+                  {t("payment.utrVerificationFailed", "Verification failed. Check UTR and try again.")}
+                </Text>
+              )}
+
+              {/* Verify button - GL-RJ-004 */}
+              {verificationStatus !== "verified" && (
+                <Pressable
+                  style={[styles.verifyButton, (!utrInput.trim() || verifying) && styles.verifyButtonDisabled]}
+                  onPress={handleVerifyUtr}
+                  disabled={!utrInput.trim() || verifying}
+                >
+                  {verifying ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons name="shield-check" size={18} color={theme.colors.primary} />
+                      <Text style={styles.verifyButtonText}>
+                        {t("payment.verifyPayment", "Verify Payment")}
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+
+              {/* Confirm button - only enabled after verification */}
               <Pressable
-                style={[styles.confirmButton, !utrInput.trim() && styles.confirmButtonDisabled]}
+                style={[
+                  styles.confirmButton,
+                  verificationStatus !== "verified" && styles.confirmButtonDisabled,
+                ]}
                 onPress={handleConfirmUpi}
-                disabled={!utrInput.trim()}
+                disabled={verificationStatus !== "verified"}
               >
                 <MaterialCommunityIcons name="check" size={18} color={theme.colors.textInverse} />
                 <Text style={styles.confirmButtonText}>
@@ -473,6 +611,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     lineHeight: 20,
   },
+  utrInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   utrInput: {
     backgroundColor: theme.colors.surfaceAlt,
     borderWidth: 1,
@@ -482,6 +624,50 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     fontSize: 16,
     color: theme.colors.textPrimary,
+  },
+  utrInputFlex: {
+    flex: 1,
+  },
+  utrInputVerified: {
+    borderColor: theme.colors.success,
+    backgroundColor: theme.colors.successSoft,
+  },
+  utrInputFailed: {
+    borderColor: theme.colors.error,
+    backgroundColor: theme.colors.errorSoft,
+  },
+  verifiedBadge: {
+    marginLeft: theme.spacing.sm,
+  },
+  verifiedText: {
+    fontSize: 13,
+    color: theme.colors.success,
+    fontWeight: "500",
+  },
+  failedText: {
+    fontSize: 13,
+    color: theme.colors.error,
+    fontWeight: "500",
+  },
+  verifyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    gap: theme.spacing.xs,
+  },
+  verifyButtonDisabled: {
+    borderColor: theme.colors.textTertiary,
+    opacity: 0.6,
+  },
+  verifyButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.primary,
   },
   confirmButton: {
     flexDirection: "row",

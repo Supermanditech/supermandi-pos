@@ -148,3 +148,136 @@ export async function rejectSupplierRequest(
 
   return { success: true };
 }
+
+// =============================================================================
+// SA-1.3-001 to SA-1.3-003: Product Approval & Margin/BNPL Configuration
+// =============================================================================
+
+export type PendingProduct = {
+  id: string;
+  productName: string;
+  skuCode?: string | null;
+  barcode?: string | null;
+  purchasePrice: number;
+  mrp: number;
+  moq?: number;
+  createdAt: string;
+  supplierId: string;
+  supplierName: string;
+};
+
+export type ProductEditInput = {
+  editedName?: string;
+  editedCategory?: string;
+  superMandiMarginMinor?: number;  // Fixed margin in paise (mutually exclusive with marginPercent)
+  marginPercent?: number;          // Percentage margin (mutually exclusive with superMandiMarginMinor)
+  bnplEligible?: boolean;
+  bnplMaxDays?: number;
+};
+
+export type ProductEditResponse = {
+  productId: string;
+  editedName: string;
+  editedCategory?: string | null;
+  superMandiMarginMinor?: number | null;
+  marginPercent?: number | null;
+  bnplEligible: boolean;
+  bnplMaxDays: number;
+  purchasePrice: number;
+  retailerPrice: number;
+};
+
+/**
+ * Fetch products pending admin approval (SA-1.3-001)
+ */
+export async function fetchPendingProducts(): Promise<PendingProduct[]> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+
+  const res = await fetch(`${base}/api/v1/admin/products/pending`, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.data) ? (data.data as PendingProduct[]) : [];
+}
+
+/**
+ * Approve a pending product (SA-1.3-002)
+ */
+export async function approveProduct(productId: string): Promise<{ productId: string; approvalStatus: string; approvedAt: string }> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+
+  const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/approve`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    }
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
+}
+
+/**
+ * Reject a pending product (SA-1.3-002)
+ */
+export async function rejectProduct(productId: string, reason: string): Promise<{ productId: string; approvalStatus: string }> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+
+  const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/reject`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    },
+    body: JSON.stringify({ reason })
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
+}
+
+/**
+ * Edit product details, set margin, and configure BNPL (SA-1.3-003)
+ */
+export async function editProduct(productId: string, input: ProductEditInput): Promise<ProductEditResponse> {
+  const base = requireApiBase();
+  const token = getAdminToken();
+
+  const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/edit`, {
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    },
+    body: JSON.stringify(input)
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
+}

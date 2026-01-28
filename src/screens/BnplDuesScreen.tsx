@@ -58,6 +58,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     upiDeepLink: string | null;
     utrInput: string;
     paying: boolean;
+    // GL-RJ-008: Auto-polling state
+    isPolling: boolean;
+    pollingStatus: string | null;
   }>({
     visible: false,
     drawdown: null,
@@ -66,6 +69,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     upiDeepLink: null,
     utrInput: "",
     paying: false,
+    isPolling: false,
+    pollingStatus: null,
   });
 
   // Load data
@@ -107,8 +112,68 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       upiDeepLink: null,
       utrInput: "",
       paying: false,
+      isPolling: false,
+      pollingStatus: null,
     });
   }, []);
+
+  // GL-RJ-008: Start auto-polling for UPI payment status
+  const startAutoPolling = useCallback(
+    async (drawdownId: string, repaymentId: string) => {
+      setPaymentModal((prev) => ({
+        ...prev,
+        isPolling: true,
+        pollingStatus: "Waiting for payment...",
+      }));
+
+      try {
+        const result = await bnplApi.pollBnplPaymentStatus(drawdownId, repaymentId, {
+          intervalMs: 3000,
+          maxAttempts: 60, // 3 minutes
+          onStatusUpdate: (status) => {
+            if (status.status === "processing") {
+              setPaymentModal((prev) => ({
+                ...prev,
+                pollingStatus: "Processing payment...",
+              }));
+            } else if (status.status === "pending") {
+              setPaymentModal((prev) => ({
+                ...prev,
+                pollingStatus: "Waiting for payment...",
+              }));
+            }
+          },
+        });
+
+        // Payment completed automatically
+        setPaymentModal((prev) => ({
+          ...prev,
+          isPolling: false,
+          pollingStatus: null,
+        }));
+
+        Alert.alert("Payment Confirmed", "Your BNPL payment has been confirmed automatically.", [
+          {
+            text: "OK",
+            onPress: () => {
+              setPaymentModal((prev) => ({ ...prev, visible: false }));
+              void loadData();
+            },
+          },
+        ]);
+      } catch (error: any) {
+        console.warn("[BnplDuesScreen] Auto-polling stopped:", error);
+        // Polling timed out or failed - user can still enter UTR manually
+        setPaymentModal((prev) => ({
+          ...prev,
+          isPolling: false,
+          pollingStatus: null,
+        }));
+        // Don't show error - just let user enter UTR manually
+      }
+    },
+    [loadData]
+  );
 
   // Select payment mode
   const handleSelectPaymentMode = useCallback(
@@ -134,6 +199,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               await Linking.openURL(response.upiCollect.deepLink);
             }
           }
+          // GL-RJ-008: Start auto-polling for payment status
+          void startAutoPolling(paymentModal.drawdown.id, response.repaymentId);
         } else if (mode === "CASH") {
           // Cash payment is immediately completed
           Alert.alert(
@@ -156,7 +223,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         setPaymentModal((prev) => ({ ...prev, paying: false }));
       }
     },
-    [paymentModal.drawdown, loadData]
+    [paymentModal.drawdown, loadData, startAutoPolling]
   );
 
   // Confirm UPI payment with UTR
@@ -201,6 +268,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       upiDeepLink: null,
       utrInput: "",
       paying: false,
+      isPolling: false,
+      pollingStatus: null,
     });
   }, []);
 
@@ -438,42 +507,64 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               {/* UPI confirmation */}
               {paymentModal.mode === "UPI" && paymentModal.repaymentId && (
                 <View style={styles.upiConfirmSection}>
+                  {/* GL-RJ-008: Show polling status */}
+                  {paymentModal.isPolling && (
+                    <View style={styles.pollingStatus}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <Text style={styles.pollingStatusText}>
+                        {paymentModal.pollingStatus || "Waiting for payment..."}
+                      </Text>
+                    </View>
+                  )}
+
                   <Text style={styles.upiInstructions}>
-                    Complete the payment in your UPI app, then enter the UTR (transaction reference)
-                    below to confirm.
+                    {paymentModal.isPolling
+                      ? "Complete the payment in your UPI app. Payment will be confirmed automatically."
+                      : "Complete the payment in your UPI app, then enter the UTR (transaction reference) below to confirm."}
                   </Text>
-                  <TextInput
-                    style={styles.utrInput}
-                    placeholder="Enter UTR / Transaction Reference"
-                    placeholderTextColor={theme.colors.textTertiary}
-                    value={paymentModal.utrInput}
-                    onChangeText={(text) =>
-                      setPaymentModal((prev) => ({ ...prev, utrInput: text }))
-                    }
-                    autoCapitalize="characters"
-                  />
-                  <Pressable
-                    style={[
-                      styles.confirmButton,
-                      (!paymentModal.utrInput || paymentModal.paying) &&
-                        styles.confirmButtonDisabled,
-                    ]}
-                    onPress={handleConfirmUpiPayment}
-                    disabled={!paymentModal.utrInput || paymentModal.paying}
-                  >
-                    {paymentModal.paying ? (
-                      <ActivityIndicator size="small" color={theme.colors.textInverse} />
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons
-                          name="check"
-                          size={18}
-                          color={theme.colors.textInverse}
-                        />
-                        <Text style={styles.confirmButtonText}>Confirm Payment</Text>
-                      </>
-                    )}
-                  </Pressable>
+
+                  {/* Manual UTR entry - shown when not polling or as fallback */}
+                  {!paymentModal.isPolling && (
+                    <>
+                      <View style={styles.manualEntryDivider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>or enter manually</Text>
+                        <View style={styles.dividerLine} />
+                      </View>
+                      <TextInput
+                        style={styles.utrInput}
+                        placeholder="Enter UTR / Transaction Reference"
+                        placeholderTextColor={theme.colors.textTertiary}
+                        value={paymentModal.utrInput}
+                        onChangeText={(text) =>
+                          setPaymentModal((prev) => ({ ...prev, utrInput: text }))
+                        }
+                        autoCapitalize="characters"
+                      />
+                      <Pressable
+                        style={[
+                          styles.confirmButton,
+                          (!paymentModal.utrInput || paymentModal.paying) &&
+                            styles.confirmButtonDisabled,
+                        ]}
+                        onPress={handleConfirmUpiPayment}
+                        disabled={!paymentModal.utrInput || paymentModal.paying}
+                      >
+                        {paymentModal.paying ? (
+                          <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                        ) : (
+                          <>
+                            <MaterialCommunityIcons
+                              name="check"
+                              size={18}
+                              color={theme.colors.textInverse}
+                            />
+                            <Text style={styles.confirmButtonText}>Confirm Payment</Text>
+                          </>
+                        )}
+                      </Pressable>
+                    </>
+                  )}
 
                   {paymentModal.upiDeepLink && (
                     <Pressable
@@ -844,6 +935,36 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     fontSize: 14,
     color: theme.colors.textSecondary,
+  },
+  // GL-RJ-008: Auto-polling styles
+  pollingStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.accentSoft,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+  },
+  pollingStatusText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: theme.colors.primary,
+  },
+  manualEntryDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: theme.spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  dividerText: {
+    paddingHorizontal: theme.spacing.sm,
+    fontSize: 12,
+    color: theme.colors.textTertiary,
   },
 });
 

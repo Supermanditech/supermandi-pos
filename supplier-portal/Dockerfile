@@ -1,0 +1,67 @@
+# Supplier Portal Dockerfile - Next.js Production Build
+# GL-UI-001: Deploy Supplier Portal UI on VM
+
+# =============================================================================
+# BUILD STAGE
+# =============================================================================
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the Next.js application
+# Note: NEXT_PUBLIC_API_BASE_URL must be set at build time for client-side usage
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
+RUN npm run build
+
+# =============================================================================
+# PRODUCTION STAGE
+# =============================================================================
+FROM node:20-alpine AS production
+
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev
+
+# Copy built application from builder
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/next.config.js ./
+
+# Copy public directory if it exists (optional)
+RUN mkdir -p ./public
+
+# Set ownership
+RUN chown -R nodejs:nodejs /app
+
+USER nodejs
+
+# Environment
+ENV NODE_ENV=production
+ENV PORT=3001
+
+EXPOSE 3001
+
+# Health check - Next.js serves on configured port
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/ || exit 1
+
+# Start Next.js production server
+CMD ["npm", "start"]

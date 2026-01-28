@@ -23,10 +23,16 @@ import {
   fetchVerifiedSuppliers,
   verifySupplierRequest,
   rejectSupplierRequest,
+  fetchPendingProducts,
+  approveProduct,
+  rejectProduct,
+  editProduct,
   type PendingSupplierRequest,
-  type VerifiedSupplier
+  type VerifiedSupplier,
+  type PendingProduct,
+  type ProductEditInput
 } from "./api/suppliers";
-import { fetchUsers, patchUser, type UserRecord } from "./api/users";
+import { fetchUsers, patchUser, createUser, type UserRecord, type UserCreateInput } from "./api/users";
 import { fetchSettings, fetchSystemStats, type SystemSettings, type SystemStats } from "./api/settings";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
@@ -218,6 +224,24 @@ export default function App() {
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const suppliersInFlightRef = useRef(false);
 
+  // SA-1.3-001 to SA-1.3-003: Product Approval State
+  const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
+  const [productActionLoading, setProductActionLoading] = useState<Record<string, boolean>>({});
+  const [productActionError, setProductActionError] = useState<string>("");
+  const [productRejectReason, setProductRejectReason] = useState<Record<string, string>>({});
+  const [editingProduct, setEditingProduct] = useState<PendingProduct | null>(null);
+  const [editProductForm, setEditProductForm] = useState<{
+    editedName: string;
+    marginType: "fixed" | "percent";
+    fixedMargin: string;
+    percentMargin: string;
+    bnplEligible: boolean;
+    bnplMaxDays: string;
+  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7" });
+  const [editProductLoading, setEditProductLoading] = useState<boolean>(false);
+  const [editProductError, setEditProductError] = useState<string>("");
+  const [editProductSuccess, setEditProductSuccess] = useState<string>("");
+
   // Users state (ADM-SCR-002)
   const [userRecords, setUserRecords] = useState<UserRecord[]>([]);
   const [usersLoading, setUsersLoading] = useState<boolean>(false);
@@ -226,6 +250,15 @@ export default function App() {
   const [userStatusSaving, setUserStatusSaving] = useState<Record<string, boolean>>({});
   const [userActionError, setUserActionError] = useState<string>("");
   const usersInFlightRef = useRef(false);
+
+  // SA-1.3-004: User creation state
+  const [showCreateUser, setShowCreateUser] = useState<boolean>(false);
+  const [createUserForm, setCreateUserForm] = useState<{ name: string; email: string; phone: string; actor_type: string }>({
+    name: "", email: "", phone: "", actor_type: "store"
+  });
+  const [createUserLoading, setCreateUserLoading] = useState<boolean>(false);
+  const [createUserError, setCreateUserError] = useState<string>("");
+  const [createUserSuccess, setCreateUserSuccess] = useState<string>("");
 
   // Settings state (ADM-SCR-003)
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
@@ -359,12 +392,14 @@ export default function App() {
     setSuppliersLoading(true);
     setSuppliersError("");
     try {
-      const [pending, verified] = await Promise.all([
+      const [pending, verified, products] = await Promise.all([
         fetchPendingSuppliers(),
-        fetchVerifiedSuppliers(supplierSearch || undefined)
+        fetchVerifiedSuppliers(supplierSearch || undefined),
+        fetchPendingProducts()
       ]);
       setPendingSuppliers(pending);
       setVerifiedSuppliers(verified);
+      setPendingProducts(products);
       if (rateLimitedUntilRef.current) {
         setRateLimit(null);
       }
@@ -415,6 +450,45 @@ export default function App() {
       setUserActionError(e?.message ? String(e.message) : "Failed to update user");
     } finally {
       setUserStatusSaving((prev) => ({ ...prev, [userId]: false }));
+    }
+  }
+
+  // SA-1.3-004: Handle user creation
+  async function handleCreateUser() {
+    setCreateUserError("");
+    setCreateUserSuccess("");
+
+    const { name, email, phone, actor_type } = createUserForm;
+    if (!name.trim()) {
+      setCreateUserError("Name is required");
+      return;
+    }
+    if (!email.trim() && !phone.trim()) {
+      setCreateUserError("Either email or phone is required");
+      return;
+    }
+
+    setCreateUserLoading(true);
+    try {
+      const input: UserCreateInput = {
+        name: name.trim(),
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
+        actor_type: actor_type || "store"
+      };
+      const newUser = await createUser(input);
+      setUserRecords((prev) => [newUser, ...prev]);
+      setCreateUserSuccess(`User "${newUser.name}" created successfully!`);
+      setCreateUserForm({ name: "", email: "", phone: "", actor_type: "store" });
+      // Auto-close form after short delay
+      setTimeout(() => {
+        setShowCreateUser(false);
+        setCreateUserSuccess("");
+      }, 2000);
+    } catch (e: any) {
+      setCreateUserError(e?.message ? String(e.message) : "Failed to create user");
+    } finally {
+      setCreateUserLoading(false);
     }
   }
 
@@ -499,6 +573,97 @@ export default function App() {
       setSupplierActionError(e?.message ? String(e.message) : "Failed to reject supplier");
     } finally {
       setSupplierActionLoading((prev) => ({ ...prev, [requestId]: false }));
+    }
+  }
+
+  // SA-1.3-002: Approve a pending product
+  async function handleApproveProduct(productId: string) {
+    setProductActionError("");
+    setProductActionLoading((prev) => ({ ...prev, [productId]: true }));
+    try {
+      await approveProduct(productId);
+      setPendingProducts((prev) => prev.filter((p) => p.id !== productId));
+    } catch (e: any) {
+      setProductActionError(e?.message ? String(e.message) : "Failed to approve product");
+    } finally {
+      setProductActionLoading((prev) => ({ ...prev, [productId]: false }));
+    }
+  }
+
+  // SA-1.3-002: Reject a pending product
+  async function handleRejectProduct(productId: string) {
+    const reason = productRejectReason[productId] || "";
+    if (!reason || reason.length < 10) {
+      setProductActionError("Rejection reason must be at least 10 characters");
+      return;
+    }
+    setProductActionError("");
+    setProductActionLoading((prev) => ({ ...prev, [productId]: true }));
+    try {
+      await rejectProduct(productId, reason);
+      setPendingProducts((prev) => prev.filter((p) => p.id !== productId));
+      setProductRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+    } catch (e: any) {
+      setProductActionError(e?.message ? String(e.message) : "Failed to reject product");
+    } finally {
+      setProductActionLoading((prev) => ({ ...prev, [productId]: false }));
+    }
+  }
+
+  // SA-1.3-003: Open edit modal for a product
+  function handleOpenEditProduct(product: PendingProduct) {
+    setEditingProduct(product);
+    setEditProductForm({
+      editedName: product.productName,
+      marginType: "fixed",
+      fixedMargin: "",
+      percentMargin: "",
+      bnplEligible: false,
+      bnplMaxDays: "7"
+    });
+    setEditProductError("");
+    setEditProductSuccess("");
+  }
+
+  // SA-1.3-003: Submit product edit
+  async function handleSubmitEditProduct() {
+    if (!editingProduct) return;
+    setEditProductLoading(true);
+    setEditProductError("");
+    setEditProductSuccess("");
+
+    try {
+      const input: ProductEditInput = {
+        editedName: editProductForm.editedName || undefined,
+        bnplEligible: editProductForm.bnplEligible,
+        bnplMaxDays: parseInt(editProductForm.bnplMaxDays) || 7
+      };
+
+      if (editProductForm.marginType === "fixed" && editProductForm.fixedMargin) {
+        input.superMandiMarginMinor = Math.round(parseFloat(editProductForm.fixedMargin) * 100);
+      } else if (editProductForm.marginType === "percent" && editProductForm.percentMargin) {
+        input.marginPercent = parseFloat(editProductForm.percentMargin);
+      }
+
+      const result = await editProduct(editingProduct.id, input);
+      setEditProductSuccess(`Saved! Retailer Price: INR ${(result.retailerPrice / 100).toFixed(2)}`);
+
+      // Update local state
+      setPendingProducts((prev) =>
+        prev.map((p) =>
+          p.id === editingProduct.id
+            ? { ...p, productName: result.editedName || p.productName }
+            : p
+        )
+      );
+    } catch (e: any) {
+      setEditProductError(e?.message ? String(e.message) : "Failed to save product");
+    } finally {
+      setEditProductLoading(false);
     }
   }
 
@@ -1155,9 +1320,9 @@ export default function App() {
         </button>
         <button className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>
           Suppliers
-          {pendingSuppliers.filter(s => s.status === "pending").length > 0 && (
+          {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length) > 0 && (
             <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
-              {pendingSuppliers.filter(s => s.status === "pending").length}
+              {pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length}
             </span>
           )}
         </button>
@@ -2065,7 +2230,223 @@ export default function App() {
             </div>
           )}
 
-          <div className="cardHeader" style={{ paddingTop: 0 }}>
+          {/* SA-1.3-001 to SA-1.3-003: Pending Products Section */}
+          <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb" }}>
+            <div>
+              <div className="cardTitle">
+                Pending Products
+                {pendingProducts.length > 0 && (
+                  <span className="badge badgeWarn" style={{ marginLeft: 8 }}>
+                    {pendingProducts.length}
+                  </span>
+                )}
+              </div>
+              <div className="muted">Supplier products awaiting approval - set margin and BNPL settings</div>
+            </div>
+          </div>
+
+          {productActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{productActionError}</div>}
+
+          {pendingProducts.length === 0 ? (
+            <div className="empty">
+              {suppliersLoading ? "Loading pending products..." : "No products pending approval."}
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <div className="deviceGrid">
+                {pendingProducts.map((product) => (
+                  <div className="deviceCard" key={product.id}>
+                    <div className="deviceHeader">
+                      <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
+                        {product.productName}
+                      </div>
+                      <div className="badgeRow">
+                        <span className="badge badgeWarn">Pending</span>
+                      </div>
+                    </div>
+
+                    <div className="deviceMetaGrid">
+                      <div>
+                        <strong>Supplier:</strong> <span>{product.supplierName}</span>
+                      </div>
+                      <div>
+                        <strong>Barcode:</strong> <span className="mono">{product.barcode || "-"}</span>
+                      </div>
+                      <div>
+                        <strong>Purchase Price:</strong> <span className="mono">INR {(product.purchasePrice / 100).toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <strong>MRP:</strong> <span className="mono">INR {(product.mrp / 100).toFixed(2)}</span>
+                      </div>
+                      <div>
+                        <strong>MOQ:</strong> <span className="mono">{product.moq || 1}</span>
+                      </div>
+                      <div>
+                        <strong>Submitted:</strong> <span className="mono">{new Date(product.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 8 }}>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Reject Reason (min 10 chars):</label>
+                      <input
+                        className="tableInput"
+                        style={{ width: "100%", marginBottom: 8 }}
+                        placeholder="Enter reason for rejection..."
+                        value={productRejectReason[product.id] || ""}
+                        onChange={(e) => setProductRejectReason((prev) => ({ ...prev, [product.id]: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <button
+                        onClick={() => handleOpenEditProduct(product)}
+                        style={{ background: "#6366f1", color: "white" }}
+                        title="Edit product details, set margin and BNPL"
+                      >
+                        Edit / Set Margin
+                      </button>
+                      <button
+                        onClick={() => handleApproveProduct(product.id)}
+                        disabled={productActionLoading[product.id]}
+                        style={{ background: "#22c55e", color: "white" }}
+                        title="Approve this product"
+                      >
+                        {productActionLoading[product.id] ? "Approving..." : "Approve"}
+                      </button>
+                      <button
+                        className="btnGhost"
+                        onClick={() => handleRejectProduct(product.id)}
+                        disabled={productActionLoading[product.id] || (productRejectReason[product.id]?.length || 0) < 10}
+                        style={{ color: "#ef4444" }}
+                        title="Reject this product"
+                      >
+                        {productActionLoading[product.id] ? "Rejecting..." : "Reject"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Product Edit Modal (SA-1.3-003) */}
+          {editingProduct && (
+            <div className="modalOverlay" onClick={() => setEditingProduct(null)}>
+              <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+                <div className="modalHeader">
+                  <h3 style={{ margin: 0 }}>Edit Product - Set Margin & BNPL</h3>
+                  <button className="btnGhost" onClick={() => setEditingProduct(null)}>&times;</button>
+                </div>
+
+                <div className="modalBody">
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>Original Name:</strong> {editingProduct.productName}
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>Purchase Price:</strong> INR {(editingProduct.purchasePrice / 100).toFixed(2)}
+                  </div>
+                  <div style={{ marginBottom: 12 }}>
+                    <strong>MRP:</strong> INR {(editingProduct.mrp / 100).toFixed(2)}
+                  </div>
+
+                  <hr style={{ margin: "16px 0", borderColor: "#e5e7eb" }} />
+
+                  <div className="control" style={{ marginBottom: 16 }}>
+                    <label>Display Name (optional override)</label>
+                    <input
+                      value={editProductForm.editedName}
+                      onChange={(e) => setEditProductForm((f) => ({ ...f, editedName: e.target.value }))}
+                      placeholder={editingProduct.productName}
+                    />
+                  </div>
+
+                  <div className="control" style={{ marginBottom: 16 }}>
+                    <label>Margin Type</label>
+                    <select
+                      value={editProductForm.marginType}
+                      onChange={(e) => setEditProductForm((f) => ({ ...f, marginType: e.target.value as "fixed" | "percent" }))}
+                    >
+                      <option value="fixed">Fixed Amount (INR)</option>
+                      <option value="percent">Percentage (%)</option>
+                    </select>
+                  </div>
+
+                  {editProductForm.marginType === "fixed" ? (
+                    <div className="control" style={{ marginBottom: 16 }}>
+                      <label>Fixed Margin (INR)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editProductForm.fixedMargin}
+                        onChange={(e) => setEditProductForm((f) => ({ ...f, fixedMargin: e.target.value }))}
+                        placeholder="e.g. 5.00"
+                      />
+                      <div className="muted" style={{ marginTop: 4 }}>
+                        Retailer Price: INR {((editingProduct.purchasePrice / 100) + (parseFloat(editProductForm.fixedMargin) || 0)).toFixed(2)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="control" style={{ marginBottom: 16 }}>
+                      <label>Margin Percentage (%)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={editProductForm.percentMargin}
+                        onChange={(e) => setEditProductForm((f) => ({ ...f, percentMargin: e.target.value }))}
+                        placeholder="e.g. 10"
+                      />
+                      <div className="muted" style={{ marginTop: 4 }}>
+                        Retailer Price: INR {((editingProduct.purchasePrice / 100) * (1 + (parseFloat(editProductForm.percentMargin) || 0) / 100)).toFixed(2)}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="control" style={{ marginBottom: 16 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={editProductForm.bnplEligible}
+                        onChange={(e) => setEditProductForm((f) => ({ ...f, bnplEligible: e.target.checked }))}
+                      />
+                      BNPL Eligible (Buy Now Pay Later)
+                    </label>
+                  </div>
+
+                  {editProductForm.bnplEligible && (
+                    <div className="control" style={{ marginBottom: 16 }}>
+                      <label>BNPL Max Days</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={editProductForm.bnplMaxDays}
+                        onChange={(e) => setEditProductForm((f) => ({ ...f, bnplMaxDays: e.target.value }))}
+                      />
+                    </div>
+                  )}
+
+                  {editProductError && <div className="banner">{editProductError}</div>}
+                  {editProductSuccess && <div className="muted" style={{ color: "#22c55e", marginTop: 8 }}>{editProductSuccess}</div>}
+                </div>
+
+                <div className="modalFooter">
+                  <button className="btnGhost" onClick={() => setEditingProduct(null)}>Cancel</button>
+                  <button
+                    onClick={handleSubmitEditProduct}
+                    disabled={editProductLoading}
+                    style={{ background: "#3b82f6", color: "white" }}
+                  >
+                    {editProductLoading ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb" }}>
             <div>
               <div className="cardTitle">Recently Processed</div>
               <div className="muted">Approved and rejected requests</div>
@@ -2711,9 +3092,76 @@ export default function App() {
       {tab === "users" && (
         <section className="card">
           <div className="cardHeader">
-            <div className="cardTitle">Users Management</div>
-            <div className="muted">Manage platform users and their access</div>
+            <div>
+              <div className="cardTitle">Users Management</div>
+              <div className="muted">Manage platform users and their access</div>
+            </div>
+            <button
+              onClick={() => setShowCreateUser(!showCreateUser)}
+              style={{ background: showCreateUser ? "#6b7280" : "#3b82f6", color: "white" }}
+            >
+              {showCreateUser ? "Cancel" : "+ Create User"}
+            </button>
           </div>
+
+          {/* SA-1.3-004: Create User Form */}
+          {showCreateUser && (
+            <div className="tableWrap" style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+                <div className="control">
+                  <label>Name *</label>
+                  <input
+                    value={createUserForm.name}
+                    onChange={(e) => setCreateUserForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Full name"
+                  />
+                </div>
+                <div className="control">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    value={createUserForm.email}
+                    onChange={(e) => setCreateUserForm((f) => ({ ...f, email: e.target.value }))}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="control">
+                  <label>Phone</label>
+                  <input
+                    type="tel"
+                    value={createUserForm.phone}
+                    onChange={(e) => setCreateUserForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+                <div className="control">
+                  <label>Type</label>
+                  <select
+                    value={createUserForm.actor_type}
+                    onChange={(e) => setCreateUserForm((f) => ({ ...f, actor_type: e.target.value }))}
+                  >
+                    <option value="store">Store</option>
+                    <option value="supplier">Supplier</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                <button
+                  onClick={handleCreateUser}
+                  disabled={createUserLoading}
+                  style={{ background: "#22c55e", color: "white" }}
+                >
+                  {createUserLoading ? "Creating..." : "Create User"}
+                </button>
+                {createUserError && <span className="errorText">{createUserError}</span>}
+                {createUserSuccess && <span style={{ color: "#22c55e", fontWeight: 600 }}>{createUserSuccess}</span>}
+              </div>
+              <div className="muted" style={{ marginTop: 8 }}>
+                * Name is required. At least one of Email or Phone must be provided.
+              </div>
+            </div>
+          )}
 
           <div className="tableWrap">
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>

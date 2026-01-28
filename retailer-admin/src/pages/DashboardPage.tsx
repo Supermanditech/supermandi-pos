@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
-import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult } from '../api/store';
+import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
 
 export default function DashboardPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
@@ -26,6 +26,11 @@ export default function DashboardPage() {
   // FE-RETAILER-CAT-001: Categories from POS taxonomy
   const [categories, setCategories] = useState<FmcgCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // GL-RJ-009: Daily summary for dashboard
+  const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
+  const [dailySummaryLoading, setDailySummaryLoading] = useState(true);
+  const [dailySummaryError, setDailySummaryError] = useState<string | null>(null);
 
   // RCAT-CAT-002: Category edit/delete state
   const [editingCategory, setEditingCategory] = useState<FmcgCategory | null>(null);
@@ -117,8 +122,25 @@ export default function DashboardPage() {
       }
     };
 
+    // GL-RJ-009: Load daily summary for dashboard
+    const loadDailySummary = async () => {
+      setDailySummaryLoading(true);
+      setDailySummaryError(null);
+      try {
+        const result = await fetchDailySummary(accessToken);
+        setDailySummary(result.data || null);
+      } catch (err) {
+        console.error('Failed to load daily summary:', err);
+        setDailySummaryError('Failed to load daily summary');
+        setDailySummary(null);
+      } finally {
+        setDailySummaryLoading(false);
+      }
+    };
+
     loadInventory();
     loadCategories();
+    loadDailySummary();
   }, [accessToken]);
 
   useEffect(() => {
@@ -543,6 +565,140 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* GL-RJ-009: Daily Sales Summary Section */}
+      <div style={{
+        background: 'white',
+        borderRadius: '14px',
+        padding: '1.5rem',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        border: '1px solid #e2e8f0',
+        marginBottom: '2rem',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '1rem',
+            fontWeight: '600',
+            color: '#1e293b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>📊</span>
+            Today's Sales Summary
+          </h2>
+          {dailySummary && (
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              {new Date(dailySummary.date).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </span>
+          )}
+        </div>
+
+        {dailySummaryLoading ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+            Loading daily summary...
+          </div>
+        ) : dailySummaryError ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>
+            {dailySummaryError}
+          </div>
+        ) : dailySummary ? (
+          <>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '1rem',
+              marginBottom: '1rem',
+            }}>
+              {/* Total Sales */}
+              <div style={{
+                background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)',
+                borderRadius: '10px',
+                padding: '1rem',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669' }}>
+                  ₹{dailySummary.totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Total Sales</div>
+              </div>
+
+              {/* Total Bills */}
+              <div style={{
+                background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+                borderRadius: '10px',
+                padding: '1rem',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#2563eb' }}>
+                  {dailySummary.totalBills}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Bills</div>
+              </div>
+
+              {/* Average Bill */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fef3c7, #fef9c3)',
+                borderRadius: '10px',
+                padding: '1rem',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706' }}>
+                  ₹{dailySummary.averageBillValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Avg Bill</div>
+              </div>
+
+              {/* Items Sold */}
+              <div style={{
+                background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)',
+                borderRadius: '10px',
+                padding: '1rem',
+                textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#db2777' }}>
+                  {dailySummary.itemsSold}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Items Sold</div>
+              </div>
+            </div>
+
+            {/* Payment Breakdown */}
+            {(dailySummary.paymentBreakdown.cash > 0 || dailySummary.paymentBreakdown.upi > 0) && (
+              <div style={{
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '1rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                fontSize: '0.85rem',
+              }}>
+                <span style={{ color: '#64748b', fontWeight: '500' }}>Payment Modes:</span>
+                {dailySummary.paymentBreakdown.cash > 0 && (
+                  <span style={{ color: '#059669' }}>
+                    💵 Cash: ₹{dailySummary.paymentBreakdown.cash.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+                {dailySummary.paymentBreakdown.upi > 0 && (
+                  <span style={{ color: '#2563eb' }}>
+                    📱 UPI: ₹{dailySummary.paymentBreakdown.upi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+                {dailySummary.paymentBreakdown.card > 0 && (
+                  <span style={{ color: '#7c3aed' }}>
+                    💳 Card: ₹{dailySummary.paymentBreakdown.card.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+            No sales data for today
+          </div>
+        )}
+      </div>
+
       {/* Quick Actions Section */}
       <div style={{ marginBottom: '2rem' }}>
         <h2 style={{
@@ -689,7 +845,7 @@ export default function DashboardPage() {
             Add Supplier (Market Supplier)
           </button>
 
-          {/* Export Button */}
+          {/* GL-WF-031: Export Button with CSV download handler */}
           <button
             style={{
               display: 'flex',
@@ -712,6 +868,31 @@ export default function DashboardPage() {
             onMouseOut={(e) => {
               e.currentTarget.style.borderColor = '#e2e8f0';
               e.currentTarget.style.background = 'white';
+            }}
+            onClick={() => {
+              // GL-WF-031: Export inventory to CSV
+              if (!inventory || inventory.length === 0) {
+                alert('No inventory data to export');
+                return;
+              }
+              const headers = ['Product Name', 'Barcode', 'Stock Qty', 'Purchase Value (Rs)', 'Sell Revenue (Rs)'];
+              const rows = inventory.map(item => [
+                `"${(item.productName || '').replace(/"/g, '""')}"`,
+                item.barcode || '',
+                String(item.totalStockQty || 0),
+                ((item.totalPurchaseValue || 0) / 100).toFixed(2),
+                ((item.totalSellRevenue || 0) / 100).toFixed(2),
+              ]);
+              const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+              const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `inventory-export-${new Date().toISOString().split('T')[0]}.csv`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
             }}
           >
             <span style={{ fontSize: '1.1rem' }}>📊</span>

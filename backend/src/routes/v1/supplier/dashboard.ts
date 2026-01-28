@@ -36,6 +36,7 @@ router.get("/dashboard/stats", requireSupplierAuth, async (req: SupplierAuthRequ
     );
 
     // Get order counts and revenue
+    // FIX: Use correct column names (order_id instead of purchase_order_id, line_total instead of line_total_minor)
     const orderStats = await pool.query(
       `SELECT
         COUNT(DISTINCT po.id) as total_orders,
@@ -43,9 +44,9 @@ router.get("/dashboard/stats", requireSupplierAuth, async (req: SupplierAuthRequ
         COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'confirmed') as confirmed_orders,
         COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'shipped') as shipped_orders,
         COUNT(DISTINCT po.id) FILTER (WHERE po.status = 'delivered') as delivered_orders,
-        COALESCE(SUM(poi.line_total_minor) FILTER (WHERE po.status = 'delivered'), 0) as total_revenue
+        COALESCE(SUM(poi.line_total) FILTER (WHERE po.status = 'delivered'), 0) as total_revenue
       FROM orders.purchase_orders po
-      JOIN orders.purchase_order_items poi ON poi.purchase_order_id = po.id
+      JOIN orders.purchase_order_items poi ON poi.order_id = po.id
       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
       WHERE sp.supplier_id = $1`,
       [req.supplierId]

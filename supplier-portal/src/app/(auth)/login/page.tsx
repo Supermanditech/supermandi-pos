@@ -99,9 +99,18 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label htmlFor="password" className="label">
-            Password
-          </label>
+          <div className="flex items-center justify-between">
+            <label htmlFor="password" className="label">
+              Password
+            </label>
+            {/* GL-WF-035: Forgot password link */}
+            <Link
+              href="/forgot-password"
+              className="text-sm text-primary-600 hover:text-primary-700"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input
             type="password"
             id="password"

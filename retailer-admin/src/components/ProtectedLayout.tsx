@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
@@ -7,9 +8,14 @@ const API_BASE_URL = '/api/v1/retailer-admin';
 
 export default function ProtectedLayout() {
   const { storeCode } = useParams<{ storeCode: string }>();
-  const { logout, store } = useAuth();
+  const { logout, store, user, showSessionWarning, dismissSessionWarning } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  // GL-WF-053: Logout confirmation state
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  // GL-WF-033: Check if user has admin role
+  const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'owner';
 
   // DEPLOY-003: Use gateway base URL from env
   const getApiBaseUrl = () => {
@@ -34,8 +40,10 @@ export default function ProtectedLayout() {
     { path: 'products', label: 'Products', icon: '📦' },
     { path: 'inventory', label: 'Inventory', icon: '📋' },
     { path: 'suppliers', label: 'Suppliers', icon: '🏪' },
+    { path: 'supplier-catalog', label: 'Supplier Catalog', icon: '🛒' }, // CA-1.4-001
     { path: 'import', label: 'Import CSV', icon: '📄' },
     { path: 'compliance', label: 'Compliance', icon: '📑' },
+    { path: 'settings', label: 'Settings', icon: '⚙️' }, // GL-RJ-005
   ];
 
   // SM-024: Admin approval queue navigation
@@ -132,63 +140,65 @@ export default function ProtectedLayout() {
             </a>
           ))}
 
-          {/* SM-024: Admin Section Divider */}
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            margin: '0.75rem 0',
-            paddingTop: '0.75rem',
-          }}>
+          {/* SM-024: Admin Section Divider - GL-WF-033: Only show for admin users */}
+          {isAdmin && (
             <div style={{
-              fontSize: '0.7rem',
-              color: '#64748b',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              padding: '0 1rem',
-              marginBottom: '0.5rem',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              margin: '0.75rem 0',
+              paddingTop: '0.75rem',
             }}>
-              SuperAdmin
+              <div style={{
+                fontSize: '0.7rem',
+                color: '#64748b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                padding: '0 1rem',
+                marginBottom: '0.5rem',
+              }}>
+                SuperAdmin
+              </div>
+              {adminNavItems.map((item) => (
+                <a
+                  key={item.path}
+                  href={`/s/${storeCode}/${item.path}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    padding: '0.875rem 1rem',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '10px',
+                    background: isActive(item.path)
+                      ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))'
+                      : 'transparent',
+                    border: isActive(item.path)
+                      ? '1px solid rgba(139, 92, 246, 0.3)'
+                      : '1px solid transparent',
+                    fontWeight: isActive(item.path) ? '500' : '400',
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s',
+                    opacity: isActive(item.path) ? 1 : 0.7,
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isActive(item.path)) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                      e.currentTarget.style.opacity = '1';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isActive(item.path)) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.opacity = '0.7';
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
+                  {item.label}
+                </a>
+              ))}
             </div>
-            {adminNavItems.map((item) => (
-              <a
-                key={item.path}
-                href={`/s/${storeCode}/${item.path}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.875rem 1rem',
-                  color: 'white',
-                  textDecoration: 'none',
-                  borderRadius: '10px',
-                  background: isActive(item.path)
-                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))'
-                    : 'transparent',
-                  border: isActive(item.path)
-                    ? '1px solid rgba(139, 92, 246, 0.3)'
-                    : '1px solid transparent',
-                  fontWeight: isActive(item.path) ? '500' : '400',
-                  fontSize: '0.95rem',
-                  transition: 'all 0.2s',
-                  opacity: isActive(item.path) ? 1 : 0.7,
-                }}
-                onMouseOver={(e) => {
-                  if (!isActive(item.path)) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                    e.currentTarget.style.opacity = '1';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!isActive(item.path)) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.opacity = '0.7';
-                  }
-                }}
-              >
-                <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
-                {item.label}
-              </a>
-            ))}
-          </div>
+          )}
         </nav>
 
         {/* Footer */}
@@ -196,8 +206,9 @@ export default function ProtectedLayout() {
           padding: '1rem 1.5rem',
           borderTop: '1px solid rgba(255,255,255,0.1)',
         }}>
+          {/* GL-WF-053: Logout button with confirmation */}
           <button
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             style={{
               width: '100%',
               padding: '0.75rem 1rem',
@@ -272,6 +283,106 @@ export default function ProtectedLayout() {
           <span>API: <strong style={{ color: '#38bdf8' }}>{window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin}</strong></span>
         </footer>
       </div>
+
+      {/* GL-WF-028: Session Expiry Warning Modal */}
+      {showSessionWarning && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '400px',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+          }}>
+            <div style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>⏰</div>
+            <h3 style={{ margin: '0 0 1rem', textAlign: 'center', color: '#1e293b' }}>Session Expiring Soon</h3>
+            <p style={{ margin: '0 0 1.5rem', color: '#64748b', textAlign: 'center' }}>
+              Your session will expire in less than 5 minutes due to inactivity. Click below to stay logged in.
+            </p>
+            <button
+              onClick={dismissSessionWarning}
+              style={{
+                width: '100%',
+                padding: '0.875rem',
+                background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+            >
+              Stay Logged In
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* GL-WF-053: Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '400px',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+          }}>
+            <h3 style={{ margin: '0 0 1rem', textAlign: 'center', color: '#1e293b' }}>Confirm Logout</h3>
+            <p style={{ margin: '0 0 1.5rem', color: '#64748b', textAlign: 'center' }}>
+              Are you sure you want to logout?
+            </p>
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  flex: 1,
+                  padding: '0.875rem',
+                  background: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

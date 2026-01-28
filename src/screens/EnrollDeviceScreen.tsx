@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 // expo-updates disabled for development - channel info not needed
 const Updates = { channel: null as string | null };
 
-import { enrollDevice } from "../services/api/enrollApi";
+import { enrollDevice, checkDuplicateLabel, CheckDuplicateLabelResponse } from "../services/api/enrollApi";
 import { getDeviceSession, saveDeviceSession, clearDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -215,6 +215,10 @@ export default function EnrollDeviceScreen() {
   const [scanned, setScanned] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  // GL-RJ-006: Duplicate label detection state
+  const [labelCheckResult, setLabelCheckResult] = useState<CheckDuplicateLabelResponse | null>(null);
+  const [checkingLabel, setCheckingLabel] = useState(false);
+  const labelCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // P3-001: Use expo-device for reliable device metadata capture
   const deviceMeta = useMemo(() => {
@@ -228,6 +232,52 @@ export default function EnrollDeviceScreen() {
       printingMode
     };
   }, [labelInput, deviceType, printingMode]);
+
+  // GL-RJ-006: Debounced duplicate label check
+  const doLabelCheck = useCallback(async (label: string, code: string) => {
+    if (!label.trim() || !code.trim()) {
+      setLabelCheckResult(null);
+      return;
+    }
+
+    setCheckingLabel(true);
+    try {
+      const result = await checkDuplicateLabel({
+        enrollmentCode: code,
+        label: label.trim(),
+      });
+      setLabelCheckResult(result);
+    } catch (error) {
+      console.warn("[EnrollDeviceScreen] Label check failed:", error);
+      setLabelCheckResult(null);
+    } finally {
+      setCheckingLabel(false);
+    }
+  }, []);
+
+  // GL-RJ-006: Trigger label check when label or code changes
+  useEffect(() => {
+    if (labelCheckTimerRef.current) {
+      clearTimeout(labelCheckTimerRef.current);
+    }
+
+    const enrollmentCode = parseEnrollmentCode(codeInput);
+    if (!labelInput.trim() || !enrollmentCode) {
+      setLabelCheckResult(null);
+      return;
+    }
+
+    // Debounce by 500ms
+    labelCheckTimerRef.current = setTimeout(() => {
+      void doLabelCheck(labelInput, enrollmentCode);
+    }, 500);
+
+    return () => {
+      if (labelCheckTimerRef.current) {
+        clearTimeout(labelCheckTimerRef.current);
+      }
+    };
+  }, [labelInput, codeInput, doLabelCheck]);
 
   useEffect(() => {
     let cancelled = false;
@@ -264,6 +314,19 @@ export default function EnrollDeviceScreen() {
     }
     if (!labelInput.trim()) {
       Alert.alert("Missing Label", "Enter a device label (e.g., Counter-1).");
+      return;
+    }
+
+    // GL-RJ-006: Block enrollment if duplicate label detected
+    if (labelCheckResult?.isDuplicate) {
+      const suggestions = labelCheckResult.suggestions?.slice(0, 3).join(", ");
+      Alert.alert(
+        "Duplicate Label",
+        `A device with label "${labelInput.trim()}" already exists for this store.\n\n` +
+        (suggestions ? `Suggestions: ${suggestions}\n\n` : "") +
+        "Please use a unique label.",
+        [{ text: "OK" }]
+      );
       return;
     }
 
@@ -433,11 +496,44 @@ export default function EnrollDeviceScreen() {
 
         <Text style={styles.label}>Device Label (required)</Text>
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            labelCheckResult?.isDuplicate && styles.inputError
+          ]}
           placeholder="Counter-1"
           value={labelInput}
           onChangeText={setLabelInput}
         />
+        {/* GL-RJ-006: Duplicate label warning */}
+        {checkingLabel && (
+          <Text style={styles.labelHint}>Checking label availability...</Text>
+        )}
+        {labelCheckResult?.isDuplicate && (
+          <View style={styles.duplicateWarning}>
+            <Text style={styles.duplicateWarningText}>
+              This label is already in use. Please choose a different label.
+            </Text>
+            {labelCheckResult.suggestions && labelCheckResult.suggestions.length > 0 && (
+              <View style={styles.suggestions}>
+                <Text style={styles.suggestionsLabel}>Suggestions:</Text>
+                <View style={styles.suggestionPills}>
+                  {labelCheckResult.suggestions.slice(0, 3).map((suggestion) => (
+                    <Pressable
+                      key={suggestion}
+                      style={styles.suggestionPill}
+                      onPress={() => setLabelInput(suggestion)}
+                    >
+                      <Text style={styles.suggestionPillText}>{suggestion}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+        {!checkingLabel && !labelCheckResult?.isDuplicate && labelInput.trim() && parseEnrollmentCode(codeInput) && (
+          <Text style={styles.labelAvailable}>Label available</Text>
+        )}
 
         <Text style={styles.label}>Device Type</Text>
         <View style={styles.pillRow}>
@@ -604,6 +700,59 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: theme.colors.surfaceAlt,
     color: theme.colors.textPrimary
+  },
+  // GL-RJ-006: Duplicate label detection styles
+  inputError: {
+    borderColor: theme.colors.error,
+    backgroundColor: theme.colors.errorSoft
+  },
+  labelHint: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    fontStyle: "italic"
+  },
+  duplicateWarning: {
+    backgroundColor: theme.colors.errorSoft,
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.error
+  },
+  duplicateWarningText: {
+    fontSize: 12,
+    color: theme.colors.error,
+    fontWeight: "500"
+  },
+  suggestions: {
+    marginTop: 8
+  },
+  suggestionsLabel: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginBottom: 6
+  },
+  suggestionPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6
+  },
+  suggestionPill: {
+    backgroundColor: theme.colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.primary
+  },
+  suggestionPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.primaryDark
+  },
+  labelAvailable: {
+    fontSize: 11,
+    color: theme.colors.success,
+    fontWeight: "500"
   },
   pillRow: {
     flexDirection: "row",

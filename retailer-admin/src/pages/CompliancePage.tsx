@@ -1,4 +1,7 @@
-import { useState } from 'react';
+// GL-WF-032: Compliance Document Upload with real API integration
+import { useState, useEffect } from 'react';
+import { useAuth } from '../lib/AuthContext';
+import { authFetch } from '../lib/api';
 
 interface Document {
   id: string;
@@ -7,15 +10,8 @@ interface Document {
   uploadedAt: string;
   status: 'pending' | 'verified' | 'rejected';
   rejectionReason?: string;
+  fileUrl?: string;
 }
-
-// Mock data
-const mockDocuments: Document[] = [
-  { id: '1', type: 'GSTIN Certificate', fileName: 'gstin_certificate.pdf', uploadedAt: '2024-01-10', status: 'verified' },
-  { id: '2', type: 'FSSAI License', fileName: 'fssai_license.pdf', uploadedAt: '2024-01-12', status: 'verified' },
-  { id: '3', type: 'Shop License', fileName: 'shop_license.pdf', uploadedAt: '2024-01-14', status: 'pending' },
-  { id: '4', type: 'PAN Card', fileName: 'pan_card.jpg', uploadedAt: '2024-01-15', status: 'rejected', rejectionReason: 'Image is blurry, please upload a clear copy' },
-];
 
 const documentTypes = [
   { value: 'gstin', label: 'GSTIN Certificate' },
@@ -23,12 +19,41 @@ const documentTypes = [
   { value: 'shop_license', label: 'Shop License' },
   { value: 'pan', label: 'PAN Card' },
   { value: 'trade_license', label: 'Trade License' },
+  { value: 'address_proof', label: 'Address Proof' },
 ];
 
 export default function CompliancePage() {
+  const { accessToken } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
   const [selectedType, setSelectedType] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Fetch existing documents on mount
+  useEffect(() => {
+    if (!accessToken) return;
+
+    const fetchDocuments = async () => {
+      setIsLoading(true);
+      try {
+        const response = await authFetch('/api/v1/retailer-admin/compliance/documents', accessToken);
+        if (response.ok) {
+          const data = await response.json();
+          setDocuments(data.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch documents:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDocuments();
+  }, [accessToken]);
 
   const getStatusBadge = (status: Document['status']) => {
     switch (status) {
@@ -41,12 +66,87 @@ export default function CompliancePage() {
     }
   };
 
-  const handleUpload = (e: React.FormEvent) => {
+  // GL-WF-032: Real document upload handler
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate upload
-    setShowUpload(false);
-    setSelectedType('');
-    setSelectedFile(null);
+    if (!selectedFile || !selectedType || !accessToken) {
+      setError('Please select document type and file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const formData = new FormData();
+      formData.append('document', selectedFile);
+      formData.append('type', selectedType);
+
+      const response = await authFetch('/api/v1/retailer-admin/compliance/upload', accessToken, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type header - browser will set it with boundary for FormData
+        headers: {},
+      });
+
+      if (response.status === 401) return;
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Upload failed');
+      }
+
+      // Add new document to the list
+      if (data.data) {
+        setDocuments(prev => [data.data, ...prev]);
+      }
+
+      setSuccess(`Document "${selectedFile.name}" uploaded successfully!`);
+      setShowUpload(false);
+      setSelectedType('');
+      setSelectedFile(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload document');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Handle document download
+  const handleDownload = async (doc: Document) => {
+    if (!doc.fileUrl || !accessToken) return;
+
+    try {
+      const response = await authFetch(doc.fileUrl, accessToken);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = doc.fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      setError('Failed to download document');
+    }
+  };
+
+  // Count documents by status
+  const statusCounts = {
+    verified: documents.filter(d => d.status === 'verified').length,
+    pending: documents.filter(d => d.status === 'pending').length,
+    rejected: documents.filter(d => d.status === 'rejected').length,
   };
 
   return (
@@ -61,19 +161,45 @@ export default function CompliancePage() {
       </header>
 
       <div className="page-content">
+        {/* Success/Error Messages */}
+        {success && (
+          <div style={{
+            background: '#dcfce7',
+            color: '#166534',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.375rem',
+            marginBottom: '1rem',
+            fontSize: '0.875rem'
+          }}>
+            {success}
+          </div>
+        )}
+        {error && (
+          <div style={{
+            background: '#fee2e2',
+            color: '#991b1b',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.375rem',
+            marginBottom: '1rem',
+            fontSize: '0.875rem'
+          }}>
+            {error}
+          </div>
+        )}
+
         {/* Status Summary */}
         <div className="grid grid-3" style={{ marginBottom: '1.5rem' }}>
           <div className="stat-card">
             <div className="stat-label">✓ Verified</div>
-            <div className="stat-value" style={{ color: 'var(--success)' }}>2</div>
+            <div className="stat-value" style={{ color: 'var(--success)' }}>{statusCounts.verified}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">⏳ Pending</div>
-            <div className="stat-value" style={{ color: 'var(--warning)' }}>1</div>
+            <div className="stat-value" style={{ color: 'var(--warning)' }}>{statusCounts.pending}</div>
           </div>
           <div className="stat-card">
             <div className="stat-label">✗ Rejected</div>
-            <div className="stat-value" style={{ color: 'var(--danger)' }}>1</div>
+            <div className="stat-value" style={{ color: 'var(--danger)' }}>{statusCounts.rejected}</div>
           </div>
         </div>
 
@@ -90,6 +216,7 @@ export default function CompliancePage() {
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
                     required
+                    disabled={isUploading}
                   >
                     <option value="">Select document type</option>
                     {documentTypes.map((type) => (
@@ -98,13 +225,14 @@ export default function CompliancePage() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">File *</label>
+                  <label className="form-label">File * (PDF, JPG, PNG - max 5MB)</label>
                   <input
                     type="file"
                     className="form-input"
                     accept=".pdf,.jpg,.jpeg,.png"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                     required
+                    disabled={isUploading}
                   />
                 </div>
               </div>
@@ -114,8 +242,17 @@ export default function CompliancePage() {
                 </p>
               )}
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button type="submit" className="btn btn-primary">Upload</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowUpload(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={isUploading}>
+                  {isUploading ? 'Uploading...' : 'Upload'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowUpload(false)}
+                  disabled={isUploading}
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -123,46 +260,69 @@ export default function CompliancePage() {
 
         {/* Documents List */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Document Type</th>
-                <th>File Name</th>
-                <th>Uploaded</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockDocuments.map((doc) => (
-                <tr key={doc.id}>
-                  <td style={{ fontWeight: '500' }}>{doc.type}</td>
-                  <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{doc.fileName}</td>
-                  <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>{doc.uploadedAt}</td>
-                  <td>
-                    {getStatusBadge(doc.status)}
-                    {doc.rejectionReason && (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>
-                        {doc.rejectionReason}
-                      </p>
-                    )}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="btn btn-secondary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                        Download
-                      </button>
-                      {doc.status === 'rejected' && (
-                        <button className="btn btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>
-                          Re-upload
-                        </button>
-                      )}
-                    </div>
-                  </td>
+          {isLoading ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Loading documents...
+            </div>
+          ) : documents.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No documents uploaded yet. Click "Upload Document" to add your compliance documents.
+            </div>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Document Type</th>
+                  <th>File Name</th>
+                  <th>Uploaded</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {documents.map((doc) => (
+                  <tr key={doc.id}>
+                    <td style={{ fontWeight: '500' }}>{doc.type}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>{doc.fileName}</td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                      {new Date(doc.uploadedAt).toLocaleDateString('en-IN')}
+                    </td>
+                    <td>
+                      {getStatusBadge(doc.status)}
+                      {doc.rejectionReason && (
+                        <p style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '0.25rem' }}>
+                          {doc.rejectionReason}
+                        </p>
+                      )}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          onClick={() => handleDownload(doc)}
+                        >
+                          Download
+                        </button>
+                        {doc.status === 'rejected' && (
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                            onClick={() => {
+                              setSelectedType(doc.type);
+                              setShowUpload(true);
+                            }}
+                          >
+                            Re-upload
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Required Documents */}

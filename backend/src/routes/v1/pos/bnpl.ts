@@ -417,4 +417,101 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (r
   }
 });
 
+// =============================================================================
+// GL-RJ-008: BNPL Payment Status Polling
+// Endpoint for auto-detecting when UPI payment completes
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/bnpl/:drawdownId/pay/:repaymentId/status
+ * GL-RJ-008: Poll BNPL payment status for auto-detection
+ * Returns current payment status for the given repayment
+ */
+posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as unknown as PosRequest).posDevice;
+  const { drawdownId, repaymentId } = req.params;
+
+  if (!drawdownId || !repaymentId) {
+    return res.status(400).json({
+      success: false,
+      error: "drawdownId and repaymentId are required"
+    });
+  }
+
+  try {
+    // Get repayment record with status
+    const repaymentResult = await pool.query(`
+      SELECT
+        bp.id,
+        bp.bnpl_drawdown_id as "drawdownId",
+        bp.status,
+        bp.amount_minor as "amountMinor",
+        bp.upi_payer_ref as utr,
+        bp.completed_at as "paidAt",
+        bp.failure_reason as "errorMessage"
+      FROM payments.buy_payments bp
+      WHERE bp.id = $1
+        AND bp.store_id = $2
+        AND bp.bnpl_drawdown_id = $3
+    `, [repaymentId, storeId, drawdownId]);
+
+    if (repaymentResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        repaymentId,
+        drawdownId,
+        status: "not_found",
+        errorMessage: "Repayment not found"
+      });
+    }
+
+    const repayment = repaymentResult.rows[0];
+
+    // Map internal status to API status
+    let apiStatus: "pending" | "processing" | "completed" | "failed" | "expired" = "pending";
+    switch (repayment.status) {
+      case "initiated":
+        apiStatus = "pending";
+        break;
+      case "processing":
+        apiStatus = "processing";
+        break;
+      case "completed":
+        apiStatus = "completed";
+        break;
+      case "failed":
+        apiStatus = "failed";
+        break;
+      default:
+        apiStatus = "pending";
+    }
+
+    console.log(`[GL-RJ-008] BNPL status poll: repaymentId=${repaymentId}, status=${apiStatus}`);
+
+    return res.json({
+      success: true,
+      repaymentId,
+      drawdownId: repayment.drawdownId,
+      status: apiStatus,
+      amountMinor: repayment.amountMinor,
+      utr: repayment.utr || undefined,
+      paidAt: repayment.paidAt || undefined,
+      errorMessage: repayment.errorMessage || undefined
+    });
+
+  } catch (error: any) {
+    console.error("[GL-RJ-008] BNPL status poll error:", error.message);
+    return res.status(500).json({
+      success: false,
+      repaymentId,
+      drawdownId,
+      status: "failed",
+      errorMessage: "Failed to get payment status"
+    });
+  }
+});
+
 export default posBnplRouter;

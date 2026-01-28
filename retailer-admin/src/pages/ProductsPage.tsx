@@ -42,6 +42,8 @@ interface Product {
   rateUnit?: string;
   // RCAT-CAT-002: Category
   categoryId?: string;
+  // GL-WF-029: BNPL eligibility
+  bnplEligible?: boolean;
 }
 
 // API response for product create
@@ -90,6 +92,8 @@ interface ProductFormData {
   rateUnit: string;          // Required - the unit rate is quoted in (e.g., KG, GM, PCS)
   // RCAT-CAT-002: Category override
   categoryId: string;        // Optional - taxonomy_id from fmcg_taxonomy
+  // GL-WF-029: BNPL eligibility toggle
+  bnplEligible: boolean;     // Optional - whether product can be purchased on BNPL
 }
 
 const initialFormData: ProductFormData = {
@@ -118,6 +122,8 @@ const initialFormData: ProductFormData = {
   rateUnit: 'KG',     // Default rate unit
   // RCAT-CAT-002: Category override
   categoryId: '',
+  // GL-WF-029: BNPL eligibility
+  bnplEligible: false,
 };
 
 export default function ProductsPage() {
@@ -280,6 +286,8 @@ export default function ProductsPage() {
       rateUnit: product.rateUnit || 'KG',
       // RCAT-CAT-002: Category
       categoryId: product.categoryId || '',
+      // GL-WF-029: BNPL eligibility
+      bnplEligible: product.bnplEligible || false,
     });
     setShowForm(true);
     setError('');
@@ -389,6 +397,8 @@ export default function ProductsPage() {
         gstPercent: formData.gstPercent ? parseFloat(formData.gstPercent) : undefined,
         hsn: formData.hsn.trim() || undefined,
         notes: formData.notes.trim() || undefined,
+        // GL-WF-029: BNPL eligibility
+        bnplEligible: formData.bnplEligible,
       };
 
       // RCAT-CAT-002: Category override (store level)
@@ -1185,6 +1195,23 @@ export default function ProductsPage() {
                   style={{ resize: 'vertical' }}
                 />
                 <small style={{ color: 'var(--text-muted)' }}>For store use only, not shown on POS</small>
+              </div>
+
+              {/* GL-WF-029: BNPL Eligibility Toggle */}
+              <div className="form-group" style={{ marginBottom: '0.75rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    name="bnplEligible"
+                    checked={formData.bnplEligible}
+                    onChange={(e) => setFormData({ ...formData, bnplEligible: e.target.checked })}
+                    style={{ width: '1rem', height: '1rem' }}
+                  />
+                  <span className="form-label" style={{ margin: 0, fontWeight: 500 }}>BNPL Eligible</span>
+                </label>
+                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '0.25rem', marginLeft: '1.5rem' }}>
+                  Allow customers to purchase this product using Buy Now, Pay Later
+                </small>
               </div>
 
               <div style={{ display: 'flex', gap: '0.5rem', paddingTop: '0.75rem' }}>

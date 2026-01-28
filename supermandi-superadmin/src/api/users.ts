@@ -74,3 +74,39 @@ export async function patchUser(userId: string, input: UserPatchInput): Promise<
   }
   return data.user;
 }
+
+// SA-1.3-004: Create a new user
+export type UserCreateInput = {
+  name: string;
+  email?: string;
+  phone?: string;
+  actor_type?: string;
+  actor_id?: string;
+};
+
+export async function createUser(input: UserCreateInput): Promise<UserRecord> {
+  if (!API_BASE) {
+    throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
+  }
+
+  const token = getAdminToken();
+  const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(token ? { "x-admin-token": token } : {})
+    },
+    body: JSON.stringify(input)
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { user?: UserRecord };
+  if (!data.user) {
+    throw new Error("User response missing");
+  }
+  return data.user;
+}

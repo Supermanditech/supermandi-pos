@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   AppState,
   BackHandler,
@@ -326,6 +327,9 @@ function CartItemRow({
       ? Math.max(0, Math.floor(availableStock))
       : null;
   const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
+  // GL-RJ-007: Check for price resolution errors
+  const hasPriceError = item.priceResolutionError || (!hasUnitPrice && !isPurchaseMode);
+  const priceErrorMessage = item.priceResolutionMessage || (hasPriceError && !hasUnitPrice ? "Price not set" : null);
 
   useEffect(() => {
     setPriceInput(formatPriceInput(item.priceMinor));
@@ -667,6 +671,15 @@ function CartItemRow({
           </Text>
         </View>
       ) : null}
+      {/* GL-RJ-007: Price resolution error warning */}
+      {hasPriceError && (
+        <View style={styles.priceErrorRow}>
+          <MaterialCommunityIcons name="alert" size={14} color={theme.colors.warning} />
+          <Text style={styles.priceErrorText}>
+            {priceErrorMessage || "Price lookup failed - enter price manually"}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 
@@ -2087,6 +2100,9 @@ export default function SellScanScreen({
     } else {
       // New item - add to cart (store identifiers in metadata for sync)
       console.log(`handleAddSku:new_item:${item.barcode}`);
+      // GL-RJ-007: Detect price resolution failures
+      const priceResolutionFailed = resolved.priceMinor === 0 ||
+        (resolved.inventoryPrice === null && resolved.variantPrice === null && resolved.mrp === null);
       cartState.addItem({
         id: item.barcode,
         name: item.name,
@@ -2097,7 +2113,19 @@ export default function SellScanScreen({
           storeProductId: item.storeProductId || undefined,
           productId: item.productId || undefined,
         },
+        // GL-RJ-007: Set price resolution error flag if no price found
+        priceResolutionError: priceResolutionFailed,
+        priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
       });
+
+      // GL-WF-020: Show alert when price resolution fails
+      if (priceResolutionFailed) {
+        Alert.alert(
+          "Price Not Found",
+          `No price found for "${item.name}". Please enter the price manually before checkout.`,
+          [{ text: "OK", style: "default" }]
+        );
+      }
     }
 
     setCatalogItems((prev) => [item, ...prev.filter((entry) => entry.barcode !== item.barcode)]);
@@ -4082,6 +4110,21 @@ const styles = StyleSheet.create({
   stockLabelCritical: {
     color: theme.colors.error,
     fontWeight: "700",
+  },
+  // GL-RJ-007: Price resolution error styles
+  priceErrorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingTop: 4,
+    paddingBottom: 2,
+  },
+  priceErrorText: {
+    fontSize: 11,
+    color: theme.colors.warning,
+    fontWeight: "500",
+    fontStyle: "italic",
+    flex: 1,
   },
   cartItemTotalLabel: {
     fontSize: 10,

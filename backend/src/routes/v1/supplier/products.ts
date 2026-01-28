@@ -10,6 +10,24 @@ import { parse } from "csv-parse/sync";
 
 const router = Router();
 
+// GL-WF-057: Valid FMCG categories from taxonomy
+const VALID_CATEGORIES = [
+  'Atta-Dal',
+  'Chawal',
+  'Masala',
+  'Tel-Ghee',
+  'Namkeen',
+  'Biscuit',
+  'Chai-Coffee',
+  'Cold Drink',
+  'Doodh',
+  'Sabun',
+  'Safai',
+  'Baby',
+  'Paan-Supari',
+  'Baaki',
+];
+
 // Multer config for CSV upload
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -30,6 +48,7 @@ const upload = multer({
 /**
  * GET /api/v1/supplier/products
  * List all products for the authenticated supplier
+ * GL-WF-063: Supports pagination via page and limit query params
  */
 router.get("/products", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -39,6 +58,20 @@ router.get("/products", requireSupplierAuth, async (req: SupplierAuthRequest, re
       return;
     }
 
+    // GL-WF-063: Parse pagination parameters
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const offset = (page - 1) * limit;
+
+    // GL-WF-063: Get total count for pagination
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM catalog.supplier_products WHERE supplier_id = $1`,
+      [req.supplierId]
+    );
+    const total = parseInt(countResult.rows[0]?.total || '0');
+
+    // GL-WF-036: Include rejection_reason in product list
+    // GL-WF-063: Add LIMIT and OFFSET for pagination
     const result = await pool.query(
       `SELECT
         id,
@@ -55,12 +88,14 @@ router.get("/products", requireSupplierAuth, async (req: SupplierAuthRequest, re
         stock_status,
         is_active,
         approval_status,
+        rejection_reason,
         created_at,
         updated_at
       FROM catalog.supplier_products
       WHERE supplier_id = $1
-      ORDER BY created_at DESC`,
-      [req.supplierId]
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3`,
+      [req.supplierId, limit, offset]
     );
 
     res.json({
@@ -79,9 +114,17 @@ router.get("/products", requireSupplierAuth, async (req: SupplierAuthRequest, re
         stockStatus: p.stock_status,
         isActive: p.is_active,
         approvalStatus: p.approval_status || 'pending',
+        rejectionReason: p.rejection_reason, // GL-WF-036
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),
+      // GL-WF-063: Pagination metadata
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     next(error);
@@ -111,6 +154,30 @@ router.post("/products", requireSupplierAuth, async (req: SupplierAuthRequest, r
     if (!name || !purchasePrice) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'Name and purchase price are required' }
+      });
+      return;
+    }
+
+    // GL-WF-017: Validate MRP >= Purchase Price
+    if (mrp !== undefined && mrp !== null && mrp < purchasePrice) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'MRP must be greater than or equal to purchase price' }
+      });
+      return;
+    }
+
+    // GL-WF-056: Validate barcode format (GTIN: 8, 12, 13, or 14 digits)
+    if (barcode && !/^\d{8}$|^\d{12,14}$/.test(barcode)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Barcode must be a valid GTIN format (8, 12, 13, or 14 digits)' }
+      });
+      return;
+    }
+
+    // GL-WF-057: Validate category against FMCG taxonomy
+    if (category && !VALID_CATEGORIES.includes(category)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` }
       });
       return;
     }
@@ -223,6 +290,58 @@ router.patch("/products/:id", requireSupplierAuth, async (req: SupplierAuthReque
     if (checkResult.rows.length === 0) {
       res.status(404).json({
         error: { code: 'NOT_FOUND', message: 'Product not found' }
+      });
+      return;
+    }
+
+    // GL-WF-017: Validate MRP >= Purchase Price if both are being updated
+    if (mrp !== undefined && purchasePrice !== undefined && mrp < purchasePrice) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'MRP must be greater than or equal to purchase price' }
+      });
+      return;
+    }
+
+    // GL-WF-017: If only MRP is being updated, check against existing purchase price
+    if (mrp !== undefined && purchasePrice === undefined) {
+      const existingResult = await pool.query(
+        `SELECT purchase_price FROM catalog.supplier_products WHERE id = $1`,
+        [id]
+      );
+      if (existingResult.rows[0] && mrp < existingResult.rows[0].purchase_price) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: 'MRP must be greater than or equal to purchase price' }
+        });
+        return;
+      }
+    }
+
+    // GL-WF-017: If only purchase price is being updated, check against existing MRP
+    if (purchasePrice !== undefined && mrp === undefined) {
+      const existingResult = await pool.query(
+        `SELECT mrp FROM catalog.supplier_products WHERE id = $1`,
+        [id]
+      );
+      if (existingResult.rows[0]?.mrp && existingResult.rows[0].mrp < purchasePrice) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: 'Purchase price cannot exceed existing MRP' }
+        });
+        return;
+      }
+    }
+
+    // GL-WF-056: Validate barcode format if being updated
+    if (barcode && !/^\d{8}$|^\d{12,14}$/.test(barcode)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Barcode must be a valid GTIN format (8, 12, 13, or 14 digits)' }
+      });
+      return;
+    }
+
+    // GL-WF-057: Validate category against FMCG taxonomy if being updated
+    if (category && !VALID_CATEGORIES.includes(category)) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` }
       });
       return;
     }

@@ -431,4 +431,315 @@ router.post("/auth/change-password", requireSupplierAuth, async (req: SupplierAu
   }
 });
 
+// =============================================================================
+// GL-WF-035: Password Reset Flow
+// =============================================================================
+
+/**
+ * POST /api/v1/supplier/auth/forgot-password
+ * Request a password reset token
+ */
+router.post("/auth/forgot-password", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Email is required' }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Check if email exists
+    const result = await pool.query(
+      `SELECT id, primary_email FROM supplier.suppliers WHERE primary_email = $1`,
+      [email.toLowerCase()]
+    );
+
+    // Always return success to prevent email enumeration
+    if (result.rows.length === 0) {
+      res.json({ data: { success: true, message: 'If the email exists, a reset link will be sent.' } });
+      return;
+    }
+
+    const supplier = result.rows[0];
+
+    // Generate reset token (6-digit code for simplicity, valid for 1 hour)
+    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Store reset token
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET password_reset_token = $1, password_reset_expires = $2
+       WHERE id = $3`,
+      [resetToken, resetExpiry, supplier.id]
+    );
+
+    // In production, send email here
+    // For now, log the token (REMOVE IN PRODUCTION)
+    console.log(`[GL-WF-035] Password reset token for ${email}: ${resetToken}`);
+
+    // TODO: Send email with reset token
+    // await sendPasswordResetEmail(email, resetToken);
+
+    res.json({
+      data: {
+        success: true,
+        message: 'If the email exists, a reset code will be sent.',
+        // DEV ONLY: Return token in response for testing
+        ...(process.env.NODE_ENV !== 'production' && { devToken: resetToken })
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/reset-password
+ * Reset password using token
+ */
+router.post("/auth/reset-password", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Email, token, and new password are required' }
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'New password must be at least 8 characters' }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Find supplier with valid reset token
+    const result = await pool.query(
+      `SELECT id, password_reset_token, password_reset_expires
+       FROM supplier.suppliers
+       WHERE primary_email = $1`,
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(400).json({
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired reset token' }
+      });
+      return;
+    }
+
+    const supplier = result.rows[0];
+
+    // Verify token
+    if (supplier.password_reset_token !== token) {
+      res.status(400).json({
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired reset token' }
+      });
+      return;
+    }
+
+    // Check expiry
+    if (new Date(supplier.password_reset_expires) < new Date()) {
+      res.status(400).json({
+        error: { code: 'TOKEN_EXPIRED', message: 'Reset token has expired. Please request a new one.' }
+      });
+      return;
+    }
+
+    // Hash new password and update
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL
+       WHERE id = $2`,
+      [newHash, supplier.id]
+    );
+
+    res.json({ data: { success: true, message: 'Password reset successfully. You can now login.' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
+// GL-WF-034: Email Verification Flow
+// =============================================================================
+
+/**
+ * POST /api/v1/supplier/auth/send-verification
+ * Send email verification code (requires auth)
+ */
+router.post("/auth/send-verification", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Check if already verified
+    const result = await pool.query(
+      `SELECT id, primary_email, email_verified FROM supplier.suppliers WHERE id = $1`,
+      [req.supplierId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Supplier not found' } });
+      return;
+    }
+
+    const supplier = result.rows[0];
+
+    if (supplier.email_verified) {
+      res.status(400).json({ error: { code: 'ALREADY_VERIFIED', message: 'Email is already verified' } });
+      return;
+    }
+
+    // Generate verification code (6-digit, valid for 1 hour)
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // Store verification code
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET email_verification_token = $1, email_verification_expires = $2
+       WHERE id = $3`,
+      [verificationCode, verificationExpiry, req.supplierId]
+    );
+
+    // In production, send email here
+    console.log(`[GL-WF-034] Email verification code for ${supplier.primary_email}: ${verificationCode}`);
+
+    // TODO: Send email with verification code
+    // await sendVerificationEmail(supplier.primary_email, verificationCode);
+
+    res.json({
+      data: {
+        success: true,
+        message: 'Verification code sent to your email.',
+        // DEV ONLY: Return code in response for testing
+        ...(process.env.NODE_ENV !== 'production' && { devCode: verificationCode })
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/verify-email
+ * Verify email using code (requires auth)
+ */
+router.post("/auth/verify-email", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Verification code is required' }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Get supplier verification data
+    const result = await pool.query(
+      `SELECT id, email_verified, email_verification_token, email_verification_expires
+       FROM supplier.suppliers
+       WHERE id = $1`,
+      [req.supplierId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Supplier not found' } });
+      return;
+    }
+
+    const supplier = result.rows[0];
+
+    if (supplier.email_verified) {
+      res.status(400).json({ error: { code: 'ALREADY_VERIFIED', message: 'Email is already verified' } });
+      return;
+    }
+
+    // Verify code
+    if (supplier.email_verification_token !== code) {
+      res.status(400).json({
+        error: { code: 'INVALID_CODE', message: 'Invalid verification code' }
+      });
+      return;
+    }
+
+    // Check expiry
+    if (new Date(supplier.email_verification_expires) < new Date()) {
+      res.status(400).json({
+        error: { code: 'CODE_EXPIRED', message: 'Verification code has expired. Please request a new one.' }
+      });
+      return;
+    }
+
+    // Mark email as verified
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET email_verified = true, email_verification_token = NULL, email_verification_expires = NULL
+       WHERE id = $1`,
+      [req.supplierId]
+    );
+
+    res.json({ data: { success: true, message: 'Email verified successfully!' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/supplier/auth/verification-status
+ * Check email verification status (requires auth)
+ */
+router.get("/auth/verification-status", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT email_verified FROM supplier.suppliers WHERE id = $1`,
+      [req.supplierId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Supplier not found' } });
+      return;
+    }
+
+    res.json({ data: { emailVerified: result.rows[0].email_verified } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export const supplierAuthRouter = router;

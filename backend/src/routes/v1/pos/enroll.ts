@@ -490,3 +490,109 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     client.release();
   }
 });
+
+// =============================================================================
+// GL-RJ-006: Duplicate Label Check Endpoint
+// =============================================================================
+
+// POST /api/v1/pos/enroll/check-label
+// Check if a device label already exists for the store (before enrollment)
+posEnrollRouter.post("/enroll/check-label", async (req, res) => {
+  const rawCode = req.body?.code ?? req.body?.enrollmentCode;
+  const code = asTrimmedString(rawCode)?.toUpperCase();
+  const label = asTrimmedString(req.body?.label);
+
+  if (!code) {
+    return res.status(400).json({ error: "Code is required" });
+  }
+  if (!label) {
+    return res.status(400).json({ error: "Label is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "Database unavailable" });
+  }
+
+  try {
+    // Get store ID from enrollment code
+    const enrollmentRes = await pool.query(
+      `SELECT store_id FROM pos_device_enrollments WHERE code = $1`,
+      [code]
+    );
+
+    if (enrollmentRes.rowCount === 0) {
+      // Code not found - return not duplicate (let enrollment handle the error)
+      return res.json({ isDuplicate: false });
+    }
+
+    const storeId = enrollmentRes.rows[0].store_id;
+
+    // Check for existing device with same label (case-insensitive)
+    const existingRes = await pool.query(
+      `
+      SELECT id, label, is_active, last_seen_online
+      FROM pos_devices
+      WHERE store_id = $1 AND lower(label) = lower($2) AND is_active = true
+      `,
+      [storeId, label]
+    );
+
+    if (existingRes.rowCount && existingRes.rowCount > 0) {
+      const existing = existingRes.rows[0];
+
+      // Get existing labels for suggestions
+      const labelsRes = await pool.query(
+        `
+        SELECT label FROM pos_devices
+        WHERE store_id = $1 AND is_active = true
+        ORDER BY label
+        LIMIT 20
+        `,
+        [storeId]
+      );
+
+      const existingLabels = labelsRes.rows.map((r) => r.label?.toLowerCase() || "");
+
+      // Generate suggestions based on the requested label
+      const suggestions: string[] = [];
+      const baseLabel = label.replace(/[-_]?\d+$/, "").trim(); // Remove trailing number
+
+      for (let i = 1; i <= 10; i++) {
+        const suggestion = `${baseLabel}-${i}`;
+        if (!existingLabels.includes(suggestion.toLowerCase())) {
+          suggestions.push(suggestion);
+          if (suggestions.length >= 3) break;
+        }
+      }
+
+      // If no numbered suggestions found, try other patterns
+      if (suggestions.length < 3) {
+        const patterns = ["A", "B", "C", "New", "Alt"];
+        for (const p of patterns) {
+          const suggestion = `${baseLabel}-${p}`;
+          if (!existingLabels.includes(suggestion.toLowerCase()) && !suggestions.includes(suggestion)) {
+            suggestions.push(suggestion);
+            if (suggestions.length >= 3) break;
+          }
+        }
+      }
+
+      return res.json({
+        isDuplicate: true,
+        existingDevice: {
+          label: existing.label,
+          deviceId: existing.id,
+          status: existing.is_active ? "active" : "inactive",
+          lastSeen: existing.last_seen_online,
+        },
+        suggestions,
+      });
+    }
+
+    return res.json({ isDuplicate: false });
+  } catch (error) {
+    console.error("[checkDuplicateLabel] Error:", error);
+    return res.status(500).json({ error: "Failed to check label" });
+  }
+});

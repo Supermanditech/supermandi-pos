@@ -18,9 +18,18 @@ import { formatMoney } from "../../utils/money";
 import {
   createSplitPayment,
   confirmSplitCash,
+  getSplitPaymentStatus,
   SplitPaymentResponse,
 } from "../../services/api/posApi";
 import { theme } from "../../theme";
+
+export interface SplitPaymentResult {
+  success: boolean;
+  paymentStatus: 'completed' | 'failed' | 'pending';
+  upiVerified: boolean;
+  cashConfirmed: boolean;
+  errorMessage?: string;
+}
 
 interface SplitPaymentModalProps {
   visible: boolean;
@@ -28,7 +37,7 @@ interface SplitPaymentModalProps {
   currency: string;
   saleId: string;
   onClose: () => void;
-  onComplete: () => void;
+  onComplete: (result: SplitPaymentResult) => void;
 }
 
 type SplitStep = "input" | "upi-waiting" | "cash-collect" | "complete";
@@ -45,8 +54,13 @@ export function SplitPaymentModal({
   const [upiAmount, setUpiAmount] = useState("");
   const [cashAmount, setCashAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifyingUpi, setVerifyingUpi] = useState(false);
   const [splitResponse, setSplitResponse] = useState<SplitPaymentResponse | null>(null);
   const [upiCompleted, setUpiCompleted] = useState(false);
+  const [upiVerified, setUpiVerified] = useState(false);
+  const [pollingActive, setPollingActive] = useState(false);
+  const [pollCount, setPollCount] = useState(0);
+  const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Reset state when modal opens
   useEffect(() => {
@@ -55,10 +69,81 @@ export function SplitPaymentModal({
       setUpiAmount("");
       setCashAmount("");
       setLoading(false);
+      setVerifyingUpi(false);
       setSplitResponse(null);
       setUpiCompleted(false);
+      setUpiVerified(false);
+      setPollingActive(false);
+      setPollCount(0);
     }
+    // Cleanup polling on unmount
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
   }, [visible]);
+
+  // GL-RJ-001: Auto-poll for UPI payment status when in upi-waiting step
+  useEffect(() => {
+    if (step === "upi-waiting" && saleId && !upiVerified && !pollingActive) {
+      setPollingActive(true);
+      setPollCount(0);
+
+      const pollStatus = async () => {
+        try {
+          const status = await getSplitPaymentStatus({ saleId });
+
+          if (status.upiStatus === 'completed' || status.upiStatus === 'COMPLETED') {
+            // Payment completed - stop polling and proceed
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            setPollingActive(false);
+            setUpiCompleted(true);
+            setUpiVerified(true);
+            setStep("cash-collect");
+          } else {
+            // Still pending - increment counter
+            setPollCount((prev) => prev + 1);
+          }
+        } catch (error) {
+          console.warn("[SplitPayment] Poll error:", error);
+          // Don't stop polling on transient errors
+        }
+      };
+
+      // Initial check
+      void pollStatus();
+
+      // Poll every 3 seconds, max 40 attempts (2 minutes)
+      pollIntervalRef.current = setInterval(() => {
+        setPollCount((prev) => {
+          if (prev >= 40) {
+            // Stop after 2 minutes
+            if (pollIntervalRef.current) {
+              clearInterval(pollIntervalRef.current);
+              pollIntervalRef.current = null;
+            }
+            setPollingActive(false);
+            return prev;
+          }
+          void pollStatus();
+          return prev + 1;
+        });
+      }, 3000);
+    }
+
+    return () => {
+      if (step !== "upi-waiting" && pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+        setPollingActive(false);
+      }
+    };
+  }, [step, saleId, upiVerified, pollingActive]);
 
   // Auto-calculate remaining amount
   const upiMinor = Math.round(parseFloat(upiAmount || "0") * 100);
@@ -117,14 +202,73 @@ export function SplitPaymentModal({
     }
   };
 
-  const handleUpiReceived = useCallback(() => {
-    setUpiCompleted(true);
-    setStep("cash-collect");
-  }, []);
+  // GL-RJ-001: Verify UPI payment with backend before proceeding to cash collection
+  const handleUpiReceived = useCallback(async () => {
+    if (!saleId) {
+      Alert.alert("Error", "Sale ID not found.");
+      return;
+    }
 
+    setVerifyingUpi(true);
+    try {
+      // Verify UPI payment status with backend
+      const status = await getSplitPaymentStatus({ saleId });
+
+      // GL-RJ-001: Only proceed if UPI payment is verified as completed
+      if (status.upiStatus === 'completed' || status.upiStatus === 'COMPLETED') {
+        setUpiCompleted(true);
+        setUpiVerified(true);
+        setStep("cash-collect");
+      } else if (status.upiStatus === 'pending' || status.upiStatus === 'PENDING') {
+        // Payment still pending - show warning and allow retry
+        Alert.alert(
+          "Payment Pending",
+          "UPI payment has not been confirmed yet. Please wait for the payment to complete or verify with the customer.",
+          [
+            { text: "Check Again", onPress: () => handleUpiReceived() },
+            { text: "Cancel", style: "cancel" }
+          ]
+        );
+      } else {
+        // Payment failed or unknown status
+        Alert.alert(
+          "Payment Not Verified",
+          `UPI payment status: ${status.upiStatus}. Please ensure the payment was completed successfully.`,
+          [
+            { text: "Check Again", onPress: () => handleUpiReceived() },
+            { text: "Cancel", style: "cancel" }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error("[SplitPayment] UPI verification error:", error);
+      Alert.alert(
+        "Verification Failed",
+        "Could not verify UPI payment. Please check your connection and try again.",
+        [
+          { text: "Retry", onPress: () => handleUpiReceived() },
+          { text: "Cancel", style: "cancel" }
+        ]
+      );
+    } finally {
+      setVerifyingUpi(false);
+    }
+  }, [saleId]);
+
+  // GL-RJ-001: Confirm cash payment and verify complete sale status
   const handleCashReceived = async () => {
     if (!splitResponse?.cashPayment?.paymentId) {
       Alert.alert("Error", "Cash payment ID not found.");
+      return;
+    }
+
+    // GL-RJ-001: Ensure UPI was verified before confirming cash
+    if (!upiVerified) {
+      Alert.alert(
+        "UPI Not Verified",
+        "Please verify UPI payment before confirming cash.",
+        [{ text: "OK" }]
+      );
       return;
     }
 
@@ -134,18 +278,49 @@ export function SplitPaymentModal({
         paymentId: splitResponse.cashPayment.paymentId,
       });
 
-      if (result.saleCompleted) {
+      // GL-RJ-001: Verify sale completion status from backend
+      if (result.saleCompleted && result.status === 'completed') {
         setStep("complete");
-        // Brief delay then close
+        // Brief delay then close with verified result
         setTimeout(() => {
-          onComplete();
+          onComplete({
+            success: true,
+            paymentStatus: 'completed',
+            upiVerified: true,
+            cashConfirmed: true,
+          });
+        }, 1000);
+      } else if (result.saleCompleted) {
+        // Sale completed but status unclear - proceed with warning logged
+        console.warn("[SplitPayment] Sale completed but status unclear:", result.status);
+        setStep("complete");
+        setTimeout(() => {
+          onComplete({
+            success: true,
+            paymentStatus: 'completed',
+            upiVerified: true,
+            cashConfirmed: true,
+          });
         }, 1000);
       } else {
-        Alert.alert("Error", "Sale not completed. Please try again.");
+        // GL-RJ-001: Sale not completed - don't proceed
+        Alert.alert(
+          "Payment Not Complete",
+          "The sale could not be completed. Please try again or contact support.",
+          [{ text: "OK" }]
+        );
+        onComplete({
+          success: false,
+          paymentStatus: 'failed',
+          upiVerified,
+          cashConfirmed: false,
+          errorMessage: "Sale not completed by backend",
+        });
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to confirm cash payment.");
       console.error("[SplitPayment] Cash confirm error:", error);
+      Alert.alert("Error", "Failed to confirm cash payment. Please try again.");
+      // GL-RJ-001: Don't call onComplete on error - let user retry
     } finally {
       setLoading(false);
     }
@@ -239,15 +414,38 @@ export function SplitPaymentModal({
       </View>
 
       <Text style={styles.waitingText}>
-        Waiting for UPI payment...
+        {verifyingUpi
+          ? "Verifying UPI payment..."
+          : pollingActive
+          ? `Auto-checking payment status... (${pollCount}/40)`
+          : "Waiting for UPI payment..."}
       </Text>
+      {pollingActive && (
+        <ActivityIndicator
+          size="small"
+          color={theme.colors.primary}
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={onClose}
+          disabled={verifyingUpi}
+        >
           <Text style={styles.cancelBtnText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.proceedBtn} onPress={handleUpiReceived}>
-          <Text style={styles.proceedBtnText}>UPI Received</Text>
+        <TouchableOpacity
+          style={[styles.proceedBtn, verifyingUpi && styles.btnDisabled]}
+          onPress={handleUpiReceived}
+          disabled={verifyingUpi}
+        >
+          {verifyingUpi ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.proceedBtnText}>Verify & Proceed</Text>
+          )}
         </TouchableOpacity>
       </View>
     </>

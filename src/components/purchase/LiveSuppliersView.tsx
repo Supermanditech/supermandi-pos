@@ -4,18 +4,22 @@
 import React, { useCallback, useState } from "react";
 import {
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import * as Haptics from "expo-haptics";
 
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
+import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
 
 // =============================================================================
 // TYPES
@@ -41,6 +45,7 @@ interface SKUItem {
 
 interface LiveSuppliersViewProps {
   onOpenScanner?: () => void;
+  onItemsAdded?: (count: number) => void;
 }
 
 // =============================================================================
@@ -120,13 +125,17 @@ const MOCK_SKU_DATA: SKUItem[] = [
 // COMPONENT
 // =============================================================================
 
-export default function LiveSuppliersView({ onOpenScanner }: LiveSuppliersViewProps) {
+export default function LiveSuppliersView({ onOpenScanner, onItemsAdded }: LiveSuppliersViewProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  // Purchase cart store
+  const addCartItem = usePurchaseCartStore((state) => state.addItem);
 
   // State
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItems, setSelectedItems] = useState<Map<string, { supplierId: string; qty: number }>>(new Map());
+  const [isAdding, setIsAdding] = useState(false);
 
   // Filter SKUs based on search
   const filteredSKUs = MOCK_SKU_DATA.filter((item) => {
@@ -183,6 +192,65 @@ export default function LiveSuppliersView({ onOpenScanner }: LiveSuppliersViewPr
   }, 0);
 
   const totalQty = Array.from(selectedItems.values()).reduce((sum, { qty }) => sum + qty, 0);
+
+  // Handle Add to Order - GL-RJ-002 fix
+  const handleAddToOrder = useCallback(async () => {
+    if (selectedItems.size === 0 || isAdding) return;
+
+    setIsAdding(true);
+
+    try {
+      // Transfer selected items to purchase cart
+      let addedCount = 0;
+
+      for (const [itemId, { supplierId, qty }] of selectedItems.entries()) {
+        const item = MOCK_SKU_DATA.find((i) => i.id === itemId);
+        if (!item) continue;
+
+        const supplier = item.suppliers.find((s) => s.supplierId === supplierId);
+        if (!supplier) continue;
+
+        // Add to purchase cart store
+        addCartItem({
+          supplierProductId: `${supplierId}-${item.id}`,
+          productId: item.id,
+          supplierId: supplier.supplierId,
+          supplierName: supplier.supplierName,
+          productName: item.productName,
+          barcode: item.sku,
+          unitPrice: supplier.price,
+          moq: supplier.moq,
+          quantity: qty,
+        });
+
+        addedCount += qty;
+      }
+
+      // Clear local selection
+      setSelectedItems(new Map());
+
+      // Haptic feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Show success toast
+      if (Platform.OS === "android") {
+        ToastAndroid.show(
+          `${addedCount} item${addedCount > 1 ? "s" : ""} added to cart`,
+          ToastAndroid.SHORT
+        );
+      }
+
+      // Notify parent for navigation/badge update
+      onItemsAdded?.(addedCount);
+    } catch (error) {
+      console.error("Failed to add items to order:", error);
+      if (Platform.OS === "android") {
+        ToastAndroid.show("Failed to add items", ToastAndroid.SHORT);
+      }
+    } finally {
+      setIsAdding(false);
+    }
+  }, [selectedItems, isAdding, addCartItem, onItemsAdded]);
 
   // Render SKU card
   const renderSKUCard = useCallback(({ item }: { item: SKUItem }) => {
@@ -315,8 +383,14 @@ export default function LiveSuppliersView({ onOpenScanner }: LiveSuppliersViewPr
             <Text style={styles.orderText}>{totalQty} items</Text>
             <Text style={styles.orderTotal}>{formatMoney(orderTotal)}</Text>
           </View>
-          <Pressable style={styles.orderBtn}>
-            <Text style={styles.orderBtnText}>Add to Order</Text>
+          <Pressable
+            style={[styles.orderBtn, isAdding && styles.orderBtnDisabled]}
+            onPress={handleAddToOrder}
+            disabled={isAdding}
+          >
+            <Text style={styles.orderBtnText}>
+              {isAdding ? "Adding..." : "Add to Order"}
+            </Text>
           </Pressable>
         </View>
       )}
@@ -515,6 +589,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 20,
+  },
+  orderBtnDisabled: {
+    opacity: 0.6,
   },
   orderBtnText: {
     fontSize: 14,

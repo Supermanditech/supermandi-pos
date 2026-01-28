@@ -17,6 +17,9 @@ export interface CartItem {
   metadata?: Record<string, any>;
   flags?: string[];
   itemDiscount?: ItemDiscount;
+  // GL-RJ-007: Track price resolution status
+  priceResolutionError?: boolean;
+  priceResolutionMessage?: string;
 }
 
 export interface ItemDiscount {
@@ -676,9 +679,11 @@ export const useCartStore = create<CartState>()(
     {
       name: CART_STORAGE_KEY,
       storage: createJSONStorage(() => storeScopedStorage),
+      // GL-WF-019: Include locked state in persistence to prevent cart modification after crash during payment
       partialize: (state) => ({
         items: state.items,
-        discount: state.discount
+        discount: state.discount,
+        locked: state.locked
       }),
       // AUD-058-A FIX: Add error boundary for cart deserialization
       onRehydrateStorage: () => (state, error) => {

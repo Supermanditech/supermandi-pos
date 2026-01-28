@@ -114,3 +114,5 @@ backend/tmpclaude-*-cwd/
 package-lock.json
 **/*.tsbuildinfo
 **/*.d.ts.map
+deploy-package/
+*.tar.gz

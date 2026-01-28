@@ -54,99 +54,42 @@ export async function seedTestDatabase(): Promise<void> {
     // Clean existing test data
     await cleanTestData(client);
 
-    // 1. Create platform
+    // 1. Create store (platform.stores - no separate platforms table in v3)
     await client.query(`
-      INSERT INTO platforms (id, name, slug, settings, status)
-      VALUES ($1, 'Test Platform', 'test-platform', '{}', 'active')
+      INSERT INTO platform.stores (id, name, code, address_line1, phone, status)
+      VALUES ($1, 'Test Store', 'TEST001', '123 Test St', '+919999900000', 'active')
       ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.platformId]);
+    `, [TEST_IDS.storeId]);
 
-    // 2. Create store
+    // 2. Create and enroll device (pos_devices table)
     await client.query(`
-      INSERT INTO stores (id, platform_id, name, code, address, phone, settings, status)
-      VALUES ($1, $2, 'Test Store', 'TEST001', '123 Test St', '+919999900000', '{}', 'active')
-      ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.storeId, TEST_IDS.platformId]);
-
-    // 3. Create staff user
-    const hashedPin = await hashPin(TEST_CREDENTIALS.staffPin);
-    await client.query(`
-      INSERT INTO users (id, platform_id, phone, pin_hash, name, role, status)
-      VALUES ($1, $2, $3, $4, 'Test Staff', 'staff', 'active')
-      ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.staffUserId, TEST_IDS.platformId, TEST_CREDENTIALS.staffPhone, hashedPin]);
-
-    // 4. Link staff to store
-    await client.query(`
-      INSERT INTO store_staff (store_id, user_id, role, is_active)
-      VALUES ($1, $2, 'cashier', true)
-      ON CONFLICT (store_id, user_id) DO NOTHING
-    `, [TEST_IDS.storeId, TEST_IDS.staffUserId]);
-
-    // 5. Create and enroll device
-    await client.query(`
-      INSERT INTO devices (id, store_id, fingerprint, name, status, enrolled_at)
-      VALUES ($1, $2, $3, 'Test POS Device', 'active', NOW())
+      INSERT INTO pos_devices (id, store_id, device_token, device_label, active, created_at)
+      VALUES ($1, $2, $3, 'Test POS Device', true, NOW())
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.deviceId, TEST_IDS.storeId, TEST_CREDENTIALS.deviceFingerprint]);
 
-    // 6. Create supplier
+    // 3. Create supplier (supplier.suppliers table)
     await client.query(`
-      INSERT INTO suppliers (id, platform_id, name, code, phone, email, status)
-      VALUES ($1, $2, 'Test Supplier', 'SUP001', '+919999900002', 'supplier@test.com', 'active')
+      INSERT INTO supplier.suppliers (id, business_name, primary_email, primary_phone, status)
+      VALUES ($1, 'Test Supplier', 'supplier@test.com', '+919999900002', 'active')
       ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.supplierId, TEST_IDS.platformId]);
+    `, [TEST_IDS.supplierId]);
 
-    // 7. Link supplier to store
+    // 4. Create category (catalog.categories)
     await client.query(`
-      INSERT INTO supplier_store_links (supplier_id, store_id, min_order_value, lead_days, is_active)
-      VALUES ($1, $2, 500, 2, true)
-      ON CONFLICT (supplier_id, store_id) DO NOTHING
-    `, [TEST_IDS.supplierId, TEST_IDS.storeId]);
-
-    // 8. Create category
-    await client.query(`
-      INSERT INTO categories (id, platform_id, name, slug, sort_order, is_active)
-      VALUES ($1, $2, 'Test Category', 'test-category', 1, true)
+      INSERT INTO catalog.categories (id, name, slug, sort_order, status)
+      VALUES ($1, 'Test Category', 'test-category', 1, 'active')
       ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.categoryId, TEST_IDS.platformId]);
+    `, [TEST_IDS.categoryId]);
 
-    // 9. Create products
+    // 5. Create store products (store_products table)
     await client.query(`
-      INSERT INTO products (id, platform_id, category_id, name, barcode, unit, mrp, status)
+      INSERT INTO store_products (id, store_id, name, barcode, category_id, unit, mrp, status)
       VALUES
-        ($1, $2, $3, 'Test Product 1', '8901234567890', 'pcs', 100.00, 'active'),
-        ($4, $2, $3, 'Test Product 2', '8901234567891', 'kg', 50.00, 'active')
+        ($1, $2, 'Test Product 1', '8901234567890', $3, 'pcs', 100.00, 'active'),
+        ($4, $2, 'Test Product 2', '8901234567891', $3, 'kg', 50.00, 'active')
       ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.productId1, TEST_IDS.platformId, TEST_IDS.categoryId, TEST_IDS.productId2]);
-
-    // 10. Create supplier products
-    await client.query(`
-      INSERT INTO supplier_products (id, supplier_id, product_id, sku, unit_price, moq, is_available)
-      VALUES
-        ($1, $2, $3, 'SKU001', 80.00, 10, true),
-        ($4, $2, $5, 'SKU002', 40.00, 5, true)
-      ON CONFLICT (id) DO NOTHING
-    `, [
-      TEST_IDS.supplierProductId1, TEST_IDS.supplierId, TEST_IDS.productId1,
-      TEST_IDS.supplierProductId2, TEST_IDS.productId2
-    ]);
-
-    // 11. Initialize inventory
-    await client.query(`
-      INSERT INTO inventory (store_id, product_id, quantity, reserved_quantity, version)
-      VALUES
-        ($1, $2, 100, 0, 1),
-        ($1, $3, 50, 0, 1)
-      ON CONFLICT (store_id, product_id) DO NOTHING
-    `, [TEST_IDS.storeId, TEST_IDS.productId1, TEST_IDS.productId2]);
-
-    // 12. Create reorder settings
-    await client.query(`
-      INSERT INTO reorder_settings (store_id, reorder_enabled, require_approval, auto_approve_threshold, default_lead_days)
-      VALUES ($1, true, true, 10000, 2)
-      ON CONFLICT (store_id) DO NOTHING
-    `, [TEST_IDS.storeId]);
+    `, [TEST_IDS.productId1, TEST_IDS.storeId, TEST_IDS.categoryId, TEST_IDS.productId2]);
 
     await client.query('COMMIT');
     console.log('✓ Test database seeded successfully');
@@ -163,33 +106,19 @@ export async function seedTestDatabase(): Promise<void> {
  * Clean test data from database.
  */
 async function cleanTestData(client: any): Promise<void> {
-  // Delete in reverse dependency order
+  // Delete in reverse dependency order - using actual schema tables
   const tables = [
-    'inventory_ledger',
-    'inventory',
-    'grn_items',
-    'grns',
-    'purchase_order_items',
-    'purchase_orders',
-    'pending_reorders',
-    'reorder_policies',
-    'reorder_settings',
-    'supplier_products',
-    'supplier_store_links',
-    'suppliers',
-    'products',
-    'categories',
-    'outbox_events',
-    'devices',
-    'store_staff',
-    'stores',
-    'users',
-    'platforms'
+    'inventory.inventory_ledger',
+    'store_products',
+    'catalog.categories',
+    'pos_devices',
+    'supplier.suppliers',
+    'platform.stores'
   ];
 
   for (const table of tables) {
     try {
-      await client.query(`DELETE FROM ${table} WHERE id LIKE '00000000-0000-0000-0000-%' OR store_id LIKE '00000000-0000-0000-0000-%' OR platform_id LIKE '00000000-0000-0000-0000-%'`);
+      await client.query(`DELETE FROM ${table} WHERE id::text LIKE '00000000-0000-0000-0000-%' OR store_id::text LIKE '00000000-0000-0000-0000-%'`);
     } catch {
       // Table might not exist or column might not exist, continue
     }

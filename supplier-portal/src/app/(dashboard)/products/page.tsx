@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ import {
   deleteProduct,
   Product,
   ProductInput,
+  PaginatedResponse,
 } from '@/lib/api';
 
 function formatPrice(paise: number | undefined): string {
@@ -24,6 +25,25 @@ const statusColors: Record<string, string> = {
   rejected: 'bg-red-100 text-red-700',
 };
 
+// GL-WF-057: Predefined FMCG categories from taxonomy
+const PRODUCT_CATEGORIES = [
+  { value: '', label: 'Select Category' },
+  { value: 'Atta-Dal', label: 'Atta-Dal (आटा-दाल)' },
+  { value: 'Chawal', label: 'Chawal (चावल)' },
+  { value: 'Masala', label: 'Masala (मसाला)' },
+  { value: 'Tel-Ghee', label: 'Tel-Ghee (तेल-घी)' },
+  { value: 'Namkeen', label: 'Namkeen (नमकीन)' },
+  { value: 'Biscuit', label: 'Biscuit (बिस्कुट)' },
+  { value: 'Chai-Coffee', label: 'Chai-Coffee (चाय-कॉफी)' },
+  { value: 'Cold Drink', label: 'Cold Drink (कोल्ड ड्रिंक)' },
+  { value: 'Doodh', label: 'Doodh (दूध-पनीर)' },
+  { value: 'Sabun', label: 'Sabun (साबुन)' },
+  { value: 'Safai', label: 'Safai (सफाई)' },
+  { value: 'Baby', label: 'Baby (बेबी)' },
+  { value: 'Paan-Supari', label: 'Paan-Supari (पान-सुपारी)' },
+  { value: 'Baaki', label: 'Baaki - Other (बाकी)' },
+];
+
 export default function ProductsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
@@ -34,6 +54,12 @@ export default function ProductsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  // GL-WF-062: Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  // GL-WF-063: Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const [formData, setFormData] = useState<ProductInput>({
     name: '',
@@ -47,10 +73,14 @@ export default function ProductsPage() {
     unit: 'PCS',
   });
 
-  const { data: products, isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: getProducts,
+  // GL-WF-063: Paginated products query
+  const { data: productsResponse, isLoading } = useQuery({
+    queryKey: ['products', currentPage, pageSize],
+    queryFn: () => getProducts({ page: currentPage, limit: pageSize }),
   });
+
+  const products = productsResponse?.data;
+  const pagination = productsResponse?.pagination;
 
   const createMutation = useMutation({
     mutationFn: createProduct,
@@ -89,9 +119,38 @@ export default function ProductsPage() {
     },
   });
 
+  // GL-WF-037: Resubmit rejected product for review
+  const resubmitMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<ProductInput> }) =>
+      updateProduct(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product resubmitted for review!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to resubmit product');
+    },
+  });
+
+  // GL-WF-037: Handle resubmit - triggers update which resets to pending
+  const handleResubmit = (product: Product) => {
+    resubmitMutation.mutate({
+      id: product.id,
+      data: {
+        name: product.name,
+        category: product.category || '',
+        purchasePrice: product.purchasePrice,
+        mrp: product.mrp,
+        moq: product.moq,
+        unit: product.unit,
+      },
+    });
+  };
+
   const resetForm = () => {
     setShowForm(false);
     setEditingProduct(null);
+    setHasUnsavedChanges(false); // GL-WF-062
     setFormData({
       name: '',
       description: '',
@@ -105,8 +164,30 @@ export default function ProductsPage() {
     });
   };
 
+  // GL-WF-062: Handle cancel with unsaved changes check
+  const handleCancel = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedWarning(true);
+    } else {
+      resetForm();
+    }
+  }, [hasUnsavedChanges]);
+
+  // GL-WF-062: Warn on browser navigation with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && showForm) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, showForm]);
+
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
+    setHasUnsavedChanges(false); // GL-WF-062: Reset on edit start
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -121,6 +202,12 @@ export default function ProductsPage() {
     setShowForm(true);
   };
 
+  // GL-WF-056: Validate barcode format (GTIN: 8, 12, 13, or 14 digits)
+  const isValidBarcode = (barcode: string): boolean => {
+    if (!barcode) return true; // Optional field
+    return /^\d{8}$|^\d{12,14}$/.test(barcode);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -130,6 +217,18 @@ export default function ProductsPage() {
     }
     if (!formData.purchasePrice || formData.purchasePrice <= 0) {
       toast.error('Valid purchase price is required');
+      return;
+    }
+
+    // GL-WF-017: Validate MRP >= Purchase Price
+    if (formData.mrp && formData.mrp < formData.purchasePrice) {
+      toast.error('MRP must be greater than or equal to purchase price');
+      return;
+    }
+
+    // GL-WF-056: Validate barcode format
+    if (formData.barcode && !isValidBarcode(formData.barcode)) {
+      toast.error('Barcode must be a valid GTIN format (8, 12, 13, or 14 digits)');
       return;
     }
 
@@ -144,6 +243,7 @@ export default function ProductsPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    setHasUnsavedChanges(true); // GL-WF-062: Track changes
     setFormData((prev) => ({
       ...prev,
       [name]:
@@ -181,8 +281,9 @@ export default function ProductsPage() {
             reviewed by SuperMandi.
           </p>
         </div>
+        {/* GL-WF-062: Use handleCancel when form has unsaved changes */}
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => showForm ? handleCancel() : setShowForm(true)}
           className="btn btn-primary"
         >
           {showForm ? 'Cancel' : '+ Add Product'}
@@ -210,16 +311,21 @@ export default function ProductsPage() {
                 />
               </div>
 
+              {/* GL-WF-057: Category dropdown instead of free-text */}
               <div>
                 <label className="label">Category</label>
-                <input
-                  type="text"
+                <select
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
                   className="input"
-                  placeholder="e.g., Grocery, Beverages"
-                />
+                >
+                  {PRODUCT_CATEGORIES.map((cat) => (
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -331,9 +437,10 @@ export default function ProductsPage() {
                   ? 'Update Product'
                   : 'Add Product'}
               </button>
+              {/* GL-WF-062: Use handleCancel for unsaved changes check */}
               <button
                 type="button"
-                onClick={resetForm}
+                onClick={handleCancel}
                 className="btn btn-secondary"
                 disabled={isSubmitting}
               >
@@ -441,6 +548,14 @@ export default function ProductsPage() {
                     >
                       {product.approvalStatus}
                     </span>
+                    {/* GL-WF-036: Show rejection reason */}
+                    {product.approvalStatus === 'rejected' && product.rejectionReason && (
+                      <div className="mt-1 text-xs text-red-600" title={product.rejectionReason}>
+                        Reason: {product.rejectionReason.length > 30
+                          ? `${product.rejectionReason.substring(0, 30)}...`
+                          : product.rejectionReason}
+                      </div>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex gap-2">
@@ -450,6 +565,16 @@ export default function ProductsPage() {
                       >
                         Edit
                       </button>
+                      {/* GL-WF-037: Resubmit button for rejected products */}
+                      {product.approvalStatus === 'rejected' && (
+                        <button
+                          onClick={() => handleResubmit(product)}
+                          className="text-amber-600 hover:text-amber-700 text-sm font-medium"
+                          disabled={resubmitMutation.isPending}
+                        >
+                          {resubmitMutation.isPending ? 'Submitting...' : 'Resubmit'}
+                        </button>
+                      )}
                       <button
                         onClick={() => setDeleteConfirm(product.id)}
                         className="text-red-600 hover:text-red-700 text-sm font-medium"
@@ -474,6 +599,35 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
+
+      {/* GL-WF-063: Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border border-slate-200 rounded-lg">
+          <div className="text-sm text-slate-600">
+            Showing {((currentPage - 1) * pageSize) + 1} to{' '}
+            {Math.min(currentPage * pageSize, pagination.total)} of {pagination.total} products
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1 text-sm text-slate-600">
+              Page {currentPage} of {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={currentPage === pagination.totalPages}
+              className="px-3 py-1 text-sm border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
@@ -503,6 +657,41 @@ export default function ProductsPage() {
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GL-WF-062: Unsaved Changes Warning Modal */}
+      {showUnsavedWarning && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowUnsavedWarning(false)}
+        >
+          <div
+            className="card max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-2">Discard Changes?</h3>
+            <p className="text-slate-600 mb-4">
+              You have unsaved changes. Are you sure you want to discard them?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowUnsavedWarning(false)}
+                className="btn btn-secondary"
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={() => {
+                  setShowUnsavedWarning(false);
+                  resetForm();
+                }}
+                className="btn bg-amber-600 text-white hover:bg-amber-700"
+              >
+                Discard
               </button>
             </div>
           </div>

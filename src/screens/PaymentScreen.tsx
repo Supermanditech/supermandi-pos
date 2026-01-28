@@ -32,7 +32,7 @@ import { formatStoreName } from "../utils/storeName";
 import { uuidv4 } from "../utils/uuid";
 import { buildStockDeductionLogs, partitionSaleItems } from "../services/saleScope";
 import { theme } from "../theme";
-import { SplitPaymentModal } from "../components/sell/SplitPaymentModal";
+import { SplitPaymentModal, SplitPaymentResult } from "../components/sell/SplitPaymentModal";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -723,20 +723,56 @@ const PaymentScreen = () => {
       </View>
 
       {/* SM-015: Split Payment Modal */}
+      {/* GL-RJ-001: Updated to verify payment result before completing */}
       <SplitPaymentModal
         visible={showSplitModal}
         totalAmountMinor={totalMinor}
         currency={currency}
         saleId={saleId || ""}
         onClose={() => setShowSplitModal(false)}
-        onComplete={() => {
+        onComplete={(result: SplitPaymentResult) => {
           setShowSplitModal(false);
+
+          // GL-RJ-001: Verify payment was actually successful before completing
+          if (!result.success || result.paymentStatus !== 'completed') {
+            // Payment failed or not verified - log and show error
+            void logPaymentEvent("PAYMENT_FAILED", {
+              transactionId,
+              billId: billRef || "",
+              paymentMode: "SPLIT",
+              amountMinor: totalMinor,
+              currency,
+              reason: result.errorMessage || "split_payment_not_verified",
+              upiVerified: result.upiVerified,
+              cashConfirmed: result.cashConfirmed,
+            });
+
+            Alert.alert(
+              "Payment Not Complete",
+              result.errorMessage || "Split payment could not be verified. Please try again.",
+              [{ text: "OK" }]
+            );
+            return; // Don't proceed - cart remains intact
+          }
+
+          // GL-RJ-001: Payment verified - proceed to success
           finalized.current = true;
           if (isPartialSale) {
             for (const item of saleItems) {
               removeItem(item.id, true);
             }
           }
+
+          void logPaymentEvent("PAYMENT_SUCCESS", {
+            transactionId,
+            billId: billRef || "",
+            paymentMode: "SPLIT",
+            amountMinor: totalMinor,
+            currency,
+            upiVerified: result.upiVerified,
+            cashConfirmed: result.cashConfirmed,
+          });
+
           navigation.navigate("SuccessPrint", {
             paymentMode: "CASH", // Split shows as CASH on receipt
             transactionId,

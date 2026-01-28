@@ -93,6 +93,22 @@ export async function fetchInventory(accessToken: string): Promise<ApiResponse<I
   return response.json();
 }
 
+// GL-RJ-009: Fetch daily sales summary for dashboard
+export async function fetchDailySummary(accessToken: string, date?: string): Promise<ApiResponse<DailySummary>> {
+  const params = date ? `?date=${date}` : '';
+  const response = await authFetch(`${API_BASE}/daily-summary${params}`, accessToken);
+
+  if (response.status === 401) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch daily summary');
+  }
+
+  return response.json();
+}
+
 // FE-RETAILER-CAT-001: Categories from FMCG taxonomy
 export interface FmcgCategory {
   id: string;
@@ -277,22 +293,6 @@ export async function deleteSupplier(accessToken: string, id: string): Promise<A
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.message || 'Failed to delete supplier');
-  }
-
-  return response.json();
-}
-
-export async function fetchDailySummary(accessToken: string, date?: string): Promise<ApiResponse<DailySummary>> {
-  const path = date ? `${API_BASE}/daily-summary?date=${date}` : `${API_BASE}/daily-summary`;
-  const response = await authFetch(path, accessToken);
-
-  // 401 handled by authFetch (triggers logout)
-  if (response.status === 401) {
-    throw new Error('Unauthorized');
-  }
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch daily summary');
   }
 
   return response.json();

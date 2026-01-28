@@ -21,6 +21,9 @@ interface AuthContextType {
   accessToken: string | null;
   login: (accessToken: string, refreshToken: string, user: User, store: Store) => void;
   logout: () => void;
+  // GL-WF-028: Session expiry warning state
+  showSessionWarning: boolean;
+  dismissSessionWarning: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -33,12 +36,16 @@ const STORE_KEY = 'retailer_store';
 // RCAT-AUTH-001: Idle timeout configuration
 const LAST_ACTIVITY_KEY = 'retailer_last_activity';
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+// GL-WF-028: Warning 5 minutes before timeout
+const WARNING_BEFORE_MS = 5 * 60 * 1000; // 5 minutes before timeout
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [store, setStore] = useState<Store | null>(null);
+  // GL-WF-028: Session expiry warning state
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
 
   // RCAT-AUTH-001: Track whether session has been expired by idle timeout
   const idleCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -129,6 +136,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // GL-WF-028: Dismiss warning and refresh activity timestamp
+  const dismissSessionWarning = useCallback(() => {
+    setShowSessionWarning(false);
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  }, []);
+
   // Subscribe to auth failures (401 responses) - triggers logout
   useEffect(() => {
     return onAuthFailure(() => {
@@ -156,15 +169,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener('click', updateActivity);
     window.addEventListener('scroll', updateActivity);
 
-    // Check for idle timeout every minute
+    // GL-WF-028: Check for idle timeout and show warning before logout
     idleCheckRef.current = setInterval(() => {
       const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
       if (!lastActivity) return;
       const elapsed = Date.now() - parseInt(lastActivity, 10);
+
+      // Show warning 5 minutes before timeout
+      if (elapsed > IDLE_TIMEOUT_MS - WARNING_BEFORE_MS && elapsed <= IDLE_TIMEOUT_MS) {
+        setShowSessionWarning(true);
+      }
+
+      // Logout after full timeout
       if (elapsed > IDLE_TIMEOUT_MS) {
+        setShowSessionWarning(false);
         logout();
       }
-    }, 60000); // Check every 60 seconds
+    }, 30000); // Check every 30 seconds for more responsive warning
 
     return () => {
       window.removeEventListener('mousemove', updateActivity);
@@ -188,6 +209,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken,
         login,
         logout,
+        // GL-WF-028: Session warning
+        showSessionWarning,
+        dismissSessionWarning,
       }}
     >
       {children}

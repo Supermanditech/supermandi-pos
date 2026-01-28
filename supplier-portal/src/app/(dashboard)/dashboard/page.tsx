@@ -60,15 +60,18 @@ export default function DashboardPage() {
     queryFn: getDashboardStats,
   });
 
-  const { data: recentOrders } = useQuery({
+  // GL-WF-063: Use paginated API calls
+  const { data: ordersResponse } = useQuery({
     queryKey: ['recent-orders'],
-    queryFn: getOrders,
+    queryFn: () => getOrders({ page: 1, limit: 5 }),
   });
+  const recentOrders = ordersResponse?.data;
 
-  const { data: products } = useQuery({
+  const { data: productsResponse } = useQuery({
     queryKey: ['products'],
-    queryFn: getProducts,
+    queryFn: () => getProducts({ page: 1, limit: 100 }),
   });
+  const products = productsResponse?.data;
 
   // Mock stats if API not ready
   const displayStats = stats || {
@@ -91,6 +94,28 @@ export default function DashboardPage() {
           Here's what's happening with your products and orders.
         </p>
       </div>
+
+      {/* GL-WF-058: Pending products visibility indicator */}
+      {displayStats.pendingProducts > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+          <span className="text-amber-500 text-xl">⚠️</span>
+          <div>
+            <p className="font-medium text-amber-800">
+              {displayStats.pendingProducts} product{displayStats.pendingProducts > 1 ? 's' : ''} pending approval
+            </p>
+            <p className="text-sm text-amber-700 mt-1">
+              Pending products are <strong>not visible to retailers</strong> until approved by SuperMandi.
+              Review takes 1-2 business days.
+            </p>
+            <Link
+              href="/products"
+              className="text-sm text-amber-800 font-medium hover:underline mt-2 inline-block"
+            >
+              View pending products →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

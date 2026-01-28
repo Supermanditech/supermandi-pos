@@ -96,27 +96,27 @@ export default function MenuScreen() {
     })();
   }, []);
 
-  // TICKET-002: Daily Summary state
+  // TICKET-002 + GL-RJ-009: Daily Summary state with enhanced error handling
   const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+
+  const loadDailySummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const summary = await getDailySummary();
+      setDailySummary(summary);
+    } catch (e: any) {
+      console.error("[MenuScreen] dailySummary fetch failed:", e);
+      setSummaryError(e.message || "Failed to load summary");
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const summary = await getDailySummary();
-        if (mounted) {
-          setDailySummary(summary);
-        }
-      } catch (e) {
-        console.error("[MenuScreen] dailySummary fetch failed:", e);
-      } finally {
-        if (mounted) {
-          setSummaryLoading(false);
-        }
-      }
-    })();
-    return () => { mounted = false; };
+    void loadDailySummary();
   }, []);
 
   // Alias for devInfo used in switch store handler
@@ -280,15 +280,36 @@ export default function MenuScreen() {
         </View>
       </View>
 
-      {/* POS-002: Daily Summary Card - Tap navigates to Sales Statement */}
+      {/* POS-002 + GL-RJ-009: Daily Summary Card - Enhanced with error handling and refresh */}
       <Pressable style={styles.summaryCard} onPress={goToSalesStatement}>
         <View style={styles.statusHeader}>
           <MaterialCommunityIcons name="chart-bar" size={16} color={theme.colors.primary} />
           <Text style={styles.statusHeaderText}>{t('menu.todaysSales', { defaultValue: "Today's Sales" })}</Text>
-          <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.textTertiary} style={{ marginLeft: 'auto' }} />
+          {/* GL-RJ-009: Refresh button */}
+          <Pressable
+            onPress={(e) => { e.stopPropagation(); void loadDailySummary(); }}
+            style={styles.summaryRefresh}
+            hitSlop={8}
+          >
+            <MaterialCommunityIcons
+              name={summaryLoading ? "loading" : "refresh"}
+              size={16}
+              color={theme.colors.textTertiary}
+            />
+          </Pressable>
+          <MaterialCommunityIcons name="chevron-right" size={16} color={theme.colors.textTertiary} />
         </View>
         {summaryLoading ? (
           <Text style={styles.summaryLoading}>{t('common.loading', { defaultValue: 'Loading...' })}</Text>
+        ) : summaryError ? (
+          /* GL-RJ-009: Error state with retry */
+          <View style={styles.summaryErrorContainer}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={24} color={theme.colors.error} />
+            <Text style={styles.summaryErrorText}>{summaryError}</Text>
+            <Pressable style={styles.summaryRetryButton} onPress={loadDailySummary}>
+              <Text style={styles.summaryRetryText}>{t('common.retry', { defaultValue: 'Retry' })}</Text>
+            </Pressable>
+          </View>
         ) : dailySummary ? (
           <View style={styles.summaryGrid}>
             <View style={styles.summaryItem}>
@@ -872,5 +893,31 @@ const styles = StyleSheet.create({
   breakdownItem: {
     fontSize: 12,
     color: theme.colors.textSecondary,
+  },
+  // GL-RJ-009: Summary refresh and error styles
+  summaryRefresh: {
+    marginLeft: 'auto',
+    padding: 4,
+  },
+  summaryErrorContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  summaryErrorText: {
+    fontSize: 13,
+    color: theme.colors.error,
+    textAlign: 'center',
+  },
+  summaryRetryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+  },
+  summaryRetryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.colors.textInverse,
   },
 });

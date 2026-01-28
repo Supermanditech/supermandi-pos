@@ -247,13 +247,14 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
   }
 
   try {
-    // Query store_products for current stock and calculate aggregates from ledger
+    // CA-1.4-004: Query store_products with canonical stock from stock_balances
+    // Prioritize inventory.stock_balances as the source of truth, fallback to sp.current_stock
     const result = await pool.query(
       `SELECT
         sp.product_id as "productId",
         COALESCE(sp.display_name, p.name) as "productName",
         p.primary_barcode as "barcode",
-        COALESCE(sp.current_stock, 0) as "totalStockQty",
+        COALESCE(sb.current_qty, sp.current_stock, 0) as "totalStockQty",
         COALESCE(
           (SELECT SUM(ABS(delta_qty) * COALESCE(unit_cost, 0))
            FROM inventory.inventory_ledger il
@@ -272,6 +273,7 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
         )::bigint as "totalSellRevenue"
       FROM catalog.store_products sp
       JOIN catalog.products p ON p.id = sp.product_id
+      LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
       WHERE sp.store_id = $1
         AND (sp.is_active = true OR sp.is_active IS NULL)
       ORDER BY COALESCE(sp.display_name, p.name) ASC`,
@@ -495,14 +497,15 @@ retailerAdminInventoryRouter.get("/categories", async (req: Request, res: Respon
 
   try {
     // RCAT-CAT-002: Get FMCG taxonomy categories with product counts + store overrides
-    // Joins with store_category_overrides for rename/hide support
+    // CA-1.4-004: Use canonical stock from stock_balances with fallback to current_stock
     const result = await pool.query(
       `WITH store_counts AS (
         SELECT
           COALESCE(sp.taxonomy_id, 'f0000000-0000-0000-0000-00000000000f') as taxonomy_id,
           COUNT(*) as product_count,
-          COALESCE(SUM(sp.current_stock * sp.sell_price), 0) as stock_value
+          COALESCE(SUM(COALESCE(sb.current_qty, sp.current_stock, 0) * sp.sell_price), 0) as stock_value
         FROM catalog.store_products sp
+        LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
         WHERE sp.store_id = $1
           AND (sp.is_active = true OR sp.is_active IS NULL)
         GROUP BY COALESCE(sp.taxonomy_id, 'f0000000-0000-0000-0000-00000000000f')
@@ -510,8 +513,9 @@ retailerAdminInventoryRouter.get("/categories", async (req: Request, res: Respon
       total_counts AS (
         SELECT
           COUNT(*) as total_products,
-          COALESCE(SUM(sp.current_stock * sp.sell_price), 0) as total_stock_value
+          COALESCE(SUM(COALESCE(sb.current_qty, sp.current_stock, 0) * sp.sell_price), 0) as total_stock_value
         FROM catalog.store_products sp
+        LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
         WHERE sp.store_id = $1
           AND (sp.is_active = true OR sp.is_active IS NULL)
       )

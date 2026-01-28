@@ -1,7 +1,10 @@
 // Inward Store - Local cart for stock-in operations
 // GO-LIVE-004: Supports manual stock inward without PO
+// GL-WF-005: Added persist middleware to prevent data loss on app restart
 
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export interface InwardItem {
   id: string; // productId
@@ -36,10 +39,12 @@ interface InwardState {
   getItemCount: () => number;
 }
 
-export const useInwardStore = create<InwardState>()((set, get) => ({
-  items: [],
-  selectedSupplier: null,
-  notes: "",
+export const useInwardStore = create<InwardState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      selectedSupplier: null,
+      notes: "",
 
   addItem: (item) => {
     const { items, selectedSupplier } = get();
@@ -112,4 +117,16 @@ export const useInwardStore = create<InwardState>()((set, get) => ({
     const { items } = get();
     return items.reduce((sum, item) => sum + item.quantity, 0);
   },
-}));
+    }),
+    {
+      name: "supermandi-inward-cart",
+      storage: createJSONStorage(() => AsyncStorage),
+      // GL-WF-005: Persist all state to survive app restarts
+      partialize: (state) => ({
+        items: state.items,
+        selectedSupplier: state.selectedSupplier,
+        notes: state.notes,
+      }),
+    }
+  )
+);

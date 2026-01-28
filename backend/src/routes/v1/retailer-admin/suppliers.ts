@@ -453,6 +453,284 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
 // RCAT-SUP-002: Remove a supplier link from store (soft delete)
 // =============================================================================
 
+// =============================================================================
+// GET /api/v1/retailer-admin/supplier-catalog
+// CA-1.4-001/002: View approved products from verified suppliers
+// Returns products that are approved and available for the store to order
+// =============================================================================
+
+retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { query, category, supplierId, limit = "50", offset = "0" } = req.query;
+
+  try {
+    // Get store location for service area matching
+    const storeResult = await pool.query(
+      `SELECT pincode, city, state FROM platform.stores WHERE id = $1`,
+      [storeId]
+    );
+    const storePincode = storeResult.rows[0]?.pincode || null;
+    const storeCity = storeResult.rows[0]?.city || null;
+    const storeState = storeResult.rows[0]?.state || null;
+
+    let whereClause = `WHERE sp.approval_status = 'approved' AND s.verification_status = 'verified' AND s.status = 'active'`;
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    // Filter by supplier if specified
+    if (supplierId && typeof supplierId === "string") {
+      whereClause += ` AND sp.supplier_id = $${paramIndex}::uuid`;
+      params.push(supplierId);
+      paramIndex++;
+    }
+
+    // Search by product name or barcode
+    if (query && typeof query === "string" && query.trim()) {
+      const searchTerm = `%${query.trim()}%`;
+      whereClause += ` AND (sp.name ILIKE $${paramIndex} OR sp.barcode ILIKE $${paramIndex})`;
+      params.push(searchTerm);
+      paramIndex++;
+    }
+
+    // Filter by category
+    if (category && typeof category === "string" && category.trim()) {
+      whereClause += ` AND sp.category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
+    const offsetNum = Math.max(parseInt(offset as string, 10) || 0, 0);
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM catalog.supplier_products sp
+       JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    // Get products with supplier info
+    const result = await pool.query(
+      `SELECT
+        sp.id as "productId",
+        sp.name as "productName",
+        COALESCE(sp.edited_name, sp.name) as "displayName",
+        sp.barcode,
+        sp.category,
+        sp.unit,
+        sp.purchase_price as "supplierPriceMinor",
+        sp.supermandi_margin_minor as "marginMinor",
+        (sp.purchase_price + COALESCE(sp.supermandi_margin_minor, 0)) as "retailerPriceMinor",
+        sp.mrp as "mrpMinor",
+        sp.bnpl_eligible as "bnplEligible",
+        sp.bnpl_max_days as "bnplMaxDays",
+        NULL as "imageUrl",
+        sp.approved_at as "approvedAt",
+        s.id as "supplierId",
+        s.business_name as "supplierName",
+        s.trade_name as "supplierTradeName",
+        s.city as "supplierCity",
+        s.primary_phone as "supplierPhone"
+      FROM catalog.supplier_products sp
+      JOIN supplier.suppliers s ON s.id = sp.supplier_id
+      ${whereClause}
+      ORDER BY sp.approved_at DESC, sp.name ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limitNum, offsetNum]
+    );
+
+    // CA-1.4-001: Mark products already in store catalog
+    const productIds = result.rows.map(r => r.productId);
+    const existingResult = productIds.length > 0 ? await pool.query(
+      `SELECT DISTINCT sp.product_id
+       FROM catalog.store_products sp
+       WHERE sp.store_id = $1 AND sp.product_id = ANY($2::uuid[])`,
+      [storeId, productIds]
+    ) : { rows: [] };
+    const existingProductIds = new Set(existingResult.rows.map(r => String(r.product_id)));
+
+    const products = result.rows.map(row => ({
+      ...row,
+      supplierPriceMinor: Number(row.supplierPriceMinor) || 0,
+      marginMinor: Number(row.marginMinor) || 0,
+      retailerPriceMinor: Number(row.retailerPriceMinor) || 0,
+      mrpMinor: Number(row.mrpMinor) || 0,
+      bnplEligible: row.bnplEligible === true,
+      bnplMaxDays: Number(row.bnplMaxDays) || 0,
+      inStoreCatalog: existingProductIds.has(row.productId),
+    }));
+
+    return res.json({
+      success: true,
+      data: products,
+      pagination: {
+        total,
+        limit: limitNum,
+        offset: offsetNum,
+        hasMore: offsetNum + result.rows.length < total,
+      },
+    });
+  } catch (error: any) {
+    console.error("[RetailerSupplierCatalog] GET error:", error.message);
+
+    // If table doesn't exist, return empty list
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: [],
+        pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to load supplier catalog" },
+    });
+  }
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/supplier-catalog/:productId/add
+// CA-1.4-001: Add a supplier product to the store's catalog
+// =============================================================================
+
+retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { productId } = req.params;
+  const { initialStock = 0, sellPrice } = req.body;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Verify product is approved and from a verified supplier
+    const productCheck = await client.query(
+      `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.purchase_price,
+              sp.supermandi_margin_minor, sp.mrp, sp.unit,
+              s.id as supplier_id, s.business_name
+       FROM catalog.supplier_products sp
+       JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       WHERE sp.id = $1::uuid
+         AND sp.approval_status = 'approved'
+         AND s.verification_status = 'verified'`,
+      [productId]
+    );
+
+    if (productCheck.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Product not found or not approved" },
+      });
+    }
+
+    const product = productCheck.rows[0];
+    const retailerPrice = sellPrice ||
+      (product.purchase_price + (product.supermandi_margin_minor || 0));
+
+    // Check if already in store catalog
+    const existingCheck = await client.query(
+      `SELECT id FROM catalog.store_products WHERE store_id = $1 AND product_id = $2::uuid`,
+      [storeId, productId]
+    );
+
+    if (existingCheck.rows.length > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: { code: "CONFLICT", message: "Product already in your catalog" },
+      });
+    }
+
+    // First ensure the product exists in catalog.products (master catalog)
+    // Handle both id and barcode conflicts gracefully
+    await client.query(
+      `INSERT INTO catalog.products (id, name, primary_barcode, category, unit)
+       VALUES ($1::uuid, $2, $3, $4, $5)
+       ON CONFLICT DO NOTHING`,
+      [productId, product.name, product.barcode, product.category, product.unit]
+    );
+
+    // Add to store catalog
+    const insertResult = await client.query(
+      `INSERT INTO catalog.store_products (
+        store_id, product_id, display_name, sell_price, purchase_price,
+        current_stock, is_active, supplier_id
+      ) VALUES ($1, $2::uuid, $3, $4, $5, $6, true, $7::uuid)
+      RETURNING id`,
+      [
+        storeId,
+        productId,
+        product.name,
+        retailerPrice,
+        product.purchase_price,
+        initialStock || 0,
+        product.supplier_id
+      ]
+    );
+
+    // Add barcode if exists
+    if (product.barcode) {
+      await client.query(
+        `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+         VALUES ($1, $2, $3, 'supplier_sync')
+         ON CONFLICT (store_id, barcode) DO NOTHING`,
+        [storeId, insertResult.rows[0].id, product.barcode]
+      );
+    }
+
+    // Initialize stock balance
+    if (initialStock > 0) {
+      await client.query(
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, updated_at)
+         VALUES ($1, $2::uuid, $3, NOW())
+         ON CONFLICT (store_id, product_id) DO UPDATE SET
+           current_qty = $3,
+           updated_at = NOW()`,
+        [storeId, productId, initialStock]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        storeProductId: insertResult.rows[0].id,
+        productId,
+        productName: product.name,
+        supplierName: product.business_name,
+      },
+      message: "Product added to your catalog",
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[RetailerSupplierCatalog] POST add error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to add product to catalog" },
+    });
+  } finally {
+    client.release();
+  }
+});
+
 retailerAdminSuppliersRouter.delete("/suppliers/:id", async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });

@@ -56,6 +56,9 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
         inventoryEnabled: true,
         suppliersEnabled: true,
         ordersEnabled: true,
+        // CA-1.4-005: Credit enabled from backend
+        creditEnabled: (features.creditEnabled as boolean) ?? false,
+        bnplEnabled: (features.bnplEnabled as boolean) ?? false,
       },
     };
   }
@@ -83,6 +86,9 @@ function getDefaultUiStatus(): UiStatusResponse {
       inventoryEnabled: true,
       suppliersEnabled: true,
       ordersEnabled: true,
+      // CA-1.4-005: Default credit disabled until backend confirms
+      creditEnabled: false,
+      bnplEnabled: false,
     },
   };
 }
