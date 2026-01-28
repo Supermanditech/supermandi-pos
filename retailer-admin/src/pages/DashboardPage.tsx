@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
+import { useEscapeKey } from '../lib/hooks';
 import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
 
 export default function DashboardPage() {
@@ -40,6 +41,15 @@ export default function DashboardPage() {
   const [catEditNameHi, setCatEditNameHi] = useState('');
   const [catEditSaving, setCatEditSaving] = useState(false);
   const [showHiddenCategories, setShowHiddenCategories] = useState(false);
+
+  // GL-CRIT-0078: Close modals with Escape key
+  useEscapeKey(
+    useCallback(() => {
+      setEditingCategory(null);
+      setCatEditError(null);
+    }, []),
+    !!editingCategory
+  );
 
   // RCAT-CAT-002: Rename category (store override)
   // GL-CRIT-0039: Error handling with user feedback

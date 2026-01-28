@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../lib/AuthContext';
 import { authFetch } from '../../lib/api';
+import { useEscapeKey } from '../../lib/hooks';
 
 interface PendingProduct {
   id: string;
@@ -55,6 +56,22 @@ export default function ProductQueuePage() {
   // Rejection modal
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+
+  // GL-CRIT-0078: Close modals with Escape key
+  useEscapeKey(
+    useCallback(() => {
+      setShowEditModal(false);
+      setSelectedProduct(null);
+    }, []),
+    showEditModal
+  );
+  useEscapeKey(
+    useCallback(() => {
+      setShowRejectModal(false);
+      setSelectedProduct(null);
+    }, []),
+    showRejectModal && !showEditModal
+  );
 
   // Fetch pending products
   const fetchPendingProducts = useCallback(async () => {

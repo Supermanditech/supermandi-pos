@@ -77,15 +77,36 @@ export function resolveStockForSku(item: { productId?: string | null; barcode?: 
 
 let refreshInFlight: Promise<boolean> | null = null;
 
+// GL-CRIT-0088: Timeout for stock refresh to prevent indefinite hanging
+const STOCK_REFRESH_TIMEOUT_MS = 30000; // 30 seconds
+
+/**
+ * GL-CRIT-0088: Helper to wrap a promise with a timeout
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    ),
+  ]);
+}
+
 export async function refreshStockSnapshot(params?: { query?: string }): Promise<boolean> {
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = (async () => {
     try {
       if (!(await isOnline())) return false;
-      const products = await productsApi.listProducts(params?.query ? { q: params.query } : undefined);
+      // GL-CRIT-0088: Add timeout to prevent indefinite hanging
+      const products = await withTimeout(
+        productsApi.listProducts(params?.query ? { q: params.query } : undefined),
+        STOCK_REFRESH_TIMEOUT_MS,
+        "Stock refresh timed out"
+      );
       upsertStockFromProducts(products);
       return true;
-    } catch {
+    } catch (error) {
+      console.warn("[Stock] GL-CRIT-0088: Refresh failed:", error);
       return false;
     }
   })();

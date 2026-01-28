@@ -6,3 +6,18 @@
 
 export { AppText, ButtonText, LabelText, PriceText } from "./AppText";
 export type { AppTextVariant } from "./AppText";
+
+// GL-CRIT-0083, GL-CRIT-0084, GL-CRIT-0085: Unified loading states
+export {
+  LoadingState,
+  Skeleton,
+  SkeletonList,
+  SkeletonGrid,
+  useLoadingCoordinator,
+} from "./LoadingState";
+export type {
+  LoadingStateProps,
+  SkeletonProps,
+  SkeletonListProps,
+  LoadingCoordinatorState,
+} from "./LoadingState";

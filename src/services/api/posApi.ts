@@ -77,7 +77,12 @@ export async function initUpiPayment(input: {
   transactionId?: string;
 }): Promise<{ paymentId: string; billRef: string; amountMinor: number; storeName: string | null; upiVpa: string }> {
   if (!(await isOnline())) {
-    throw new ApiError(0, "upi_offline_blocked");
+    // GL-CRIT-0041: Clear error message explaining why UPI is unavailable offline
+    throw new ApiError(
+      0,
+      "upi_offline_blocked",
+      "UPI payments require internet connection. Please use Cash or Credit payment instead, or connect to the internet to process UPI."
+    );
   }
   return apiClient.post("/api/v1/pos/payments/upi/init", input);
 }

@@ -491,6 +491,9 @@ services:
 
   # ---------------------------------------------------------------------------
   # VOICE SERVICE
+  # GL-CRIT-0051: OpenAI API key is passed via environment variable from .env
+  # NEVER hardcode API keys in docker-compose or Dockerfiles
+  # The OPENAI_API_KEY should only be set in production .env file
   # ---------------------------------------------------------------------------
   voice-service:
     build:
@@ -501,6 +504,7 @@ services:
     environment:
       NODE_ENV: production
       VOICE_SERVICE_PORT: 3008
+      # GL-CRIT-0051: API key from secure .env - never logged or exposed
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-whisper-1}
       OPENAI_STT_LANGUAGE: ${OPENAI_STT_LANGUAGE:-hi}
@@ -534,6 +538,10 @@ volumes:
 
 # =============================================================================
 # NETWORKS
+# GL-CRIT-0050: Network isolation for defense in depth
+# - db-network: Only accessible by services that need direct DB access
+# - internal-network: Internal service-to-service communication
+# - public-network: Services exposed to the internet (api-gateway only)
 # =============================================================================
 networks:
   supermandi-network:
@@ -542,3 +550,19 @@ networks:
       driver: default
       config:
         - subnet: 172.28.0.0/16
+  # GL-CRIT-0050: Database tier - isolated network for DB access only
+  db-network:
+    driver: bridge
+    internal: true  # No external access
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.29.0.0/24
+  # GL-CRIT-0050: Internal services network - no direct internet access
+  internal-network:
+    driver: bridge
+    internal: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.30.0.0/24

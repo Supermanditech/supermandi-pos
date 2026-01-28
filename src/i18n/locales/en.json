@@ -262,7 +262,14 @@
     "partialReceive": "Partial Receive",
     "completeGrn": "Complete GRN",
     "grnSuccess": "GRN completed successfully",
-    "grnFailed": "Failed to complete GRN"
+    "grnFailed": "Failed to complete GRN",
+    "loadError": "Failed to load order details",
+    "notFoundTitle": "Not Found",
+    "notFoundMessage": "No item found with that barcode or name.",
+    "enterQuantities": "Please enter quantities to receive.",
+    "successTitle": "Success",
+    "receiveFailed": "Failed to receive goods. Please try again.",
+    "loadingOrder": "Loading order..."
   },
   "orders": {
     "title": "Orders",
@@ -281,7 +288,13 @@
     "viewDetails": "View Details",
     "trackOrder": "Track Order",
     "cancelOrder": "Cancel Order",
-    "reorder": "Reorder"
+    "reorder": "Reorder",
+    "loadError": "Failed to load orders",
+    "loadingDetails": "Loading order details...",
+    "cancelConfirmTitle": "Cancel Order",
+    "cancelConfirmMessage": "Are you sure you want to cancel this order?",
+    "cancelFailed": "Failed to cancel order. Please try again.",
+    "loadingOrders": "Loading orders..."
   },
   "reports": {
     "salesStatement": "Sales Statement",

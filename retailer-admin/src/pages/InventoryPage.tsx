@@ -171,8 +171,12 @@ export default function InventoryPage() {
                 </tr>
               ) : ledgerEntries.length === 0 ? (
                 <tr>
+                  {/* GL-CRIT-0073: Contextual empty state based on filter */}
                   <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    No ledger entries found. Stock movements will appear here.
+                    {filter === 'all' && 'No ledger entries found. Stock movements will appear here once you start selling or receiving inventory.'}
+                    {filter === 'INWARD' && 'No inward entries found. These will appear when you receive stock from suppliers or record purchase receipts.'}
+                    {filter === 'OUTWARD' && 'No sales recorded yet. Outward entries will appear when items are sold through POS.'}
+                    {filter === 'ADJUSTMENT' && 'No stock adjustments found. Use this to track manual stock corrections, damage, or expired goods.'}
                   </td>
                 </tr>
               ) : (

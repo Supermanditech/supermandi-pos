@@ -54,6 +54,8 @@ const calculateDiscountAmount = (
   return Math.min(Math.round(safeValue), safeBase);
 };
 
+// GL-CRIT-0015: Idempotent sale creation - prevents duplicate sales from double-clicks
+// If saleId is provided and already exists, returns existing sale without creating duplicate
 export async function createOfflineSale(
   input: OfflineSaleInput & { saleId?: string }
 ): Promise<{
@@ -64,6 +66,7 @@ export async function createOfflineSale(
   const saleId = typeof input.saleId === "string" && input.saleId.trim()
     ? input.saleId.trim()
     : uuidv4();
+  // GL-CRIT-0015: Check if sale already exists (idempotency check)
   if (input.saleId) {
     const existing = await offlineDb.all<{
       id: string;

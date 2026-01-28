@@ -262,7 +262,14 @@
     "partialReceive": "आंशिक प्राप्ति",
     "completeGrn": "GRN पूरा करें",
     "grnSuccess": "GRN सफलतापूर्वक पूरा हुआ",
-    "grnFailed": "GRN पूरा करने में विफल"
+    "grnFailed": "GRN पूरा करने में विफल",
+    "loadError": "ऑर्डर विवरण लोड करने में विफल",
+    "notFoundTitle": "नहीं मिला",
+    "notFoundMessage": "उस बारकोड या नाम से कोई आइटम नहीं मिला।",
+    "enterQuantities": "कृपया प्राप्त करने के लिए मात्रा दर्ज करें।",
+    "successTitle": "सफल",
+    "receiveFailed": "सामान प्राप्त करने में विफल। कृपया पुनः प्रयास करें।",
+    "loadingOrder": "ऑर्डर लोड हो रहा है..."
   },
   "orders": {
     "title": "ऑर्डर",
@@ -281,7 +288,13 @@
     "viewDetails": "विवरण देखें",
     "trackOrder": "ऑर्डर ट्रैक करें",
     "cancelOrder": "ऑर्डर रद्द करें",
-    "reorder": "फिर से ऑर्डर करें"
+    "reorder": "फिर से ऑर्डर करें",
+    "loadError": "ऑर्डर लोड करने में विफल",
+    "loadingDetails": "ऑर्डर विवरण लोड हो रहा है...",
+    "cancelConfirmTitle": "ऑर्डर रद्द करें",
+    "cancelConfirmMessage": "क्या आप वाकई इस ऑर्डर को रद्द करना चाहते हैं?",
+    "cancelFailed": "ऑर्डर रद्द करने में विफल। कृपया पुनः प्रयास करें।",
+    "loadingOrders": "ऑर्डर लोड हो रहे हैं..."
   },
   "reports": {
     "salesStatement": "बिक्री विवरण",

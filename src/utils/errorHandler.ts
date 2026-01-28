@@ -310,6 +310,82 @@ export function isRetriable(error: ParsedApiError): boolean {
   return error.isNetworkError || error.isServerError || error.status === 429;
 }
 
+// =============================================================================
+// GL-CRIT-0087: RETRY UX
+// =============================================================================
+
+/**
+ * GL-CRIT-0087: Show retry prompt for network errors
+ * Returns a promise that resolves to true if user wants to retry, false otherwise
+ */
+export function showRetryPrompt(error: ParsedApiError): Promise<boolean> {
+  return new Promise((resolve) => {
+    const title = error.isNetworkError ? "Connection Error" : "Request Failed";
+    const message = error.isNetworkError
+      ? "Unable to connect to server. Please check your internet connection."
+      : error.isServerError
+      ? "Server is temporarily unavailable. Please try again."
+      : error.message || "An error occurred.";
+
+    Alert.alert(
+      title,
+      message,
+      [
+        { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+        { text: "Retry", style: "default", onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) }
+    );
+  });
+}
+
+/**
+ * GL-CRIT-0087: Execute function with automatic retry on network errors
+ * @param fn - Function to execute
+ * @param maxRetries - Maximum number of retries (default: 3)
+ * @param delayMs - Delay between retries in ms (default: 1000, doubles each retry)
+ */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { maxRetries?: number; delayMs?: number; showPrompt?: boolean } = {}
+): Promise<T> {
+  const { maxRetries = 3, delayMs = 1000, showPrompt = false } = options;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const parsed = parseError(error);
+
+      // Only retry on retriable errors
+      if (!isRetriable(parsed)) {
+        throw error;
+      }
+
+      // If this was the last attempt, throw
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      // Show prompt if requested, otherwise auto-retry
+      if (showPrompt) {
+        const shouldRetry = await showRetryPrompt(parsed);
+        if (!shouldRetry) {
+          throw error;
+        }
+      } else {
+        // Auto-retry with exponential backoff
+        const delay = delayMs * Math.pow(2, attempt);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 /**
  * Log error for debugging (only in development).
  */
@@ -333,5 +409,7 @@ export default {
   requiresReauth,
   isDeviceBlocked,
   isRetriable,
+  showRetryPrompt,
+  withRetry,
   logError,
 };
