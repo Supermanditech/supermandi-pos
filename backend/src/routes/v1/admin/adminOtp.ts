@@ -16,6 +16,24 @@ const OTP_LENGTH = 6;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_RATE_LIMIT_MS = 60 * 1000; // 1 minute between requests
 const lastOtpRequest = new Map<string, number>();
+// ITER4-P1-003: Rate limiting for OTP verification to prevent brute force
+const OTP_VERIFY_RATE_LIMIT_MS = 1000; // 1 second between verify attempts
+const lastOtpVerify = new Map<string, number>();
+const otpVerifyFailures = new Map<string, { count: number; lockedUntil: number }>();
+const MAX_OTP_VERIFY_FAILURES = 5;
+const OTP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minute lockout after 5 failures
+
+// ITER4-P0-003: Timing-safe comparison for OTP to prevent timing attacks
+function timingSafeCompare(a: string, b: string): boolean {
+  if (!a || !b) return false;
+  // Pad both to same length to prevent length-based timing leaks
+  const maxLen = Math.max(a.length, b.length, 6);
+  const bufA = Buffer.alloc(maxLen);
+  const bufB = Buffer.alloc(maxLen);
+  bufA.write(a);
+  bufB.write(b);
+  return crypto.timingSafeEqual(bufA, bufB) && a.length === b.length;
+}
 
 adminOtpRouter.use(requireAdminToken);
 
@@ -102,6 +120,26 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "email_otp_purpose_required" });
   }
 
+  // ITER4-P1-003: Check if email is locked out due to too many failures
+  const failures = otpVerifyFailures.get(email);
+  if (failures && Date.now() < failures.lockedUntil) {
+    const waitSeconds = Math.ceil((failures.lockedUntil - Date.now()) / 1000);
+    return res.status(429).json({
+      error: "too_many_attempts",
+      message: `Account temporarily locked. Please try again in ${waitSeconds} seconds.`
+    });
+  }
+
+  // ITER4-P1-003: Rate limit verify attempts (1 per second per email)
+  const lastVerify = lastOtpVerify.get(email) || 0;
+  if (Date.now() - lastVerify < OTP_VERIFY_RATE_LIMIT_MS) {
+    return res.status(429).json({
+      error: "rate_limited",
+      message: "Please wait before trying again."
+    });
+  }
+  lastOtpVerify.set(email, Date.now());
+
   const stored = otpStore.get(email);
 
   if (!stored) {
@@ -113,13 +151,26 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "otp_expired", message: "OTP has expired. Please request a new one." });
   }
 
-  if (stored.purpose !== purpose) {
+  // ITER4-P0-003: Use timing-safe comparison for purpose
+  if (!timingSafeCompare(stored.purpose, purpose)) {
     return res.status(400).json({ error: "otp_purpose_mismatch", message: "OTP was requested for a different purpose." });
   }
 
-  if (stored.otp !== otp) {
+  // ITER4-P0-003: Use timing-safe comparison for OTP to prevent timing attacks
+  if (!timingSafeCompare(stored.otp, otp)) {
+    // Track failures for lockout
+    const currentFailures = otpVerifyFailures.get(email) || { count: 0, lockedUntil: 0 };
+    currentFailures.count += 1;
+    if (currentFailures.count >= MAX_OTP_VERIFY_FAILURES) {
+      currentFailures.lockedUntil = Date.now() + OTP_LOCKOUT_MS;
+      console.warn(`[GL-CRIT-0053] OTP verify locked out for ${email} after ${currentFailures.count} failures`);
+    }
+    otpVerifyFailures.set(email, currentFailures);
     return res.status(400).json({ error: "invalid_otp", message: "Invalid OTP. Please check and try again." });
   }
+
+  // Clear failures on success
+  otpVerifyFailures.delete(email);
 
   // OTP is valid - delete it (single use)
   otpStore.delete(email);

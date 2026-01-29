@@ -7,6 +7,20 @@ import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 const router = Router();
 
 // =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * ITER4-P0-010: Mask bank account number to prevent PII exposure
+ * Only shows last 4 digits: ****1234
+ */
+function maskBankAccountNumber(accountNumber: string | null): string | null {
+  if (!accountNumber) return null;
+  if (accountNumber.length <= 4) return '****';
+  return '****' + accountNumber.slice(-4);
+}
+
+// =============================================================================
 // ROUTES
 // =============================================================================
 
@@ -63,7 +77,8 @@ router.get("/", requireSupplierAuth, async (req: SupplierAuthRequest, res: Respo
         currency: payout.currency,
         status: payout.status,
         bankAccount: {
-          accountNumber: payout.bank_account_number,
+          // ITER4-P0-010: Mask bank account number to protect PII
+          accountNumber: maskBankAccountNumber(payout.bank_account_number),
           ifsc: payout.bank_ifsc,
           accountName: payout.bank_account_name,
         },

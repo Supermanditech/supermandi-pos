@@ -5,6 +5,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 
 // =============================================================================
@@ -29,6 +31,47 @@ const JWT_EXPIRES_IN = '24h';
 const BCRYPT_ROUNDS = 10;
 
 const router = Router();
+
+// =============================================================================
+// ITER4-P1-001, ITER4-P1-002: Rate limiters for auth endpoints
+// =============================================================================
+
+// Rate limiter for login attempts (5 attempts per 15 minutes per IP)
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many login attempts. Please try again in 15 minutes.'
+    }
+  },
+  keyGenerator: (req) => {
+    // Rate limit by IP + email combination for targeted protection
+    const email = (req.body?.email || '').toLowerCase();
+    return `${req.ip}:${email}`;
+  }
+});
+
+// Rate limiter for password reset requests (3 per 15 minutes per email)
+const passwordResetRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // 3 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many password reset requests. Please try again later.'
+    }
+  },
+  keyGenerator: (req) => {
+    // Rate limit by email to prevent email flooding
+    return (req.body?.email || req.ip || '').toLowerCase();
+  }
+});
 
 // =============================================================================
 // GL-AUD-008: Bank Detail Validation Functions
@@ -296,8 +339,9 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
 /**
  * POST /api/v1/supplier/auth/login
  * Login an existing supplier
+ * ITER4-P1-001: Rate limited to prevent brute force attacks
  */
-router.post("/auth/login", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
 
@@ -450,8 +494,9 @@ router.post("/auth/change-password", requireSupplierAuth, async (req: SupplierAu
 /**
  * POST /api/v1/supplier/auth/forgot-password
  * Request a password reset token
+ * ITER4-P1-002: Rate limited to prevent email flooding
  */
-router.post("/auth/forgot-password", async (req: Request, res: Response, next: NextFunction) => {
+router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
 
@@ -482,8 +527,9 @@ router.post("/auth/forgot-password", async (req: Request, res: Response, next: N
 
     const supplier = result.rows[0];
 
-    // Generate reset token (6-digit code for simplicity, valid for 1 hour)
-    const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+    // ITER4-P0-002: Use crypto.randomInt() for cryptographically secure token generation
+    // 6-digit code for simplicity, valid for 1 hour
+    const resetToken = crypto.randomInt(100000, 999999).toString();
     const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     // Store reset token
@@ -494,9 +540,12 @@ router.post("/auth/forgot-password", async (req: Request, res: Response, next: N
       [resetToken, resetExpiry, supplier.id]
     );
 
-    // In production, send email here
-    // For now, log the token (REMOVE IN PRODUCTION)
-    console.log(`[GL-WF-035] Password reset token for ${email}: ${resetToken}`);
+    // ITER4-P0-013: Never log reset tokens - only log that a reset was requested
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[GL-WF-035] DEV ONLY - Password reset requested for ${email}`);
+    } else {
+      console.log(`[GL-WF-035] Password reset requested for ${email}`);
+    }
 
     // TODO: Send email with reset token
     // await sendPasswordResetEmail(email, resetToken);

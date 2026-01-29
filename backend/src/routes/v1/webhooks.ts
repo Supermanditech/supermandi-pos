@@ -149,8 +149,18 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   const rawBody = JSON.stringify(req.body);
   const signature = req.headers["x-razorpay-signature"] as string | undefined;
 
-  // Verify webhook signature (skip in development if not configured)
-  if (signature && !verifyWebhookSignature(rawBody, signature)) {
+  // ITER4-P0-006: Require webhook signature in production - never process unsigned webhooks
+  if (process.env.NODE_ENV === 'production') {
+    if (!signature) {
+      console.warn("[SM-018] Missing Razorpay webhook signature in production - rejecting");
+      return res.status(401).json({ error: "Missing signature" });
+    }
+    if (!verifyWebhookSignature(rawBody, signature)) {
+      console.warn("[SM-018] Invalid Razorpay webhook signature");
+      return res.status(401).json({ error: "Invalid signature" });
+    }
+  } else if (signature && !verifyWebhookSignature(rawBody, signature)) {
+    // In development, still verify if signature is provided
     console.warn("[SM-018] Invalid Razorpay webhook signature");
     return res.status(401).json({ error: "Invalid signature" });
   }

@@ -15,7 +15,19 @@ export function errorHandler(
     return;
   }
 
-  const message = err instanceof Error ? err.message : "Unknown error";
+  // ITER4-P1-007: Don't expose internal error messages/stack traces in production
+  // Log the full error for debugging, but return generic message to client
+  if (err instanceof Error) {
+    console.error('[ErrorHandler] Internal server error:', err.message);
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(err.stack);
+    }
+  }
+
+  const message = process.env.NODE_ENV === 'production'
+    ? "Internal server error"
+    : (err instanceof Error ? err.message : "Unknown error");
+
   res.status(500).json({ error: message });
 }
 

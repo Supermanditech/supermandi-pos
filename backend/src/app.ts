@@ -37,7 +37,8 @@ const corsOptions: cors.CorsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token', 'X-Admin-Token', 'X-Request-ID'],
 };
 app.use(cors(corsOptions));
-app.use(express.json());
+// ITER4-P1-012: Set request body size limit to prevent DoS attacks
+app.use(express.json({ limit: '1mb' }));
 
 app.get("/health", (_req, res) => {
   // Cloud health-check contract: must be JSON { status: "ok" }
