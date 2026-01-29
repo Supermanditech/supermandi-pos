@@ -288,12 +288,10 @@ voiceRouter.post(
       const userRole = device?.role || "cashier";
       const requestId = reqId || uuidv4();
 
-      // Create a dummy audio buffer since we already have transcript
-      // We'll skip STT and go directly to parsing
+      // Pass transcript directly - skips STT
       const result = await processVoiceOrder({
         requestId,
-        audioBuffer: Buffer.from(""), // Empty buffer - will skip STT
-        filename: "transcript.txt",
+        transcript, // Use provided transcript
         storeId,
         deviceId: device?.id || device?.device_id,
         currentMode: mode,

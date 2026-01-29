@@ -77,8 +77,9 @@ export interface VoiceOrderResult {
 
 export interface VoiceOrderRequest {
   requestId?: string;
-  audioBuffer: Buffer;
-  filename: string;
+  audioBuffer?: Buffer;
+  filename?: string;
+  transcript?: string; // Pre-transcribed text (skips STT if provided)
   storeId: string;
   deviceId?: string;
   currentMode: "SELL" | "BUY";
@@ -381,25 +382,56 @@ export async function processVoiceOrder(
   });
 
   try {
-    // Step 1: Speech-to-Text
-    const sttResult = await speechToText({
-      audioBuffer: request.audioBuffer,
-      filename: request.filename,
-      storeId: request.storeId,
-      deviceId: request.deviceId,
-      ip: request.ip,
-      language: "hi", // Hindi/Hinglish
-      requestId,
-    });
+    let transcript: string;
+    let language = "hi";
 
-    const transcript = sttResult.text.trim();
+    // Step 1: Get transcript - either from input or via STT
+    if (request.transcript) {
+      // Transcript provided - skip STT
+      transcript = request.transcript.trim();
+      console.log("[VoiceOrder] Using provided transcript:", transcript.slice(0, 50));
+    } else if (request.audioBuffer && request.audioBuffer.length > 0) {
+      // Do Speech-to-Text
+      const sttResult = await speechToText({
+        audioBuffer: request.audioBuffer,
+        filename: request.filename || "audio.m4a",
+        storeId: request.storeId,
+        deviceId: request.deviceId,
+        ip: request.ip,
+        language: "hi", // Hindi/Hinglish
+        requestId,
+      });
+      transcript = sttResult.text.trim();
+      language = sttResult.language;
+    } else {
+      // No transcript and no audio
+      const result: VoiceOrderResult = {
+        requestId,
+        success: false,
+        transcript: "",
+        language: "hi",
+        actions: [],
+        confidence: 0,
+        requiresConfirmation: false,
+        message: "No audio or transcript provided."
+      };
+
+      processedRequests.set(requestId, {
+        requestId,
+        transcript: "",
+        result,
+        processedAt: new Date()
+      });
+
+      return result;
+    }
 
     if (!transcript) {
       const result: VoiceOrderResult = {
         requestId,
         success: false,
         transcript: "",
-        language: sttResult.language,
+        language,
         actions: [],
         confidence: 0,
         requiresConfirmation: false,
