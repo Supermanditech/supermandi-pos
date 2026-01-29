@@ -17,7 +17,8 @@ export const config = {
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // JWT configuration for supplier auth (SM-005)
-  jwtSecret: getEnvOrDefault('JWT_SECRET', 'supermandi-dev-secret-change-in-production'),
+  // Default must match main-backend for cross-service token validation
+  jwtSecret: getEnvOrDefault('JWT_SECRET', 'dev-secret-change-in-prod'),
 
   // Database configuration (uses shared pool from @supermandi/common)
   database: {

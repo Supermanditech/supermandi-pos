@@ -37,6 +37,69 @@ async function generateUniqueCode(pool: ReturnType<typeof getPool>): Promise<str
   return `SM-${randomBytes(4).toString("hex").toUpperCase()}`;
 }
 
+// GET /api/v1/admin/device-enrollments - List all device enrollments
+adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async (req, res) => {
+  try {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const storeId = req.query.storeId as string;
+
+    // Build WHERE clause for both queries
+    let whereClause = "";
+    const countParams: string[] = [];
+    const dataParams: (string | number)[] = [];
+
+    if (storeId) {
+      whereClause = ` WHERE e.store_id = $1::text`;
+      countParams.push(storeId);
+      dataParams.push(storeId);
+    }
+
+    // SA-GAP-001 FIX: Get total count separately for accurate pagination
+    const countQuery = `SELECT COUNT(*) as total FROM pos_device_enrollments e${whereClause}`;
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    // Get paginated data
+    const dataQuery = `
+      SELECT
+        e.id,
+        e.code,
+        e.store_id,
+        s.name as store_name,
+        s.code as store_code,
+        e.expires_at,
+        e.max_uses,
+        e.uses_count,
+        e.created_at,
+        e.created_by
+      FROM pos_device_enrollments e
+      LEFT JOIN platform.stores s ON e.store_id::uuid = s.id
+      ${whereClause}
+      ORDER BY e.created_at DESC
+      LIMIT $${dataParams.length + 1} OFFSET $${dataParams.length + 2}
+    `;
+    dataParams.push(limit, offset);
+
+    const result = await pool.query(dataQuery, dataParams);
+
+    return res.json({
+      enrollments: result.rows,
+      pagination: {
+        limit,
+        offset,
+        total
+      }
+    });
+  } catch (error) {
+    console.error("[AdminEnrollment] Error listing enrollments:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to list enrollments" });
+  }
+});
+
 // POST /api/v1/admin/stores/:storeId/device-enrollments
 adminDeviceEnrollmentRouter.post("/stores/:storeId/device-enrollments", requireAdminToken, async (req, res) => {
   try {

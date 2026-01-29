@@ -85,16 +85,24 @@ interface SupplierRow {
 
 const BCRYPT_COST = 12;
 
+// JWT issuer must match main-backend for cross-service token validation
+const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
+
 function generateSupplierToken(supplierId: string, email: string): string {
+  // Payload structure must match main-backend expectations
   const payload = {
-    supplierId,
-    email,
+    sub: supplierId,
     actorType: 'SUPPLIER',
+    actorId: supplierId,
+    email,
+    // Also include supplierId for backward compatibility with supplier-service middleware
+    supplierId,
+    permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
   };
 
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: '7d',
-    issuer: 'supermandi-supplier-service',
+    expiresIn: '24h',  // Match main-backend's 24h expiry
+    issuer: JWT_ISSUER,
   });
 }
 
@@ -346,6 +354,7 @@ router.post(
 /**
  * GET /auth/me
  * Get current supplier info from JWT token
+ * Compatible with tokens from both supplier-service and main-backend
  */
 router.get(
   '/auth/me',
@@ -363,10 +372,16 @@ router.get(
 
       const token = authHeader.substring(7);
 
-      // Verify and decode token
-      let decoded: { supplierId: string; email: string; actorType: string };
+      // Verify and decode token - support both old and new formats
+      let decoded: {
+        supplierId?: string;
+        actorId?: string;
+        sub?: string;
+        email: string;
+        actorType: string
+      };
       try {
-        decoded = jwt.verify(token, config.jwtSecret) as typeof decoded;
+        decoded = jwt.verify(token, config.jwtSecret, { issuer: JWT_ISSUER }) as typeof decoded;
       } catch {
         throw new ApiError(
           401,
@@ -384,13 +399,23 @@ router.get(
         );
       }
 
+      // Extract supplierId from either format
+      const supplierId = decoded.supplierId || decoded.actorId || decoded.sub;
+      if (!supplierId) {
+        throw new ApiError(
+          401,
+          ERROR_CODES.UNAUTHORIZED,
+          'Invalid token: missing supplier ID'
+        );
+      }
+
       // Get supplier info
       const supplier = await queryOne<SupplierRow>(
         `SELECT id, gstin, business_name, primary_email, primary_phone,
                 verification_status, status
          FROM supplier.suppliers
          WHERE id = $1`,
-        [decoded.supplierId]
+        [supplierId]
       );
 
       if (!supplier) {
