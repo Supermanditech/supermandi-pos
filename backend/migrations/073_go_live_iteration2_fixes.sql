@@ -75,10 +75,25 @@ END $$;
 -- GAP-HIGH-004: Add missing indexes for common queries
 -- =============================================================================
 
--- Customer phone lookup for sales
-CREATE INDEX IF NOT EXISTS idx_sales_customer_phone
-ON public.sales(customer_phone)
-WHERE customer_phone IS NOT NULL;
+-- Customer phone lookup for sales (only if column exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'sales' AND column_name = 'customer_phone'
+  ) THEN
+    CREATE INDEX IF NOT EXISTS idx_sales_customer_phone
+    ON public.sales(customer_phone)
+    WHERE customer_phone IS NOT NULL;
+    RAISE NOTICE 'GAP-HIGH-004: Created idx_sales_customer_phone';
+  ELSE
+    RAISE NOTICE 'GAP-HIGH-004: customer_phone column not found, using customer_id instead';
+    -- Create index on customer_id if it exists
+    CREATE INDEX IF NOT EXISTS idx_sales_customer_id
+    ON public.sales(customer_id)
+    WHERE customer_id IS NOT NULL;
+  END IF;
+END $$;
 
 -- Device enrollment code lookup
 CREATE INDEX IF NOT EXISTS idx_device_enrollments_code
