@@ -98,3 +98,86 @@ export async function fetchAuditStats(): Promise<AuditStatsResponse> {
 
   return res.json();
 }
+
+// GL-CRIT-0049: Create audit log entry for admin actions
+export type AuditLogInput = {
+  action: string;
+  resource_type: string;
+  resource_id?: string | null;
+  store_id?: string | null;
+  request_body?: Record<string, unknown> | null;
+  response_status?: number | null;
+  error_message?: string | null;
+};
+
+/**
+ * GL-CRIT-0049: Log an admin action to the audit trail
+ * This should be called after every mutation action in SuperAdmin
+ */
+export async function createAuditLog(input: AuditLogInput): Promise<void> {
+  if (!API_BASE) {
+    console.warn('GL-CRIT-0049: Cannot log audit - VITE_API_BASE_URL missing');
+    return;
+  }
+
+  const token = getAdminToken();
+  if (!token) {
+    console.warn('GL-CRIT-0049: Cannot log audit - no admin token');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/admin/audit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'x-admin-token': token,
+      },
+      body: JSON.stringify(input),
+    });
+
+    if (!res.ok) {
+      console.warn('GL-CRIT-0049: Audit log failed:', res.status);
+    }
+  } catch (err) {
+    // Don't throw - audit failures shouldn't block the action
+    console.warn('GL-CRIT-0049: Audit log error:', err);
+  }
+}
+
+/**
+ * GL-CRIT-0049: Helper to log successful admin action
+ */
+export function logAdminAction(
+  action: string,
+  resourceType: string,
+  resourceId?: string,
+  details?: Record<string, unknown>
+): void {
+  createAuditLog({
+    action,
+    resource_type: resourceType,
+    resource_id: resourceId || null,
+    request_body: details || null,
+    response_status: 200,
+  });
+}
+
+/**
+ * GL-CRIT-0049: Helper to log failed admin action
+ */
+export function logAdminActionError(
+  action: string,
+  resourceType: string,
+  resourceId?: string,
+  errorMessage?: string
+): void {
+  createAuditLog({
+    action,
+    resource_type: resourceType,
+    resource_id: resourceId || null,
+    response_status: 500,
+    error_message: errorMessage || 'Unknown error',
+  });
+}

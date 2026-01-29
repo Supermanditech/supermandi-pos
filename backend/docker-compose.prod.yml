@@ -32,6 +32,8 @@ services:
       start_period: 30s
     networks:
       - supermandi-network
+      # GL-CRIT-0050: Database on isolated db-network
+      - db-network
     deploy:
       resources:
         limits:
@@ -69,6 +71,8 @@ services:
       start_period: 10s
     networks:
       - supermandi-network
+      # GL-CRIT-0050: Redis on isolated db-network
+      - db-network
     deploy:
       resources:
         limits:
@@ -78,6 +82,40 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
+
+  # ---------------------------------------------------------------------------
+  # NGINX REVERSE PROXY (GL-CRIT-0026: HTTPS/TLS termination)
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: supermandi-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - supermandi-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
 
   # ---------------------------------------------------------------------------
   # API GATEWAY
@@ -491,9 +529,8 @@ services:
 
   # ---------------------------------------------------------------------------
   # VOICE SERVICE
-  # GL-CRIT-0051: OpenAI API key is passed via environment variable from .env
-  # NEVER hardcode API keys in docker-compose or Dockerfiles
-  # The OPENAI_API_KEY should only be set in production .env file
+  # GL-CRIT-0051: OpenAI API key uses Docker secrets for enhanced security
+  # Secrets are mounted as files, not exposed in environment or docker inspect
   # ---------------------------------------------------------------------------
   voice-service:
     build:
@@ -504,11 +541,15 @@ services:
     environment:
       NODE_ENV: production
       VOICE_SERVICE_PORT: 3008
-      # GL-CRIT-0051: API key from secure .env - never logged or exposed
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      # GL-CRIT-0051: API key path (read from Docker secret file)
+      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
+      # Fallback to env var for backwards compatibility during migration
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-whisper-1}
       OPENAI_STT_LANGUAGE: ${OPENAI_STT_LANGUAGE:-hi}
       VOICE_MAX_FILE_SIZE_MB: ${VOICE_MAX_FILE_SIZE_MB:-10}
+    secrets:
+      - openai_api_key
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
       interval: 30s
@@ -566,3 +607,13 @@ networks:
       driver: default
       config:
         - subnet: 172.30.0.0/24
+
+# =============================================================================
+# SECRETS (GL-CRIT-0051: Secure secret management)
+# =============================================================================
+secrets:
+  openai_api_key:
+    # GL-CRIT-0051: OpenAI API key stored as Docker secret
+    # Create with: echo "sk-your-key" | docker secret create openai_api_key -
+    # Or use file: docker secret create openai_api_key /path/to/key/file
+    external: true

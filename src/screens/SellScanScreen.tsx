@@ -60,6 +60,8 @@ import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "..
 import { useFeatureEnabled } from "../utils/featureFlags";
 import { VoiceSheet, type VoiceButtonState, type VoiceSheetState } from "../components/voice";
 import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } from "../services/voice";
+// GL-CRIT-0089: Import centralized pagination constant
+import { PRODUCTS_PAGE_SIZE } from "../config/pagination";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -214,7 +216,8 @@ async function syncProductsToOffline(query?: string): Promise<SkuItem[]> {
 }
 
 // GL-CRIT-0089: Use centralized pagination constant
-const PAGE_SIZE = 40; // TODO: import from "../config/pagination" when ready
+// GL-CRIT-0089: Use centralized pagination constant
+const PAGE_SIZE = PRODUCTS_PAGE_SIZE;
 const NUM_COLUMNS = 2;
 // GL-CRIT-0090: Disabled auto-collapse as it was confusing to users.
 // Category rail stays expanded until user manually collapses (back button or tap outside).

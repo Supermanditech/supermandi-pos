@@ -34,6 +34,8 @@ import {
 } from "./api/suppliers";
 import { fetchUsers, patchUser, createUser, type UserRecord, type UserCreateInput } from "./api/users";
 import { fetchSettings, fetchSystemStats, type SystemSettings, type SystemStats } from "./api/settings";
+// GL-CRIT-0049: Import audit logging functions
+import { logAdminAction, logAdminActionError } from "./api/audit";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
@@ -479,8 +481,13 @@ export default function App() {
     try {
       const updated = await patchUser(userId, { status: newStatus });
       setUserRecords((prev) => prev.map((u) => (u.id === userId ? updated : u)));
+      // GL-CRIT-0049: Log successful user status change
+      logAdminAction('user_status_change', 'user', userId, { newStatus, userName: updated.name });
     } catch (e: any) {
-      setUserActionError(e?.message ? String(e.message) : "Failed to update user");
+      const errorMsg = e?.message ? String(e.message) : "Failed to update user";
+      setUserActionError(errorMsg);
+      // GL-CRIT-0049: Log failed user status change
+      logAdminActionError('user_status_change', 'user', userId, errorMsg);
     } finally {
       setUserStatusSaving((prev) => ({ ...prev, [userId]: false }));
     }
@@ -532,13 +539,22 @@ export default function App() {
       setCreateUserSuccess(`User "${newUser.name}" created successfully!`);
       setCreateUserForm({ name: "", email: "", phone: "", actor_type: "store" });
       setAdminVerificationReason("");
+      // GL-CRIT-0049: Log successful user creation
+      logAdminAction('user_create', 'user', newUser.id, {
+        name: newUser.name,
+        actor_type: input.actor_type,
+        isPlatformAdmin: input.actor_type === 'platform'
+      });
       // Auto-close form after short delay
       setTimeout(() => {
         setShowCreateUser(false);
         setCreateUserSuccess("");
       }, 2000);
     } catch (e: any) {
-      setCreateUserError(e?.message ? String(e.message) : "Failed to create user");
+      const errorMsg = e?.message ? String(e.message) : "Failed to create user";
+      setCreateUserError(errorMsg);
+      // GL-CRIT-0049: Log failed user creation
+      logAdminActionError('user_create', 'user', undefined, errorMsg);
     } finally {
       setCreateUserLoading(false);
     }
@@ -1135,7 +1151,7 @@ export default function App() {
     const currentDevice = deviceRecords.find((d) => d.id === deviceId);
     if (!draft) return;
 
-    // GL-CRIT-0054: Validate label length (1-50 characters)
+    // GL-CRIT-0054: Validate label (1-50 characters, alphanumeric + spaces/hyphens/underscores)
     const trimmedLabel = draft.label.trim();
     if (!trimmedLabel) {
       setDeviceActionError("Device label is required.");
@@ -1143,6 +1159,11 @@ export default function App() {
     }
     if (trimmedLabel.length > 50) {
       setDeviceActionError("Device label must be 50 characters or less.");
+      return;
+    }
+    // GL-CRIT-0054: Alphanumeric validation (allow letters, numbers, spaces, hyphens, underscores)
+    if (!/^[a-zA-Z0-9\s\-_]+$/.test(trimmedLabel)) {
+      setDeviceActionError("Device label can only contain letters, numbers, spaces, hyphens, and underscores.");
       return;
     }
 
@@ -1184,8 +1205,17 @@ export default function App() {
           active: Boolean(updated.active)
         }
       }));
+      // GL-CRIT-0049: Log successful device update
+      logAdminAction('device_update', 'device', deviceId, {
+        label: draft.label.trim(),
+        active: draft.active,
+        deviceType: draft.deviceType
+      });
     } catch (e: any) {
-      setDeviceActionError(e?.message ? String(e.message) : "Failed to update device.");
+      const errorMsg = e?.message ? String(e.message) : "Failed to update device.";
+      setDeviceActionError(errorMsg);
+      // GL-CRIT-0049: Log failed device update
+      logAdminActionError('device_update', 'device', deviceId, errorMsg);
     } finally {
       setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
     }
@@ -1208,8 +1238,13 @@ export default function App() {
     try {
       const updated = await patchDevice(deviceId, { resetToken: true });
       setDeviceRecords((prev) => prev.map((d) => (d.id === deviceId ? updated : d)));
+      // GL-CRIT-0049: Log successful device token reset
+      logAdminAction('device_token_reset', 'device', deviceId, { label: updated.label });
     } catch (e: any) {
-      setDeviceActionError(e?.message ? String(e.message) : "Failed to reset device token.");
+      const errorMsg = e?.message ? String(e.message) : "Failed to reset device token.";
+      setDeviceActionError(errorMsg);
+      // GL-CRIT-0049: Log failed device token reset
+      logAdminActionError('device_token_reset', 'device', deviceId, errorMsg);
     } finally {
       setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
     }

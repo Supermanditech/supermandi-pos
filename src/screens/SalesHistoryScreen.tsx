@@ -3,11 +3,14 @@ import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
 import { listBills } from "../services/api/billingApi";
 import type { BillSummary } from "../services/billing/billTypes";
+// GL-CRIT-0085: Import skeleton loader component
+import { SkeletonList } from "../components/ui/LoadingState";
 
 type RootStackParamList = {
   SalesHistory: undefined;
@@ -20,6 +23,8 @@ type Nav = NativeStackNavigationProp<RootStackParamList, "SalesHistory">;
 export default function SalesHistoryScreen() {
   const navigation = useNavigation<Nav>();
   const isFocused = useIsFocused();
+  // GL-CRIT-0095: Use i18n for error messages
+  const { t } = useTranslation();
   const [bills, setBills] = useState<BillSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,7 +36,8 @@ export default function SalesHistoryScreen() {
       const results = await listBills();
       setBills(results);
     } catch (e: any) {
-      setError(e?.message ? String(e.message) : "Failed to load bills.");
+      // GL-CRIT-0095: Use i18n for error messages
+      setError(e?.message ? String(e.message) : t('history.loadError', 'Failed to load bills.'));
     } finally {
       setLoading(false);
     }
@@ -87,17 +93,22 @@ export default function SalesHistoryScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {bills.length === 0 && !loading ? (
+      {/* GL-CRIT-0085: Show skeleton loader during initial load */}
+      {loading && bills.length === 0 ? (
+        <View style={styles.list}>
+          <SkeletonList count={5} itemHeight={80} />
+        </View>
+      ) : bills.length === 0 ? (
         <View style={styles.empty}>
           <MaterialCommunityIcons name="receipt" size={48} color={theme.colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No bills yet</Text>
-          <Text style={styles.emptyText}>Bills will appear here after you make sales.</Text>
+          <Text style={styles.emptyTitle}>{t('history.noBills', 'No bills yet')}</Text>
+          <Text style={styles.emptyText}>{t('history.noBillsHint', 'Bills will appear here after you make sales.')}</Text>
           <Pressable
             style={styles.ctaButton}
             onPress={() => (navigation as any).navigate("SellScan")}
           >
             <MaterialCommunityIcons name="cart-outline" size={18} color={theme.colors.textInverse} />
-            <Text style={styles.ctaButtonText}>Make Your First Sale</Text>
+            <Text style={styles.ctaButtonText}>{t('history.makeFirstSale', 'Make Your First Sale')}</Text>
           </Pressable>
         </View>
       ) : (

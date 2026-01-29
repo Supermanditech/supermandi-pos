@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
 import { useEscapeKey } from '../lib/hooks';
 import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
+// GL-CRIT-0066: Use centralized category icons configuration
+import { getCategoryIcon as getCategoryIconFromConfig } from '../config/categoryIcons';
 
 export default function DashboardPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
@@ -228,26 +230,10 @@ export default function DashboardPage() {
   };
 
   // FE-RETAILER-CAT-001: Map FMCG category icons to emoji
-  const getCategoryIcon = (iconKey: string): string => {
-    const iconMap: Record<string, string> = {
-      'barley': '🌾',          // Atta-Dal
-      'rice': '🍚',            // Chawal
-      'shaker': '🌶️',          // Masala
-      'oil': '🫒',             // Tel-Ghee
-      'peanut': '🥜',          // Namkeen
-      'cookie': '🍪',          // Biscuit
-      'coffee': '☕',          // Chai-Coffee
-      'bottle-soda-classic': '🥤', // Cold Drink
-      'cow': '🥛',             // Doodh
-      'hand-wash': '🧴',       // Sabun
-      'spray-bottle': '🧹',    // Safai
-      'baby-face': '👶',       // Baby
-      'leaf': '🌿',            // Paan-Supari
-      'dots-horizontal': '📦', // Baaki (Others)
-      'view-grid': '📋',       // Default
-    };
-    return iconMap[iconKey] || '📦';
-  };
+  // GL-CRIT-0066: Use centralized configuration (can be overridden by backend)
+  const getCategoryIcon = useCallback((iconKey: string): string => {
+    return getCategoryIconFromConfig(iconKey);
+  }, []);
 
   return (
     <div style={{
