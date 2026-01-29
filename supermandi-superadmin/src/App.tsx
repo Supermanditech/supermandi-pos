@@ -127,11 +127,137 @@ function PayloadDetails({ payload }: { payload: unknown }) {
   );
 }
 
+// ITER4-CRIT-001: Login gate component - blocks access to admin UI without valid token
+function LoginGate({ onLogin }: { onLogin: () => void }) {
+  const [tokenInput, setTokenInput] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    const token = tokenInput.trim();
+    if (!token) {
+      setError("Please enter an admin token");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Validate token by making a test API call
+      const res = await fetch("/api/v1/admin/health", {
+        headers: { "X-Admin-Token": token }
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        setError("Invalid admin token");
+        setLoading(false);
+        return;
+      }
+
+      // Token is valid - save it and proceed
+      sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
+      onLogin();
+    } catch (err) {
+      // Network error - still allow login attempt (backend might be down)
+      sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
+      onLogin();
+    }
+
+    setLoading(false);
+  };
+
+  return (
+    <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+      <div style={{
+        background: "#fff",
+        padding: "40px",
+        borderRadius: "12px",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+        maxWidth: "400px",
+        width: "100%"
+      }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
+          <div className="title" style={{ marginBottom: "8px" }}>
+            <span className="brandPill">SuperMandi</span>
+            SuperAdmin
+          </div>
+          <div style={{ color: "#666", fontSize: "14px" }}>
+            Cloud POS operational dashboard
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#333" }}>
+            Admin Token
+          </label>
+          <input
+            type="password"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            placeholder="Enter your admin token"
+            style={{
+              width: "100%",
+              padding: "12px",
+              border: "1px solid #ddd",
+              borderRadius: "6px",
+              fontSize: "14px",
+              boxSizing: "border-box"
+            }}
+            autoFocus
+          />
+        </div>
+
+        {error && (
+          <div style={{
+            color: "#dc2626",
+            background: "#fef2f2",
+            padding: "12px",
+            borderRadius: "6px",
+            marginBottom: "16px",
+            fontSize: "14px"
+          }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: loading ? "#9ca3af" : "#2563eb",
+            color: "#fff",
+            border: "none",
+            borderRadius: "6px",
+            fontSize: "14px",
+            fontWeight: 500,
+            cursor: loading ? "not-allowed" : "pointer"
+          }}
+        >
+          {loading ? "Verifying..." : "Login"}
+        </button>
+
+        <div style={{ marginTop: "24px", fontSize: "12px", color: "#666", textAlign: "center" }}>
+          Contact your system administrator if you don't have access credentials.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [tab, setTab] = useState<TabKey>("events");
 
-  // Runtime admin token (stored in localStorage). This avoids committing secrets.
-  const [adminTokenInput, setAdminTokenInput] = useState<string>("");
+  // ITER4-CRIT-001: Track authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    // Check if token exists on initial load
+    return !!getAdminToken();
+  });
+
+  // ITER4-CRIT-001: Removed adminTokenInput state - login now handled by LoginGate component
 
   const [health, setHealth] = useState<{ ok: boolean; statusText: string; lastCheckedAt?: string }>(
     { ok: false, statusText: "unknown" }
@@ -794,9 +920,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    // Pre-fill token UI from storage/env (do not expose full token; user can overwrite).
-    const existing = getAdminToken();
-    setAdminTokenInput(existing ? "********" : "");
+    // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
 
     const shouldRefreshEvents = tab === "events" || tab === "devices" || tab === "payments"; // P0-DEPLOY-002: Include payments
     const shouldRefreshDevices = tab === "devices";
@@ -1364,6 +1488,11 @@ export default function App() {
     return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
   }, [enrollment, enrollNow]);
 
+  // ITER4-CRIT-001: Show login gate if not authenticated
+  if (!isAuthenticated) {
+    return <LoginGate onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="page">
       <header className="header">
@@ -1377,34 +1506,21 @@ export default function App() {
 
         <div className="health">
           <div className="muted" style={{ display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" }}>
-            <span>Admin token:</span>
-            <input
-              type="password"
-              value={adminTokenInput}
-              onChange={(e) => setAdminTokenInput(e.target.value)}
-              placeholder="Set token (required for Admin APIs)"
-              className="tokenInput"
-            />
+            <span style={{ color: "#059669" }}>Authenticated</span>
             <button
               className="tab"
               onClick={() => {
+                // ITER4-CRIT-001: Logout - clear token and show login
                 try {
-                  const v = adminTokenInput.trim();
-                  // GL-CRIT-0020: Use sessionStorage instead of localStorage
-                  if (!v || v === "********") {
-                    sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-                  } else {
-                    sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, v);
-                  }
+                  sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
                 } catch {
                   // ignore
                 }
-                refreshHealth();
-                refreshEvents();
-                refreshDevices();
+                setIsAuthenticated(false);
               }}
+              style={{ background: "#fee2e2", color: "#dc2626" }}
             >
-              Save
+              Logout
             </button>
           </div>
           <div className="healthRow">
@@ -1417,18 +1533,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* GO-LIVE-REVEAL-001: Prominent warning when admin token is missing */}
-      {!getAdminToken() && (
-        <div className="banner" role="alert" style={{ background: "#fef3c7", borderColor: "#f59e0b" }}>
-          <strong style={{ color: "#92400e" }}>Admin Token Required</strong>
-          <div className="bannerDetails" style={{ color: "#78350f" }}>
-            <div>Enter your admin token in the input field above to access dashboard data.</div>
-            <div style={{ marginTop: 8, fontSize: "0.9em" }}>
-              The token must match the <code>ADMIN_TOKEN</code> environment variable set in the backend.
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ITER4-CRIT-001: Warning banner removed - login gate now blocks access */}
 
       {(healthError || eventsError || devicesError) && (
         <div className="banner" role="alert">
