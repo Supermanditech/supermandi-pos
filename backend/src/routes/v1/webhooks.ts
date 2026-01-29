@@ -1,6 +1,7 @@
 // SM-018: Webhook Routes for External Payment Providers
 // Handles Razorpay payout webhooks and manual payout processing triggers
 // GL-AUD-002: Added SELL UPI payment webhook handler
+// ITER4-P0-007: Added idempotency tracking to prevent duplicate processing
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
@@ -11,6 +12,40 @@ import {
   getScheduledPayouts,
   isRazorpayConfigured,
 } from "../../services/supplierPayoutService";
+
+// =============================================================================
+// ITER4-P0-007: Webhook Idempotency Tracking
+// =============================================================================
+
+// In-memory cache for processed webhook event IDs (with TTL)
+// In production, this should be moved to Redis for cluster-wide deduplication
+const processedWebhookEvents = new Map<string, number>();
+const WEBHOOK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// Clean up old entries every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [eventId, timestamp] of processedWebhookEvents.entries()) {
+    if (now - timestamp > WEBHOOK_IDEMPOTENCY_TTL_MS) {
+      processedWebhookEvents.delete(eventId);
+    }
+  }
+}, 60 * 60 * 1000);
+
+/**
+ * Check if webhook event was already processed (idempotency check)
+ * Returns true if event should be skipped (already processed)
+ */
+function isWebhookEventProcessed(eventId: string): boolean {
+  return processedWebhookEvents.has(eventId);
+}
+
+/**
+ * Mark webhook event as processed
+ */
+function markWebhookEventProcessed(eventId: string): void {
+  processedWebhookEvents.set(eventId, Date.now());
+}
 
 // =============================================================================
 // GL-AUD-002: SELL UPI Payment Webhook Handler
@@ -165,19 +200,34 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid signature" });
   }
 
-  const { event, payload } = req.body;
+  const { event, payload, account_id } = req.body;
 
   if (!event || !payload) {
     return res.status(400).json({ error: "Missing event or payload" });
   }
 
-  console.log(`[SM-018] Razorpay webhook received: ${event}`);
+  // ITER4-P0-007: Extract unique event ID for idempotency
+  // Razorpay sends event ID in different locations depending on event type
+  const payoutEntity = payload?.payout?.entity;
+  const paymentEntity = payload?.payment?.entity;
+  const razorpayEventId = payoutEntity?.id || paymentEntity?.id || `${event}-${account_id}-${Date.now()}`;
+  const idempotencyKey = `razorpay:${razorpayEventId}:${event}`;
+
+  // ITER4-P0-007: Check idempotency - skip if already processed
+  if (isWebhookEventProcessed(idempotencyKey)) {
+    console.log(`[SM-018] Duplicate webhook ignored: ${idempotencyKey}`);
+    return res.json({ status: "ok", event, duplicate: true });
+  }
+
+  console.log(`[SM-018] Razorpay webhook received: ${event} (id: ${razorpayEventId})`);
 
   // Handle payout events
   const payoutEvents = ["payout.processed", "payout.failed", "payout.reversed", "payout.queued"];
   if (payoutEvents.includes(event)) {
     const success = await handlePayoutWebhook(pool, event, payload);
     if (success) {
+      // ITER4-P0-007: Mark as processed after successful handling
+      markWebhookEventProcessed(idempotencyKey);
       return res.json({ status: "ok", event });
     } else {
       return res.status(422).json({ error: "Failed to process webhook" });
@@ -189,6 +239,8 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   if (paymentEvents.includes(event)) {
     const result = await handleSellPaymentWebhook(pool, event, payload);
     if (result.success) {
+      // ITER4-P0-007: Mark as processed after successful handling
+      markWebhookEventProcessed(idempotencyKey);
       return res.json({ status: "ok", event, paymentId: result.paymentId });
     } else {
       return res.status(422).json({ error: result.error || "Failed to process payment webhook" });
@@ -196,6 +248,8 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   }
 
   // Acknowledge other events without processing
+  // ITER4-P0-007: Mark ignored events as processed too to prevent retries
+  markWebhookEventProcessed(idempotencyKey);
   console.log(`[SM-018] Ignoring webhook event: ${event}`);
   return res.json({ status: "ignored", event });
 });

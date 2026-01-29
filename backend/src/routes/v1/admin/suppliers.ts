@@ -298,8 +298,13 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, async (_req, r
  */
 adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, async (req, res) => {
   const { supplierId } = req.params;
-  // Use a fixed system admin UUID when no admin ID is available
-  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
+  // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    console.warn("[admin/suppliers/approve] Missing adminId in request - rejecting for audit compliance");
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
 
   if (!supplierId) {
     return res.status(400).json({ error: "supplierId is required" });
@@ -369,7 +374,13 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, a
 adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, async (req, res) => {
   const { supplierId } = req.params;
   const { reason } = req.body || {};
-  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
+  // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    console.warn("[admin/suppliers/reject] Missing adminId in request - rejecting for audit compliance");
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
 
   if (!supplierId) {
     return res.status(400).json({ error: "supplierId is required" });
@@ -480,7 +491,13 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, async (_req, re
  */
 adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, async (req, res) => {
   const { productId } = req.params;
-  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
+  // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    console.warn("[admin/products/approve] Missing adminId in request - rejecting for audit compliance");
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
 
   if (!productId) {
     return res.status(400).json({ error: "productId is required" });
@@ -550,7 +567,13 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, asy
 adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, async (req, res) => {
   const { productId } = req.params;
   const { reason } = req.body || {};
-  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
+  // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    console.warn("[admin/products/reject] Missing adminId in request - rejecting for audit compliance");
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
 
   if (!productId) {
     return res.status(400).json({ error: "productId is required" });
@@ -641,7 +664,13 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, async (
     bnplEligible,
     bnplMaxDays
   } = req.body || {};
-  const adminId = (req as any).adminId || '00000000-0000-0000-0000-000000000001';
+  // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    console.warn("[admin/products/edit] Missing adminId in request - rejecting for audit compliance");
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
 
   if (!productId) {
     return res.status(400).json({ error: "productId is required" });

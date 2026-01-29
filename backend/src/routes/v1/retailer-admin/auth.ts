@@ -45,6 +45,26 @@ interface FirebaseLoginRequest {
 // =============================================================================
 
 /**
+ * ITER4-P0-018: Mask phone number to protect PII in API responses
+ * Shows only country code and last 4 digits: +91****5678
+ */
+function maskPhoneNumber(phone: string): string {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length <= 4) return '****';
+
+  // For E.164 format (+91XXXXXXXXXX)
+  if (phone.startsWith('+')) {
+    const countryCode = phone.match(/^\+\d{1,3}/)?.[0] || '+';
+    const lastFour = digits.slice(-4);
+    return `${countryCode}****${lastFour}`;
+  }
+
+  // For other formats, just show last 4
+  return `****${digits.slice(-4)}`;
+}
+
+/**
  * Normalize phone number to E.164 format
  * Assumes Indian numbers if no country code provided
  */
@@ -231,7 +251,8 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
         tokenType: 'Bearer',
         user: {
           id: user.id,
-          phone: phoneNormalized,
+          // ITER4-P0-018: Mask phone number in response to prevent PII exposure
+          phone: maskPhoneNumber(phoneNormalized),
           role: "RETAILER_ADMIN",
         },
         store: {
@@ -389,7 +410,8 @@ router.get("/auth/me", async (req: Request, res: Response, next: NextFunction) =
       data: {
         user: {
           id: user.id,
-          phone: user.phone,
+          // ITER4-P0-018: Mask phone number in response to prevent PII exposure
+          phone: maskPhoneNumber(user.phone),
           name: user.name,
           role: user.role,
         },

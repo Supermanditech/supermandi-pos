@@ -16,6 +16,13 @@ function normalizeName(value: unknown): string | null {
   return trimmed ? trimmed : null;
 }
 
+// ITER4-P1-018: UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidUUID(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
 // PATCH /api/v1/admin/global-products/:globalProductId
 adminGlobalProductsRouter.patch("/global-products/:globalProductId", async (req, res) => {
   const pool = getPool();
@@ -24,6 +31,11 @@ adminGlobalProductsRouter.patch("/global-products/:globalProductId", async (req,
   const globalProductId = typeof req.params.globalProductId === "string" ? req.params.globalProductId.trim() : "";
   if (!globalProductId) {
     return res.status(400).json({ error: "globalProductId is required" });
+  }
+
+  // ITER4-P1-018: Validate UUID format before passing to SQL
+  if (!isValidUUID(globalProductId)) {
+    return res.status(400).json({ error: "globalProductId must be a valid UUID" });
   }
 
   const body =
