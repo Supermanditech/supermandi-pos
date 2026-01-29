@@ -24,7 +24,19 @@ try {
 
 const app = express();
 
-app.use(cors());
+// ITER3-P0-001: Configure CORS with explicit allowed origins
+// In production, ALLOWED_ORIGINS should be set to comma-separated list of domains
+const corsOptions: cors.CorsOptions = {
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+    : (process.env.NODE_ENV === 'production'
+      ? ['https://supermandi.in', 'https://www.supermandi.in', 'https://admin.supermandi.in', 'https://supplier.supermandi.in']
+      : true), // Allow all in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token', 'X-Admin-Token', 'X-Request-ID'],
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get("/health", (_req, res) => {

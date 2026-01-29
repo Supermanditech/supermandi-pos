@@ -361,8 +361,8 @@ export interface CsvUploadResult {
   errors: { row: number; error: string }[];
 }
 
-// GL-WF-059: Maximum file size for CSV upload (10MB)
-const MAX_CSV_FILE_SIZE = 10 * 1024 * 1024;
+// ITER3-P0-011: Maximum file size for CSV upload (5MB - aligned with backend)
+const MAX_CSV_FILE_SIZE = 5 * 1024 * 1024;
 
 export async function uploadProductsCsv(file: File): Promise<CsvUploadResult> {
   // GL-WF-009: Fail explicitly if API URL not configured

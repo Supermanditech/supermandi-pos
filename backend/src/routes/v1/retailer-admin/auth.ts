@@ -9,9 +9,21 @@ import { getPool } from "../../../db/client";
 // =============================================================================
 // JWT CONFIGURATION
 // Must match API Gateway middleware settings
+// ITER3-P0-002: JWT_SECRET is required - no fallback in production
 // =============================================================================
 
-const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
+const JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET']?.trim();
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('FATAL: JWT_SECRET environment variable is required in production');
+      process.exit(1);
+    }
+    console.warn('[SECURITY] JWT_SECRET not set - using dev default (NOT FOR PRODUCTION)');
+    return 'dev-secret-change-in-prod';
+  }
+  return secret;
+})();
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 const JWT_EXPIRES_IN = '24h';
 
@@ -117,14 +129,17 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
     let phone = phoneNumber;
     if (!phone) {
       // Try to decode from idToken (JWT) - simplified extraction
+      // ITER3-P0-006: Parse Firebase token to extract phone number
+      // Note: This is client-side extraction only - server-side Firebase verification is recommended
       try {
         const parts = idToken.split(".");
         if (parts.length === 3) {
           const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
           phone = payload.phone_number;
         }
-      } catch {
-        // Ignore parse errors
+      } catch (parseError) {
+        console.warn("[RetailerAuth] Failed to parse Firebase token:", parseError);
+        // Continue - we'll check if phoneNumber was provided in request
       }
     }
 

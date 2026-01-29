@@ -333,3 +333,40 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store" });
   }
 });
+
+// ITER3-P0-007: DELETE /api/v1/admin/stores/:storeId - Soft delete a store
+adminStoresRouter.delete("/stores/:storeId", async (req, res) => {
+  const storeId = req.params.storeId?.trim();
+  if (!storeId) {
+    return res.status(400).json({ error: "storeId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const isUuid = UUID_PATTERN.test(storeId);
+
+  try {
+    // Soft delete: Set status to 'deleted' and clear UPI VPA
+    const result = await pool.query(
+      `UPDATE platform.stores
+       SET status = 'deleted', upi_vpa = NULL, updated_at = NOW()
+       WHERE ${isUuid ? "id = $1::uuid" : "UPPER(code) = UPPER($1)"}
+         AND status != 'deleted'
+       RETURNING id::TEXT as id, name, code`,
+      [storeId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "store not found or already deleted" });
+    }
+
+    const store = result.rows[0];
+    console.log(`[admin/stores] Store deleted: ${store.code} (${store.id})`);
+
+    return res.json({ success: true, message: `Store ${store.code} has been deleted` });
+  } catch (err: any) {
+    console.error("[admin/stores DELETE] Delete failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to delete store" });
+  }
+});

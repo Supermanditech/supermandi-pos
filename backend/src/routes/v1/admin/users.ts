@@ -258,3 +258,35 @@ adminUsersRouter.post("/users", async (req, res) => {
     return res.status(500).json({ error: "create_user_failed" });
   }
 });
+
+// ITER3-P0-008: DELETE /api/v1/admin/users/:userId - Soft delete a user
+adminUsersRouter.delete("/users/:userId", async (req, res) => {
+  const { userId } = req.params;
+  if (!userId) return res.status(400).json({ error: "userId_required" });
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Soft delete: Set status to 'deleted'
+    const result = await pool.query(
+      `UPDATE auth.users
+       SET status = 'deleted', updated_at = NOW()
+       WHERE id = $1::uuid AND status != 'deleted'
+       RETURNING id::TEXT as id, name, email`,
+      [userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "user_not_found_or_already_deleted" });
+    }
+
+    const user = result.rows[0];
+    console.log(`[admin/users] User deleted: ${user.name} (${user.id})`);
+
+    return res.json({ success: true, message: `User ${user.name} has been deleted` });
+  } catch (error: any) {
+    console.error("[admin/users] Failed to delete user:", error);
+    return res.status(500).json({ error: "delete_user_failed" });
+  }
+});

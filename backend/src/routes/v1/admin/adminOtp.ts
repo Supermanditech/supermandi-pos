@@ -63,9 +63,12 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
   otpStore.set(email, { otp, expiresAt, purpose });
   lastOtpRequest.set(email, Date.now());
 
-  // In production, send email here
-  // For now, log it (REMOVE IN PRODUCTION)
-  console.log(`[GL-CRIT-0053] OTP for ${email} (${purpose}): ${otp}`);
+  // ITER3-P1-001: Only log OTP in development, never in production
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[GL-CRIT-0053] DEV ONLY - OTP for ${email} (${purpose}): ${otp}`);
+  } else {
+    console.log(`[GL-CRIT-0053] OTP generated for ${email} (${purpose})`);
+  }
 
   // TODO: Integrate with email service
   // await sendEmail({

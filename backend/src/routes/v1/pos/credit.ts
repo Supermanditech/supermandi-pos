@@ -70,11 +70,17 @@ async function calculateCreditScore(pool: any, storeId: string): Promise<CreditS
     const bnpl = bnplResult.rows[0] || {};
     const store = storeResult.rows[0] || {};
 
-    const totalGmv = parseInt(sales.total_gmv || '0', 10);
-    const txnCount = parseInt(sales.transaction_count || '0', 10);
-    const bnplPaid = parseInt(bnpl.paid_count || '0', 10);
-    const bnplDefault = parseInt(bnpl.default_count || '0', 10);
-    const bnplTotal = parseInt(bnpl.total_count || '0', 10);
+    // ITER3-P0-004: Safe parseInt with NaN check
+    const safeParseInt = (val: unknown, def = 0): number => {
+      const num = parseInt(String(val || def), 10);
+      return Number.isFinite(num) ? num : def;
+    };
+
+    const totalGmv = safeParseInt(sales.total_gmv, 0);
+    const txnCount = safeParseInt(sales.transaction_count, 0);
+    const bnplPaid = safeParseInt(bnpl.paid_count, 0);
+    const bnplDefault = safeParseInt(bnpl.default_count, 0);
+    const bnplTotal = safeParseInt(bnpl.total_count, 0);
 
     // Calculate monthly GMV (average over 3 months)
     const monthlyGmv = Math.round(totalGmv / 3);

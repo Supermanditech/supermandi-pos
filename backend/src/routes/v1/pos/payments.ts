@@ -91,6 +91,11 @@ posPaymentsRouter.post(
     if (!amountMinor || typeof amountMinor !== 'number' || amountMinor <= 0) {
       return res.status(400).json({ error: "amountMinor must be a positive number" });
     }
+    // ITER3-P1-005: Maximum payment amount validation (₹10 crore = 1 billion paise)
+    const MAX_PAYMENT_AMOUNT = 1_000_000_000;
+    if (amountMinor > MAX_PAYMENT_AMOUNT) {
+      return res.status(400).json({ error: "Payment amount exceeds maximum limit" });
+    }
 
     const pool = getPool();
     if (!pool) {

@@ -9,9 +9,21 @@ import { getPool } from "../../../db/client";
 
 // =============================================================================
 // JWT CONFIGURATION
+// ITER3-P0-002: JWT_SECRET is required - no fallback in production
 // =============================================================================
 
-const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
+const JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET']?.trim();
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('FATAL: JWT_SECRET environment variable is required in production');
+      process.exit(1);
+    }
+    console.warn('[SECURITY] JWT_SECRET not set - using dev default (NOT FOR PRODUCTION)');
+    return 'dev-secret-change-in-prod';
+  }
+  return secret;
+})();
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 const JWT_EXPIRES_IN = '24h';
 const BCRYPT_ROUNDS = 10;
