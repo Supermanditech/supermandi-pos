@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
 import { useEscapeKey } from '../lib/hooks';
