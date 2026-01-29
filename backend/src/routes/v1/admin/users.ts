@@ -260,6 +260,7 @@ adminUsersRouter.post("/users", async (req, res) => {
 });
 
 // ITER3-P0-008: DELETE /api/v1/admin/users/:userId - Soft delete a user
+// Uses 'suspended' status as soft delete since constraint doesn't allow 'deleted'
 adminUsersRouter.delete("/users/:userId", async (req, res) => {
   const { userId } = req.params;
   if (!userId) return res.status(400).json({ error: "userId_required" });
@@ -268,12 +269,15 @@ adminUsersRouter.delete("/users/:userId", async (req, res) => {
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   try {
-    // Soft delete: Set status to 'deleted'
+    // Soft delete: Set status to 'suspended' and clear PII
     const result = await pool.query(
       `UPDATE auth.users
-       SET status = 'deleted', updated_at = NOW()
-       WHERE id = $1::uuid AND status != 'deleted'
-       RETURNING id::TEXT as id, name, email`,
+       SET status = 'suspended',
+           email = CONCAT('deleted_', id::TEXT, '@removed'),
+           phone = NULL,
+           updated_at = NOW()
+       WHERE id = $1::uuid AND status NOT IN ('suspended')
+       RETURNING id::TEXT as id, name`,
       [userId]
     );
 
@@ -282,7 +286,7 @@ adminUsersRouter.delete("/users/:userId", async (req, res) => {
     }
 
     const user = result.rows[0];
-    console.log(`[admin/users] User deleted: ${user.name} (${user.id})`);
+    console.log(`[admin/users] User soft-deleted: ${user.name} (${user.id})`);
 
     return res.json({ success: true, message: `User ${user.name} has been deleted` });
   } catch (error: any) {
