@@ -491,7 +491,7 @@ export async function processVoiceOrder(
       requestId,
       success: !requiresConfirmation && resolvedActions.length > 0,
       transcript,
-      language: sttResult.language,
+      language, // Use the language variable declared earlier
       actions: resolvedActions,
       confidence,
       requiresConfirmation,
