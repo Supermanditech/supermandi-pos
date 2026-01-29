@@ -24,8 +24,8 @@ adminSettingsRouter.get("/settings", async (_req, res) => {
   const pool = getPool();
   const dbConnected = !!pool;
 
-  // Check AI configuration
-  const aiEnabled = !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY);
+  // Check AI configuration (GO-LIVE: OpenAI only)
+  const aiEnabled = !!process.env.OPENAI_API_KEY;
 
   const settings: SystemSettings = {
     version: process.env.npm_package_version || "1.0.0",

@@ -106,17 +106,19 @@ microserviceHealthRouter.get("/reorder/health", async (_req: Request, res: Respo
 /**
  * GET /api/v1/voice/health
  * Health check for voice service (logical microservice in monolith)
+ * GO-LIVE: Migrated from Claude/Anthropic to OpenAI
  */
 microserviceHealthRouter.get("/voice/health", async (_req: Request, res: Response) => {
-  // AUD-076-D: Voice service now uses Claude/Anthropic API
-  const anthropicConfigured = Boolean(process.env['ANTHROPIC_API_KEY']);
+  const openaiConfigured = Boolean(process.env['OPENAI_API_KEY']);
 
   res.status(200).json({
     status: 'ok',
     service: 'voice-service',
-    version: '1.1.0',
+    version: '2.0.0', // GO-LIVE: OpenAI migration
     gitSha: GIT_SHA,
-    anthropic: anthropicConfigured ? 'configured' : 'not_configured (using mock)',
+    provider: 'openai',
+    configured: openaiConfigured,
+    openai: openaiConfigured ? 'configured' : 'not_configured',
     deployment: 'monolith',
   });
 });

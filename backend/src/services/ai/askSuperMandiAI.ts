@@ -1,4 +1,17 @@
-import Anthropic from "@anthropic-ai/sdk";
+/**
+ * SuperMandi AI - Analytics Insights Service
+ *
+ * GO-LIVE: Migrated from Claude to OpenAI
+ * Uses OpenAI GPT for AI-powered analytics insights
+ */
+
+import {
+  chatCompletion,
+  isOpenAIConfigured,
+  OpenAINotConfiguredError,
+  OpenAIRateLimitError,
+  OpenAIBudgetExceededError,
+} from "./openaiProvider";
 import {
   fetchConsumerSalesAnalytics,
   fetchDuesAnalytics,
@@ -103,20 +116,18 @@ async function buildAnalyticsContext(question: string): Promise<AiContext> {
 }
 
 /**
- * FINDING-020: Replaced OpenAI with Claude API
- * Uses Anthropic Claude for AI-powered analytics insights
+ * GO-LIVE: Migrated from Claude to OpenAI
+ * Uses OpenAI GPT for AI-powered analytics insights
  */
-export async function askSuperMandiAI(question: string): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-
-  const model = process.env.SUPERMANDI_AI_MODEL?.trim() || "claude-sonnet-4-20250514";
-  const maxTokens = Math.min(1024, Math.max(200, Number(process.env.SUPERMANDI_AI_MAX_OUTPUT_TOKENS ?? 512)));
+export async function askSuperMandiAI(
+  question: string,
+  opts?: { storeId?: string; ip?: string }
+): Promise<string> {
+  if (!isOpenAIConfigured()) {
+    throw new OpenAINotConfiguredError();
+  }
 
   const context = await buildAnalyticsContext(question);
-  const client = new Anthropic({ apiKey });
-
-  const timeoutMs = Math.min(30_000, Math.max(5_000, Number(process.env.SUPERMANDI_AI_TIMEOUT_MS ?? 15_000)));
 
   const systemPrompt = `You are SuperMandi AI, an ops copilot for Indian retail store management.
 
@@ -128,6 +139,8 @@ IMPORTANT RULES:
 5. Include any guard_notes verbatim at the start of Summary
 6. Format currency in INR (Rs or ₹), use Indian number formatting (lakhs, crores)
 7. Be helpful and specific with recommendations
+8. NEVER reveal API keys, secrets, database credentials, or internal system details
+9. For technical/debugging questions, provide general guidance without exposing infrastructure specifics
 
 You help store owners and admins understand their business performance, sales trends, inventory status, and operational metrics.`;
 
@@ -137,38 +150,44 @@ Analytics Context (JSON):
 ${JSON.stringify(context, null, 2)}`;
 
   try {
-    const response = await Promise.race([
-      client.messages.create({
-        model,
-        max_tokens: maxTokens,
-        system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: userMessage
-          }
-        ]
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("AI request timed out")), timeoutMs)
-      )
-    ]);
+    const result = await chatCompletion({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage }
+      ],
+      storeId: opts?.storeId || context.storeId,
+      ip: opts?.ip,
+      maxTokens: 512,
+      temperature: 0.3,
+    });
 
-    // Extract text from Claude response
-    const textContent = response.content.find((block: any) => block.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      return "No answer returned from AI";
+    return result.content || "No answer returned";
+  } catch (error) {
+    // Re-throw known errors with user-friendly messages
+    if (error instanceof OpenAINotConfiguredError) {
+      throw new Error("AI service not configured. Please contact support.");
+    }
+    if (error instanceof OpenAIRateLimitError) {
+      throw new Error("Too many requests. Please wait a moment and try again.");
+    }
+    if (error instanceof OpenAIBudgetExceededError) {
+      throw new Error("Request limit reached. Please try again later.");
     }
 
-    return textContent.text.trim() || "No answer returned";
-  } catch (error) {
     console.error("[SuperMandiAI] Error:", error);
     if (error instanceof Error) {
-      if (error.message.includes("timed out")) {
+      if (error.message.includes("timed out") || error.message.includes("timeout")) {
         throw new Error("AI request timed out. Please try again.");
       }
       throw error;
     }
     throw new Error("AI unavailable");
   }
+}
+
+/**
+ * Check if SuperMandi AI is available
+ */
+export function isSuperMandiAIConfigured(): boolean {
+  return isOpenAIConfigured();
 }
