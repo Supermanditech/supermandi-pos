@@ -95,6 +95,9 @@ importers:
       multer:
         specifier: ^1.4.5-lts.1
         version: 1.4.5-lts.2
+      nodemailer:
+        specifier: ^6.9.8
+        version: 6.10.1
       openai:
         specifier: ^4.47.0
         version: 4.104.0(zod@3.25.76)
@@ -123,6 +126,9 @@ importers:
       '@types/node':
         specifier: ^20.10.0
         version: 20.19.28
+      '@types/nodemailer':
+        specifier: ^6.4.14
+        version: 6.4.22
       '@types/supertest':
         specifier: ^6.0.2
         version: 6.0.3
@@ -2078,6 +2084,12 @@ packages:
     dependencies:
       undici-types: 6.21.0
     dev: false
+
+  /@types/nodemailer@6.4.22:
+    resolution: {integrity: sha512-HV16KRsW7UyZBITE07B62k8PRAKFqRSFXn1T7vslurVjN761tMDBhk5Lbt17ehyTzK6XcyJnAgUpevrvkcVOzw==}
+    dependencies:
+      '@types/node': 20.19.28
+    dev: true
 
   /@types/pdfkit@0.13.9:
     resolution: {integrity: sha512-RDG8Yb1zT7I01FfpwK7nMSA433XWpblMqSCtA5vJlSyavWZb303HUYPCel6JTiDDFqwGLvtAnYbH8N/e0Cb89g==}
@@ -6096,6 +6108,11 @@ packages:
   /node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
     dev: true
+
+  /nodemailer@6.10.1:
+    resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
+    engines: {node: '>=6.0.0'}
+    dev: false
 
   /nodemon@3.1.11:
     resolution: {integrity: sha512-is96t8F/1//UHAjNPHpbsNY46ELPpftGUoSVNXwUfMk/qdjSylYrWSu1XavVTBOn526kFiOR733ATgNBCQyH0g==}

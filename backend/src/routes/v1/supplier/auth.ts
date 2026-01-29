@@ -8,6 +8,15 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+import {
+  sendVerificationEmail,
+  generateSecureOTP,
+  hashOTP,
+  verifyOTPHash,
+  checkEmailRateLimit,
+  recordEmailSend,
+  isEmailServiceEnabled,
+} from "../../../services/emailService";
 
 // =============================================================================
 // JWT CONFIGURATION
@@ -646,6 +655,8 @@ router.post("/auth/reset-password", async (req: Request, res: Response, next: Ne
 /**
  * POST /api/v1/supplier/auth/send-verification
  * Send email verification code (requires auth)
+ * GO-LIVE: Now actually sends emails via Resend/SMTP
+ * CRITICAL: Returns honest result - never lies about email delivery
  */
 router.post("/auth/send-verification", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -673,32 +684,72 @@ router.post("/auth/send-verification", requireSupplierAuth, async (req: Supplier
       return;
     }
 
-    // Generate verification code (6-digit, valid for 1 hour)
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const verificationExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    // Check rate limit before sending
+    const rateLimitError = checkEmailRateLimit(supplier.primary_email);
+    if (rateLimitError) {
+      res.status(429).json({
+        error: { code: 'RATE_LIMITED', message: rateLimitError }
+      });
+      return;
+    }
 
-    // Store verification code
+    // Generate cryptographically secure 6-digit OTP
+    const verificationCode = generateSecureOTP();
+    const OTP_EXPIRY_MINUTES = 10; // 10 minutes for better security
+    const verificationExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    // Hash OTP before storing for security
+    const hashedCode = hashOTP(verificationCode);
+
+    // Store hashed verification code
     await pool.query(
       `UPDATE supplier.suppliers
        SET email_verification_token = $1, email_verification_expires = $2
        WHERE id = $3`,
-      [verificationCode, verificationExpiry, req.supplierId]
+      [hashedCode, verificationExpiry, req.supplierId]
     );
 
-    // In production, send email here
-    console.log(`[GL-WF-034] Email verification code for ${supplier.primary_email}: ${verificationCode}`);
-
-    // TODO: Send email with verification code
-    // await sendVerificationEmail(supplier.primary_email, verificationCode);
-
-    res.json({
-      data: {
-        success: true,
-        message: 'Verification code sent to your email.',
-        // DEV ONLY: Return code in response for testing
-        ...(process.env.NODE_ENV !== 'production' && { devCode: verificationCode })
-      }
+    // CRITICAL: Actually send the email
+    const emailResult = await sendVerificationEmail({
+      to: supplier.primary_email,
+      code: verificationCode,
+      expiryMinutes: OTP_EXPIRY_MINUTES,
     });
+
+    // Record the send attempt for rate limiting
+    recordEmailSend(supplier.primary_email);
+
+    // NEVER log OTP in production
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[GL-WF-034] DEV: Verification code for ${supplier.primary_email}: ${verificationCode}`);
+    }
+
+    // Return HONEST result about email delivery
+    if (emailResult.sent) {
+      res.json({
+        data: {
+          sent: true,
+          message: 'Verification code sent to your email.',
+          expiresIn: OTP_EXPIRY_MINUTES * 60, // seconds
+          // DEV ONLY: Return code in response for testing
+          ...(process.env.NODE_ENV !== 'production' && { devCode: verificationCode })
+        }
+      });
+    } else {
+      // Email failed to send - be honest about it
+      console.error(`[GL-WF-034] Failed to send verification email to ${supplier.primary_email}: ${emailResult.errorCode}`);
+      res.status(500).json({
+        error: {
+          code: 'EMAIL_SEND_FAILED',
+          message: 'Failed to send verification email. Please try again or contact support.',
+          errorCode: emailResult.errorCode,
+        },
+        data: {
+          sent: false,
+          errorCode: emailResult.errorCode,
+        }
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -707,6 +758,7 @@ router.post("/auth/send-verification", requireSupplierAuth, async (req: Supplier
 /**
  * POST /api/v1/supplier/auth/verify-email
  * Verify email using code (requires auth)
+ * GO-LIVE: Uses timing-safe hash comparison for security
  */
 router.post("/auth/verify-email", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -715,6 +767,14 @@ router.post("/auth/verify-email", requireSupplierAuth, async (req: SupplierAuthR
     if (!code) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'Verification code is required' }
+      });
+      return;
+    }
+
+    // Validate code format (must be 6 digits)
+    if (!/^\d{6}$/.test(code)) {
+      res.status(400).json({
+        error: { code: 'INVALID_CODE', message: 'Verification code must be 6 digits' }
       });
       return;
     }
@@ -745,29 +805,47 @@ router.post("/auth/verify-email", requireSupplierAuth, async (req: SupplierAuthR
       return;
     }
 
-    // Verify code
-    if (supplier.email_verification_token !== code) {
+    // Check if there's a pending verification token
+    if (!supplier.email_verification_token) {
       res.status(400).json({
-        error: { code: 'INVALID_CODE', message: 'Invalid verification code' }
+        error: { code: 'NO_PENDING_VERIFICATION', message: 'No verification code pending. Please request a new one.' }
       });
       return;
     }
 
-    // Check expiry
+    // Check expiry first (before revealing code validity)
     if (new Date(supplier.email_verification_expires) < new Date()) {
+      // Clear expired token
+      await pool.query(
+        `UPDATE supplier.suppliers
+         SET email_verification_token = NULL, email_verification_expires = NULL
+         WHERE id = $1`,
+        [req.supplierId]
+      );
       res.status(400).json({
         error: { code: 'CODE_EXPIRED', message: 'Verification code has expired. Please request a new one.' }
       });
       return;
     }
 
-    // Mark email as verified
+    // Verify code using timing-safe hash comparison
+    // The stored token is a SHA-256 hash of the original OTP
+    if (!verifyOTPHash(code, supplier.email_verification_token)) {
+      res.status(400).json({
+        error: { code: 'INVALID_CODE', message: 'Invalid verification code' }
+      });
+      return;
+    }
+
+    // Mark email as verified and clear the token
     await pool.query(
       `UPDATE supplier.suppliers
        SET email_verified = true, email_verification_token = NULL, email_verification_expires = NULL
        WHERE id = $1`,
       [req.supplierId]
     );
+
+    console.log(`[GL-WF-034] Email verified for supplier ${req.supplierId}`);
 
     res.json({ data: { success: true, message: 'Email verified successfully!' } });
   } catch (error) {

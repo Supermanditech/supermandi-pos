@@ -3,6 +3,7 @@
 // /health/detailed - Full info (authenticated)
 
 import { Router, Request, Response, NextFunction } from "express";
+import { getEmailProviderInfo } from "../../../services/emailService";
 
 export const adminHealthRouter = Router();
 
@@ -55,5 +56,7 @@ adminHealthRouter.get("/health/detailed", requireAdminToken, (_req: Request, res
     uptime: process.uptime(),
     memory: process.memoryUsage(),
     timestamp: new Date().toISOString(),
+    // GO-LIVE: Email service status for verification
+    email: getEmailProviderInfo(),
   });
 });

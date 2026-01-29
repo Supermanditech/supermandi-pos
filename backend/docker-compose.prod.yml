@@ -285,6 +285,17 @@ services:
       OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.3}
       OPENAI_TIMEOUT_MS: ${OPENAI_TIMEOUT_MS:-30000}
       OPENAI_MAX_CONCURRENCY: ${OPENAI_MAX_CONCURRENCY:-5}
+      # GO-LIVE: Email service configuration for supplier verification
+      # GL-WF-034: Required for email verification OTP
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-disabled}
+      EMAIL_FROM: ${EMAIL_FROM:-SuperMandi <noreply@supermandi.com>}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # SMTP fallback (optional)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     depends_on:
       postgres:
         condition: service_healthy

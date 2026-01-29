@@ -194,8 +194,17 @@ export async function resetPassword(email: string, token: string, newPassword: s
 }
 
 // GL-WF-034: Email verification functions
-export async function sendVerificationEmail(): Promise<{ success: boolean; message: string; devCode?: string }> {
-  return apiFetch<{ success: boolean; message: string; devCode?: string }>('/api/v1/supplier/auth/send-verification', {
+// GO-LIVE: Updated response format - 'sent' boolean indicates actual email delivery
+export interface SendVerificationResponse {
+  sent: boolean;
+  message: string;
+  expiresIn?: number; // seconds
+  devCode?: string;
+  errorCode?: string;
+}
+
+export async function sendVerificationEmail(): Promise<SendVerificationResponse> {
+  return apiFetch<SendVerificationResponse>('/api/v1/supplier/auth/send-verification', {
     method: 'POST',
   });
 }

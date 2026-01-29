@@ -172,6 +172,7 @@ export default function DashboardLayout({
         )}
 
         {/* GL-WF-034: Email Verification Banner */}
+        {/* GL-WF-034: Email Verification Banner - GO-LIVE: Honest about email delivery */}
         {supplier && !supplier.emailVerified && (
           <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
             <p className="text-blue-800 text-sm">
@@ -184,8 +185,17 @@ export default function DashboardLayout({
                 setVerificationMessage(null);
                 try {
                   const result = await sendVerificationEmail();
-                  setVerificationMessage({ type: 'success', text: result.message });
-                  setShowVerificationModal(true);
+                  // GO-LIVE: Check 'sent' field - only show modal if email was actually sent
+                  if (result.sent) {
+                    setVerificationMessage({ type: 'success', text: result.message });
+                    setShowVerificationModal(true);
+                  } else {
+                    // Email failed to send - show error, don't open modal
+                    setVerificationMessage({
+                      type: 'error',
+                      text: result.message || 'Failed to send verification email. Please try again.'
+                    });
+                  }
                 } catch (error) {
                   setVerificationMessage({
                     type: 'error',
@@ -199,6 +209,21 @@ export default function DashboardLayout({
               className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-all"
             >
               {verificationLoading ? 'Sending...' : 'Verify Email'}
+            </button>
+          </div>
+        )}
+
+        {/* GO-LIVE: Show error message banner if email send failed */}
+        {verificationMessage && verificationMessage.type === 'error' && !showVerificationModal && (
+          <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center justify-between">
+            <p className="text-red-800 text-sm">
+              <span className="font-medium">Error:</span> {verificationMessage.text}
+            </p>
+            <button
+              onClick={() => setVerificationMessage(null)}
+              className="text-red-600 hover:text-red-800 text-sm"
+            >
+              Dismiss
             </button>
           </div>
         )}
@@ -291,7 +316,15 @@ export default function DashboardLayout({
                     setVerificationMessage(null);
                     try {
                       const result = await sendVerificationEmail();
-                      setVerificationMessage({ type: 'success', text: 'New code sent!' });
+                      // GO-LIVE: Check 'sent' field for honest feedback
+                      if (result.sent) {
+                        setVerificationMessage({ type: 'success', text: 'New code sent!' });
+                      } else {
+                        setVerificationMessage({
+                          type: 'error',
+                          text: result.message || 'Failed to resend code. Please try again.'
+                        });
+                      }
                     } catch (error) {
                       setVerificationMessage({
                         type: 'error',
