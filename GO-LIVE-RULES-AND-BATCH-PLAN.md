@@ -1037,17 +1037,17 @@ curl -s http://localhost:3000/health | jq  # Verify rollback worked
 
 ### Session Reference - RESUME POINT
 ```
-Commit: 70f71de
+Commit: fdb8cba
 Branch: main
 Working Tree: Clean
 
 API Gateway: http://34.14.220.171:3000
 Production URL: https://supermandi.tech
 
-Save Time (IST): 2026-01-30 20:00 IST
-Backend VM Status: needs deployment (docker secret must be created first)
+Save Time (IST): 2026-01-30 20:15 IST
+Backend VM Status: needs deployment
 Remote Origin: https://github.com/Supermanditech/supermandi-pos.git
-Pushed: ⏳ Pending push
+Pushed: ✅ Yes
 
 PROGRESS:
 - Total Tickets: 241
@@ -1056,14 +1056,27 @@ PROGRESS:
 
 COMPLETED:
 - GO-LIVE-101 ✅ (Secrets in source control) - Commit 2cc7d0e
-- GO-LIVE-103 ✅ (ADMIN_TOKEN exposed) - Commit 70f71de
+- GO-LIVE-103 ✅ (ADMIN_TOKEN Docker secrets) - Commit fdb8cba
 
 NEXT TICKET:
 - GO-LIVE-104: Firebase token fallback allows JWT forgery
 
-DEPLOYMENT NOTE for GO-LIVE-103:
-Before deploying, create Docker secret on VM:
-  echo "your-admin-token" | docker secret create admin_token -
+DEPLOYMENT for GO-LIVE-103 (one-time setup):
+  # 1. Create secrets directory
+  sudo mkdir -p /etc/supermandi/secrets
+
+  # 2. Create admin_token secret file
+  echo "YOUR_ACTUAL_ADMIN_TOKEN" | sudo tee /etc/supermandi/secrets/admin_token
+  sudo chmod 600 /etc/supermandi/secrets/admin_token
+
+  # 3. Create openai_api_key secret file (if not exists)
+  echo "sk-YOUR_KEY" | sudo tee /etc/supermandi/secrets/openai_api_key
+  sudo chmod 600 /etc/supermandi/secrets/openai_api_key
+
+  # 4. Deploy
+  cd /home/claude/supermandi-pos/backend
+  git pull origin main
+  docker-compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### Execution Mode: ONE TICKET AT A TIME
