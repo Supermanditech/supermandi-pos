@@ -1,8 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuthToken, clearAuthToken, getSupplierProfile, Supplier } from './api';
+
+// GO-LIVE-111: Idle timeout configuration (30 minutes)
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const LAST_ACTIVITY_KEY = 'supplier_last_activity';
 
 interface AuthContextType {
   supplier: Supplier | null;
@@ -24,6 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supplier, setSupplier] = useState<Supplier | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  // GO-LIVE-111: Idle timeout ref
+  const idleCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   const refreshProfile = useCallback(async () => {
     const token = getAuthToken();
@@ -33,12 +39,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // GO-LIVE-111: Check idle timeout on profile refresh
+    const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+    if (lastActivity) {
+      const elapsed = Date.now() - parseInt(lastActivity, 10);
+      if (elapsed > IDLE_TIMEOUT_MS) {
+        console.log('[Auth] Session expired due to inactivity');
+        clearAuthToken();
+        localStorage.removeItem(LAST_ACTIVITY_KEY);
+        setSupplier(null);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     try {
       const profile = await getSupplierProfile();
       setSupplier(profile);
+      // GO-LIVE-111: Update activity on successful auth
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     } catch (error) {
       console.error('[Auth] Failed to fetch profile:', error);
       clearAuthToken();
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
       setSupplier(null);
     } finally {
       setIsLoading(false);
@@ -51,9 +74,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     clearAuthToken();
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
     setSupplier(null);
+    if (idleCheckRef.current) {
+      clearInterval(idleCheckRef.current);
+      idleCheckRef.current = null;
+    }
     router.push('/login');
   }, [router]);
+
+  // GO-LIVE-111: Activity tracking + idle timeout
+  useEffect(() => {
+    if (!supplier) {
+      if (idleCheckRef.current) {
+        clearInterval(idleCheckRef.current);
+        idleCheckRef.current = null;
+      }
+      return;
+    }
+
+    // Update last activity on user interaction (throttled)
+    let lastWrite = 0;
+    const updateActivity = () => {
+      const now = Date.now();
+      if (now - lastWrite > 60000) { // Write at most once per minute
+        localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+        lastWrite = now;
+      }
+    };
+
+    // Listen for user activity
+    window.addEventListener('mousemove', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('click', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+
+    // Check for idle timeout periodically
+    idleCheckRef.current = setInterval(() => {
+      const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+      if (!lastActivity) return;
+      const elapsed = Date.now() - parseInt(lastActivity, 10);
+      if (elapsed > IDLE_TIMEOUT_MS) {
+        console.log('[Auth] Logging out due to inactivity');
+        logout();
+      }
+    }, 30000); // Check every 30 seconds
+
+    return () => {
+      window.removeEventListener('mousemove', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('click', updateActivity);
+      window.removeEventListener('scroll', updateActivity);
+      if (idleCheckRef.current) {
+        clearInterval(idleCheckRef.current);
+        idleCheckRef.current = null;
+      }
+    };
+  }, [supplier, logout]);
 
   return (
     <AuthContext.Provider
