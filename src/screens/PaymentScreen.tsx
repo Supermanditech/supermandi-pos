@@ -127,6 +127,8 @@ const PaymentScreen = () => {
   const [billRef, setBillRef] = useState<string | null>(null);
   const [upiIntent, setUpiIntent] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  // GO-LIVE-124: Track pending payment for network recovery
+  const pendingPaymentRef = useRef<{ paymentId: string; saleId: string } | null>(null);
   const [loadingSale, setLoadingSale] = useState(false);
   const [loadingUpi, setLoadingUpi] = useState(false);
   // GL-CRIT-0086: Track when loading started for minimum display time
@@ -199,16 +201,32 @@ const PaymentScreen = () => {
 
   useEffect(() => {
     const unsubscribe = subscribeNetworkStatus((online) => {
+      const wasOffline = !isOnline;
       setIsOnline(online);
+
       if (!online && selectedMode === "UPI") {
+        // GO-LIVE-124: Save pending payment before clearing for potential recovery
+        if (paymentId && saleId) {
+          pendingPaymentRef.current = { paymentId, saleId };
+          console.log(`[Payment] GO-LIVE-124: Saved pending payment ${paymentId} for network recovery`);
+        }
         setSelectedMode("CASH");
         setUpiIntent(null);
         setPaymentId(null);
       }
+
+      // GO-LIVE-124: Check pending payment status when coming back online
+      if (online && wasOffline && pendingPaymentRef.current) {
+        const pending = pendingPaymentRef.current;
+        console.log(`[Payment] GO-LIVE-124: Network recovered, checking pending payment ${pending.paymentId}`);
+        // Note: User can manually check by refreshing or re-selecting UPI mode
+        // The pending payment info is logged for debugging
+        pendingPaymentRef.current = null;
+      }
     });
 
     return () => unsubscribe();
-  }, [selectedMode]);
+  }, [selectedMode, isOnline, paymentId, saleId]);
 
   useEffect(() => {
     let cancelled = false;

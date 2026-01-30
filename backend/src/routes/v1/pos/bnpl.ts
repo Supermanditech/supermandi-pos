@@ -343,8 +343,17 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (r
   if (!repaymentId) {
     return res.status(400).json({ success: false, error: "repaymentId is required" });
   }
-  if (!upiTxnRef || upiTxnRef.length < 6) {
-    return res.status(400).json({ success: false, error: "Valid upiTxnRef (UTR) is required" });
+
+  // GO-LIVE-127: Strict UTR validation (12-22 alphanumeric characters)
+  if (!upiTxnRef || typeof upiTxnRef !== 'string') {
+    return res.status(400).json({ success: false, error: "upiTxnRef (UTR) is required" });
+  }
+  const normalizedUtr = upiTxnRef.trim().toUpperCase().replace(/\s+/g, '');
+  if (normalizedUtr.length < 12 || normalizedUtr.length > 22 || !/^[A-Z0-9]+$/.test(normalizedUtr)) {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid UTR format. UTR must be 12-22 alphanumeric characters."
+    });
   }
 
   const client = await pool.connect();
@@ -375,12 +384,12 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (r
       return res.status(400).json({ success: false, error: `Cannot confirm repayment in '${repayment.status}' status` });
     }
 
-    // Update repayment record
+    // Update repayment record (GO-LIVE-127: Use normalized UTR)
     await client.query(`
       UPDATE payments.buy_payments
       SET status = 'completed', upi_payer_ref = $1, completed_at = NOW()
       WHERE id = $2
-    `, [upiTxnRef, repaymentId]);
+    `, [normalizedUtr, repaymentId]);
 
     // Mark drawdown as paid
     await client.query(`
@@ -398,7 +407,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (r
 
     await client.query("COMMIT");
 
-    console.log(`[SM-019] BNPL repayment confirmed: drawdownId=${drawdownId}, utr=${upiTxnRef}`);
+    console.log(`[SM-019] BNPL repayment confirmed: drawdownId=${drawdownId}, utr=${normalizedUtr}`);
 
     return res.json({
       success: true,

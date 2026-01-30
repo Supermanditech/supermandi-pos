@@ -118,22 +118,34 @@ export function SplitPaymentModal({
       // Initial check
       void pollStatus();
 
-      // Poll every 3 seconds, max 40 attempts (2 minutes)
-      pollIntervalRef.current = setInterval(() => {
-        setPollCount((prev) => {
-          if (prev >= 40) {
-            // Stop after 2 minutes
-            if (pollIntervalRef.current) {
-              clearInterval(pollIntervalRef.current);
-              pollIntervalRef.current = null;
+      // GO-LIVE-125: Exponential backoff polling (2s, 4s, 8s, 16s, capped at 30s)
+      // Max 20 attempts (~5 minutes total)
+      let currentAttempt = 0;
+      const maxAttempts = 20;
+      const baseDelay = 2000;
+      const maxDelay = 30000;
+
+      const scheduleNextPoll = () => {
+        if (currentAttempt >= maxAttempts) {
+          setPollingActive(false);
+          return;
+        }
+        // Exponential backoff: 2^attempt * baseDelay, capped at maxDelay
+        const delay = Math.min(Math.pow(2, currentAttempt) * baseDelay, maxDelay);
+        currentAttempt++;
+        setPollCount(currentAttempt);
+
+        pollIntervalRef.current = setTimeout(() => {
+          void pollStatus().then(() => {
+            // Only schedule next poll if still in upi-waiting step
+            if (step === "upi-waiting" && !upiVerified) {
+              scheduleNextPoll();
             }
-            setPollingActive(false);
-            return prev;
-          }
-          void pollStatus();
-          return prev + 1;
-        });
-      }, 3000);
+          });
+        }, delay) as unknown as ReturnType<typeof setInterval>;
+      };
+
+      scheduleNextPoll();
     }
 
     return () => {
