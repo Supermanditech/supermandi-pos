@@ -179,10 +179,10 @@ git push origin main
 |--------|---------|----------|--------|
 | GO-LIVE-101 | Secrets in source control (.env files committed) - includes Firebase key fix | CRITICAL | ✅ DONE |
 | GO-LIVE-103 | ADMIN_TOKEN exposed in docker-compose.prod.yml | CRITICAL | ✅ DONE |
-| GO-LIVE-104 | Firebase token fallback allows JWT forgery without server verification | CRITICAL | PENDING |
-| GO-LIVE-105 | Device token stored in AsyncStorage (not SecureStore) | CRITICAL | PENDING |
-| GO-LIVE-106 | SQLite database on mobile not encrypted | CRITICAL | PENDING |
-| GO-LIVE-107 | OpenAI API key stored as plaintext in memory | CRITICAL | PENDING |
+| GO-LIVE-104 | Firebase token fallback allows JWT forgery without server verification | CRITICAL | ✅ DONE |
+| GO-LIVE-105 | Device token stored in AsyncStorage (not SecureStore) | CRITICAL | ✅ DONE |
+| GO-LIVE-106 | SQLite database on mobile not encrypted | CRITICAL | ✅ ASSESSED (No PII, deferred to post-launch) |
+| GO-LIVE-107 | OpenAI API key stored as plaintext in memory | CRITICAL | ✅ DONE |
 | GO-LIVE-108 | Missing CSRF protection across all portals | CRITICAL | PENDING |
 | GO-LIVE-109 | No token refresh mechanism in retailer-admin portal | CRITICAL | PENDING |
 | GO-LIVE-110 | Supplier JWT tokens stored in localStorage (XSS vulnerable) | CRITICAL | PENDING |
