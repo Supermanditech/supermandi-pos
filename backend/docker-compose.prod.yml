@@ -104,8 +104,7 @@ services:
       # GO-LIVE-078: Use template + entrypoint for env var substitution
       - ./nginx/docker-entrypoint.sh:/docker-entrypoint.d/10-generate-config.sh:ro
       - ./nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.prod.conf.template:ro
-      # Fallback: static config if template fails
-      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      # Note: Static fallback removed - was causing duplicate upstream conflict
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
     depends_on:
