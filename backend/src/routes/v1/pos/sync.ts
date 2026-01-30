@@ -16,6 +16,8 @@ import {
 } from "../../../services/inventoryLedgerService";
 import { createPurchase, type PurchaseItemInput } from "../../../services/purchaseService";
 import { logPosEventSafe } from "../../../services/posEventLogger";
+// GO-LIVE-034: Import stock cache invalidation for offline sales
+import { invalidateStockCache } from "./inventory";
 
 export const posSyncRouter = Router();
 
@@ -499,6 +501,76 @@ async function upsertDeviceHeartbeat(params: {
 // Prevents mobile app from timing out on large batches
 const SYNC_BATCH_TIMEOUT_MS = 30000;
 
+// GO-LIVE-032: Maximum retry attempts for failed sync events
+// Events that fail more than this many times are permanently rejected
+const MAX_SYNC_EVENT_RETRIES = 5;
+
+/**
+ * GO-LIVE-032: Track failed sync events and their retry counts
+ * Returns true if event should be processed, false if max retries exceeded
+ */
+async function checkAndTrackEventRetry(
+  client: PoolClient,
+  eventId: string,
+  deviceId: string,
+  storeId: string,
+  eventType: string
+): Promise<{ canRetry: boolean; retryCount: number }> {
+  // Check if this event has failed before
+  const failedRes = await client.query(
+    `SELECT retry_count FROM failed_sync_events WHERE event_id = $1 AND device_id = $2`,
+    [eventId, deviceId]
+  );
+
+  if (failedRes.rows[0]) {
+    const retryCount = parseInt(failedRes.rows[0].retry_count, 10) || 0;
+    if (retryCount >= MAX_SYNC_EVENT_RETRIES) {
+      return { canRetry: false, retryCount };
+    }
+    return { canRetry: true, retryCount };
+  }
+
+  return { canRetry: true, retryCount: 0 };
+}
+
+/**
+ * GO-LIVE-032: Record a failed event for retry tracking
+ */
+async function recordFailedEvent(
+  client: PoolClient,
+  eventId: string,
+  deviceId: string,
+  storeId: string,
+  eventType: string,
+  errorMessage: string
+): Promise<number> {
+  const result = await client.query(
+    `INSERT INTO failed_sync_events (event_id, device_id, store_id, event_type, last_error, retry_count, last_attempt_at)
+     VALUES ($1, $2, $3, $4, $5, 1, NOW())
+     ON CONFLICT (event_id, device_id) DO UPDATE SET
+       retry_count = failed_sync_events.retry_count + 1,
+       last_error = EXCLUDED.last_error,
+       last_attempt_at = NOW()
+     RETURNING retry_count`,
+    [eventId, deviceId, storeId, eventType, errorMessage.slice(0, 1000)]
+  );
+  return parseInt(result.rows[0]?.retry_count ?? '1', 10);
+}
+
+/**
+ * GO-LIVE-032: Clear failed event record after successful processing
+ */
+async function clearFailedEvent(
+  client: PoolClient,
+  eventId: string,
+  deviceId: string
+): Promise<void> {
+  await client.query(
+    `DELETE FROM failed_sync_events WHERE event_id = $1 AND device_id = $2`,
+    [eventId, deviceId]
+  );
+}
+
 // POST /api/v1/pos/sync
 posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
   const batchStartTime = Date.now();
@@ -578,6 +650,17 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
       if (!eventId || !type) {
         results.push({ eventId: eventId ?? "unknown", status: "rejected", error: "invalid event" });
+        continue;
+      }
+
+      // GO-LIVE-032: Check if event has exceeded max retry attempts
+      const retryCheck = await checkAndTrackEventRetry(client, eventId, deviceId, storeId, type);
+      if (!retryCheck.canRetry) {
+        results.push({
+          eventId,
+          status: "rejected",
+          error: `max_retries_exceeded:${retryCheck.retryCount}`
+        });
         continue;
       }
 
@@ -892,6 +975,12 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
           });
 
+          // GO-LIVE-034: Invalidate stock cache for all products in this offline sale
+          // This ensures subsequent stock queries get fresh data from database
+          for (const item of resolvedItems) {
+            invalidateStockCache(storeId, item.productId);
+          }
+
           const saleRow = await client.query(
             `SELECT bill_ref, offline_receipt_ref FROM sales WHERE id = $1 AND store_id = $2`,
             [saleId, storeId]
@@ -1181,6 +1270,10 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
         // AUD-080-A FIX: Release savepoint on success (event committed to batch transaction)
         await client.query(`RELEASE SAVEPOINT event_${eventId.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 50)}`);
+
+        // GO-LIVE-032: Clear any previous failure record on success
+        await clearFailedEvent(client, eventId, deviceId);
+
         results.push({ eventId, status: "applied" });
         processedEventCount++;
       } catch (error: any) {
@@ -1196,6 +1289,16 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             errorMessage = "insufficient_stock";
           }
         }
+
+        // GO-LIVE-032: Record failed event for retry tracking
+        // Don't record if error is a dependency issue (sale_not_yet_synced) - those should retry immediately
+        if (!errorMessage.includes("retry_later") && !errorMessage.includes("reorder_events")) {
+          const retryCount = await recordFailedEvent(client, eventId, deviceId, storeId, type, errorMessage);
+          if (retryCount >= MAX_SYNC_EVENT_RETRIES) {
+            errorMessage = `${errorMessage} (max_retries_reached:${retryCount})`;
+          }
+        }
+
         results.push({ eventId, status: "rejected", error: errorMessage });
         processedEventCount++;
       }
@@ -1241,6 +1344,29 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
     [deviceId, newPendingCount]
   );
 
+  // GO-LIVE-035: Calculate exponential backoff hint for sync retry
+  // Base: 1 second, max: 60 seconds, with jitter
+  const rejectedCount = results.filter(r => r.status === "rejected").length;
+  let retryAfterMs = 0;
+  if (rejectedCount > 0 || timedOut) {
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, 60s (max)
+    // Use rejectedCount as proxy for retry attempt number
+    const backoffSeconds = Math.min(60, Math.pow(2, Math.min(rejectedCount - 1, 6)));
+    // Add jitter of ±20%
+    const jitter = backoffSeconds * (0.8 + Math.random() * 0.4);
+    retryAfterMs = Math.round(jitter * 1000);
+  }
+
   // AUD-081-C FIX: Include timedOut flag so client knows to retry with remaining events
-  return res.json({ results, saleMappings, collectionMappings, timedOut });
+  // GO-LIVE-035: Include retryAfterMs hint for exponential backoff
+  // GO-LIVE-038: Same backoff mechanism applies to split payment polling
+  return res.json({
+    results,
+    saleMappings,
+    collectionMappings,
+    timedOut,
+    retryAfterMs,  // GO-LIVE-035/038: Hint for client-side backoff
+    processedCount,  // Number of events processed in this batch
+    totalEvents: events.length  // Total events submitted
+  });
 });

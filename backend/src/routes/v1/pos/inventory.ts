@@ -57,8 +57,9 @@ function setCachedStock(storeId: string, productId: string, currentQty: number):
 
 /**
  * GO-LIVE-100: Invalidate stock cache for a product or entire store
+ * GO-LIVE-034: Exported so sync.ts can invalidate cache for offline sales
  */
-function invalidateStockCache(storeId: string, productId?: string): void {
+export function invalidateStockCache(storeId: string, productId?: string): void {
   if (productId) {
     stockCache.delete(`${storeId}:${productId}`);
   } else {

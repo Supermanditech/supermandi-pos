@@ -1229,12 +1229,25 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, re
       items
     });
 
-    // Update sale status based on payment mode
+    // GO-LIVE-069: Update sale status and payment_status based on payment mode
     const newStatus = paymentMode === "CASH" ? "PAID_CASH" : paymentMode === "UPI" ? "PAID_UPI" : "DUE";
+    const newPaymentStatus = paymentMode === "DUE" ? "due" : "paid";
     await client.query(
-      `UPDATE sales SET status = $1 WHERE id = $2`,
-      [newStatus, saleId]
+      `UPDATE sales SET status = $1, payment_status = $2 WHERE id = $3`,
+      [newStatus, newPaymentStatus, saleId]
     );
+
+    // GO-LIVE-070: Create AR record if payment mode is DUE
+    if (paymentMode === "DUE") {
+      await client.query(
+        `INSERT INTO accounts_receivable (store_id, sale_id, amount_minor, currency, status)
+         VALUES ($1, $2, $3, 'INR', 'outstanding')
+         ON CONFLICT (sale_id) DO UPDATE SET
+           amount_minor = EXCLUDED.amount_minor,
+           updated_at = NOW()`,
+        [storeId, saleId, sale.total_minor]
+      );
+    }
 
     await client.query("COMMIT");
 
@@ -1393,6 +1406,8 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
   });
 });
 
+// GO-LIVE-037: UPI confirmation with idempotency
+// If payment is already confirmed, return success without re-processing
 posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (req, res) => {
   const { paymentId } = req.body as { paymentId?: string };
 
@@ -1423,9 +1438,10 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
 
     const paymentRes = await client.query(
       `
-      SELECT id, sale_id
+      SELECT id, sale_id, status
       FROM payments
       WHERE id = $1
+      FOR UPDATE
       `,
       [paymentId]
     );
@@ -1434,6 +1450,12 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
     if (!payment) {
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "payment not found" });
+    }
+
+    // GO-LIVE-037: Idempotency - if already confirmed, return success
+    if (payment.status === "PAID") {
+      await client.query("ROLLBACK");
+      return res.json({ status: "PAID", idempotent: true });
     }
 
     const saleId = String(payment.sale_id);
@@ -1517,9 +1539,9 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
       [paymentId]
     );
 
-    // Update sale status
+    // GO-LIVE-069: Update both status and payment_status
     await client.query(
-      `UPDATE sales SET status = 'PAID_UPI' WHERE id = $1`,
+      `UPDATE sales SET status = 'PAID_UPI', payment_status = 'paid' WHERE id = $1`,
       [saleId]
     );
 
@@ -1662,7 +1684,11 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
       return res.status(500).json({ error: "payment_store_mismatch" });
     }
 
-    await client.query(`UPDATE sales SET status = 'PAID_CASH' WHERE id = $1`, [saleId]);
+    // GO-LIVE-069: Update both status and payment_status
+    await client.query(
+      `UPDATE sales SET status = 'PAID_CASH', payment_status = 'paid' WHERE id = $1`,
+      [saleId]
+    );
 
     await client.query("COMMIT");
     return res.json({ status: "PAID" });
@@ -1803,10 +1829,24 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
       return res.status(500).json({ error: "payment_store_mismatch" });
     }
 
-    await client.query(`UPDATE sales SET status = 'DUE' WHERE id = $1`, [saleId]);
+    // GO-LIVE-069: Update both status and payment_status
+    await client.query(
+      `UPDATE sales SET status = 'DUE', payment_status = 'due' WHERE id = $1`,
+      [saleId]
+    );
+
+    // GO-LIVE-070: Create AR (Accounts Receivable) record for DUE payment
+    await client.query(
+      `INSERT INTO accounts_receivable (store_id, sale_id, payment_id, amount_minor, currency, status)
+       VALUES ($1, $2, $3, $4, 'INR', 'outstanding')
+       ON CONFLICT (sale_id) DO UPDATE SET
+         amount_minor = EXCLUDED.amount_minor,
+         updated_at = NOW()`,
+      [storeId, saleId, paymentId, sale.total_minor]
+    );
 
     await client.query("COMMIT");
-    return res.json({ status: "DUE" });
+    return res.json({ status: "DUE", paymentId });
   } catch (error) {
     await client.query("ROLLBACK");
     if (error instanceof InsufficientStockError) {
@@ -1987,4 +2027,134 @@ posSalesRouter.post("/collections/due", requireDeviceToken, async (req, res) => 
   );
 
   return res.json({ status: "DUE", collectionId });
+});
+
+// =============================================================================
+// GO-LIVE-036: Payment verification after network drop
+// =============================================================================
+// This endpoint allows the POS to check if a payment was recorded after
+// a network drop. The POS can poll this endpoint to recover from network errors.
+
+/**
+ * GET /api/v1/pos/sales/:saleId/payment-status
+ *
+ * Check the payment status of a sale after a network drop.
+ * Returns the current sale status and any associated payment details.
+ *
+ * Response:
+ * - saleStatus: PENDING | PAID_CASH | PAID_UPI | DUE | CANCELLED | EXPIRED
+ * - paymentRecorded: boolean - whether a payment was recorded
+ * - paymentDetails: { paymentId, mode, status, amountMinor, confirmedAt } | null
+ */
+posSalesRouter.get("/sales/:saleId/payment-status", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) {
+    return res.status(400).json({ error: "saleId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  try {
+    // Get sale status
+    const saleRes = await pool.query(
+      `
+      SELECT id, status, total_minor, bill_ref, created_at
+      FROM sales
+      WHERE id = $1 AND store_id = $2
+      `,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // Get payment if exists
+    const paymentRes = await pool.query(
+      `
+      SELECT id, mode, status, amount_minor, confirmed_at, created_at
+      FROM payments
+      WHERE sale_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+      `,
+      [saleId]
+    );
+
+    const payment = paymentRes.rows[0];
+    const paymentRecorded = !!payment && (payment.status === "PAID" || payment.status === "DUE");
+
+    return res.json({
+      saleId: String(sale.id),
+      billRef: String(sale.bill_ref),
+      saleStatus: String(sale.status),
+      totalMinor: Number(sale.total_minor ?? 0),
+      paymentRecorded,
+      paymentDetails: payment ? {
+        paymentId: String(payment.id),
+        mode: String(payment.mode),
+        status: String(payment.status),
+        amountMinor: Number(payment.amount_minor ?? 0),
+        confirmedAt: payment.confirmed_at ? new Date(payment.confirmed_at).toISOString() : null
+      } : null
+    });
+  } catch (error) {
+    console.error("[sales/payment-status] Error:", error);
+    return res.status(500).json({ error: "failed to get payment status" });
+  }
+});
+
+/**
+ * GET /api/v1/pos/payments/:paymentId/status
+ *
+ * Check the status of a specific payment after a network drop.
+ * Useful when the POS has the paymentId but lost connection.
+ */
+posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req, res) => {
+  const paymentId = typeof req.params.paymentId === "string" ? req.params.paymentId.trim() : "";
+  if (!paymentId) {
+    return res.status(400).json({ error: "paymentId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  try {
+    const paymentRes = await pool.query(
+      `
+      SELECT p.id, p.mode, p.status, p.amount_minor, p.confirmed_at, p.created_at,
+             s.id as sale_id, s.status as sale_status, s.bill_ref
+      FROM payments p
+      JOIN sales s ON s.id = p.sale_id
+      WHERE p.id = $1 AND s.store_id = $2
+      `,
+      [paymentId, storeId]
+    );
+
+    const payment = paymentRes.rows[0];
+    if (!payment) {
+      return res.status(404).json({ error: "payment_not_found" });
+    }
+
+    return res.json({
+      paymentId: String(payment.id),
+      saleId: String(payment.sale_id),
+      billRef: String(payment.bill_ref),
+      mode: String(payment.mode),
+      status: String(payment.status),
+      saleStatus: String(payment.sale_status),
+      amountMinor: Number(payment.amount_minor ?? 0),
+      confirmedAt: payment.confirmed_at ? new Date(payment.confirmed_at).toISOString() : null,
+      paymentRecorded: payment.status === "PAID" || payment.status === "DUE"
+    });
+  } catch (error) {
+    console.error("[payments/status] Error:", error);
+    return res.status(500).json({ error: "failed to get payment status" });
+  }
 });
