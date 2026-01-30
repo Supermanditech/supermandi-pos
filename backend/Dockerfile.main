@@ -48,6 +48,10 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/packages/common/dist ./packages/common/dist
 COPY --from=builder /app/dist ./dist
 
+# Create workspace link for @supermandi/common
+RUN mkdir -p node_modules/@supermandi && \
+    ln -s /app/packages/common node_modules/@supermandi/common
+
 # Copy migrations and entrypoint for production migration runner
 COPY migrations ./migrations
 COPY scripts/migrate-prod.js ./scripts/migrate-prod.js
