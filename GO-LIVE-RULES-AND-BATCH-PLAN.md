@@ -187,7 +187,7 @@ git push origin main
 | GO-LIVE-109 | No token refresh mechanism in retailer-admin portal | CRITICAL | ✅ DONE |
 | GO-LIVE-110 | Supplier JWT tokens stored in localStorage (XSS vulnerable) | CRITICAL | ✅ DONE (CSP headers added) |
 | GO-LIVE-111 | No session timeout in supplier portal | CRITICAL | ✅ DONE |
-| GO-LIVE-112 | ALLOW_BYPASS_FOR_TESTING can be enabled in production | CRITICAL | PENDING |
+| GO-LIVE-112 | ALLOW_BYPASS_FOR_TESTING can be enabled in production | CRITICAL | ✅ DONE (variable removed) |
 
 **Note:** GO-LIVE-102 merged into GO-LIVE-101 (both addressed same .env.production file)
 
