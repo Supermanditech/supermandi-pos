@@ -33,13 +33,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const TOKEN_KEY = 'retailerAdminToken';
-const LEGACY_TOKEN_KEY = 'retailer_access_token';
-const REFRESH_TOKEN_KEY = 'retailer_refresh_token';
-const USER_KEY = 'retailer_user';
-const STORE_KEY = 'retailer_store';
+// GO-LIVE-133: localStorage keys namespaced per store
+// This prevents data conflicts when multiple stores use the same browser
+const ACTIVE_STORE_KEY = 'retailer_active_store_id'; // Tracks which store is currently active (not namespaced)
+
+// Helper to generate namespaced keys
+const getNamespacedKey = (storeId: string, key: string): string => `retailer_${storeId}_${key}`;
+
+// Key suffixes for namespaced storage
+const KEY_TOKEN = 'token';
+const KEY_REFRESH_TOKEN = 'refresh_token';
+const KEY_USER = 'user';
+const KEY_STORE = 'store';
+const KEY_LAST_ACTIVITY = 'last_activity';
+
+// Legacy keys for migration (will be cleared after successful migration)
+const LEGACY_KEYS = [
+  'retailerAdminToken',
+  'retailer_access_token',
+  'retailer_refresh_token',
+  'retailer_user',
+  'retailer_store',
+  'retailer_last_activity',
+];
+
 // RCAT-AUTH-001: Idle timeout configuration
-const LAST_ACTIVITY_KEY = 'retailer_last_activity';
 // GL-CRIT-0076: Make idle timeout configurable via environment variable
 // Default: 30 minutes, can be overridden with VITE_IDLE_TIMEOUT_MINUTES
 const IDLE_TIMEOUT_MINUTES = parseInt(import.meta.env.VITE_IDLE_TIMEOUT_MINUTES || '30', 10);
@@ -58,96 +76,173 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // RCAT-AUTH-001: Track whether session has been expired by idle timeout
   const idleCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // GO-LIVE-133: Helper to clear all auth data for a specific store
+  const clearStoreAuth = useCallback((storeId: string) => {
+    localStorage.removeItem(getNamespacedKey(storeId, KEY_TOKEN));
+    localStorage.removeItem(getNamespacedKey(storeId, KEY_REFRESH_TOKEN));
+    localStorage.removeItem(getNamespacedKey(storeId, KEY_USER));
+    localStorage.removeItem(getNamespacedKey(storeId, KEY_STORE));
+    localStorage.removeItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY));
+  }, []);
+
+  // GO-LIVE-133: Helper to clear legacy (non-namespaced) auth data
+  const clearLegacyAuth = useCallback(() => {
+    LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
+  }, []);
+
   // Load from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const legacyToken = localStorage.getItem(LEGACY_TOKEN_KEY);
-    const resolvedToken = storedToken || legacyToken;
-    const storedUser = localStorage.getItem(USER_KEY);
-    const storedStore = localStorage.getItem(STORE_KEY);
+    // GO-LIVE-133: First check for active store ID
+    const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
 
-    if (resolvedToken && storedUser && storedStore) {
+    // GO-LIVE-133: Try to migrate from legacy keys if no active store
+    if (!activeStoreId) {
+      // Check for legacy data to migrate
+      const legacyToken = localStorage.getItem('retailerAdminToken') || localStorage.getItem('retailer_access_token');
+      const legacyStore = localStorage.getItem('retailer_store');
+
+      if (legacyToken && legacyStore) {
+        try {
+          const parsedStore = JSON.parse(legacyStore);
+          const storeId = parsedStore.id;
+
+          if (storeId) {
+            console.log('[Auth] GO-LIVE-133: Migrating legacy auth data to namespaced storage');
+
+            // Migrate all legacy data to namespaced keys
+            const legacyUser = localStorage.getItem('retailer_user');
+            const legacyRefresh = localStorage.getItem('retailer_refresh_token');
+            const legacyActivity = localStorage.getItem('retailer_last_activity');
+
+            localStorage.setItem(ACTIVE_STORE_KEY, storeId);
+            localStorage.setItem(getNamespacedKey(storeId, KEY_TOKEN), legacyToken);
+            if (legacyRefresh) localStorage.setItem(getNamespacedKey(storeId, KEY_REFRESH_TOKEN), legacyRefresh);
+            if (legacyUser) localStorage.setItem(getNamespacedKey(storeId, KEY_USER), legacyUser);
+            localStorage.setItem(getNamespacedKey(storeId, KEY_STORE), legacyStore);
+            if (legacyActivity) localStorage.setItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY), legacyActivity);
+
+            // Clear legacy keys after migration
+            clearLegacyAuth();
+
+            // Now proceed with normal loading using the migrated data
+            const lastActivityTime = legacyActivity ? parseInt(legacyActivity, 10) : Date.now();
+            const isExpired = Date.now() - lastActivityTime > IDLE_TIMEOUT_MS;
+
+            if (isExpired) {
+              clearStoreAuth(storeId);
+              localStorage.removeItem(ACTIVE_STORE_KEY);
+            } else {
+              setAccessToken(legacyToken);
+              setUser(legacyUser ? JSON.parse(legacyUser) : null);
+              setStore(parsedStore);
+              localStorage.setItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY), String(Date.now()));
+            }
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.error('[Auth] GO-LIVE-133: Migration failed:', e);
+          clearLegacyAuth();
+        }
+      } else {
+        // No legacy data and no active store - clean slate
+        clearLegacyAuth();
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    // GO-LIVE-133: Load from namespaced keys using active store ID
+    const storedToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_TOKEN));
+    const storedUser = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_USER));
+    const storedStore = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_STORE));
+
+    if (storedToken && storedUser && storedStore) {
       // RCAT-AUTH-001: Check if session has expired due to idle timeout
-      const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+      const lastActivity = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY));
       const lastActivityTime = lastActivity ? parseInt(lastActivity, 10) : Date.now();
       const isExpired = Date.now() - lastActivityTime > IDLE_TIMEOUT_MS;
 
       if (isExpired) {
-        // Session expired due to idle - clear all auth data
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(LEGACY_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        localStorage.removeItem(USER_KEY);
-        localStorage.removeItem(STORE_KEY);
-        localStorage.removeItem(LAST_ACTIVITY_KEY);
+        // Session expired due to idle - clear auth data for this store
+        clearStoreAuth(activeStoreId);
+        localStorage.removeItem(ACTIVE_STORE_KEY);
       } else {
         try {
-          setAccessToken(resolvedToken);
+          setAccessToken(storedToken);
           setUser(JSON.parse(storedUser));
           setStore(JSON.parse(storedStore));
           // Update last activity on successful restore
-          localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
-          if (!storedToken && legacyToken) {
-            localStorage.setItem(TOKEN_KEY, legacyToken);
-            localStorage.removeItem(LEGACY_TOKEN_KEY);
-          }
+          localStorage.setItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY), String(Date.now()));
         } catch {
           // Clear invalid data
-          localStorage.removeItem(TOKEN_KEY);
-          localStorage.removeItem(LEGACY_TOKEN_KEY);
-          localStorage.removeItem(REFRESH_TOKEN_KEY);
-          localStorage.removeItem(USER_KEY);
-          localStorage.removeItem(STORE_KEY);
-          localStorage.removeItem(LAST_ACTIVITY_KEY);
+          clearStoreAuth(activeStoreId);
+          localStorage.removeItem(ACTIVE_STORE_KEY);
         }
       }
-    } else if (storedToken || legacyToken || storedUser || storedStore) {
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(LEGACY_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      localStorage.removeItem(STORE_KEY);
-      localStorage.removeItem(LAST_ACTIVITY_KEY);
+    } else {
+      // Incomplete data - clear everything for this store
+      clearStoreAuth(activeStoreId);
+      localStorage.removeItem(ACTIVE_STORE_KEY);
     }
     setIsLoading(false);
-  }, []);
+  }, [clearLegacyAuth, clearStoreAuth]);
 
   const login = (newAccessToken: string, newRefreshToken: string, newUser: User, newStore: Store) => {
     setAccessToken(newAccessToken);
     setUser(newUser);
     setStore(newStore);
 
-    localStorage.setItem(TOKEN_KEY, newAccessToken);
-    localStorage.removeItem(LEGACY_TOKEN_KEY);
-    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
-    localStorage.setItem(STORE_KEY, JSON.stringify(newStore));
+    // GO-LIVE-133: Store with namespaced keys per store ID
+    const storeId = newStore.id;
+
+    // Set active store ID first (this is the only non-namespaced key)
+    localStorage.setItem(ACTIVE_STORE_KEY, storeId);
+
+    // Store all auth data under namespaced keys
+    localStorage.setItem(getNamespacedKey(storeId, KEY_TOKEN), newAccessToken);
+    localStorage.setItem(getNamespacedKey(storeId, KEY_REFRESH_TOKEN), newRefreshToken);
+    localStorage.setItem(getNamespacedKey(storeId, KEY_USER), JSON.stringify(newUser));
+    localStorage.setItem(getNamespacedKey(storeId, KEY_STORE), JSON.stringify(newStore));
     // RCAT-AUTH-001: Set initial last activity on login
-    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    localStorage.setItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY), String(Date.now()));
+
+    // Clear any legacy keys that might exist
+    clearLegacyAuth();
   };
 
   const logout = useCallback(() => {
+    // GO-LIVE-133: Get current store ID before clearing state
+    const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
+
     setAccessToken(null);
     setUser(null);
     setStore(null);
 
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(LEGACY_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(STORE_KEY);
-    localStorage.removeItem(LAST_ACTIVITY_KEY);
+    // GO-LIVE-133: Clear namespaced keys for the active store
+    if (activeStoreId) {
+      clearStoreAuth(activeStoreId);
+    }
+    localStorage.removeItem(ACTIVE_STORE_KEY);
+
+    // Also clear any legacy keys that might exist
+    clearLegacyAuth();
+
     // Clear idle check interval
     if (idleCheckRef.current) {
       clearInterval(idleCheckRef.current);
       idleCheckRef.current = null;
     }
-  }, []);
+  }, [clearLegacyAuth, clearStoreAuth]);
 
   // GL-WF-028: Dismiss warning and refresh activity timestamp
   const dismissSessionWarning = useCallback(() => {
     setShowSessionWarning(false);
-    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    // GO-LIVE-133: Use namespaced key
+    const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
+    if (activeStoreId) {
+      localStorage.setItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY), String(Date.now()));
+    }
   }, []);
 
   // GO-LIVE-109: Parse JWT to get expiry time
@@ -164,7 +259,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // GO-LIVE-109: Refresh access token using refresh token
   const refreshAccessToken = useCallback(async (): Promise<boolean> => {
-    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    // GO-LIVE-133: Use namespaced key for refresh token
+    const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
+    if (!activeStoreId) {
+      console.log('[Auth] No active store for token refresh');
+      return false;
+    }
+
+    const refreshToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_REFRESH_TOKEN));
     if (!refreshToken) {
       console.log('[Auth] No refresh token available');
       return false;
@@ -188,7 +290,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (newAccessToken) {
         setAccessToken(newAccessToken);
-        localStorage.setItem(TOKEN_KEY, newAccessToken);
+        // GO-LIVE-133: Store with namespaced key
+        localStorage.setItem(getNamespacedKey(activeStoreId, KEY_TOKEN), newAccessToken);
         console.log('[Auth] Token refreshed successfully');
         return true;
       }
@@ -262,12 +365,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!accessToken) return;
 
+    // GO-LIVE-133: Get active store ID for namespaced storage
+    const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
+    if (!activeStoreId) return;
+
     // Update last activity on user interaction (throttled to avoid excessive writes)
     let lastWrite = 0;
     const updateActivity = () => {
       const now = Date.now();
       if (now - lastWrite > 60000) { // Write at most once per minute
-        localStorage.setItem(LAST_ACTIVITY_KEY, String(now));
+        // GO-LIVE-133: Use namespaced key
+        localStorage.setItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY), String(now));
         lastWrite = now;
       }
     };
@@ -280,7 +388,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // GL-WF-028: Check for idle timeout and show warning before logout
     idleCheckRef.current = setInterval(() => {
-      const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
+      // GO-LIVE-133: Use namespaced key
+      const lastActivity = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY));
       if (!lastActivity) return;
       const elapsed = Date.now() - parseInt(lastActivity, 10);
 
