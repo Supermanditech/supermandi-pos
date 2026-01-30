@@ -26,13 +26,15 @@ export interface RequestLoggerOptions {
   generateCorrelationId?: boolean;
 }
 
+// Extend Express Request type - uses string to be compatible with services that
+// may declare correlationId as required (string) instead of optional (string | undefined)
 declare global {
   namespace Express {
     interface Request {
-      correlationId?: string;
-      requestId?: string;
-      startTime?: number;
-      log?: Logger;
+      correlationId: string;
+      requestId: string;
+      startTime: number;
+      log: Logger;
     }
   }
 }
@@ -75,7 +77,7 @@ export function requestLogger(options: RequestLoggerOptions = {}): RequestHandle
     const correlationId =
       (req.headers[correlationIdHeader] as string) ||
       (req.headers[correlationIdHeader.toLowerCase()] as string) ||
-      (generateCorrelationId ? uuidv4() : undefined);
+      (generateCorrelationId ? uuidv4() : uuidv4()); // Always generate if not present
 
     // Generate request ID
     const requestId = uuidv4();

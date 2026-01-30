@@ -25,6 +25,9 @@ export * from './idempotency';
 // Logging (structured logging, request tracking, health checks)
 export * from './logging';
 
+// Middleware (timeout, error handling) - GO-LIVE Batch 0
+export * from './middleware';
+
 // Auth (JWT types)
 export * from './auth';
 
