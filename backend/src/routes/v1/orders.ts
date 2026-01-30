@@ -787,14 +787,16 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
 
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-      // Create buy_payment record
+      // GO-LIVE-122: Create buy_payment record with idempotency key
+      const idempotencyKey = `buy_upi_${orderId}_${Date.now()}`;
       await client.query(
         `INSERT INTO payments.buy_payments (
           id, purchase_order_id, store_id, supplier_id, mode, amount_minor,
           upi_txn_ref, upi_deep_link, upi_vpa,
-          status, initiated_at
-        ) VALUES ($1, $2, $3, $4, 'UPI', $5, $6, $7, $8, 'initiated', NOW())`,
-        [paymentId, orderId, storeId, order.supplier_id, order.total_amount, txnRef, deepLink, order.supplier_upi_vpa]
+          status, initiated_at, idempotency_key
+        ) VALUES ($1, $2, $3, $4, 'UPI', $5, $6, $7, $8, 'initiated', NOW(), $9)
+        ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`,
+        [paymentId, orderId, storeId, order.supplier_id, order.total_amount, txnRef, deepLink, order.supplier_upi_vpa, idempotencyKey]
       );
 
       await client.query("COMMIT");
@@ -876,13 +878,15 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
         [drawdownId, storeId, order.supplier_id, orderId, order.total_amount, dueDateStr]
       );
 
-      // Create BNPL payment record linked to drawdown
+      // GO-LIVE-122: Create BNPL payment record with idempotency key
+      const idempotencyKey = `buy_bnpl_${orderId}_${drawdownId}`;
       await client.query(
         `INSERT INTO payments.buy_payments (
           id, purchase_order_id, store_id, supplier_id, mode, amount_minor,
-          bnpl_drawdown_id, status, initiated_at
-        ) VALUES ($1, $2, $3, $4, 'BNPL', $5, $6, 'pending', NOW())`,
-        [paymentId, orderId, storeId, order.supplier_id, order.total_amount, drawdownId]
+          bnpl_drawdown_id, status, initiated_at, idempotency_key
+        ) VALUES ($1, $2, $3, $4, 'BNPL', $5, $6, 'pending', NOW(), $7)
+        ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`,
+        [paymentId, orderId, storeId, order.supplier_id, order.total_amount, drawdownId, idempotencyKey]
       );
 
       // Update order payment status
@@ -911,12 +915,15 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
     if (mode === 'CREDIT') {
       const paymentId = randomUUID();
 
+      // GO-LIVE-122: Create CREDIT payment with idempotency key
+      const idempotencyKey = `buy_credit_${orderId}`;
       await client.query(
         `INSERT INTO payments.buy_payments (
           id, purchase_order_id, store_id, supplier_id, mode, amount_minor,
-          status, initiated_at
-        ) VALUES ($1, $2, $3, $4, 'CREDIT', $5, 'approved', NOW())`,
-        [paymentId, orderId, storeId, order.supplier_id, order.total_amount]
+          status, initiated_at, idempotency_key
+        ) VALUES ($1, $2, $3, $4, 'CREDIT', $5, 'approved', NOW(), $6)
+        ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING`,
+        [paymentId, orderId, storeId, order.supplier_id, order.total_amount, idempotencyKey]
       );
 
       await client.query(
