@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
-import { requireAdminToken } from "../../../middleware/adminToken";
+import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 
 export const adminSuppliersRouter = Router();
 
@@ -10,7 +10,8 @@ export const adminSuppliersRouter = Router();
  * ITER2-002: Fixed response format to match frontend expectations ({ data: [...] })
  * ITER2-004: Fixed schema namespace (supplier.supplier_requests)
  */
-adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, async (_req, res) => {
+// GO-LIVE-128: Requires 'suppliers:read' permission
+adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, requirePermission("suppliers", "read"), async (_req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
@@ -59,7 +60,8 @@ adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, async (_req, r
  * ITER2-002: Fixed response format to match frontend expectations ({ data: [...] })
  * ITER2-004: Fixed schema namespace (supplier.suppliers)
  */
-adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'suppliers:read' permission
+adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermission("suppliers", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
@@ -117,7 +119,8 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, async (req, r
  * Verify a pending supplier request
  * ITER2-004: Fixed schema namespace (supplier.supplier_requests)
  */
-adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'suppliers:approve' permission
+adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminToken, requirePermission("suppliers", "approve"), async (req, res) => {
   const { supplierId } = req.params;
   const { supplierId: linkedSupplierId, verifySupplier, notes } = req.body || {};
 
@@ -197,7 +200,8 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
  * ITER2-003: Fixed field name mismatch - accept both 'notes' and 'reason'
  * ITER2-004: Fixed schema namespace (supplier.supplier_requests)
  */
-adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'suppliers:reject' permission
+adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), async (req, res) => {
   const { supplierId } = req.params;
   // ITER2-003: Accept both 'notes' (from frontend) and 'reason' (legacy) field names
   const { notes, reason } = req.body || {};
@@ -252,7 +256,8 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
  * GET /api/v1/admin/suppliers/pending
  * List all self-registered suppliers pending verification (from SM-005)
  */
-adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, async (_req, res) => {
+// GO-LIVE-128: Requires 'suppliers:read' permission
+adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermission("suppliers", "read"), async (_req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
@@ -296,7 +301,8 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, async (_req, r
  * POST /api/v1/admin/suppliers/:supplierId/approve
  * Approve a self-registered supplier
  */
-adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'suppliers:approve' permission
+adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, requirePermission("suppliers", "approve"), async (req, res) => {
   const { supplierId } = req.params;
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -371,7 +377,8 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, a
  * POST /api/v1/admin/suppliers/:supplierId/reject
  * Reject a self-registered supplier
  */
-adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'suppliers:reject' permission
+adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), async (req, res) => {
   const { supplierId } = req.params;
   const { reason } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
@@ -446,7 +453,8 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, as
  * GET /api/v1/admin/products/pending
  * List all products pending approval
  */
-adminSuppliersRouter.get("/products/pending", requireAdminToken, async (_req, res) => {
+// GO-LIVE-128: Requires 'products:read' permission
+adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermission("products", "read"), async (_req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
@@ -489,7 +497,8 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, async (_req, re
  * POST /api/v1/admin/products/:productId/approve
  * Approve a product for catalog visibility
  */
-adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'products:approve' permission
+adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
   const { productId } = req.params;
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -564,7 +573,8 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, asy
  * POST /api/v1/admin/products/:productId/reject
  * Reject a product
  */
-adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'products:reject' permission
+adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requirePermission("products", "reject"), async (req, res) => {
   const { productId } = req.params;
   const { reason } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
@@ -654,7 +664,8 @@ adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, asyn
  * Response:
  * - productId, editedName, superMandiMarginMinor, bnplEligible, retailerPrice
  */
-adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, async (req, res) => {
+// GO-LIVE-128: Requires 'products:update' permission
+adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, requirePermission("products", "update"), async (req, res) => {
   const { productId } = req.params;
   const {
     editedName,

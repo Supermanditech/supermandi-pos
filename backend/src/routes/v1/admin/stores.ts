@@ -1,11 +1,12 @@
 import { randomUUID } from "crypto";
 import { Router } from "express";
-import { requireAdminToken } from "../../../middleware/adminToken";
+import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
 
 export const adminStoresRouter = Router();
 
+// GO-LIVE-128: All admin store routes require admin token authentication
 adminStoresRouter.use(requireAdminToken);
 
 const UPI_VPA_PATTERN = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/;
@@ -78,7 +79,8 @@ async function ensureUniqueStoreId(pool: ReturnType<typeof getPool>, preferredId
 }
 
 // POST /api/v1/admin/stores - STORECODE-002: Now generates store_code automatically
-adminStoresRouter.post("/stores", async (req, res) => {
+// GO-LIVE-128: Requires 'stores:create' permission
+adminStoresRouter.post("/stores", requirePermission("stores", "create"), async (req, res) => {
   const storeNameInput = normalizeStoreNameInput((req.body as any)?.storeName ?? (req.body as any)?.name);
   if (storeNameInput.error || !storeNameInput.value) {
     return res.status(400).json({ error: storeNameInput.error ?? "storeName_required" });
@@ -140,7 +142,8 @@ adminStoresRouter.post("/stores", async (req, res) => {
 });
 
 // GET /api/v1/admin/stores
-adminStoresRouter.get("/stores", async (_req, res) => {
+// GO-LIVE-128: Requires 'stores:read' permission
+adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (_req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -201,7 +204,8 @@ adminStoresRouter.get("/stores", async (_req, res) => {
 });
 
 // GET /api/v1/admin/stores/:storeId
-adminStoresRouter.get("/stores/:storeId", async (req, res) => {
+// GO-LIVE-128: Requires 'stores:read' permission
+adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), async (req, res) => {
   const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
   if (!storeId) {
     return res.status(400).json({ error: "storeId is required" });
@@ -266,7 +270,8 @@ adminStoresRouter.get("/stores/:storeId", async (req, res) => {
 });
 
 // PATCH /api/v1/admin/stores/:storeId
-adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
+// GO-LIVE-128: Requires 'stores:update' permission
+adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"), async (req, res) => {
   const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
   if (!storeId) {
     return res.status(400).json({ error: "storeId is required" });
@@ -385,7 +390,8 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
 });
 
 // ITER3-P0-007: DELETE /api/v1/admin/stores/:storeId - Soft delete a store
-adminStoresRouter.delete("/stores/:storeId", async (req, res) => {
+// GO-LIVE-128: Requires 'stores:delete' permission (super_admin only)
+adminStoresRouter.delete("/stores/:storeId", requirePermission("stores", "delete"), async (req, res) => {
   const storeId = req.params.storeId?.trim();
   if (!storeId) {
     return res.status(400).json({ error: "storeId is required" });
