@@ -130,6 +130,7 @@ services:
 
   # ---------------------------------------------------------------------------
   # API GATEWAY
+  # GO-LIVE-103: Uses Docker secrets for ADMIN_TOKEN (not exposed in docker inspect)
   # ---------------------------------------------------------------------------
   api-gateway:
     build:
@@ -150,12 +151,16 @@ services:
       REORDER_SERVICE_URL: http://reorder-service:3007
       POS_SERVICE_URL: http://main-backend:3010
       VOICE_SERVICE_URL: http://voice-service:3008
-      # GL-CRIT-0006: ADMIN_TOKEN must be set in .env - no fallback for security
-      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      # GO-LIVE-103: ADMIN_TOKEN read from Docker secret file (not env var)
+      ADMIN_TOKEN_FILE: /run/secrets/admin_token
+      # Fallback to env var for backwards compatibility during migration
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+    secrets:
+      - admin_token
     ports:
       - "${API_GATEWAY_PORT:-3000}:3000"
     depends_on:
@@ -273,6 +278,7 @@ services:
 
   # ---------------------------------------------------------------------------
   # MAIN BACKEND (MONOLITH)
+  # GO-LIVE-103: Uses Docker secrets for ADMIN_TOKEN (not exposed in docker inspect)
   # ---------------------------------------------------------------------------
   main-backend:
     build:
@@ -286,8 +292,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
-      # GL-CRIT-0006: ADMIN_TOKEN must be set in .env - no fallback for security
-      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      # GO-LIVE-103: ADMIN_TOKEN read from Docker secret file (not env var)
+      ADMIN_TOKEN_FILE: /run/secrets/admin_token
+      # Fallback to env var for backwards compatibility during migration
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
       # GO-LIVE: OpenAI configuration for AI + Voice services
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL_CHAT: ${OPENAI_MODEL_CHAT:-gpt-4o-mini}
@@ -307,6 +315,8 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+    secrets:
+      - admin_token
     depends_on:
       postgres:
         condition: service_healthy
@@ -684,4 +694,9 @@ secrets:
     # GL-CRIT-0051: OpenAI API key stored as Docker secret
     # Create with: echo "sk-your-key" | docker secret create openai_api_key -
     # Or use file: docker secret create openai_api_key /path/to/key/file
+    external: true
+  admin_token:
+    # GO-LIVE-103: Admin token stored as Docker secret (not visible in docker inspect)
+    # Create with: echo "your-admin-token" | docker secret create admin_token -
+    # Or use file: docker secret create admin_token /path/to/token/file
     external: true

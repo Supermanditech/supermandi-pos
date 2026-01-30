@@ -1,9 +1,11 @@
 // GO-LIVE-002: Admin Session Service
 // Manages admin JWT session tokens with expiry and rotation
 // Replaces static admin token with time-bound sessions
+// GO-LIVE-103: Reads ADMIN_TOKEN from Docker secret file (more secure than env var)
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import fs from 'fs';
 
 // =============================================================================
 // TYPES
@@ -38,8 +40,32 @@ const MAX_ACTIVE_SESSIONS = 10; // Per admin
 const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-admin';
 
+// GO-LIVE-103: Read ADMIN_TOKEN from Docker secret file (preferred) or env var (fallback)
+function loadAdminToken(): string | undefined {
+  // Try reading from Docker secret file first (more secure - not exposed in docker inspect)
+  const tokenFilePath = process.env['ADMIN_TOKEN_FILE'];
+  if (tokenFilePath) {
+    try {
+      const token = fs.readFileSync(tokenFilePath, 'utf8').trim();
+      if (token) {
+        console.log('[AdminSession] ADMIN_TOKEN loaded from secret file');
+        return token;
+      }
+    } catch (err) {
+      // File doesn't exist or can't be read - fall through to env var
+      console.warn('[AdminSession] Could not read ADMIN_TOKEN_FILE, falling back to env var');
+    }
+  }
+  // Fallback to environment variable (for backwards compatibility)
+  const envToken = process.env['ADMIN_TOKEN']?.trim();
+  if (envToken) {
+    console.log('[AdminSession] ADMIN_TOKEN loaded from environment variable');
+  }
+  return envToken;
+}
+
 // Master admin token (for initial login only)
-const ADMIN_TOKEN = process.env['ADMIN_TOKEN']?.trim();
+const ADMIN_TOKEN = loadAdminToken();
 
 // =============================================================================
 // SESSION STORAGE (In-memory, should use Redis for production scale)

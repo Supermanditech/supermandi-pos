@@ -178,7 +178,7 @@ git push origin main
 | Ticket | Summary | Severity | Status |
 |--------|---------|----------|--------|
 | GO-LIVE-101 | Secrets in source control (.env files committed) - includes Firebase key fix | CRITICAL | ✅ DONE |
-| GO-LIVE-103 | ADMIN_TOKEN exposed in docker-compose.prod.yml | CRITICAL | PENDING |
+| GO-LIVE-103 | ADMIN_TOKEN exposed in docker-compose.prod.yml | CRITICAL | ✅ DONE |
 | GO-LIVE-104 | Firebase token fallback allows JWT forgery without server verification | CRITICAL | PENDING |
 | GO-LIVE-105 | Device token stored in AsyncStorage (not SecureStore) | CRITICAL | PENDING |
 | GO-LIVE-106 | SQLite database on mobile not encrypted | CRITICAL | PENDING |
@@ -1033,34 +1033,37 @@ curl -s http://localhost:3000/health | jq  # Verify rollback worked
 
 ## 11) Current Focus
 
-**NOW:** Batch 0, Ticket GO-LIVE-103 (GO-LIVE-101 completed)
+**NOW:** Batch 0, Ticket GO-LIVE-104 (GO-LIVE-101, GO-LIVE-103 completed)
 
 ### Session Reference - RESUME POINT
 ```
-Commit: b7bdb94
-Full SHA: b7bdb94cb6a35d94d324e405677ed15fa509e725
+Commit: ace47e1
 Branch: main
-Previous Commit: c4ba2a9
-Working Tree: Clean (0 changes)
+Working Tree: Clean
 
 API Gateway: http://34.14.220.171:3000
 Production URL: https://supermandi.tech
 
-Save Time (IST): 2026-01-30 19:40 IST
-Backend VM Status: deployed OK
+Save Time (IST): 2026-01-30 20:00 IST
+Backend VM Status: needs deployment (docker secret must be created first)
 Remote Origin: https://github.com/Supermanditech/supermandi-pos.git
-Pushed: ✅ Yes (origin/main up to date)
+Pushed: ⏳ Pending push
 
 PROGRESS:
 - Total Tickets: 241
-- Completed: 1 (GO-LIVE-101)
-- Remaining: 240
+- Completed: 2 (GO-LIVE-101, GO-LIVE-103)
+- Remaining: 239
 
 COMPLETED:
 - GO-LIVE-101 ✅ (Secrets in source control) - Commit 2cc7d0e
+- GO-LIVE-103 ✅ (ADMIN_TOKEN exposed) - Commit ace47e1
 
 NEXT TICKET:
-- GO-LIVE-103: ADMIN_TOKEN exposed in docker-compose.prod.yml
+- GO-LIVE-104: Firebase token fallback allows JWT forgery
+
+DEPLOYMENT NOTE for GO-LIVE-103:
+Before deploying, create Docker secret on VM:
+  echo "your-admin-token" | docker secret create admin_token -
 ```
 
 ### Execution Mode: ONE TICKET AT A TIME
@@ -1078,7 +1081,7 @@ For each ticket:
 
 ### Current Ticket Queue (Batch 0) - 11 tickets
 - [x] GO-LIVE-101: Secrets in source control (includes GO-LIVE-102) ✅ DONE - Commit 2cc7d0e
-- [ ] GO-LIVE-103: ADMIN_TOKEN exposed
+- [x] GO-LIVE-103: ADMIN_TOKEN exposed ✅ DONE
 - [ ] GO-LIVE-104: Firebase token forgery
 - [ ] GO-LIVE-105: Device token in AsyncStorage
 - [ ] GO-LIVE-106: SQLite not encrypted
@@ -1089,7 +1092,7 @@ For each ticket:
 - [ ] GO-LIVE-111: No session timeout in supplier
 - [ ] GO-LIVE-112: ALLOW_BYPASS can be enabled
 
-**NEXT:** GO-LIVE-103 (ADMIN_TOKEN exposed in docker-compose.prod.yml)
+**NEXT:** GO-LIVE-104 (Firebase token fallback allows JWT forgery)
 
 ---
 
