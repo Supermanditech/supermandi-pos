@@ -44,6 +44,10 @@ const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 const JWT_EXPIRES_IN = '24h';
 const BCRYPT_ROUNDS = 10;
 
+// GO-LIVE-134: Account lockout configuration
+const MAX_LOGIN_ATTEMPTS = 5;          // Lock after 5 failed attempts
+const LOCKOUT_DURATION_MINUTES = 30;   // Lock for 30 minutes
+
 const router = Router();
 
 // =============================================================================
@@ -431,6 +435,7 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
  * POST /api/v1/supplier/auth/login
  * Login an existing supplier
  * ITER4-P1-001: Rate limited to prevent brute force attacks
+ * GO-LIVE-134: Account lockout after failed attempts
  */
 router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -449,10 +454,10 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
       return;
     }
 
-    // Get supplier by email
+    // GO-LIVE-134: Get supplier by email including lockout fields
     const result = await pool.query(
       `SELECT id, primary_email, password_hash, business_name, gstin,
-              verification_status, status
+              verification_status, status, failed_login_count, locked_until
        FROM supplier.suppliers
        WHERE primary_email = $1`,
       [email.toLowerCase()]
@@ -460,9 +465,25 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
 
     const supplier = result.rows[0];
 
+    // Use constant-time comparison to prevent timing attacks
+    // Don't reveal whether email exists or not
     if (!supplier || !supplier.password_hash) {
       res.status(401).json({
         error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
+      });
+      return;
+    }
+
+    // GO-LIVE-134: Check if account is locked
+    if (supplier.locked_until && new Date(supplier.locked_until) > new Date()) {
+      const remainingMinutes = Math.ceil((new Date(supplier.locked_until).getTime() - Date.now()) / 60000);
+      console.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} is locked for ${remainingMinutes} more minutes`);
+      res.status(403).json({
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: `Account is temporarily locked due to too many failed login attempts. Please try again in ${remainingMinutes} minutes.`,
+          lockedUntil: supplier.locked_until,
+        }
       });
       return;
     }
@@ -476,12 +497,57 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
 
     // Verify password
     const isValid = await bcrypt.compare(password, supplier.password_hash);
+    const clientIp = req.ip || req.socket?.remoteAddress || null;
+
     if (!isValid) {
-      res.status(401).json({
-        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password' }
-      });
+      // GO-LIVE-134: Record failed login attempt
+      const newCount = (supplier.failed_login_count || 0) + 1;
+      const attemptsRemaining = MAX_LOGIN_ATTEMPTS - newCount;
+
+      if (newCount >= MAX_LOGIN_ATTEMPTS) {
+        // Lock the account
+        const lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
+        await pool.query(
+          `UPDATE supplier.suppliers
+           SET failed_login_count = $1, locked_until = $2, last_failed_login_at = NOW(), last_login_ip = $3
+           WHERE id = $4`,
+          [newCount, lockedUntil, clientIp, supplier.id]
+        );
+        console.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} locked after ${newCount} failed attempts`);
+        res.status(403).json({
+          error: {
+            code: 'ACCOUNT_LOCKED',
+            message: `Account has been locked due to ${MAX_LOGIN_ATTEMPTS} failed login attempts. Please try again in ${LOCKOUT_DURATION_MINUTES} minutes.`,
+            lockedUntil,
+          }
+        });
+      } else {
+        // Just increment the counter
+        await pool.query(
+          `UPDATE supplier.suppliers
+           SET failed_login_count = $1, last_failed_login_at = NOW(), last_login_ip = $2
+           WHERE id = $3`,
+          [newCount, clientIp, supplier.id]
+        );
+        console.warn(`[SupplierAuth] GO-LIVE-134: Failed login for ${email}, ${attemptsRemaining} attempts remaining`);
+        res.status(401).json({
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: 'Invalid email or password',
+            attemptsRemaining: attemptsRemaining > 0 ? attemptsRemaining : undefined,
+          }
+        });
+      }
       return;
     }
+
+    // GO-LIVE-134: Clear failed login attempts on successful login
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET failed_login_count = 0, locked_until = NULL, last_login_ip = $1
+       WHERE id = $2`,
+      [clientIp, supplier.id]
+    );
 
     // GO-LIVE-084: Generate JWT token with JTI for revocation support
     const jti = randomUUID();
