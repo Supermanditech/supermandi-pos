@@ -767,7 +767,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
           // Validation constants to prevent overflow and abuse
           const MAX_QUANTITY = 100000; // Maximum 100k items per line
-          const MAX_PRICE_MINOR = 100000000; // Maximum 1 million INR per item
+          const MAX_PRICE_MINOR = 1000000000; // GO-LIVE-050: Maximum 10 million INR per item (standardized)
 
           for (const item of items) {
             const barcode = asTrimmedString(item?.barcode);
@@ -788,7 +788,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
               priceMinor <= 0 ||
               priceMinor > MAX_PRICE_MINOR
             ) {
-              throw new Error("invalid sale item: quantity must be 1-100000, price must be 1-100000000 minor");
+              throw new Error("invalid sale item: quantity must be 1-100000, price must be 1-1000000000 minor");
             }
 
             const fallbackName = `Item ${barcode.slice(-4)}`;

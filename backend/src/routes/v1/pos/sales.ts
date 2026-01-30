@@ -785,7 +785,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
 
   // Validation constants to prevent overflow and abuse
   const MAX_QUANTITY = 100000; // Maximum 100k items per line
-  const MAX_PRICE_MINOR = 100000000; // Maximum 1 million INR per item
+  const MAX_PRICE_MINOR = 1000000000; // GO-LIVE-050: Maximum 10 million INR per item (standardized)
   // AUD-059-B FIX: Name/barcode length bounds
   const MAX_NAME_LENGTH = 200;
   const MAX_BARCODE_LENGTH = 50;
@@ -808,7 +808,7 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   if (invalidItem) {
     return res.status(400).json({
       error: "items are invalid",
-      message: "Item quantity must be between 1 and 100,000. Price must be between 1 and 1,000,000 INR."
+      message: "Item quantity must be between 1 and 100,000. Price must be between 1 and 10,000,000 INR."
     });
   }
 

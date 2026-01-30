@@ -2,11 +2,16 @@
 // RCAT-CSV-001: CSV template download
 // RCAT-CSV-002: Upload → validate → review → commit flow
 // Store-scoped via JWT (x-actor-id header from gateway)
+// GO-LIVE-049: Added file size limits for security
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 
 export const retailerAdminCsvImportRouter = Router();
+
+// GO-LIVE-049: File size limits
+const MAX_CSV_SIZE_BYTES = 5 * 1024 * 1024; // 5MB max CSV file size
+const MAX_CSV_ROWS = 10000; // 10,000 rows max
 
 /**
  * Get store ID from gateway-provided headers
@@ -73,9 +78,33 @@ retailerAdminCsvImportRouter.post("/products/import/upload", async (req: Request
     });
   }
 
+  // GO-LIVE-049: File size validation
+  const contentSizeBytes = Buffer.byteLength(csvContent, 'utf8');
+  if (contentSizeBytes > MAX_CSV_SIZE_BYTES) {
+    return res.status(413).json({
+      error: {
+        code: "FILE_TOO_LARGE",
+        message: `CSV file too large. Maximum size is ${MAX_CSV_SIZE_BYTES / (1024 * 1024)}MB.`,
+        details: { maxBytes: MAX_CSV_SIZE_BYTES, actualBytes: contentSizeBytes }
+      },
+    });
+  }
+
   try {
     // Parse CSV rows
     const lines = csvContent.trim().split('\n');
+
+    // GO-LIVE-049: Row count validation
+    if (lines.length - 1 > MAX_CSV_ROWS) {
+      return res.status(400).json({
+        error: {
+          code: "TOO_MANY_ROWS",
+          message: `CSV has too many rows. Maximum is ${MAX_CSV_ROWS} data rows.`,
+          details: { maxRows: MAX_CSV_ROWS, actualRows: lines.length - 1 }
+        },
+      });
+    }
+
     if (lines.length < 2) {
       return res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "CSV must have at least a header row and one data row" },

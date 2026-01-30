@@ -54,11 +54,50 @@ const app = express();
 // MIDDLEWARE SETUP
 // =============================================================================
 
-// DEPLOY-003: CORS - allow retailer-admin dashboard (served by Nginx) to call gateway
+// =============================================================================
+// GO-LIVE-073: CORS - Restrict to allowed origins (no wildcard in production)
+// =============================================================================
+const CORS_ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// Default allowed origins for production
+const DEFAULT_CORS_ORIGINS = [
+  'https://supermandi.tech',
+  'https://www.supermandi.tech',
+  'https://34.14.220.171.nip.io',
+];
+
+// In development, allow localhost
+if (config.env === 'development') {
+  DEFAULT_CORS_ORIGINS.push(
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:8081',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+  );
+}
+
+const allowedOrigins = CORS_ALLOWED_ORIGINS.length > 0 ? CORS_ALLOWED_ORIGINS : DEFAULT_CORS_ORIGINS;
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+
+  // Check if the origin is allowed
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (config.env === 'development' && !origin) {
+    // Allow requests without origin header in development (curl, Postman, etc.)
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  // Note: If origin not in allowedOrigins, we don't set the header (browser will block)
+
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
     return;

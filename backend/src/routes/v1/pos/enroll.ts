@@ -25,6 +25,15 @@ const enrollmentLimiter = rateLimit({
   message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please try again in 15 minutes." } }
 });
 
+// GO-LIVE-052: Rate limiter for label check endpoint
+const labelCheckLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // Maximum 30 label checks per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Too many label check requests. Please wait a moment." } }
+});
+
 export const posEnrollRouter = Router();
 
 type DeviceMeta = {
@@ -497,7 +506,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
 
 // POST /api/v1/pos/enroll/check-label
 // Check if a device label already exists for the store (before enrollment)
-posEnrollRouter.post("/enroll/check-label", async (req, res) => {
+// GO-LIVE-052: Added rate limiting to prevent abuse
+posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) => {
   const rawCode = req.body?.code ?? req.body?.enrollmentCode;
   const code = asTrimmedString(rawCode)?.toUpperCase();
   const label = asTrimmedString(req.body?.label);

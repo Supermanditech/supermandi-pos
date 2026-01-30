@@ -37,6 +37,9 @@ function timingSafeCompare(a: string, b: string): boolean {
 
 adminOtpRouter.use(requireAdminToken);
 
+// GO-LIVE-051: Proper email validation regex (not just checking for "@")
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Generate a random OTP
  */
@@ -55,7 +58,8 @@ function generateOtp(): string {
 adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
   const { email, purpose } = req.body as { email?: string; purpose?: string };
 
-  if (!email || !email.includes("@")) {
+  // GO-LIVE-051: Use proper email regex validation
+  if (!email || !EMAIL_REGEX.test(email.trim())) {
     return res.status(400).json({ error: "valid_email_required" });
   }
 

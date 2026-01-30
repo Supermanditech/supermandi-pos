@@ -87,6 +87,26 @@ const passwordResetRateLimiter = rateLimit({
   }
 });
 
+// GO-LIVE-054: Rate limiter for password change (authenticated)
+// Prevents abuse even from authenticated users
+const passwordChangeRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many password change attempts. Please try again later.'
+    }
+  },
+  keyGenerator: (req) => {
+    // Rate limit by supplier ID (from auth middleware)
+    const supplierId = (req as SupplierAuthRequest).supplierId;
+    return supplierId || req.ip || 'unknown';
+  }
+});
+
 // =============================================================================
 // GL-AUD-008: Bank Detail Validation Functions
 // =============================================================================
@@ -497,8 +517,9 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
 /**
  * POST /api/v1/supplier/auth/change-password
  * Change supplier password (requires auth)
+ * GO-LIVE-054: Added rate limiting to prevent abuse
  */
-router.post("/auth/change-password", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.post("/auth/change-password", requireSupplierAuth, passwordChangeRateLimiter, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
