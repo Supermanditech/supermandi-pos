@@ -51,8 +51,18 @@ async function callRazorpayPayoutApi(params: {
   narration: string;
 }): Promise<PayoutResult> {
   if (!isRazorpayConfigured()) {
-    // Mock response for development/testing
-    console.log("[SM-018] Razorpay not configured, using mock payout");
+    // GO-LIVE-119: NEVER return mock success in production - suppliers would not receive money
+    const isProduction = process.env.NODE_ENV === "production";
+    if (isProduction) {
+      console.error("[SM-018] GO-LIVE-119: CRITICAL - Razorpay not configured in production! Payout cannot proceed.");
+      return {
+        success: false,
+        error: "Payment gateway not configured - please contact support",
+      };
+    }
+
+    // Only allow mock response in development/testing
+    console.log("[SM-018] Razorpay not configured (dev mode), using mock payout");
     const mockPayoutId = `pout_mock_${Date.now().toString(36)}`;
     const mockUtr = `UTR${Date.now()}`;
     return {
@@ -314,8 +324,14 @@ export async function processAllScheduledPayouts(pool: Pool): Promise<{
  */
 export function verifyWebhookSignature(body: string, signature: string): boolean {
   if (!RAZORPAY_WEBHOOK_SECRET) {
-    console.warn("[SM-018] Webhook secret not configured, skipping verification");
-    return true; // Allow in development
+    // GO-LIVE-119: Never skip verification in production - attackers could send fake events
+    const isProduction = process.env.NODE_ENV === "production";
+    if (isProduction) {
+      console.error("[SM-018] GO-LIVE-119: CRITICAL - Webhook secret not configured in production!");
+      return false; // Reject webhooks in production without proper verification
+    }
+    console.warn("[SM-018] Webhook secret not configured (dev mode), skipping verification");
+    return true; // Only allow in development
   }
 
   const expectedSignature = crypto
