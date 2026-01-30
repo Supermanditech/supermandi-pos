@@ -5,20 +5,16 @@
 // RCAT-PROD-004: Product Delete flow
 // RCAT-LOOSE-001: Loose/Bulk product create
 // RCAT-BULK-002: Bulk paste import
-// Store-scoped via JWT (x-actor-id header from gateway)
+// GO-LIVE-132: Store-scoped via JWT (x-actor-id header from gateway)
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { getStoreId, requireStoreContext } from "../../../middleware/retailerStoreContext";
 
 export const retailerAdminProductsRouter = Router();
 
-/**
- * Get store ID from gateway-provided headers
- */
-function getStoreId(req: Request): string | null {
-  const actorId = req.headers['x-actor-id'];
-  return typeof actorId === 'string' ? actorId : null;
-}
+// GO-LIVE-132: Apply store context middleware to all routes
+retailerAdminProductsRouter.use(requireStoreContext);
 
 /**
  * Generate a store-scoped barcode for LOOSE_BULK products
@@ -49,10 +45,8 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
 
-  const storeId = getStoreId(req);
-  if (!storeId) {
-    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
-  }
+  // GO-LIVE-132: Store ID now guaranteed by requireStoreContext middleware
+  const storeId = req.storeId!;
 
   const { categoryId, search, limit, offset } = req.query;
   const limitNum = Math.min(parseInt(limit as string, 10) || 200, 500);
