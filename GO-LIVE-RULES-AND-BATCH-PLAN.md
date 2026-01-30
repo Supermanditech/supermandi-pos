@@ -183,10 +183,10 @@ git push origin main
 | GO-LIVE-105 | Device token stored in AsyncStorage (not SecureStore) | CRITICAL | ✅ DONE |
 | GO-LIVE-106 | SQLite database on mobile not encrypted | CRITICAL | ✅ ASSESSED (No PII, deferred to post-launch) |
 | GO-LIVE-107 | OpenAI API key stored as plaintext in memory | CRITICAL | ✅ DONE |
-| GO-LIVE-108 | Missing CSRF protection across all portals | CRITICAL | PENDING |
-| GO-LIVE-109 | No token refresh mechanism in retailer-admin portal | CRITICAL | PENDING |
-| GO-LIVE-110 | Supplier JWT tokens stored in localStorage (XSS vulnerable) | CRITICAL | PENDING |
-| GO-LIVE-111 | No session timeout in supplier portal | CRITICAL | PENDING |
+| GO-LIVE-108 | Missing CSRF protection across all portals | CRITICAL | ✅ N/A (JWT auth, not cookies) |
+| GO-LIVE-109 | No token refresh mechanism in retailer-admin portal | CRITICAL | ✅ DONE |
+| GO-LIVE-110 | Supplier JWT tokens stored in localStorage (XSS vulnerable) | CRITICAL | ✅ DONE (CSP headers added) |
+| GO-LIVE-111 | No session timeout in supplier portal | CRITICAL | ✅ DONE |
 | GO-LIVE-112 | ALLOW_BYPASS_FOR_TESTING can be enabled in production | CRITICAL | PENDING |
 
 **Note:** GO-LIVE-102 merged into GO-LIVE-101 (both addressed same .env.production file)

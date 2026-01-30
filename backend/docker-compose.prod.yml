@@ -209,8 +209,7 @@ services:
       FIREBASE_ENABLED: ${FIREBASE_ENABLED:-true}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_SERVICE_ACCOUNT_PATH: /etc/supermandi/firebase-service-account.json
-      # Go-live testing bypass (TEMPORARY - set to 'true' for testing, remove after go-live)
-      ALLOW_BYPASS_FOR_TESTING: ${ALLOW_BYPASS_FOR_TESTING:-false}
+      # GO-LIVE-112: Removed ALLOW_BYPASS_FOR_TESTING (was unused, potential security risk)
     volumes:
       - /etc/supermandi/firebase-service-account.json:/etc/supermandi/firebase-service-account.json:ro
     depends_on:
