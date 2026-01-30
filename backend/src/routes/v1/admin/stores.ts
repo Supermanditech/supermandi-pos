@@ -29,11 +29,36 @@ const normalizeStoreIdInput = (value: unknown): { value?: string; error?: string
   return { value: trimmed };
 };
 
+// GO-LIVE-004: Store name validation with min/max length
+const STORE_NAME_MIN_LENGTH = 2;
+const STORE_NAME_MAX_LENGTH = 100;
+
 const normalizeStoreNameInput = (value: unknown): { value?: string; error?: string } => {
   if (typeof value !== "string") return { error: "storeName_required" };
   const trimmed = value.trim();
   if (!trimmed) return { error: "storeName_required" };
+  // GO-LIVE-004: Enforce min/max length constraints
+  if (trimmed.length < STORE_NAME_MIN_LENGTH) {
+    return { error: `storeName_too_short_min_${STORE_NAME_MIN_LENGTH}` };
+  }
+  if (trimmed.length > STORE_NAME_MAX_LENGTH) {
+    return { error: `storeName_too_long_max_${STORE_NAME_MAX_LENGTH}` };
+  }
   return { value: trimmed };
+};
+
+// GO-LIVE-005: Email and phone validation regex patterns
+const EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const PHONE_PATTERN = /^[+]?[0-9]{10,15}$/;
+
+const validateEmail = (email: string): boolean => {
+  return EMAIL_PATTERN.test(email);
+};
+
+const validatePhone = (phone: string): boolean => {
+  // Remove spaces and dashes for validation
+  const cleaned = phone.replace(/[\s-]/g, '');
+  return PHONE_PATTERN.test(cleaned);
 };
 
 const generateStoreId = (): string => randomUUID();
@@ -272,8 +297,17 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
   };
 
   // P1-SADM-002: Update all supported store fields
-  if (storeName !== undefined) addUpdate("name", typeof storeName === "string" ? storeName.trim() : storeName);
-  else if (name !== undefined) addUpdate("name", typeof name === "string" ? name.trim() : name);
+  // GO-LIVE-004: Validate store name on update too
+  if (storeName !== undefined || name !== undefined) {
+    const nameValue = storeName !== undefined ? storeName : name;
+    const nameResult = normalizeStoreNameInput(nameValue);
+    if (nameResult.error) {
+      return res.status(400).json({ error: nameResult.error });
+    }
+    if (nameResult.value) {
+      addUpdate("name", nameResult.value);
+    }
+  }
 
   const upiVpaValue = upiVpa !== undefined ? upiVpa : upiVpaSnake;
   if (upiVpaValue !== undefined) {
@@ -291,8 +325,24 @@ adminStoresRouter.patch("/stores/:storeId", async (req, res) => {
   // Contact and address fields
   if (typeof address === "string") addUpdate("address", address.trim());
   if (typeof contactName === "string") addUpdate("contact_name", contactName.trim());
-  if (typeof contactPhone === "string") addUpdate("contact_phone", contactPhone.trim());
-  if (typeof contactEmail === "string") addUpdate("contact_email", contactEmail.trim().toLowerCase());
+
+  // GO-LIVE-005: Validate phone format
+  if (typeof contactPhone === "string") {
+    const trimmedPhone = contactPhone.trim();
+    if (trimmedPhone && !validatePhone(trimmedPhone)) {
+      return res.status(400).json({ error: "contactPhone_invalid_format" });
+    }
+    addUpdate("contact_phone", trimmedPhone);
+  }
+
+  // GO-LIVE-005: Validate email format
+  if (typeof contactEmail === "string") {
+    const trimmedEmail = contactEmail.trim().toLowerCase();
+    if (trimmedEmail && !validateEmail(trimmedEmail)) {
+      return res.status(400).json({ error: "contactEmail_invalid_format" });
+    }
+    addUpdate("contact_email", trimmedEmail);
+  }
 
   if (updates.length === 0) {
     return res.status(400).json({ error: "No fields to update" });

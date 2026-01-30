@@ -1,5 +1,5 @@
 // GL-CRIT-0049: Audit Log API
-import { getAuthHeaders, getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;

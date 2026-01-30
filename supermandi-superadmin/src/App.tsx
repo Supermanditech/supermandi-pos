@@ -14,6 +14,12 @@ import {
   fetchAnalyticsConsumerSales,
   fetchAnalyticsActivity,
   fetchAnalyticsDues,
+  // GO-LIVE-010: Proper type imports for analytics data
+  type OverviewResponse,
+  type DevicesResponse,
+  type ProductsResponse,
+  type PurchasesResponse,
+  type ConsumerSalesResponse,
   type ActivityResponse,
   type DuesResponse
 } from "./api/analytics";
@@ -35,12 +41,19 @@ import {
 import { fetchUsers, patchUser, createUser, type UserRecord, type UserCreateInput } from "./api/users";
 import { fetchSettings, fetchSystemStats, type SystemSettings, type SystemStats } from "./api/settings";
 // GL-CRIT-0049: Import audit logging functions
-import { logAdminAction, logAdminActionError } from "./api/audit";
+// GO-LIVE-011: Added fetchAuditLogs and types for audit UI
+import {
+  logAdminAction,
+  logAdminActionError,
+  fetchAuditLogs,
+  type AuditLogRecord
+} from "./api/audit";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
 
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings";
+// GO-LIVE-011: Added "audit" tab for audit logs
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -337,11 +350,12 @@ export default function App() {
   const [analyticsStoreId, setAnalyticsStoreId] = useState<string>("");
   const [analyticsLoading, setAnalyticsLoading] = useState<boolean>(false);
   const [analyticsError, setAnalyticsError] = useState<string>("");
-  const [overviewData, setOverviewData] = useState<any>(null);
-  const [analyticsDevices, setAnalyticsDevices] = useState<any>(null);
-  const [analyticsProducts, setAnalyticsProducts] = useState<any>(null);
-  const [analyticsPurchases, setAnalyticsPurchases] = useState<any>(null);
-  const [analyticsConsumerSales, setAnalyticsConsumerSales] = useState<any>(null);
+  // GO-LIVE-010: Use proper types instead of any
+  const [overviewData, setOverviewData] = useState<OverviewResponse["overview"] | null>(null);
+  const [analyticsDevices, setAnalyticsDevices] = useState<DevicesResponse | null>(null);
+  const [analyticsProducts, setAnalyticsProducts] = useState<ProductsResponse["products"] | null>(null);
+  const [analyticsPurchases, setAnalyticsPurchases] = useState<PurchasesResponse["purchases"] | null>(null);
+  const [analyticsConsumerSales, setAnalyticsConsumerSales] = useState<ConsumerSalesResponse["consumer_sales"] | null>(null);
   const [analyticsActivity, setAnalyticsActivity] = useState<ActivityResponse["activity"] | null>(null);
   const [analyticsDues, setAnalyticsDues] = useState<DuesResponse["dues"] | null>(null);
   const [productsGroupBy, setProductsGroupBy] = useState<string>("day");
@@ -408,6 +422,18 @@ export default function App() {
   const [settingsLoading, setSettingsLoading] = useState<boolean>(false);
   const [settingsError, setSettingsError] = useState<string>("");
   const settingsInFlightRef = useRef(false);
+
+  // GO-LIVE-011: Audit logs state
+  const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
+  const [auditLogsTotal, setAuditLogsTotal] = useState<number>(0);
+  const [auditLogsLoading, setAuditLogsLoading] = useState<boolean>(false);
+  const [auditLogsError, setAuditLogsError] = useState<string>("");
+  const [auditLogsPage, setAuditLogsPage] = useState<number>(0);
+  const [auditLogsFilter, setAuditLogsFilter] = useState<{
+    action?: string;
+    resource_type?: string;
+  }>({});
+  const auditLogsInFlightRef = useRef(false);
 
   const setRateLimit = (until: number | null) => {
     rateLimitedUntilRef.current = until;
@@ -919,6 +945,30 @@ export default function App() {
     }
   }
 
+  // GO-LIVE-011: Fetch audit logs
+  async function refreshAuditLogs() {
+    if (auditLogsInFlightRef.current) return;
+    auditLogsInFlightRef.current = true;
+    setAuditLogsLoading(true);
+    setAuditLogsError("");
+
+    try {
+      const res = await fetchAuditLogs({
+        limit: 50,
+        offset: auditLogsPage * 50,
+        action: auditLogsFilter.action,
+        resource_type: auditLogsFilter.resource_type,
+      });
+      setAuditLogs(res.logs);
+      setAuditLogsTotal(res.total);
+    } catch (e: any) {
+      setAuditLogsError(e?.message ? String(e.message) : "Failed to fetch audit logs");
+    } finally {
+      setAuditLogsLoading(false);
+      auditLogsInFlightRef.current = false;
+    }
+  }
+
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
 
@@ -929,6 +979,7 @@ export default function App() {
     const shouldRefreshUsers = tab === "users";
     const shouldRefreshSettings = tab === "settings";
     const shouldRefreshAi = tab === "ai";
+    const shouldRefreshAudit = tab === "audit"; // GO-LIVE-011
 
     refreshHealth();
     if (shouldRefreshEvents) refreshEvents();
@@ -942,6 +993,7 @@ export default function App() {
         .then((res) => setAiConfigured(res.configured))
         .catch(() => setAiConfigured(null));
     }
+    if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
 
     const id = setInterval(() => {
       if (isRateLimited()) return;
@@ -957,6 +1009,7 @@ export default function App() {
           .then((res) => setAiConfigured(res.configured))
           .catch(() => setAiConfigured(null));
       }
+      if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
   }, [tab]);
@@ -966,6 +1019,13 @@ export default function App() {
     refreshEvents();
     setPage(0);
   }, [limit]);
+
+  // GO-LIVE-011: Refresh audit logs when page or filter changes
+  useEffect(() => {
+    if (tab === "audit") {
+      refreshAuditLogs();
+    }
+  }, [auditLogsPage, auditLogsFilter]);
 
   useEffect(() => {
     if (!enrollment) return;
@@ -1584,6 +1644,10 @@ export default function App() {
         <button className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>
           Settings
         </button>
+        {/* GO-LIVE-011: Audit logs tab */}
+        <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>
+          Audit Logs
+        </button>
 
         <div className="tabsRight muted">
           {lastRefreshAt ? `Last refresh: ${new Date(lastRefreshAt).toLocaleTimeString()}` : ""}
@@ -1798,6 +1862,15 @@ export default function App() {
                         }}
                       >
                         Copy QR payload
+                      </button>
+                      {/* GO-LIVE-012: QR code regenerate button */}
+                      <button
+                        className="btnDanger"
+                        onClick={handleCreateEnrollment}
+                        disabled={enrollLoading}
+                        title="Regenerate QR code with new enrollment"
+                      >
+                        {enrollLoading ? "Regenerating..." : "Regenerate QR"}
                       </button>
                     </div>
                   </div>
@@ -2909,7 +2982,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsDevices.devices.map((d: any) => {
+                      {analyticsDevices.devices.map((d) => {
                         const online = isDeviceOnline(d.last_seen_online);
                         return (
                           <tr key={d.device_id}>
@@ -2959,7 +3032,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsProducts.top_products.map((p: any) => (
+                      {analyticsProducts.top_products.map((p) => (
                         <tr key={p.product_id}>
                           <td>{p.name}</td>
                           <td className="mono">{p.barcode}</td>
@@ -2986,7 +3059,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsProducts.new_products_created.map((p: any) => (
+                      {analyticsProducts.new_products_created.map((p) => (
                         <tr key={p.id}>
                           <td>{p.name}</td>
                           <td className="mono">{p.barcode}</td>
@@ -3020,7 +3093,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsPurchases.vendor_breakdown.map((v: any) => (
+                      {analyticsPurchases.vendor_breakdown.map((v) => (
                         <tr key={v.supplier}>
                           <td>{v.supplier}</td>
                           <td className="mono">{formatMoneyMinor(v.total_minor)}</td>
@@ -3044,7 +3117,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsPurchases.sku_cost_summary.map((s: any, idx: number) => (
+                      {analyticsPurchases.sku_cost_summary.map((s, idx) => (
                         <tr key={`${s.product_id ?? s.sku ?? "sku"}-${idx}`}>
                           <td className="mono">{s.sku ?? s.product_id ?? "unknown"}</td>
                           <td className="mono">{s.quantity}</td>
@@ -3084,7 +3157,7 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analyticsConsumerSales.status_counts.map((s: any) => (
+                      {analyticsConsumerSales.status_counts.map((s) => (
                         <tr key={s.status}>
                           <td>{s.status}</td>
                           <td className="mono">{s.count}</td>
@@ -3581,6 +3654,147 @@ export default function App() {
                 )}
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* GO-LIVE-011: Audit Logs Tab */}
+      {tab === "audit" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">Audit Logs</div>
+            <div className="muted">System activity and admin actions ({auditLogsTotal} total)</div>
+          </div>
+
+          <div className="tableWrap">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <button onClick={() => refreshAuditLogs()} disabled={auditLogsLoading}>
+                {auditLogsLoading ? "Loading..." : "Refresh"}
+              </button>
+
+              <select
+                value={auditLogsFilter.action || ""}
+                onChange={(e) => {
+                  setAuditLogsFilter(prev => ({ ...prev, action: e.target.value || undefined }));
+                  setAuditLogsPage(0);
+                }}
+                style={{ padding: "6px 10px" }}
+              >
+                <option value="">All Actions</option>
+                <option value="create">Create</option>
+                <option value="update">Update</option>
+                <option value="delete">Delete</option>
+                <option value="approve">Approve</option>
+                <option value="reject">Reject</option>
+                <option value="login">Login</option>
+              </select>
+
+              <select
+                value={auditLogsFilter.resource_type || ""}
+                onChange={(e) => {
+                  setAuditLogsFilter(prev => ({ ...prev, resource_type: e.target.value || undefined }));
+                  setAuditLogsPage(0);
+                }}
+                style={{ padding: "6px 10px" }}
+              >
+                <option value="">All Resources</option>
+                <option value="store">Store</option>
+                <option value="device">Device</option>
+                <option value="user">User</option>
+                <option value="supplier">Supplier</option>
+                <option value="product">Product</option>
+              </select>
+
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  disabled={auditLogsPage === 0}
+                  onClick={() => setAuditLogsPage(prev => Math.max(0, prev - 1))}
+                >
+                  ← Prev
+                </button>
+                <span className="muted">Page {auditLogsPage + 1} of {Math.max(1, Math.ceil(auditLogsTotal / 50))}</span>
+                <button
+                  disabled={(auditLogsPage + 1) * 50 >= auditLogsTotal}
+                  onClick={() => setAuditLogsPage(prev => prev + 1)}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+
+            {auditLogsError && <div className="errorText" style={{ marginBottom: 8 }}>{auditLogsError}</div>}
+
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Action</th>
+                  <th>Resource</th>
+                  <th>Resource ID</th>
+                  <th>Actor</th>
+                  <th>Status</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="mono" style={{ fontSize: 12 }}>
+                      {new Date(log.created_at).toLocaleString()}
+                    </td>
+                    <td>
+                      <span style={{
+                        padding: "2px 6px",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: log.action === "delete" ? "#ffebee" :
+                                   log.action === "create" ? "#e8f5e9" :
+                                   log.action === "approve" ? "#e3f2fd" :
+                                   log.action === "reject" ? "#fff3e0" : "#f5f5f5",
+                        color: log.action === "delete" ? "#c62828" :
+                               log.action === "create" ? "#2e7d32" :
+                               log.action === "approve" ? "#1565c0" :
+                               log.action === "reject" ? "#e65100" : "#666"
+                      }}>
+                        {log.action.toUpperCase()}
+                      </span>
+                    </td>
+                    <td>{log.resource_type}</td>
+                    <td className="mono" style={{ fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {log.resource_id || "-"}
+                    </td>
+                    <td className="mono" style={{ fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {log.actor_user_id || log.actor_ip || "system"}
+                    </td>
+                    <td>
+                      {log.response_status ? (
+                        <span style={{
+                          color: log.response_status >= 400 ? "#c62828" : "#2e7d32"
+                        }}>
+                          {log.response_status}
+                        </span>
+                      ) : "-"}
+                    </td>
+                    <td>
+                      {log.error_message && (
+                        <span style={{ color: "#c62828", fontSize: 12 }}>{log.error_message}</span>
+                      )}
+                      {log.request_body && !log.error_message && (
+                        <PayloadDetails payload={log.request_body} />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {auditLogs.length === 0 && !auditLogsLoading && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: "center", color: "#888", padding: 24 }}>
+                      No audit logs found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
