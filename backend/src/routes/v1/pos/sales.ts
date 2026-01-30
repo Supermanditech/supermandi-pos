@@ -1229,7 +1229,10 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, re
       quantity: Number(row.quantity ?? 0)
     }));
 
-    // Re-verify stock availability (critical - stock might have changed)
+    // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
+    // Stock is NOT reserved during PENDING state - another sale could consume it
+    // This final check ensures we don't oversell even with concurrent pending sales
+    // If this fails, payment is rejected with InsufficientStockError
     await ensureStoreInventoryAvailability({
       client,
       storeId,
@@ -1241,7 +1244,7 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, re
       }))
     });
 
-    // Deduct stock NOW (only after payment is confirmed)
+    // Deduct stock NOW (only after payment is confirmed and stock verified)
     await applyBulkDeductions({
       client,
       storeId,
@@ -1646,7 +1649,10 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
       quantity: Number(row.quantity ?? 0)
     }));
 
-    // Re-verify stock availability (critical - stock might have changed)
+    // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
+    // Stock is NOT reserved during PENDING state - another sale could consume it
+    // This final check ensures we don't oversell even with concurrent pending sales
+    // If this fails, payment is rejected with InsufficientStockError
     await ensureStoreInventoryAvailability({
       client,
       storeId,
@@ -1658,7 +1664,7 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
       }))
     });
 
-    // Deduct stock NOW (only after payment is being processed)
+    // Deduct stock NOW (only after payment is confirmed and stock verified)
     await applyBulkDeductions({
       client,
       storeId,
@@ -1777,7 +1783,10 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
       quantity: Number(row.quantity ?? 0)
     }));
 
-    // Re-verify stock availability (critical - stock might have changed)
+    // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
+    // Stock is NOT reserved during PENDING state - another sale could consume it
+    // This final check ensures we don't oversell even with concurrent pending sales
+    // If this fails, payment is rejected with InsufficientStockError
     await ensureStoreInventoryAvailability({
       client,
       storeId,
@@ -1789,7 +1798,7 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
       }))
     });
 
-    // Deduct stock NOW (only after payment is being processed)
+    // Deduct stock NOW (only after payment is confirmed and stock verified)
     await applyBulkDeductions({
       client,
       storeId,
@@ -1907,7 +1916,10 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
       quantity: Number(row.quantity ?? 0)
     }));
 
-    // Re-verify stock availability (critical - stock might have changed)
+    // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
+    // Stock is NOT reserved during PENDING state - another sale could consume it
+    // This final check ensures we don't oversell even with concurrent pending sales
+    // If this fails, payment is rejected with InsufficientStockError
     await ensureStoreInventoryAvailability({
       client,
       storeId,
@@ -1919,7 +1931,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
       }))
     });
 
-    // Deduct stock NOW (only after payment is being processed)
+    // Deduct stock NOW (only after payment is confirmed and stock verified)
     await applyBulkDeductions({
       client,
       storeId,
