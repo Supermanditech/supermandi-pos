@@ -566,7 +566,6 @@ export function validateBnplMaxDays(days: unknown): { valid: boolean; value?: nu
 // =============================================================================
 
 const VALID_GROUP_BY_VALUES = ['minute', 'hour', 'day', 'category'] as const;
-type GroupByValue = typeof VALID_GROUP_BY_VALUES[number];
 
 /**
  * Validate analytics groupBy parameter to prevent SQL injection
