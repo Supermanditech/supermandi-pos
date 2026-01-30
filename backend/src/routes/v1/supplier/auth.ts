@@ -128,11 +128,13 @@ function isValidIfscCode(ifsc: string): boolean {
 }
 
 /**
- * Validate UPI VPA (username@bankhandle)
+ * GO-LIVE-123: Strict UPI VPA validation (username@bankhandle)
+ * Rules: Min 3 chars before @, min 2 chars for bank handle
  */
 function isValidUpiVpa(vpa: string): boolean {
   const trimmed = vpa.trim().toLowerCase();
-  return /^[a-z0-9._-]+@[a-z0-9]+$/.test(trimmed) && trimmed.length <= 100;
+  // GO-LIVE-123: At least 3 chars before @, 2+ chars for bank handle
+  return /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/.test(trimmed) && trimmed.length >= 6 && trimmed.length <= 100;
 }
 
 // =============================================================================

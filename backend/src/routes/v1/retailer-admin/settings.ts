@@ -16,13 +16,18 @@ function getStoreId(req: Request): string | null {
 }
 
 /**
- * Validate UPI VPA format
+ * GO-LIVE-123: Strict UPI VPA validation
  * Format: name@bank (e.g., store@ybl, 9876543210@paytm)
+ * Rules:
+ * - Min 3 chars before @
+ * - Min 2 chars after @ (valid bank handles are 2+ chars)
+ * - Max 100 chars total
+ * - Only alphanumeric, dots, underscores, dashes allowed
  */
 function isValidUpiVpa(vpa: string): boolean {
-  // Basic VPA format: alphanumeric.alphanumeric@alphanumeric
-  const vpaRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/;
-  return vpaRegex.test(vpa) && vpa.length <= 100;
+  // GO-LIVE-123: Stricter regex - at least 3 chars before @, 2+ chars for bank handle
+  const vpaRegex = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9]{2,}$/;
+  return vpaRegex.test(vpa) && vpa.length >= 6 && vpa.length <= 100;
 }
 
 // =============================================================================
