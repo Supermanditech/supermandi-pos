@@ -118,11 +118,16 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
  * POST /api/v1/admin/pending-suppliers/:supplierId/verify
  * Verify a pending supplier request
  * ITER2-004: Fixed schema namespace (supplier.supplier_requests)
+ * GO-LIVE-130: Enhanced authorization with admin tracking and audit logging
  */
 // GO-LIVE-128: Requires 'suppliers:approve' permission
 adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminToken, requirePermission("suppliers", "approve"), async (req, res) => {
   const { supplierId } = req.params;
   const { supplierId: linkedSupplierId, verifySupplier, notes } = req.body || {};
+
+  // GO-LIVE-130: Get admin ID for audit trail
+  const adminId = (req as any).adminId;
+  const adminEmail = (req as any).adminInfo?.email || 'master-token';
 
   if (!supplierId) {
     return res.status(400).json({ error: "supplierId (request ID) is required" });
@@ -139,7 +144,10 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
 
     // Get the supplier request
     const reqResult = await client.query(
-      `SELECT * FROM supplier.supplier_requests WHERE id = $1::uuid AND status = 'pending'`,
+      `SELECT sr.*, st.name as store_name, st.status as store_status
+       FROM supplier.supplier_requests sr
+       LEFT JOIN platform.stores st ON st.id = sr.store_id
+       WHERE sr.id = $1::uuid AND sr.status = 'pending'`,
       [supplierId]
     );
 
@@ -149,6 +157,16 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
     }
 
     const request = reqResult.rows[0];
+
+    // GO-LIVE-130: Validate that the requesting store exists and is active
+    if (request.store_id && request.store_status === 'deleted') {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: "requesting_store_deleted",
+        message: "Cannot approve supplier request: the requesting store has been deleted"
+      });
+    }
+
     let finalSupplierId: string | null = linkedSupplierId || null;
 
     // If verifySupplier=true, create a new supplier from the request data
@@ -167,20 +185,51 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
       finalSupplierId = supplierResult.rows[0].id;
     }
 
-    // Update the request to approved
+    // GO-LIVE-130: Update the request with reviewer information
     await client.query(
       `UPDATE supplier.supplier_requests
-       SET status = 'approved', review_notes = $2, reviewed_at = NOW(), approved_supplier_id = $3, updated_at = NOW()
+       SET status = 'approved',
+           review_notes = $2,
+           reviewed_at = NOW(),
+           reviewed_by = $3,
+           approved_supplier_id = $4,
+           updated_at = NOW()
        WHERE id = $1::uuid`,
-      [supplierId, notes || null, finalSupplierId]
+      [supplierId, notes || null, adminId !== 'master-token' ? adminId : null, finalSupplierId]
     );
 
+    // GO-LIVE-130: Log to audit table
+    try {
+      await client.query(
+        `INSERT INTO admin.audit_log (actor_user_id, action, resource_type, resource_id, store_id, request_body, response_status)
+         VALUES ($1::uuid, 'supplier_request.approve', 'supplier_request', $2, $3::uuid, $4::jsonb, 200)`,
+        [
+          adminId !== 'master-token' ? adminId : null,
+          supplierId,
+          request.store_id,
+          JSON.stringify({
+            adminEmail,
+            requestedName: request.requested_name,
+            requestedGstin: request.requested_gstin,
+            notes: notes || null,
+            createdSupplierId: finalSupplierId
+          })
+        ]
+      );
+    } catch (auditErr: any) {
+      // Don't fail the operation if audit logging fails
+      console.warn('[admin/verify-supplier] GO-LIVE-130: Audit log failed:', auditErr?.message);
+    }
+
     await client.query("COMMIT");
+
+    console.log(`[admin/verify-supplier] GO-LIVE-130: Supplier request ${supplierId} approved by ${adminEmail}`);
 
     return res.json({
       success: true,
       message: "Supplier request approved",
-      approvedSupplierId: finalSupplierId
+      approvedSupplierId: finalSupplierId,
+      approvedBy: adminEmail
     });
   } catch (err: any) {
     await client.query("ROLLBACK");
@@ -199,6 +248,7 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
  * Reject a pending supplier request
  * ITER2-003: Fixed field name mismatch - accept both 'notes' and 'reason'
  * ITER2-004: Fixed schema namespace (supplier.supplier_requests)
+ * GO-LIVE-130: Enhanced authorization with admin tracking and audit logging
  */
 // GO-LIVE-128: Requires 'suppliers:reject' permission
 adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), async (req, res) => {
@@ -206,6 +256,10 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
   // ITER2-003: Accept both 'notes' (from frontend) and 'reason' (legacy) field names
   const { notes, reason } = req.body || {};
   const reviewNotes = notes || reason || null;
+
+  // GO-LIVE-130: Get admin ID for audit trail
+  const adminId = (req as any).adminId;
+  const adminEmail = (req as any).adminInfo?.email || 'master-token';
 
   if (!supplierId) {
     return res.status(400).json({ error: "supplierId (request ID) is required" });
@@ -216,11 +270,33 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
     return res.status(503).json({ error: "database unavailable" });
   }
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    // GO-LIVE-130: Get request details for audit logging
+    const reqCheck = await client.query(
+      `SELECT store_id, requested_name, requested_gstin FROM supplier.supplier_requests
+       WHERE id = $1::uuid AND status = 'pending'`,
+      [supplierId]
+    );
+
+    if (reqCheck.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Supplier request not found or not pending" });
+    }
+
+    const requestInfo = reqCheck.rows[0];
+
+    // GO-LIVE-130: Update with reviewed_by information
+    const result = await client.query(
       `UPDATE supplier.supplier_requests
-       SET status = 'rejected', review_notes = $2, reviewed_at = NOW(), updated_at = NOW()
-       WHERE id = $1::uuid AND status = 'pending'
+       SET status = 'rejected',
+           review_notes = $2,
+           reviewed_at = NOW(),
+           reviewed_by = $3,
+           updated_at = NOW()
+       WHERE id = $1::uuid
        RETURNING
          id,
          store_id as "storeId",
@@ -228,23 +304,48 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
          status,
          review_notes as "reviewNotes",
          reviewed_at as "reviewedAt"`,
-      [supplierId, reviewNotes]
+      [supplierId, reviewNotes, adminId !== 'master-token' ? adminId : null]
     );
 
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Supplier request not found or not pending" });
+    // GO-LIVE-130: Log to audit table
+    try {
+      await client.query(
+        `INSERT INTO admin.audit_log (actor_user_id, action, resource_type, resource_id, store_id, request_body, response_status)
+         VALUES ($1::uuid, 'supplier_request.reject', 'supplier_request', $2, $3::uuid, $4::jsonb, 200)`,
+        [
+          adminId !== 'master-token' ? adminId : null,
+          supplierId,
+          requestInfo.store_id,
+          JSON.stringify({
+            adminEmail,
+            requestedName: requestInfo.requested_name,
+            requestedGstin: requestInfo.requested_gstin,
+            rejectionReason: reviewNotes
+          })
+        ]
+      );
+    } catch (auditErr: any) {
+      console.warn('[admin/reject-supplier] GO-LIVE-130: Audit log failed:', auditErr?.message);
     }
+
+    await client.query("COMMIT");
+
+    console.log(`[admin/reject-supplier] GO-LIVE-130: Supplier request ${supplierId} rejected by ${adminEmail}`);
 
     return res.json({
       success: true,
-      data: result.rows[0]
+      data: result.rows[0],
+      rejectedBy: adminEmail
     });
   } catch (err: any) {
+    await client.query("ROLLBACK");
     console.error("[admin/reject-supplier] Error:", err);
     if (err.code === "42P01") {
       return res.status(404).json({ error: "Supplier tables not initialized" });
     }
     return res.status(500).json({ error: "Failed to reject supplier" });
+  } finally {
+    client.release();
   }
 });
 
