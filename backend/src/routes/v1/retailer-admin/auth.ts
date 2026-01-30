@@ -153,18 +153,28 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
       firebaseUid = verifyResult.payload?.uid;
       console.log(`[RetailerAuth] Firebase token verified. UID: ${firebaseUid}, Phone: ${phone ? '***' + phone.slice(-4) : 'N/A'}`);
     } else {
-      // Fallback: Client-side extraction (less secure, for development/testing)
-      console.warn("[RetailerAuth] Using client-side token extraction (Firebase Admin not configured)");
+      // GO-LIVE-104: Firebase Admin SDK is REQUIRED for production
+      // The previous fallback allowed JWT forgery by simply base64-decoding the token
+      // without cryptographic verification - attackers could forge any phone number
+      if (process.env.NODE_ENV === 'production') {
+        console.error("[RetailerAuth] SECURITY: Firebase Admin SDK not configured in production");
+        res.status(503).json({
+          error: "Authentication service unavailable. Firebase verification required.",
+          code: "FIREBASE_NOT_CONFIGURED"
+        });
+        return;
+      }
+
+      // Development only: Allow bypass with explicit phone number from request
+      // This does NOT extract from token (which would be insecure)
+      console.warn("[RetailerAuth] DEV MODE: Firebase Admin not configured, using phoneNumber from request body");
       if (!phone) {
-        try {
-          const parts = idToken.split(".");
-          if (parts.length === 3) {
-            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-            phone = payload.phone_number;
-          }
-        } catch (parseError) {
-          console.warn("[RetailerAuth] Failed to parse Firebase token:", parseError);
-        }
+        console.error("[RetailerAuth] DEV MODE: phoneNumber required in request body when Firebase Admin not configured");
+        res.status(400).json({
+          error: "Phone number required in request body (Firebase Admin not configured)",
+          code: "PHONE_REQUIRED_DEV_MODE"
+        });
+        return;
       }
     }
 
