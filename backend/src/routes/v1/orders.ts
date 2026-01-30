@@ -1029,6 +1029,20 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
       [orderId]
     );
 
+    // GO-LIVE-118: Fetch order total for reconciliation verification
+    const orderResult = await client.query(
+      `SELECT total_amount FROM orders.purchase_orders WHERE id = $1`,
+      [orderId]
+    );
+    const orderTotal = orderResult.rows[0]?.total_amount;
+
+    // GO-LIVE-118: Verify payment amount matches order total (reconciliation)
+    if (orderTotal !== undefined && payment.amount_minor !== orderTotal) {
+      console.error(`[SM-017] GO-LIVE-118: Payout reconciliation mismatch! payment=${payment.amount_minor}, order=${orderTotal}`);
+      // Don't fail the payment, but log critical discrepancy
+      // This could indicate a race condition or data corruption
+    }
+
     // Schedule payout to supplier (create payout record)
     const payoutId = randomUUID();
     try {
@@ -1037,6 +1051,13 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
           id, supplier_id, purchase_order_id, payment_id, amount_minor, status
         ) VALUES ($1, $2, $3, $4, $5, 'scheduled')`,
         [payoutId, payment.supplier_id, orderId, paymentId, payment.amount_minor]
+      );
+
+      // GO-LIVE-118: Track order-payout relationship for audit trail
+      await client.query(
+        `INSERT INTO supplier.payout_order_items (payout_id, order_id, amount_paise)
+         VALUES ($1, $2, $3)`,
+        [payoutId, orderId, payment.amount_minor]
       );
     } catch (e: any) {
       // Table might not exist yet, log and continue

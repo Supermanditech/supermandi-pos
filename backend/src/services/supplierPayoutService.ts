@@ -127,6 +127,32 @@ export async function processScheduledPayout(
   try {
     await client.query("BEGIN");
 
+    // GO-LIVE-118: Reconciliation verification - verify payout amount matches order total
+    const orderResult = await client.query(
+      `SELECT total_amount FROM orders.purchase_orders WHERE id = $1`,
+      [payout.purchaseOrderId]
+    );
+    const orderTotal = orderResult.rows[0]?.total_amount;
+
+    if (orderTotal !== undefined && payout.amountMinor !== orderTotal) {
+      console.error(
+        `[SM-018] GO-LIVE-118: CRITICAL - Payout reconciliation mismatch! ` +
+        `payoutId=${payout.id}, payoutAmount=${payout.amountMinor}, orderTotal=${orderTotal}`
+      );
+      // Fail the payout if amounts don't match - this indicates data corruption
+      await client.query(
+        `UPDATE payments.supplier_payouts
+         SET status = 'failed', failure_reason = $1
+         WHERE id = $2`,
+        [`Reconciliation mismatch: payout=${payout.amountMinor}, order=${orderTotal}`, payout.id]
+      );
+      await client.query("COMMIT");
+      return {
+        success: false,
+        error: `Reconciliation mismatch: payout amount (${payout.amountMinor}) does not match order total (${orderTotal})`,
+      };
+    }
+
     // Determine payout mode
     const mode = payout.payoutMethod === "UPI" ? "UPI" : "IMPS";
 
