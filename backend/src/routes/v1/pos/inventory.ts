@@ -976,7 +976,7 @@ posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, async (re
       `UPDATE store_inventory
        SET available_qty = $3, updated_at = NOW()
        WHERE store_id = $1 AND global_product_id = $2`,
-      [storeId, productId]
+      [storeId, productId, stockAfter]
     );
 
     await client.query("COMMIT");
