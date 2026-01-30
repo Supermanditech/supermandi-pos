@@ -30,6 +30,8 @@ interface PayoutResult {
   utr?: string;
   status?: string;
   error?: string;
+  // GO-LIVE-120: Distinguish retryable errors from permanent failures
+  isRetryable?: boolean;
 }
 
 /**
@@ -58,6 +60,7 @@ async function callRazorpayPayoutApi(params: {
       return {
         success: false,
         error: "Payment gateway not configured - please contact support",
+        isRetryable: false, // GO-LIVE-120: Config errors are not retryable
       };
     }
 
@@ -105,9 +108,12 @@ async function callRazorpayPayoutApi(params: {
 
     if (!response.ok) {
       console.error("[SM-018] Razorpay payout failed:", data);
+      // GO-LIVE-120: Server errors (5xx) and rate limits (429) are retryable
+      const isRetryable = response.status >= 500 || response.status === 429;
       return {
         success: false,
         error: data.error?.description || "Payout API error",
+        isRetryable,
       };
     }
 
@@ -118,10 +124,12 @@ async function callRazorpayPayoutApi(params: {
       status: data.status,
     };
   } catch (error: any) {
+    // GO-LIVE-120: Network errors are retryable (timeout, connection refused, etc.)
     console.error("[SM-018] Razorpay payout exception:", error.message);
     return {
       success: false,
       error: error.message,
+      isRetryable: true, // Network errors should be retried
     };
   }
 }
@@ -232,15 +240,22 @@ export async function processScheduledPayout(
       await client.query("COMMIT");
       console.log(`[SM-018] Payout completed: payoutId=${payout.id}, razorpayId=${result.payoutId}, utr=${result.utr}`);
     } else {
-      // Update payout record with failure
-      await client.query(
-        `UPDATE payments.supplier_payouts
-         SET status = 'failed', failure_reason = $1
-         WHERE id = $2`,
-        [result.error, payout.id]
-      );
-      await client.query("COMMIT");
-      console.error(`[SM-018] Payout failed: payoutId=${payout.id}, error=${result.error}`);
+      // GO-LIVE-120: Handle retryable vs permanent failures differently
+      if (result.isRetryable) {
+        // Retryable error - ROLLBACK to keep 'scheduled' status for retry
+        await client.query("ROLLBACK");
+        console.warn(`[SM-018] GO-LIVE-120: Retryable payout error, will retry: payoutId=${payout.id}, error=${result.error}`);
+      } else {
+        // Permanent failure - mark as failed
+        await client.query(
+          `UPDATE payments.supplier_payouts
+           SET status = 'failed', failure_reason = $1
+           WHERE id = $2`,
+          [result.error, payout.id]
+        );
+        await client.query("COMMIT");
+        console.error(`[SM-018] Payout permanently failed: payoutId=${payout.id}, error=${result.error}`);
+      }
     }
 
     return result;
