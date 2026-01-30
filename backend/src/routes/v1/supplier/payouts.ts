@@ -227,4 +227,65 @@ router.get("/:id", requireSupplierAuth, async (req: SupplierAuthRequest, res: Re
   }
 });
 
+/**
+ * GET /api/v1/supplier/payouts/:id/orders
+ * GO-LIVE-031: Get orders included in a payout
+ */
+router.get("/:id/orders", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // First verify this payout belongs to this supplier
+    const payoutCheck = await pool.query(
+      `SELECT id FROM supplier.payouts WHERE id = $1 AND supplier_id = $2`,
+      [id, req.supplierId]
+    );
+
+    if (payoutCheck.rows.length === 0) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Payout not found' }
+      });
+      return;
+    }
+
+    // Get orders associated with this payout
+    const result = await pool.query(
+      `SELECT
+        poi.id,
+        poi.order_id,
+        poi.amount_paise,
+        poi.created_at,
+        po.status as order_status,
+        po.created_at as order_date,
+        s.name as store_name
+      FROM supplier.payout_order_items poi
+      JOIN orders.purchase_orders po ON po.id = poi.order_id
+      JOIN platform.stores s ON s.id = po.store_id
+      WHERE poi.payout_id = $1
+      ORDER BY po.created_at DESC`,
+      [id]
+    );
+
+    res.json({
+      data: result.rows.map(row => ({
+        id: row.id,
+        orderId: row.order_id,
+        amountPaise: parseInt(row.amount_paise),
+        orderStatus: row.order_status,
+        orderDate: row.order_date,
+        storeName: row.store_name,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export const supplierPayoutsRouter = router;

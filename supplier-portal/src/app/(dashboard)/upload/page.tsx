@@ -42,8 +42,8 @@ export default function UploadPage() {
 
     const file = e.dataTransfer.files[0];
     if (file && (file.name.endsWith('.csv') || file.type === 'text/csv')) {
-      // GL-WF-059: Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
+      // GO-LIVE-024: Fixed file size validation (5MB limit matches API)
+      if (file.size > 5 * 1024 * 1024) {
         toast.error('File size must be less than 5MB');
         return;
       }
@@ -58,8 +58,8 @@ export default function UploadPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        // GL-WF-059: Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
+        // GO-LIVE-024: Fixed file size validation (5MB limit matches API)
+        if (file.size > 5 * 1024 * 1024) {
           toast.error('File size must be less than 5MB');
           e.target.value = ''; // Reset input
           return;

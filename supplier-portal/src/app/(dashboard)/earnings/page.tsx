@@ -5,11 +5,13 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { getPayouts, getPayoutSummary, getKycStatus, Payout, PayoutSummary } from '@/lib/api';
+import { getPayouts, getPayoutSummary, getKycStatus, getPayoutOrders, Payout, PayoutSummary, PayoutOrderItem } from '@/lib/api';
 
 export default function EarningsPage() {
   const [page, setPage] = useState(1);
   const limit = 20;
+  // GO-LIVE-031: Selected payout for order breakdown
+  const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null);
 
   // Fetch payout summary
   const { data: summary, isLoading: summaryLoading } = useQuery({
@@ -27,6 +29,13 @@ export default function EarningsPage() {
   const { data: kycStatus } = useQuery({
     queryKey: ['kyc-status'],
     queryFn: getKycStatus,
+  });
+
+  // GO-LIVE-031: Fetch payout orders when a payout is selected
+  const { data: payoutOrders, isLoading: ordersLoading } = useQuery({
+    queryKey: ['payout-orders', selectedPayoutId],
+    queryFn: () => selectedPayoutId ? getPayoutOrders(selectedPayoutId) : Promise.resolve([]),
+    enabled: !!selectedPayoutId,
   });
 
   const formatCurrency = (paise: number) => {
@@ -64,6 +73,8 @@ export default function EarningsPage() {
 
   const payouts = payoutsData?.data || [];
   const pagination = payoutsData?.pagination;
+  // GO-LIVE-031: Find selected payout for modal
+  const selectedPayout = payouts.find(p => p.id === selectedPayoutId);
 
   return (
     <div>
@@ -177,7 +188,11 @@ export default function EarningsPage() {
                 </thead>
                 <tbody>
                   {payouts.map((payout) => (
-                    <tr key={payout.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr
+                      key={payout.id}
+                      className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
+                      onClick={() => setSelectedPayoutId(payout.id)}
+                    >
                       <td className="py-3 px-4 text-sm text-slate-700">
                         {formatDate(payout.initiatedAt)}
                       </td>
@@ -190,7 +205,7 @@ export default function EarningsPage() {
                       <td className="py-3 px-4">
                         <p className="text-sm text-slate-700">{payout.bankAccount.accountName}</p>
                         <p className="text-xs text-slate-400">
-                          ****{payout.bankAccount.accountNumber.slice(-4)} | {payout.bankAccount.ifsc}
+                          {payout.bankAccount.accountNumber} | {payout.bankAccount.ifsc}
                         </p>
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -213,7 +228,11 @@ export default function EarningsPage() {
             {/* Mobile Cards */}
             <div className="md:hidden space-y-3">
               {payouts.map((payout) => (
-                <div key={payout.id} className="border border-slate-200 rounded-lg p-4">
+                <div
+                  key={payout.id}
+                  className="border border-slate-200 rounded-lg p-4 cursor-pointer hover:bg-slate-50"
+                  onClick={() => setSelectedPayoutId(payout.id)}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-semibold text-slate-800">
@@ -226,7 +245,7 @@ export default function EarningsPage() {
                   <div className="text-sm text-slate-600">
                     <p>Ref: {payout.referenceId}</p>
                     <p className="text-xs text-slate-400">
-                      {payout.bankAccount.accountName} | ****{payout.bankAccount.accountNumber.slice(-4)}
+                      {payout.bankAccount.accountName} | {payout.bankAccount.accountNumber}
                     </p>
                   </div>
                   {payout.status === 'failed' && payout.failureReason && (
@@ -275,6 +294,146 @@ export default function EarningsPage() {
           <li>Ensure your bank details are verified to avoid payout failures.</li>
         </ul>
       </div>
+
+      {/* GO-LIVE-031: Payout Details Modal */}
+      {selectedPayoutId && selectedPayout && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedPayoutId(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-slate-800">Payout Details</h2>
+                <button
+                  onClick={() => setSelectedPayoutId(null)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Payout Summary */}
+              <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <p className="text-sm text-slate-500">Reference</p>
+                  <p className="font-mono font-medium">{selectedPayout.referenceId}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Amount</p>
+                  <p className="text-xl font-bold text-slate-800">
+                    {formatCurrency(selectedPayout.amountPaise)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Date</p>
+                  <p className="font-medium">{formatDate(selectedPayout.initiatedAt)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Status</p>
+                  {getStatusBadge(selectedPayout.status)}
+                </div>
+              </div>
+
+              {/* Order Breakdown */}
+              <div>
+                <h3 className="font-medium text-slate-700 mb-3">
+                  Orders Included in This Payout
+                </h3>
+
+                {ordersLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
+                  </div>
+                ) : payoutOrders && payoutOrders.length > 0 ? (
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="text-left py-2 px-4 font-medium text-slate-500">Order</th>
+                          <th className="text-left py-2 px-4 font-medium text-slate-500">Store</th>
+                          <th className="text-left py-2 px-4 font-medium text-slate-500">Date</th>
+                          <th className="text-right py-2 px-4 font-medium text-slate-500">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payoutOrders.map((order: PayoutOrderItem) => (
+                          <tr key={order.id} className="border-b border-slate-100">
+                            <td className="py-2 px-4 font-mono text-xs">
+                              {order.orderId.slice(0, 8)}...
+                            </td>
+                            <td className="py-2 px-4">{order.storeName}</td>
+                            <td className="py-2 px-4 text-slate-600">
+                              {new Date(order.orderDate).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                              })}
+                            </td>
+                            <td className="py-2 px-4 text-right font-medium">
+                              {formatCurrency(order.amountPaise)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-slate-50 border-t-2 border-slate-200">
+                          <td colSpan={3} className="py-2 px-4 font-medium text-right">
+                            Total
+                          </td>
+                          <td className="py-2 px-4 text-right font-bold">
+                            {formatCurrency(selectedPayout.amountPaise)}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-slate-500 text-sm">
+                    <p>No order breakdown available for this payout.</p>
+                    <p className="text-xs mt-1">
+                      Order tracking was added recently. Older payouts may not have detailed breakdowns.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* UTR Info */}
+              {selectedPayout.paymentGatewayRef && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    <span className="font-medium">UTR/Transaction ID:</span>{' '}
+                    <span className="font-mono">{selectedPayout.paymentGatewayRef}</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Failure Reason */}
+              {selectedPayout.status === 'failed' && selectedPayout.failureReason && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <span className="font-medium">Failure Reason:</span>{' '}
+                    {selectedPayout.failureReason}
+                  </p>
+                </div>
+              )}
+
+              {/* Close Button */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setSelectedPayoutId(null)}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

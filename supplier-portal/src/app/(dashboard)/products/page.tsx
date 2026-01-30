@@ -133,13 +133,16 @@ export default function ProductsPage() {
     },
   });
 
-  // GL-WF-037: Handle resubmit - triggers update which resets to pending
+  // GO-LIVE-026: Handle resubmit - include ALL product fields to prevent data loss
   const handleResubmit = (product: Product) => {
     resubmitMutation.mutate({
       id: product.id,
       data: {
         name: product.name,
+        description: product.description || '',
         category: product.category || '',
+        barcode: product.barcode || '',
+        supplierSku: product.supplierSku || '',
         purchasePrice: product.purchasePrice,
         mrp: product.mrp,
         moq: product.moq,

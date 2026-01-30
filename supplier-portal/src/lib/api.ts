@@ -582,13 +582,32 @@ export async function getPayoutById(id: string): Promise<Payout> {
   return apiFetch<Payout>(`/api/v1/supplier/payouts/${id}`);
 }
 
+// GO-LIVE-031: Payout order breakdown
+export interface PayoutOrderItem {
+  id: string;
+  orderId: string;
+  amountPaise: number;
+  orderStatus: string;
+  orderDate: string;
+  storeName: string;
+  createdAt: string;
+}
+
+// GO-LIVE-031: Get orders included in a payout
+export async function getPayoutOrders(payoutId: string): Promise<PayoutOrderItem[]> {
+  return apiFetch<PayoutOrderItem[]>(`/api/v1/supplier/payouts/${payoutId}/orders`);
+}
+
 // ============================================================================
 // GL-WF-039: ORDER SHIPMENT APIs
 // ============================================================================
 
+// GO-LIVE-029: Added shipment date fields
 export interface ShipmentInfo {
   trackingNumber: string;
   carrier: string;
+  shipmentDate?: string;  // ISO date string
+  expectedDeliveryDate?: string;  // ISO date string
 }
 
 // GL-WF-039: Update order with shipment info
@@ -613,5 +632,36 @@ export async function updateOrderItemStatus(
   return apiFetch(`/api/v1/supplier/orders/${orderId}/items/${itemId}/status`, {
     method: 'PATCH',
     body: JSON.stringify(update),
+  });
+}
+
+// ============================================================================
+// GO-LIVE-030: ORDER NOTES APIs
+// ============================================================================
+
+export interface OrderNote {
+  id: string;
+  authorType: 'supplier' | 'retailer' | 'system';
+  authorName: string;
+  message: string;
+  isInternal: boolean;
+  createdAt: string;
+}
+
+export interface OrderNoteInput {
+  message: string;
+  isInternal?: boolean;
+}
+
+// GO-LIVE-030: Get order notes
+export async function getOrderNotes(orderId: string): Promise<OrderNote[]> {
+  return apiFetch<OrderNote[]>(`/api/v1/supplier/orders/${orderId}/notes`);
+}
+
+// GO-LIVE-030: Add a note to an order
+export async function addOrderNote(orderId: string, input: OrderNoteInput): Promise<OrderNote> {
+  return apiFetch<OrderNote>(`/api/v1/supplier/orders/${orderId}/notes`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }

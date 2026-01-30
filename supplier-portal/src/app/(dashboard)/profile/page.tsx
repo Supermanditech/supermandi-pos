@@ -165,15 +165,17 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="label">Email Address</label>
+                  {/* GO-LIVE-025: Email is read-only after registration for security */}
                   <input
                     type="email"
                     value={profileData.email}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, email: e.target.value })
-                    }
-                    className="input"
+                    disabled
+                    className="input bg-slate-100 cursor-not-allowed"
                     placeholder="email@example.com"
                   />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Email cannot be changed. Contact support if needed.
+                  </p>
                 </div>
 
                 <div>

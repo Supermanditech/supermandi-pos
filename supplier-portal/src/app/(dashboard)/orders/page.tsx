@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, Order, OrderItem, PaginatedResponse } from '@/lib/api';
+import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, Order, OrderItem, OrderNote, PaginatedResponse } from '@/lib/api';
 
 function formatPrice(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', {
@@ -68,8 +68,17 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
   // GL-WF-039: Shipment tracking state
+  // GO-LIVE-029: Added shipment date fields
   const [showShipmentForm, setShowShipmentForm] = useState(false);
-  const [shipmentData, setShipmentData] = useState({ trackingNumber: '', carrier: '' });
+  const [shipmentData, setShipmentData] = useState({
+    trackingNumber: '',
+    carrier: '',
+    shipmentDate: new Date().toISOString().split('T')[0],  // Default to today
+    expectedDeliveryDate: '',
+  });
+  // GO-LIVE-030: Order notes state
+  const [newNoteText, setNewNoteText] = useState('');
+  const [showNotesSection, setShowNotesSection] = useState(false);
 
   // GL-WF-063: Paginated orders query
   const { data: ordersResponse, isLoading } = useQuery({
@@ -88,6 +97,8 @@ export default function OrdersPage() {
       toast.success('Order status updated');
       setSelectedOrder(null);
       setShowShipmentForm(false);
+      setShowNotesSection(false);
+      setNewNoteText('');
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update order');
@@ -95,15 +106,20 @@ export default function OrdersPage() {
   });
 
   // GL-WF-039: Shipment tracking mutation
+  // GO-LIVE-029: Include shipment date fields
   const shipmentMutation = useMutation({
-    mutationFn: ({ id, trackingNumber, carrier }: { id: string; trackingNumber: string; carrier: string }) =>
-      updateOrderShipment(id, { trackingNumber, carrier }),
+    mutationFn: ({ id, trackingNumber, carrier, shipmentDate, expectedDeliveryDate }: {
+      id: string; trackingNumber: string; carrier: string; shipmentDate?: string; expectedDeliveryDate?: string;
+    }) =>
+      updateOrderShipment(id, { trackingNumber, carrier, shipmentDate, expectedDeliveryDate }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       toast.success('Shipment info added and order marked as shipped');
       setSelectedOrder(null);
       setShowShipmentForm(false);
-      setShipmentData({ trackingNumber: '', carrier: '' });
+      setShowNotesSection(false);
+      setNewNoteText('');
+      setShipmentData({ trackingNumber: '', carrier: '', shipmentDate: new Date().toISOString().split('T')[0], expectedDeliveryDate: '' });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to add shipment info');
@@ -124,6 +140,27 @@ export default function OrdersPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update item status');
+    },
+  });
+
+  // GO-LIVE-030: Order notes query - only fetch when an order is selected
+  const { data: orderNotes, isLoading: notesLoading, refetch: refetchNotes } = useQuery({
+    queryKey: ['orderNotes', selectedOrder?.id],
+    queryFn: () => selectedOrder ? getOrderNotes(selectedOrder.id) : Promise.resolve([]),
+    enabled: !!selectedOrder && showNotesSection,
+  });
+
+  // GO-LIVE-030: Add note mutation
+  const addNoteMutation = useMutation({
+    mutationFn: ({ orderId, message }: { orderId: string; message: string }) =>
+      addOrderNote(orderId, { message, isInternal: false }),
+    onSuccess: () => {
+      refetchNotes();
+      setNewNoteText('');
+      toast.success('Note added');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add note');
     },
   });
 
@@ -298,7 +335,11 @@ export default function OrdersPage() {
       {selectedOrder && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setSelectedOrder(null)}
+          onClick={() => {
+            setSelectedOrder(null);
+            setShowNotesSection(false);
+            setNewNoteText('');
+          }}
         >
           <div
             className="card max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -307,7 +348,11 @@ export default function OrdersPage() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Order Details</h2>
               <button
-                onClick={() => setSelectedOrder(null)}
+                onClick={() => {
+                  setSelectedOrder(null);
+                  setShowNotesSection(false);
+                  setNewNoteText('');
+                }}
                 className="text-slate-400 hover:text-slate-600"
               >
                 ✕
@@ -449,6 +494,7 @@ export default function OrdersPage() {
             </div>
 
             {/* GL-WF-039: Shipment Form - GL-CRIT-0062: Allow from pending or confirmed */}
+            {/* GO-LIVE-029: Added shipment date fields */}
             {showShipmentForm && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending') && (
               <div className="border border-slate-200 rounded-lg p-4 mb-6 bg-slate-50">
                 <h3 className="font-medium text-slate-800 mb-3">Add Shipment Details</h3>
@@ -476,6 +522,25 @@ export default function OrdersPage() {
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm text-slate-600 mb-1">Shipment Date</label>
+                    <input
+                      type="date"
+                      value={shipmentData.shipmentDate}
+                      onChange={(e) => setShipmentData({ ...shipmentData, shipmentDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-slate-600 mb-1">Expected Delivery Date</label>
+                    <input
+                      type="date"
+                      value={shipmentData.expectedDeliveryDate}
+                      onChange={(e) => setShipmentData({ ...shipmentData, expectedDeliveryDate: e.target.value })}
+                      min={shipmentData.shipmentDate}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -488,6 +553,8 @@ export default function OrdersPage() {
                         id: selectedOrder.id,
                         trackingNumber: shipmentData.trackingNumber,
                         carrier: shipmentData.carrier,
+                        shipmentDate: shipmentData.shipmentDate || undefined,
+                        expectedDeliveryDate: shipmentData.expectedDeliveryDate || undefined,
                       });
                     }}
                     disabled={shipmentMutation.isPending}
@@ -505,9 +572,102 @@ export default function OrdersPage() {
               </div>
             )}
 
+            {/* GO-LIVE-030: Order Notes/Communication Section */}
+            <div className="border-t border-slate-200 pt-4 mt-4">
+              <button
+                onClick={() => setShowNotesSection(!showNotesSection)}
+                className="flex items-center justify-between w-full text-left"
+              >
+                <span className="font-medium text-slate-700">
+                  Order Notes & Communication
+                </span>
+                <span className="text-slate-400">
+                  {showNotesSection ? '▼' : '▶'}
+                </span>
+              </button>
+
+              {showNotesSection && (
+                <div className="mt-4 space-y-4">
+                  {/* Notes List */}
+                  <div className="max-h-48 overflow-y-auto space-y-3">
+                    {notesLoading ? (
+                      <p className="text-sm text-slate-500">Loading notes...</p>
+                    ) : orderNotes && orderNotes.length > 0 ? (
+                      orderNotes.map((note: OrderNote) => (
+                        <div
+                          key={note.id}
+                          className={`p-3 rounded-lg text-sm ${
+                            note.authorType === 'supplier'
+                              ? 'bg-blue-50 border border-blue-100 ml-4'
+                              : note.authorType === 'system'
+                              ? 'bg-slate-100 border border-slate-200'
+                              : 'bg-green-50 border border-green-100 mr-4'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-slate-700">
+                              {note.authorName}
+                              {note.authorType === 'system' && ' (System)'}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                              {new Date(note.createdAt).toLocaleString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-slate-600">{note.message}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500 text-center py-2">
+                        No notes yet. Add a note to communicate with the retailer.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Add Note Form */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newNoteText}
+                      onChange={(e) => setNewNoteText(e.target.value)}
+                      placeholder="Type a message..."
+                      maxLength={2000}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newNoteText.trim()) {
+                          addNoteMutation.mutate({
+                            orderId: selectedOrder.id,
+                            message: newNoteText.trim(),
+                          });
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        if (newNoteText.trim()) {
+                          addNoteMutation.mutate({
+                            orderId: selectedOrder.id,
+                            message: newNoteText.trim(),
+                          });
+                        }
+                      }}
+                      disabled={addNoteMutation.isPending || !newNoteText.trim()}
+                      className="btn btn-primary px-4"
+                    >
+                      {addNoteMutation.isPending ? '...' : 'Send'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Status Actions */}
             {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && (
-              <div>
+              <div className="mt-4">
                 <p className="text-sm text-slate-500 mb-3">Update Status</p>
                 <div className="flex gap-3">
                   {statusFlow[selectedOrder.status].map((newStatus) => (
