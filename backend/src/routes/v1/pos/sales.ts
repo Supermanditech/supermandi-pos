@@ -830,9 +830,12 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
     });
   }
 
-  const discount = Math.max(0, Math.round(discountMinor ?? 0));
   const subtotal = cleanedItems.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
-  const total = Math.max(0, subtotal - discount);
+  // GO-LIVE-115: Cap discount to subtotal to prevent negative bills
+  // Also prevents storing invalid data where discount > subtotal
+  const rawDiscount = Math.max(0, Math.round(discountMinor ?? 0));
+  const discount = Math.min(rawDiscount, subtotal);
+  const total = subtotal - discount; // No Math.max(0,...) needed since discount <= subtotal
   const saleCurrency = typeof currency === "string" && currency.trim() ? currency.trim() : "INR";
   const requestedSaleId = asTrimmedString(requestedSaleIdRaw);
 

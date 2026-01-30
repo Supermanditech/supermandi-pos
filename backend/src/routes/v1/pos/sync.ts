@@ -847,7 +847,9 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const price = Math.round(priceRaw);
             return sum + qty * price;
           }, 0);
-          const computedTotal = Math.max(0, computedSubtotal - discountMinor);
+          // GO-LIVE-115: Cap discount to subtotal to prevent negative bills
+          const cappedDiscount = Math.min(discountMinor, computedSubtotal);
+          const computedTotal = computedSubtotal - cappedDiscount;
 
           // MED-006 FIX: Use deterministic billRef from saleId - no retry loop needed
           // Same saleId always produces same billRef, preventing duplicate rows
@@ -879,7 +881,7 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
                 billRef,
                 offlineReceiptRef,
                 computedSubtotal,
-                discountMinor,
+                cappedDiscount, // GO-LIVE-115: Use capped discount
                 computedTotal,
                 "completed",
                 createdAt,
