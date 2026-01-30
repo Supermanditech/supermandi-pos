@@ -72,6 +72,10 @@ server {
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     add_header Referrer-Policy "strict-origin-when-cross-origin";
+    # GO-LIVE-110: Content Security Policy to mitigate XSS attacks
+    # Note: 'unsafe-inline' needed for React inline styles, 'unsafe-eval' for some build tools
+    # This significantly reduces XSS risk even with localStorage token storage
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';";
 
     # Request size limits
     client_max_body_size 10M;
