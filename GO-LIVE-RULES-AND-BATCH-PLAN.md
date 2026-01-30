@@ -124,7 +124,14 @@ Each ticket must include:
 
 ## 3) AUDIT SUMMARY
 
-### Total Issues Identified: 246 Tickets → 16 Batches (0-15)
+### Total Issues Identified: 241 Tickets → 16 Batches (0-15)
+
+**Deduplication Note:** 5 duplicate tickets were identified and removed:
+- GO-LIVE-102 merged into GO-LIVE-101 (both about .env secrets)
+- GO-LIVE-136 duplicate of GO-LIVE-109 (token refresh)
+- GO-LIVE-281 duplicate of GO-LIVE-143 (store creation logging)
+- GO-LIVE-282 duplicate of GO-LIVE-141 (supplier verification logging)
+- GO-LIVE-283 duplicate of GO-LIVE-142 (product approval logging)
 
 | Component | Critical | High | Medium | Low | Total |
 |-----------|----------|------|--------|-----|-------|
@@ -145,7 +152,7 @@ Each ticket must include:
 
 ## 4) Batch Mapping (246 Tickets → 16 Batches)
 
-### Batch 0: CRITICAL Security & Secrets (12 tickets)
+### Batch 0: CRITICAL Security & Secrets (11 tickets)
 **Theme:** Immediate security fixes - secrets exposure, authentication bypass
 **Priority:** BLOCK ALL OTHER WORK
 
@@ -168,20 +175,21 @@ git push origin main
 # - Check browser console for token exposure
 ```
 
-| Ticket | Summary | Severity |
-|--------|---------|----------|
-| GO-LIVE-101 | Secrets in source control (.env files committed) | CRITICAL |
-| GO-LIVE-102 | Firebase API key exposed in retailer-admin/.env.production | CRITICAL |
-| GO-LIVE-103 | ADMIN_TOKEN exposed in docker-compose.prod.yml | CRITICAL |
-| GO-LIVE-104 | Firebase token fallback allows JWT forgery without server verification | CRITICAL |
-| GO-LIVE-105 | Device token stored in AsyncStorage (not SecureStore) | CRITICAL |
-| GO-LIVE-106 | SQLite database on mobile not encrypted | CRITICAL |
-| GO-LIVE-107 | OpenAI API key stored as plaintext in memory | CRITICAL |
-| GO-LIVE-108 | Missing CSRF protection across all portals | CRITICAL |
-| GO-LIVE-109 | No token refresh mechanism in retailer-admin portal | CRITICAL |
-| GO-LIVE-110 | Supplier JWT tokens stored in localStorage (XSS vulnerable) | CRITICAL |
-| GO-LIVE-111 | No session timeout in supplier portal | CRITICAL |
-| GO-LIVE-112 | ALLOW_BYPASS_FOR_TESTING can be enabled in production | CRITICAL |
+| Ticket | Summary | Severity | Status |
+|--------|---------|----------|--------|
+| GO-LIVE-101 | Secrets in source control (.env files committed) - includes Firebase key fix | CRITICAL | ✅ DONE |
+| GO-LIVE-103 | ADMIN_TOKEN exposed in docker-compose.prod.yml | CRITICAL | PENDING |
+| GO-LIVE-104 | Firebase token fallback allows JWT forgery without server verification | CRITICAL | PENDING |
+| GO-LIVE-105 | Device token stored in AsyncStorage (not SecureStore) | CRITICAL | PENDING |
+| GO-LIVE-106 | SQLite database on mobile not encrypted | CRITICAL | PENDING |
+| GO-LIVE-107 | OpenAI API key stored as plaintext in memory | CRITICAL | PENDING |
+| GO-LIVE-108 | Missing CSRF protection across all portals | CRITICAL | PENDING |
+| GO-LIVE-109 | No token refresh mechanism in retailer-admin portal | CRITICAL | PENDING |
+| GO-LIVE-110 | Supplier JWT tokens stored in localStorage (XSS vulnerable) | CRITICAL | PENDING |
+| GO-LIVE-111 | No session timeout in supplier portal | CRITICAL | PENDING |
+| GO-LIVE-112 | ALLOW_BYPASS_FOR_TESTING can be enabled in production | CRITICAL | PENDING |
+
+**Note:** GO-LIVE-102 merged into GO-LIVE-101 (both addressed same .env.production file)
 
 ---
 
@@ -227,7 +235,7 @@ docker exec supermandi-backend npm run migrate  # If DB changes
 
 ---
 
-### Batch 2: Authentication & Authorization (18 tickets)
+### Batch 2: Authentication & Authorization (17 tickets)
 **Theme:** Auth bypass, role checks, store ownership
 
 #### Batch 2 Deployment Rules
@@ -254,7 +262,6 @@ docker compose -f docker-compose.prod.yml up -d --build
 | GO-LIVE-133 | localStorage keys not namespaced per store | HIGH |
 | GO-LIVE-134 | No account lockout after failed login attempts | HIGH |
 | GO-LIVE-135 | OTP rate limiting allows 600 attempts in 10 minutes | HIGH |
-| GO-LIVE-136 | Token refresh not implemented in AuthContext | HIGH |
 | GO-LIVE-137 | Logout doesn't invalidate server-side session | HIGH |
 | GO-LIVE-138 | No IP-based blocking after auth failures | HIGH |
 | GO-LIVE-139 | Demo mode generates real JWT tokens | HIGH |
@@ -264,6 +271,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 | GO-LIVE-143 | Store creation not logged to audit | HIGH |
 | GO-LIVE-144 | Login success not logged to audit | HIGH |
 | GO-LIVE-145 | No password reset flow in admin portal | HIGH |
+
+**Note:** GO-LIVE-136 removed (duplicate of GO-LIVE-109 in Batch 0)
 
 ---
 
@@ -595,14 +604,27 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ---
 
-### Batch 11: SuperAdmin Portal Completeness (12 tickets)
+### Batch 11: SuperAdmin Portal Completeness (9 tickets)
 **Theme:** Audit logging, input validation, missing features
+
+#### Batch 11 Deployment Rules
+```bash
+# AFTER each superadmin portal ticket:
+ssh claude@34.14.220.171
+cd /home/claude/supermandi-pos && git pull origin main
+docker compose -f docker-compose.prod.yml up -d --build
+
+# REAL USER TEST after each ticket:
+# 1. Go to https://supermandi.tech/admin/
+# 2. Login with admin token
+# 3. Perform the action (create store, approve supplier, etc.)
+# 4. Go to Audit Logs tab
+# 5. Verify action was logged with correct details
+# 6. Test input validation on forms
+```
 
 | Ticket | Summary | Severity |
 |--------|---------|----------|
-| GO-LIVE-281 | Store creation not logged | HIGH |
-| GO-LIVE-282 | Supplier verification not logged | HIGH |
-| GO-LIVE-283 | Product approval/rejection not logged | HIGH |
 | GO-LIVE-284 | Device enrollment not logged | MEDIUM |
 | GO-LIVE-285 | Barcode sheet download not logged | MEDIUM |
 | GO-LIVE-286 | Audit log creation is fire-and-forget | MEDIUM |
@@ -613,10 +635,34 @@ docker compose -f docker-compose.prod.yml up -d --build
 | GO-LIVE-291 | No device deprovisioning workflow | HIGH |
 | GO-LIVE-292 | Date range validation missing (from > to) | MEDIUM |
 
+**Note:** GO-LIVE-281/282/283 removed (duplicates of GO-LIVE-143/141/142 in Batch 2)
+
 ---
 
 ### Batch 12: Infrastructure - High Availability (15 tickets)
 **Theme:** Single points of failure, replication, failover
+
+#### Batch 12 Deployment Rules
+```bash
+# INFRASTRUCTURE CHANGES - EXTRA CAUTION!
+# AFTER each HA ticket:
+ssh claude@34.14.220.171
+cd /home/claude/supermandi-pos && git pull origin main
+
+# Backup current docker-compose config
+cp docker-compose.prod.yml docker-compose.prod.yml.backup
+
+# Apply changes carefully
+docker compose -f docker-compose.prod.yml up -d --build
+
+# REAL USER TEST after each ticket:
+# 1. Verify all services healthy: docker ps
+# 2. Test failover scenario if applicable
+# 3. Verify no service interruption
+# 4. Check all endpoints respond
+curl -s http://localhost:3000/health
+curl -s http://localhost:3010/health
+```
 
 | Ticket | Summary | Severity |
 |--------|---------|----------|
@@ -641,6 +687,27 @@ docker compose -f docker-compose.prod.yml up -d --build
 ### Batch 13: Infrastructure - Scaling & Performance (15 tickets)
 **Theme:** Resource limits, connection pooling, caching
 
+#### Batch 13 Deployment Rules
+```bash
+# PERFORMANCE CHANGES - Monitor closely!
+# AFTER each scaling ticket:
+ssh claude@34.14.220.171
+cd /home/claude/supermandi-pos && git pull origin main
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Monitor resource usage
+docker stats --no-stream
+
+# Check database connections
+docker exec supermandi-postgres psql -U supermandi -c "SELECT count(*) FROM pg_stat_activity;"
+
+# REAL USER TEST after each ticket:
+# 1. Verify system remains responsive
+# 2. Test under simulated load if possible
+# 3. Check memory/CPU usage: docker stats
+# 4. Verify no timeouts on API calls
+```
+
 | Ticket | Summary | Severity |
 |--------|---------|----------|
 | GO-LIVE-308 | Database pool max=10 (need 100+ for 10K stores) | CRITICAL |
@@ -664,6 +731,26 @@ docker compose -f docker-compose.prod.yml up -d --build
 ### Batch 14: Backup & Disaster Recovery (12 tickets)
 **Theme:** Backup frequency, encryption, recovery testing
 
+#### Batch 14 Deployment Rules
+```bash
+# BACKUP CHANGES - Test recovery after each change!
+# AFTER each backup ticket:
+ssh claude@34.14.220.171
+cd /home/claude/supermandi-pos && git pull origin main
+docker compose -f docker-compose.prod.yml up -d --build
+
+# REAL USER TEST after each ticket:
+# 1. Trigger a manual backup
+docker exec supermandi-postgres pg_dump -U supermandi supermandi > /tmp/test_backup.sql
+
+# 2. Verify backup file is valid
+head -100 /tmp/test_backup.sql
+
+# 3. Test backup encryption if applicable
+# 4. Verify backup uploaded to GCS
+# 5. Test restore to verify backup works (on test DB only!)
+```
+
 | Ticket | Summary | Severity |
 |--------|---------|----------|
 | GO-LIVE-323 | Backup frequency once daily (need hourly) | CRITICAL |
@@ -684,6 +771,24 @@ docker compose -f docker-compose.prod.yml up -d --build
 ### Batch 15: Monitoring & Logging (12 tickets)
 **Theme:** Centralized logging, APM, alerting
 
+#### Batch 15 Deployment Rules
+```bash
+# MONITORING CHANGES - Verify observability works!
+# AFTER each monitoring ticket:
+ssh claude@34.14.220.171
+cd /home/claude/supermandi-pos && git pull origin main
+docker compose -f docker-compose.prod.yml up -d --build
+
+# REAL USER TEST after each ticket:
+# 1. Generate some traffic (make API calls)
+# 2. Verify logs are captured
+docker logs --tail 50 supermandi-backend
+
+# 3. Check if centralized logging receives logs
+# 4. Verify alerts fire on test conditions
+# 5. Check request IDs are tracked end-to-end
+```
+
 | Ticket | Summary | Severity |
 |--------|---------|----------|
 | GO-LIVE-335 | No centralized logging (Docker logs only) | CRITICAL |
@@ -703,65 +808,102 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 ## 5) Definition of DONE (Per Ticket)
 
-A ticket is DONE only if:
-- [ ] Code implemented + reviewed
-- [ ] DB migrations applied safely (idempotent)
-- [ ] Deployed to VM (prod-like)
-- [ ] Verified via VM commands + logs
-- [ ] Verified via REAL USER flows in all affected apps
-- [ ] PASS/FAIL acceptance criteria is **PASS**
+A ticket is **DONE** only when ALL of the following are true:
+- [ ] Code implemented locally and tested
+- [ ] Committed with message: `GO-LIVE-XXX: description`
+- [ ] Pushed to origin/main
+- [ ] Deployed to VM via: `ssh claude@34.14.220.171`
+- [ ] DB migrations applied (if applicable)
+- [ ] Health checks pass on VM
+- [ ] Real user test performed on production URL
+- [ ] PASS documented with evidence (screenshot/log)
+
+A ticket is **NOT DONE** if:
+- ❌ Only tested locally
+- ❌ Deployed but not user-tested
+- ❌ User test failed but moved on anyway
+- ❌ Health checks failing on VM
 
 ---
 
-## 6) Deployment Playbook
+## 6) Deployment Playbook (USE AFTER EVERY TICKET)
 
-### Pre-deploy checklist
+### Step 1: SSH to VM
 ```bash
-# Check running containers
-docker ps
-
-# Capture baseline logs
-docker logs --tail 50 supermandi-backend
-
-# Verify health endpoints
-curl -s http://localhost:3000/health
-curl -s http://localhost:3010/health
-```
-
-### Deploy steps
-```bash
-# 1. SSH into VM
+# Primary method
 ssh claude@34.14.220.171
 
-# 2. Navigate to project
+# Alternative (GCloud)
+gcloud compute ssh --zone "asia-south1-a" "supermandi-backend-vm" --project "supermandi-backend"
+```
+
+### Step 2: Pre-deploy Checklist
+```bash
 cd /home/claude/supermandi-pos
 
-# 3. Pull latest
+# Check current state
+docker ps
+docker logs --tail 20 supermandi-backend 2>&1 | grep -i error
+
+# Verify health BEFORE changes
+curl -s http://localhost:3000/health | jq
+curl -s http://localhost:3010/health | jq
+```
+
+### Step 3: Pull & Deploy
+```bash
+# Pull latest code
 git pull origin main
 
-# 4. Build and restart
+# Build and restart containers
 docker compose -f docker-compose.prod.yml build
 docker compose -f docker-compose.prod.yml up -d
 
-# 5. Run migrations (if any)
+# Run migrations if ticket requires DB changes
 docker exec supermandi-backend npm run migrate
-
-# 6. Record deployed commit
-git rev-parse HEAD
-date
 ```
 
-### Post-deploy verification
+### Step 4: Post-deploy Verification
 ```bash
-# Health checks
+# Wait for containers to start
+sleep 10
+
+# Health checks MUST pass
 curl -s http://localhost:3000/health | jq
 curl -s http://localhost:3010/health | jq
 
-# Check for errors in logs
-docker logs --tail 100 supermandi-backend 2>&1 | grep -i error
+# Check for errors
+docker logs --tail 50 supermandi-backend 2>&1 | grep -i error
+docker logs --tail 50 supermandi-api-gateway 2>&1 | grep -i error
 
-# Verify key routes
+# Verify key routes respond
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/v1/health
+curl -s -o /dev/null -w "%{http_code}" https://supermandi.tech/admin/
+
+# Record deployment
+echo "Deployed: $(git rev-parse HEAD) at $(date)"
+```
+
+### Step 5: Real User Test (MANDATORY)
+```
+DO NOT SKIP THIS STEP!
+
+After EVERY deployment:
+1. Open the affected portal in browser
+2. Login as real user would
+3. Perform the exact flow that was fixed
+4. Verify fix works correctly
+5. Check for regressions in related features
+6. Document PASS or FAIL with evidence
+```
+
+### Rollback Procedure (If Needed)
+```bash
+# If deployment fails:
+git log --oneline -5  # Find previous good commit
+git checkout <previous_commit>
+docker compose -f docker-compose.prod.yml up -d --build
+curl -s http://localhost:3000/health | jq  # Verify rollback worked
 ```
 
 ---
@@ -833,39 +975,37 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/v1/health
 
 ## 9) Execution Status
 
-| Batch | Theme | Tickets | Status |
-|-------|-------|---------|--------|
-| 0 | CRITICAL Security & Secrets | 12 | PENDING |
-| 1 | Payment & Financial Integrity | 15 | PENDING |
-| 2 | Authentication & Authorization | 18 | PENDING |
-| 3 | Input Validation & Sanitization | 20 | PENDING |
-| 4 | API Error Handling & Resilience | 18 | PENDING |
-| 5 | Rate Limiting & DoS Protection | 12 | PENDING |
-| 6 | Database Schema Integrity | 20 | PENDING |
-| 7 | Offline & Sync Reliability | 15 | PENDING |
-| 8 | POS App UX & Business Logic | 20 | PENDING |
-| 9 | Retailer Portal Completeness | 15 | PENDING |
-| 10 | Supplier Portal Completeness | 15 | PENDING |
-| 11 | SuperAdmin Portal Completeness | 12 | PENDING |
-| 12 | Infrastructure - High Availability | 15 | PENDING |
-| 13 | Infrastructure - Scaling & Performance | 15 | PENDING |
-| 14 | Backup & Disaster Recovery | 12 | PENDING |
-| 15 | Monitoring & Logging | 12 | PENDING |
-| **TOTAL** | | **246** | |
+| Batch | Theme | Tickets | Done | Status |
+|-------|-------|---------|------|--------|
+| 0 | CRITICAL Security & Secrets | 11 | 1 | IN PROGRESS |
+| 1 | Payment & Financial Integrity | 15 | 0 | PENDING |
+| 2 | Authentication & Authorization | 17 | 0 | PENDING |
+| 3 | Input Validation & Sanitization | 20 | 0 | PENDING |
+| 4 | API Error Handling & Resilience | 18 | 0 | PENDING |
+| 5 | Rate Limiting & DoS Protection | 12 | 0 | PENDING |
+| 6 | Database Schema Integrity | 20 | 0 | PENDING |
+| 7 | Offline & Sync Reliability | 15 | 0 | PENDING |
+| 8 | POS App UX & Business Logic | 20 | 0 | PENDING |
+| 9 | Retailer Portal Completeness | 15 | 0 | PENDING |
+| 10 | Supplier Portal Completeness | 15 | 0 | PENDING |
+| 11 | SuperAdmin Portal Completeness | 9 | 0 | PENDING |
+| 12 | Infrastructure - High Availability | 15 | 0 | PENDING |
+| 13 | Infrastructure - Scaling & Performance | 15 | 0 | PENDING |
+| 14 | Backup & Disaster Recovery | 12 | 0 | PENDING |
+| 15 | Monitoring & Logging | 12 | 0 | PENDING |
+| **TOTAL** | | **241** | **1** | |
 
 ---
 
 ## 10) Priority Order
 
 ### Phase 1: Security Blockers (Batches 0-2)
-**Timeline:** Week 1
-**Tickets:** 45 (12 + 15 + 18)
-- Batch 0: Secrets & Critical Security (12)
+**Tickets:** 43 (11 + 15 + 17)
+- Batch 0: Secrets & Critical Security (11)
 - Batch 1: Payment Integrity (15)
-- Batch 2: Auth & Authorization (18)
+- Batch 2: Auth & Authorization (17)
 
 ### Phase 2: Data Integrity (Batches 3-7)
-**Timeline:** Week 2-3
 **Tickets:** 85 (20 + 18 + 12 + 20 + 15)
 - Batch 3: Input Validation (20)
 - Batch 4: Error Handling (18)
@@ -874,30 +1014,73 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/v1/health
 - Batch 7: Offline & Sync (15)
 
 ### Phase 3: User Experience (Batches 8-11)
-**Timeline:** Week 4
-**Tickets:** 62 (20 + 15 + 15 + 12)
+**Tickets:** 59 (20 + 15 + 15 + 9)
 - Batch 8: POS App UX (20)
 - Batch 9: Retailer Portal (15)
 - Batch 10: Supplier Portal (15)
-- Batch 11: SuperAdmin Portal (12)
+- Batch 11: SuperAdmin Portal (9)
 
 ### Phase 4: Infrastructure (Batches 12-15)
-**Timeline:** Week 5
 **Tickets:** 54 (15 + 15 + 12 + 12)
 - Batch 12: High Availability (15)
 - Batch 13: Scaling & Performance (15)
 - Batch 14: Backup & DR (12)
 - Batch 15: Monitoring & Logging (12)
 
-**GRAND TOTAL: 246 tickets**
+**GRAND TOTAL: 241 tickets** (5 duplicates removed)
 
 ---
 
 ## 11) Current Focus
 
-**NOW:** Batch 0 - CRITICAL Security & Secrets
+**NOW:** Batch 0, Ticket GO-LIVE-103 (GO-LIVE-101 completed)
 
-Starting implementation immediately. All secrets must be removed from source control and rotated before ANY other work.
+### Session Reference - STARTING POINT
+```
+Commit: 2895b8f
+Full SHA: 2895b8f58224d998b80d7848ff71a37cbd9556dc
+Branch: main
+Previous Commit: e050b65
+Previous SHA: e050b6534b0395d6970263a0f38e59ac7a79016d
+Working Tree: Clean (after audit document updates)
+
+API Gateway: http://34.14.220.171:3000
+POS Service: http://34.14.220.171:3009
+Production URL: https://supermandi.tech
+
+Save Time (IST): 2026-01-30 18:53:20 IST
+Backend VM Status: deployed OK
+Remote Origin: https://github.com/Supermanditech/supermandi-pos.git
+Pushed: ✅ Yes (origin/main up to date)
+```
+
+### Execution Mode: ONE TICKET AT A TIME
+```
+For each ticket:
+1. Implement fix locally
+2. git commit -m "GO-LIVE-XXX: description"
+3. git push origin main
+4. SSH to VM: ssh claude@34.14.220.171
+5. Deploy: git pull && docker compose up -d --build
+6. Real user test on production URLs
+7. Document PASS/FAIL
+8. Only then move to next ticket
+```
+
+### Current Ticket Queue (Batch 0) - 11 tickets
+- [x] GO-LIVE-101: Secrets in source control (includes GO-LIVE-102) ✅ DONE - Commit 2cc7d0e
+- [ ] GO-LIVE-103: ADMIN_TOKEN exposed
+- [ ] GO-LIVE-104: Firebase token forgery
+- [ ] GO-LIVE-105: Device token in AsyncStorage
+- [ ] GO-LIVE-106: SQLite not encrypted
+- [ ] GO-LIVE-107: OpenAI key in memory
+- [ ] GO-LIVE-108: Missing CSRF protection
+- [ ] GO-LIVE-109: No token refresh in retailer-admin
+- [ ] GO-LIVE-110: Supplier tokens in localStorage
+- [ ] GO-LIVE-111: No session timeout in supplier
+- [ ] GO-LIVE-112: ALLOW_BYPASS can be enabled
+
+**NEXT:** GO-LIVE-103 (ADMIN_TOKEN exposed in docker-compose.prod.yml)
 
 ---
 
