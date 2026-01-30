@@ -115,6 +115,7 @@ export async function loginWithMasterToken(masterToken: string): Promise<{ succe
 
 /**
  * Refresh the current session token
+ * GO-LIVE-175: Enhanced error handling to log refresh failures
  */
 export async function refreshSession(): Promise<boolean> {
   const currentToken = getSessionToken();
@@ -131,18 +132,37 @@ export async function refreshSession(): Promise<boolean> {
     });
 
     if (!res.ok) {
-      clearSessionToken();
+      // GO-LIVE-175: Log the specific error status for debugging
+      console.warn(`[GO-LIVE-175] Session refresh failed with status ${res.status}`);
+      if (res.status === 401) {
+        // Token is invalid/expired, clear and redirect
+        clearSessionToken();
+        clearAdminToken();
+      }
       return false;
     }
 
-    const data = await res.json();
+    let data: { sessionToken?: string; expiresAt?: number };
+    try {
+      data = await res.json();
+    } catch (parseError) {
+      // GO-LIVE-175: Log JSON parse errors
+      console.error('[GO-LIVE-175] Failed to parse refresh response:', parseError);
+      return false;
+    }
+
     if (data.sessionToken && data.expiresAt) {
       setSessionToken(data.sessionToken, data.expiresAt);
       return true;
     }
 
+    // GO-LIVE-175: Log unexpected response format
+    console.warn('[GO-LIVE-175] Refresh response missing required fields:', Object.keys(data));
     return false;
-  } catch {
+  } catch (error) {
+    // GO-LIVE-175: Log network/fetch errors instead of silently failing
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`[GO-LIVE-175] Session refresh error: ${errorMessage}`);
     return false;
   }
 }
@@ -244,6 +264,20 @@ export function clearAdminToken(): void {
     sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
   } catch {
     // ignore
+  }
+}
+
+/**
+ * GO-LIVE-171: Handle 401 responses by clearing session and redirecting to login
+ * Call this when any API returns 401
+ */
+export function handle401Response(): void {
+  console.warn("[GO-LIVE-171] 401 response - clearing session and redirecting to login");
+  clearSessionToken();
+  clearAdminToken();
+  // Redirect to root (login page) using replace to prevent back navigation
+  if (typeof window !== "undefined") {
+    window.location.replace("/");
   }
 }
 

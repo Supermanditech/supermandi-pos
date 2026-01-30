@@ -1,8 +1,35 @@
 // Database connection pool - V3.0.9 compliant
+// GO-LIVE-183: Added circuit breaker integration
 import { Pool, PoolClient, PoolConfig } from 'pg';
 import { DbConfig } from './types';
+import { getDbCircuitBreaker, CircuitBreakerError } from './circuitBreaker';
 
 let pool: Pool | null = null;
+
+// GO-LIVE-183: Track connection errors for circuit breaker
+function isConnectionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: string; message?: string };
+  // Connection-related PostgreSQL error codes
+  const connectionErrorCodes = [
+    '08000', // connection_exception
+    '08003', // connection_does_not_exist
+    '08006', // connection_failure
+    '57P01', // admin_shutdown
+    '57P02', // crash_shutdown
+    '57P03', // cannot_connect_now
+  ];
+  if (err.code && connectionErrorCodes.includes(err.code)) return true;
+  // Also check for common connection error messages
+  const msg = err.message?.toLowerCase() || '';
+  return (
+    msg.includes('connection refused') ||
+    msg.includes('connection timed out') ||
+    msg.includes('timeout exceeded') ||
+    msg.includes('econnrefused') ||
+    msg.includes('enotfound')
+  );
+}
 
 /**
  * Parse DATABASE_URL into PoolConfig
@@ -129,5 +156,133 @@ export async function healthCheck(): Promise<boolean> {
     return result?.ok === 1;
   } catch {
     return false;
+  }
+}
+
+// =============================================================================
+// GO-LIVE-183: CIRCUIT BREAKER PROTECTED QUERIES
+// =============================================================================
+
+/**
+ * Execute a query with circuit breaker protection
+ * Fails fast if database is experiencing connection issues
+ */
+export async function queryProtected<T = Record<string, unknown>>(
+  sql: string,
+  params?: unknown[]
+): Promise<T[]> {
+  const breaker = getDbCircuitBreaker();
+
+  return breaker.execute(async () => {
+    try {
+      const p = getPool();
+      const result = await p.query(sql, params);
+      return result.rows as T[];
+    } catch (error) {
+      // Only count connection errors towards circuit breaker
+      // Query errors (like invalid SQL) should not trip the circuit
+      if (!isConnectionError(error)) {
+        // Re-throw but mark as non-circuit-breaking
+        throw error;
+      }
+      console.error('[GO-LIVE-183] Database connection error:', error);
+      throw error;
+    }
+  });
+}
+
+/**
+ * Execute a single-row query with circuit breaker protection
+ */
+export async function queryOneProtected<T = Record<string, unknown>>(
+  sql: string,
+  params?: unknown[]
+): Promise<T | null> {
+  const rows = await queryProtected<T>(sql, params);
+  return rows[0] ?? null;
+}
+
+/**
+ * Get a client from the pool with circuit breaker check
+ * Note: Circuit breaker only checks availability; client operations
+ * should handle their own errors
+ */
+export async function getClientProtected(): Promise<PoolClient> {
+  const breaker = getDbCircuitBreaker();
+
+  if (!breaker.isAllowingRequests()) {
+    throw new CircuitBreakerError(
+      'Database circuit breaker is open',
+      'database',
+      breaker.getState()
+    );
+  }
+
+  try {
+    const p = getPool();
+    return await p.connect();
+  } catch (error) {
+    if (isConnectionError(error)) {
+      // Trigger circuit breaker on connection failure
+      await breaker.execute(() => Promise.reject(error));
+    }
+    throw error;
+  }
+}
+
+/**
+ * Health check with circuit breaker status
+ */
+export interface DbHealthStatus {
+  healthy: boolean;
+  circuitBreaker: {
+    state: string;
+    isAllowingRequests: boolean;
+    tripCount: number;
+    failedRequests: number;
+  };
+  latencyMs?: number;
+  error?: string;
+}
+
+export async function healthCheckDetailed(): Promise<DbHealthStatus> {
+  const breaker = getDbCircuitBreaker();
+  const stats = breaker.getStats();
+
+  const baseStatus: DbHealthStatus = {
+    healthy: false,
+    circuitBreaker: {
+      state: stats.state,
+      isAllowingRequests: breaker.isAllowingRequests(),
+      tripCount: stats.tripCount,
+      failedRequests: stats.failedRequests,
+    },
+  };
+
+  // If circuit is open, fail fast
+  if (!breaker.isAllowingRequests()) {
+    return {
+      ...baseStatus,
+      error: 'Circuit breaker is open',
+    };
+  }
+
+  const start = Date.now();
+  try {
+    const result = await queryOne<{ ok: number }>('SELECT 1 as ok');
+    const latencyMs = Date.now() - start;
+
+    return {
+      ...baseStatus,
+      healthy: result?.ok === 1,
+      latencyMs,
+    };
+  } catch (error) {
+    const latencyMs = Date.now() - start;
+    return {
+      ...baseStatus,
+      latencyMs,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }

@@ -36,8 +36,10 @@ const normalizeStock = (value: unknown): number | null => {
 const persistState = async (state: StockCacheState): Promise<void> => {
   try {
     await storeScopedStorage.setItem(STOCK_CACHE_KEY, JSON.stringify(state.entries));
-  } catch {
-    // Cache persistence failures should not block runtime flow.
+  } catch (persistError) {
+    // GO-LIVE-168: Log persistence failures but don't block runtime flow
+    const errorMsg = persistError instanceof Error ? persistError.message : String(persistError);
+    console.warn(`[GO-LIVE-168] stockCache persistState failed: ${errorMsg}`);
   }
 };
 
@@ -57,7 +59,10 @@ export async function hydrateStockCacheForStore(storeId?: string | null): Promis
       const parsed = JSON.parse(raw) as Record<string, StockCacheEntry>;
       state.entries = parsed ?? {};
     }
-  } catch {
+  } catch (hydrateError) {
+    // GO-LIVE-168: Log hydration errors instead of silently discarding
+    const errorMsg = hydrateError instanceof Error ? hydrateError.message : String(hydrateError);
+    console.error(`[GO-LIVE-168] stockCache hydration failed: ${errorMsg}`);
     state.entries = {};
   }
 

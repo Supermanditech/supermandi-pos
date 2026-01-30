@@ -3,11 +3,97 @@
 // RCAT-CSV-002: Upload → validate → review → commit flow
 // Store-scoped via JWT (x-actor-id header from gateway)
 // GO-LIVE-049: Added file size limits for security
+// GO-LIVE-178: Enhanced error reporting for partial failures
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 
 export const retailerAdminCsvImportRouter = Router();
+
+// GO-LIVE-178: Error categories for better failure diagnosis
+type ImportErrorCategory = 'duplicate_barcode' | 'validation_error' | 'db_constraint' | 'db_error' | 'unknown';
+
+interface CategorizedWarning {
+  row: number;
+  message: string;
+  category: ImportErrorCategory;
+  field?: string;
+  originalValue?: string;
+}
+
+function categorizeDbError(err: any, row: any): CategorizedWarning {
+  const rowNum = row.row ?? 0;
+
+  // PostgreSQL error code 23505 = unique_violation
+  if (err.code === '23505') {
+    // Check constraint name or detail for more specific info
+    const detail = err.detail || '';
+    if (detail.includes('barcode') || err.constraint?.includes('barcode')) {
+      return {
+        row: rowNum,
+        message: `Duplicate barcode "${row.barcode}" already exists in store`,
+        category: 'duplicate_barcode',
+        field: 'barcode',
+        originalValue: row.barcode,
+      };
+    }
+    return {
+      row: rowNum,
+      message: `Duplicate value: ${err.detail || err.message}`,
+      category: 'db_constraint',
+    };
+  }
+
+  // PostgreSQL error code 23503 = foreign_key_violation
+  if (err.code === '23503') {
+    return {
+      row: rowNum,
+      message: `Referenced data not found: ${err.detail || err.message}`,
+      category: 'db_constraint',
+    };
+  }
+
+  // PostgreSQL error code 23502 = not_null_violation
+  if (err.code === '23502') {
+    return {
+      row: rowNum,
+      message: `Required field missing: ${err.column || 'unknown'}`,
+      category: 'db_constraint',
+      field: err.column,
+    };
+  }
+
+  // Other database errors
+  if (err.code && /^[0-9A-Z]{5}$/.test(err.code)) {
+    return {
+      row: rowNum,
+      message: `Database error (${err.code}): ${(err.message || '').substring(0, 80)}`,
+      category: 'db_error',
+    };
+  }
+
+  return {
+    row: rowNum,
+    message: `Error: ${(err.message || 'Unknown error').substring(0, 80)}`,
+    category: 'unknown',
+  };
+}
+
+function summarizeWarnings(warnings: CategorizedWarning[]): Record<ImportErrorCategory, number> {
+  const summary: Record<ImportErrorCategory, number> = {
+    duplicate_barcode: 0,
+    validation_error: 0,
+    db_constraint: 0,
+    db_error: 0,
+    unknown: 0,
+  };
+
+  for (const w of warnings) {
+    summary[w.category]++;
+  }
+
+  return summary;
+}
 
 // GO-LIVE-049: File size limits
 const MAX_CSV_SIZE_BYTES = 5 * 1024 * 1024; // 5MB max CSV file size
@@ -264,13 +350,27 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
       ]
     );
 
+    // GO-LIVE-178: Include total counts even when list is truncated
+    const totalErrors = errors.length;
+    const displayedErrors = errors.slice(0, 50);
+    const truncated = totalErrors > displayedErrors.length;
+
     return res.json({
       success: true,
       data: {
         validCount,
         invalidCount: previewRows.length - validCount,
         totalRows: previewRows.length,
-        errors: errors.slice(0, 50), // Limit errors shown
+        errors: displayedErrors,
+        // GO-LIVE-178: Provide context about truncation
+        errorSummary: {
+          total: totalErrors,
+          displayed: displayedErrors.length,
+          truncated,
+          message: truncated
+            ? `Showing ${displayedErrors.length} of ${totalErrors} validation errors. Fix these issues and re-upload.`
+            : undefined,
+        },
         previewRows: previewRows.slice(0, 20), // First 20 for preview
       },
     });
@@ -338,7 +438,8 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
 
     let created = 0;
     let skipped = 0;
-    const warnings: string[] = [];
+    // GO-LIVE-178: Use categorized warnings for better error reporting
+    const categorizedWarnings: CategorizedWarning[] = [];
 
     for (const row of validRows) {
       try {
@@ -416,13 +517,9 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
 
         created++;
       } catch (err: any) {
-        if (err.code === '23505') {
-          warnings.push(`Row ${row.row}: Duplicate barcode ${row.barcode}, skipped`);
-          skipped++;
-        } else {
-          warnings.push(`Row ${row.row}: ${err.message?.substring(0, 80)}`);
-          skipped++;
-        }
+        // GO-LIVE-178: Categorize errors for better diagnosis
+        categorizedWarnings.push(categorizeDbError(err, row));
+        skipped++;
       }
     }
 
@@ -436,10 +533,51 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
 
     await client.query("COMMIT");
 
+    // GO-LIVE-178: Enhanced response with categorized warnings and summary
+    const totalWarnings = categorizedWarnings.length;
+    const displayedWarnings = categorizedWarnings.slice(0, 20);
+    const warningSummary = summarizeWarnings(categorizedWarnings);
+
+    // Convert to simple string format for backwards compatibility
+    const warningStrings = displayedWarnings.map(w => `Row ${w.row}: ${w.message}`);
+
+    // Build user-friendly summary message
+    const summaryParts: string[] = [];
+    if (warningSummary.duplicate_barcode > 0) {
+      summaryParts.push(`${warningSummary.duplicate_barcode} duplicate barcode(s)`);
+    }
+    if (warningSummary.db_constraint > 0) {
+      summaryParts.push(`${warningSummary.db_constraint} constraint error(s)`);
+    }
+    if (warningSummary.db_error > 0) {
+      summaryParts.push(`${warningSummary.db_error} database error(s)`);
+    }
+    if (warningSummary.unknown > 0) {
+      summaryParts.push(`${warningSummary.unknown} other error(s)`);
+    }
+
     return res.json({
       success: true,
-      data: { created, updated: 0, skipped, warnings: warnings.slice(0, 20) },
-      message: `Imported ${created} products`,
+      data: {
+        created,
+        updated: 0,
+        skipped,
+        warnings: warningStrings,
+        // GO-LIVE-178: Detailed failure information
+        failureSummary: totalWarnings > 0 ? {
+          total: totalWarnings,
+          displayed: displayedWarnings.length,
+          truncated: totalWarnings > displayedWarnings.length,
+          byCategory: warningSummary,
+          message: summaryParts.length > 0
+            ? `${skipped} row(s) failed: ${summaryParts.join(', ')}`
+            : undefined,
+          details: displayedWarnings,
+        } : undefined,
+      },
+      message: skipped > 0
+        ? `Imported ${created} products. ${skipped} row(s) failed (see failureSummary for details).`
+        : `Imported ${created} products`,
     });
   } catch (error: any) {
     await client.query("ROLLBACK");
@@ -507,13 +645,27 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/preview", async (req: Re
     });
   }
 
+  // GO-LIVE-178: Include total counts even when list is truncated
+  const totalErrors = errors.length;
+  const displayedErrors = errors.slice(0, 50);
+  const truncated = totalErrors > displayedErrors.length;
+
   return res.json({
     success: true,
     data: {
       validCount: preview.filter(p => p.valid).length,
       invalidCount: preview.filter(p => !p.valid).length,
       totalRows: preview.length,
-      errors: errors.slice(0, 50),
+      errors: displayedErrors,
+      // GO-LIVE-178: Provide context about truncation
+      errorSummary: {
+        total: totalErrors,
+        displayed: displayedErrors.length,
+        truncated,
+        message: truncated
+          ? `Showing ${displayedErrors.length} of ${totalErrors} validation errors. Fix these issues and try again.`
+          : undefined,
+      },
       previewRows: preview,
     },
   });
@@ -545,7 +697,8 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
 
   const client = await pool.connect();
   let created = 0;
-  const warnings: string[] = [];
+  // GO-LIVE-178: Use categorized warnings for better error reporting
+  const categorizedWarnings: CategorizedWarning[] = [];
 
   try {
     await client.query("BEGIN");
@@ -615,16 +768,58 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
 
         created++;
       } catch (err: any) {
-        warnings.push(`${row.name}: ${err.message?.substring(0, 60)}`);
+        // GO-LIVE-178: Categorize errors for better diagnosis
+        categorizedWarnings.push(categorizeDbError(err, row));
       }
     }
 
     await client.query("COMMIT");
 
+    // GO-LIVE-178: Enhanced response with categorized warnings
+    const skipped = validRows.length - created;
+    const totalWarnings = categorizedWarnings.length;
+    const displayedWarnings = categorizedWarnings.slice(0, 20);
+    const warningSummary = summarizeWarnings(categorizedWarnings);
+
+    // Convert to simple string format for backwards compatibility
+    const warningStrings = displayedWarnings.map(w => `Row ${w.row}: ${w.message}`);
+
+    // Build user-friendly summary message
+    const summaryParts: string[] = [];
+    if (warningSummary.duplicate_barcode > 0) {
+      summaryParts.push(`${warningSummary.duplicate_barcode} duplicate barcode(s)`);
+    }
+    if (warningSummary.db_constraint > 0) {
+      summaryParts.push(`${warningSummary.db_constraint} constraint error(s)`);
+    }
+    if (warningSummary.db_error > 0) {
+      summaryParts.push(`${warningSummary.db_error} database error(s)`);
+    }
+    if (warningSummary.unknown > 0) {
+      summaryParts.push(`${warningSummary.unknown} other error(s)`);
+    }
+
     return res.json({
       success: true,
-      data: { created, skipped: validRows.length - created, warnings: warnings.slice(0, 20) },
-      message: `Imported ${created} products`,
+      data: {
+        created,
+        skipped,
+        warnings: warningStrings,
+        // GO-LIVE-178: Detailed failure information
+        failureSummary: totalWarnings > 0 ? {
+          total: totalWarnings,
+          displayed: displayedWarnings.length,
+          truncated: totalWarnings > displayedWarnings.length,
+          byCategory: warningSummary,
+          message: summaryParts.length > 0
+            ? `${skipped} row(s) failed: ${summaryParts.join(', ')}`
+            : undefined,
+          details: displayedWarnings,
+        } : undefined,
+      },
+      message: skipped > 0
+        ? `Imported ${created} products. ${skipped} row(s) failed (see failureSummary for details).`
+        : `Imported ${created} products`,
     });
   } catch (error: any) {
     await client.query("ROLLBACK");

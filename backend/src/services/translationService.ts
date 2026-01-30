@@ -348,6 +348,26 @@ async function translateWithGoogleCloud(
     console.warn("[translationService] Empty translation response, using original text");
     return text;
   } catch (error: any) {
+    // GO-LIVE-179: Handle timeout and deadline exceeded errors
+    // gRPC error codes: 4 = DEADLINE_EXCEEDED, 14 = UNAVAILABLE
+    if (error.code === 4) {
+      console.error("[translationService] Translation API timeout (DEADLINE_EXCEEDED)");
+      // Re-throw timeout errors so callers can handle appropriately
+      const timeoutError = new Error(`Translation API timeout: ${error.message || 'DEADLINE_EXCEEDED'}`);
+      (timeoutError as any).code = 'TRANSLATION_TIMEOUT';
+      (timeoutError as any).isTimeout = true;
+      throw timeoutError;
+    }
+
+    if (error.code === 14) {
+      console.error("[translationService] Translation API unavailable (UNAVAILABLE)");
+      // Re-throw unavailable errors
+      const unavailableError = new Error(`Translation API unavailable: ${error.message || 'UNAVAILABLE'}`);
+      (unavailableError as any).code = 'TRANSLATION_UNAVAILABLE';
+      (unavailableError as any).isUnavailable = true;
+      throw unavailableError;
+    }
+
     // Handle specific GCP errors
     if (error.code === 7) {
       // PERMISSION_DENIED
@@ -368,7 +388,22 @@ async function translateWithGoogleCloud(
           mimeType: "text/plain",
         });
         return response.translations?.[0]?.translatedText || text;
-      } catch (retryError) {
+      } catch (retryError: any) {
+        // GO-LIVE-179: Re-throw timeout errors from retry attempt
+        if (retryError.code === 4) {
+          console.error("[translationService] Translation retry timeout (DEADLINE_EXCEEDED)");
+          const timeoutError = new Error(`Translation retry timeout: ${retryError.message || 'DEADLINE_EXCEEDED'}`);
+          (timeoutError as any).code = 'TRANSLATION_TIMEOUT';
+          (timeoutError as any).isTimeout = true;
+          throw timeoutError;
+        }
+        if (retryError.code === 14) {
+          console.error("[translationService] Translation retry unavailable");
+          const unavailableError = new Error(`Translation retry unavailable: ${retryError.message || 'UNAVAILABLE'}`);
+          (unavailableError as any).code = 'TRANSLATION_UNAVAILABLE';
+          (unavailableError as any).isUnavailable = true;
+          throw unavailableError;
+        }
         console.error("[translationService] Translation retry failed:", retryError);
         return text;
       }
@@ -421,7 +456,12 @@ export async function translateText(
     );
     await storeCache(pool, cacheKey, text, machineTranslated, "en", targetLocale);
     return { text: machineTranslated, source: "machine" };
-  } catch (error) {
+  } catch (error: any) {
+    // GO-LIVE-179: Re-throw timeout and unavailable errors for caller handling
+    if (error.isTimeout || error.isUnavailable) {
+      console.error(`[translationService] Machine translation ${error.code}:`, error.message);
+      throw error;
+    }
     console.error("[translationService] Machine translation failed:", error);
     // Fall back to glossary-only result
     return { text: glossaryResult.text, source: "glossary" };
@@ -719,6 +759,8 @@ export function getTranslationHealth(): TranslationHealthStatus {
 /**
  * TR-PEND-003: Verify translateText never throws uncaught errors
  * Wraps the main translate function with guaranteed fallback
+ *
+ * GO-LIVE-179: Enhanced to properly categorize and log timeout errors
  */
 export async function translateTextSafe(
   pool: Pool,
@@ -729,8 +771,15 @@ export async function translateTextSafe(
     const result = await translateText(pool, text, targetLocale);
     // Never return empty string
     return result.text || text;
-  } catch (error) {
-    console.error("[translationService] translateTextSafe caught error:", error);
+  } catch (error: any) {
+    // GO-LIVE-179: Categorize errors for better diagnostics
+    if (error.isTimeout) {
+      console.error(`[translationService] translateTextSafe: timeout error for "${text.substring(0, 30)}...": ${error.message}`);
+    } else if (error.isUnavailable) {
+      console.error(`[translationService] translateTextSafe: service unavailable for "${text.substring(0, 30)}...": ${error.message}`);
+    } else {
+      console.error("[translationService] translateTextSafe caught error:", error);
+    }
     // Ultimate fallback: return original text
     return text;
   }

@@ -1,0 +1,211 @@
+/**
+ * GO-LIVE-180: GCP Credential Validation at Startup
+ *
+ * Validates Google Cloud Platform credentials and configuration before
+ * services that depend on them start accepting requests.
+ *
+ * This catches configuration issues early rather than failing later
+ * when translation or storage operations are attempted.
+ */
+
+import fs from 'fs';
+import path from 'path';
+
+export interface GcpValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  services: {
+    translation: { available: boolean; reason?: string };
+    storage: { available: boolean; reason?: string };
+  };
+}
+
+/**
+ * Validate GCP configuration and credentials at startup
+ * Returns validation result with errors and warnings
+ */
+export function validateGcpCredentials(): GcpValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const result: GcpValidationResult = {
+    valid: true,
+    errors,
+    warnings,
+    services: {
+      translation: { available: false, reason: 'Not configured' },
+      storage: { available: false, reason: 'Not configured' },
+    },
+  };
+
+  // Check GOOGLE_CLOUD_PROJECT
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT;
+  if (!projectId) {
+    warnings.push(
+      'GOOGLE_CLOUD_PROJECT not set. Machine translation and GCS storage will be unavailable.'
+    );
+    result.services.translation.reason = 'GOOGLE_CLOUD_PROJECT not set';
+    result.services.storage.reason = 'GOOGLE_CLOUD_PROJECT not set';
+    return result;
+  }
+
+  // Check GOOGLE_APPLICATION_CREDENTIALS
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+
+  if (!credentialsPath) {
+    // Check if running on GCP (where default credentials are available)
+    const isGcpEnvironment =
+      process.env.K_SERVICE || // Cloud Run
+      process.env.FUNCTION_NAME || // Cloud Functions
+      process.env.GAE_ENV || // App Engine
+      process.env.GCP_PROJECT; // Generic GCP
+
+    if (isGcpEnvironment) {
+      // Running on GCP with default credentials
+      result.services.translation.available = true;
+      result.services.translation.reason = 'Using GCP default credentials';
+      result.services.storage.available = true;
+      result.services.storage.reason = 'Using GCP default credentials';
+      warnings.push('Using GCP default credentials (no explicit credentials file)');
+    } else {
+      warnings.push(
+        'GOOGLE_APPLICATION_CREDENTIALS not set. ' +
+        'Machine translation and GCS will use default credentials or be unavailable.'
+      );
+      result.services.translation.reason = 'No credentials configured';
+      result.services.storage.reason = 'No credentials configured';
+    }
+    return result;
+  }
+
+  // Validate credentials file exists
+  const absolutePath = path.isAbsolute(credentialsPath)
+    ? credentialsPath
+    : path.resolve(process.cwd(), credentialsPath);
+
+  if (!fs.existsSync(absolutePath)) {
+    errors.push(
+      `GOOGLE_APPLICATION_CREDENTIALS file not found: ${absolutePath}`
+    );
+    result.valid = false;
+    result.services.translation.reason = 'Credentials file not found';
+    result.services.storage.reason = 'Credentials file not found';
+    return result;
+  }
+
+  // Validate credentials file is readable and valid JSON
+  try {
+    const fileContent = fs.readFileSync(absolutePath, 'utf-8');
+    const credentials = JSON.parse(fileContent);
+
+    // Validate required fields in service account JSON
+    const requiredFields = ['type', 'project_id', 'private_key', 'client_email'];
+    const missingFields = requiredFields.filter(field => !credentials[field]);
+
+    if (missingFields.length > 0) {
+      errors.push(
+        `GCP credentials file missing required fields: ${missingFields.join(', ')}`
+      );
+      result.valid = false;
+      result.services.translation.reason = 'Invalid credentials file';
+      result.services.storage.reason = 'Invalid credentials file';
+      return result;
+    }
+
+    // Validate type is service_account
+    if (credentials.type !== 'service_account') {
+      errors.push(
+        `GCP credentials type is "${credentials.type}" but expected "service_account". ` +
+        'Other credential types may not work for all services.'
+      );
+      // Warning, not error - some types may still work
+    }
+
+    // Validate project_id matches GOOGLE_CLOUD_PROJECT
+    if (credentials.project_id !== projectId) {
+      warnings.push(
+        `GOOGLE_CLOUD_PROJECT (${projectId}) does not match credentials project_id (${credentials.project_id}). ` +
+        'This may cause permission issues.'
+      );
+    }
+
+    // Validate private key format
+    if (!credentials.private_key.includes('BEGIN PRIVATE KEY')) {
+      errors.push('GCP credentials private_key appears malformed');
+      result.valid = false;
+      result.services.translation.reason = 'Malformed private key';
+      result.services.storage.reason = 'Malformed private key';
+      return result;
+    }
+
+    // All validation passed
+    result.services.translation.available = true;
+    result.services.translation.reason = 'Credentials validated';
+    result.services.storage.available = true;
+    result.services.storage.reason = 'Credentials validated';
+
+  } catch (parseError: any) {
+    if (parseError instanceof SyntaxError) {
+      errors.push(`GCP credentials file is not valid JSON: ${parseError.message}`);
+    } else {
+      errors.push(`Failed to read GCP credentials file: ${parseError.message}`);
+    }
+    result.valid = false;
+    result.services.translation.reason = 'Cannot read credentials file';
+    result.services.storage.reason = 'Cannot read credentials file';
+  }
+
+  return result;
+}
+
+/**
+ * Run GCP validation and log results
+ * Call this during server startup
+ */
+export function logGcpValidationResults(): GcpValidationResult {
+  const result = validateGcpCredentials();
+
+  console.log('[GO-LIVE-180] GCP Credential Validation:');
+
+  if (result.errors.length > 0) {
+    console.error('[GO-LIVE-180] ERRORS:');
+    for (const error of result.errors) {
+      console.error(`  - ${error}`);
+    }
+  }
+
+  if (result.warnings.length > 0) {
+    console.warn('[GO-LIVE-180] Warnings:');
+    for (const warning of result.warnings) {
+      console.warn(`  - ${warning}`);
+    }
+  }
+
+  console.log('[GO-LIVE-180] Service Availability:');
+  console.log(`  - Translation: ${result.services.translation.available ? '✓' : '✗'} (${result.services.translation.reason})`);
+  console.log(`  - Storage: ${result.services.storage.available ? '✓' : '✗'} (${result.services.storage.reason})`);
+
+  if (!result.valid) {
+    console.error(
+      '[GO-LIVE-180] GCP validation failed. Services requiring GCP will not function correctly.'
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Check if translation service should be available based on validation
+ */
+export function isTranslationAvailable(): boolean {
+  const result = validateGcpCredentials();
+  return result.services.translation.available;
+}
+
+/**
+ * Check if GCS storage should be available based on validation
+ */
+export function isStorageAvailable(): boolean {
+  const result = validateGcpCredentials();
+  return result.services.storage.available;
+}

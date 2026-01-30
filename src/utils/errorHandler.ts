@@ -218,6 +218,7 @@ export function showToast(message: string, duration: "short" | "long" = "short")
 
 /**
  * Show error toast from a ParsedApiError.
+ * GO-LIVE-173: Enhanced to include error codes for debugging
  */
 export function showErrorToast(error: ParsedApiError): void {
   let message = error.message;
@@ -226,7 +227,21 @@ export function showErrorToast(error: ParsedApiError): void {
   if (error.isNetworkError) {
     message = "Network error. Please check your connection.";
   } else if (error.isServerError) {
-    message = "Server error. Please try again later.";
+    // GO-LIVE-173: Include status code for server errors to help debugging
+    message = `Server error (${error.status || 500}). Please try again later.`;
+  } else if (error.isValidationError && error.code) {
+    // GO-LIVE-173: Include validation error code
+    message = `Validation error: ${error.message}`;
+  } else if (error.isAuthError) {
+    // GO-LIVE-173: Specific auth error messages
+    message = error.code === 'device_unauthorized'
+      ? "Device not authorized. Please re-enroll."
+      : "Session expired. Please log in again.";
+  }
+
+  // GO-LIVE-173: Append error code if available (helps support diagnose issues)
+  if (error.code && !message.includes(error.code)) {
+    message = `${message} (${error.code})`;
   }
 
   showToast(message, "long");
@@ -399,6 +414,54 @@ export function logError(context: string, error: unknown): void {
   }
 }
 
+/**
+ * GO-LIVE-173: Get diagnostic string for error (useful for support/debugging)
+ * Returns a string that can be safely shown to users or logged
+ */
+export function getDiagnosticString(error: ParsedApiError): string {
+  const parts: string[] = [];
+
+  // Error type
+  if (error.isNetworkError) parts.push("NetworkError");
+  else if (error.isAuthError) parts.push("AuthError");
+  else if (error.isValidationError) parts.push("ValidationError");
+  else if (error.isServerError) parts.push("ServerError");
+  else if (error.isNotFound) parts.push("NotFound");
+  else if (error.isConflict) parts.push("Conflict");
+
+  // Status code if present
+  if (error.status > 0) parts.push(`HTTP${error.status}`);
+
+  // Error code if present
+  if (error.code) parts.push(error.code);
+
+  // Request ID if present (helps support trace issues)
+  if (error.requestId) parts.push(`Req:${error.requestId.slice(0, 8)}`);
+
+  return parts.join("/") || "UnknownError";
+}
+
+/**
+ * GO-LIVE-173: Get detailed error info for debugging
+ * Should only be shown in development or error reports
+ */
+export function getDetailedErrorInfo(error: unknown): string {
+  const parsed = parseError(error);
+  const lines: string[] = [
+    `Message: ${parsed.message}`,
+    `Type: ${getDiagnosticString(parsed)}`,
+  ];
+
+  if (parsed.code) lines.push(`Code: ${parsed.code}`);
+  if (parsed.status > 0) lines.push(`Status: ${parsed.status}`);
+  if (parsed.requestId) lines.push(`Request ID: ${parsed.requestId}`);
+  if (Object.keys(parsed.fieldErrors).length > 0) {
+    lines.push(`Field Errors: ${JSON.stringify(parsed.fieldErrors)}`);
+  }
+
+  return lines.join("\n");
+}
+
 export default {
   parseError,
   showToast,
@@ -412,4 +475,6 @@ export default {
   showRetryPrompt,
   withRetry,
   logError,
+  getDiagnosticString,
+  getDetailedErrorInfo,
 };

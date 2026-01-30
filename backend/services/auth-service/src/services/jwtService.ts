@@ -146,10 +146,29 @@ export function generateTokenPair(
 // TOKEN VERIFICATION
 // =============================================================================
 
+// GO-LIVE-174: JWT error types for better error handling
+export type JwtVerifyError = 'EXPIRED' | 'INVALID' | 'MALFORMED' | 'NOT_YET_ACTIVE' | 'INVALID_SIGNATURE';
+
+export interface JwtVerifyResult {
+  payload: JwtPayload | null;
+  error?: JwtVerifyError;
+  message?: string;
+}
+
 /**
  * Verify and decode an access token
+ * GO-LIVE-174: Enhanced to return specific error types
  */
 export function verifyAccessToken(token: string): JwtPayload | null {
+  const result = verifyAccessTokenWithError(token);
+  return result.payload;
+}
+
+/**
+ * GO-LIVE-174: Verify access token with detailed error information
+ * Returns error type to help with more specific error messages
+ */
+export function verifyAccessTokenWithError(token: string): JwtVerifyResult {
   try {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
@@ -157,20 +176,41 @@ export function verifyAccessToken(token: string): JwtPayload | null {
 
     // Validate required fields
     if (!decoded.sub || !decoded.actorType || !Array.isArray(decoded.permissions)) {
-      return null;
+      return { payload: null, error: 'MALFORMED', message: 'Token missing required fields' };
     }
 
     return {
-      userId: decoded.sub,
-      actorType: decoded.actorType as ActorType,
-      actorId: decoded.actorId,
-      role: '', // Role name not stored in token, derived from permissions
-      permissions: decoded.permissions,
-      iat: decoded.iat ?? 0,
-      exp: decoded.exp ?? 0,
+      payload: {
+        userId: decoded.sub,
+        actorType: decoded.actorType as ActorType,
+        actorId: decoded.actorId,
+        role: '', // Role name not stored in token, derived from permissions
+        permissions: decoded.permissions,
+        iat: decoded.iat ?? 0,
+        exp: decoded.exp ?? 0,
+      }
     };
-  } catch {
-    return null;
+  } catch (error) {
+    // GO-LIVE-174: Handle specific JWT error types
+    if (error instanceof jwt.TokenExpiredError) {
+      return { payload: null, error: 'EXPIRED', message: 'Token has expired' };
+    }
+    if (error instanceof jwt.NotBeforeError) {
+      return { payload: null, error: 'NOT_YET_ACTIVE', message: 'Token not yet active' };
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      // Check for specific sub-types
+      if (error.message.includes('signature')) {
+        return { payload: null, error: 'INVALID_SIGNATURE', message: 'Invalid token signature' };
+      }
+      if (error.message.includes('malformed') || error.message.includes('invalid')) {
+        return { payload: null, error: 'MALFORMED', message: 'Malformed token' };
+      }
+      return { payload: null, error: 'INVALID', message: error.message };
+    }
+    // Unknown error
+    console.error('[GO-LIVE-174] Unexpected JWT verification error:', error);
+    return { payload: null, error: 'INVALID', message: 'Token verification failed' };
   }
 }
 
@@ -178,6 +218,20 @@ export function verifyAccessToken(token: string): JwtPayload | null {
  * Verify and decode a refresh token
  */
 export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
+  const result = verifyRefreshTokenWithError(token);
+  return result.payload;
+}
+
+export interface RefreshTokenVerifyResult {
+  payload: RefreshTokenPayload | null;
+  error?: JwtVerifyError;
+  message?: string;
+}
+
+/**
+ * GO-LIVE-174: Verify refresh token with detailed error information
+ */
+export function verifyRefreshTokenWithError(token: string): RefreshTokenVerifyResult {
   try {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
@@ -185,16 +239,29 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload | null {
 
     // Validate it's a refresh token
     if (!decoded.sub || !decoded.tokenId || decoded.type !== 'refresh') {
-      return null;
+      return { payload: null, error: 'MALFORMED', message: 'Invalid refresh token structure' };
     }
 
     return {
-      sub: decoded.sub,
-      tokenId: decoded.tokenId,
-      type: 'refresh',
+      payload: {
+        sub: decoded.sub,
+        tokenId: decoded.tokenId,
+        type: 'refresh',
+      }
     };
-  } catch {
-    return null;
+  } catch (error) {
+    // GO-LIVE-174: Handle specific JWT error types
+    if (error instanceof jwt.TokenExpiredError) {
+      return { payload: null, error: 'EXPIRED', message: 'Refresh token has expired' };
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      if (error.message.includes('signature')) {
+        return { payload: null, error: 'INVALID_SIGNATURE', message: 'Invalid token signature' };
+      }
+      return { payload: null, error: 'INVALID', message: error.message };
+    }
+    console.error('[GO-LIVE-174] Unexpected refresh token verification error:', error);
+    return { payload: null, error: 'INVALID', message: 'Token verification failed' };
   }
 }
 
@@ -281,6 +348,20 @@ export function generateServiceToken(serviceName: string): string {
  * @returns The service token payload if valid, null otherwise
  */
 export function verifyServiceToken(token: string): ServiceTokenPayload | null {
+  const result = verifyServiceTokenWithError(token);
+  return result.payload;
+}
+
+export interface ServiceTokenVerifyResult {
+  payload: ServiceTokenPayload | null;
+  error?: JwtVerifyError | 'UNKNOWN_SERVICE';
+  message?: string;
+}
+
+/**
+ * GO-LIVE-174: Verify service token with detailed error information
+ */
+export function verifyServiceTokenWithError(token: string): ServiceTokenVerifyResult {
   try {
     const decoded = jwt.verify(token, config.jwt.secret, {
       issuer: config.jwt.issuer,
@@ -288,19 +369,32 @@ export function verifyServiceToken(token: string): ServiceTokenPayload | null {
 
     // Validate it's a service token
     if (decoded.type !== 'service' || !decoded.serviceName) {
-      return null;
+      return { payload: null, error: 'MALFORMED', message: 'Not a service token' };
     }
 
     // Validate service name is in allowed list
     if (!ALLOWED_INTERNAL_SERVICES.includes(decoded.serviceName)) {
-      return null;
+      return { payload: null, error: 'UNKNOWN_SERVICE', message: `Unknown service: ${decoded.serviceName}` };
     }
 
     return {
-      serviceName: decoded.serviceName,
-      type: 'service',
+      payload: {
+        serviceName: decoded.serviceName,
+        type: 'service',
+      }
     };
-  } catch {
-    return null;
+  } catch (error) {
+    // GO-LIVE-174: Handle specific JWT error types
+    if (error instanceof jwt.TokenExpiredError) {
+      return { payload: null, error: 'EXPIRED', message: 'Service token has expired' };
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      if (error.message.includes('signature')) {
+        return { payload: null, error: 'INVALID_SIGNATURE', message: 'Invalid token signature' };
+      }
+      return { payload: null, error: 'INVALID', message: error.message };
+    }
+    console.error('[GO-LIVE-174] Unexpected service token verification error:', error);
+    return { payload: null, error: 'INVALID', message: 'Token verification failed' };
   }
 }

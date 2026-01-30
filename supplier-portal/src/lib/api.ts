@@ -17,6 +17,22 @@ export class ApiError extends Error {
   }
 }
 
+// GO-LIVE-169: Response validation utility
+function validateResponseStructure(data: unknown, endpoint: string): void {
+  if (data === null || data === undefined) {
+    console.warn(`[GO-LIVE-169] API response is null/undefined for ${endpoint}`);
+    return;
+  }
+
+  // Check for unexpected error field in success response
+  if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+    const obj = data as Record<string, unknown>;
+    if ('error' in obj && obj.error) {
+      console.error(`[GO-LIVE-169] Unexpected error in success response for ${endpoint}:`, obj.error);
+    }
+  }
+}
+
 // Get stored auth token
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -46,6 +62,9 @@ function handle401Response(): void {
   }
 }
 
+// GO-LIVE-176: Request timeout for API calls (30 seconds)
+const API_TIMEOUT_MS = 30000;
+
 // Authenticated fetch wrapper
 export async function apiFetch<T>(
   endpoint: string,
@@ -67,10 +86,31 @@ export async function apiFetch<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // GO-LIVE-176: Add request timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeoutId);
+    // GO-LIVE-176: Handle timeout/abort errors
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError(408, 'TIMEOUT', 'Request timed out. Please try again.');
+    }
+    // GO-LIVE-177: Distinguish network errors from other errors
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new ApiError(0, 'NETWORK_ERROR', 'Network error. Please check your connection.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // GL-WF-046: Handle 401 (unauthorized) responses
   if (response.status === 401) {
@@ -82,7 +122,14 @@ export async function apiFetch<T>(
     throw new ApiError(401, data.error?.code || 'UNAUTHORIZED', data.error?.message || 'Session expired. Please login again.');
   }
 
-  const data = await response.json();
+  let data: Record<string, unknown>;
+  try {
+    data = await response.json();
+  } catch (parseError) {
+    // GO-LIVE-169: Handle JSON parse errors
+    console.error(`[GO-LIVE-169] JSON parse error for ${endpoint}:`, parseError);
+    throw new ApiError(response.status, 'INVALID_JSON', 'Server returned invalid response');
+  }
 
   if (!response.ok) {
     throw new ApiError(
@@ -92,7 +139,11 @@ export async function apiFetch<T>(
     );
   }
 
-  return data.data ?? data;
+  // GO-LIVE-169: Validate response structure
+  const result = data.data ?? data;
+  validateResponseStructure(result, endpoint);
+
+  return result;
 }
 
 // ============================================================================

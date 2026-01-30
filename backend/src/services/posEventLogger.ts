@@ -3,6 +3,8 @@ import { desc } from "drizzle-orm";
 import { getDb, getPool } from "../db/client";
 import { ensurePosEventsTable } from "../db/ensureSchema";
 import { posEvents } from "../db/schema/posEvents";
+// GO-LIVE-181: Use centralized schema error handling
+import { handleSchemaError, isSchemaError } from "@supermandi/common";
 
 export type IncomingPosEvent = {
   deviceId?: unknown;
@@ -11,22 +13,6 @@ export type IncomingPosEvent = {
   payload?: unknown;
   pendingOutboxCount?: unknown;
 };
-
-function isMissingRelationError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const code = (error as { code?: string }).code;
-  if (code === "42P01") return true;
-  const message = "message" in (error as any) ? String((error as any).message) : "";
-  return message.includes("relation \"pos_events\" does not exist");
-}
-
-function isPermissionError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const code = (error as { code?: string }).code;
-  if (code === "42501") return true;
-  const message = "message" in (error as any) ? String((error as any).message) : "";
-  return message.toLowerCase().includes("permission denied");
-}
 
 function normalize(input: IncomingPosEvent) {
   const deviceId = typeof input.deviceId === "string" && input.deviceId.trim() ? input.deviceId.trim() : "unknown";
@@ -120,9 +106,12 @@ export async function fetchLatestPosEvents(opts: { limit: number }) {
       createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt)
     }));
   } catch (error) {
-    if (isMissingRelationError(error) || isPermissionError(error)) {
-      const message = error instanceof Error ? error.message : "pos_events unavailable";
-      console.warn("POS events unavailable; returning empty list:", message);
+    // GO-LIVE-181: Use centralized schema error handling with tracking
+    if (isSchemaError(error)) {
+      handleSchemaError(error, {
+        operation: 'fetchLatestPosEvents',
+        table: 'pos_events',
+      });
       return [];
     }
     throw error;

@@ -14,6 +14,28 @@ export class ApiError extends Error {
   }
 }
 
+// GO-LIVE-169: Response validation utilities
+function validateResponseStructure(parsed: unknown, path: string): void {
+  // Warn if response is completely empty when we expect data
+  if (parsed === null || parsed === undefined) {
+    console.warn(`[GO-LIVE-169] API response is null/undefined for ${path}`);
+    return;
+  }
+
+  // Check for unexpected error field in success response (indicates backend issue)
+  if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+    const obj = parsed as Record<string, unknown>;
+    if ('error' in obj && obj.error) {
+      console.error(`[GO-LIVE-169] Unexpected error field in success response for ${path}:`, obj.error);
+    }
+  }
+
+  // Warn if response is a primitive when object expected (common backend bug)
+  if (typeof parsed === 'string' || typeof parsed === 'number' || typeof parsed === 'boolean') {
+    console.warn(`[GO-LIVE-169] API response is primitive (${typeof parsed}) for ${path}, expected object/array`);
+  }
+}
+
 // GO-LIVE FIX: Define protected endpoint patterns that REQUIRE device token
 // Requests to these endpoints will be blocked if token is missing (not sent with empty token)
 const PROTECTED_ENDPOINT_PATTERNS = [
@@ -105,7 +127,16 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
 
     const text = await res.text();
     console.log(`[api_debug] status: ${res.status}, body: ${text.slice(0, 300)}`);
-    const parsed = text ? (JSON.parse(text) as unknown) : undefined;
+
+    // GO-LIVE-169: Parse with error handling
+    let parsed: unknown;
+    try {
+      parsed = text ? (JSON.parse(text) as unknown) : undefined;
+    } catch (parseError) {
+      console.error(`[GO-LIVE-169] JSON parse error for ${path}: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+      console.error(`[GO-LIVE-169] Response text (first 200 chars): ${text?.slice(0, 200)}`);
+      throw new ApiError(res.status, 'INVALID_JSON_RESPONSE', { rawText: text?.slice(0, 500) });
+    }
 
     if (!res.ok) {
       // DEV-071: Handle structured error format { error: { code, message } } or { error: "string" }
@@ -125,6 +156,9 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
       }
       throw new ApiError(res.status, message, parsed);
     }
+
+    // GO-LIVE-169: Validate response structure
+    validateResponseStructure(parsed, path);
 
     return parsed as T;
   } finally {

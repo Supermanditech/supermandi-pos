@@ -75,7 +75,10 @@ async function loadQueue(): Promise<QueuedPosEvent[]> {
   try {
     const parsed = JSON.parse(raw) as QueuedPosEvent[];
     inMemoryQueue = Array.isArray(parsed) ? parsed : [];
-  } catch {
+  } catch (parseError) {
+    // GO-LIVE-168: Log JSON parse errors instead of silently discarding
+    console.error(`[GO-LIVE-168] cloudEventLogger queue JSON parse error:`, parseError);
+    console.error(`[GO-LIVE-168] Raw data (first 200 chars): ${raw?.slice(0, 200)}`);
     inMemoryQueue = [];
   }
   inMemoryQueueKey = scopedKey;
@@ -119,7 +122,10 @@ async function sendToBackend(ev: QueuedPosEvent): Promise<boolean> {
     });
 
     return res.ok;
-  } catch {
+  } catch (sendError) {
+    // GO-LIVE-168: Log send errors instead of silently failing
+    const errorMsg = sendError instanceof Error ? sendError.message : String(sendError);
+    console.warn(`[GO-LIVE-168] cloudEventLogger send failed: ${errorMsg}, event=${ev.eventType}`);
     return false;
   } finally {
     clearTimeout(timeout);
@@ -208,8 +214,11 @@ export async function logPosEvent(eventType: PosEventType, payload: Record<strin
     if (isOnline) {
       void flushQueue();
     }
-  } catch {
-    // Swallow all errors: POS UI must never crash.
+  } catch (logError) {
+    // GO-LIVE-168: Log errors but don't crash POS UI
+    const errorMsg = logError instanceof Error ? logError.message : String(logError);
+    console.warn(`[GO-LIVE-168] cloudEventLogger.logPosEvent failed: ${errorMsg}, type=${eventType}`);
+    // Swallow error to prevent UI crash
   }
 }
 

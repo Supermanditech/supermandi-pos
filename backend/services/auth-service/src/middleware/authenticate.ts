@@ -4,7 +4,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '@supermandi/common';
 import type { JwtPayload, AuthUser } from '@supermandi/common';
-import { verifyAccessToken } from '../services/jwtService';
+import { verifyAccessToken, verifyAccessTokenWithError } from '../services/jwtService';
 
 // Extend Express Request to include authenticated user
 declare global {
@@ -50,6 +50,7 @@ function payloadToAuthUser(payload: JwtPayload): AuthUser {
 /**
  * Middleware that requires valid JWT authentication
  * Attaches user info to request.user
+ * GO-LIVE-174: Enhanced with specific error messages for different JWT errors
  */
 export function authenticate(
   req: Request,
@@ -63,14 +64,37 @@ export function authenticate(
     return;
   }
 
-  const payload = verifyAccessToken(token);
-  if (!payload) {
-    next(ApiError.unauthorized('Invalid or expired token'));
+  // GO-LIVE-174: Use enhanced verification with specific error types
+  const result = verifyAccessTokenWithError(token);
+
+  if (!result.payload) {
+    // Provide specific error message based on error type
+    let message = 'Invalid or expired token';
+
+    switch (result.error) {
+      case 'EXPIRED':
+        message = 'Token has expired. Please log in again.';
+        break;
+      case 'INVALID_SIGNATURE':
+        message = 'Invalid token signature';
+        break;
+      case 'MALFORMED':
+        message = 'Malformed authentication token';
+        break;
+      case 'NOT_YET_ACTIVE':
+        message = 'Token not yet active';
+        break;
+      case 'INVALID':
+        message = result.message || 'Invalid token';
+        break;
+    }
+
+    next(ApiError.unauthorized(message));
     return;
   }
 
   // Attach user and token to request
-  req.user = payloadToAuthUser(payload);
+  req.user = payloadToAuthUser(result.payload);
   req.token = token;
 
   next();

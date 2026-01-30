@@ -51,22 +51,41 @@ export async function syncOutboxBatch(): Promise<number> {
     return 0;
   }
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/pos/sync`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "x-device-token": deviceToken
-    },
-    body: JSON.stringify({
-      pendingOutboxCount: count,
-      events
-    })
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/api/v1/pos/sync`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "x-device-token": deviceToken
+      },
+      body: JSON.stringify({
+        pendingOutboxCount: count,
+        events
+      })
+    });
+  } catch (networkError) {
+    // GO-LIVE-167: Log network errors instead of silent failure
+    const errorMsg = networkError instanceof Error ? networkError.message : String(networkError);
+    console.error(`[GO-LIVE-167] Sync network error: ${errorMsg}`);
+    throw new Error(`Sync network error: ${errorMsg}`);
+  }
 
-  const data = (await res.json().catch(() => ({}))) as SyncResult | { error?: string };
+  let data: SyncResult | { error?: string };
+  try {
+    data = await res.json() as SyncResult | { error?: string };
+  } catch (parseError) {
+    // GO-LIVE-167: Log JSON parse errors
+    console.error(`[GO-LIVE-167] Sync response parse error: status=${res.status}`);
+    throw new Error(`Sync response parse error: ${res.status}`);
+  }
+
   if (!res.ok) {
-    return 0;
+    // GO-LIVE-167: Log server errors with details instead of returning 0
+    const errorDetails = (data as { error?: string }).error ?? `HTTP ${res.status}`;
+    console.error(`[GO-LIVE-167] Sync API error: ${errorDetails}, events=${events.length}`);
+    throw new Error(`Sync API error: ${errorDetails}`);
   }
 
   const results = (data as SyncResult).results ?? [];
@@ -107,8 +126,28 @@ export async function syncOutbox(): Promise<void> {
   if (syncing) return;
   syncing = true;
   try {
-    while (await syncOutboxBatch()) {
-      // continue until empty
+    let batchCount = 0;
+    let totalSynced = 0;
+    const maxBatches = 100; // GO-LIVE-167: Prevent infinite loops
+
+    while (batchCount < maxBatches) {
+      try {
+        const synced = await syncOutboxBatch();
+        if (synced === 0) break; // No more events to sync
+        totalSynced += synced;
+        batchCount++;
+      } catch (batchError) {
+        // GO-LIVE-167: Log batch error and re-throw to trigger retry mechanism
+        const errorMsg = batchError instanceof Error ? batchError.message : String(batchError);
+        console.error(`[GO-LIVE-167] syncOutboxBatch failed after ${batchCount} batches (${totalSynced} synced): ${errorMsg}`);
+        throw batchError;
+      }
+    }
+
+    if (batchCount >= maxBatches) {
+      console.warn(`[GO-LIVE-167] syncOutbox hit max batch limit (${maxBatches}), ${totalSynced} events synced`);
+    } else if (totalSynced > 0) {
+      console.log(`[Sync] Outbox sync complete: ${totalSynced} events in ${batchCount} batches`);
     }
   } finally {
     syncing = false;
