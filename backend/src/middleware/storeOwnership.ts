@@ -1,4 +1,5 @@
 // GO-LIVE-047: Store Ownership Verification Middleware
+// GO-LIVE-129: Enhanced with complete ownership verification
 // Ensures users can only access stores they own/are authorized for
 // SuperAdmin (x-admin-token) bypasses this check
 
@@ -15,16 +16,32 @@ interface StoreOwnershipResult {
   storeId?: string;
 }
 
+// GO-LIVE-129: Store info for extended verification
+interface StoreInfo {
+  id: string;
+  status: string;
+  name?: string;
+}
+
 // =============================================================================
 // HELPERS
 // =============================================================================
 
 /**
  * Check if request is from SuperAdmin (x-admin-token)
+ * GO-LIVE-129: Also check for adminRole from RBAC middleware
  */
 function isSuperAdmin(req: Request): boolean {
   // If request has admin token header and passed adminToken middleware, it's SuperAdmin
-  return !!req.headers['x-admin-token'] || (req as any).isAdminRequest === true;
+  if (req.headers['x-admin-token']) {
+    return true;
+  }
+  // GO-LIVE-129: Check for RBAC admin role
+  if ((req as any).adminRole === 'super_admin' || (req as any).adminRole === 'admin') {
+    return true;
+  }
+  // Legacy flag
+  return (req as any).isAdminRequest === true;
 }
 
 /**
@@ -43,22 +60,47 @@ function getAuthorizedStoreId(req: Request): string | null {
 }
 
 /**
+ * GO-LIVE-129: Get supplier ID from gateway headers
+ */
+function getAuthorizedSupplierId(req: Request): string | null {
+  const actorType = req.headers['x-actor-type'];
+  const actorId = req.headers['x-actor-id'];
+
+  if (actorType !== 'SUPPLIER') {
+    return null;
+  }
+
+  return typeof actorId === 'string' ? actorId : null;
+}
+
+/**
  * Get requested store ID from various request locations
+ * GO-LIVE-129: Extended to check more locations
  */
 function getRequestedStoreId(req: Request): string | null {
-  // Check params first
+  // Check params first (common in routes like /stores/:storeId)
   if (req.params?.storeId) {
     return req.params.storeId;
+  }
+  // Also check for store_id in params
+  if (req.params?.store_id) {
+    return req.params.store_id;
   }
 
   // Check query
   if (typeof req.query?.storeId === 'string') {
     return req.query.storeId;
   }
+  if (typeof req.query?.store_id === 'string') {
+    return req.query.store_id;
+  }
 
-  // Check body
+  // Check body (both camelCase and snake_case)
   if (typeof (req.body as any)?.storeId === 'string') {
     return (req.body as any).storeId;
+  }
+  if (typeof (req.body as any)?.store_id === 'string') {
+    return (req.body as any).store_id;
   }
 
   return null;
@@ -69,25 +111,86 @@ function getRequestedStoreId(req: Request): string | null {
 // =============================================================================
 
 /**
- * Verify store exists in database
+ * GO-LIVE-129: Verify store exists in database with proper status check
+ * Uses status column (not deleted_at) as that's what the schema uses
  */
-async function storeExists(storeId: string): Promise<boolean> {
+async function storeExists(storeId: string): Promise<StoreInfo | null> {
+  const pool = getPool();
+  if (!pool) return null;
+
+  try {
+    // GO-LIVE-129: Check status instead of deleted_at
+    const result = await pool.query(
+      `SELECT id::TEXT as id, status, name FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    if ((result.rowCount ?? 0) === 0) {
+      return null;
+    }
+    return result.rows[0] as StoreInfo;
+  } catch (err: any) {
+    console.error('[StoreOwnership] GO-LIVE-129: Store lookup error:', err?.message);
+    return null;
+  }
+}
+
+/**
+ * GO-LIVE-129: Verify supplier has access to a specific store
+ * Suppliers can only access stores they are linked to
+ */
+async function supplierHasStoreAccess(supplierId: string, storeId: string): Promise<boolean> {
   const pool = getPool();
   if (!pool) return false;
 
   try {
     const result = await pool.query(
-      `SELECT 1 FROM platform.stores WHERE id = $1 AND deleted_at IS NULL`,
-      [storeId]
+      `SELECT 1 FROM supplier.supplier_store_links
+       WHERE supplier_id = $1::uuid AND store_id = $2::uuid AND status = 'active'
+       LIMIT 1`,
+      [supplierId, storeId]
     );
     return (result.rowCount ?? 0) > 0;
-  } catch {
+  } catch (err: any) {
+    // Table might not exist yet
+    if (err?.code === '42P01') {
+      console.log('[StoreOwnership] GO-LIVE-129: supplier_store_links table not found');
+      return false;
+    }
+    console.error('[StoreOwnership] GO-LIVE-129: Supplier store access check error:', err?.message);
     return false;
   }
 }
 
 /**
- * Verify user has access to store
+ * GO-LIVE-129: Verify device has access to a store
+ * Used for POS device authentication
+ */
+async function deviceHasStoreAccess(deviceId: string, storeId: string): Promise<boolean> {
+  const pool = getPool();
+  if (!pool) return false;
+
+  try {
+    const result = await pool.query(
+      `SELECT 1 FROM platform.devices
+       WHERE id = $1::uuid AND store_id = $2::uuid AND status = 'active'
+       LIMIT 1`,
+      [deviceId, storeId]
+    );
+    return (result.rowCount ?? 0) > 0;
+  } catch (err: any) {
+    // Table might not exist yet
+    if (err?.code === '42P01') {
+      console.log('[StoreOwnership] GO-LIVE-129: devices table not found');
+      return false;
+    }
+    console.error('[StoreOwnership] GO-LIVE-129: Device store access check error:', err?.message);
+    return false;
+  }
+}
+
+/**
+ * GO-LIVE-129: Verify user has access to store
+ * Enhanced to check multiple ownership paths
  */
 export async function verifyStoreOwnership(
   userId: string,
@@ -99,24 +202,46 @@ export async function verifyStoreOwnership(
   }
 
   try {
-    // Check if store exists
-    if (!(await storeExists(storeId))) {
+    // Check if store exists and get status
+    const storeInfo = await storeExists(storeId);
+    if (!storeInfo) {
       return { verified: false, error: 'Store not found' };
     }
 
-    // Check if user has access to this store
-    const result = await pool.query(
+    // GO-LIVE-129: Check if store is active/accessible
+    if (storeInfo.status === 'deleted') {
+      return { verified: false, error: 'Store has been deleted' };
+    }
+
+    // Check if user has access via auth.store_users
+    const storeUserResult = await pool.query(
       `SELECT 1 FROM auth.store_users
-       WHERE user_id = $1 AND store_id = $2 AND is_active = true`,
+       WHERE user_id = $1::uuid AND store_id = $2::uuid AND is_active = true`,
       [userId, storeId]
     );
 
-    if ((result.rowCount ?? 0) === 0) {
-      return { verified: false, error: 'Access denied to this store' };
+    if ((storeUserResult.rowCount ?? 0) > 0) {
+      return { verified: true, storeId };
     }
 
-    return { verified: true, storeId };
-  } catch (error) {
+    // GO-LIVE-129: Also check if user is directly linked via auth.users actor_id
+    const userActorResult = await pool.query(
+      `SELECT 1 FROM auth.users
+       WHERE id = $1::uuid AND actor_type = 'store' AND actor_id = $2::uuid AND status = 'active'`,
+      [userId, storeId]
+    );
+
+    if ((userActorResult.rowCount ?? 0) > 0) {
+      return { verified: true, storeId };
+    }
+
+    return { verified: false, error: 'Access denied to this store' };
+  } catch (error: any) {
+    // GO-LIVE-129: Handle missing tables gracefully
+    if (error?.code === '42P01') {
+      console.warn('[StoreOwnership] GO-LIVE-129: Required table not found:', error?.message);
+      return { verified: false, error: 'Store access table not initialized' };
+    }
     console.error('[StoreOwnership] Verification error:', error);
     return { verified: false, error: 'Verification failed' };
   }
@@ -128,11 +253,13 @@ export async function verifyStoreOwnership(
 
 /**
  * GO-LIVE-047: Store ownership verification middleware
+ * GO-LIVE-129: Enhanced with complete ownership verification
  *
  * Ensures that:
  * 1. SuperAdmin requests bypass verification (they have access to all stores)
  * 2. Retailer requests can only access their authorized store
- * 3. Store IDs in request match the caller's authorized store
+ * 3. Supplier requests can only access stores they are linked to
+ * 4. Store IDs in request match the caller's authorized store
  */
 export function requireStoreOwnership(
   req: Request,
@@ -141,48 +268,88 @@ export function requireStoreOwnership(
 ): void {
   // SuperAdmin bypasses store ownership check
   if (isSuperAdmin(req)) {
-    console.log('[StoreOwnership] SuperAdmin access - bypassing verification');
+    console.log('[StoreOwnership] GO-LIVE-129: SuperAdmin access - bypassing verification');
     return next();
   }
 
   const authorizedStoreId = getAuthorizedStoreId(req);
+  const authorizedSupplierId = getAuthorizedSupplierId(req);
   const requestedStoreId = getRequestedStoreId(req);
 
-  // If no authorized store (not a store actor), reject
-  if (!authorizedStoreId) {
-    console.log('[StoreOwnership] No authorized store for user');
-    res.status(403).json({
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Store access not authorized',
-      },
-    });
+  // Case 1: Store actor (retailer)
+  if (authorizedStoreId) {
+    // If request includes a specific storeId, verify it matches authorized store
+    if (requestedStoreId && requestedStoreId !== authorizedStoreId) {
+      console.warn(
+        `[StoreOwnership] GO-LIVE-129: Store mismatch - authorized: ${authorizedStoreId}, requested: ${requestedStoreId}`
+      );
+      res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Access denied to requested store',
+        },
+      });
+      return;
+    }
+
+    // Set verified store ID on request for downstream use
+    (req as any).verifiedStoreId = authorizedStoreId;
+    console.log(`[StoreOwnership] GO-LIVE-129: Verified store access: ${authorizedStoreId}`);
+    return next();
+  }
+
+  // Case 2: Supplier actor - needs async verification
+  if (authorizedSupplierId && requestedStoreId) {
+    // Suppliers need to be verified against specific store links
+    supplierHasStoreAccess(authorizedSupplierId, requestedStoreId)
+      .then((hasAccess) => {
+        if (hasAccess) {
+          (req as any).verifiedStoreId = requestedStoreId;
+          (req as any).verifiedSupplierId = authorizedSupplierId;
+          console.log(`[StoreOwnership] GO-LIVE-129: Verified supplier ${authorizedSupplierId} access to store: ${requestedStoreId}`);
+          return next();
+        }
+        console.warn(`[StoreOwnership] GO-LIVE-129: Supplier ${authorizedSupplierId} denied access to store ${requestedStoreId}`);
+        res.status(403).json({
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Supplier not linked to this store',
+          },
+        });
+      })
+      .catch((error) => {
+        console.error('[StoreOwnership] GO-LIVE-129: Supplier verification error:', error);
+        res.status(500).json({
+          error: {
+            code: 'INTERNAL_ERROR',
+            message: 'Store access verification failed',
+          },
+        });
+      });
     return;
   }
 
-  // If request includes a specific storeId, verify it matches authorized store
-  if (requestedStoreId && requestedStoreId !== authorizedStoreId) {
-    console.warn(
-      `[StoreOwnership] Store mismatch - authorized: ${authorizedStoreId}, requested: ${requestedStoreId}`
-    );
-    res.status(403).json({
-      error: {
-        code: 'FORBIDDEN',
-        message: 'Access denied to requested store',
-      },
-    });
-    return;
+  // Case 3: Supplier without specific store request - allow (for supplier-only endpoints)
+  if (authorizedSupplierId && !requestedStoreId) {
+    (req as any).verifiedSupplierId = authorizedSupplierId;
+    console.log(`[StoreOwnership] GO-LIVE-129: Supplier access (no store): ${authorizedSupplierId}`);
+    return next();
   }
 
-  // Set verified store ID on request for downstream use
-  (req as any).verifiedStoreId = authorizedStoreId;
-  console.log(`[StoreOwnership] Verified store access: ${authorizedStoreId}`);
-  next();
+  // No valid authorization found
+  console.log('[StoreOwnership] GO-LIVE-129: No authorized store/supplier for request');
+  res.status(403).json({
+    error: {
+      code: 'FORBIDDEN',
+      message: 'Store access not authorized',
+    },
+  });
 }
 
 /**
- * Verify store exists for admin operations
+ * GO-LIVE-129: Verify store exists for admin operations
  * Used by SuperAdmin routes that take storeId as parameter
+ * Enhanced to check store status
  */
 export async function verifyStoreExists(
   req: Request,
@@ -196,8 +363,8 @@ export async function verifyStoreExists(
     return next();
   }
 
-  const exists = await storeExists(storeId);
-  if (!exists) {
+  const storeInfo = await storeExists(storeId);
+  if (!storeInfo) {
     res.status(404).json({
       error: {
         code: 'NOT_FOUND',
@@ -207,7 +374,19 @@ export async function verifyStoreExists(
     return;
   }
 
+  // GO-LIVE-129: Check if store is deleted
+  if (storeInfo.status === 'deleted') {
+    res.status(410).json({
+      error: {
+        code: 'GONE',
+        message: 'Store has been deleted',
+      },
+    });
+    return;
+  }
+
   (req as any).verifiedStoreId = storeId;
+  (req as any).verifiedStoreInfo = storeInfo;
   next();
 }
 
@@ -217,4 +396,54 @@ export async function verifyStoreExists(
  */
 export function getVerifiedStoreId(req: Request): string | null {
   return (req as any).verifiedStoreId || getAuthorizedStoreId(req);
+}
+
+/**
+ * GO-LIVE-129: Get the verified supplier ID from request
+ * Use this in route handlers after middleware has run
+ */
+export function getVerifiedSupplierId(req: Request): string | null {
+  return (req as any).verifiedSupplierId || getAuthorizedSupplierId(req);
+}
+
+/**
+ * GO-LIVE-129: Get the verified store info from request
+ * Use this in route handlers after middleware has run
+ */
+export function getVerifiedStoreInfo(req: Request): StoreInfo | null {
+  return (req as any).verifiedStoreInfo || null;
+}
+
+/**
+ * GO-LIVE-129: Require that store is in active status
+ * Use after verifyStoreExists to ensure store is operational
+ */
+export function requireActiveStore(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const storeInfo = getVerifiedStoreInfo(req);
+
+  if (!storeInfo) {
+    res.status(400).json({
+      error: {
+        code: 'BAD_REQUEST',
+        message: 'Store verification required before this check',
+      },
+    });
+    return;
+  }
+
+  if (storeInfo.status !== 'active') {
+    res.status(403).json({
+      error: {
+        code: 'STORE_INACTIVE',
+        message: `Store is ${storeInfo.status}. Only active stores can perform this operation.`,
+      },
+    });
+    return;
+  }
+
+  next();
 }
