@@ -1,3 +1,19 @@
+// GO-LIVE-106: SQLite Security Assessment
+// =========================================
+// This database stores OPERATIONAL data only (products, prices, sales transactions).
+// It does NOT store:
+// - Customer PII (names, addresses, phone numbers)
+// - Authentication tokens (stored in SecureStore - see GO-LIVE-105)
+// - Payment card data (not stored locally)
+//
+// SECURITY POSTURE: Medium risk (business data exposure if device compromised)
+// - Pricing/sales data could benefit competitors if extracted
+// - No regulatory compliance issues (no PII)
+//
+// FUTURE: For full encryption, migrate to SQLCipher or expo-sqlite-encrypted
+// when available. This requires native code changes incompatible with Expo Go.
+// Ticket: POST-LAUNCH-001
+
 import * as SQLite from "expo-sqlite";
 import { getDeviceStoreId } from "../deviceSession";
 import { normalizeStoreScope } from "../storeScope";
