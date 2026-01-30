@@ -16,12 +16,19 @@ const OTP_LENGTH = 6;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_RATE_LIMIT_MS = 60 * 1000; // 1 minute between requests
 const lastOtpRequest = new Map<string, number>();
-// ITER4-P1-003: Rate limiting for OTP verification to prevent brute force
-const OTP_VERIFY_RATE_LIMIT_MS = 1000; // 1 second between verify attempts
+// GO-LIVE-135: Stricter rate limiting for OTP verification to prevent brute force
+// Previous settings allowed ~600 attempts in 10 minutes (1 sec rate limit)
+// New settings: 5 second delay, 5 attempts max, 30 min lockout = max 120 attempts/10min
+// Combined with 5-attempt lockout = effectively max 5 attempts
+const OTP_VERIFY_RATE_LIMIT_MS = 5000; // GO-LIVE-135: 5 seconds between verify attempts (was 1 sec)
 const lastOtpVerify = new Map<string, number>();
 const otpVerifyFailures = new Map<string, { count: number; lockedUntil: number }>();
 const MAX_OTP_VERIFY_FAILURES = 5;
-const OTP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minute lockout after 5 failures
+const OTP_LOCKOUT_MS = 30 * 60 * 1000; // GO-LIVE-135: 30 minute lockout (was 15 min)
+// GO-LIVE-135: IP-based rate limiting to prevent distributed attacks
+const ipOtpAttempts = new Map<string, { count: number; windowStart: number }>();
+const IP_OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minute window
+const IP_OTP_MAX_ATTEMPTS = 10; // Max 10 OTP verifications per IP per 10 minutes
 
 // ITER4-P0-003: Timing-safe comparison for OTP to prevent timing attacks
 function timingSafeCompare(a: string, b: string): boolean {
@@ -124,22 +131,42 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "email_otp_purpose_required" });
   }
 
+  // GO-LIVE-135: IP-based rate limiting to prevent distributed attacks
+  const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
+  const now = Date.now();
+  let ipAttempts = ipOtpAttempts.get(clientIp);
+  if (!ipAttempts || now - ipAttempts.windowStart > IP_OTP_WINDOW_MS) {
+    ipAttempts = { count: 0, windowStart: now };
+    ipOtpAttempts.set(clientIp, ipAttempts);
+  }
+
+  if (ipAttempts.count >= IP_OTP_MAX_ATTEMPTS) {
+    const waitSeconds = Math.ceil((ipAttempts.windowStart + IP_OTP_WINDOW_MS - now) / 1000);
+    console.warn(`[GO-LIVE-135] IP ${clientIp} rate limited for OTP verify (${ipAttempts.count} attempts)`);
+    return res.status(429).json({
+      error: "ip_rate_limited",
+      message: `Too many verification attempts from this location. Please wait ${waitSeconds} seconds.`
+    });
+  }
+  ipAttempts.count += 1;
+
   // ITER4-P1-003: Check if email is locked out due to too many failures
   const failures = otpVerifyFailures.get(email);
   if (failures && Date.now() < failures.lockedUntil) {
     const waitSeconds = Math.ceil((failures.lockedUntil - Date.now()) / 1000);
     return res.status(429).json({
       error: "too_many_attempts",
-      message: `Account temporarily locked. Please try again in ${waitSeconds} seconds.`
+      message: `Account temporarily locked. Please try again in ${Math.ceil(waitSeconds / 60)} minutes.`
     });
   }
 
-  // ITER4-P1-003: Rate limit verify attempts (1 per second per email)
+  // GO-LIVE-135: Rate limit verify attempts (5 seconds between attempts per email)
   const lastVerify = lastOtpVerify.get(email) || 0;
   if (Date.now() - lastVerify < OTP_VERIFY_RATE_LIMIT_MS) {
+    const waitSeconds = Math.ceil((OTP_VERIFY_RATE_LIMIT_MS - (Date.now() - lastVerify)) / 1000);
     return res.status(429).json({
       error: "rate_limited",
-      message: "Please wait before trying again."
+      message: `Please wait ${waitSeconds} seconds before trying again.`
     });
   }
   lastOtpVerify.set(email, Date.now());
@@ -258,6 +285,20 @@ setInterval(() => {
   for (const [key, value] of verifiedTokens.entries()) {
     if (now > value.expiresAt) {
       verifiedTokens.delete(key);
+    }
+  }
+
+  // GO-LIVE-135: Cleanup old IP rate limit entries
+  for (const [ip, data] of ipOtpAttempts.entries()) {
+    if (now - data.windowStart > IP_OTP_WINDOW_MS) {
+      ipOtpAttempts.delete(ip);
+    }
+  }
+
+  // GO-LIVE-135: Cleanup old lockouts that have expired
+  for (const [email, data] of otpVerifyFailures.entries()) {
+    if (data.lockedUntil && now > data.lockedUntil) {
+      otpVerifyFailures.delete(email);
     }
   }
 }, 60000); // Run every minute

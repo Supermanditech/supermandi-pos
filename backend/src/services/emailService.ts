@@ -444,13 +444,15 @@ export async function sendVerificationEmail(
 
 // =============================================================================
 // RATE LIMITING (In-Memory for now, should use Redis in production)
+// GO-LIVE-135: Tightened rate limits to prevent OTP abuse
 // =============================================================================
 
-// Email rate limiting: 3 per minute per email, 10 per hour
+// Email rate limiting: 2 per minute per email (was 3), 5 per hour (was 10)
 const emailRateLimits = new Map<string, { minute: number[]; hour: number[] }>();
 
-const RATE_LIMIT_PER_MINUTE = 3;
-const RATE_LIMIT_PER_HOUR = 10;
+// GO-LIVE-135: Reduced limits to be more restrictive
+const RATE_LIMIT_PER_MINUTE = 2;  // Was 3 - reduced to prevent rapid OTP requests
+const RATE_LIMIT_PER_HOUR = 5;    // Was 10 - reduced to limit daily abuse potential
 
 /**
  * Check if email sending is rate limited
