@@ -124,6 +124,9 @@ const calculateDiscountAmount = (
   return Math.min(Math.round(safeValue), safeBase);
 };
 
+// GO-LIVE-116: Maximum safe total to prevent overflow
+const MAX_SAFE_TOTAL = 9007199254740991; // Number.MAX_SAFE_INTEGER
+
 const calculateCartTotals = (items: CartItem[], discount: CartDiscount | null) => {
   let subtotal = 0;
   let itemDiscountAmount = 0;
@@ -137,6 +140,12 @@ const calculateCartTotals = (items: CartItem[], discount: CartDiscount | null) =
     const lineDiscount = calculateDiscountAmount(lineSubtotal, item.itemDiscount ?? null);
     subtotal += lineSubtotal;
     itemDiscountAmount += lineDiscount;
+  }
+
+  // GO-LIVE-116: Cap subtotal to prevent overflow (backend will also reject)
+  if (subtotal > MAX_SAFE_TOTAL) {
+    console.warn('[Cart] GO-LIVE-116: Subtotal exceeds MAX_SAFE_TOTAL, capping');
+    subtotal = MAX_SAFE_TOTAL;
   }
 
   const subtotalAfterItemDiscounts = Math.max(0, subtotal - itemDiscountAmount);

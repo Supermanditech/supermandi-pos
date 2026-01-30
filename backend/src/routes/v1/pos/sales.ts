@@ -831,6 +831,19 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
   }
 
   const subtotal = cleanedItems.reduce((sum, item) => sum + item.priceMinor * item.quantity, 0);
+
+  // GO-LIVE-116: Protect against integer overflow with extreme values
+  // MAX_SAFE_INTEGER ensures JavaScript precision is maintained
+  const MAX_SAFE_TOTAL = 9007199254740991; // Number.MAX_SAFE_INTEGER
+  if (subtotal > MAX_SAFE_TOTAL) {
+    return res.status(422).json({
+      error: {
+        code: "SUBTOTAL_OVERFLOW",
+        message: "Order total exceeds maximum safe value. Please reduce item quantities or prices."
+      }
+    });
+  }
+
   // GO-LIVE-115: Cap discount to subtotal to prevent negative bills
   // Also prevents storing invalid data where discount > subtotal
   const rawDiscount = Math.max(0, Math.round(discountMinor ?? 0));

@@ -847,6 +847,13 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             const price = Math.round(priceRaw);
             return sum + qty * price;
           }, 0);
+
+          // GO-LIVE-116: Protect against integer overflow with extreme values
+          const MAX_SAFE_TOTAL = 9007199254740991; // Number.MAX_SAFE_INTEGER
+          if (computedSubtotal > MAX_SAFE_TOTAL) {
+            throw new Error("subtotal_overflow: order total exceeds maximum safe value");
+          }
+
           // GO-LIVE-115: Cap discount to subtotal to prevent negative bills
           const cappedDiscount = Math.min(discountMinor, computedSubtotal);
           const computedTotal = computedSubtotal - cappedDiscount;
