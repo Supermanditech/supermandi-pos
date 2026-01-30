@@ -70,10 +70,17 @@ builds/
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
 
-# Environment
+# Environment - GO-LIVE-101: Block ALL production secrets
 .env
 .env.local
 .env.*.local
+.env.production
+.env.prod
+**/.env.production
+**/.env.prod
+# Keep only .example templates in git (re-include after blocking)
+!**/.env.example
+!**/.env.*.example
 
 # Spec PDFs (do not commit)
 Supermandi POS App Plan.pdf
