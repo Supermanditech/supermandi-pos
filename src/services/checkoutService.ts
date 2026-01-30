@@ -91,28 +91,35 @@ export async function completeCheckout(
 
     console.log(`[Checkout] Inventory deducted for sale ${saleId}, ${items.length} items`);
   } catch (inventoryError) {
-    // GL-CRIT-0016: Inventory deduction failed - enqueue for retry
+    // GO-LIVE-114: Inventory deduction failed - enqueue for retry
     // Don't fail checkout, but ensure inventory is eventually deducted
     console.warn(
-      `[Checkout] Inventory deduction failed for sale ${saleId}, queueing for retry:`,
+      `[Checkout] GO-LIVE-114: Inventory deduction failed for sale ${saleId}, queueing for retry:`,
       inventoryError
     );
 
-    // GL-CRIT-0016: Add to offline outbox for retry
+    // GO-LIVE-114: Add to offline outbox for retry
+    // IMPORTANT: Format payload to match what sync.ts expects for SALE_CREATED
+    // Use barcode/name/priceMinor (sync format) instead of productId/unitCost (inventory format)
     try {
       await enqueueEvent("SALE_CREATED", {
         saleId,
         billRef,
+        offlineReceiptRef: billRef, // sync.ts uses offlineReceiptRef or billRef
         items: items.map((item) => ({
-          productId: item.id,
+          barcode: item.barcode,
+          name: item.name,
           quantity: item.quantity,
-          unitCost: item.priceMinor,
+          priceMinor: item.priceMinor,
+          globalProductId: item.metadata?.globalProductId ?? null,
         })),
-        retryInventoryDeduction: true, // Flag for sync processor to handle
+        currency: input.currency,
+        discountMinor: 0, // Discount already applied to sale, don't re-apply
+        retryInventoryDeduction: true, // GO-LIVE-114: Flag for sync processor to run inventory only
         originalError: inventoryError instanceof Error ? inventoryError.message : String(inventoryError),
         queuedAt: new Date().toISOString(),
       });
-      console.log(`[Checkout] GL-CRIT-0016: Queued inventory deduction retry for sale ${saleId}`);
+      console.log(`[Checkout] GO-LIVE-114: Queued inventory deduction retry for sale ${saleId}`);
     } catch (queueError) {
       // If even queueing fails, log critical error
       console.error(

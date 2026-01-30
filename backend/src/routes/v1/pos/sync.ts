@@ -775,22 +775,63 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             throw new Error(`cart_exceeds_limit: maximum ${MAX_CART_ITEMS} line items allowed`);
           }
 
+          // GO-LIVE-114: Check if this is a retry for inventory deduction only
+          const retryInventoryDeduction = (payload as any)?.retryInventoryDeduction === true;
+
           const existingSale = await client.query(
             `SELECT id, store_id, bill_ref, offline_receipt_ref FROM sales WHERE id = $1 AND store_id = $2`,
             [saleId, storeId]
           );
+
+          // GO-LIVE-114: Track if we need to skip sale creation but still run inventory
+          let skipSaleCreation = false;
+          let existingBillRef = offlineReceiptRef;
+
           if ((existingSale.rowCount ?? 0) > 0) {
             const existing = existingSale.rows[0];
-            await client.query("COMMIT");
-            results.push({ eventId, status: "duplicate_ignored" });
-            saleMappings.push({
-              saleId,
-              localSaleId: saleId,
-              serverSaleId: existing.id,
-              billRef: existing.bill_ref,
-              offlineReceiptRef: existing.offline_receipt_ref ?? offlineReceiptRef
-            });
-            continue;
+            existingBillRef = existing.bill_ref;
+
+            if (!retryInventoryDeduction) {
+              // Normal duplicate - skip everything
+              await client.query("COMMIT");
+              results.push({ eventId, status: "duplicate_ignored" });
+              saleMappings.push({
+                saleId,
+                localSaleId: saleId,
+                serverSaleId: existing.id,
+                billRef: existing.bill_ref,
+                offlineReceiptRef: existing.offline_receipt_ref ?? offlineReceiptRef
+              });
+              continue;
+            }
+
+            // GO-LIVE-114: Sale exists but this is an inventory retry
+            // Check if inventory was already deducted for this sale
+            const ledgerCheck = await client.query(
+              `SELECT COUNT(*) as count FROM inventory_ledger
+               WHERE store_id = $1 AND reference_id = $2 AND reference_type = 'sale'`,
+              [storeId, saleId]
+            );
+            const alreadyDeducted = parseInt(ledgerCheck.rows[0]?.count ?? '0', 10) > 0;
+
+            if (alreadyDeducted) {
+              // Inventory already processed - this is a true duplicate
+              console.log(`[Sync] GO-LIVE-114: Inventory already deducted for sale ${saleId}, skipping`);
+              await client.query("COMMIT");
+              results.push({ eventId, status: "duplicate_ignored" });
+              saleMappings.push({
+                saleId,
+                localSaleId: saleId,
+                serverSaleId: existing.id,
+                billRef: existing.bill_ref,
+                offlineReceiptRef: existing.offline_receipt_ref ?? offlineReceiptRef
+              });
+              continue;
+            }
+
+            // Sale exists but inventory not deducted - proceed with inventory only
+            console.log(`[Sync] GO-LIVE-114: Retrying inventory deduction for existing sale ${saleId}`);
+            skipSaleCreation = true;
           }
 
           // ITER2-002 FIX (AUD-082-D): Skip invalid items in subtotal, don't default to 0
@@ -810,38 +851,42 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
           // MED-006 FIX: Use deterministic billRef from saleId - no retry loop needed
           // Same saleId always produces same billRef, preventing duplicate rows
-          const billRef = buildBillRef(saleId);
-          await client.query(
-            `
-            INSERT INTO sales (
-              id,
-              store_id,
-              device_id,
-              bill_ref,
-              offline_receipt_ref,
-              subtotal_minor,
-              discount_minor,
-              total_minor,
-              status,
-              created_at,
-              currency
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()), $11)
-            `,
-            [
-              saleId,
-              storeId,
-              deviceId,
-              billRef,
-              offlineReceiptRef,
-              computedSubtotal,
-              discountMinor,
-              computedTotal,
-              "completed",
-              createdAt,
-              currency
-            ]
-          );
+          const billRef = skipSaleCreation ? existingBillRef : buildBillRef(saleId);
+
+          // GO-LIVE-114: Skip sale creation if this is an inventory retry
+          if (!skipSaleCreation) {
+            await client.query(
+              `
+              INSERT INTO sales (
+                id,
+                store_id,
+                device_id,
+                bill_ref,
+                offline_receipt_ref,
+                subtotal_minor,
+                discount_minor,
+                total_minor,
+                status,
+                created_at,
+                currency
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, COALESCE($10, NOW()), $11)
+              `,
+              [
+                saleId,
+                storeId,
+                deviceId,
+                billRef,
+                offlineReceiptRef,
+                computedSubtotal,
+                discountMinor,
+                computedTotal,
+                "completed",
+                createdAt,
+                currency
+              ]
+            );
+          }
 
           const resolvedItems: Array<{
             productId: string;
@@ -924,27 +969,31 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
             items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
           });
 
-          for (const item of resolvedItems) {
-            const lineTotal = item.priceMinor * item.quantity;
-            await client.query(
-              `
-              INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-              `,
-              [
-                randomUUID(),
-                saleId,
-                item.productId,
-                item.variantId,
-                item.quantity,
-                item.priceMinor,
-                lineTotal,
-                item.name,
-                item.barcode
-              ]
-            );
+          // GO-LIVE-114: Skip sale_items insertion if this is an inventory retry (items already exist)
+          if (!skipSaleCreation) {
+            for (const item of resolvedItems) {
+              const lineTotal = item.priceMinor * item.quantity;
+              await client.query(
+                `
+                INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                `,
+                [
+                  randomUUID(),
+                  saleId,
+                  item.productId,
+                  item.variantId,
+                  item.quantity,
+                  item.priceMinor,
+                  lineTotal,
+                  item.name,
+                  item.barcode
+                ]
+              );
+            }
           }
 
+          // GO-LIVE-114: Inventory deduction always runs (this is the retry path for existing sales)
           await recordSaleInventoryMovements({
             client,
             storeId,
