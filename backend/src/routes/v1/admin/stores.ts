@@ -3,6 +3,7 @@ import { Router } from "express";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
+import { sanitizeHtml, validateEmail as validateEmailFn, validatePhone as validatePhoneFn, validatePinCode } from "@supermandi/common";
 
 export const adminStoresRouter = Router();
 
@@ -45,7 +46,8 @@ const normalizeStoreNameInput = (value: unknown): { value?: string; error?: stri
   if (trimmed.length > STORE_NAME_MAX_LENGTH) {
     return { error: `storeName_too_long_max_${STORE_NAME_MAX_LENGTH}` };
   }
-  return { value: trimmed };
+  // GO-LIVE-150: Sanitize for XSS prevention
+  return { value: sanitizeHtml(trimmed) };
 };
 
 // GO-LIVE-005: Email and phone validation regex patterns

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
+import { validateBnplMaxDays, validateMargin, validateMoq } from "@supermandi/common";
 
 export const adminSuppliersRouter = Router();
 
@@ -820,6 +821,22 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     return res.status(400).json({
       error: "superMandiMarginMinor and marginPercent are mutually exclusive. Provide only one."
     });
+  }
+
+  // GO-LIVE-164: Validate margin percentage
+  if (marginPercent !== undefined && marginPercent !== null) {
+    const marginValidation = validateMargin(marginPercent);
+    if (!marginValidation.valid) {
+      return res.status(400).json({ error: marginValidation.error });
+    }
+  }
+
+  // GO-LIVE-165: Validate BNPL max days (positive, 1-90 days)
+  if (bnplMaxDays !== undefined && bnplMaxDays !== null) {
+    const bnplValidation = validateBnplMaxDays(bnplMaxDays);
+    if (!bnplValidation.valid) {
+      return res.status(400).json({ error: bnplValidation.error });
+    }
   }
 
   const pool = getPool();

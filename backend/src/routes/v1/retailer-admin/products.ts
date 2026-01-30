@@ -10,6 +10,13 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { getStoreId, requireStoreContext } from "../../../middleware/retailerStoreContext";
+import {
+  sanitizeHtml,
+  validateSearchQuery,
+  validateBarcode,
+  validateCategoryId,
+  validatePrice,
+} from "@supermandi/common";
 
 export const retailerAdminProductsRouter = Router();
 
@@ -70,11 +77,15 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
       }
     }
 
+    // GO-LIVE-158: Validate and sanitize search query to prevent regex DoS
     if (search && typeof search === 'string' && search.trim()) {
-      const term = `%${search.trim()}%`;
-      whereClause += ` AND (p.name ILIKE $${paramIndex} OR sp.display_name ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex} OR COALESCE(sp.brand, p.brand) ILIKE $${paramIndex})`;
-      params.push(term);
-      paramIndex++;
+      const searchValidation = validateSearchQuery(search);
+      if (searchValidation.valid && searchValidation.value) {
+        const term = `%${searchValidation.value}%`;
+        whereClause += ` AND (p.name ILIKE $${paramIndex} OR sp.display_name ILIKE $${paramIndex} OR p.primary_barcode ILIKE $${paramIndex} OR COALESCE(sp.brand, p.brand) ILIKE $${paramIndex})`;
+        params.push(term);
+        paramIndex++;
+      }
     }
 
     const result = await pool.query(
@@ -188,7 +199,6 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   const MAX_NAME_LENGTH = 200;
   const MAX_DESCRIPTION_LENGTH = 500;
   const MAX_BRAND_LENGTH = 100;
-  const MAX_BARCODE_LENGTH = 50;
 
   // Validate required fields
   if (!name || !name.trim()) {
@@ -198,6 +208,11 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   if (name.trim().length > MAX_NAME_LENGTH) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Product name exceeds ${MAX_NAME_LENGTH} characters` } });
   }
+  // GO-LIVE-147: Sanitize product name for XSS prevention
+  const sanitizedName = sanitizeHtml(name.trim());
+  const sanitizedDescription = description ? sanitizeHtml(description.trim()) : null;
+  const sanitizedBrand = brand ? sanitizeHtml(brand.trim()) : null;
+
   // AUD-059-B FIX: Description length bounds
   if (description && description.length > MAX_DESCRIPTION_LENGTH) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Description exceeds ${MAX_DESCRIPTION_LENGTH} characters` } });
@@ -206,10 +221,12 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   if (brand && brand.length > MAX_BRAND_LENGTH) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Brand exceeds ${MAX_BRAND_LENGTH} characters` } });
   }
-  // AUD-059-B FIX: Barcode length bounds
-  if (barcode && barcode.length > MAX_BARCODE_LENGTH) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Barcode exceeds ${MAX_BARCODE_LENGTH} characters` } });
+  // GO-LIVE-148: Barcode validation with proper length check
+  const barcodeValidation = validateBarcode(barcode);
+  if (!barcodeValidation.valid) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: barcodeValidation.error } });
   }
+  const validatedBarcode = barcodeValidation.value;
 
   if (!sellPrice || sellPrice <= 0) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid sell price is required" } });
@@ -245,11 +262,22 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   const productMode = mode || 'PACKAGED';
   const stockQty = parsedOpeningStock || 0;
 
+  // GO-LIVE-162: Validate category ID format if provided
+  if (categoryId !== undefined && categoryId !== null && categoryId !== '') {
+    const categoryValidation = validateCategoryId(categoryId);
+    if (!categoryValidation.valid) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: categoryValidation.error }
+      });
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     // 1. Create the master product
+    // GO-LIVE-147/148: Use sanitized values for XSS prevention and validated barcode
     const productResult = await client.query(
       `INSERT INTO catalog.products (
         name, description, brand, category, unit, pack_size, pack_unit,
@@ -257,14 +285,14 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
       RETURNING id`,
       [
-        name.trim(),
-        description?.trim() || null,
-        brand?.trim() || null,
+        sanitizedName,
+        sanitizedDescription,
+        sanitizedBrand,
         null, // category auto-derived later
         unit || 'PCS',
         packSize ? parseInt(packSize) : null,
         packUnit?.trim() || null,
-        productMode === 'PACKAGED' && barcode ? barcode.trim() : null,
+        productMode === 'PACKAGED' && validatedBarcode ? validatedBarcode : null,
         hsn?.trim() || null,
         gstPercent !== undefined && gstPercent !== '' ? parseFloat(gstPercent) : null,
       ]
@@ -274,6 +302,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     // 2. Create the store_product mapping
     // RCAT-CAT-002: Include taxonomy_id for category assignment (store override)
     // SYNC-PRD-001: Set display_name = name so product is immediately visible with correct name
+    // GO-LIVE-147: Use sanitized name for display_name
     const storeProductResult = await client.query(
       `INSERT INTO catalog.store_products (
         store_id, product_id, sell_price, mrp, purchase_price,
@@ -291,25 +320,26 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         productMode,
         stockQty,
         lowStockAlertQty ? parseInt(lowStockAlertQty) : null,
-        notes?.trim() || null,
+        notes ? sanitizeHtml(notes.trim()) : null,
         productMode === 'LOOSE_BULK' ? (soldBy || 'WEIGHT') : null,
         productMode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null,
         supplierId || null,
         categoryId || null,
-        name.trim(),
+        sanitizedName,
       ]
     );
     const storeProductId = storeProductResult.rows[0].id;
 
     // 3. Create barcode entry
+    // GO-LIVE-148: Use validated barcode
     let generatedBarcode: string | null = null;
-    if (productMode === 'PACKAGED' && barcode && barcode.trim()) {
+    if (productMode === 'PACKAGED' && validatedBarcode) {
       // Store the manufacturer barcode
       await client.query(
         `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
          VALUES ($1, $2, $3, 'retailer_digitisation')
          ON CONFLICT (store_id, barcode) DO NOTHING`,
-        [storeId, storeProductId, barcode.trim()]
+        [storeId, storeProductId, validatedBarcode]
       );
     } else if (productMode === 'LOOSE_BULK') {
       // Generate a store-scoped barcode
@@ -353,13 +383,13 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
       data: {
         storeId,
         productId,
-        barcode: productMode === 'PACKAGED' ? (barcode?.trim() || null) : null,
+        barcode: productMode === 'PACKAGED' ? (validatedBarcode || null) : null,
         generatedBarcode,
         ledgerEntryId,
         storeProduct: {
           productId,
           mode: productMode,
-          name: name.trim(),
+          name: sanitizedName,
           sellPrice: safeNumber(sellPrice),
           purchasePrice: safeNumber(purchasePrice),
           currentStock: stockQty,
@@ -425,6 +455,16 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
   // AUD-025-B: Parse incoming timestamp for LWW comparison
   const incomingTimestamp = metadataUpdatedAt ? new Date(metadataUpdatedAt) : null;
   const validIncomingTimestamp = incomingTimestamp && !isNaN(incomingTimestamp.getTime()) ? incomingTimestamp : null;
+
+  // GO-LIVE-162: Validate category ID format if provided
+  if (categoryId !== undefined && categoryId !== null && categoryId !== '') {
+    const categoryValidation = validateCategoryId(categoryId);
+    if (!categoryValidation.valid) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: categoryValidation.error }
+      });
+    }
+  }
 
   const client = await pool.connect();
   try {

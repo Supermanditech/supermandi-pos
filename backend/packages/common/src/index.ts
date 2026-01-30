@@ -38,3 +38,6 @@ export * from './storage';
 // Firebase (ID token verification) - requires firebase-admin
 // Note: Initialize with initializeFirebase() before use
 export * from './firebase';
+
+// Validation (input sanitization, format validation) - GO-LIVE Batch 3
+export * from './validation';

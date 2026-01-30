@@ -4,6 +4,7 @@
 import { Router, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
+import { validatePinCode, validateEmail, validatePhone } from "@supermandi/common";
 
 const router = Router();
 
@@ -107,6 +108,39 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
       tradeName,
       bankDetails,
     } = req.body;
+
+    // GO-LIVE-155: Validate PIN code format (6 digits, numeric only)
+    if (pincode !== undefined && pincode !== null) {
+      const pincodeValidation = validatePinCode(pincode);
+      if (!pincodeValidation.valid) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: pincodeValidation.error }
+        });
+        return;
+      }
+    }
+
+    // GO-LIVE-153: Validate email format
+    if (email !== undefined && email !== null) {
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.valid) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: emailValidation.error }
+        });
+        return;
+      }
+    }
+
+    // GO-LIVE-154: Validate phone format
+    if (phone !== undefined && phone !== null) {
+      const phoneValidation = validatePhone(phone);
+      if (!phoneValidation.valid) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: phoneValidation.error }
+        });
+        return;
+      }
+    }
 
     const pool = getPool();
     if (!pool) {

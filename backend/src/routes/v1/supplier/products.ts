@@ -7,6 +7,7 @@ import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
+import { validateMoq, validatePrice } from "@supermandi/common";
 
 const router = Router();
 
@@ -182,6 +183,17 @@ router.post("/products", requireSupplierAuth, async (req: SupplierAuthRequest, r
       return;
     }
 
+    // GO-LIVE-163: Validate MOQ bounds (positive integer, max 10000)
+    if (moq !== undefined && moq !== null) {
+      const moqValidation = validateMoq(moq);
+      if (!moqValidation.valid) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: moqValidation.error }
+        });
+        return;
+      }
+    }
+
     const pool = getPool();
     if (!pool) {
       res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
@@ -344,6 +356,17 @@ router.patch("/products/:id", requireSupplierAuth, async (req: SupplierAuthReque
         error: { code: 'VALIDATION_ERROR', message: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` }
       });
       return;
+    }
+
+    // GO-LIVE-163: Validate MOQ bounds if being updated
+    if (moq !== undefined && moq !== null) {
+      const moqValidation = validateMoq(moq);
+      if (!moqValidation.valid) {
+        res.status(400).json({
+          error: { code: 'VALIDATION_ERROR', message: moqValidation.error }
+        });
+        return;
+      }
     }
 
     // Build dynamic update

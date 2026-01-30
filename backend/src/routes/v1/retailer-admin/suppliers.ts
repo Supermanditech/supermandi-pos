@@ -4,6 +4,7 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { validatePan, validatePinCode, validatePhone, validateEmail } from "@supermandi/common";
 
 export const retailerAdminSuppliersRouter = Router();
 
@@ -168,6 +169,38 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
     }
   }
 
+  // GO-LIVE-156: Validate PAN format if provided
+  let validatedPan: string | null = null;
+  if (pan && pan.trim()) {
+    const panValidation = validatePan(pan);
+    if (!panValidation.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid PAN format. Expected: AAAAA9999A" } });
+    }
+    validatedPan = panValidation.value || null;
+  }
+
+  // GO-LIVE-155: Validate PIN code format if provided
+  if (pincode && pincode.trim()) {
+    const pincodeValidation = validatePinCode(pincode);
+    if (!pincodeValidation.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: pincodeValidation.error } });
+    }
+  }
+
+  // Validate phone format
+  const phoneValidation = validatePhone(phone);
+  if (!phoneValidation.valid) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: phoneValidation.error } });
+  }
+
+  // Validate email format if provided
+  if (email && email.trim()) {
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: emailValidation.error } });
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -212,7 +245,7 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
           name.trim(),
           tradeName?.trim() || null,
           supplierType || null,
-          pan?.trim() || null,
+          validatedPan,
           fssai?.trim() || null,
           phone.trim(),
           email?.trim() || null,
@@ -320,6 +353,44 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
     priceSource, categoriesSupplied, brandsSupplied, orderingChannel, notes,
   } = req.body;
 
+  // GO-LIVE-156: Validate PAN format if provided
+  let validatedPan: string | null | undefined = undefined;
+  if (pan !== undefined) {
+    if (pan && pan.trim()) {
+      const panValidation = validatePan(pan);
+      if (!panValidation.valid) {
+        return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid PAN format. Expected: AAAAA9999A" } });
+      }
+      validatedPan = panValidation.value || null;
+    } else {
+      validatedPan = null;
+    }
+  }
+
+  // GO-LIVE-155: Validate PIN code format if provided
+  if (pincode !== undefined && pincode && pincode.trim()) {
+    const pincodeValidation = validatePinCode(pincode);
+    if (!pincodeValidation.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: pincodeValidation.error } });
+    }
+  }
+
+  // Validate phone format if provided
+  if (phone !== undefined && phone && phone.trim()) {
+    const phoneValidation = validatePhone(phone);
+    if (!phoneValidation.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: phoneValidation.error } });
+    }
+  }
+
+  // Validate email format if provided
+  if (email !== undefined && email && email.trim()) {
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: emailValidation.error } });
+    }
+  }
+
   const client = await pool.connect();
   try {
     // Verify the supplier is linked to this store and is editable
@@ -352,7 +423,7 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
         business_name = COALESCE($2, business_name),
         trade_name = $3,
         business_type = $4,
-        pan = $5,
+        pan = COALESCE($5, pan),
         fssai = $6,
         primary_phone = COALESCE($7, primary_phone),
         primary_email = $8,
@@ -371,7 +442,7 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
         name?.trim() || null,
         tradeName?.trim() || null,
         supplierType || null,
-        pan?.trim() || null,
+        validatedPan !== undefined ? validatedPan : null,
         fssai?.trim() || null,
         phone?.trim() || null,
         email?.trim() || null,

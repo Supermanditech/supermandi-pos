@@ -1,4 +1,5 @@
 import { getPool } from "../../db/client";
+import { validateAnalyticsGroupBy } from "@supermandi/common";
 
 export type DateRange = {
   from: Date;
@@ -659,9 +660,8 @@ export async function fetchProductsAnalytics(params: {
   const storeId = params.storeId?.trim() || undefined;
   const limit = Math.max(1, Math.min(200, params.limit ?? 20));
   const offset = Math.max(0, params.offset ?? 0);
-  const groupBy = params.groupBy === "hour" || params.groupBy === "day" || params.groupBy === "category"
-    ? params.groupBy
-    : "day";
+  // GO-LIVE-146: Use centralized validation to prevent SQL injection
+  const groupBy = validateAnalyticsGroupBy(params.groupBy, ['hour', 'day', 'category'], 'day');
 
   const topProductsRes = await pool.query(
     `
@@ -1232,9 +1232,8 @@ export async function fetchActivityAnalytics(params: {
 
   const range = parseRange(params.from, params.to);
   const storeId = params.storeId?.trim() || undefined;
-  const groupBy = params.groupBy === "minute" || params.groupBy === "hour" || params.groupBy === "day"
-    ? params.groupBy
-    : "hour";
+  // GO-LIVE-146: Use centralized validation to prevent SQL injection
+  const groupBy = validateAnalyticsGroupBy(params.groupBy, ['minute', 'hour', 'day'], 'hour');
 
   const bucketMap = new Map<string, ActivityBucket>();
   const ensureBucket = (bucket: string) => {

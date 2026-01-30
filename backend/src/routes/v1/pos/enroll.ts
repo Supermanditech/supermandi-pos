@@ -3,6 +3,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
+import { validateDeviceFingerprint } from "@supermandi/common";
 
 // DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
 // BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
@@ -104,7 +105,17 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
   const model = asTrimmedString(meta.model);
   const androidVersion = asTrimmedString(meta.androidVersion);
   const printingMode = normalizeEnum(asTrimmedString(meta.printingMode)) ?? "NONE";
-  const deviceFingerprint = asTrimmedString(meta.deviceFingerprint);
+  const rawDeviceFingerprint = asTrimmedString(meta.deviceFingerprint);
+
+  // GO-LIVE-149: Validate device fingerprint format (reject arbitrary binary)
+  let deviceFingerprint: string | undefined;
+  if (rawDeviceFingerprint) {
+    const fingerprintValidation = validateDeviceFingerprint(rawDeviceFingerprint);
+    if (!fingerprintValidation.valid) {
+      return res.status(400).json({ error: { code: "DEVICE_FINGERPRINT_INVALID", message: fingerprintValidation.error } });
+    }
+    deviceFingerprint = fingerprintValidation.value;
+  }
 
   if (!label) {
     return res.status(400).json({ error: { code: "LABEL_REQUIRED", message: "Device label is required" } });
