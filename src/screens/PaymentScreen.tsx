@@ -158,8 +158,8 @@ const PaymentScreen = () => {
   const transactionId = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
   const finalized = useRef(false);
   const pendingSaleIdRef = useRef<string | null>(null);
-  // AUD-055-A FIX: Use ref for immediate synchronous double-submit protection
-  // React setState is async, ref check is synchronous
+  // AUD-055-A FIX / GO-LIVE-113: Use ref for immediate synchronous double-submit protection
+  // React setState is async, ref check is synchronous - prevents payment fraud from rapid taps
   const submittingRef = useRef(false);
 
   const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
@@ -796,6 +796,7 @@ const PaymentScreen = () => {
 
       {/* SM-015: Split Payment Modal */}
       {/* GL-RJ-001: Updated to verify payment result before completing */}
+      {/* GO-LIVE-113: Added submittingRef protection to prevent double-submit race condition */}
       <SplitPaymentModal
         visible={showSplitModal}
         totalAmountMinor={totalMinor}
@@ -803,11 +804,19 @@ const PaymentScreen = () => {
         saleId={saleId || ""}
         onClose={() => setShowSplitModal(false)}
         onComplete={(result: SplitPaymentResult) => {
+          // GO-LIVE-113: Immediately acquire lock to prevent race with main payment button
+          // This check+set must happen FIRST, before any other logic
+          if (finalized.current || submittingRef.current) {
+            setShowSplitModal(false);
+            return; // Already processing or completed - ignore duplicate
+          }
+          submittingRef.current = true; // Lock immediately (synchronous)
           setShowSplitModal(false);
 
           // GL-RJ-001: Verify payment was actually successful before completing
           if (!result.success || result.paymentStatus !== 'completed') {
-            // Payment failed or not verified - log and show error
+            // Payment failed or not verified - release lock and show error
+            submittingRef.current = false; // Release lock to allow retry
             void logPaymentEvent("PAYMENT_FAILED", {
               transactionId,
               billId: billRef || "",
@@ -828,6 +837,7 @@ const PaymentScreen = () => {
           }
 
           // GL-RJ-001: Payment verified - proceed to success
+          // GO-LIVE-113: Keep submittingRef=true and set finalized to prevent any further attempts
           finalized.current = true;
           if (isPartialSale) {
             for (const item of saleItems) {
