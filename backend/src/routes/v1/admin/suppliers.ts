@@ -622,9 +622,13 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
   try {
     await client.query("BEGIN");
 
-    // Check product exists and is pending
+    // GO-LIVE-131: Check product exists and verify supplier relationship
     const checkResult = await client.query(
-      `SELECT id, approval_status, supplier_id FROM catalog.supplier_products WHERE id = $1::uuid`,
+      `SELECT sp.id, sp.approval_status, sp.supplier_id, sp.name as product_name,
+              s.business_name as supplier_name, s.verification_status as supplier_status
+       FROM catalog.supplier_products sp
+       LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       WHERE sp.id = $1::uuid`,
       [productId]
     );
 
@@ -633,9 +637,31 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
       return res.status(404).json({ error: "Product not found" });
     }
 
-    if (checkResult.rows[0].approval_status !== 'pending') {
+    const product = checkResult.rows[0];
+
+    if (product.approval_status !== 'pending') {
       await client.query("ROLLBACK");
       return res.status(400).json({ error: "Product is not pending approval" });
+    }
+
+    // GO-LIVE-131: Verify supplier-product relationship
+    if (!product.supplier_id) {
+      await client.query("ROLLBACK");
+      console.warn(`[admin/products/approve] GO-LIVE-131: Product ${productId} has no supplier_id`);
+      return res.status(400).json({
+        error: "product_no_supplier",
+        message: "Cannot approve product without supplier association"
+      });
+    }
+
+    // GO-LIVE-131: Verify supplier is verified before approving product
+    if (product.supplier_status !== 'verified') {
+      await client.query("ROLLBACK");
+      console.warn(`[admin/products/approve] GO-LIVE-131: Cannot approve product from non-verified supplier: ${product.supplier_name}`);
+      return res.status(400).json({
+        error: "supplier_not_verified",
+        message: `Cannot approve product - supplier "${product.supplier_name}" is not verified (status: ${product.supplier_status || 'unknown'})`
+      });
     }
 
     // Update product to approved
@@ -805,16 +831,20 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
   try {
     await client.query("BEGIN");
 
-    // Get current product data for comparison
+    // GO-LIVE-131: Get current product data with supplier verification
     const checkResult = await client.query(
       `SELECT
-        id, name, category, purchase_price,
-        edited_name, edited_category,
-        supermandi_margin_minor, margin_percent,
-        bnpl_eligible, bnpl_max_days,
-        approval_status
-       FROM catalog.supplier_products
-       WHERE id = $1::uuid`,
+        sp.id, sp.name, sp.category, sp.purchase_price,
+        sp.edited_name, sp.edited_category,
+        sp.supermandi_margin_minor, sp.margin_percent,
+        sp.bnpl_eligible, sp.bnpl_max_days,
+        sp.approval_status,
+        sp.supplier_id,
+        s.business_name as supplier_name,
+        s.verification_status as supplier_status
+       FROM catalog.supplier_products sp
+       LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       WHERE sp.id = $1::uuid`,
       [productId]
     );
 
@@ -824,6 +854,22 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     }
 
     const current = checkResult.rows[0];
+
+    // GO-LIVE-131: Verify supplier-product relationship
+    if (!current.supplier_id) {
+      await client.query("ROLLBACK");
+      console.warn(`[admin/products/edit] GO-LIVE-131: Product ${productId} has no supplier_id`);
+      return res.status(400).json({
+        error: "product_no_supplier",
+        message: "Product is not associated with any supplier"
+      });
+    }
+
+    // GO-LIVE-131: Warn if supplier is not verified (but allow edit for admin)
+    if (current.supplier_status && current.supplier_status !== 'verified') {
+      console.warn(`[admin/products/edit] GO-LIVE-131: Editing product from non-verified supplier: ${current.supplier_name} (${current.supplier_status})`);
+    }
+
     const purchasePrice = current.purchase_price;
 
     // Build dynamic update query
