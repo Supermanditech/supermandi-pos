@@ -103,6 +103,29 @@ export async function applyInventoryMovement(
     throw new Error("store_or_product_missing");
   }
 
+  // GO-LIVE-121: Idempotency check - prevent duplicate ledger entries for same reference
+  // This prevents delta from being applied twice if the same sale is processed multiple times
+  if (input.referenceId && input.referenceType) {
+    const existingEntry = await input.client.query(
+      `SELECT id FROM inventory_ledger
+       WHERE store_id = $1 AND global_product_id = $2
+         AND reference_type = $3 AND reference_id = $4
+       LIMIT 1`,
+      [storeId, globalProductId, input.referenceType, input.referenceId]
+    );
+    if (existingEntry.rows.length > 0) {
+      console.log(`[InventoryLedger] GO-LIVE-121: Skipping duplicate movement for ${input.referenceType}/${input.referenceId}`);
+      // Return current stock without applying delta again
+      const currentRes = await input.client.query(
+        `SELECT available_qty FROM store_inventory
+         WHERE store_id = $1 AND global_product_id = $2`,
+        [storeId, globalProductId]
+      );
+      const current = Math.round(Number(currentRes.rows[0]?.available_qty ?? 0));
+      return { previousQty: current, nextQty: current, delta: 0 };
+    }
+  }
+
   const delta = normalizeDelta(input.movementType, input.quantity);
   const unitCostMinor = normalizeMinor(input.unitCostMinor ?? null, "unit_cost_minor");
   const unitSellMinor = normalizeMinor(input.unitSellMinor ?? null, "unit_sell_minor");
