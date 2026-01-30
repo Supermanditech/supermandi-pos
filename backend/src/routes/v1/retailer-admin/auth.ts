@@ -4,6 +4,7 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
 
 // GO-LIVE-045: Import Firebase verification from common package
@@ -257,12 +258,14 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
       );
     }
 
-    // Generate proper JWT token matching API Gateway expectations
+    // GO-LIVE-137: Generate proper JWT token with JTI for revocation support
+    const jti = randomUUID();
     const jwtPayload = {
       sub: user.id,                    // User ID
       actorType: 'STORE',              // Actor type for retailer admin
       actorId: store.id,               // Store ID
       permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+      jti,                             // GO-LIVE-137: JWT ID for session revocation
     };
 
     const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
@@ -270,11 +273,13 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
       expiresIn: JWT_EXPIRES_IN,
     });
 
-    // Also generate a refresh token (longer lived)
+    // Also generate a refresh token (longer lived) with JTI
+    const refreshJti = randomUUID();
     const refreshPayload = {
       sub: user.id,
       type: 'refresh',
       storeId: store.id,
+      jti: refreshJti,                 // GO-LIVE-137: JWT ID for refresh token revocation
     };
 
     const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
@@ -310,6 +315,7 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
 /**
  * POST /api/v1/retailer-admin/auth/refresh
  * Refresh an expired access token using a valid refresh token
+ * GO-LIVE-137: Now checks for token revocation before issuing new token
  */
 router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -325,7 +331,7 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
     try {
       decoded = jwt.verify(refreshToken, JWT_SECRET, {
         issuer: JWT_ISSUER,
-      }) as { sub: string; type: string; storeId: string };
+      }) as { sub: string; type: string; storeId: string; jti?: string; iat?: number };
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         res.status(401).json({ error: "Refresh token expired. Please login again." });
@@ -346,9 +352,21 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Get user and store info
+    // GO-LIVE-137: Check if refresh token has been revoked
+    if (decoded.jti) {
+      const revocationCheck = await pool.query(
+        `SELECT 1 FROM auth.token_revocations WHERE jti = $1 LIMIT 1`,
+        [decoded.jti]
+      );
+      if (revocationCheck.rows.length > 0) {
+        res.status(401).json({ error: "Session has been logged out. Please login again." });
+        return;
+      }
+    }
+
+    // Get user and store info, including tokens_revoked_at for bulk revocation check
     const userResult = await pool.query(
-      `SELECT u.id, u.phone, u.name, su.store_id
+      `SELECT u.id, u.phone, u.name, u.tokens_revoked_at, su.store_id
        FROM auth.users u
        JOIN auth.store_users su ON su.user_id = u.id
        WHERE u.id = $1 AND su.store_id = $2 AND u.status = 'active' AND su.is_active = true`,
@@ -362,6 +380,16 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
 
     const user = userResult.rows[0];
 
+    // GO-LIVE-137: Check bulk token revocation
+    if (user.tokens_revoked_at && decoded.iat) {
+      const revokedAtMs = new Date(user.tokens_revoked_at).getTime();
+      const issuedAtMs = decoded.iat * 1000;
+      if (issuedAtMs < revokedAtMs) {
+        res.status(401).json({ error: "All sessions have been logged out. Please login again." });
+        return;
+      }
+    }
+
     // Get store info
     const storeResult = await pool.query(
       `SELECT id, code, name FROM platform.stores WHERE id = $1`,
@@ -374,12 +402,14 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Generate new access token
+    // GO-LIVE-137: Generate new access token with JTI
+    const newJti = randomUUID();
     const jwtPayload = {
       sub: user.id,
       actorType: 'STORE',
       actorId: store.id,
       permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+      jti: newJti,
     };
 
     const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
@@ -460,6 +490,165 @@ router.get("/auth/me", async (req: Request, res: Response, next: NextFunction) =
           storeCode: store.code,
           storeName: store.name,
         } : null,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
+// GO-LIVE-137: Server-side session invalidation (Logout)
+// =============================================================================
+
+/**
+ * POST /api/v1/retailer-admin/auth/logout
+ * GO-LIVE-137: Revoke the current session token
+ * Adds the token's JTI to the blacklist so it can't be reused
+ */
+router.post("/auth/logout", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Get user context from gateway headers
+    const userId = req.headers['x-user-id'] as string;
+    const storeId = req.headers['x-actor-id'] as string;
+
+    if (!userId || !storeId) {
+      // No valid session, just return success
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    // Get the Bearer token to extract JTI
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    const token = authHeader.slice(7);
+    let decoded: { jti?: string; exp?: number };
+
+    try {
+      // Decode without verification (gateway already verified)
+      decoded = jwt.decode(token) as { jti?: string; exp?: number };
+    } catch {
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    if (!decoded?.jti) {
+      // Old tokens without JTI - still return success
+      console.log(`[RetailerAuth] GO-LIVE-137: Logout for user ${userId} (no JTI)`);
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      // Even if DB unavailable, return success since token will expire
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    // Calculate token expiry
+    const expiresAt = decoded.exp
+      ? new Date(decoded.exp * 1000)
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Add to revocation table
+    try {
+      await pool.query(
+        `INSERT INTO auth.token_revocations
+         (user_id, store_id, jti, token_expires_at, revoked_by, reason, ip_address, user_agent)
+         VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (jti) DO NOTHING`,
+        [
+          userId,
+          storeId,
+          decoded.jti,
+          expiresAt,
+          'user',
+          'User logout',
+          req.ip || null,
+          req.get('user-agent') || null,
+        ]
+      );
+
+      console.log(`[RetailerAuth] GO-LIVE-137: Token revoked for user ${userId}, JTI: ${decoded.jti}`);
+    } catch (dbError) {
+      // Log but don't fail
+      console.warn('[RetailerAuth] GO-LIVE-137: Failed to record token revocation:', dbError);
+    }
+
+    res.json({
+      data: {
+        success: true,
+        message: 'Logged out successfully',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/logout-all
+ * GO-LIVE-137: Revoke all sessions for the current user/store
+ */
+router.post("/auth/logout-all", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    const storeId = req.headers['x-actor-id'] as string;
+
+    if (!userId || !storeId) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: "Database unavailable" });
+      return;
+    }
+
+    // Revoke current token if available
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        const decoded = jwt.decode(token) as { jti?: string; exp?: number };
+        if (decoded?.jti) {
+          const expiresAt = decoded.exp
+            ? new Date(decoded.exp * 1000)
+            : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+          await pool.query(
+            `INSERT INTO auth.token_revocations
+             (user_id, store_id, jti, token_expires_at, revoked_by, reason)
+             VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)
+             ON CONFLICT (jti) DO NOTHING`,
+            [userId, storeId, decoded.jti, expiresAt, 'user', 'Logout all sessions']
+          );
+        }
+      } catch {
+        // Ignore decode errors
+      }
+    }
+
+    // Set tokens_revoked_at to invalidate all tokens issued before this time
+    await pool.query(
+      `UPDATE auth.users
+       SET tokens_revoked_at = NOW()
+       WHERE id = $1::uuid`,
+      [userId]
+    );
+
+    console.log(`[RetailerAuth] GO-LIVE-137: All tokens revoked for user ${userId}`);
+
+    res.json({
+      data: {
+        success: true,
+        message: 'All sessions logged out. Please login again.',
       },
     });
   } catch (error) {
