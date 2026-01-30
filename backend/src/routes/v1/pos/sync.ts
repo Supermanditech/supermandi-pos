@@ -683,8 +683,13 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
           const discountMinor = Math.max(0, Math.round(asNumber((payload as any)?.discountMinor) ?? 0));
           const createdAt = asTrimmedString((payload as any)?.createdAt);
 
+          // GO-LIVE-044: Max cart item limit to prevent abuse/overflow
+          const MAX_CART_ITEMS = 500;
           if (!saleId || !offlineReceiptRef || items.length === 0) {
             throw new Error("invalid sale payload");
+          }
+          if (items.length > MAX_CART_ITEMS) {
+            throw new Error(`cart_exceeds_limit: maximum ${MAX_CART_ITEMS} line items allowed`);
           }
 
           const existingSale = await client.query(
@@ -796,11 +801,17 @@ posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
 
             // MT-6: Dual-write - ensure product exists in BOTH schemas
             // 1. Catalog schema (so Dashboard can see products from offline sales)
-            const { productId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt: createdAt });
+            const { productId, storeProductId } = await ensureCatalogProduct(client, { storeId, barcode, name: itemName, eventCreatedAt: createdAt });
+
+            // GO-LIVE-039: Cache price from sale items for offline-scanned products
+            // This ensures subsequent scans don't re-prompt for price
+            await upsertCatalogPrice(client, { storeId, storeProductId, priceMinor, eventCreatedAt: createdAt });
 
             // 2. Legacy schema (for sales/inventory compatibility)
             const variantId = await ensureProductByBarcode(client, { barcode, name: itemName, currency });
             await ensureRetailerVariant(client, { storeId, variantId });
+            // GO-LIVE-039: Also update legacy price for backward compatibility
+            await upsertRetailerPrice(client, { storeId, variantId, priceMinor, eventCreatedAt: createdAt });
 
             resolvedItems.push({
               productId,

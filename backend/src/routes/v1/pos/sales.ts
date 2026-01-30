@@ -52,6 +52,21 @@ function resolvePaymentMode(status: string | null | undefined): BillPaymentMode 
   return "UNKNOWN";
 }
 
+// GO-LIVE-042: Stock reservation timeout (30 minutes)
+// PENDING sales older than this are considered expired and cannot be paid
+const SALE_RESERVATION_TIMEOUT_MS = 30 * 60 * 1000;
+
+/**
+ * GO-LIVE-042: Check if sale reservation has expired
+ * Returns true if the sale is too old to be paid
+ */
+function isSaleReservationExpired(saleCreatedAt: Date | string | null): boolean {
+  if (!saleCreatedAt) return false;
+  const created = saleCreatedAt instanceof Date ? saleCreatedAt : new Date(saleCreatedAt);
+  if (isNaN(created.getTime())) return false;
+  return Date.now() - created.getTime() > SALE_RESERVATION_TIMEOUT_MS;
+}
+
 function asTrimmedString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -1148,7 +1163,7 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, re
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+confirm race
     const saleRes = await client.query(
       `
-      SELECT id, store_id, status, subtotal_minor, discount_minor, total_minor
+      SELECT id, store_id, status, subtotal_minor, discount_minor, total_minor, created_at
       FROM sales
       WHERE id = $1 AND store_id = $2
       FOR UPDATE
@@ -1167,6 +1182,16 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, re
       return res.status(409).json({
         error: "sale_already_confirmed",
         message: `Sale is in ${sale.status} status and cannot be confirmed again`
+      });
+    }
+
+    // GO-LIVE-042: Check reservation expiry
+    if (isSaleReservationExpired(sale.created_at)) {
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      await client.query("COMMIT");
+      return res.status(410).json({
+        error: "sale_reservation_expired",
+        message: "Sale reservation has expired (30 minutes). Please create a new sale."
       });
     }
 
@@ -1416,7 +1441,7 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
-      SELECT id, store_id, status, total_minor
+      SELECT id, store_id, status, total_minor, created_at
       FROM sales
       WHERE id = $1 AND store_id = $2
       FOR UPDATE
@@ -1435,6 +1460,16 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
       return res.status(409).json({
         error: "sale_not_pending",
         message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // GO-LIVE-042: Check reservation expiry
+    if (isSaleReservationExpired(sale.created_at)) {
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      await client.query("COMMIT");
+      return res.status(410).json({
+        error: "sale_reservation_expired",
+        message: "Sale reservation has expired (30 minutes). Please create a new sale."
       });
     }
 
@@ -1537,7 +1572,7 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
-      SELECT id, store_id, status, total_minor
+      SELECT id, store_id, status, total_minor, created_at
       FROM sales
       WHERE id = $1 AND store_id = $2
       FOR UPDATE
@@ -1556,6 +1591,16 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
       return res.status(409).json({
         error: "sale_not_pending",
         message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // GO-LIVE-042: Check reservation expiry
+    if (isSaleReservationExpired(sale.created_at)) {
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      await client.query("COMMIT");
+      return res.status(410).json({
+        error: "sale_reservation_expired",
+        message: "Sale reservation has expired (30 minutes). Please create a new sale."
       });
     }
 
@@ -1668,7 +1713,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
-      SELECT id, store_id, status, total_minor
+      SELECT id, store_id, status, total_minor, created_at
       FROM sales
       WHERE id = $1 AND store_id = $2
       FOR UPDATE
@@ -1687,6 +1732,16 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
       return res.status(409).json({
         error: "sale_not_pending",
         message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // GO-LIVE-042: Check reservation expiry
+    if (isSaleReservationExpired(sale.created_at)) {
+      await client.query(`UPDATE sales SET status = 'EXPIRED' WHERE id = $1`, [saleId]);
+      await client.query("COMMIT");
+      return res.status(410).json({
+        error: "sale_reservation_expired",
+        message: "Sale reservation has expired (30 minutes). Please create a new sale."
       });
     }
 

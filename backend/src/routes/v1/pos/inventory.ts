@@ -9,6 +9,79 @@ import { randomUUID } from "crypto";
 export const posInventoryRouter = Router();
 
 // =============================================================================
+// GO-LIVE-100: STOCK CACHE WITH TTL
+// In-memory cache for stock queries with configurable TTL
+// =============================================================================
+
+type StockCacheEntry = {
+  currentQty: number;
+  cachedAt: number;
+};
+
+// Cache: Map<storeId:productId, entry>
+const stockCache = new Map<string, StockCacheEntry>();
+
+// GO-LIVE-100: Configurable TTL (default 5 minutes)
+const STOCK_CACHE_TTL_MS = parseInt(process.env.STOCK_CACHE_TTL_MS || '300000', 10);
+
+// Cleanup interval (every 10 minutes)
+const CACHE_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+
+/**
+ * GO-LIVE-100: Get cached stock or fetch from database
+ */
+function getCachedStock(storeId: string, productId: string): StockCacheEntry | null {
+  const key = `${storeId}:${productId}`;
+  const entry = stockCache.get(key);
+  if (!entry) return null;
+
+  // Check TTL
+  if (Date.now() - entry.cachedAt > STOCK_CACHE_TTL_MS) {
+    stockCache.delete(key);
+    return null;
+  }
+
+  return entry;
+}
+
+/**
+ * GO-LIVE-100: Update stock cache
+ */
+function setCachedStock(storeId: string, productId: string, currentQty: number): void {
+  const key = `${storeId}:${productId}`;
+  stockCache.set(key, {
+    currentQty,
+    cachedAt: Date.now(),
+  });
+}
+
+/**
+ * GO-LIVE-100: Invalidate stock cache for a product or entire store
+ */
+function invalidateStockCache(storeId: string, productId?: string): void {
+  if (productId) {
+    stockCache.delete(`${storeId}:${productId}`);
+  } else {
+    // Invalidate all products for this store
+    for (const key of stockCache.keys()) {
+      if (key.startsWith(`${storeId}:`)) {
+        stockCache.delete(key);
+      }
+    }
+  }
+}
+
+// Periodic cache cleanup
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of stockCache.entries()) {
+    if (now - entry.cachedAt > STOCK_CACHE_TTL_MS) {
+      stockCache.delete(key);
+    }
+  }
+}, CACHE_CLEANUP_INTERVAL_MS);
+
+// =============================================================================
 // LEDGER ENDPOINT - GO-LIVE-006/007
 // =============================================================================
 
@@ -287,6 +360,9 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
       );
 
       entries.push(ledgerResult.rows[0]);
+
+      // GO-LIVE-100: Invalidate cache for this product
+      invalidateStockCache(storeId, productId);
     }
 
     await client.query("COMMIT");
@@ -317,8 +393,12 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
 /**
  * GET /api/v1/pos/inventory/stock/:productId
  * Get current stock for a single product
+ * GO-LIVE-100: Now uses cache with TTL
  *
- * Returns: { data: { storeId, productId, currentQty } }
+ * Query params:
+ *   - refresh=true: Force bypass cache and refresh
+ *
+ * Returns: { data: { storeId, productId, currentQty, cached: boolean } }
  */
 posInventoryRouter.get("/inventory/stock/:productId", requireDeviceToken, async (req: Request, res: Response) => {
   const pool = getPool();
@@ -334,7 +414,26 @@ posInventoryRouter.get("/inventory/stock/:productId", requireDeviceToken, async 
     return res.status(400).json({ error: "productId is required" });
   }
 
+  // GO-LIVE-100: Check for refresh parameter
+  const forceRefresh = req.query.refresh === 'true';
+
   try {
+    // GO-LIVE-100: Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = getCachedStock(storeId, productId);
+      if (cached) {
+        return res.json({
+          data: {
+            storeId,
+            productId,
+            currentQty: cached.currentQty,
+            cached: true,
+            cachedAt: cached.cachedAt,
+          }
+        });
+      }
+    }
+
     const result = await pool.query(
       `SELECT
         store_id as "storeId",
@@ -345,19 +444,21 @@ posInventoryRouter.get("/inventory/stock/:productId", requireDeviceToken, async 
       [storeId, productId]
     );
 
-    if (result.rowCount === 0) {
-      // No balance record = 0 stock
-      return res.json({
-        data: {
-          storeId,
-          productId,
-          currentQty: 0
-        }
-      });
+    let currentQty = 0;
+    if (result.rowCount && result.rowCount > 0) {
+      currentQty = result.rows[0].currentQty;
     }
 
+    // GO-LIVE-100: Update cache
+    setCachedStock(storeId, productId, currentQty);
+
     return res.json({
-      data: result.rows[0]
+      data: {
+        storeId,
+        productId,
+        currentQty,
+        cached: false,
+      }
     });
   } catch (error: any) {
     console.error("[InventoryStock] Get error:", error.message);
@@ -517,5 +618,241 @@ posInventoryRouter.get("/inventory/statement", requireDeviceToken, async (req: R
   } catch (error: any) {
     console.error("[InventoryStatement] Error:", error.message);
     return res.status(500).json({ error: "Failed to get stock statement" });
+  }
+});
+
+// =============================================================================
+// GO-LIVE-100: MANUAL CACHE REFRESH ENDPOINT
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/inventory/stock/refresh
+ * Manually invalidate and refresh stock cache for a product or entire store
+ *
+ * Body:
+ *   - productId?: string (optional, if omitted invalidates all store products)
+ *
+ * Returns: { success: true, message: string }
+ */
+posInventoryRouter.post("/inventory/stock/refresh", requireDeviceToken, async (req: Request, res: Response) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const { productId } = req.body as { productId?: string };
+
+  // GO-LIVE-100: Invalidate cache
+  invalidateStockCache(storeId, productId);
+
+  const message = productId
+    ? `Cache invalidated for product ${productId}`
+    : `Cache invalidated for all products in store`;
+
+  console.log(`[InventoryCache] Refresh requested: storeId=${storeId}, productId=${productId || 'ALL'}`);
+
+  return res.json({
+    success: true,
+    message,
+  });
+});
+
+// =============================================================================
+// GO-LIVE-094: STOCK BALANCE RECOMPUTE FUNCTION
+// Recomputes stock_balances from inventory_ledger for data integrity
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/inventory/stock/recompute
+ * Recompute stock balance from ledger entries for a specific product
+ * GO-LIVE-094: This recalculates current_qty by summing all delta_qty from ledger
+ *
+ * Body:
+ *   - productId: string (required)
+ *
+ * Returns: { success: true, before: number, after: number, ledgerEntries: number }
+ */
+posInventoryRouter.post("/inventory/stock/recompute", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const { productId } = req.body as { productId?: string };
+  if (!productId || typeof productId !== "string") {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Get current stock balance (before)
+    const beforeResult = await client.query(
+      `SELECT current_qty FROM inventory.stock_balances
+       WHERE store_id = $1 AND product_id = $2
+       FOR UPDATE`,
+      [storeId, productId]
+    );
+    const stockBefore = beforeResult.rows[0]?.current_qty ?? 0;
+
+    // GO-LIVE-094: Recompute from ledger entries
+    const recomputeResult = await client.query(
+      `SELECT
+        COALESCE(SUM(delta_qty), 0) as computed_qty,
+        COUNT(*) as entry_count
+      FROM inventory.inventory_ledger
+      WHERE store_id = $1 AND product_id = $2`,
+      [storeId, productId]
+    );
+
+    const computedQty = Math.max(0, parseInt(recomputeResult.rows[0]?.computed_qty || '0', 10));
+    const entryCount = parseInt(recomputeResult.rows[0]?.entry_count || '0', 10);
+
+    // Update stock_balances with recomputed value
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = $3,
+         updated_at = NOW()`,
+      [storeId, productId, computedQty]
+    );
+
+    // Also update denormalized stock in store_products
+    await client.query(
+      `UPDATE catalog.store_products
+       SET current_stock = $3, updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2`,
+      [storeId, productId, computedQty]
+    );
+
+    await client.query("COMMIT");
+
+    // Invalidate cache
+    invalidateStockCache(storeId, productId);
+
+    console.log(`[InventoryRecompute] storeId=${storeId}, productId=${productId}: ${stockBefore} -> ${computedQty} (${entryCount} ledger entries)`);
+
+    return res.json({
+      success: true,
+      before: stockBefore,
+      after: computedQty,
+      ledgerEntries: entryCount,
+      message: stockBefore !== computedQty
+        ? `Stock recomputed: ${stockBefore} -> ${computedQty}`
+        : `Stock verified: ${computedQty} (no change needed)`,
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[InventoryRecompute] Error:", error.message);
+    return res.status(500).json({ error: "Failed to recompute stock" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * POST /api/v1/pos/inventory/stock/recompute-all
+ * Recompute ALL stock balances for the store from ledger entries
+ * GO-LIVE-094: Batch recompute for store-wide integrity check
+ *
+ * WARNING: This can be slow for stores with many products. Use with caution.
+ *
+ * Returns: { success: true, productsChecked: number, productsFixed: number }
+ */
+posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Get all products with ledger entries for this store
+    const productsResult = await client.query(
+      `SELECT DISTINCT product_id FROM inventory.inventory_ledger WHERE store_id = $1`,
+      [storeId]
+    );
+
+    let productsChecked = 0;
+    let productsFixed = 0;
+
+    for (const row of productsResult.rows) {
+      const productId = row.product_id;
+
+      // Get current balance
+      const balanceResult = await client.query(
+        `SELECT current_qty FROM inventory.stock_balances
+         WHERE store_id = $1 AND product_id = $2`,
+        [storeId, productId]
+      );
+      const currentQty = balanceResult.rows[0]?.current_qty ?? 0;
+
+      // Recompute from ledger
+      const recomputeResult = await client.query(
+        `SELECT COALESCE(SUM(delta_qty), 0) as computed_qty
+         FROM inventory.inventory_ledger
+         WHERE store_id = $1 AND product_id = $2`,
+        [storeId, productId]
+      );
+      const computedQty = Math.max(0, parseInt(recomputeResult.rows[0]?.computed_qty || '0', 10));
+
+      productsChecked++;
+
+      // Only update if different
+      if (currentQty !== computedQty) {
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, updated_at)
+           VALUES ($1, $2, $3, NOW())
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             current_qty = $3,
+             updated_at = NOW()`,
+          [storeId, productId, computedQty]
+        );
+
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, computedQty]
+        );
+
+        productsFixed++;
+        console.log(`[InventoryRecompute] Fixed: ${productId}: ${currentQty} -> ${computedQty}`);
+      }
+    }
+
+    await client.query("COMMIT");
+
+    // Invalidate entire store cache
+    invalidateStockCache(storeId);
+
+    console.log(`[InventoryRecompute] Store ${storeId}: checked=${productsChecked}, fixed=${productsFixed}`);
+
+    return res.json({
+      success: true,
+      productsChecked,
+      productsFixed,
+      message: productsFixed > 0
+        ? `Recomputed ${productsFixed} of ${productsChecked} products`
+        : `All ${productsChecked} products verified correctly`,
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[InventoryRecompute] Error:", error.message);
+    return res.status(500).json({ error: "Failed to recompute stock" });
+  } finally {
+    client.release();
   }
 });

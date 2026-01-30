@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import {
   lookupProductByBarcode,
   resolveScan,
@@ -9,6 +10,74 @@ import { resolveScanForDigitisation } from "../../../services/storeProductDigiti
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 
 export const posScanRouter = Router();
+
+// GO-LIVE-040: Rate limiting for scan endpoints
+// 120 scans per minute per device (2 per second average)
+const scanRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  keyGenerator: (req) => {
+    // Rate limit per device
+    const posDevice = (req as any).posDevice as { deviceId?: string } | undefined;
+    return posDevice?.deviceId || req.ip || 'unknown';
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many scan requests. Please slow down.'
+    }
+  }
+});
+
+// GO-LIVE-041: Barcode format validation
+// Supports EAN-13, EAN-8, UPC-A, UPC-E, and internal SM-xxx barcodes
+const BARCODE_PATTERNS = {
+  EAN13: /^\d{13}$/,
+  EAN8: /^\d{8}$/,
+  UPC_A: /^\d{12}$/,
+  UPC_E: /^\d{6,8}$/,
+  INTERNAL: /^SM-[A-Z0-9]{3,20}$/i,
+  // Allow numeric barcodes 6-14 digits (covers most standard formats)
+  GENERIC_NUMERIC: /^\d{6,14}$/,
+};
+
+function validateBarcodeFormat(barcode: string): { valid: boolean; error?: string } {
+  if (!barcode || typeof barcode !== 'string') {
+    return { valid: false, error: 'Barcode is required' };
+  }
+
+  const trimmed = barcode.trim();
+
+  if (trimmed.length === 0) {
+    return { valid: false, error: 'Barcode cannot be empty' };
+  }
+
+  if (trimmed.length > 50) {
+    return { valid: false, error: 'Barcode too long (max 50 characters)' };
+  }
+
+  // Check for valid characters (alphanumeric and hyphens only)
+  if (!/^[A-Za-z0-9-]+$/.test(trimmed)) {
+    return { valid: false, error: 'Invalid barcode characters' };
+  }
+
+  // Check if matches any known format
+  const matchesKnownFormat =
+    BARCODE_PATTERNS.EAN13.test(trimmed) ||
+    BARCODE_PATTERNS.EAN8.test(trimmed) ||
+    BARCODE_PATTERNS.UPC_A.test(trimmed) ||
+    BARCODE_PATTERNS.UPC_E.test(trimmed) ||
+    BARCODE_PATTERNS.INTERNAL.test(trimmed) ||
+    BARCODE_PATTERNS.GENERIC_NUMERIC.test(trimmed);
+
+  if (!matchesKnownFormat) {
+    return { valid: false, error: 'Invalid barcode format' };
+  }
+
+  return { valid: true };
+}
 
 /**
  * POST /api/v1/pos/scan/resolve
@@ -22,8 +91,11 @@ export const posScanRouter = Router();
  * 2. LEGACY FORMAT (backward compatibility):
  *    Body: { "scanValue": "...", "mode": "SELL" | "DIGITISE" }
  *    Response: { action: "ADD_TO_CART" | "PROMPT_PRICE" | ..., product: {...} }
+ *
+ * GO-LIVE-040: Rate limited to 120 requests per minute per device
+ * GO-LIVE-041: Barcode format validation applied
  */
-posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
+posScanRouter.post("/scan/resolve", requireDeviceToken, scanRateLimiter, async (req, res) => {
   const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
 
   // Detect request format
@@ -35,14 +107,16 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
 
   // NEW FORMAT: { barcode } - SD-ONBOARD-001B digitisation contract
   if (typeof barcode === "string") {
-    const trimmedBarcode = barcode.trim();
-
-    if (trimmedBarcode.length === 0) {
+    // GO-LIVE-041: Validate barcode format
+    const validation = validateBarcodeFormat(barcode);
+    if (!validation.valid) {
       return res.status(422).json({
         error: "VALIDATION_ERROR",
-        message: "Barcode is required"
+        message: validation.error || "Invalid barcode format"
       });
     }
+
+    const trimmedBarcode = barcode.trim();
 
     try {
       const result = await resolveScanForDigitisation(storeId, trimmedBarcode);
@@ -61,6 +135,12 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
     return res.status(400).json({ error: "scanValue is required" });
   }
 
+  // GO-LIVE-041: Validate scanValue format for legacy mode
+  const scanValidation = validateBarcodeFormat(scanValue);
+  if (!scanValidation.valid) {
+    return res.status(400).json({ error: scanValidation.error || "Invalid barcode format" });
+  }
+
   if (mode !== "SELL" && mode !== "DIGITISE") {
     return res.status(400).json({ error: "mode must be SELL or DIGITISE" });
   }
@@ -74,7 +154,8 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, async (req, res) => {
 });
 
 // POST /api/v1/pos/products/price
-posScanRouter.post("/products/price", requireDeviceToken, async (req, res) => {
+// GO-LIVE-040: Rate limited
+posScanRouter.post("/products/price", requireDeviceToken, scanRateLimiter, async (req, res) => {
   const { productId, priceMinor } = req.body as {
     productId?: string;
     priceMinor?: number;
@@ -108,17 +189,25 @@ posScanRouter.post("/products/price", requireDeviceToken, async (req, res) => {
 });
 
 // GET /api/v1/pos/products/lookup?barcode=...
-posScanRouter.get("/products/lookup", requireDeviceToken, async (req, res) => {
+// GO-LIVE-040: Rate limited
+// GO-LIVE-041: Barcode format validation
+posScanRouter.get("/products/lookup", requireDeviceToken, scanRateLimiter, async (req, res) => {
   const barcode = typeof req.query.barcode === "string" ? req.query.barcode : "";
 
   if (!barcode.trim()) {
     return res.status(400).json({ error: "barcode is required" });
   }
 
+  // GO-LIVE-041: Validate barcode format
+  const validation = validateBarcodeFormat(barcode);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error || "Invalid barcode format" });
+  }
+
   const { storeId } = (req as any).posDevice as { storeId: string };
 
   try {
-    const product = await lookupProductByBarcode(barcode, storeId);
+    const product = await lookupProductByBarcode(barcode.trim(), storeId);
     if (!product) {
       return res.status(404).json({ error: "product_not_found" });
     }
