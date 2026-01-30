@@ -9,6 +9,7 @@ import crypto from "crypto";
 import { randomUUID } from "crypto";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../../../services/ipBlockingService";
 import {
   sendVerificationEmail,
   generateSecureOTP,
@@ -436,8 +437,9 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
  * Login an existing supplier
  * ITER4-P1-001: Rate limited to prevent brute force attacks
  * GO-LIVE-134: Account lockout after failed attempts
+ * GO-LIVE-138: IP-based blocking after multiple failures
  */
-router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
 
@@ -500,6 +502,11 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
     const clientIp = req.ip || req.socket?.remoteAddress || null;
 
     if (!isValid) {
+      // GO-LIVE-138: Record IP-level failure
+      if (clientIp) {
+        await recordAuthFailure(clientIp, 'login_failed', { email });
+      }
+
       // GO-LIVE-134: Record failed login attempt
       const newCount = (supplier.failed_login_count || 0) + 1;
       const attemptsRemaining = MAX_LOGIN_ATTEMPTS - newCount;
@@ -548,6 +555,11 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
        WHERE id = $2`,
       [clientIp, supplier.id]
     );
+
+    // GO-LIVE-138: Clear IP failure tracking on successful login
+    if (clientIp) {
+      clearIpFailures(clientIp);
+    }
 
     // GO-LIVE-084: Generate JWT token with JTI for revocation support
     const jti = randomUUID();
