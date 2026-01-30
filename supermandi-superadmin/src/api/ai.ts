@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, handle401Response } from "./authToken";
 
 function requireApiBase(): string {
   if (!API_BASE) {
@@ -25,8 +25,10 @@ export async function askAi(question: string): Promise<{ answer: string }> {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // GO-LIVE-171: Handle 401 by redirecting to login
     if (res.status === 401) {
-      throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
+      handle401Response();
+      throw new Error("Session expired. Redirecting to login...");
     }
     const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI failed (${res.status})`);
     throw new Error(msg);
@@ -46,8 +48,10 @@ export async function fetchAiHealth(): Promise<{ configured: boolean }> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    // GO-LIVE-171: Handle 401 by redirecting to login
     if (res.status === 401) {
-      throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
+      handle401Response();
+      throw new Error("Session expired. Redirecting to login...");
     }
     const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI health failed (${res.status})`);
     throw new Error(msg);

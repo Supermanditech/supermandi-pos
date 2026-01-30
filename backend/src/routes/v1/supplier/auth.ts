@@ -13,6 +13,7 @@ import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../.
 import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../services/authAuditService";
 import {
   sendVerificationEmail,
+  sendPasswordResetEmail,
   generateSecureOTP,
   hashOTP,
   verifyOTPHash,
@@ -749,15 +750,34 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
     // ITER4-P0-013: Never log reset tokens - only log that a reset was requested
     console.log(`[GL-WF-035] Password reset requested for ${email} (GO-LIVE-085/086: secure hashed token)`);
 
-    // TODO: Send email with reset token
-    // await sendPasswordResetEmail(email, resetToken);
+    // GO-LIVE-166: Send email with reset token (with proper error handling)
+    let emailSent = false;
+    let emailError: string | undefined;
+    if (isEmailServiceEnabled()) {
+      try {
+        const emailResult = await sendPasswordResetEmail(email, resetToken, supplier.business_name);
+        emailSent = emailResult.sent;
+        if (!emailResult.sent) {
+          emailError = emailResult.errorCode;
+          console.error(`[GL-WF-035] Failed to send password reset email to ${email}: ${emailResult.errorCode} - ${emailResult.errorMessage}`);
+        }
+      } catch (err) {
+        emailError = 'EMAIL_SEND_EXCEPTION';
+        console.error(`[GL-WF-035] Exception sending password reset email:`, err);
+      }
+    } else {
+      emailError = 'EMAIL_SERVICE_DISABLED';
+      console.warn(`[GL-WF-035] Email service is disabled - password reset email not sent`);
+    }
 
     res.json({
       data: {
         success: true,
         message: 'If the email exists, a reset link will be sent.',
+        // GO-LIVE-166: Include email delivery status (never leak whether email exists)
+        emailDeliveryAttempted: isEmailServiceEnabled(),
         // DEV ONLY: Return token in response for testing (this is the plaintext token to send via email)
-        ...(process.env.NODE_ENV !== 'production' && { devToken: resetToken })
+        ...(process.env.NODE_ENV !== 'production' && { devToken: resetToken, emailSent, emailError })
       }
     });
   } catch (error) {

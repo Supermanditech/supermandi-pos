@@ -20,6 +20,7 @@ import { OrderCard } from "../components/orders/OrderCard";
 import * as orderApi from "../services/api/orderApi";
 import type { PurchaseOrder, OrderStatus } from "../services/api/orderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
+import { shouldStopPagination } from "../config/pagination";
 
 // =============================================================================
 // TYPES
@@ -124,10 +125,11 @@ export default function OrderHistoryScreen({
   }, [loadOrders]);
 
   // Load more
+  // GO-LIVE-170: Added pagination safeguard to prevent infinite loops
   const handleLoadMore = useCallback(() => {
-    if (!loadingMore && hasMore && !loading) {
-      loadOrders(false, page + 1);
-    }
+    if (loadingMore || loading) return;
+    if (shouldStopPagination(page, hasMore)) return;
+    loadOrders(false, page + 1);
   }, [loadingMore, hasMore, loading, page, loadOrders]);
 
   // Handle order press

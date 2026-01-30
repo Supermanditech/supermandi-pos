@@ -61,7 +61,8 @@ import { useFeatureEnabled } from "../utils/featureFlags";
 import { VoiceSheet, type VoiceButtonState, type VoiceSheetState } from "../components/voice";
 import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } from "../services/voice";
 // GL-CRIT-0089: Import centralized pagination constant
-import { PRODUCTS_PAGE_SIZE } from "../config/pagination";
+// GO-LIVE-170: Import pagination safeguard
+import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -1577,6 +1578,11 @@ export default function SellScanScreen({
   const loadCatalog = useCallback(async (reset: boolean) => {
     if (catalogLoading) return;
     if (!catalogHasMore && !reset) return;
+    // GO-LIVE-170: Prevent infinite pagination loops
+    if (!reset && catalogPage >= MAX_PAGINATION_PAGE) {
+      console.warn(`[GO-LIVE-170] Catalog pagination hit limit (${MAX_PAGINATION_PAGE})`);
+      return;
+    }
 
     const page = reset ? 0 : catalogPage;
     const offset = page * PAGE_SIZE;
@@ -1631,6 +1637,11 @@ export default function SellScanScreen({
   const loadAddResults = useCallback(async (reset: boolean) => {
     if (addLoading) return;
     if (!addHasMore && !reset) return;
+    // GO-LIVE-170: Prevent infinite pagination loops
+    if (!reset && addPage >= MAX_PAGINATION_PAGE) {
+      console.warn(`[GO-LIVE-170] Add results pagination hit limit (${MAX_PAGINATION_PAGE})`);
+      return;
+    }
 
     const query = addQuery.trim().toLowerCase();
     const page = reset ? 0 : addPage;

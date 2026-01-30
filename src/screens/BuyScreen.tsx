@@ -28,6 +28,7 @@ import type { CatalogProduct } from "../services/api/catalogApi";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
+import { LIST_PAGE_SIZE, shouldStopPagination } from "../config/pagination";
 
 // =============================================================================
 // TYPES
@@ -46,8 +47,8 @@ type StockStatusFilter = "all" | "in_stock" | "low_stock" | "out_of_stock";
 // =============================================================================
 
 const NUM_COLUMNS = 2;
-// GL-CRIT-0089: Centralized pagination - consider using "../config/pagination"
-const PAGE_SIZE = 20;
+// GO-LIVE-170: Use centralized pagination config
+const PAGE_SIZE = LIST_PAGE_SIZE;
 const SEARCH_DEBOUNCE_MS = 400;
 
 // =============================================================================
@@ -223,8 +224,10 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   }, [storeId, debouncedQuery, selectedCategory]);
 
   // Load more on scroll
+  // GO-LIVE-170: Added pagination safeguard to prevent infinite loops
   const handleLoadMore = useCallback(() => {
-    if (loadingMore || !hasMore || loading) return;
+    if (loadingMore || loading) return;
+    if (shouldStopPagination(page, hasMore)) return;
     loadProducts(page + 1, false);
   }, [loadingMore, hasMore, loading, page, loadProducts]);
 

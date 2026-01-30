@@ -1095,15 +1095,27 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
       console.warn('[GO-LIVE-145] Audit log failed:', auditErr);
     }
 
-    // Send password reset email if email service is available
+    // GO-LIVE-166: Send password reset email with proper error handling and reporting
+    let emailSent = false;
+    let emailError: string | undefined;
+
     if (isEmailServiceEnabled()) {
       try {
-        await sendPasswordResetEmail(supplier.primary_email, resetToken, supplier.business_name);
-        console.log(`[GO-LIVE-145] Password reset email sent to ${supplier.primary_email} (triggered by ${adminEmail})`);
-      } catch (emailErr) {
-        console.warn(`[GO-LIVE-145] Failed to send reset email:`, emailErr);
-        // Continue anyway - admin can share the token manually in dev
+        const emailResult = await sendPasswordResetEmail(supplier.primary_email, resetToken, supplier.business_name);
+        emailSent = emailResult.sent;
+        if (emailResult.sent) {
+          console.log(`[GO-LIVE-145] Password reset email sent to ${supplier.primary_email} (triggered by ${adminEmail})`);
+        } else {
+          emailError = emailResult.errorMessage || emailResult.errorCode || 'Unknown error';
+          console.error(`[GO-LIVE-145] Failed to send reset email to ${supplier.primary_email}: ${emailResult.errorCode} - ${emailResult.errorMessage}`);
+        }
+      } catch (emailErr: any) {
+        emailError = emailErr.message || 'Email service exception';
+        console.error(`[GO-LIVE-145] Exception sending reset email:`, emailErr);
       }
+    } else {
+      emailError = 'Email service is not configured';
+      console.warn(`[GO-LIVE-145] Email service is disabled - admin must share reset link manually`);
     }
 
     console.log(`[GO-LIVE-145] Admin ${adminEmail} triggered password reset for supplier ${supplier.business_name} (${supplier.primary_email})`);
@@ -1115,8 +1127,11 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
       supplierEmail: supplier.primary_email,
       supplierName: supplier.business_name,
       expiresAt,
-      // Only return token in non-production (for testing)
-      ...(process.env.NODE_ENV !== 'production' && { devResetToken: resetToken }),
+      // GO-LIVE-166: Report email delivery status to admin
+      emailSent,
+      emailError: emailSent ? undefined : emailError,
+      // Only return token in non-production OR if email failed (so admin can share manually)
+      ...((process.env.NODE_ENV !== 'production' || !emailSent) && { resetToken }),
     });
   } catch (err: any) {
     console.error("[GO-LIVE-145] Admin password reset failed:", err);
