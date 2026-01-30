@@ -661,7 +661,7 @@ export async function fetchProductsAnalytics(params: {
   const limit = Math.max(1, Math.min(200, params.limit ?? 20));
   const offset = Math.max(0, params.offset ?? 0);
   // GO-LIVE-146: Use centralized validation to prevent SQL injection
-  const groupBy = validateAnalyticsGroupBy(params.groupBy, ['hour', 'day', 'category'], 'day');
+  const groupBy = validateAnalyticsGroupBy(params.groupBy, ['hour', 'day', 'category'], 'day') as 'hour' | 'day' | 'category';
 
   const topProductsRes = await pool.query(
     `
@@ -1233,7 +1233,7 @@ export async function fetchActivityAnalytics(params: {
   const range = parseRange(params.from, params.to);
   const storeId = params.storeId?.trim() || undefined;
   // GO-LIVE-146: Use centralized validation to prevent SQL injection
-  const groupBy = validateAnalyticsGroupBy(params.groupBy, ['minute', 'hour', 'day'], 'hour');
+  const groupBy = validateAnalyticsGroupBy(params.groupBy, ['minute', 'hour', 'day'], 'hour') as 'minute' | 'hour' | 'day';
 
   const bucketMap = new Map<string, ActivityBucket>();
   const ensureBucket = (bucket: string) => {
