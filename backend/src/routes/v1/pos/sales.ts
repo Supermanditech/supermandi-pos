@@ -1390,10 +1390,10 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
   const paymentId = randomUUID();
   await pool.query(
     `
-    INSERT INTO payments (id, sale_id, mode, status, amount_minor, provider_ref)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO payments (id, sale_id, store_id, mode, status, amount_minor, provider_ref)
+    VALUES ($1, $2, $3::uuid, $4, $5, $6, $7)
     `,
-    [paymentId, saleId, "UPI", "PENDING", sale.total_minor, providerRef]
+    [paymentId, saleId, storeId, "UPI", "PENDING", sale.total_minor, providerRef]
   );
 
   return res.json({
@@ -1663,26 +1663,11 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
     const paymentId = randomUUID();
     await client.query(
       `
-      INSERT INTO payments (id, sale_id, mode, status, amount_minor)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO payments (id, sale_id, store_id, mode, status, amount_minor)
+      VALUES ($1, $2, $3::uuid, $4, $5, $6)
       `,
-      [paymentId, saleId, "CASH", "PAID", sale.total_minor]
+      [paymentId, saleId, storeId, "CASH", "PAID", sale.total_minor]
     );
-
-    // Verify payment was created for correct store (defense in depth)
-    const paymentVerify = await client.query(
-      `
-      SELECT p.id FROM payments p
-      JOIN sales s ON s.id = p.sale_id
-      WHERE p.id = $1 AND s.store_id = $2
-      `,
-      [paymentId, storeId]
-    );
-
-    if (!paymentVerify.rows[0]) {
-      await client.query("ROLLBACK");
-      return res.status(500).json({ error: "payment_store_mismatch" });
-    }
 
     // GO-LIVE-069: Update both status and payment_status
     await client.query(
@@ -1808,26 +1793,11 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
     const paymentId = randomUUID();
     await client.query(
       `
-      INSERT INTO payments (id, sale_id, mode, status, amount_minor)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO payments (id, sale_id, store_id, mode, status, amount_minor)
+      VALUES ($1, $2, $3::uuid, $4, $5, $6)
       `,
-      [paymentId, saleId, "DUE", "DUE", sale.total_minor]
+      [paymentId, saleId, storeId, "DUE", "DUE", sale.total_minor]
     );
-
-    // Verify payment was created for correct store (defense in depth)
-    const paymentVerify = await client.query(
-      `
-      SELECT p.id FROM payments p
-      JOIN sales s ON s.id = p.sale_id
-      WHERE p.id = $1 AND s.store_id = $2
-      `,
-      [paymentId, storeId]
-    );
-
-    if (!paymentVerify.rows[0]) {
-      await client.query("ROLLBACK");
-      return res.status(500).json({ error: "payment_store_mismatch" });
-    }
 
     // GO-LIVE-069: Update both status and payment_status
     await client.query(
