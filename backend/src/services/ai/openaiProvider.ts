@@ -2,7 +2,7 @@
  * OpenAI Provider - GO-LIVE Production-Grade Implementation
  *
  * Security Controls:
- * - API key from env only (never hardcoded)
+ * - GO-LIVE-107: API key from Docker secrets (preferred) or env var (fallback)
  * - Startup validation (503 if missing)
  * - Log redaction (no headers, keys, or PII)
  * - Rate limiting per device/store and IP
@@ -12,11 +12,46 @@
  */
 
 import OpenAI from "openai";
+import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
+
+// GO-LIVE-107: Read OpenAI API key from Docker secret file (preferred) or env var (fallback)
+function loadOpenAIApiKey(): string {
+  // Try reading from Docker secret file first (more secure - not exposed in docker inspect)
+  const keyFilePath = process.env.OPENAI_API_KEY_FILE;
+  if (keyFilePath) {
+    try {
+      const key = fs.readFileSync(keyFilePath, 'utf8').trim();
+      if (key) {
+        console.log('[OpenAI] API key loaded from secret file');
+        return key;
+      }
+    } catch {
+      // File doesn't exist or can't be read - fall through to env var
+      console.warn('[OpenAI] Could not read OPENAI_API_KEY_FILE, falling back to env var');
+    }
+  }
+  // Fallback to environment variable (for backwards compatibility)
+  const envKey = process.env.OPENAI_API_KEY?.trim();
+  if (envKey) {
+    console.log('[OpenAI] API key loaded from environment variable');
+  }
+  return envKey || '';
+}
+
+// Cache the loaded key (loaded once at startup)
+let cachedApiKey: string | null = null;
+
+function getApiKey(): string {
+  if (cachedApiKey === null) {
+    cachedApiKey = loadOpenAIApiKey();
+  }
+  return cachedApiKey;
+}
 
 export interface OpenAIConfig {
   apiKey: string;
@@ -31,7 +66,7 @@ export interface OpenAIConfig {
 
 function getConfig(): OpenAIConfig {
   return {
-    apiKey: process.env.OPENAI_API_KEY?.trim() || "",
+    apiKey: getApiKey(),
     model: process.env.OPENAI_MODEL_CHAT?.trim() || "gpt-4o-mini",
     sttModel: process.env.OPENAI_MODEL_STT?.trim() || "whisper-1",
     maxTokens: Math.min(2048, Math.max(100, Number(process.env.OPENAI_MAX_TOKENS ?? 512))),
@@ -51,9 +86,10 @@ let configuredAt: Date | null = null;
 
 /**
  * Check if OpenAI is configured (API key present)
+ * GO-LIVE-107: Checks both Docker secret and env var
  */
 export function isOpenAIConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
+  return Boolean(getApiKey());
 }
 
 /**
