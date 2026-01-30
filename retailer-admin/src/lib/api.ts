@@ -131,3 +131,48 @@ export async function parseJsonResponse<T>(response: Response): Promise<{
     };
   }
 }
+
+/**
+ * GO-LIVE-020: Safe JSON parsing helper
+ * Safely parse JSON from response, returning fallback on parse errors
+ * Use this instead of direct response.json() calls to handle 500 errors gracefully
+ */
+export async function safeJson<T = any>(response: Response, fallback: T | null = null): Promise<T | null> {
+  try {
+    return await response.json();
+  } catch {
+    // On parse failure (e.g., 500 HTML response), return fallback
+    console.warn(`[GO-LIVE-020] JSON parse failed for response status ${response.status}`);
+    return fallback;
+  }
+}
+
+/**
+ * GO-LIVE-020: Safe JSON parsing with error extraction
+ * Returns { data, error } tuple - use this for API calls that need error messages
+ */
+export async function safeJsonWithError<T = any>(response: Response): Promise<{
+  data: T | null;
+  error: { code: string; message: string } | null;
+}> {
+  try {
+    const json = await response.json();
+    if (!response.ok) {
+      return {
+        data: null,
+        error: json.error || { code: 'API_ERROR', message: json.message || 'Request failed' },
+      };
+    }
+    return { data: json, error: null };
+  } catch {
+    return {
+      data: null,
+      error: {
+        code: 'PARSE_ERROR',
+        message: response.status >= 500
+          ? 'Server error. Please try again later.'
+          : 'Failed to parse server response',
+      },
+    };
+  }
+}

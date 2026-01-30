@@ -1,4 +1,4 @@
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 // DEPLOY-003: Use VITE_API_BASE_URL when set (points to gateway e.g. http://34.14.220.171:3000)
 // Falls back to relative path (requires Nginx proxy for /api/* in production)
@@ -50,7 +50,10 @@ export async function fetchStore(accessToken: string): Promise<ApiResponse<Store
     throw new Error('Failed to fetch store');
   }
 
-  return response.json();
+  // GO-LIVE-020: Use safe JSON parsing
+  const data = await safeJson<ApiResponse<Store>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 export async function fetchProducts(accessToken: string): Promise<ApiResponse<unknown[]>> {
@@ -65,7 +68,10 @@ export async function fetchProducts(accessToken: string): Promise<ApiResponse<un
     throw new Error('Failed to fetch products');
   }
 
-  return response.json();
+  // GO-LIVE-020: Use safe JSON parsing
+  const data = await safeJson<ApiResponse<unknown[]>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 // Inventory item for dashboard display
@@ -90,7 +96,10 @@ export async function fetchInventory(accessToken: string): Promise<ApiResponse<I
     throw new Error('Failed to fetch inventory');
   }
 
-  return response.json();
+  // GO-LIVE-020: Use safe JSON parsing
+  const data = await safeJson<ApiResponse<InventoryItem[]>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 // GL-RJ-009: Fetch daily sales summary for dashboard
@@ -106,7 +115,10 @@ export async function fetchDailySummary(accessToken: string, date?: string): Pro
     throw new Error('Failed to fetch daily summary');
   }
 
-  return response.json();
+  // GO-LIVE-020: Use safe JSON parsing
+  const data = await safeJson<ApiResponse<DailySummary>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 // FE-RETAILER-CAT-001: Categories from FMCG taxonomy
@@ -132,7 +144,10 @@ export async function fetchCategories(accessToken: string): Promise<ApiResponse<
     throw new Error('Failed to fetch categories');
   }
 
-  return response.json();
+  // GO-LIVE-020: Use safe JSON parsing
+  const data = await safeJson<ApiResponse<FmcgCategory[]>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 // Full 4-section supplier interface matching backend

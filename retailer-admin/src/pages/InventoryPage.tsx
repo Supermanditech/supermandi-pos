@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -59,45 +59,49 @@ export default function InventoryPage() {
   const [, setPagination] = useState({ total: 0, hasMore: false });
   const [totals, setTotals] = useState({ totalSkus: 0, totalEntries: 0, todaysMovements: 0 });
 
-  // Fetch ledger entries from API
-  useEffect(() => {
+  // GO-LIVE-021: Extract fetchLedger to allow retry on error
+  const fetchLedger = useCallback(async () => {
     if (!accessToken) return;
 
-    const fetchLedger = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Map display filter to API transaction types
-        let url = '/api/v1/retailer-admin/inventory/ledger?limit=100';
-        if (filter === 'INWARD') {
-          url += '&transactionType=purchase_received';
-        } else if (filter === 'OUTWARD') {
-          url += '&transactionType=sale';
-        } else if (filter === 'ADJUSTMENT') {
-          url += '&transactionType=adjustment';
-        }
-
-        const response = await authFetch(url, accessToken);
-        if (response.status === 401) return;
-        if (!response.ok) throw new Error('Failed to fetch ledger');
-
-        const data: LedgerResponse = await response.json();
-        setLedgerEntries(data.data || []);
-        setPagination({ total: data.pagination?.total || 0, hasMore: data.pagination?.hasMore || false });
-        if (data.totals) {
-          setTotals(data.totals);
-        }
-      } catch (err) {
-        console.error('Failed to load ledger:', err);
-        setError('Failed to load inventory ledger');
-        setLedgerEntries([]);
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    setError(null);
+    try {
+      // Map display filter to API transaction types
+      let url = '/api/v1/retailer-admin/inventory/ledger?limit=100';
+      if (filter === 'INWARD') {
+        url += '&transactionType=purchase_received';
+      } else if (filter === 'OUTWARD') {
+        url += '&transactionType=sale';
+      } else if (filter === 'ADJUSTMENT') {
+        url += '&transactionType=adjustment';
       }
-    };
 
-    fetchLedger();
+      const response = await authFetch(url, accessToken);
+      if (response.status === 401) return;
+      if (!response.ok) throw new Error('Failed to fetch ledger');
+
+      // GO-LIVE-020: Use safe JSON parsing
+      const data = await safeJson<LedgerResponse>(response);
+      if (!data) throw new Error('Invalid response from server');
+
+      setLedgerEntries(data.data || []);
+      setPagination({ total: data.pagination?.total || 0, hasMore: data.pagination?.hasMore || false });
+      if (data.totals) {
+        setTotals(data.totals);
+      }
+    } catch (err) {
+      console.error('Failed to load ledger:', err);
+      setError('Failed to load inventory ledger. Please try again.');
+      setLedgerEntries([]);
+    } finally {
+      setLoading(false);
+    }
   }, [accessToken, filter]);
+
+  // Fetch ledger entries from API
+  useEffect(() => {
+    fetchLedger();
+  }, [fetchLedger]);
 
   // RCAT-LEDGER-001: Use backend-provided totals for accuracy
   const totalSKUs = totals.totalSkus;
@@ -165,8 +169,23 @@ export default function InventoryPage() {
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)' }}>
-                    {error}
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>
+                    {/* GO-LIVE-021: Retry button for ledger load failure */}
+                    <button
+                      onClick={fetchLedger}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: 'var(--primary)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Retry
+                    </button>
                   </td>
                 </tr>
               ) : ledgerEntries.length === 0 ? (

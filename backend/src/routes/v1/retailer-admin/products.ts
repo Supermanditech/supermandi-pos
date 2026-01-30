@@ -236,8 +236,20 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "MRP exceeds maximum allowed value" } });
   }
 
+  // GO-LIVE-015: Validate opening stock is non-negative
+  const MAX_OPENING_STOCK = 1000000; // 1 million units max
+  const parsedOpeningStock = parseInt(openingStockQty);
+  if (openingStockQty !== undefined && openingStockQty !== null && openingStockQty !== '') {
+    if (isNaN(parsedOpeningStock) || parsedOpeningStock < 0) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Opening stock must be a non-negative number" } });
+    }
+    if (parsedOpeningStock > MAX_OPENING_STOCK) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Opening stock exceeds maximum allowed value of ${MAX_OPENING_STOCK}` } });
+    }
+  }
+
   const productMode = mode || 'PACKAGED';
-  const stockQty = parseInt(openingStockQty) || 0;
+  const stockQty = parsedOpeningStock || 0;
 
   const client = await pool.connect();
   try {
@@ -830,7 +842,19 @@ retailerAdminProductsRouter.post("/products/loose", async (req: Request, res: Re
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid purchase price is required" } });
   }
 
-  const stockQty = parseInt(openingStockQty) || 0;
+  // GO-LIVE-015: Validate opening stock is non-negative
+  const MAX_OPENING_STOCK = 1000000;
+  const parsedOpeningStock = parseInt(openingStockQty);
+  if (openingStockQty !== undefined && openingStockQty !== null && openingStockQty !== '') {
+    if (isNaN(parsedOpeningStock) || parsedOpeningStock < 0) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Opening stock must be a non-negative number" } });
+    }
+    if (parsedOpeningStock > MAX_OPENING_STOCK) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Opening stock exceeds maximum allowed value of ${MAX_OPENING_STOCK}` } });
+    }
+  }
+
+  const stockQty = parsedOpeningStock || 0;
 
   const client = await pool.connect();
   try {

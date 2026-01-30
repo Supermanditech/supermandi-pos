@@ -613,6 +613,7 @@ export default function SettingsPage() {
                 value={settings.receiptFooter}
                 onChange={(e) => handleChange('receiptFooter', e.target.value)}
                 rows={2}
+                maxLength={200}
                 placeholder="Thank you for shopping with us!"
                 style={{
                   width: '100%',
@@ -626,7 +627,7 @@ export default function SettingsPage() {
                 }}
               />
               <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-                This message will appear at the bottom of printed receipts
+                This message will appear at the bottom of printed receipts ({settings.receiptFooter?.length || 0}/200 characters)
               </p>
             </div>
           </div>
