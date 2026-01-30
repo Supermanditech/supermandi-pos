@@ -2,12 +2,29 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/admin/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>supermandi-superadmin</title>
+    <title>SuperMandi SuperAdmin</title>
+    <!-- GO-LIVE-099: PWA manifest -->
+    <link rel="manifest" href="/admin/manifest.json" />
+    <meta name="theme-color" content="#1976d2" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- GO-LIVE-099: Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/admin/sw.js')
+            .then(function(registration) {
+              console.log('[App] Service worker registered:', registration.scope);
+            })
+            .catch(function(error) {
+              console.warn('[App] Service worker registration failed:', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>

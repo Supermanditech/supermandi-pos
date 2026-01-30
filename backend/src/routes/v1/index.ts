@@ -33,6 +33,7 @@ import { adminSuppliersRouter } from "./admin/suppliers";
 import { adminUsersRouter } from "./admin/users";
 import { adminSettingsRouter } from "./admin/settings";
 import { adminAuditRouter } from "./admin/audit";  // GL-CRIT-0049: Audit log endpoint
+import { adminGstCreditsRouter } from "./admin/gstCredits";  // GO-LIVE-097: GST input credits
 import { adminAuditMiddleware } from "../../middleware/adminAudit";  // GL-CRIT-0049: Audit logging
 import { validateGatewayHeaders } from "../../middleware/validateGatewayHeaders";  // GO-LIVE-046: Validate gateway headers
 import { requireStoreOwnership } from "../../middleware/storeOwnership";  // GO-LIVE-047: Store ownership verification
@@ -91,6 +92,7 @@ v1Router.use("/admin", adminSuppliersRouter);
 v1Router.use("/admin", adminUsersRouter);
 v1Router.use("/admin", adminSettingsRouter);
 v1Router.use("/admin", adminAuditRouter);  // GL-CRIT-0049: Audit log fetch endpoint
+v1Router.use("/admin", adminGstCreditsRouter);  // GO-LIVE-097: GST input credits
 
 // GO-LIVE-046: Apply gateway header validation to retailer-admin routes
 // GO-LIVE-047: Apply store ownership verification to retailer-admin routes

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { requireAdminToken } from "../../../middleware/adminToken";
+import { apiCache } from "../../../middleware/apiCache";  // GO-LIVE-098
 import {
   fetchConsumerSalesAnalytics,
   fetchDuesAnalytics,
@@ -94,7 +95,8 @@ function validateDateRange(fromStr?: string, toStr?: string): DateRangeValidatio
   return { from: fromDate, to: toDate };
 }
 
-adminAnalyticsRouter.get("/analytics/overview", async (req, res) => {
+// GO-LIVE-098: Cache analytics overview for 60 seconds
+adminAnalyticsRouter.get("/analytics/overview", apiCache('analytics:overview', { ttlSeconds: 60 }), async (req, res) => {
   try {
     const storeId = asString(req.query.storeId);
     const from = asString(req.query.from);

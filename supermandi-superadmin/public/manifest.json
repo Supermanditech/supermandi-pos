@@ -1,0 +1,19 @@
+{
+  "name": "SuperMandi SuperAdmin",
+  "short_name": "SuperAdmin",
+  "description": "SuperMandi Store Management Admin Portal",
+  "start_url": "/admin/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1976d2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/admin/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}
