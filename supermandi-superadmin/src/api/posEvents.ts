@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 
 export type PosEvent = {
   id: string;
@@ -35,14 +35,13 @@ function normalizeFilter(v: string | undefined): string {
 export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosEvent[]> {
   const base = requireApiBase();
   const limit = Math.min(1000, Math.max(1, Number(params.limit || 100)));
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/pos/events?limit=${limit}`, {
     method: "GET",
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 

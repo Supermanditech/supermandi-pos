@@ -34,6 +34,8 @@ import { adminUsersRouter } from "./admin/users";
 import { adminSettingsRouter } from "./admin/settings";
 import { adminAuditRouter } from "./admin/audit";  // GL-CRIT-0049: Audit log endpoint
 import { adminAuditMiddleware } from "../../middleware/adminAudit";  // GL-CRIT-0049: Audit logging
+import { validateGatewayHeaders } from "../../middleware/validateGatewayHeaders";  // GO-LIVE-046: Validate gateway headers
+import { requireStoreOwnership } from "../../middleware/storeOwnership";  // GO-LIVE-047: Store ownership verification
 import { retailerAdminInventoryRouter } from "./retailer-admin/inventory";
 import { retailerAdminSuppliersRouter } from "./retailer-admin/suppliers";
 import { retailerAdminProductsRouter } from "./retailer-admin/products";
@@ -89,6 +91,11 @@ v1Router.use("/admin", adminSuppliersRouter);
 v1Router.use("/admin", adminUsersRouter);
 v1Router.use("/admin", adminSettingsRouter);
 v1Router.use("/admin", adminAuditRouter);  // GL-CRIT-0049: Audit log fetch endpoint
+
+// GO-LIVE-046: Apply gateway header validation to retailer-admin routes
+// GO-LIVE-047: Apply store ownership verification to retailer-admin routes
+v1Router.use("/retailer-admin", validateGatewayHeaders);
+v1Router.use("/retailer-admin", requireStoreOwnership);
 v1Router.use("/retailer-admin", retailerAdminInventoryRouter);
 v1Router.use("/retailer-admin", retailerAdminSuppliersRouter);
 v1Router.use("/retailer-admin", retailerAdminProductsRouter);

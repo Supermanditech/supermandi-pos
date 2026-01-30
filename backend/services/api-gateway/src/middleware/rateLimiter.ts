@@ -58,4 +58,29 @@ export const authRateLimiter = rateLimit({
   },
 });
 
+/**
+ * GO-LIVE-003: Strict rate limiter for admin token attempts
+ * 5 requests per minute per IP to prevent brute force attacks on admin token
+ */
+export const adminRateLimiter = rateLimit({
+  windowMs: config.rateLimitWindowMs, // 1 minute
+  max: config.authRateLimitMax, // 5 attempts per minute (same as auth)
+  standardHeaders: true,
+  legacyHeaders: false,
+
+  message: {
+    error: {
+      code: 'ADMIN_RATE_LIMIT_EXCEEDED',
+      message: 'Too many admin authentication attempts, please try again later',
+    },
+  },
+
+  keyGenerator: (req) => {
+    return req.ip || 'unknown';
+  },
+
+  // Only count failed admin token attempts
+  skipSuccessfulRequests: true,
+});
+
 export default rateLimiterMiddleware;

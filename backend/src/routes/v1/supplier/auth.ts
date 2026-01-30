@@ -6,6 +6,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { randomUUID } from "crypto";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import {
@@ -16,6 +17,10 @@ import {
   checkEmailRateLimit,
   recordEmailSend,
   isEmailServiceEnabled,
+  // GO-LIVE-085 & GO-LIVE-086: Secure password reset token functions
+  generateSecureResetToken,
+  hashResetToken,
+  verifyResetTokenHash,
 } from "../../../services/emailService";
 
 // =============================================================================
@@ -117,6 +122,44 @@ function isValidUpiVpa(vpa: string): boolean {
 export interface SupplierAuthRequest extends Request {
   supplierId?: string;
   supplierEmail?: string;
+  tokenJti?: string; // GO-LIVE-084: JWT ID for revocation
+}
+
+// GO-LIVE-084: Check if token is revoked (either by JTI or bulk revocation)
+async function isTokenRevoked(jti: string | undefined, supplierId: string, tokenIssuedAt: number | undefined): Promise<boolean> {
+  const pool = getPool();
+  if (!pool) return false; // Fail open if DB unavailable
+
+  try {
+    // Check 1: Individual token revocation by JTI
+    if (jti) {
+      const jtiResult = await pool.query(
+        `SELECT 1 FROM supplier.token_revocations WHERE jti = $1 LIMIT 1`,
+        [jti]
+      );
+      if (jtiResult.rows.length > 0) return true;
+    }
+
+    // Check 2: Bulk revocation ("logout all") - check tokens_revoked_at
+    if (tokenIssuedAt) {
+      const supplierResult = await pool.query(
+        `SELECT tokens_revoked_at FROM supplier.suppliers WHERE id = $1`,
+        [supplierId]
+      );
+      const revokedAt = supplierResult.rows[0]?.tokens_revoked_at;
+      if (revokedAt) {
+        const revokedAtMs = new Date(revokedAt).getTime();
+        const issuedAtMs = tokenIssuedAt * 1000;
+        // Token was issued before the bulk revocation
+        if (issuedAtMs < revokedAtMs) return true;
+      }
+    }
+
+    return false;
+  } catch (err) {
+    console.warn('[SupplierAuth] Revocation check failed:', err);
+    return false; // Fail open
+  }
 }
 
 export async function requireSupplierAuth(
@@ -139,6 +182,9 @@ export async function requireSupplierAuth(
       actorType: string;
       actorId: string;
       email: string;
+      jti?: string; // GO-LIVE-084: JWT ID
+      iat?: number; // GO-LIVE-084: Issued at timestamp
+      exp?: number;
     };
 
     if (decoded.actorType !== 'SUPPLIER') {
@@ -146,8 +192,20 @@ export async function requireSupplierAuth(
       return;
     }
 
+    // GO-LIVE-084: Check token revocation (both individual and bulk)
+    if (await isTokenRevoked(decoded.jti, decoded.actorId, decoded.iat)) {
+      res.status(401).json({
+        error: {
+          code: 'TOKEN_REVOKED',
+          message: 'This session has been logged out. Please login again.',
+        },
+      });
+      return;
+    }
+
     req.supplierId = decoded.actorId;
     req.supplierEmail = decoded.email;
+    req.tokenJti = decoded.jti;
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
@@ -314,13 +372,15 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
 
     const supplier = result.rows[0];
 
-    // Generate JWT token
+    // GO-LIVE-084: Generate JWT token with JTI for revocation support
+    const jti = randomUUID(); // Unique token identifier
     const jwtPayload = {
       sub: supplier.id,
       actorType: 'SUPPLIER',
       actorId: supplier.id,
       email: supplier.primary_email,
       permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
+      jti, // GO-LIVE-084: JWT ID for revocation
     };
 
     const token = jwt.sign(jwtPayload, JWT_SECRET, {
@@ -401,13 +461,15 @@ router.post("/auth/login", loginRateLimiter, async (req: Request, res: Response,
       return;
     }
 
-    // Generate JWT token
+    // GO-LIVE-084: Generate JWT token with JTI for revocation support
+    const jti = randomUUID();
     const jwtPayload = {
       sub: supplier.id,
       actorType: 'SUPPLIER',
       actorId: supplier.id,
       email: supplier.primary_email,
       permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
+      jti, // GO-LIVE-084: JWT ID for revocation
     };
 
     const token = jwt.sign(jwtPayload, JWT_SECRET, {
@@ -536,25 +598,23 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
 
     const supplier = result.rows[0];
 
-    // ITER4-P0-002: Use crypto.randomInt() for cryptographically secure token generation
-    // 6-digit code for simplicity, valid for 1 hour
-    const resetToken = crypto.randomInt(100000, 999999).toString();
+    // GO-LIVE-086: Generate cryptographically secure 64-char hex token (256 bits entropy)
+    // Much stronger than previous 6-digit code (~20 bits)
+    const resetToken = generateSecureResetToken();
     const resetExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token
+    // GO-LIVE-085: Hash token before storing (like passwords)
+    // Store only the hash, never the plaintext token
+    const tokenHash = hashResetToken(resetToken);
     await pool.query(
       `UPDATE supplier.suppliers
        SET password_reset_token = $1, password_reset_expires = $2
        WHERE id = $3`,
-      [resetToken, resetExpiry, supplier.id]
+      [tokenHash, resetExpiry, supplier.id]
     );
 
     // ITER4-P0-013: Never log reset tokens - only log that a reset was requested
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[GL-WF-035] DEV ONLY - Password reset requested for ${email}`);
-    } else {
-      console.log(`[GL-WF-035] Password reset requested for ${email}`);
-    }
+    console.log(`[GL-WF-035] Password reset requested for ${email} (GO-LIVE-085/086: secure hashed token)`);
 
     // TODO: Send email with reset token
     // await sendPasswordResetEmail(email, resetToken);
@@ -562,8 +622,8 @@ router.post("/auth/forgot-password", passwordResetRateLimiter, async (req: Reque
     res.json({
       data: {
         success: true,
-        message: 'If the email exists, a reset code will be sent.',
-        // DEV ONLY: Return token in response for testing
+        message: 'If the email exists, a reset link will be sent.',
+        // DEV ONLY: Return token in response for testing (this is the plaintext token to send via email)
         ...(process.env.NODE_ENV !== 'production' && { devToken: resetToken })
       }
     });
@@ -617,18 +677,27 @@ router.post("/auth/reset-password", async (req: Request, res: Response, next: Ne
 
     const supplier = result.rows[0];
 
-    // Verify token
-    if (supplier.password_reset_token !== token) {
+    // Check if reset token exists
+    if (!supplier.password_reset_token) {
       res.status(400).json({
-        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired reset token' }
+        error: { code: 'INVALID_TOKEN', message: 'No password reset was requested for this account' }
       });
       return;
     }
 
-    // Check expiry
+    // Check expiry first (faster check)
     if (new Date(supplier.password_reset_expires) < new Date()) {
       res.status(400).json({
         error: { code: 'TOKEN_EXPIRED', message: 'Reset token has expired. Please request a new one.' }
+      });
+      return;
+    }
+
+    // GO-LIVE-085: Verify token using timing-safe hash comparison
+    // The stored value is a hash, so we hash the provided token and compare
+    if (!verifyResetTokenHash(token, supplier.password_reset_token)) {
+      res.status(400).json({
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired reset token' }
       });
       return;
     }
@@ -876,6 +945,152 @@ router.get("/auth/verification-status", requireSupplierAuth, async (req: Supplie
     }
 
     res.json({ data: { emailVerified: result.rows[0].email_verified } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
+// GO-LIVE-084: Token Revocation (Logout)
+// =============================================================================
+
+/**
+ * POST /api/v1/supplier/auth/logout
+ * GO-LIVE-084: Revoke the current session token (logout)
+ * Adds the token's JTI to the blacklist so it can't be reused
+ */
+router.post("/auth/logout", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      // Even if DB is unavailable, return success since token will expire eventually
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    // Get token JTI and expiry from the decoded JWT
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    const token = authHeader.slice(7);
+    let decoded: { jti?: string; exp?: number };
+
+    try {
+      // Decode without verification (already verified by middleware)
+      decoded = jwt.decode(token) as { jti?: string; exp?: number };
+    } catch {
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    if (!decoded?.jti) {
+      // Old tokens without JTI - still return success
+      console.log(`[SupplierAuth] Logout for supplier ${req.supplierId} (no JTI)`);
+      res.json({ data: { success: true, message: 'Logged out' } });
+      return;
+    }
+
+    // Calculate token expiry (default to 24h if not present)
+    const expiresAt = decoded.exp
+      ? new Date(decoded.exp * 1000)
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    // Add to revocation blacklist
+    try {
+      await pool.query(
+        `INSERT INTO supplier.token_revocations
+         (supplier_id, jti, token_expires_at, revoked_by, reason, ip_address, user_agent)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (jti) DO NOTHING`,
+        [
+          req.supplierId,
+          decoded.jti,
+          expiresAt,
+          'user',
+          'User logout',
+          req.ip || null,
+          req.get('user-agent') || null,
+        ]
+      );
+
+      console.log(`[GO-LIVE-084] Token revoked for supplier ${req.supplierId}, JTI: ${decoded.jti}`);
+    } catch (dbError) {
+      // Log but don't fail - token will expire eventually
+      console.warn('[SupplierAuth] Failed to record token revocation:', dbError);
+    }
+
+    res.json({
+      data: {
+        success: true,
+        message: 'Logged out successfully',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/logout-all
+ * GO-LIVE-084: Revoke all sessions for the current supplier
+ * Useful when password is changed or suspicious activity is detected
+ */
+router.post("/auth/logout-all", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Since we can't enumerate all active tokens, we'll:
+    // 1. Invalidate the current token
+    // 2. Add a "revoke all before" timestamp to the supplier record
+
+    // First, revoke current token if it has JTI
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        const decoded = jwt.decode(token) as { jti?: string; exp?: number };
+        if (decoded?.jti) {
+          const expiresAt = decoded.exp
+            ? new Date(decoded.exp * 1000)
+            : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+          await pool.query(
+            `INSERT INTO supplier.token_revocations
+             (supplier_id, jti, token_expires_at, revoked_by, reason)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (jti) DO NOTHING`,
+            [req.supplierId, decoded.jti, expiresAt, 'user', 'Logout all sessions']
+          );
+        }
+      } catch {
+        // Ignore decode errors
+      }
+    }
+
+    // Update supplier record with revocation timestamp
+    // Any tokens issued before this timestamp should be considered invalid
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET tokens_revoked_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [req.supplierId]
+    );
+
+    console.log(`[GO-LIVE-084] All tokens revoked for supplier ${req.supplierId}`);
+
+    res.json({
+      data: {
+        success: true,
+        message: 'All sessions logged out. Please login again.',
+      },
+    });
   } catch (error) {
     next(error);
   }

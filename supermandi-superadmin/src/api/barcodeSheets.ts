@@ -1,4 +1,4 @@
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -15,8 +15,7 @@ export async function fetchBarcodeSheetPdf(params: {
   tier: "tier1" | "tier2";
 }): Promise<Blob> {
   const base = requireApiBase();
-  const token = getAdminToken();
-  const qs = new URLSearchParams();
+    const qs = new URLSearchParams();
   qs.set("storeId", params.storeId);
   qs.set("tier", params.tier);
 
@@ -24,7 +23,7 @@ export async function fetchBarcodeSheetPdf(params: {
     cache: "no-store",
     headers: {
       Accept: "application/pdf",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 

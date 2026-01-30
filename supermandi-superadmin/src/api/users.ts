@@ -1,5 +1,5 @@
 // ADM-SCR-002: Users API Module
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -30,12 +30,11 @@ export async function fetchUsers(): Promise<UserRecord[]> {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-  const token = getAdminToken();
-  const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+    const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 
@@ -56,13 +55,12 @@ export async function patchUser(userId: string, input: UserPatchInput): Promise<
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-  const token = getAdminToken();
-  const res = await fetch(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
+    const res = await fetch(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify(input)
   });
@@ -97,13 +95,12 @@ export async function createUser(input: UserCreateInput): Promise<UserRecord> {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-  const token = getAdminToken();
-  const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+    const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify(input)
   });

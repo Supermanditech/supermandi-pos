@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 
 export type HealthResponse = { status: string };
 
@@ -12,13 +12,12 @@ function requireApiBase(): string {
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const base = requireApiBase();
-  const token = getAdminToken();
   const res = await fetch(`${base}/health`, {
     method: "GET",
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     }
   });
 

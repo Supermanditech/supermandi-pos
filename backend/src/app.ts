@@ -8,10 +8,30 @@ import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { noCacheHeaders } from "./middleware/noCache";
 import { getTranslationHealth } from "./services/translationService";
+import { initializeFirebase } from "@supermandi/common";
 
 // Always load backend env from `backend/.env` (not repo root `/.env`).
 // This prevents Prisma errors like missing DATABASE_URL when the process is started with a different CWD (e.g. pm2/systemd).
 dotenv.config({ path: path.resolve(__dirname, "..", ".env") });
+
+// GO-LIVE-045: Initialize Firebase Admin SDK for server-side token verification
+const firebaseEnabled = process.env.FIREBASE_ENABLED !== 'false';
+const firebaseServiceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+const firebaseProjectId = process.env.FIREBASE_PROJECT_ID;
+
+if (firebaseEnabled && (firebaseServiceAccountPath || firebaseProjectId)) {
+  try {
+    initializeFirebase({
+      serviceAccountPath: firebaseServiceAccountPath,
+      projectId: firebaseProjectId,
+    });
+    console.log('[App] Firebase Admin SDK initialized for server-side token verification');
+  } catch (error) {
+    console.warn('[App] Firebase initialization failed (retailer portal will use fallback mode):', error);
+  }
+} else {
+  console.warn('[App] Firebase not configured - retailer portal login will use client-side verification only');
+}
 
 // DEV-071: Capture build info at startup for /health endpoint
 let GIT_SHA = "unknown";

@@ -1,13 +1,75 @@
 // SEC-ADMIN-001: Admin Authentication Middleware for API Gateway
 // Protects /api/v1/admin/* routes with x-admin-token header check
+// GO-LIVE-002: Added session-based JWT tokens with expiry
+// GO-LIVE-003: Added rate limiting for admin token attempts
 
 import { Request, Response, NextFunction } from 'express';
+import {
+  verifyAdminSession,
+  verifyMasterToken,
+  isMasterTokenConfigured,
+} from '../services/adminSessionService';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
 const ADMIN_TOKEN = process.env['ADMIN_TOKEN']?.trim();
+
+// Routes that don't require admin authentication (public within admin namespace)
+const ADMIN_PUBLIC_PATHS = [
+  '/api/v1/admin/auth/login',
+  '/api/v1/admin/auth/status',
+  '/api/v1/admin/health',
+];
+
+// GO-LIVE-003: Track failed admin auth attempts for rate limiting
+const failedAttempts = new Map<string, { count: number; firstAttempt: number }>();
+const FAILED_ATTEMPT_WINDOW_MS = 60000; // 1 minute
+const MAX_FAILED_ATTEMPTS = 5;
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * GO-LIVE-003: Check if IP is rate limited due to failed attempts
+ */
+function isRateLimited(ip: string): boolean {
+  const record = failedAttempts.get(ip);
+  if (!record) return false;
+
+  // Clean up old records
+  if (Date.now() - record.firstAttempt > FAILED_ATTEMPT_WINDOW_MS) {
+    failedAttempts.delete(ip);
+    return false;
+  }
+
+  return record.count >= MAX_FAILED_ATTEMPTS;
+}
+
+/**
+ * GO-LIVE-003: Record a failed admin auth attempt
+ */
+function recordFailedAttempt(ip: string): void {
+  const record = failedAttempts.get(ip);
+  const now = Date.now();
+
+  if (!record || now - record.firstAttempt > FAILED_ATTEMPT_WINDOW_MS) {
+    // Start new window
+    failedAttempts.set(ip, { count: 1, firstAttempt: now });
+  } else {
+    // Increment existing
+    record.count++;
+  }
+}
+
+/**
+ * GO-LIVE-003: Clear failed attempts on successful auth (optional - keep strict)
+ */
+function clearFailedAttempts(ip: string): void {
+  failedAttempts.delete(ip);
+}
 
 // =============================================================================
 // MIDDLEWARE
@@ -16,13 +78,19 @@ const ADMIN_TOKEN = process.env['ADMIN_TOKEN']?.trim();
 /**
  * Admin Authentication Middleware
  *
- * Protects /api/v1/admin/* routes by requiring a valid x-admin-token header.
- * This ensures only superadmin users can access admin endpoints.
+ * Protects /api/v1/admin/* routes with authentication.
+ * GO-LIVE-002: Supports two authentication methods:
+ *   1. Session JWT (preferred): Authorization: Bearer <session-token>
+ *   2. Legacy x-admin-token header (deprecated, for backwards compatibility)
+ *
+ * GO-LIVE-003: Rate limits failed authentication attempts (5/minute)
  *
  * Proof requirements:
  * - curl without token → 401
  * - curl with invalid token → 403
- * - curl with valid admin token → passes through (200 from backend)
+ * - curl with valid session JWT → passes through
+ * - curl with valid x-admin-token → passes through (deprecated)
+ * - 6+ failed attempts in 1 minute → 429
  */
 export function adminAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
   // Only apply to admin routes
@@ -30,13 +98,28 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
     return next();
   }
 
-  // GL-AUD-006: Allow health endpoints through without auth (for monitoring/smoke tests)
-  if (req.path === '/api/v1/admin/health') {
+  // Allow public admin paths through without auth
+  if (ADMIN_PUBLIC_PATHS.some(path => req.path === path || req.path.startsWith(path + '/'))) {
     return next();
   }
 
-  // Check if ADMIN_TOKEN is configured
-  if (!ADMIN_TOKEN) {
+  const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+
+  // GO-LIVE-003: Check rate limiting first
+  if (isRateLimited(clientIp)) {
+    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Rate limited (IP: ${clientIp})`);
+    res.status(429).json({
+      error: {
+        code: 'ADMIN_RATE_LIMIT_EXCEEDED',
+        message: 'Too many failed admin authentication attempts. Please try again later.',
+      },
+      requestId: req.correlationId,
+    });
+    return;
+  }
+
+  // Check if admin auth is configured
+  if (!isMasterTokenConfigured()) {
     console.error('[ADMIN-AUTH] ADMIN_TOKEN env var not set - admin APIs disabled');
     res.status(503).json({
       error: {
@@ -48,25 +131,46 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
     return;
   }
 
-  // Get token from header
-  const token = req.headers['x-admin-token'];
-  const tokenStr = Array.isArray(token) ? token[0] : token;
+  // GO-LIVE-002: Try session JWT first (Authorization: Bearer <token>)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const sessionToken = authHeader.substring(7);
+    const session = verifyAdminSession(sessionToken);
 
-  if (!tokenStr) {
-    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Missing x-admin-token header`);
+    if (session) {
+      clearFailedAttempts(clientIp);
+      console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via session JWT`);
+      return next();
+    }
+
+    // Invalid session JWT
+    recordFailedAttempt(clientIp);
+    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid session JWT (IP: ${clientIp})`);
     res.status(401).json({
       error: {
-        code: 'UNAUTHORIZED',
-        message: 'Missing x-admin-token header. Admin authentication required.',
+        code: 'INVALID_SESSION',
+        message: 'Session expired or invalid. Please login again.',
       },
       requestId: req.correlationId,
     });
     return;
   }
 
-  // Verify token
-  if (tokenStr.trim() !== ADMIN_TOKEN) {
-    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid admin token`);
+  // Legacy: Try x-admin-token header (deprecated but still supported)
+  const legacyToken = req.headers['x-admin-token'];
+  const legacyTokenStr = Array.isArray(legacyToken) ? legacyToken[0] : legacyToken;
+
+  if (legacyTokenStr) {
+    // Verify using timing-safe comparison
+    if (verifyMasterToken(legacyTokenStr)) {
+      clearFailedAttempts(clientIp);
+      console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Authenticated via legacy x-admin-token (DEPRECATED)`);
+      return next();
+    }
+
+    // Invalid legacy token
+    recordFailedAttempt(clientIp);
+    console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Invalid x-admin-token (IP: ${clientIp})`);
     res.status(403).json({
       error: {
         code: 'FORBIDDEN',
@@ -77,7 +181,14 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
     return;
   }
 
-  // Token is valid - allow request to proceed
-  console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - Admin authenticated`);
-  next();
+  // No authentication provided
+  recordFailedAttempt(clientIp);
+  console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - No authentication provided (IP: ${clientIp})`);
+  res.status(401).json({
+    error: {
+      code: 'UNAUTHORIZED',
+      message: 'Admin authentication required. Use Authorization: Bearer <session-token> header.',
+    },
+    requestId: req.correlationId,
+  });
 }

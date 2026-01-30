@@ -1,10 +1,22 @@
 // Retailer Admin Auth Routes - Firebase Token Exchange
 // GO-LIVE-FIX: Handles phone OTP authentication via Firebase for retailer portal
-// NOTE: Simplified version without @supermandi/common dependency
+// GO-LIVE-045: Server-side Firebase token verification
 
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { getPool } from "../../../db/client";
+
+// GO-LIVE-045: Import Firebase verification from common package
+let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
+try {
+  const firebase = require("@supermandi/common");
+  if (firebase.verifyFirebaseIdToken) {
+    verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
+    console.log("[RetailerAuth] Firebase server-side verification available");
+  }
+} catch {
+  console.warn("[RetailerAuth] Firebase verification not available - using client-side extraction");
+}
 
 // =============================================================================
 // JWT CONFIGURATION
@@ -116,9 +128,50 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
       return;
     }
 
-    // For simplified flow, we trust the client's Firebase verification
-    // and just validate the store exists and phone matches
-    // In production, add server-side Firebase Admin SDK verification
+    // GO-LIVE-045: Server-side Firebase token verification
+    let phone = phoneNumber;
+    let firebaseUid: string | undefined;
+
+    if (verifyFirebaseIdToken) {
+      // Server-side verification available - use it
+      console.log("[RetailerAuth] Verifying Firebase token server-side");
+      const verifyResult = await verifyFirebaseIdToken(idToken);
+
+      if (!verifyResult.success) {
+        console.warn(`[RetailerAuth] Firebase verification failed: ${verifyResult.error} (${verifyResult.code})`);
+        res.status(401).json({
+          error: verifyResult.code === 'TOKEN_EXPIRED'
+            ? "Firebase token has expired. Please sign in again."
+            : "Invalid Firebase token. Please sign in again.",
+          code: verifyResult.code,
+        });
+        return;
+      }
+
+      // Extract verified phone number from Firebase
+      phone = verifyResult.payload?.phone_number || phoneNumber;
+      firebaseUid = verifyResult.payload?.uid;
+      console.log(`[RetailerAuth] Firebase token verified. UID: ${firebaseUid}, Phone: ${phone ? '***' + phone.slice(-4) : 'N/A'}`);
+    } else {
+      // Fallback: Client-side extraction (less secure, for development/testing)
+      console.warn("[RetailerAuth] Using client-side token extraction (Firebase Admin not configured)");
+      if (!phone) {
+        try {
+          const parts = idToken.split(".");
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+            phone = payload.phone_number;
+          }
+        } catch (parseError) {
+          console.warn("[RetailerAuth] Failed to parse Firebase token:", parseError);
+        }
+      }
+    }
+
+    if (!phone) {
+      res.status(400).json({ error: "Phone number is required" });
+      return;
+    }
 
     const pool = getPool();
     if (!pool) {
@@ -142,29 +195,6 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
 
     if (!store.retailer_portal_enabled) {
       res.status(403).json({ error: "Retailer portal is not enabled for this store" });
-      return;
-    }
-
-    // Use provided phone number or extract from token (simplified)
-    let phone = phoneNumber;
-    if (!phone) {
-      // Try to decode from idToken (JWT) - simplified extraction
-      // ITER3-P0-006: Parse Firebase token to extract phone number
-      // Note: This is client-side extraction only - server-side Firebase verification is recommended
-      try {
-        const parts = idToken.split(".");
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-          phone = payload.phone_number;
-        }
-      } catch (parseError) {
-        console.warn("[RetailerAuth] Failed to parse Firebase token:", parseError);
-        // Continue - we'll check if phoneNumber was provided in request
-      }
-    }
-
-    if (!phone) {
-      res.status(400).json({ error: "Phone number is required" });
       return;
     }
 

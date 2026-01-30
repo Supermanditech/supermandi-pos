@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type StoreRecord = {
@@ -40,14 +40,13 @@ async function parseError(res: Response): Promise<string> {
 
 export async function fetchStore(storeId: string): Promise<StoreRecord> {
   const base = requireApiBase();
-  const token = getAdminToken();
 
   const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
     method: "GET",
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     }
   });
 
@@ -61,14 +60,13 @@ export async function fetchStore(storeId: string): Promise<StoreRecord> {
 
 export async function fetchStores(): Promise<StoreRecord[]> {
   const base = requireApiBase();
-  const token = getAdminToken();
 
   const res = await fetch(`${base}/api/v1/admin/stores`, {
     method: "GET",
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     }
   });
 
@@ -82,7 +80,6 @@ export async function fetchStores(): Promise<StoreRecord[]> {
 
 export async function createStore(input: { storeName: string; storeId?: string }): Promise<StoreRecord> {
   const base = requireApiBase();
-  const token = getAdminToken();
 
   const payload: Record<string, unknown> = { storeName: input.storeName };
   if (input.storeId) payload.storeId = input.storeId;
@@ -92,7 +89,7 @@ export async function createStore(input: { storeName: string; storeId?: string }
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(payload)
   });
@@ -120,14 +117,13 @@ export async function updateStore(
   input: StoreUpdateInput
 ): Promise<StoreRecord> {
   const base = requireApiBase();
-  const token = getAdminToken();
 
   const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(input)
   });

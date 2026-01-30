@@ -23,6 +23,7 @@ import {
   adminAuthMiddleware,
 } from './middleware';
 import { setupProxyRoutes } from './routes/proxy';
+import { adminAuthRouter } from './routes/adminAuth';
 
 // =============================================================================
 // GO-LIVE-079: STRUCTURED LOGGING
@@ -102,6 +103,12 @@ app.use(adminAuthMiddleware);
 // Using standardized health router from common package
 // =============================================================================
 app.use(createHealthRouter(healthChecker));
+
+// =============================================================================
+// GO-LIVE-002: ADMIN AUTH ROUTES
+// Session-based authentication with JWT tokens
+// =============================================================================
+app.use('/api/v1/admin/auth', adminAuthRouter);
 
 // =============================================================================
 // PROXY ROUTES

@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type PendingSupplierRequest = {
@@ -52,14 +52,12 @@ async function parseError(res: Response): Promise<string> {
 
 export async function fetchPendingSuppliers(): Promise<PendingSupplierRequest[]> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
   const res = await fetch(`${base}/api/v1/admin/pending-suppliers`, {
     method: "GET",
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     }
   });
 
@@ -74,8 +72,7 @@ export async function fetchPendingSuppliers(): Promise<PendingSupplierRequest[]>
 
 export async function fetchVerifiedSuppliers(search?: string): Promise<VerifiedSupplier[]> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const url = new URL(`${base}/api/v1/admin/verified-suppliers`);
   if (search) url.searchParams.set("search", search);
 
@@ -84,7 +81,7 @@ export async function fetchVerifiedSuppliers(search?: string): Promise<VerifiedS
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 
@@ -108,14 +105,13 @@ export async function verifySupplierRequest(
   input: { supplierId?: string; verifySupplier?: boolean; notes?: string }
 ): Promise<{ success: boolean }> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/verify`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify(input)
   });
@@ -132,15 +128,14 @@ export async function rejectSupplierRequest(
   input: { reason?: string }
 ): Promise<{ success: boolean }> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   // Backend expects 'notes', not 'reason'
   const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/reject`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify({ notes: input.reason })
   });
@@ -195,14 +190,13 @@ export type ProductEditResponse = {
  */
 export async function fetchPendingProducts(): Promise<PendingProduct[]> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/products/pending`, {
     method: "GET",
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 
@@ -219,14 +213,13 @@ export async function fetchPendingProducts(): Promise<PendingProduct[]> {
  */
 export async function approveProduct(productId: string): Promise<{ productId: string; approvalStatus: string; approvedAt: string }> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/approve`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 
@@ -242,14 +235,13 @@ export async function approveProduct(productId: string): Promise<{ productId: st
  */
 export async function rejectProduct(productId: string, reason: string): Promise<{ productId: string; approvalStatus: string }> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/reject`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify({ reason })
   });
@@ -266,14 +258,13 @@ export async function rejectProduct(productId: string, reason: string): Promise<
  */
 export async function editProduct(productId: string, input: ProductEditInput): Promise<ProductEditResponse> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/edit`, {
     method: "PUT",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify(input)
   });

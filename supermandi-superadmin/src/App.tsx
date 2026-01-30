@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken } from "./api/authToken";
+import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken, logout } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -1509,13 +1509,9 @@ export default function App() {
             <span style={{ color: "#059669" }}>Authenticated</span>
             <button
               className="tab"
-              onClick={() => {
-                // ITER4-CRIT-001: Logout - clear token and show login
-                try {
-                  sessionStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
-                } catch {
-                  // ignore
-                }
+              onClick={async () => {
+                // GO-LIVE-001 & GO-LIVE-002: Logout - revoke session and show login
+                await logout();
                 setIsAuthenticated(false);
               }}
               style={{ background: "#fee2e2", color: "#dc2626" }}

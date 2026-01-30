@@ -1,4 +1,4 @@
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -39,12 +39,11 @@ export async function fetchDevices(params?: { storeId?: string }): Promise<Devic
 
   const storeId = params?.storeId?.trim();
   const qs = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
-  const token = getAdminToken();
   const res = await fetch(`${API_BASE}/api/v1/admin/devices${qs}`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     }
   });
 
@@ -70,13 +69,12 @@ export async function patchDevice(deviceId: string, input: DevicePatchInput): Pr
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-  const token = getAdminToken();
   const res = await fetch(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     },
     body: JSON.stringify(input)
   });

@@ -103,6 +103,39 @@ export function verifyOTPHash(otp: string, hash: string): boolean {
 }
 
 // =============================================================================
+// GO-LIVE-085 & GO-LIVE-086: SECURE PASSWORD RESET TOKEN
+// =============================================================================
+
+/**
+ * GO-LIVE-086: Generate a cryptographically secure password reset token
+ * Uses 32-byte random hex string instead of 6-digit code
+ * This provides 256 bits of entropy vs ~20 bits for 6-digit codes
+ */
+export function generateSecureResetToken(): string {
+  return crypto.randomBytes(32).toString('hex'); // 64 character hex string
+}
+
+/**
+ * GO-LIVE-085: Hash password reset token for secure storage
+ * Uses SHA-256 for one-way hashing
+ */
+export function hashResetToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * GO-LIVE-085: Verify reset token against stored hash
+ * Uses timing-safe comparison to prevent timing attacks
+ */
+export function verifyResetTokenHash(token: string, hash: string): boolean {
+  const tokenHash = hashResetToken(token);
+  if (tokenHash.length !== hash.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(tokenHash), Buffer.from(hash));
+}
+
+// =============================================================================
 // EMAIL HTML TEMPLATES
 // =============================================================================
 

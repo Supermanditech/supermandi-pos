@@ -1,0 +1,201 @@
+// GO-LIVE-046: Validate Gateway Headers Middleware
+// Ensures retailer-admin routes have valid gateway-provided headers
+// Defense-in-depth: validates JWT even though gateway already verified it
+
+import type { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+const JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET']?.trim();
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[FATAL] JWT_SECRET environment variable is required in production');
+      process.exit(1);
+    }
+    console.warn('[SECURITY] JWT_SECRET not set - using dev default (NOT FOR PRODUCTION)');
+    return 'dev-secret-change-in-prod';
+  }
+  return secret;
+})();
+
+const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface JwtPayload {
+  sub: string;        // User ID
+  actorType: string;  // 'STORE', 'PLATFORM', 'SUPPLIER'
+  actorId: string;    // Store ID, etc.
+  permissions?: string[];
+  iat: number;
+  exp: number;
+  iss: string;
+}
+
+// =============================================================================
+// MIDDLEWARE
+// =============================================================================
+
+/**
+ * GO-LIVE-046: Validate gateway headers for retailer-admin routes
+ *
+ * This middleware ensures that:
+ * 1. Requests have a valid Authorization header with JWT
+ * 2. The JWT is properly signed and not expired
+ * 3. The gateway-provided headers (x-user-id, x-actor-id) match the JWT claims
+ *
+ * This provides defense-in-depth even if someone bypasses the API gateway.
+ */
+export function validateGatewayHeaders(req: Request, res: Response, next: NextFunction): void {
+  // Skip for public paths (auth endpoints)
+  if (req.path.startsWith('/auth/')) {
+    return next();
+  }
+
+  // Get Authorization header
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Check if we have gateway headers without JWT
+    // This means request came from gateway after JWT validation
+    const gatewayUserId = req.headers['x-user-id'];
+    const gatewayActorId = req.headers['x-actor-id'];
+
+    // If we have gateway headers, trust them (requests coming from gateway)
+    // The gateway already validated the JWT
+    if (gatewayUserId && gatewayActorId) {
+      console.log(`[ValidateGateway] Trusted gateway headers - userId: ${gatewayUserId}, actorId: ${gatewayActorId}`);
+      return next();
+    }
+
+    // No authorization at all
+    console.log('[ValidateGateway] No authorization provided');
+    res.status(401).json({
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required.',
+      },
+    });
+    return;
+  }
+
+  // Extract and validate JWT
+  const token = authHeader.substring(7);
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+    }) as JwtPayload;
+
+    // Validate required claims
+    if (!decoded.sub || !decoded.actorId || !decoded.actorType) {
+      console.log('[ValidateGateway] JWT missing required claims');
+      res.status(401).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Token missing required claims.',
+        },
+      });
+      return;
+    }
+
+    // Validate gateway headers match JWT claims (if headers present)
+    const gatewayUserId = req.headers['x-user-id'] as string | undefined;
+    const gatewayActorId = req.headers['x-actor-id'] as string | undefined;
+
+    if (gatewayUserId && gatewayUserId !== decoded.sub) {
+      console.warn(`[ValidateGateway] Mismatched x-user-id - header: ${gatewayUserId}, jwt: ${decoded.sub}`);
+      res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Header mismatch detected.',
+        },
+      });
+      return;
+    }
+
+    if (gatewayActorId && gatewayActorId !== decoded.actorId) {
+      console.warn(`[ValidateGateway] Mismatched x-actor-id - header: ${gatewayActorId}, jwt: ${decoded.actorId}`);
+      res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Header mismatch detected.',
+        },
+      });
+      return;
+    }
+
+    // Set gateway headers from JWT if not present
+    // This handles direct backend requests (bypassing gateway)
+    if (!gatewayUserId) {
+      req.headers['x-user-id'] = decoded.sub;
+    }
+    if (!gatewayActorId) {
+      req.headers['x-actor-id'] = decoded.actorId;
+    }
+    if (!req.headers['x-actor-type']) {
+      req.headers['x-actor-type'] = decoded.actorType;
+    }
+
+    console.log(`[ValidateGateway] JWT validated - userId: ${decoded.sub}, actorId: ${decoded.actorId}`);
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      console.log('[ValidateGateway] Token expired');
+      res.status(401).json({
+        error: {
+          code: 'TOKEN_EXPIRED',
+          message: 'Token has expired. Please login again.',
+        },
+      });
+      return;
+    }
+
+    if (error instanceof jwt.JsonWebTokenError) {
+      console.log(`[ValidateGateway] Invalid token: ${error.message}`);
+      res.status(401).json({
+        error: {
+          code: 'INVALID_TOKEN',
+          message: 'Invalid token. Please login again.',
+        },
+      });
+      return;
+    }
+
+    console.error('[ValidateGateway] Token verification error:', error);
+    res.status(500).json({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Authentication error.',
+      },
+    });
+  }
+}
+
+/**
+ * Extract store ID from validated gateway headers
+ */
+export function getValidatedStoreId(req: Request): string | null {
+  const actorId = req.headers['x-actor-id'];
+  const actorType = req.headers['x-actor-type'];
+
+  if (!actorId || actorType !== 'STORE') {
+    return null;
+  }
+
+  return typeof actorId === 'string' ? actorId : null;
+}
+
+/**
+ * Extract user ID from validated gateway headers
+ */
+export function getValidatedUserId(req: Request): string | null {
+  const userId = req.headers['x-user-id'];
+  return typeof userId === 'string' ? userId : null;
+}

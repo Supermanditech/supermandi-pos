@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type DeviceEnrollmentResponse = {
@@ -27,14 +27,13 @@ async function parseError(res: Response): Promise<string> {
 
 export async function createDeviceEnrollment(storeId: string): Promise<DeviceEnrollmentResponse> {
   const base = requireApiBase();
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/device-enrollments`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
 

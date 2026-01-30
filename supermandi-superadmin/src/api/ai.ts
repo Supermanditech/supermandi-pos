@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 
 function requireApiBase(): string {
   if (!API_BASE) {
@@ -12,14 +12,13 @@ export async function askAi(question: string): Promise<{ answer: string }> {
   const base = requireApiBase();
   const q = question.trim();
   if (!q) throw new Error("Question is required");
-  const token = getAdminToken();
-
+  
   const res = await fetch(`${base}/api/v1/admin/ai`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     },
     body: JSON.stringify({ question: q })
   });
@@ -38,12 +37,11 @@ export async function askAi(question: string): Promise<{ answer: string }> {
 
 export async function fetchAiHealth(): Promise<{ configured: boolean }> {
   const base = requireApiBase();
-  const token = getAdminToken();
-  const res = await fetch(`${base}/api/v1/admin/ai/health`, {
+    const res = await fetch(`${base}/api/v1/admin/ai/health`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders()
     }
   });
   const data = await res.json().catch(() => ({}));

@@ -1,4 +1,4 @@
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -12,12 +12,11 @@ function requireApiBase(): string {
 
 async function getJson<T>(path: string): Promise<T> {
   const base = requireApiBase();
-  const token = getAdminToken();
   const res = await fetch(`${base}${path}`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {})
+      ...getAuthHeaders(),
     }
   });
 

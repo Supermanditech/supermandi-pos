@@ -1,5 +1,5 @@
 // GL-CRIT-0049: Audit Log API
-import { getAdminToken } from "./authToken";
+import { getAuthHeaders, getAdminToken } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -54,7 +54,6 @@ export async function fetchAuditLogs(params?: {
     throw new Error("VITE_API_BASE_URL is missing");
   }
 
-  const token = getAdminToken();
   const qs = new URLSearchParams();
   if (params?.limit) qs.set("limit", String(params.limit));
   if (params?.offset) qs.set("offset", String(params.offset));
@@ -67,7 +66,7 @@ export async function fetchAuditLogs(params?: {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {}),
+      ...getAuthHeaders(),
     },
   });
 
@@ -83,12 +82,11 @@ export async function fetchAuditStats(): Promise<AuditStatsResponse> {
     throw new Error("VITE_API_BASE_URL is missing");
   }
 
-  const token = getAdminToken();
   const res = await fetch(`${API_BASE}/api/v1/admin/audit/stats`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
-      ...(token ? { "x-admin-token": token } : {}),
+      ...getAuthHeaders(),
     },
   });
 
@@ -120,8 +118,8 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
     return;
   }
 
-  const token = getAdminToken();
-  if (!token) {
+  const authHeaders = getAuthHeaders();
+  if (Object.keys(authHeaders).length === 0) {
     console.warn('GL-CRIT-0049: Cannot log audit - no admin token');
     return;
   }
@@ -132,7 +130,7 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'x-admin-token': token,
+        ...authHeaders,
       },
       body: JSON.stringify(input),
     });
