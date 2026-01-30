@@ -14,8 +14,6 @@ import {
 // CONFIGURATION
 // =============================================================================
 
-const ADMIN_TOKEN = process.env['ADMIN_TOKEN']?.trim();
-
 // Routes that don't require admin authentication (public within admin namespace)
 const ADMIN_PUBLIC_PATHS = [
   '/api/v1/admin/auth/login',

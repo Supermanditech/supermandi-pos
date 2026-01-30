@@ -48,7 +48,7 @@ function clearLoginAttempts(ip: string): void {
 // ROUTES
 // =============================================================================
 
-export const adminAuthRouter = Router();
+export const adminAuthRouter: Router = Router();
 
 /**
  * POST /api/v1/admin/auth/login
