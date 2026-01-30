@@ -13,9 +13,12 @@ import {
 } from "../../../services/inventoryService";
 import {
   recordSaleInventoryMovements,
+  recordSaleReturnMovements,
   ensureStoreInventoryAvailability,
   InsufficientStockError
 } from "../../../services/inventoryLedgerService";
+// GO-LIVE-034: Import stock cache invalidation for returns
+import { invalidateStockCache } from "./inventory";
 
 export const posSalesRouter = Router();
 
@@ -1337,6 +1340,123 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, async (req, res
   } catch (error) {
     await client.query("ROLLBACK");
     return res.status(500).json({ error: "failed to cancel sale" });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
+// GO-LIVE-066/067: Sale Return/Refund endpoint
+// Reverses ledger entries and adds stock back for completed sales
+// =============================================================================
+posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, async (req, res) => {
+  const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
+  if (!saleId) {
+    return res.status(400).json({ error: "saleId is required" });
+  }
+
+  const { reason } = req.body as { reason?: string };
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
+
+    // Get sale with lock
+    const saleRes = await client.query(
+      `SELECT id, store_id, status, payment_status, total_minor
+       FROM sales WHERE id = $1 AND store_id = $2
+       FOR UPDATE`,
+      [saleId, storeId]
+    );
+
+    const sale = saleRes.rows[0];
+    if (!sale) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "sale_not_found" });
+    }
+
+    // Only allow returning completed sales (PAID_CASH, PAID_UPI, DUE)
+    const allowedStatuses = ["PAID_CASH", "PAID_UPI", "DUE"];
+    if (!allowedStatuses.includes(sale.status)) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "cannot_return",
+        message: `Cannot return sale in ${sale.status} status. Only paid or due sales can be returned.`
+      });
+    }
+
+    // Get sale items
+    const itemsRes = await client.query(
+      `SELECT si.variant_id, si.quantity, si.price_minor, v.product_id
+       FROM sale_items si
+       LEFT JOIN variants v ON v.id = si.variant_id
+       WHERE si.sale_id = $1`,
+      [saleId]
+    );
+
+    const items = itemsRes.rows.map((row) => ({
+      variantId: String(row.variant_id),
+      quantity: Number(row.quantity ?? 0),
+      unitSellMinor: Number(row.price_minor ?? 0),
+      globalProductId: row.product_id ? String(row.product_id) : null,
+      name: null
+    }));
+
+    // Generate return ID
+    const returnId = randomUUID();
+
+    // GO-LIVE-066/067: Create sale_return ledger entries (adds stock back)
+    await recordSaleReturnMovements({
+      client,
+      storeId,
+      saleId,
+      returnId,
+      items,
+      reason: reason ?? "Sale return"
+    });
+
+    // GO-LIVE-034: Invalidate stock cache for all returned products
+    for (const item of items) {
+      if (item.globalProductId) {
+        invalidateStockCache(storeId, item.globalProductId);
+      }
+    }
+
+    // Update sale status to REFUNDED
+    await client.query(
+      `UPDATE sales SET status = 'REFUNDED', payment_status = 'refunded', updated_at = NOW()
+       WHERE id = $1`,
+      [saleId]
+    );
+
+    // Update AR record if it exists (for DUE sales)
+    if (sale.status === "DUE") {
+      await client.query(
+        `UPDATE accounts_receivable SET status = 'written_off', notes = $2, updated_at = NOW()
+         WHERE sale_id = $1`,
+        [saleId, reason ?? "Sale returned"]
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return res.json({
+      saleId,
+      returnId,
+      status: "REFUNDED",
+      message: "Sale returned successfully. Stock has been restored.",
+      itemsReturned: items.length
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("[sales/return] Error:", error);
+    return res.status(500).json({ error: "failed to process return" });
   } finally {
     client.release();
   }

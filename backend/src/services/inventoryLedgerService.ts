@@ -498,3 +498,183 @@ export async function ensureStoreInventoryAvailability(params: {
     throw new InsufficientStockError(failures);
   }
 }
+
+/**
+ * GO-LIVE-066/067: Record sale return movements to reverse a sale
+ * Creates sale_return ledger entries that add stock back
+ */
+export async function recordSaleReturnMovements(params: {
+  client: PoolClient;
+  storeId: string;
+  saleId: string;
+  returnId: string;
+  items: LedgerSaleItem[];
+  reason?: string;
+}): Promise<void> {
+  const variantIds = Array.from(
+    new Set(
+      params.items
+        .map((item) => item.variantId)
+        .filter((variantId) => typeof variantId === "string" && variantId.trim().length > 0)
+    )
+  );
+  if (variantIds.length === 0) return;
+
+  const variantRes = await params.client.query(
+    `
+    SELECT v.id AS variant_id,
+           v.product_id,
+           COALESCE(p.name, v.name) AS product_name
+    FROM variants v
+    LEFT JOIN products p ON p.id = v.product_id
+    WHERE v.id = ANY($1::text[])
+    `,
+    [variantIds]
+  );
+
+  const infoByVariant = new Map<string, { productId: string; productName: string }>();
+  for (const row of variantRes.rows) {
+    const variantId = String(row.variant_id);
+    infoByVariant.set(variantId, {
+      productId: String(row.product_id),
+      productName: String(row.product_name ?? "")
+    });
+  }
+
+  // Sort by productId to prevent deadlocks (consistent lock order)
+  const resolvedItems: Array<{
+    productId: string;
+    productName: string;
+    quantity: number;
+    unitSellMinor: number;
+  }> = [];
+
+  for (const item of params.items) {
+    const info = infoByVariant.get(item.variantId);
+    if (!info) continue;
+    const explicitGlobalId = item.globalProductId?.trim();
+    const resolvedProductId = explicitGlobalId || info.productId;
+    const productName =
+      item.name?.trim() || info.productName || fallbackName(resolvedProductId);
+    resolvedItems.push({
+      productId: resolvedProductId,
+      productName,
+      quantity: item.quantity,
+      unitSellMinor: item.unitSellMinor
+    });
+  }
+
+  resolvedItems.sort((a, b) => a.productId.localeCompare(b.productId));
+
+  for (const item of resolvedItems) {
+    await ensureGlobalProductEntry({
+      client: params.client,
+      globalProductId: item.productId,
+      globalName: item.productName
+    });
+
+    // Use ADJUSTMENT movement type with positive quantity to add stock back
+    // The delta will be positive (adding stock)
+    const storeId = params.storeId.trim();
+    const globalProductId = item.productId.trim();
+    const quantity = Math.abs(Math.round(item.quantity));
+
+    // Insert store_inventory record if not exists
+    await params.client.query(
+      `INSERT INTO store_inventory (store_id, global_product_id, available_qty)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (store_id, global_product_id) DO NOTHING`,
+      [storeId, globalProductId, 0]
+    );
+
+    // Get current stock
+    const inventoryRes = await params.client.query(
+      `SELECT available_qty FROM store_inventory
+       WHERE store_id = $1 AND global_product_id = $2
+       FOR UPDATE`,
+      [storeId, globalProductId]
+    );
+
+    const currentRaw = inventoryRes.rows[0]?.available_qty ?? 0;
+    const current = Number.isFinite(Number(currentRaw)) ? Math.round(Number(currentRaw)) : 0;
+    const nextQty = current + quantity;
+
+    // Update store_inventory
+    await params.client.query(
+      `UPDATE store_inventory
+       SET available_qty = $3, updated_at = NOW()
+       WHERE store_id = $1 AND global_product_id = $2`,
+      [storeId, globalProductId, nextQty]
+    );
+
+    // Record in legacy inventory_ledger
+    await params.client.query(
+      `INSERT INTO inventory_ledger (
+        id, store_id, global_product_id, movement_type, quantity,
+        unit_sell_minor, reason, reference_type, reference_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        randomUUID(),
+        storeId,
+        globalProductId,
+        "ADJUSTMENT", // Using ADJUSTMENT since we're adding stock back
+        quantity,
+        item.unitSellMinor,
+        params.reason ?? `Return for sale ${params.saleId}`,
+        "return",
+        params.returnId
+      ]
+    );
+
+    // Get catalog stock balance
+    const balanceResult = await params.client.query(
+      `SELECT current_qty FROM inventory.stock_balances
+       WHERE store_id = $1 AND product_id = $2
+       FOR UPDATE`,
+      [storeId, globalProductId]
+    );
+    const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+    const catalogStockAfter = catalogStockBefore + quantity;
+
+    // Insert into inventory.inventory_ledger with sale_return type
+    const invLedgerId = randomUUID();
+    await params.client.query(
+      `INSERT INTO inventory.inventory_ledger
+       (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
+        stock_before, stock_after, unit_cost, source, notes, reversal_of_id)
+       VALUES ($1, $2, $3, $4, 'sale_return', 'return', $5, $6, $7, $8, 'RETURN_SERVICE', $9, NULL)`,
+      [
+        invLedgerId,
+        storeId,
+        globalProductId,
+        quantity, // Positive delta to add stock
+        params.returnId,
+        catalogStockBefore,
+        catalogStockAfter,
+        item.unitSellMinor,
+        params.reason ?? `Return for sale ${params.saleId}`
+      ]
+    );
+
+    // Upsert stock_balances
+    await params.client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = inventory.stock_balances.current_qty + $5,
+         last_ledger_id = $4,
+         updated_at = NOW()`,
+      [storeId, globalProductId, catalogStockAfter, invLedgerId, quantity]
+    );
+
+    // Update catalog.store_products denormalized stock
+    await params.client.query(
+      `UPDATE catalog.store_products
+       SET current_stock = current_stock + $3,
+           stock_last_event_at = NOW(),
+           updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2`,
+      [storeId, globalProductId, quantity]
+    );
+  }
+}

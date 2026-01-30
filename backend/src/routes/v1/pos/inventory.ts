@@ -857,3 +857,442 @@ posInventoryRouter.post("/inventory/stock/recompute-all", requireDeviceToken, as
     client.release();
   }
 });
+
+// =============================================================================
+// GO-LIVE-022: MANUAL STOCK ADJUSTMENT
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/inventory/stock/adjust
+ * Manually adjust stock for a product (increase or decrease)
+ * GO-LIVE-022: Allows store owners to correct stock discrepancies
+ *
+ * Body:
+ *   - productId: string (required)
+ *   - adjustment: number (required) - positive to add, negative to subtract
+ *   - reason: string (required) - one of: damage, theft, expired, found, correction, other
+ *   - notes: string (optional) - additional details
+ *
+ * Returns: { success: true, before: number, after: number, adjustment: number }
+ */
+posInventoryRouter.post("/inventory/stock/adjust", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const { productId, adjustment, reason, notes } = req.body as {
+    productId?: string;
+    adjustment?: number;
+    reason?: string;
+    notes?: string;
+  };
+
+  if (!productId || typeof productId !== "string") {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  if (typeof adjustment !== "number" || !Number.isFinite(adjustment) || adjustment === 0) {
+    return res.status(400).json({ error: "adjustment must be a non-zero number" });
+  }
+
+  const validReasons = ["damage", "theft", "expired", "found", "correction", "other"];
+  if (!reason || !validReasons.includes(reason)) {
+    return res.status(400).json({
+      error: "reason is required",
+      validReasons
+    });
+  }
+
+  // Limit adjustment magnitude to prevent abuse
+  const MAX_ADJUSTMENT = 10000;
+  if (Math.abs(adjustment) > MAX_ADJUSTMENT) {
+    return res.status(400).json({
+      error: "adjustment_too_large",
+      message: `Adjustment cannot exceed ${MAX_ADJUSTMENT} units`
+    });
+  }
+
+  const deltaQty = Math.round(adjustment);
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Get current stock balance
+    const beforeResult = await client.query(
+      `SELECT current_qty FROM inventory.stock_balances
+       WHERE store_id = $1 AND product_id = $2
+       FOR UPDATE`,
+      [storeId, productId]
+    );
+    const stockBefore = beforeResult.rows[0]?.current_qty ?? 0;
+    const stockAfter = Math.max(0, stockBefore + deltaQty);
+
+    // Prevent negative stock
+    if (stockAfter < 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: "insufficient_stock",
+        message: `Cannot reduce stock below 0. Current: ${stockBefore}, Adjustment: ${deltaQty}`
+      });
+    }
+
+    // Create ledger entry
+    const invLedgerId = randomUUID();
+    await client.query(
+      `INSERT INTO inventory.inventory_ledger
+       (id, store_id, product_id, delta_qty, transaction_type, reference_type,
+        stock_before, stock_after, source, notes, adjustment_reason)
+       VALUES ($1, $2, $3, $4, 'adjustment', 'manual', $5, $6, 'POS_MANUAL_ADJUST', $7, $8)`,
+      [invLedgerId, storeId, productId, deltaQty, stockBefore, stockAfter, notes ?? null, reason]
+    );
+
+    // Update stock_balances
+    await client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = $3,
+         last_ledger_id = $4,
+         updated_at = NOW()`,
+      [storeId, productId, stockAfter, invLedgerId]
+    );
+
+    // Update denormalized stock in store_products
+    await client.query(
+      `UPDATE catalog.store_products
+       SET current_stock = $3, updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2`,
+      [storeId, productId, stockAfter]
+    );
+
+    // Also update legacy store_inventory if exists
+    await client.query(
+      `UPDATE store_inventory
+       SET available_qty = $3, updated_at = NOW()
+       WHERE store_id = $1 AND global_product_id = $2`,
+      [storeId, productId]
+    );
+
+    await client.query("COMMIT");
+
+    // Invalidate cache
+    invalidateStockCache(storeId, productId);
+
+    console.log(`[InventoryAdjust] storeId=${storeId}, productId=${productId}: ${stockBefore} -> ${stockAfter} (${reason})`);
+
+    return res.json({
+      success: true,
+      productId,
+      before: stockBefore,
+      after: stockAfter,
+      adjustment: deltaQty,
+      reason,
+      message: `Stock adjusted: ${stockBefore} -> ${stockAfter}`,
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[InventoryAdjust] Error:", error.message);
+    return res.status(500).json({ error: "Failed to adjust stock" });
+  } finally {
+    client.release();
+  }
+});
+
+// =============================================================================
+// GO-LIVE-071: PHYSICAL COUNT ENDPOINTS
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/inventory/physical-count/start
+ * Start a new physical count session
+ * GO-LIVE-071: Begins a stock-take session
+ *
+ * Returns: { success: true, countId: string, startedAt: string }
+ */
+posInventoryRouter.post("/inventory/physical-count/start", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const { notes } = req.body as { notes?: string };
+
+  try {
+    // Check if there's already an in-progress count
+    const existingRes = await pool.query(
+      `SELECT id FROM inventory.physical_counts
+       WHERE store_id = $1 AND status = 'in_progress'
+       LIMIT 1`,
+      [storeId]
+    );
+
+    if (existingRes.rows[0]) {
+      return res.status(409).json({
+        error: "count_in_progress",
+        message: "A physical count is already in progress",
+        countId: existingRes.rows[0].id
+      });
+    }
+
+    // Create new count session
+    const countId = randomUUID();
+    await pool.query(
+      `INSERT INTO inventory.physical_counts (id, store_id, status, notes)
+       VALUES ($1, $2, 'in_progress', $3)`,
+      [countId, storeId, notes ?? null]
+    );
+
+    // Pre-populate count items with all active products
+    await pool.query(
+      `INSERT INTO inventory.physical_count_items (count_id, product_id, expected_qty)
+       SELECT $1, sp.product_id, COALESCE(sb.current_qty, 0)
+       FROM catalog.store_products sp
+       LEFT JOIN inventory.stock_balances sb
+         ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+       WHERE sp.store_id = $2 AND sp.is_active = true`,
+      [countId, storeId]
+    );
+
+    console.log(`[PhysicalCount] Started count ${countId} for store ${storeId}`);
+
+    return res.json({
+      success: true,
+      countId,
+      startedAt: new Date().toISOString(),
+      message: "Physical count session started"
+    });
+  } catch (error: any) {
+    console.error("[PhysicalCount] Start error:", error.message);
+    return res.status(500).json({ error: "Failed to start physical count" });
+  }
+});
+
+/**
+ * POST /api/v1/pos/inventory/physical-count/:countId/record
+ * Record a count for a specific product
+ * GO-LIVE-071: Records the physical count for one product
+ *
+ * Body:
+ *   - productId: string (required)
+ *   - countedQty: number (required) - the physical count
+ *
+ * Returns: { success: true, productId: string, expected: number, counted: number, variance: number }
+ */
+posInventoryRouter.post("/inventory/physical-count/:countId/record", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const countId = req.params.countId;
+  const { productId, countedQty } = req.body as { productId?: string; countedQty?: number };
+
+  if (!productId) {
+    return res.status(400).json({ error: "productId is required" });
+  }
+
+  if (typeof countedQty !== "number" || !Number.isFinite(countedQty) || countedQty < 0) {
+    return res.status(400).json({ error: "countedQty must be a non-negative number" });
+  }
+
+  try {
+    // Verify count exists and is in progress
+    const countRes = await pool.query(
+      `SELECT id, status FROM inventory.physical_counts
+       WHERE id = $1 AND store_id = $2`,
+      [countId, storeId]
+    );
+
+    if (!countRes.rows[0]) {
+      return res.status(404).json({ error: "count_not_found" });
+    }
+
+    if (countRes.rows[0].status !== "in_progress") {
+      return res.status(409).json({
+        error: "count_not_in_progress",
+        message: `Count is ${countRes.rows[0].status}, cannot record`
+      });
+    }
+
+    // Update or insert count item
+    const result = await pool.query(
+      `INSERT INTO inventory.physical_count_items (count_id, product_id, expected_qty, counted_qty, counted_at)
+       VALUES ($1, $2, COALESCE((SELECT current_qty FROM inventory.stock_balances WHERE store_id = $3 AND product_id = $2), 0), $4, NOW())
+       ON CONFLICT (count_id, product_id) DO UPDATE SET
+         counted_qty = $4,
+         counted_at = NOW()
+       RETURNING expected_qty, counted_qty, variance`,
+      [countId, productId, storeId, Math.round(countedQty)]
+    );
+
+    const item = result.rows[0];
+
+    return res.json({
+      success: true,
+      productId,
+      expected: item.expected_qty,
+      counted: item.counted_qty,
+      variance: item.variance
+    });
+  } catch (error: any) {
+    console.error("[PhysicalCount] Record error:", error.message);
+    return res.status(500).json({ error: "Failed to record count" });
+  }
+});
+
+/**
+ * POST /api/v1/pos/inventory/physical-count/:countId/complete
+ * Complete a physical count session and apply adjustments
+ * GO-LIVE-071: Finalizes count and creates adjustment ledger entries for variances
+ *
+ * Body:
+ *   - applyAdjustments: boolean (default: true) - whether to apply variances to stock
+ *
+ * Returns: { success: true, itemsCounted: number, variancesFound: number, adjustmentsApplied: boolean }
+ */
+posInventoryRouter.post("/inventory/physical-count/:countId/complete", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const countId = req.params.countId;
+  const { applyAdjustments = true } = req.body as { applyAdjustments?: boolean };
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Verify count exists and is in progress
+    const countRes = await client.query(
+      `SELECT id, status FROM inventory.physical_counts
+       WHERE id = $1 AND store_id = $2
+       FOR UPDATE`,
+      [countId, storeId]
+    );
+
+    if (!countRes.rows[0]) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "count_not_found" });
+    }
+
+    if (countRes.rows[0].status !== "in_progress") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        error: "count_not_in_progress",
+        message: `Count is ${countRes.rows[0].status}, cannot complete`
+      });
+    }
+
+    // Get count items with variances
+    const itemsRes = await client.query(
+      `SELECT product_id, expected_qty, counted_qty, variance
+       FROM inventory.physical_count_items
+       WHERE count_id = $1 AND counted_qty IS NOT NULL`,
+      [countId]
+    );
+
+    let itemsCounted = itemsRes.rows.length;
+    let variancesFound = 0;
+
+    if (applyAdjustments) {
+      for (const item of itemsRes.rows) {
+        if (item.variance === 0) continue;
+        variancesFound++;
+
+        const productId = item.product_id;
+        const deltaQty = item.variance;
+        const stockBefore = item.expected_qty;
+        const stockAfter = item.counted_qty;
+
+        // Create adjustment ledger entry
+        const invLedgerId = randomUUID();
+        await client.query(
+          `INSERT INTO inventory.inventory_ledger
+           (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
+            stock_before, stock_after, source, notes, adjustment_reason)
+           VALUES ($1, $2, $3, $4, 'adjustment', 'manual', $5, $6, $7, 'PHYSICAL_COUNT', $8, 'correction')`,
+          [invLedgerId, storeId, productId, deltaQty, countId, stockBefore, stockAfter,
+           `Physical count adjustment: ${stockBefore} -> ${stockAfter}`]
+        );
+
+        // Update stock_balances
+        await client.query(
+          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             current_qty = $3,
+             last_ledger_id = $4,
+             updated_at = NOW()`,
+          [storeId, productId, stockAfter, invLedgerId]
+        );
+
+        // Update store_products
+        await client.query(
+          `UPDATE catalog.store_products
+           SET current_stock = $3, updated_at = NOW()
+           WHERE store_id = $1 AND product_id = $2`,
+          [storeId, productId, stockAfter]
+        );
+
+        // Update legacy store_inventory
+        await client.query(
+          `UPDATE store_inventory
+           SET available_qty = $3, updated_at = NOW()
+           WHERE store_id = $1 AND global_product_id = $2`,
+          [storeId, productId]
+        );
+
+        // Invalidate cache
+        invalidateStockCache(storeId, productId);
+      }
+    } else {
+      variancesFound = itemsRes.rows.filter(i => i.variance !== 0).length;
+    }
+
+    // Mark count as completed
+    await client.query(
+      `UPDATE inventory.physical_counts
+       SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [countId]
+    );
+
+    await client.query("COMMIT");
+
+    console.log(`[PhysicalCount] Completed count ${countId}: ${itemsCounted} items, ${variancesFound} variances`);
+
+    return res.json({
+      success: true,
+      countId,
+      itemsCounted,
+      variancesFound,
+      adjustmentsApplied: applyAdjustments && variancesFound > 0,
+      message: applyAdjustments && variancesFound > 0
+        ? `Count completed. Applied ${variancesFound} stock adjustments.`
+        : `Count completed. ${variancesFound} variances found (not applied).`
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[PhysicalCount] Complete error:", error.message);
+    return res.status(500).json({ error: "Failed to complete physical count" });
+  } finally {
+    client.release();
+  }
+});
