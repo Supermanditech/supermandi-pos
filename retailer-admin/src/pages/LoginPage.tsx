@@ -112,28 +112,25 @@ export default function LoginPage() {
 
     try {
 
-      // Demo mode: bypass Firebase with mock data (dev only)
+      // GO-LIVE-139: Demo mode - get proper JWT from backend
       if (DEMO_MODE_AVAILABLE && demoMode) {
         if (phone !== DEMO_PHONE) {
           throw new Error(`Demo mode only works with phone: ${DEMO_PHONE}`);
         }
 
-        const mockResponse = {
-          token: 'demo-token-' + Date.now(),
-          refreshToken: 'demo-refresh-' + Date.now(),
-          user: {
-            id: 'demo-user-001',
-            phone: DEMO_PHONE,
-            role: 'RETAILER_ADMIN',
-          },
-          store: {
-            id: 'a0000000-0000-0000-0000-000000000001',
-            code: 'DEMO001',
-            name: 'SuperMandi Demo Store',
-          },
-        };
+        // Call backend to get a proper demo JWT token
+        const demoResponse = await fetch(API_GATEWAY_BASE + '/api/v1/demo/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
 
-        const authPayload = parseAuthResponse(mockResponse);
+        if (!demoResponse.ok) {
+          const errorData = await demoResponse.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || errorData.message || 'Failed to get demo token');
+        }
+
+        const demoData = await demoResponse.json();
+        const authPayload = parseAuthResponse(demoData);
         login(authPayload.token, authPayload.refreshToken, authPayload.user, authPayload.store);
 
         navigate(from, { replace: true });

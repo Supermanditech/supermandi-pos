@@ -1,4 +1,5 @@
 // Admin Audit Middleware - DEV-067
+// GO-LIVE-140: Enhanced audit logging for 10+ operations
 // Logs all admin actions to admin.audit_log table
 
 import { Request, Response, NextFunction } from 'express';
@@ -28,7 +29,8 @@ function sanitizeBody(body: unknown): unknown {
 }
 
 /**
- * Extract action and resource info from request
+ * GO-LIVE-140: Extract action and resource info from request
+ * Enhanced to capture 10+ admin operation types
  */
 function extractActionInfo(req: Request): {
   action: string;
@@ -42,81 +44,202 @@ function extractActionInfo(req: Request): {
   // Parse path segments
   const segments = path.split('/').filter(Boolean);
 
-  // Common patterns:
-  // /admin/stores - store management
-  // /admin/stores/:storeId - specific store
-  // /admin/stores/:storeId/users - store users
-  // /admin/stores/:storeId/devices - store devices
-  // /admin/stores/:storeId/device-enrollments - enrollments
-  // /admin/devices/:deviceId/block - device actions
-
   let action = 'unknown';
   let resourceType = 'unknown';
   let resourceId: string | null = null;
   let storeId: string | null = null;
 
-  // Pattern: /admin/stores
+  // =============================================================================
+  // GO-LIVE-143: Store operations
+  // =============================================================================
   if (segments[0] === 'stores') {
     storeId = segments[1] || null;
 
     if (segments.length === 1) {
-      // /admin/stores
       resourceType = 'store';
       action = method === 'POST' ? 'store.create' : 'store.list';
     } else if (segments.length === 2) {
-      // /admin/stores/:storeId
       resourceType = 'store';
       resourceId = segments[1];
       action =
-        method === 'GET'
-          ? 'store.get'
-          : method === 'PUT'
-            ? 'store.update'
-            : method === 'DELETE'
-              ? 'store.delete'
-              : 'store.unknown';
+        method === 'GET' ? 'store.get' :
+        method === 'PUT' || method === 'PATCH' ? 'store.update' :
+        method === 'DELETE' ? 'store.delete' : 'store.unknown';
     } else if (segments[2] === 'users') {
-      // /admin/stores/:storeId/users[/:userId]
       resourceType = 'user';
       resourceId = segments[3] || null;
       action =
         segments.length === 3
-          ? method === 'POST'
-            ? 'user.create'
-            : 'user.list'
-          : method === 'GET'
-            ? 'user.get'
-            : method === 'PATCH'
-              ? 'user.update'
-              : method === 'DELETE'
-                ? 'user.delete'
-                : 'user.unknown';
+          ? method === 'POST' ? 'user.create' : 'user.list'
+          : method === 'GET' ? 'user.get' :
+            method === 'PATCH' ? 'user.update' :
+            method === 'DELETE' ? 'user.delete' : 'user.unknown';
     } else if (segments[2] === 'devices') {
-      // /admin/stores/:storeId/devices
       resourceType = 'device';
       action = 'device.list';
     } else if (segments[2] === 'device-enrollments') {
-      // /admin/stores/:storeId/device-enrollments
       resourceType = 'enrollment';
       resourceId = segments[3] || null;
       action = method === 'POST' ? 'enrollment.create' : 'enrollment.list';
     }
-  } else if (segments[0] === 'devices') {
-    // /admin/devices/:deviceId/block|unblock
+  }
+  // =============================================================================
+  // Device operations
+  // =============================================================================
+  else if (segments[0] === 'devices') {
     resourceType = 'device';
     resourceId = segments[1] || null;
-    if (segments[2] === 'block') {
-      action = 'device.block';
-    } else if (segments[2] === 'unblock') {
-      action = 'device.unblock';
-    }
-  } else if (segments[0] === 'device-enrollments') {
-    // /admin/device-enrollments/:id/revoke
+    if (segments[2] === 'block') action = 'device.block';
+    else if (segments[2] === 'unblock') action = 'device.unblock';
+    else if (method === 'GET') action = 'device.get';
+    else if (method === 'DELETE') action = 'device.revoke';
+  }
+  else if (segments[0] === 'device-enrollments') {
     resourceType = 'enrollment';
     resourceId = segments[1] || null;
-    if (segments[2] === 'revoke') {
-      action = 'enrollment.revoke';
+    if (segments[2] === 'revoke') action = 'enrollment.revoke';
+    else if (method === 'GET') action = 'enrollment.list';
+    else if (method === 'POST') action = 'enrollment.create';
+  }
+  // =============================================================================
+  // GO-LIVE-141: Supplier operations
+  // =============================================================================
+  else if (segments[0] === 'pending-suppliers') {
+    resourceType = 'supplier_request';
+    resourceId = segments[1] || null;
+    if (segments[2] === 'verify') action = 'supplier_request.verify';
+    else if (segments[2] === 'reject') action = 'supplier_request.reject';
+    else action = method === 'GET' ? 'supplier_request.list' : 'supplier_request.unknown';
+  }
+  else if (segments[0] === 'verified-suppliers') {
+    resourceType = 'supplier';
+    action = 'supplier.list_verified';
+  }
+  else if (segments[0] === 'suppliers') {
+    resourceType = 'supplier';
+    resourceId = segments[1] || null;
+    if (segments[1] === 'pending') {
+      action = 'supplier.list_pending';
+    } else if (segments[2] === 'approve') {
+      action = 'supplier.approve';
+    } else if (segments[2] === 'reject') {
+      action = 'supplier.reject';
+    } else if (method === 'GET') {
+      action = segments.length === 1 ? 'supplier.list' : 'supplier.get';
     }
+  }
+  // =============================================================================
+  // GO-LIVE-142: Product operations
+  // =============================================================================
+  else if (segments[0] === 'products') {
+    resourceType = 'product';
+    resourceId = segments[1] || null;
+    if (segments[1] === 'pending') {
+      action = 'product.list_pending';
+    } else if (segments[2] === 'approve') {
+      action = 'product.approve';
+    } else if (segments[2] === 'reject') {
+      action = 'product.reject';
+    } else if (segments[2] === 'edit') {
+      action = 'product.edit';
+    } else if (method === 'GET') {
+      action = segments.length === 1 ? 'product.list' : 'product.get';
+    } else if (method === 'POST') {
+      action = 'product.create';
+    } else if (method === 'PUT' || method === 'PATCH') {
+      action = 'product.update';
+    } else if (method === 'DELETE') {
+      action = 'product.delete';
+    }
+  }
+  else if (segments[0] === 'global-products') {
+    resourceType = 'global_product';
+    resourceId = segments[1] || null;
+    action = method === 'GET' ? 'global_product.list' :
+             method === 'POST' ? 'global_product.create' :
+             method === 'PUT' || method === 'PATCH' ? 'global_product.update' :
+             method === 'DELETE' ? 'global_product.delete' : 'global_product.unknown';
+  }
+  // =============================================================================
+  // GO-LIVE-140: User and permission operations
+  // =============================================================================
+  else if (segments[0] === 'users') {
+    resourceType = 'admin_user';
+    resourceId = segments[1] || null;
+    if (segments[2] === 'permissions') {
+      action = method === 'GET' ? 'user.permissions.get' :
+               method === 'PUT' ? 'user.permissions.update' : 'user.permissions.unknown';
+    } else if (segments[2] === 'role') {
+      action = 'user.role.update';
+    } else {
+      action = method === 'GET' ? (segments.length === 1 ? 'user.list' : 'user.get') :
+               method === 'POST' ? 'user.create' :
+               method === 'PATCH' ? 'user.update' :
+               method === 'DELETE' ? 'user.delete' : 'user.unknown';
+    }
+  }
+  // =============================================================================
+  // Settings and configuration operations
+  // =============================================================================
+  else if (segments[0] === 'settings') {
+    resourceType = 'settings';
+    resourceId = segments[1] || null;
+    action = method === 'GET' ? 'settings.get' :
+             method === 'PUT' || method === 'PATCH' ? 'settings.update' : 'settings.unknown';
+  }
+  // =============================================================================
+  // OTP operations (GO-LIVE-140: 2FA administration)
+  // =============================================================================
+  else if (segments[0] === 'otp') {
+    resourceType = 'otp';
+    if (segments[1] === 'request') action = 'otp.request';
+    else if (segments[1] === 'verify') action = 'otp.verify';
+    else action = 'otp.unknown';
+  }
+  // =============================================================================
+  // Analytics and reports
+  // =============================================================================
+  else if (segments[0] === 'analytics') {
+    resourceType = 'analytics';
+    resourceId = segments[1] || null;
+    action = 'analytics.view';
+  }
+  else if (segments[0] === 'pos-events') {
+    resourceType = 'pos_events';
+    action = method === 'GET' ? 'pos_events.list' : 'pos_events.unknown';
+  }
+  // =============================================================================
+  // GST credits (GO-LIVE-097)
+  // =============================================================================
+  else if (segments[0] === 'gst-credits') {
+    resourceType = 'gst_credits';
+    resourceId = segments[1] || null;
+    action = method === 'GET' ? 'gst_credits.list' :
+             method === 'POST' ? 'gst_credits.claim' :
+             method === 'PUT' ? 'gst_credits.update' : 'gst_credits.unknown';
+  }
+  // =============================================================================
+  // Barcode sheets
+  // =============================================================================
+  else if (segments[0] === 'barcode-sheets') {
+    resourceType = 'barcode_sheet';
+    resourceId = segments[1] || null;
+    action = method === 'GET' ? 'barcode_sheet.list' :
+             method === 'POST' ? 'barcode_sheet.generate' : 'barcode_sheet.unknown';
+  }
+  // =============================================================================
+  // Audit log access
+  // =============================================================================
+  else if (segments[0] === 'audit') {
+    resourceType = 'audit_log';
+    action = 'audit.view';
+  }
+  // =============================================================================
+  // AI operations
+  // =============================================================================
+  else if (segments[0] === 'ai') {
+    resourceType = 'ai';
+    action = segments[1] ? `ai.${segments[1]}` : 'ai.unknown';
   }
 
   return { action, resourceType, resourceId, storeId };

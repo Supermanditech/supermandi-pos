@@ -1,11 +1,104 @@
 // Demo Routes - MED-004: Add demo seed endpoint
 // Seeds products for demo stores
+// GO-LIVE-139: Demo mode JWT token handling
 
 import { Router, Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import { getPool } from "../../db/client";
 import { randomUUID } from "crypto";
+import { devOnlyMiddleware, isProduction } from "../../middleware/devOnly";
 
 export const demoRouter = Router();
+
+// =============================================================================
+// GO-LIVE-139: Demo Token Configuration
+// =============================================================================
+
+const JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET'];
+  if (!secret || secret.length < 32) {
+    if (isProduction()) {
+      throw new Error('JWT_SECRET must be set and at least 32 characters in production');
+    }
+    return 'dev-secret-change-in-prod';
+  }
+  return secret;
+})();
+const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
+
+// Demo store and user constants
+const DEMO_STORE_ID = 'a0000000-0000-0000-0000-000000000001';
+const DEMO_STORE_CODE = 'DEMO001';
+const DEMO_STORE_NAME = 'SuperMandi Demo Store';
+const DEMO_USER_ID = 'demo-user-001';
+const DEMO_PHONE = '+919999999999';
+
+/**
+ * POST /api/v1/demo/token
+ * GO-LIVE-139: Generate a proper demo JWT token (dev-only)
+ *
+ * This endpoint generates a valid JWT token for demo mode that:
+ * 1. Is a properly signed JWT (not a fake string)
+ * 2. Has a `demo: true` claim for identification
+ * 3. Only works in non-production environments
+ * 4. References the standard demo store
+ */
+demoRouter.post("/token", devOnlyMiddleware(), async (req: Request, res: Response) => {
+  console.log('[GO-LIVE-139] Generating demo token');
+
+  // Generate JTI for potential revocation tracking
+  const jti = randomUUID();
+
+  // Create JWT payload with demo claim
+  const jwtPayload = {
+    sub: DEMO_USER_ID,
+    actorType: 'STORE',
+    actorId: DEMO_STORE_ID,
+    permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+    demo: true,  // GO-LIVE-139: Mark as demo token
+    jti,
+  };
+
+  const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
+    issuer: JWT_ISSUER,
+    expiresIn: '24h',
+  });
+
+  // Generate refresh token with demo flag
+  const refreshJti = randomUUID();
+  const refreshPayload = {
+    sub: DEMO_USER_ID,
+    type: 'refresh',
+    storeId: DEMO_STORE_ID,
+    demo: true,  // GO-LIVE-139: Mark as demo token
+    jti: refreshJti,
+  };
+
+  const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+    issuer: JWT_ISSUER,
+    expiresIn: '7d',
+  });
+
+  console.log(`[GO-LIVE-139] Demo token generated for user ${DEMO_USER_ID}, store ${DEMO_STORE_ID}`);
+
+  return res.json({
+    token: accessToken,
+    accessToken,
+    refreshToken,
+    user: {
+      id: DEMO_USER_ID,
+      phone: DEMO_PHONE,
+      role: 'RETAILER_ADMIN',
+    },
+    store: {
+      id: DEMO_STORE_ID,
+      code: DEMO_STORE_CODE,
+      name: DEMO_STORE_NAME,
+    },
+    expiresIn: 86400, // 24 hours in seconds
+    _warning: 'DEMO TOKEN - FOR DEVELOPMENT ONLY - NOT FOR PRODUCTION USE',
+  });
+});
 
 // Demo store code patterns
 function isDemoStoreCode(code: string): boolean {

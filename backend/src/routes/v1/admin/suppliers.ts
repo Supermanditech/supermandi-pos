@@ -996,3 +996,113 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     client.release();
   }
 });
+
+// =============================================================================
+// GO-LIVE-145: Admin-Triggered Password Reset for Suppliers
+// =============================================================================
+
+import { generateSecureResetToken, hashResetToken, sendPasswordResetEmail, isEmailServiceEnabled } from "../../../services/emailService";
+
+/**
+ * POST /api/v1/admin/suppliers/:supplierId/reset-password
+ * GO-LIVE-145: Admin triggers password reset for a supplier
+ * Generates a reset token and sends email to supplier
+ */
+// GO-LIVE-128: Requires 'suppliers:update' permission
+adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminToken, requirePermission("suppliers", "update"), async (req, res) => {
+  const { supplierId } = req.params;
+  const { reason } = req.body || {};
+  const adminId = (req as any).adminId;
+  const adminEmail = (req as any).adminInfo?.email || 'admin';
+
+  if (!supplierId) {
+    return res.status(400).json({ error: "supplierId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "database unavailable" });
+  }
+
+  try {
+    // Get supplier details
+    const supplierResult = await pool.query(
+      `SELECT id, primary_email, business_name, status
+       FROM supplier.suppliers
+       WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    if (supplierResult.rowCount === 0) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    const supplier = supplierResult.rows[0];
+
+    if (!supplier.primary_email) {
+      return res.status(400).json({ error: "Supplier has no email address" });
+    }
+
+    // Generate secure reset token
+    const resetToken = generateSecureResetToken();
+    const tokenHash = hashResetToken(resetToken);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Store hashed token in database
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET password_reset_token = $1,
+           password_reset_expires = $2,
+           updated_at = NOW()
+       WHERE id = $3::uuid`,
+      [tokenHash, expiresAt, supplierId]
+    );
+
+    // Log the admin action to audit table
+    try {
+      await pool.query(
+        `INSERT INTO admin.audit_log (actor_user_id, action, resource_type, resource_id, request_body, response_status)
+         VALUES ($1::uuid, 'supplier.password_reset_triggered', 'supplier', $2, $3::jsonb, 200)`,
+        [
+          adminId !== 'master-token' ? adminId : null,
+          supplierId,
+          JSON.stringify({
+            adminEmail,
+            reason: reason || 'Admin-triggered reset',
+            supplierEmail: supplier.primary_email,
+            supplierName: supplier.business_name,
+          })
+        ]
+      );
+    } catch (auditErr) {
+      console.warn('[GO-LIVE-145] Audit log failed:', auditErr);
+    }
+
+    // Send password reset email if email service is available
+    if (isEmailServiceEnabled()) {
+      try {
+        await sendPasswordResetEmail(supplier.primary_email, resetToken, supplier.business_name);
+        console.log(`[GO-LIVE-145] Password reset email sent to ${supplier.primary_email} (triggered by ${adminEmail})`);
+      } catch (emailErr) {
+        console.warn(`[GO-LIVE-145] Failed to send reset email:`, emailErr);
+        // Continue anyway - admin can share the token manually in dev
+      }
+    }
+
+    console.log(`[GO-LIVE-145] Admin ${adminEmail} triggered password reset for supplier ${supplier.business_name} (${supplier.primary_email})`);
+
+    return res.json({
+      success: true,
+      message: `Password reset initiated for ${supplier.primary_email}`,
+      supplierId,
+      supplierEmail: supplier.primary_email,
+      supplierName: supplier.business_name,
+      expiresAt,
+      // Only return token in non-production (for testing)
+      ...(process.env.NODE_ENV !== 'production' && { devResetToken: resetToken }),
+    });
+  } catch (err: any) {
+    console.error("[GO-LIVE-145] Admin password reset failed:", err);
+    return res.status(500).json({ error: "Failed to initiate password reset" });
+  }
+});

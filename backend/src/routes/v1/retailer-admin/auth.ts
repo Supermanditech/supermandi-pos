@@ -6,6 +6,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
+import { logLoginSuccess } from "../../../services/authAuditService";
 
 // GO-LIVE-045: Import Firebase verification from common package
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -286,6 +287,16 @@ router.post("/auth/firebase-login", async (req: Request, res: Response, next: Ne
       issuer: JWT_ISSUER,
       expiresIn: '7d',
     });
+
+    // GO-LIVE-144: Log successful login
+    logLoginSuccess({
+      actorType: 'retailer',
+      actorId: user.id,
+      phone: phoneNormalized,
+      storeId: store.id,
+      ipAddress: req.ip || undefined,
+      userAgent: req.get('user-agent'),
+    }).catch(() => {}); // Non-blocking
 
     res.json({
       success: true,

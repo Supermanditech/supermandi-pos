@@ -1,5 +1,6 @@
 // JWT Authentication Middleware for API Gateway
 // Verifies JWT tokens and sets x-user-id, x-actor-id headers for downstream services
+// GO-LIVE-139: Reject demo tokens in production
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
@@ -16,6 +17,17 @@ interface JwtPayload {
   iat: number;
   exp: number;
   iss: string;
+  demo?: boolean;     // GO-LIVE-139: Demo mode flag
+  jti?: string;       // GO-LIVE-137: JWT ID for revocation
+}
+
+// =============================================================================
+// GO-LIVE-139: Environment detection
+// =============================================================================
+
+function isProduction(): boolean {
+  const env = (process.env.NODE_ENV || 'development').toLowerCase();
+  return env === 'production' || env === 'prod';
 }
 
 // Extend Express Request to include JWT claims
@@ -98,6 +110,19 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
 
     // Store decoded payload on request for logging/debugging
     req.jwtPayload = decoded;
+
+    // GO-LIVE-139: Reject demo tokens in production
+    if (decoded.demo === true && isProduction()) {
+      console.warn(`[GO-LIVE-139] Rejected demo token in production: user=${decoded.sub}, actor=${decoded.actorId}`);
+      res.status(403).json({
+        error: {
+          code: 'DEMO_TOKEN_REJECTED',
+          message: 'Demo tokens are not allowed in production environment.',
+        },
+        requestId: req.correlationId,
+      });
+      return;
+    }
 
     // Validate required claims
     if (!decoded.sub || !decoded.actorId || !decoded.actorType) {

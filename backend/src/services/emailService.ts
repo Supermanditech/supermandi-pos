@@ -443,6 +443,104 @@ export async function sendVerificationEmail(
 }
 
 // =============================================================================
+// GO-LIVE-145: Password Reset Email
+// =============================================================================
+
+/**
+ * Send password reset email to supplier
+ * @param to - Recipient email
+ * @param resetToken - The reset token (plain text, will be included in link)
+ * @param businessName - Supplier business name for personalization
+ */
+export async function sendPasswordResetEmail(
+  to: string,
+  resetToken: string,
+  businessName?: string
+): Promise<SendEmailResult> {
+  const config = getEmailConfig();
+
+  console.log(`[EmailService] GO-LIVE-145: Sending password reset email to ${to}`);
+
+  if (config.provider === 'disabled') {
+    console.warn('[EmailService] Email provider is disabled - cannot send password reset');
+    return {
+      sent: false,
+      errorCode: 'EMAIL_DISABLED',
+      errorMessage: 'Email service is not configured',
+    };
+  }
+
+  // Build reset URL - use frontend URL or fallback
+  const frontendUrl = process.env.SUPPLIER_PORTAL_URL || process.env.FRONTEND_URL || 'https://supplier.supermandi.in';
+  const resetUrl = `${frontendUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
+
+  const subject = 'Reset your SuperMandi password';
+  const greeting = businessName ? `Hello ${businessName}` : 'Hello';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .container { background: #f9f9f9; border-radius: 8px; padding: 30px; }
+    .header { color: #2563eb; font-size: 24px; margin-bottom: 20px; }
+    .button { display: inline-block; background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+    .warning { color: #666; font-size: 14px; margin-top: 20px; }
+    .footer { color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">SuperMandi Password Reset</div>
+    <p>${greeting},</p>
+    <p>A password reset was requested for your SuperMandi supplier account.</p>
+    <p>Click the button below to reset your password:</p>
+    <a href="${resetUrl}" class="button">Reset Password</a>
+    <p>Or copy this link: ${resetUrl}</p>
+    <p class="warning">This link will expire in 24 hours. If you didn't request this, please ignore this email.</p>
+  </div>
+  <div class="footer">
+    &copy; ${new Date().getFullYear()} SuperMandi. All rights reserved.
+  </div>
+</body>
+</html>`;
+
+  const text = `${greeting},
+
+A password reset was requested for your SuperMandi supplier account.
+
+Click here to reset your password: ${resetUrl}
+
+This link will expire in 24 hours. If you didn't request this, please ignore this email.
+
+- The SuperMandi Team`;
+
+  if (config.provider === 'resend') {
+    const result = await sendViaResend(config, to, subject, html, text);
+    if (result.sent) return result;
+
+    // Try SMTP fallback
+    if (config.smtp?.host && config.smtp?.user) {
+      console.log('[EmailService] Resend failed, trying SMTP fallback...');
+      return sendViaSMTP(config, to, subject, html, text);
+    }
+    return result;
+  }
+
+  if (config.provider === 'smtp') {
+    return sendViaSMTP(config, to, subject, html, text);
+  }
+
+  return {
+    sent: false,
+    errorCode: 'UNKNOWN_PROVIDER',
+    errorMessage: `Unknown email provider: ${config.provider}`,
+  };
+}
+
+// =============================================================================
 // RATE LIMITING (In-Memory for now, should use Redis in production)
 // GO-LIVE-135: Tightened rate limits to prevent OTP abuse
 // =============================================================================

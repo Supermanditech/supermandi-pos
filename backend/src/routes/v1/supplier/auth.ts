@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../../../services/ipBlockingService";
+import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../services/authAuditService";
 import {
   sendVerificationEmail,
   generateSecureOTP,
@@ -521,6 +522,17 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
           [newCount, lockedUntil, clientIp, supplier.id]
         );
         console.warn(`[SupplierAuth] GO-LIVE-134: Account ${email} locked after ${newCount} failed attempts`);
+
+        // GO-LIVE-144: Log account lockout
+        logAccountLocked({
+          actorType: 'supplier',
+          actorId: supplier.id,
+          email,
+          ipAddress: clientIp || undefined,
+          lockDurationMinutes: LOCKOUT_DURATION_MINUTES,
+          failedAttempts: newCount,
+        }).catch(() => {});
+
         res.status(403).json({
           error: {
             code: 'ACCOUNT_LOCKED',
@@ -537,6 +549,17 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
           [newCount, clientIp, supplier.id]
         );
         console.warn(`[SupplierAuth] GO-LIVE-134: Failed login for ${email}, ${attemptsRemaining} attempts remaining`);
+
+        // GO-LIVE-144: Log failed login attempt
+        logLoginFailed({
+          actorType: 'supplier',
+          email,
+          ipAddress: clientIp || undefined,
+          userAgent: req.get('user-agent'),
+          errorCode: 'INVALID_CREDENTIALS',
+          metadata: { attemptsRemaining },
+        }).catch(() => {});
+
         res.status(401).json({
           error: {
             code: 'INVALID_CREDENTIALS',
@@ -576,6 +599,15 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
       issuer: JWT_ISSUER,
       expiresIn: JWT_EXPIRES_IN,
     });
+
+    // GO-LIVE-144: Log successful login
+    logLoginSuccess({
+      actorType: 'supplier',
+      actorId: supplier.id,
+      email: supplier.primary_email,
+      ipAddress: clientIp || undefined,
+      userAgent: req.get('user-agent'),
+    }).catch(() => {}); // Non-blocking
 
     res.json({
       data: {
