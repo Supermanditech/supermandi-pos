@@ -1808,7 +1808,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
     // GO-LIVE-070: Create AR (Accounts Receivable) record for DUE payment
     await client.query(
       `INSERT INTO accounts_receivable (store_id, sale_id, payment_id, amount_minor, currency, status)
-       VALUES ($1, $2, $3, $4, 'INR', 'outstanding')
+       VALUES ($1, $2, $3::uuid, $4, 'INR', 'outstanding')
        ON CONFLICT (sale_id) DO UPDATE SET
          amount_minor = EXCLUDED.amount_minor,
          updated_at = NOW()`,
