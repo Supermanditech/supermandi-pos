@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { onAuthFailure } from './api';
+import { onAuthFailure, API_GATEWAY_BASE } from './api';
+
+// GO-LIVE-109: Token refresh configuration
+// Refresh token 5 minutes before expiry (JWT expires in 24h)
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
+const TOKEN_CHECK_INTERVAL_MS = 60 * 1000; // Check every minute
 
 interface User {
   id: string;
@@ -144,6 +149,107 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShowSessionWarning(false);
     localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
   }, []);
+
+  // GO-LIVE-109: Parse JWT to get expiry time
+  const getTokenExpiry = useCallback((token: string): number | null => {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload = JSON.parse(atob(parts[1]));
+      return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // GO-LIVE-109: Refresh access token using refresh token
+  const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) {
+      console.log('[Auth] No refresh token available');
+      return false;
+    }
+
+    try {
+      const apiBase = API_GATEWAY_BASE || '';
+      const response = await fetch(`${apiBase}/api/v1/retailer-admin/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        console.warn('[Auth] Token refresh failed:', response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      const newAccessToken = data.data?.accessToken;
+
+      if (newAccessToken) {
+        setAccessToken(newAccessToken);
+        localStorage.setItem(TOKEN_KEY, newAccessToken);
+        console.log('[Auth] Token refreshed successfully');
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('[Auth] Token refresh error:', error);
+      return false;
+    }
+  }, []);
+
+  // GO-LIVE-109: Automatic token refresh before expiry
+  const tokenRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!accessToken) {
+      // Clear refresh interval when logged out
+      if (tokenRefreshRef.current) {
+        clearInterval(tokenRefreshRef.current);
+        tokenRefreshRef.current = null;
+      }
+      return;
+    }
+
+    // Check token expiry periodically and refresh if needed
+    const checkAndRefresh = async () => {
+      const expiry = getTokenExpiry(accessToken);
+      if (!expiry) return;
+
+      const timeUntilExpiry = expiry - Date.now();
+
+      // Refresh if token expires within the buffer time
+      if (timeUntilExpiry > 0 && timeUntilExpiry <= TOKEN_EXPIRY_BUFFER_MS) {
+        console.log('[Auth] Token expires soon, refreshing...');
+        const success = await refreshAccessToken();
+        if (!success) {
+          console.warn('[Auth] Token refresh failed, user may need to re-login');
+        }
+      } else if (timeUntilExpiry <= 0) {
+        // Token already expired - try to refresh, logout if fails
+        console.log('[Auth] Token expired, attempting refresh...');
+        const success = await refreshAccessToken();
+        if (!success) {
+          logout();
+        }
+      }
+    };
+
+    // Run immediately on mount
+    checkAndRefresh();
+
+    // Then check periodically
+    tokenRefreshRef.current = setInterval(checkAndRefresh, TOKEN_CHECK_INTERVAL_MS);
+
+    return () => {
+      if (tokenRefreshRef.current) {
+        clearInterval(tokenRefreshRef.current);
+        tokenRefreshRef.current = null;
+      }
+    };
+  }, [accessToken, getTokenExpiry, refreshAccessToken, logout]);
 
   // Subscribe to auth failures (401 responses) - triggers logout
   useEffect(() => {
