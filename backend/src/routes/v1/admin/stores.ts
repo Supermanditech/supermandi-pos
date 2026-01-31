@@ -4,6 +4,8 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { getPool } from "../../../db/client";
 import { generateStoreCode } from "../../../services/storeCodeService";
 import { sanitizeHtml, validateEmail as validateEmailFn, validatePhone as validatePhoneFn, validatePinCode } from "@supermandi/common";
+// GO-LIVE-186: Import rate limiter for admin store operations
+import { adminStoreOperationsRateLimiter } from "../../../middleware/posRateLimiter";
 
 export const adminStoresRouter = Router();
 
@@ -82,7 +84,8 @@ async function ensureUniqueStoreId(pool: ReturnType<typeof getPool>, preferredId
 
 // POST /api/v1/admin/stores - STORECODE-002: Now generates store_code automatically
 // GO-LIVE-128: Requires 'stores:create' permission
-adminStoresRouter.post("/stores", requirePermission("stores", "create"), async (req, res) => {
+// GO-LIVE-186: Rate limit store creation to 30/min per IP
+adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminStoreOperationsRateLimiter, async (req, res) => {
   const storeNameInput = normalizeStoreNameInput((req.body as any)?.storeName ?? (req.body as any)?.name);
   if (storeNameInput.error || !storeNameInput.value) {
     return res.status(400).json({ error: storeNameInput.error ?? "storeName_required" });
@@ -273,7 +276,8 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
 
 // PATCH /api/v1/admin/stores/:storeId
 // GO-LIVE-128: Requires 'stores:update' permission
-adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"), async (req, res) => {
+// GO-LIVE-186: Rate limit store updates to 30/min per IP
+adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"), adminStoreOperationsRateLimiter, async (req, res) => {
   const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
   if (!storeId) {
     return res.status(400).json({ error: "storeId is required" });
@@ -393,7 +397,8 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
 
 // ITER3-P0-007: DELETE /api/v1/admin/stores/:storeId - Soft delete a store
 // GO-LIVE-128: Requires 'stores:delete' permission (super_admin only)
-adminStoresRouter.delete("/stores/:storeId", requirePermission("stores", "delete"), async (req, res) => {
+// GO-LIVE-186: Rate limit store deletion to 30/min per IP
+adminStoresRouter.delete("/stores/:storeId", requirePermission("stores", "delete"), adminStoreOperationsRateLimiter, async (req, res) => {
   const storeId = req.params.storeId?.trim();
   if (!storeId) {
     return res.status(400).json({ error: "storeId is required" });

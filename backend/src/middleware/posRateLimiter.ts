@@ -151,7 +151,7 @@ export const supplierApprovalRateLimiter = createPosRateLimiter({
 });
 
 /**
- * GO-LIVE-186: Rate limiter for store update endpoint
+ * GO-LIVE-186: Rate limiter for store update endpoint (POS context)
  * 20 updates per minute per store
  */
 export const storeUpdateRateLimiter = createPosRateLimiter({
@@ -160,6 +160,18 @@ export const storeUpdateRateLimiter = createPosRateLimiter({
   keyType: "store",
   errorCode: "STORE_UPDATE_RATE_LIMIT_EXCEEDED",
   errorMessage: "Too many store update requests. Please wait before making more changes."
+});
+
+/**
+ * GO-LIVE-186: Rate limiter for admin store operations (IP-based)
+ * 30 updates per minute per IP for admin operations
+ */
+export const adminStoreOperationsRateLimiter = createPosRateLimiter({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 30,              // 30 operations per minute per IP
+  keyType: "ip",
+  errorCode: "ADMIN_STORE_RATE_LIMIT_EXCEEDED",
+  errorMessage: "Too many store operations. Please wait before making more changes."
 });
 
 /**
