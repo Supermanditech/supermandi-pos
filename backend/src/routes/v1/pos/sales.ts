@@ -3,6 +3,11 @@ import type { PoolClient } from "pg";
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+// GO-LIVE-184: Import rate limiters for financial operations
+import {
+  salesRateLimiter,
+  financialOperationsRateLimiter
+} from "../../../middleware/posRateLimiter";
 import {
   applyBulkDeductions,
   ensureSaleAvailability,
@@ -758,7 +763,8 @@ async function getCollectionStoreStatus(
   return res.rows[0] ?? null;
 }
 
-posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
+// GO-LIVE-184: Rate limit sales creation to 60/min per store
+posSalesRouter.post("/sales", requireDeviceToken, salesRateLimiter, async (req, res) => {
   const { items, discountMinor, currency, saleId: requestedSaleIdRaw } = req.body as {
     items?: SaleItemInput[];
     discountMinor?: number;
@@ -1158,7 +1164,8 @@ posSalesRouter.post("/sales", requireDeviceToken, async (req, res) => {
 // Confirm payment and deduct stock (two-phase commit)
 // This endpoint is called AFTER payment is confirmed
 // Stock is only deducted when payment is successful
-posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, async (req, res) => {
+// GO-LIVE-184: Rate limit payment confirmations to 30/min per store
+posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
   const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
   if (!saleId) {
     return res.status(400).json({ error: "saleId is required" });
@@ -1547,7 +1554,8 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
 
 // GO-LIVE-037: UPI confirmation with idempotency
 // If payment is already confirmed, return success without re-processing
-posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (req, res) => {
+// GO-LIVE-184: Rate limit payment confirmations to 30/min per store
+posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
   const { paymentId } = req.body as { paymentId?: string };
 
   if (typeof paymentId !== "string" || paymentId.trim().length === 0) {
@@ -1708,7 +1716,8 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, async (r
   }
 });
 
-posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
+// GO-LIVE-184: Rate limit cash payments to 30/min per store
+posSalesRouter.post("/payments/cash", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
   const { saleId } = req.body as { saleId?: string };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
@@ -1841,7 +1850,8 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, async (req, res) => {
   }
 });
 
-posSalesRouter.post("/payments/due", requireDeviceToken, async (req, res) => {
+// GO-LIVE-184: Rate limit due payments to 30/min per store
+posSalesRouter.post("/payments/due", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
   const { saleId } = req.body as { saleId?: string };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
