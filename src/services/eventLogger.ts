@@ -11,6 +11,8 @@ export type EventType =
   | 'CART_UPDATE_DETAILS'
   | 'CART_CLEAR'
   | 'CART_APPLY_DISCOUNT'
+  | 'CART_AUTO_UNLOCKED'     // GL-CRIT-0011: Cart lock timeout
+  | 'CART_STOCK_ADJUSTMENT'  // GL-CRIT-0014: Stock normalization
   | 'CHECKOUT_START'
   | 'CHECKOUT_COMPLETE'
   | 'CHECKOUT_CANCEL'

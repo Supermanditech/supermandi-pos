@@ -738,7 +738,6 @@ export default function SellScanScreen({
     applyDiscount,
     removeDiscount,
     clearCart,
-    undoLastAction,
   } = useCartStore();
 
   // GL-CRIT-0011: Auto-unlock cart if lock has expired (e.g., app crashed during payment)

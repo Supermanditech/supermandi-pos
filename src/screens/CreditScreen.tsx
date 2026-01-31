@@ -133,7 +133,9 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
   }, [activeApplication?.status, loadData]);
 
   // GO-LIVE-245: Calculate credit utilization warning
-  const creditUtilization = creditScore?.currentUtilization ?? 0;
+  // Note: currentUtilization would need to be added to the API response
+  // For now, default to 0 (no warning) until backend provides this data
+  const creditUtilization = 0; // TODO: Add utilization tracking to backend
   const showCreditWarning = creditUtilization >= 90;
 
   const handleRefresh = useCallback(() => {
