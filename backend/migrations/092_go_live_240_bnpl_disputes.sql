@@ -4,19 +4,30 @@
 -- Create BNPL disputes table
 CREATE TABLE IF NOT EXISTS payments.bnpl_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  drawdown_id UUID NOT NULL REFERENCES payments.bnpl_drawdowns(id),
-  store_id UUID NOT NULL REFERENCES platform.stores(id),
-  supplier_id UUID REFERENCES supplier.suppliers(id),
+  drawdown_id UUID NOT NULL,
+  store_id UUID NOT NULL,
+  supplier_id UUID,
   reason VARCHAR(100) NOT NULL,
   description TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'submitted'
     CHECK (status IN ('submitted', 'under_review', 'resolved', 'rejected')),
   resolution_notes TEXT,
-  resolved_by UUID REFERENCES auth.admin_users(id),
+  resolved_by UUID,
   resolved_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Add foreign key constraints if the referenced tables exist
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'payments' AND table_name = 'bnpl_drawdowns') THEN
+    BEGIN
+      ALTER TABLE payments.bnpl_disputes ADD CONSTRAINT fk_disputes_drawdown FOREIGN KEY (drawdown_id) REFERENCES payments.bnpl_drawdowns(id);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END;
+  END IF;
+END $$;
 
 -- Index for quick lookup by drawdown
 CREATE INDEX IF NOT EXISTS idx_bnpl_disputes_drawdown ON payments.bnpl_disputes(drawdown_id);
