@@ -368,7 +368,7 @@ LEFT JOIN (
   GROUP BY store_id
 ) failed ON failed.store_id = s.id
 LEFT JOIN (
-  SELECT store_id, COUNT(*) as count
+  SELECT store_id::UUID as store_id, COUNT(*) as count
   FROM public.pos_devices
   WHERE last_seen_online < NOW() - INTERVAL '1 hour'
     AND pending_outbox_count > 0
