@@ -13,7 +13,8 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
 
 export const config = {
   // Service configuration
-  port: getEnvIntOrDefault('ORDER_SERVICE_PORT', 3006),
+  // GO-LIVE-FIX: Changed default from 3006 to 3005 to match .env (3006 is reorder-service)
+  port: getEnvIntOrDefault('ORDER_SERVICE_PORT', 3005),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // Database configuration (uses shared pool from @supermandi/common)

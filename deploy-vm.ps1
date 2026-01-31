@@ -6,8 +6,8 @@ Write-Host "SUPERMANDI POS - VM DEPLOYMENT" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "VM: supermanditech@34.14.150.183" -ForegroundColor Yellow
-Write-Host "Commit: 3b632caf63f2f0cc2391690c4680d5af9ba4b030" -ForegroundColor Yellow
-Write-Host "Tag: pos-retailer-variants-fix-2026-01-11-0153IST" -ForegroundColor Yellow
+Write-Host "Commit: d69603d97c66c382afef8bbe06e25719a0f969b7" -ForegroundColor Yellow
+Write-Host "Tag: GO-LIVE-Batch5-RateLimiting-2026-01-31" -ForegroundColor Yellow
 Write-Host ""
 
 # SSH Commands to run on VM
