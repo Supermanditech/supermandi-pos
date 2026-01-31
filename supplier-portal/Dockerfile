@@ -12,7 +12,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Using npm install instead of npm ci since package-lock.json is gitignored
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -39,7 +40,7 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy built application from builder
 COPY --from=builder /app/.next ./.next
