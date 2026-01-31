@@ -223,9 +223,9 @@ COMMENT ON TABLE public.sales IS
 Future: Partition by created_at (monthly) using RANGE partitioning
 Command: CREATE TABLE sales_partitioned (LIKE sales INCLUDING ALL) PARTITION BY RANGE (created_at)';
 
--- Add index to support future partitioning
-CREATE INDEX IF NOT EXISTS idx_sales_created_at_month
-  ON public.sales (date_trunc('month', created_at), store_id);
+-- Add index to support future partitioning (simple created_at index)
+CREATE INDEX IF NOT EXISTS idx_sales_created_at_for_partition
+  ON public.sales (created_at, store_id);
 
 -- =============================================================================
 -- GO-LIVE-205: No table partitioning for inventory_ledger
@@ -235,9 +235,9 @@ COMMENT ON TABLE inventory.inventory_ledger IS
 'GO-LIVE-205: PARTITIONING CANDIDATE - High write volume
 Future: Partition by created_at (monthly) using RANGE partitioning';
 
--- Add index to support future partitioning
-CREATE INDEX IF NOT EXISTS idx_inventory_ledger_created_at_month
-  ON inventory.inventory_ledger (date_trunc('month', created_at), store_id);
+-- Add index to support future partitioning (simple created_at index)
+CREATE INDEX IF NOT EXISTS idx_inventory_ledger_created_at_for_partition
+  ON inventory.inventory_ledger (created_at, store_id);
 
 -- =============================================================================
 -- GO-LIVE-206: Missing CHECK on amount_minor > 0 for payments

@@ -103,7 +103,7 @@ IDX_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'ux_pur
 # =============================================================================
 echo ""
 echo "=== GO-LIVE-204: Sales partitioning prep ==="
-IDX_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'idx_sales_created_at_month'")
+IDX_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'idx_sales_created_at_for_partition'")
 [ "$IDX_EXISTS" = "1" ] && pass "GO-LIVE-204: Partitioning prep index exists" || fail "GO-LIVE-204" "Index not found"
 
 # =============================================================================
@@ -111,7 +111,7 @@ IDX_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'idx_sa
 # =============================================================================
 echo ""
 echo "=== GO-LIVE-205: inventory_ledger partitioning prep ==="
-IDX_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'idx_inventory_ledger_created_at_month'")
+IDX_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'idx_inventory_ledger_created_at_for_partition'")
 [ "$IDX_EXISTS" = "1" ] && pass "GO-LIVE-205: Partitioning prep index exists" || fail "GO-LIVE-205" "Index not found"
 
 # =============================================================================
