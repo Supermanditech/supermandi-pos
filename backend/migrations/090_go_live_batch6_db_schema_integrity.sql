@@ -262,6 +262,13 @@ COMMENT ON CONSTRAINT chk_sell_payments_amount_positive ON payments.sell_payment
 -- =============================================================================
 -- GO-LIVE-207: Missing CHECK on sell_price <= mrp
 -- =============================================================================
+
+-- First, fix existing data where sell_price > mrp
+-- Set sell_price = mrp for violating rows (business rule: can't sell above MRP)
+UPDATE catalog.store_products
+SET sell_price = mrp
+WHERE sell_price IS NOT NULL AND mrp IS NOT NULL AND sell_price > mrp;
+
 ALTER TABLE catalog.store_products
   DROP CONSTRAINT IF EXISTS chk_store_products_sell_price_mrp;
 
