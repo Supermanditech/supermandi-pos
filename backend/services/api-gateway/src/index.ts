@@ -140,7 +140,6 @@ function getBodyLimitForPath(path: string): number {
 // Check Content-Length before body parsing
 app.use((req, res, next) => {
   const contentLength = req.headers['content-length'];
-  // DEBUG: Log all requests with content-length
   if (contentLength) {
     const bodySize = parseInt(contentLength, 10);
     const limit = getBodyLimitForPath(req.path);
