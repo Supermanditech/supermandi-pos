@@ -15,10 +15,17 @@ upstream api_gateway {
     keepalive 32;
 }
 
-# Upstream retailer-admin frontend
-# GO-LIVE-B9: Retailer portal for Batch 9 UI testing
-upstream retailer_admin {
+# Upstream retailer portal frontend
+# GO-LIVE-B9: Retailer portal at /retailer/
+upstream retailer_portal {
     server retailer-admin:80;
+    keepalive 8;
+}
+
+# Upstream supplier portal frontend
+# GO-LIVE-B9: Supplier portal at /supplier/
+upstream supplier_portal {
+    server supplier-portal:3001;
     keepalive 8;
 }
 
@@ -45,9 +52,9 @@ server {
         proxy_set_header Host $host;
     }
 
-    # GO-LIVE-B9: Retailer Admin Portal (HTTP for testing)
-    location /admin/ {
-        proxy_pass http://retailer_admin/;
+    # GO-LIVE-B9: Retailer Portal at /retailer/
+    location /retailer/ {
+        proxy_pass http://retailer_portal/;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host $host;
@@ -56,7 +63,25 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # GO-LIVE-B9: API endpoints on HTTP for retailer portal testing
+    # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
+    location /admin/ {
+        alias /var/www/supermandi-superadmin/;
+        index index.html;
+        try_files $uri $uri/ /admin/index.html;
+    }
+
+    # GO-LIVE-B9: Supplier Portal at /supplier/
+    location /supplier/ {
+        proxy_pass http://supplier_portal/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # GO-LIVE-B9: API endpoints on HTTP for portal testing
     location /api/ {
         proxy_pass http://api_gateway;
         proxy_http_version 1.1;
@@ -138,9 +163,27 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # GO-LIVE-B9: Retailer Admin Portal
+    # GO-LIVE-B9: Retailer Portal at /retailer/
+    location /retailer/ {
+        proxy_pass http://retailer_portal/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
     location /admin/ {
-        proxy_pass http://retailer_admin/;
+        alias /var/www/supermandi-superadmin/;
+        index index.html;
+        try_files $uri $uri/ /admin/index.html;
+    }
+
+    # GO-LIVE-B9: Supplier Portal at /supplier/
+    location /supplier/ {
+        proxy_pass http://supplier_portal/;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host $host;
