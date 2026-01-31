@@ -125,114 +125,70 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// GO-LIVE-B9: Store code entry landing page
+// GO-LIVE-B9: Retailer Login - Step 1: Store Code Entry
 function StoreLandingPage() {
   const [storeCode, setStoreCode] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (storeCode.trim()) {
-      navigate(`/s/${storeCode.trim().toUpperCase()}/login`);
-    }
+    if (!storeCode.trim()) return;
+
+    setError('');
+    setIsLoading(true);
+
+    // Navigate to login page for this store
+    navigate(`/s/${storeCode.trim().toUpperCase()}/login`);
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      flexDirection: 'column',
-      gap: '1.5rem',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '1rem'
-    }}>
-      <div style={{
-        background: 'white',
-        borderRadius: '16px',
-        padding: '2.5rem',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-        maxWidth: '400px',
-        width: '100%',
-        textAlign: 'center'
-      }}>
-        <h1 style={{
-          color: '#1a1a2e',
-          marginBottom: '0.5rem',
-          fontSize: '1.75rem',
-          fontWeight: '700'
-        }}>
-          SuperMandi
-        </h1>
-        <h2 style={{
-          color: '#4a5568',
-          marginBottom: '1.5rem',
-          fontSize: '1.1rem',
-          fontWeight: '500'
-        }}>
-          Retailer Portal
-        </h2>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div>
-            <label style={{
-              display: 'block',
-              textAlign: 'left',
-              marginBottom: '0.5rem',
-              color: '#4a5568',
-              fontSize: '0.9rem',
-              fontWeight: '500'
-            }}>
-              Enter your Store Code
-            </label>
+    <div className="login-page">
+      <div className="login-card">
+        <h1 className="login-title">SuperMandi</h1>
+        <p className="login-subtitle">Retailer Portal Login</p>
+
+        {error && (
+          <div style={{
+            background: '#fee2e2',
+            color: '#991b1b',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.375rem',
+            marginBottom: '1rem',
+            fontSize: '0.875rem'
+          }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Store Code</label>
             <input
               type="text"
-              value={storeCode}
-              onChange={(e) => setStoreCode(e.target.value)}
+              className="form-input"
               placeholder="e.g., STORE001"
-              style={{
-                width: '100%',
-                padding: '0.875rem 1rem',
-                border: '2px solid #e2e8f0',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                textTransform: 'uppercase',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.2s',
-                outline: 'none'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+              value={storeCode}
+              onChange={(e) => setStoreCode(e.target.value.toUpperCase())}
+              style={{ textTransform: 'uppercase' }}
+              required
+              autoFocus
             />
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
+              Your store code was provided during registration
+            </p>
           </div>
+
           <button
             type="submit"
-            disabled={!storeCode.trim()}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              background: storeCode.trim() ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : '#e2e8f0',
-              color: storeCode.trim() ? 'white' : '#a0aec0',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: storeCode.trim() ? 'pointer' : 'not-allowed',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
+            className="btn btn-primary"
+            style={{ width: '100%' }}
+            disabled={isLoading || !storeCode.trim()}
           >
-            Go to Login
+            {isLoading ? 'Loading...' : 'Continue to Login'}
           </button>
         </form>
-        <p style={{
-          color: '#718096',
-          marginTop: '1.5rem',
-          fontSize: '0.85rem',
-          lineHeight: '1.5'
-        }}>
-          Your store code was provided during registration.
-          <br />Contact support if you need assistance.
-        </p>
       </div>
     </div>
   );
