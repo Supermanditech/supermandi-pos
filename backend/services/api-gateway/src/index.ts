@@ -145,14 +145,15 @@ app.use((req, res, next) => {
     const limit = getBodyLimitForPath(req.path);
     if (bodySize > limit) {
       const limitKb = Math.round(limit / 1024);
-      logger.warn({
+      // GO-LIVE-194: Structured logging for body size rejection
+      console.log(JSON.stringify({
         event: 'body_too_large',
         path: req.path,
         method: req.method,
         contentLength: bodySize,
         limit,
         ip: req.ip || 'unknown',
-      });
+      }));
       res.status(413).json({
         error: {
           code: 'BODY_TOO_LARGE',
