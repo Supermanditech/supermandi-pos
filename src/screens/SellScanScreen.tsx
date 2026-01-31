@@ -738,6 +738,7 @@ export default function SellScanScreen({
     applyDiscount,
     removeDiscount,
     clearCart,
+    undoLastAction,
   } = useCartStore();
 
   // GL-CRIT-0011: Auto-unlock cart if lock has expired (e.g., app crashed during payment)
@@ -2901,7 +2902,33 @@ export default function SellScanScreen({
                 <Pressable
                   style={styles.clearCartButton}
                   onPress={() => {
-                    clearCart();
+                    // GO-LIVE-249: Confirmation with undo option
+                    Alert.alert(
+                      t("sell.clearCartTitle", "Clear Cart"),
+                      t("sell.clearCartConfirm", "Are you sure you want to remove all items?"),
+                      [
+                        { text: t("common.cancel", "Cancel"), style: "cancel" },
+                        {
+                          text: t("common.clear", "Clear"),
+                          style: "destructive",
+                          onPress: () => {
+                            clearCart();
+                            // Show undo toast/alert
+                            Alert.alert(
+                              t("sell.cartCleared", "Cart Cleared"),
+                              t("sell.cartClearedUndo", "All items have been removed."),
+                              [
+                                { text: t("common.ok", "OK") },
+                                {
+                                  text: t("common.undo", "Undo"),
+                                  onPress: () => undoLastAction(),
+                                },
+                              ]
+                            );
+                          },
+                        },
+                      ]
+                    );
                   }}
                   hitSlop={8}
                   accessibilityLabel={t("sell.clearCart", "Clear cart")}

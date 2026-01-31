@@ -60,6 +60,10 @@ export default function GRNScreen({
   // Notes
   const [notes, setNotes] = useState("");
 
+  // GO-LIVE-248: Bulk selection state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+
   // Load store ID on mount
   useEffect(() => {
     getDeviceStoreId().then(setStoreId);
@@ -197,6 +201,79 @@ export default function GRNScreen({
     setHighlightedItemId(null);
   }, [order]);
 
+  // GO-LIVE-248: Bulk selection handlers
+  const handleToggleBulkMode = useCallback(() => {
+    setBulkMode((prev) => !prev);
+    setSelectedItems(new Set());
+  }, []);
+
+  const handleToggleItemSelection = useCallback((itemId: string) => {
+    setSelectedItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    if (!order) return;
+    // Select only items with remaining quantity
+    const pendingItemIds = order.items
+      .filter((item) => item.orderedQuantity - item.receivedQuantity > 0)
+      .map((item) => item.id);
+    setSelectedItems(new Set(pendingItemIds));
+  }, [order]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedItems(new Set());
+  }, []);
+
+  const handleBulkSetRemaining = useCallback(() => {
+    if (!order || selectedItems.size === 0) return;
+
+    const newQuantities = { ...receiveQuantities };
+    order.items.forEach((item) => {
+      if (selectedItems.has(item.id)) {
+        const remaining = item.orderedQuantity - item.receivedQuantity;
+        newQuantities[item.id] = Math.max(0, remaining);
+      }
+    });
+    setReceiveQuantities(newQuantities);
+    setBulkMode(false);
+    setSelectedItems(new Set());
+  }, [order, selectedItems, receiveQuantities]);
+
+  const handleBulkSetPercent = useCallback((percent: number) => {
+    if (!order || selectedItems.size === 0) return;
+
+    const newQuantities = { ...receiveQuantities };
+    order.items.forEach((item) => {
+      if (selectedItems.has(item.id)) {
+        const remaining = item.orderedQuantity - item.receivedQuantity;
+        newQuantities[item.id] = Math.round(remaining * (percent / 100));
+      }
+    });
+    setReceiveQuantities(newQuantities);
+    setBulkMode(false);
+    setSelectedItems(new Set());
+  }, [order, selectedItems, receiveQuantities]);
+
+  const handleBulkClear = useCallback(() => {
+    if (selectedItems.size === 0) return;
+
+    const newQuantities = { ...receiveQuantities };
+    selectedItems.forEach((itemId) => {
+      newQuantities[itemId] = 0;
+    });
+    setReceiveQuantities(newQuantities);
+    setBulkMode(false);
+    setSelectedItems(new Set());
+  }, [selectedItems, receiveQuantities]);
+
   // Submit GRN
   const handleSubmit = useCallback(async () => {
     if (!storeId || !order || !canSubmit) return;
@@ -258,14 +335,31 @@ export default function GRNScreen({
   // Render item
   const renderItem = useCallback(
     ({ item }: { item: PurchaseOrderItem }) => (
-      <GRNItemRow
-        item={item}
-        receiveQuantity={receiveQuantities[item.id] || 0}
-        onReceiveQuantityChange={handleReceiveQuantityChange}
-        isHighlighted={highlightedItemId === item.id}
-      />
+      <View style={styles.itemRowContainer}>
+        {/* GO-LIVE-248: Bulk selection checkbox */}
+        {bulkMode && (
+          <Pressable
+            style={styles.bulkCheckbox}
+            onPress={() => handleToggleItemSelection(item.id)}
+          >
+            <MaterialCommunityIcons
+              name={selectedItems.has(item.id) ? "checkbox-marked" : "checkbox-blank-outline"}
+              size={24}
+              color={selectedItems.has(item.id) ? theme.colors.primary : theme.colors.textTertiary}
+            />
+          </Pressable>
+        )}
+        <View style={[styles.itemRowContent, bulkMode && styles.itemRowContentBulk]}>
+          <GRNItemRow
+            item={item}
+            receiveQuantity={receiveQuantities[item.id] || 0}
+            onReceiveQuantityChange={handleReceiveQuantityChange}
+            isHighlighted={highlightedItemId === item.id}
+          />
+        </View>
+      </View>
     ),
-    [receiveQuantities, handleReceiveQuantityChange, highlightedItemId]
+    [receiveQuantities, handleReceiveQuantityChange, highlightedItemId, bulkMode, selectedItems, handleToggleItemSelection]
   );
 
   // Key extractor
@@ -377,6 +471,20 @@ export default function GRNScreen({
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
+          {/* GO-LIVE-248: Bulk mode toggle */}
+          <Pressable
+            style={[styles.quickAction, bulkMode && styles.quickActionActive]}
+            onPress={handleToggleBulkMode}
+          >
+            <MaterialCommunityIcons
+              name={bulkMode ? "checkbox-multiple-marked" : "checkbox-multiple-blank-outline"}
+              size={16}
+              color={bulkMode ? theme.colors.textInverse : theme.colors.primary}
+            />
+            <Text style={[styles.quickActionText, bulkMode && styles.quickActionTextActive]}>
+              {bulkMode ? "Done" : "Bulk"}
+            </Text>
+          </Pressable>
           <Pressable style={styles.quickAction} onPress={handleReceiveAll}>
             <MaterialCommunityIcons
               name="check-all"
@@ -396,6 +504,21 @@ export default function GRNScreen({
             </Text>
           </Pressable>
         </View>
+
+        {/* GO-LIVE-248: Bulk selection bar */}
+        {bulkMode && (
+          <View style={styles.bulkSelectionBar}>
+            <Pressable style={styles.bulkSelectButton} onPress={handleSelectAll}>
+              <Text style={styles.bulkSelectButtonText}>Select All Pending</Text>
+            </Pressable>
+            <Pressable style={styles.bulkSelectButton} onPress={handleDeselectAll}>
+              <Text style={styles.bulkSelectButtonText}>Deselect All</Text>
+            </Pressable>
+            <Text style={styles.bulkSelectedCount}>
+              {selectedItems.size} selected
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Items List */}
@@ -422,6 +545,41 @@ export default function GRNScreen({
           numberOfLines={2}
         />
       </View>
+
+      {/* GO-LIVE-248: Bulk Action Bar */}
+      {bulkMode && selectedItems.size > 0 && (
+        <View style={styles.bulkActionBar}>
+          <Text style={styles.bulkActionTitle}>Set receive quantity:</Text>
+          <View style={styles.bulkActionButtons}>
+            <Pressable
+              style={styles.bulkActionButton}
+              onPress={handleBulkSetRemaining}
+            >
+              <Text style={styles.bulkActionButtonText}>100%</Text>
+            </Pressable>
+            <Pressable
+              style={styles.bulkActionButton}
+              onPress={() => handleBulkSetPercent(50)}
+            >
+              <Text style={styles.bulkActionButtonText}>50%</Text>
+            </Pressable>
+            <Pressable
+              style={styles.bulkActionButton}
+              onPress={() => handleBulkSetPercent(25)}
+            >
+              <Text style={styles.bulkActionButtonText}>25%</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.bulkActionButton, styles.bulkActionButtonClear]}
+              onPress={handleBulkClear}
+            >
+              <Text style={[styles.bulkActionButtonText, styles.bulkActionButtonTextClear]}>
+                Clear
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
 
       {/* Footer */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
@@ -636,5 +794,93 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: theme.colors.textInverse,
+  },
+  // GO-LIVE-248: Bulk mode styles
+  quickActionActive: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.sm,
+  },
+  quickActionTextActive: {
+    color: theme.colors.textInverse,
+  },
+  bulkSelectionBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  bulkSelectButton: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.sm,
+  },
+  bulkSelectButtonText: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: theme.colors.primary,
+  },
+  bulkSelectedCount: {
+    flex: 1,
+    textAlign: "right",
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  itemRowContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  bulkCheckbox: {
+    paddingTop: theme.spacing.md,
+    paddingRight: theme.spacing.sm,
+  },
+  itemRowContent: {
+    flex: 1,
+  },
+  itemRowContentBulk: {
+    flex: 1,
+  },
+  bulkActionBar: {
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  bulkActionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  bulkActionButtons: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+  },
+  bulkActionButton: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    alignItems: "center",
+  },
+  bulkActionButtonClear: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  bulkActionButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textInverse,
+  },
+  bulkActionButtonTextClear: {
+    color: theme.colors.textSecondary,
   },
 });

@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -63,6 +64,11 @@ export default function OrderDetailScreen({
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  // GO-LIVE-242: Tracking number state
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingEditing, setTrackingEditing] = useState(false);
+  const [trackingSaving, setTrackingSaving] = useState(false);
+
   // Load store ID on mount
   useEffect(() => {
     getDeviceStoreId().then(setStoreId);
@@ -96,6 +102,31 @@ export default function OrderDetailScreen({
       loadOrder();
     }
   }, [storeId, loadOrder]);
+
+  // GO-LIVE-242: Sync tracking number state when order loads
+  useEffect(() => {
+    if (order?.trackingNumber) {
+      setTrackingNumber(order.trackingNumber);
+    }
+  }, [order?.trackingNumber]);
+
+  // GO-LIVE-239: Auto-refresh for in-progress orders
+  useEffect(() => {
+    // Only auto-refresh if order is in a non-final status
+    if (!order) return;
+    const finalStatuses: OrderStatus[] = ["received", "cancelled"];
+    if (finalStatuses.includes(order.status)) {
+      return;
+    }
+
+    // Poll every 30 seconds for status updates
+    const pollInterval = setInterval(() => {
+      console.log("[OrderDetailScreen] GO-LIVE-239: Auto-refreshing order status");
+      void loadOrder();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
+  }, [order?.status, loadOrder]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {
@@ -137,6 +168,34 @@ export default function OrderDetailScreen({
       onNavigateToGRN(order);
     }
   }, [order, onNavigateToGRN]);
+
+  // GO-LIVE-242: Handle tracking number save
+  const handleSaveTracking = useCallback(async () => {
+    if (!storeId || !order) return;
+    const trimmed = trackingNumber.trim();
+    if (!trimmed) {
+      setTrackingEditing(false);
+      setTrackingNumber(order.trackingNumber || "");
+      return;
+    }
+
+    setTrackingSaving(true);
+    try {
+      const response = await orderApi.updateTracking(storeId, orderId, trimmed);
+      if (response.success && response.data) {
+        setOrder((prev) =>
+          prev ? { ...prev, trackingNumber: response.data.trackingNumber } : prev
+        );
+      }
+      setTrackingEditing(false);
+      Alert.alert("Success", "Tracking number updated");
+    } catch (err) {
+      console.error("[OrderDetailScreen] Failed to update tracking:", err);
+      Alert.alert("Error", "Failed to update tracking number");
+    } finally {
+      setTrackingSaving(false);
+    }
+  }, [storeId, order, orderId, trackingNumber]);
 
   // Render loading state
   if (loading) {
@@ -275,12 +334,54 @@ export default function OrderDetailScreen({
                 </Text>
               </View>
             )}
-            {order.trackingNumber && (
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Tracking</Text>
-                <Text style={styles.infoValue}>{order.trackingNumber}</Text>
-              </View>
-            )}
+            {/* GO-LIVE-242: Editable tracking number */}
+            <View style={styles.trackingSection}>
+              <Text style={styles.infoLabel}>Tracking Number</Text>
+              {trackingEditing ? (
+                <View style={styles.trackingEditRow}>
+                  <TextInput
+                    style={styles.trackingInput}
+                    value={trackingNumber}
+                    onChangeText={setTrackingNumber}
+                    placeholder="Enter tracking number"
+                    placeholderTextColor={theme.colors.textTertiary}
+                    autoFocus
+                    editable={!trackingSaving}
+                  />
+                  <Pressable
+                    style={styles.trackingSaveButton}
+                    onPress={handleSaveTracking}
+                    disabled={trackingSaving}
+                  >
+                    {trackingSaving ? (
+                      <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                    ) : (
+                      <MaterialCommunityIcons name="check" size={18} color={theme.colors.textInverse} />
+                    )}
+                  </Pressable>
+                  <Pressable
+                    style={styles.trackingCancelButton}
+                    onPress={() => {
+                      setTrackingEditing(false);
+                      setTrackingNumber(order.trackingNumber || "");
+                    }}
+                    disabled={trackingSaving}
+                  >
+                    <MaterialCommunityIcons name="close" size={18} color={theme.colors.textSecondary} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  style={styles.trackingDisplayRow}
+                  onPress={() => setTrackingEditing(true)}
+                >
+                  <Text style={[styles.infoValue, !order.trackingNumber && styles.trackingPlaceholder]}>
+                    {order.trackingNumber || "Add tracking..."}
+                  </Text>
+                  <MaterialCommunityIcons name="pencil" size={14} color={theme.colors.primary} />
+                </Pressable>
+              )}
+            </View>
           </View>
 
           {order.storeNotes && (
@@ -701,5 +802,54 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: theme.colors.textInverse,
+  },
+  // GO-LIVE-242: Tracking number styles
+  trackingSection: {
+    flex: 1,
+    minWidth: "100%",
+    marginTop: theme.spacing.sm,
+  },
+  trackingEditRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginTop: 4,
+  },
+  trackingInput: {
+    flex: 1,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  trackingSaveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.success,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trackingCancelButton: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.backgroundSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trackingDisplayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    marginTop: 4,
+  },
+  trackingPlaceholder: {
+    color: theme.colors.textTertiary,
+    fontStyle: "italic",
   },
 });

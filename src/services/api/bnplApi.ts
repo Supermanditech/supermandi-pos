@@ -325,3 +325,32 @@ export function isSupplierBnplEligible(
 ): boolean {
   return bnplEnabled && availableCredit >= purchaseAmount;
 }
+
+// =============================================================================
+// GO-LIVE-240: BNPL Dispute Functions
+// =============================================================================
+
+export interface BnplDisputeResponse {
+  success: boolean;
+  disputeId: string;
+  drawdownId: string;
+  status: "submitted" | "under_review" | "resolved" | "rejected";
+  createdAt: string;
+}
+
+/**
+ * GO-LIVE-240: Submit a dispute for a BNPL drawdown
+ * @param drawdownId The drawdown to dispute
+ * @param reason Dispute reason code
+ * @param description Additional details provided by user
+ */
+export async function submitBnplDispute(
+  drawdownId: string,
+  reason: string,
+  description?: string
+): Promise<BnplDisputeResponse> {
+  return apiClient.post<BnplDisputeResponse>(`${BNPL_BASE}/${drawdownId}/dispute`, {
+    reason,
+    description,
+  });
+}

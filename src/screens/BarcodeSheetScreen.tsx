@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   fetchBarcodeSheetItems,
@@ -12,6 +13,9 @@ import {
   type BarcodeSheetTier
 } from "../services/barcodeSheet";
 import { theme } from "../theme";
+
+// GO-LIVE-243: Persist barcode sheet tier preference
+const BARCODE_TIER_KEY = "supermandi.barcode.tier.v1";
 
 export default function BarcodeSheetScreen() {
   const { t } = useTranslation();
@@ -24,8 +28,28 @@ export default function BarcodeSheetScreen() {
   // GL-BARCODE-001: Track if we've tried fetching (to distinguish initial vs empty state)
   const [hasFetched, setHasFetched] = useState(false);
 
+  // GO-LIVE-243: Load saved tier preference on mount
+  useEffect(() => {
+    void (async () => {
+      try {
+        const savedTier = await AsyncStorage.getItem(BARCODE_TIER_KEY);
+        if (savedTier === "TIER_1" || savedTier === "TIER_2") {
+          setActiveTier(savedTier);
+        }
+      } catch (e) {
+        console.warn("[BarcodeSheet] Failed to load saved tier:", e);
+      }
+    })();
+  }, []);
+
   const handleGenerate = async (tier: BarcodeSheetTier) => {
     setActiveTier(tier);
+    // GO-LIVE-243: Persist tier preference
+    try {
+      await AsyncStorage.setItem(BARCODE_TIER_KEY, tier);
+    } catch (e) {
+      console.warn("[BarcodeSheet] Failed to save tier preference:", e);
+    }
     setLoading(true);
     setError(null);
     try {

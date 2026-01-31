@@ -23,7 +23,8 @@ import {
   createSale,
   initUpiPayment,
 } from "../services/api/posApi";
-import { completeCheckout } from "../services/checkoutService";
+import { completeCheckout, validateCartStock, formatStockValidationWarning } from "../services/checkoutService";
+import { getStockBatch } from "../services/api/inventoryApi";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { logPaymentEvent } from "../services/cloudEventLogger";
 import { ApiError } from "../services/api/apiClient";
@@ -34,6 +35,13 @@ import { buildUpiIntent } from "../utils/upiIntent";
 import { formatStoreName } from "../utils/storeName";
 import { uuidv4 } from "../utils/uuid";
 import { buildStockDeductionLogs, partitionSaleItems } from "../services/saleScope";
+import {
+  savePartialSaleState,
+  loadPartialSaleState,
+  clearPartialSaleState,
+  updatePartialSaleConfirmed,
+  updatePartialSaleSaleId,
+} from "../services/partialSaleState";
 import { theme } from "../theme";
 import { SplitPaymentModal, SplitPaymentResult } from "../components/sell/SplitPaymentModal";
 
@@ -294,72 +302,120 @@ const PaymentScreen = () => {
     }
     const requestedSaleId = pendingSaleIdRef.current;
 
-    createSale({
-      saleId: requestedSaleId,
-      items: saleItems.map((item) => {
-        const metadata = item.metadata ?? {};
-        const globalProductId =
-          typeof metadata.globalProductId === "string" && metadata.globalProductId.trim()
-            ? metadata.globalProductId.trim()
-            : undefined;
+    // GO-LIVE-233: Validate stock before creating sale
+    (async () => {
+      try {
+        const productIds = saleItems.map((item) => item.id);
+        const stockLevels = await getStockBatch(productIds);
 
-        return {
-          productId: item.id,
-          barcode: item.barcode,
-          name: item.name,
-          quantity: item.quantity,
-          priceMinor: item.priceMinor,
-          itemDiscount: item.itemDiscount ?? null,
-          global_product_id: globalProductId
-        };
-      }),
-      discountMinor,
-      cartDiscount: appliedCartDiscount ?? null,
-      currency
-    })
-      .then((res) => {
-        if (cancelled) return;
-        setSaleId(res.saleId);
-        setBillRef(res.billRef);
-        void logPaymentEvent("PAYMENT_INIT", {
-          transactionId,
-          billId: res.billRef,
-          paymentMode: selectedMode,
-          amountMinor: res.totals.totalMinor,
-          currency,
-          itemCount
-        });
-      })
-      .catch(async (error) => {
-        if (cancelled) return;
-        if (error instanceof ApiError) {
-          if (await handleDeviceAuthError(error)) {
-            return;
-          }
-          if (error.message === "store_inactive") {
-            Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
-              { text: "OK", onPress: () => navigation.navigate("SellScan") }
-            ]);
-            return;
-          }
-          if (error.message === "store not found") {
-            Alert.alert("Store Missing", "Store not found. Check Superadmin setup.");
-            return;
-          }
+        // Convert to simple map for validation
+        const stockMap: Record<string, number> = {};
+        for (const [productId, stockInfo] of Object.entries(stockLevels)) {
+          stockMap[productId] = stockInfo.currentQty;
         }
-        Alert.alert("Sale Error", "Unable to start payment. Please try again.");
-      })
-      .finally(() => {
-        if (cancelled) return;
-        // GL-CRIT-0086: Ensure minimum display time to prevent flash
-        const elapsed = Date.now() - loadingSaleStartRef.current;
-        const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
-        if (remaining > 0) {
-          setTimeout(() => setLoadingSale(false), remaining);
-        } else {
-          setLoadingSale(false);
+
+        const validation = validateCartStock(saleItems, stockMap);
+        if (!validation.valid) {
+          const warningMessage = formatStockValidationWarning(validation.issues);
+          // GO-LIVE-233: Show warning but allow proceeding (soft block)
+          return new Promise<void>((resolve, reject) => {
+            Alert.alert(
+              "Low Stock Warning",
+              `${warningMessage}\n\nDo you want to proceed anyway?`,
+              [
+                {
+                  text: "Cancel",
+                  style: "cancel",
+                  onPress: () => {
+                    setLoadingSale(false);
+                    reject(new Error("User cancelled due to low stock"));
+                  },
+                },
+                {
+                  text: "Proceed",
+                  style: "default",
+                  onPress: () => resolve(),
+                },
+              ],
+              { cancelable: false }
+            );
+          });
         }
+      } catch (stockError) {
+        // GO-LIVE-233: Log warning but don't block sale if stock check fails
+        console.warn("[PaymentScreen] GO-LIVE-233: Stock validation failed, proceeding:", stockError);
+      }
+    })().then(() => {
+      if (cancelled) return;
+      return createSale({
+        saleId: requestedSaleId,
+        items: saleItems.map((item) => {
+          const metadata = item.metadata ?? {};
+          const globalProductId =
+            typeof metadata.globalProductId === "string" && metadata.globalProductId.trim()
+              ? metadata.globalProductId.trim()
+              : undefined;
+
+          return {
+            productId: item.id,
+            barcode: item.barcode,
+            name: item.name,
+            quantity: item.quantity,
+            priceMinor: item.priceMinor,
+            itemDiscount: item.itemDiscount ?? null,
+            global_product_id: globalProductId
+          };
+        }),
+        discountMinor,
+        cartDiscount: appliedCartDiscount ?? null,
+        currency
       });
+    }).then((res) => {
+      if (cancelled || !res) return;
+      setSaleId(res.saleId);
+      setBillRef(res.billRef);
+      void logPaymentEvent("PAYMENT_INIT", {
+        transactionId,
+        billId: res.billRef,
+        paymentMode: selectedMode,
+        amountMinor: res.totals.totalMinor,
+        currency,
+        itemCount
+      });
+    }).catch(async (error) => {
+      if (cancelled) return;
+      // GO-LIVE-233: Handle user cancellation from stock warning
+      if (error instanceof Error && error.message === "User cancelled due to low stock") {
+        console.log("[PaymentScreen] GO-LIVE-233: User cancelled sale due to low stock");
+        return;
+      }
+      if (error instanceof ApiError) {
+        if (await handleDeviceAuthError(error)) {
+          return;
+        }
+        if (error.message === "store_inactive") {
+          Alert.alert("POS Inactive", POS_MESSAGES.storeInactive, [
+            { text: "OK", onPress: () => navigation.navigate("SellScan") }
+          ]);
+          return;
+        }
+        if (error.message === "store not found") {
+          Alert.alert("Store Missing", "Store not found. Check Superadmin setup.");
+          return;
+        }
+      }
+      Alert.alert("Sale Error", "Unable to start payment. Please try again.");
+    }).finally(() => {
+      if (cancelled) return;
+      // GL-CRIT-0086: Ensure minimum display time to prevent flash
+      const elapsed = Date.now() - loadingSaleStartRef.current;
+      const remaining = Math.max(0, MIN_LOADING_DISPLAY_MS - elapsed);
+      if (remaining > 0) {
+        setTimeout(() => setLoadingSale(false), remaining);
+      } else {
+        setLoadingSale(false);
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -517,6 +573,35 @@ const PaymentScreen = () => {
   // GL-CRIT-0047: Ref to track if partial sale was confirmed
   const partialSaleConfirmedRef = useRef(false);
 
+  // GO-LIVE-234: Restore partial sale state on mount
+  useEffect(() => {
+    if (!isPartialSale || !saleItemIds) return;
+
+    void (async () => {
+      const savedState = await loadPartialSaleState();
+      if (savedState) {
+        // Check if the saved state matches current selection
+        const savedIdsSet = new Set(savedState.saleItemIds);
+        const currentIdsSet = new Set(saleItemIds);
+        const matches =
+          savedIdsSet.size === currentIdsSet.size &&
+          [...savedIdsSet].every((id) => currentIdsSet.has(id));
+
+        if (matches && savedState.confirmed) {
+          console.log("[Payment] GO-LIVE-234: Restored partial sale confirmation from storage");
+          partialSaleConfirmedRef.current = true;
+        }
+      }
+
+      // Save current partial sale state (even if not confirmed yet)
+      await savePartialSaleState({
+        saleItemIds,
+        confirmed: partialSaleConfirmedRef.current,
+        saleId: saleId ?? undefined,
+      });
+    })();
+  }, [isPartialSale, saleItemIds, saleId]);
+
   const handleCompletePayment = async () => {
     if (!saleId || !billRef) {
       Alert.alert("Payment Error", "Sale is not ready yet.");
@@ -536,8 +621,10 @@ const PaymentScreen = () => {
           },
           {
             text: "Continue",
-            onPress: () => {
+            onPress: async () => {
               partialSaleConfirmedRef.current = true;
+              // GO-LIVE-234: Persist confirmation to storage
+              await updatePartialSaleConfirmed(true);
               handleCompletePayment(); // Retry with confirmation
             }
           }
@@ -601,6 +688,11 @@ const PaymentScreen = () => {
         currency,
         inventoryDeducted: result.inventoryDeducted,
       });
+
+      // GO-LIVE-234: Clear partial sale state on successful payment
+      if (isPartialSale) {
+        void clearPartialSaleState();
+      }
 
       navigation.navigate("SuccessPrint", {
         paymentMode: selectedMode,
@@ -872,6 +964,11 @@ const PaymentScreen = () => {
             upiVerified: result.upiVerified,
             cashConfirmed: result.cashConfirmed,
           });
+
+          // GO-LIVE-234: Clear partial sale state on successful payment
+          if (isPartialSale) {
+            void clearPartialSaleState();
+          }
 
           navigation.navigate("SuccessPrint", {
             paymentMode: "CASH", // Split shows as CASH on receipt

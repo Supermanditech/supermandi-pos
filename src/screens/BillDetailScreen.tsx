@@ -77,24 +77,37 @@ export default function BillDetailScreen() {
     }
   };
 
-  const handlePrint = async () => {
+  // GO-LIVE-246: Add confirmation before reprint
+  const handlePrint = () => {
     if (!snapshot || printing) return;
-    setPrinting(true);
-    try {
-      await printerService.printReceipt(buildBillText(snapshot));
-      Alert.alert("Print queued", "Bill sent to printer.");
-    } catch (e: any) {
-      const message = e?.message ? String(e.message) : "print_failed";
-      if (message.toLowerCase().includes("paper")) {
-        Alert.alert("Printer error", "Printer is out of paper.");
-      } else if (message.toLowerCase().includes("connected")) {
-        Alert.alert("Printer error", "Printer not connected.");
-      } else {
-        Alert.alert("Print failed", "Unable to print this bill.");
-      }
-    } finally {
-      setPrinting(false);
-    }
+    Alert.alert(
+      "Reprint Bill",
+      "Are you sure you want to reprint this bill?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Print",
+          onPress: async () => {
+            setPrinting(true);
+            try {
+              await printerService.printReceipt(buildBillText(snapshot));
+              Alert.alert("Print queued", "Bill sent to printer.");
+            } catch (e: any) {
+              const message = e?.message ? String(e.message) : "print_failed";
+              if (message.toLowerCase().includes("paper")) {
+                Alert.alert("Printer error", "Printer is out of paper.");
+              } else if (message.toLowerCase().includes("connected")) {
+                Alert.alert("Printer error", "Printer not connected.");
+              } else {
+                Alert.alert("Print failed", "Unable to print this bill.");
+              }
+            } finally {
+              setPrinting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleWhatsApp = async () => {

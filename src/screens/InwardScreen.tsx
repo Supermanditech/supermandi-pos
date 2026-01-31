@@ -19,12 +19,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
 import { useInwardStore, type InwardItem, type InwardSupplier } from "../stores/inwardStore";
-import { recordManualInward, type InventoryTransactionItem } from "../services/api/inventoryApi";
+import { recordManualInward, type InventoryTransactionItem, getStockBatch } from "../services/api/inventoryApi";
 import { getCatalog, type CatalogProduct } from "../services/api/catalogApi";
 import { getSuppliers, type Supplier } from "../services/api/suppliersApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
+
+// GO-LIVE-235: High stock threshold for warning
+const HIGH_STOCK_THRESHOLD = 100;
 
 interface InwardScreenProps {
   storeActive: boolean | null;
@@ -128,6 +131,12 @@ function InwardItemRow({
 
   const lineTotal = formatMoney(item.purchasePriceMinor * item.quantity, "INR");
 
+  // GO-LIVE-241: Calculate price difference from market rate
+  const marketPrice = item.marketPriceMinor;
+  const priceDiff = marketPrice ? ((item.purchasePriceMinor - marketPrice) / marketPrice) * 100 : null;
+  const isPriceGood = priceDiff !== null && priceDiff <= 0;
+  const isPriceBad = priceDiff !== null && priceDiff > 10; // More than 10% above market
+
   const handleQtyBlur = () => {
     const parsed = parseInt(qtyText, 10);
     if (!isNaN(parsed) && parsed > 0) {
@@ -152,9 +161,35 @@ function InwardItemRow({
         <Text style={styles.itemName} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={styles.itemBarcode} numberOfLines={1}>
-          {item.barcode}
-        </Text>
+        <View style={styles.itemMetaRow}>
+          <Text style={styles.itemBarcode} numberOfLines={1}>
+            {item.barcode}
+          </Text>
+          {/* GO-LIVE-241: Market price comparison badge */}
+          {marketPrice && marketPrice > 0 && (
+            <View style={[
+              styles.marketBadge,
+              isPriceGood && styles.marketBadgeGood,
+              isPriceBad && styles.marketBadgeBad,
+            ]}>
+              <MaterialCommunityIcons
+                name={isPriceGood ? "trending-down" : isPriceBad ? "trending-up" : "minus"}
+                size={10}
+                color={isPriceGood ? theme.colors.success : isPriceBad ? theme.colors.error : theme.colors.textSecondary}
+              />
+              <Text style={[
+                styles.marketBadgeText,
+                isPriceGood && styles.marketBadgeTextGood,
+                isPriceBad && styles.marketBadgeTextBad,
+              ]}>
+                {priceDiff !== null && priceDiff !== 0
+                  ? `${priceDiff > 0 ? "+" : ""}${priceDiff.toFixed(0)}% vs market`
+                  : "At market"
+                }
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.itemControls}>
@@ -173,7 +208,7 @@ function InwardItemRow({
         <View style={styles.itemField}>
           <Text style={styles.itemFieldLabel}>Price</Text>
           <TextInput
-            style={[styles.itemInput, styles.itemInputWide]}
+            style={[styles.itemInput, styles.itemInputWide, isPriceBad && styles.itemInputWarning]}
             value={priceText}
             onChangeText={setPriceText}
             onBlur={handlePriceBlur}
@@ -304,6 +339,8 @@ export default function InwardScreen({
   const handleAddProduct = (product: CatalogProduct) => {
     const bestSupplier = product.suppliers[0];
     const defaultPrice = bestSupplier?.purchasePrice ?? product.bestPrice ?? 0;
+    // GO-LIVE-241: Use bestPrice as market reference
+    const marketPrice = product.bestPrice ?? bestSupplier?.purchasePrice ?? 0;
 
     addItem({
       id: product.id,
@@ -311,16 +348,53 @@ export default function InwardScreen({
       name: product.name,
       quantity: 1,
       purchasePriceMinor: defaultPrice,
+      marketPriceMinor: marketPrice > 0 ? marketPrice : undefined,
     });
 
     setSearchQuery("");
     setShowSearch(false);
   };
 
-  const handleSubmit = async () => {
+  // GO-LIVE-235: Check inventory levels and warn if high stock
+  const checkInventoryAndSubmit = async () => {
     if (!canSubmit) return;
 
     setSubmitting(true);
+    try {
+      // Check current stock levels
+      const productIds = items.map((item) => item.id);
+      const stockResult = await getStockBatch(productIds);
+
+      // Find items with high stock
+      const highStockItems: string[] = [];
+      for (const item of items) {
+        const stock = stockResult[item.id];
+        if (stock && stock.currentQty >= HIGH_STOCK_THRESHOLD) {
+          highStockItems.push(`${item.name} (current: ${stock.currentQty})`);
+        }
+      }
+
+      if (highStockItems.length > 0) {
+        // Show warning but allow proceeding
+        Alert.alert(
+          t("inward.highStockWarning", "High Stock Warning"),
+          t("inward.highStockMessage", "The following items already have high stock levels:\n\n{{items}}\n\nAre you sure you want to add more?", { items: highStockItems.join("\n") }),
+          [
+            { text: t("common.cancel", "Cancel"), style: "cancel", onPress: () => setSubmitting(false) },
+            { text: t("inward.proceedAnyway", "Proceed Anyway"), onPress: () => doSubmit() },
+          ]
+        );
+      } else {
+        await doSubmit();
+      }
+    } catch (error) {
+      // If stock check fails, still allow submission
+      console.warn("[InwardScreen] GO-LIVE-235: Stock check failed, proceeding:", error);
+      await doSubmit();
+    }
+  };
+
+  const doSubmit = async () => {
     try {
       const txItems: InventoryTransactionItem[] = items.map((item) => ({
         productId: item.id,
@@ -352,6 +426,10 @@ export default function InwardScreen({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = () => {
+    void checkInventoryAndSubmit();
   };
 
   const renderSearchResult = ({ item }: { item: CatalogProduct }) => {
@@ -720,7 +798,43 @@ const styles = StyleSheet.create({
   itemBarcode: {
     fontSize: 12,
     color: theme.colors.textSecondary,
+  },
+  // GO-LIVE-241: Market price comparison styles
+  itemMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginTop: 2,
+  },
+  marketBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  marketBadgeGood: {
+    backgroundColor: theme.colors.successSoft,
+  },
+  marketBadgeBad: {
+    backgroundColor: theme.colors.errorSoft,
+  },
+  marketBadgeText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  marketBadgeTextGood: {
+    color: theme.colors.success,
+  },
+  marketBadgeTextBad: {
+    color: theme.colors.error,
+  },
+  itemInputWarning: {
+    borderColor: theme.colors.error,
+    backgroundColor: theme.colors.errorSoft,
   },
   itemControls: {
     flexDirection: "row",

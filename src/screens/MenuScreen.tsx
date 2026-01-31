@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, Pressable, View, Alert } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ScrollView, StyleSheet, Text, Pressable, View, Alert, RefreshControl } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -18,6 +18,8 @@ import { fetchUiStatus, type UiStatusResponse } from "../services/api/uiStatusAp
 import { getDailySummary, type DailySummary } from "../services/api/dailySummaryApi";
 import { logPosEvent } from "../services/cloudEventLogger";
 import { pendingOutboxCount } from "../services/offline/outbox";
+import { syncOutbox } from "../services/offline/sync";
+import { subscribeNetworkStatus } from "../services/networkStatus";
 import { formatMoney } from "../utils/money";
 
 type RootStackParamList = {
@@ -101,12 +103,33 @@ export default function MenuScreen() {
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
+  // GO-LIVE-250: Yesterday's summary for trend comparison
+  const [yesterdaySummary, setYesterdaySummary] = useState<DailySummary | null>(null);
+
+  // GO-LIVE-236: Pull-to-refresh state
+  const [refreshing, setRefreshing] = useState(false);
+
+  // GO-LIVE-244: Network status indicator
+  const [isOnline, setIsOnline] = useState(true);
+
+  // GO-LIVE-237: Sync state
+  const [syncing, setSyncing] = useState(false);
+
   const loadDailySummary = async () => {
     setSummaryLoading(true);
     setSummaryError(null);
     try {
-      const summary = await getDailySummary();
+      // GO-LIVE-250: Fetch both today and yesterday for trend comparison
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      const [summary, yesterdayData] = await Promise.all([
+        getDailySummary(),
+        getDailySummary(yesterdayStr).catch(() => null), // Don't fail if yesterday fails
+      ]);
       setDailySummary(summary);
+      setYesterdaySummary(yesterdayData);
     } catch (e: any) {
       console.error("[MenuScreen] dailySummary fetch failed:", e);
       setSummaryError(e.message || "Failed to load summary");
@@ -115,9 +138,89 @@ export default function MenuScreen() {
     }
   };
 
+  // GO-LIVE-244: Subscribe to network status
+  useEffect(() => {
+    const unsubscribe = subscribeNetworkStatus((online) => {
+      setIsOnline(online);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // GO-LIVE-236: Pull-to-refresh handler
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        loadDailySummary(),
+        (async () => {
+          const token = await getDeviceToken();
+          const tokenSuffix = token ? token.slice(-6) : "none";
+          const uiStatus = await fetchUiStatus();
+          setOpStatus({
+            tokenSuffix,
+            storeId: uiStatus.storeId ?? null,
+            storeName: uiStatus.storeName ?? null,
+            storeCode: uiStatus.storeCode ?? null,
+            storeActive: uiStatus.storeActive ?? null,
+            deviceActive: uiStatus.deviceActive ?? null,
+            pendingOutboxCount: uiStatus.pendingOutboxCount ?? 0,
+            deviceLabel: uiStatus.deviceId ?? null,
+          });
+        })(),
+      ]);
+    } catch (e) {
+      console.error("[MenuScreen] refresh failed:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  // GO-LIVE-237: Manual sync trigger
+  const handleSync = useCallback(async () => {
+    if (syncing || !isOnline) return;
+    setSyncing(true);
+    try {
+      await syncOutbox();
+      const count = await pendingOutboxCount();
+      setOpStatus((prev) => ({ ...prev, pendingOutboxCount: count }));
+      if (count === 0) {
+        Alert.alert(t('menu.syncComplete', { defaultValue: "Sync Complete" }), t('menu.allDataSynced', { defaultValue: "All data has been synced." }));
+      }
+    } catch (e: any) {
+      console.error("[MenuScreen] sync failed:", e);
+      Alert.alert(t('menu.syncFailed', { defaultValue: "Sync Failed" }), e.message || "Please try again.");
+    } finally {
+      setSyncing(false);
+    }
+  }, [syncing, isOnline, t]);
+
   useEffect(() => {
     void loadDailySummary();
   }, []);
+
+  // GO-LIVE-250: Calculate trend percentage and direction
+  const getTrend = (today: number, yesterday: number | undefined): { percent: number; isUp: boolean } | null => {
+    if (yesterday === undefined || yesterday === 0) return null;
+    const percent = ((today - yesterday) / yesterday) * 100;
+    return { percent: Math.abs(percent), isUp: percent >= 0 };
+  };
+
+  const renderTrend = (today: number, yesterday: number | undefined) => {
+    const trend = getTrend(today, yesterday);
+    if (!trend) return null;
+    return (
+      <View style={[styles.trendBadge, trend.isUp ? styles.trendBadgeUp : styles.trendBadgeDown]}>
+        <MaterialCommunityIcons
+          name={trend.isUp ? "trending-up" : "trending-down"}
+          size={10}
+          color={trend.isUp ? theme.colors.success : theme.colors.error}
+        />
+        <Text style={[styles.trendText, trend.isUp ? styles.trendTextUp : styles.trendTextDown]}>
+          {trend.percent.toFixed(0)}%
+        </Text>
+      </View>
+    );
+  };
 
   // Alias for devInfo used in switch store handler
   const devInfo = opStatus;
@@ -202,9 +305,28 @@ export default function MenuScreen() {
   const goToBnplDues = () => navigation.navigate("BnplDues"); // SM-020
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        // GO-LIVE-236: Pull-to-refresh for daily summary
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[theme.colors.primary]}
+          tintColor={theme.colors.primary}
+        />
+      }
+    >
       <View style={styles.header}>
         <Text style={styles.title}>{t('menu.title')}</Text>
+        {/* GO-LIVE-244: Offline indicator */}
+        {!isOnline && (
+          <View style={styles.offlineIndicator}>
+            <MaterialCommunityIcons name="wifi-off" size={14} color={theme.colors.error} />
+            <Text style={styles.offlineText}>{t('menu.offline', { defaultValue: "Offline" })}</Text>
+          </View>
+        )}
       </View>
 
       {/* DEV-057: Operational Status Panel */}
@@ -262,20 +384,40 @@ export default function MenuScreen() {
         )}
         <View style={styles.statusRow}>
           <Text style={styles.statusLabel}>Sync</Text>
-          <View style={[
-            styles.statusBadge,
-            opStatus.pendingOutboxCount === 0 && styles.statusBadgeActive,
-            opStatus.pendingOutboxCount > 0 && styles.statusBadgeWarning
-          ]}>
-            <Text style={[
-              styles.statusBadgeText,
-              opStatus.pendingOutboxCount === 0 && styles.statusBadgeTextActive,
-              opStatus.pendingOutboxCount > 0 && styles.statusBadgeTextWarning
+          <View style={styles.syncRow}>
+            <View style={[
+              styles.statusBadge,
+              opStatus.pendingOutboxCount === 0 && styles.statusBadgeActive,
+              opStatus.pendingOutboxCount > 0 && styles.statusBadgeWarning
             ]}>
-              {opStatus.pendingOutboxCount > 0
-                ? t('menu.syncPending', { count: opStatus.pendingOutboxCount })
-                : t('menu.syncOk')}
-            </Text>
+              <Text style={[
+                styles.statusBadgeText,
+                opStatus.pendingOutboxCount === 0 && styles.statusBadgeTextActive,
+                opStatus.pendingOutboxCount > 0 && styles.statusBadgeTextWarning
+              ]}>
+                {opStatus.pendingOutboxCount > 0
+                  ? t('menu.syncPending', { count: opStatus.pendingOutboxCount })
+                  : t('menu.syncOk')}
+              </Text>
+            </View>
+            {/* GO-LIVE-237: Manual sync button */}
+            {opStatus.pendingOutboxCount > 0 && isOnline && (
+              <Pressable
+                onPress={handleSync}
+                style={[styles.syncButton, syncing && styles.syncButtonDisabled]}
+                disabled={syncing}
+                hitSlop={8}
+              >
+                <MaterialCommunityIcons
+                  name={syncing ? "loading" : "sync"}
+                  size={16}
+                  color={syncing ? theme.colors.textTertiary : theme.colors.primary}
+                />
+                <Text style={[styles.syncButtonText, syncing && styles.syncButtonTextDisabled]}>
+                  {syncing ? t('menu.syncing', { defaultValue: "Syncing..." }) : t('menu.syncNow', { defaultValue: "Sync Now" })}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </View>
@@ -312,20 +454,33 @@ export default function MenuScreen() {
           </View>
         ) : dailySummary ? (
           <View style={styles.summaryGrid}>
+            {/* GO-LIVE-250: Added trend indicators */}
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{formatMoney(dailySummary.totalSales)}</Text>
+              <View style={styles.summaryValueRow}>
+                <Text style={styles.summaryValue}>{formatMoney(dailySummary.totalSales)}</Text>
+                {renderTrend(dailySummary.totalSales, yesterdaySummary?.totalSales)}
+              </View>
               <Text style={styles.summaryLabel}>{t('menu.totalSales', { defaultValue: 'Total Sales' })}</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{dailySummary.totalBills}</Text>
+              <View style={styles.summaryValueRow}>
+                <Text style={styles.summaryValue}>{dailySummary.totalBills}</Text>
+                {renderTrend(dailySummary.totalBills, yesterdaySummary?.totalBills)}
+              </View>
               <Text style={styles.summaryLabel}>{t('menu.bills', { defaultValue: 'Bills' })}</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{formatMoney(dailySummary.averageBillValue)}</Text>
+              <View style={styles.summaryValueRow}>
+                <Text style={styles.summaryValue}>{formatMoney(dailySummary.averageBillValue)}</Text>
+                {renderTrend(dailySummary.averageBillValue, yesterdaySummary?.averageBillValue)}
+              </View>
               <Text style={styles.summaryLabel}>{t('menu.avgBill', { defaultValue: 'Avg Bill' })}</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{dailySummary.itemsSold}</Text>
+              <View style={styles.summaryValueRow}>
+                <Text style={styles.summaryValue}>{dailySummary.itemsSold}</Text>
+                {renderTrend(dailySummary.itemsSold, yesterdaySummary?.itemsSold)}
+              </View>
               <Text style={styles.summaryLabel}>{t('menu.itemsSold', { defaultValue: 'Items Sold' })}</Text>
             </View>
           </View>
@@ -618,12 +773,56 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingVertical: 8,
-    alignItems: "center"
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
     color: theme.colors.textPrimary
+  },
+  // GO-LIVE-244: Offline indicator styles
+  offlineIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: theme.colors.errorSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  offlineText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.error,
+  },
+  // GO-LIVE-237: Sync button styles
+  syncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  syncButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: theme.colors.primarySoft,
+  },
+  syncButtonDisabled: {
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  syncButtonText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  syncButtonTextDisabled: {
+    color: theme.colors.textTertiary,
   },
   statusPanel: {
     marginTop: 12,
@@ -919,5 +1118,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: theme.colors.textInverse,
+  },
+  // GO-LIVE-250: Trend indicator styles
+  summaryValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  trendBadgeUp: {
+    backgroundColor: theme.colors.successSoft,
+  },
+  trendBadgeDown: {
+    backgroundColor: theme.colors.errorSoft,
+  },
+  trendText: {
+    fontSize: 9,
+    fontWeight: '600',
+  },
+  trendTextUp: {
+    color: theme.colors.success,
+  },
+  trendTextDown: {
+    color: theme.colors.error,
   },
 });

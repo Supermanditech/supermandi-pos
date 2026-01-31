@@ -116,6 +116,26 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     void loadData();
   }, [loadData]);
 
+  // GO-LIVE-238: Auto-refresh when there's a pending application
+  useEffect(() => {
+    // Only auto-refresh if there's an active application with pending status
+    if (!activeApplication || activeApplication.status === "approved" || activeApplication.status === "rejected") {
+      return;
+    }
+
+    // Poll every 30 seconds
+    const pollInterval = setInterval(() => {
+      console.log("[CreditScreen] GO-LIVE-238: Auto-refreshing for pending application");
+      void loadData();
+    }, 30000);
+
+    return () => clearInterval(pollInterval);
+  }, [activeApplication?.status, loadData]);
+
+  // GO-LIVE-245: Calculate credit utilization warning
+  const creditUtilization = creditScore?.currentUtilization ?? 0;
+  const showCreditWarning = creditUtilization >= 90;
+
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     void loadData();
@@ -500,6 +520,16 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
         <View style={styles.headerRight} />
       </View>
 
+      {/* GO-LIVE-245: Credit Utilization Warning */}
+      {showCreditWarning && (
+        <View style={styles.creditWarning}>
+          <MaterialCommunityIcons name="alert" size={18} color={theme.colors.error} />
+          <Text style={styles.creditWarningText}>
+            {t("credit.utilizationWarning", "High credit utilization ({{percent}}%). Consider repaying to improve your score.", { percent: Math.round(creditUtilization) })}
+          </Text>
+        </View>
+      )}
+
       {/* Credit Score Card */}
       {creditScore && (
         <View style={styles.scoreCard}>
@@ -862,6 +892,25 @@ const styles = StyleSheet.create({
   centerContent: {
     justifyContent: "center",
     alignItems: "center",
+  },
+  // GO-LIVE-245: Credit utilization warning styles
+  creditWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.errorSoft,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+  },
+  creditWarningText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "500",
+    color: theme.colors.error,
   },
   loadingText: {
     marginTop: theme.spacing.md,

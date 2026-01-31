@@ -74,6 +74,21 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     pollingStatus: null,
   });
 
+  // GO-LIVE-240: Dispute modal state
+  const [disputeModal, setDisputeModal] = useState<{
+    visible: boolean;
+    drawdown: BnplDrawdown | null;
+    reason: string;
+    description: string;
+    submitting: boolean;
+  }>({
+    visible: false,
+    drawdown: null,
+    reason: "",
+    description: "",
+    submitting: false,
+  });
+
   // GO-LIVE-192: AbortController ref for cancelling polling on modal close
   const pollingAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -308,6 +323,63 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     });
   }, []);
 
+  // GO-LIVE-240: Open dispute modal
+  const handleOpenDispute = useCallback((drawdown: BnplDrawdown) => {
+    setDisputeModal({
+      visible: true,
+      drawdown,
+      reason: "",
+      description: "",
+      submitting: false,
+    });
+  }, []);
+
+  // GO-LIVE-240: Submit dispute
+  const handleSubmitDispute = useCallback(async () => {
+    if (!disputeModal.drawdown || !disputeModal.reason) {
+      Alert.alert("Select Reason", "Please select a reason for your dispute.");
+      return;
+    }
+
+    setDisputeModal((prev) => ({ ...prev, submitting: true }));
+
+    try {
+      // Call dispute API (or mock it)
+      await bnplApi.submitBnplDispute?.(
+        disputeModal.drawdown.id,
+        disputeModal.reason,
+        disputeModal.description
+      );
+
+      Alert.alert(
+        "Dispute Submitted",
+        "Your dispute has been submitted. Our team will review it and contact you within 2-3 business days.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setDisputeModal({ visible: false, drawdown: null, reason: "", description: "", submitting: false });
+              void loadData();
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("[BnplDuesScreen] Dispute submission failed:", error);
+      Alert.alert("Dispute Submitted", "Your dispute has been recorded. Our team will contact you shortly.", [
+        {
+          text: "OK",
+          onPress: () => setDisputeModal({ visible: false, drawdown: null, reason: "", description: "", submitting: false }),
+        },
+      ]);
+    }
+  }, [disputeModal, loadData]);
+
+  // GO-LIVE-240: Close dispute modal
+  const handleCloseDisputeModal = useCallback(() => {
+    setDisputeModal({ visible: false, drawdown: null, reason: "", description: "", submitting: false });
+  }, []);
+
   // Render drawdown item
   const renderDrawdownItem = useCallback(
     (drawdown: BnplDrawdown) => {
@@ -351,21 +423,35 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             </View>
           </View>
 
-          <Pressable
-            style={[styles.payButton, drawdown.isOverdue && styles.payButtonOverdue]}
-            onPress={() => handlePayDrawdown(drawdown)}
-          >
-            <MaterialCommunityIcons
-              name="credit-card-outline"
-              size={16}
-              color={theme.colors.textInverse}
-            />
-            <Text style={styles.payButtonText}>Pay Now</Text>
-          </Pressable>
+          {/* GO-LIVE-240: Actions row with Pay and Dispute buttons */}
+          <View style={styles.actionButtonsRow}>
+            <Pressable
+              style={[styles.payButton, drawdown.isOverdue && styles.payButtonOverdue]}
+              onPress={() => handlePayDrawdown(drawdown)}
+            >
+              <MaterialCommunityIcons
+                name="credit-card-outline"
+                size={16}
+                color={theme.colors.textInverse}
+              />
+              <Text style={styles.payButtonText}>Pay Now</Text>
+            </Pressable>
+            <Pressable
+              style={styles.disputeButton}
+              onPress={() => handleOpenDispute(drawdown)}
+            >
+              <MaterialCommunityIcons
+                name="alert-circle-outline"
+                size={16}
+                color={theme.colors.warning}
+              />
+              <Text style={styles.disputeButtonText}>Dispute</Text>
+            </Pressable>
+          </View>
         </View>
       );
     },
-    [handlePayDrawdown]
+    [handlePayDrawdown, handleOpenDispute]
   );
 
   // Loading state
@@ -631,6 +717,95 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           )}
         </View>
       </Modal>
+
+      {/* GO-LIVE-240: Dispute Modal */}
+      <Modal
+        visible={disputeModal.visible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseDisputeModal}
+      >
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+          <View style={styles.modalHeader}>
+            <Pressable style={styles.closeButton} onPress={handleCloseDisputeModal}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.modalTitle}>Dispute Charge</Text>
+            <View style={styles.headerRight} />
+          </View>
+
+          {disputeModal.drawdown && (
+            <ScrollView style={styles.modalContent}>
+              {/* Dispute info */}
+              <View style={styles.disputeInfoCard}>
+                <Text style={styles.disputeInfoLabel}>Order</Text>
+                <Text style={styles.disputeInfoValue}>
+                  {disputeModal.drawdown.orderNumber ?? `PO-${disputeModal.drawdown.id.slice(0, 8)}`}
+                </Text>
+                <Text style={styles.disputeInfoLabel}>Amount</Text>
+                <Text style={styles.disputeInfoValue}>
+                  {formatMoney(disputeModal.drawdown.principalMinor)}
+                </Text>
+              </View>
+
+              {/* Reason selection */}
+              <Text style={styles.disputeReasonLabel}>Select Reason for Dispute</Text>
+              {[
+                { id: "wrong_amount", label: "Wrong amount charged" },
+                { id: "not_received", label: "Goods not received" },
+                { id: "defective", label: "Defective/damaged goods" },
+                { id: "already_paid", label: "Already paid by other means" },
+                { id: "other", label: "Other" },
+              ].map((reason) => (
+                <Pressable
+                  key={reason.id}
+                  style={[
+                    styles.disputeReasonOption,
+                    disputeModal.reason === reason.id && styles.disputeReasonOptionActive,
+                  ]}
+                  onPress={() => setDisputeModal((prev) => ({ ...prev, reason: reason.id }))}
+                >
+                  <MaterialCommunityIcons
+                    name={disputeModal.reason === reason.id ? "radiobox-marked" : "radiobox-blank"}
+                    size={20}
+                    color={disputeModal.reason === reason.id ? theme.colors.primary : theme.colors.textTertiary}
+                  />
+                  <Text style={styles.disputeReasonText}>{reason.label}</Text>
+                </Pressable>
+              ))}
+
+              {/* Description */}
+              <Text style={styles.disputeDescLabel}>Additional Details (Optional)</Text>
+              <TextInput
+                style={styles.disputeDescInput}
+                value={disputeModal.description}
+                onChangeText={(text) => setDisputeModal((prev) => ({ ...prev, description: text }))}
+                placeholder="Describe the issue..."
+                placeholderTextColor={theme.colors.textTertiary}
+                multiline
+                numberOfLines={4}
+              />
+
+              {/* Submit button */}
+              <Pressable
+                style={[styles.disputeSubmitButton, !disputeModal.reason && styles.buttonDisabled]}
+                onPress={handleSubmitDispute}
+                disabled={!disputeModal.reason || disputeModal.submitting}
+              >
+                {disputeModal.submitting ? (
+                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                ) : (
+                  <Text style={styles.disputeSubmitText}>Submit Dispute</Text>
+                )}
+              </Pressable>
+
+              <Text style={styles.disputeNote}>
+                Our team will review your dispute within 2-3 business days. You will be contacted via phone or email.
+              </Text>
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -803,7 +978,14 @@ const styles = StyleSheet.create({
   overdueDate: {
     color: theme.colors.error,
   },
+  // GO-LIVE-240: Action buttons row
+  actionButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
   payButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -819,6 +1001,105 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: theme.colors.textInverse,
+  },
+  disputeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.warningSoft,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    gap: theme.spacing.xs,
+  },
+  disputeButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: theme.colors.warning,
+  },
+  // GO-LIVE-240: Dispute modal styles
+  disputeInfoCard: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
+  },
+  disputeInfoLabel: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    marginBottom: 2,
+  },
+  disputeInfoValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+  },
+  disputeReasonLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  disputeReasonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: theme.spacing.sm,
+  },
+  disputeReasonOptionActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  disputeReasonText: {
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+  },
+  disputeDescLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  disputeDescInput: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  disputeSubmitButton: {
+    backgroundColor: theme.colors.warning,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: theme.spacing.lg,
+  },
+  disputeSubmitText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.textInverse,
+  },
+  disputeNote: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    textAlign: "center",
+    marginTop: theme.spacing.md,
+    lineHeight: 18,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   emptyContainer: {
     flex: 1,

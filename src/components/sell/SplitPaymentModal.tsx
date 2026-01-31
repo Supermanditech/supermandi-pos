@@ -538,6 +538,26 @@ export function SplitPaymentModal({
             />
           </TouchableOpacity>
 
+          {/* GO-LIVE-247: Step progress indicator for clearer UX */}
+          <View style={styles.stepIndicator}>
+            <View style={[styles.stepDot, step === "input" && styles.stepDotActive]}>
+              <Text style={[styles.stepNumber, step === "input" && styles.stepNumberActive]}>1</Text>
+            </View>
+            <View style={[styles.stepLine, step !== "input" && styles.stepLineActive]} />
+            <View style={[styles.stepDot, step === "upi-waiting" && styles.stepDotActive]}>
+              <Text style={[styles.stepNumber, step === "upi-waiting" && styles.stepNumberActive]}>2</Text>
+            </View>
+            <View style={[styles.stepLine, (step === "cash-collect" || step === "complete") && styles.stepLineActive]} />
+            <View style={[styles.stepDot, (step === "cash-collect" || step === "complete") && styles.stepDotActive]}>
+              <Text style={[styles.stepNumber, (step === "cash-collect" || step === "complete") && styles.stepNumberActive]}>3</Text>
+            </View>
+          </View>
+          <View style={styles.stepLabels}>
+            <Text style={[styles.stepLabel, step === "input" && styles.stepLabelActive]}>Split</Text>
+            <Text style={[styles.stepLabel, step === "upi-waiting" && styles.stepLabelActive]}>UPI</Text>
+            <Text style={[styles.stepLabel, (step === "cash-collect" || step === "complete") && styles.stepLabelActive]}>Cash</Text>
+          </View>
+
           {step === "input" && renderInputStep()}
           {step === "upi-waiting" && renderUpiWaitingStep()}
           {step === "cash-collect" && renderCashCollectStep()}
@@ -569,6 +589,61 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     padding: 8,
+  },
+  // GO-LIVE-247: Step indicator styles
+  stepIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  stepDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+  },
+  stepDotActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  stepNumber: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textTertiary,
+  },
+  stepNumberActive: {
+    color: theme.colors.textInverse,
+  },
+  stepLine: {
+    width: 40,
+    height: 2,
+    backgroundColor: theme.colors.border,
+  },
+  stepLineActive: {
+    backgroundColor: theme.colors.primary,
+  },
+  stepLabels: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  stepLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.textTertiary,
+    textTransform: "uppercase",
+    width: 60,
+    textAlign: "center",
+  },
+  stepLabelActive: {
+    color: theme.colors.primary,
   },
   title: {
     fontSize: 20,

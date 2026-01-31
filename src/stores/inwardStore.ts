@@ -14,6 +14,8 @@ export interface InwardItem {
   purchasePriceMinor: number; // paise
   supplierId: string | null;
   supplierName: string | null;
+  // GO-LIVE-241: Market price reference for comparison
+  marketPriceMinor?: number;
 }
 
 export interface InwardSupplier {

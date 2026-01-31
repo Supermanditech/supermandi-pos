@@ -366,6 +366,26 @@ export async function shipOrder(
   return apiClient.post<TransitionResponse>(path, trackingInfo);
 }
 
+// GO-LIVE-242: Update tracking number response
+export interface UpdateTrackingResponse {
+  success: boolean;
+  data: PurchaseOrder;
+}
+
+/**
+ * GO-LIVE-242: Update tracking number for an order.
+ * Can be called anytime after order is submitted.
+ */
+export async function updateTracking(
+  storeId: string,
+  orderId: string,
+  trackingNumber: string,
+  carrier?: string
+): Promise<UpdateTrackingResponse> {
+  const path = `${ORDER_BASE}/stores/${storeId}/orders/${orderId}/tracking`;
+  return apiClient.patch<UpdateTrackingResponse>(path, { trackingNumber, carrier });
+}
+
 // =============================================================================
 // GL-WF-004: PAYMENT FUNCTIONS
 // =============================================================================
