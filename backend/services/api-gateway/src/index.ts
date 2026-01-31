@@ -140,9 +140,11 @@ function getBodyLimitForPath(path: string): number {
 // Check Content-Length before body parsing
 app.use((req, res, next) => {
   const contentLength = req.headers['content-length'];
+  // DEBUG: Log all requests with content-length
   if (contentLength) {
     const bodySize = parseInt(contentLength, 10);
     const limit = getBodyLimitForPath(req.path);
+    console.log(`[GO-LIVE-194] Body check: path=${req.path}, size=${bodySize}, limit=${limit}, over=${bodySize > limit}`);
     if (bodySize > limit) {
       const limitKb = Math.round(limit / 1024);
       // GO-LIVE-194: Structured logging for body size rejection
