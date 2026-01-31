@@ -5,6 +5,8 @@ import { Router, Request, Response } from "express";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
 import { refreshDeviceToken, revokeDeviceToken, logTokenEvent } from "../../../middleware/tokenSecurity";
 import { getPool } from "../../../db/client";
+// GO-LIVE-188: Import rate limiter for token operations
+import { tokenRevocationRateLimiter, financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
 
 export const tokenManagementRouter = Router();
 
@@ -12,8 +14,9 @@ export const tokenManagementRouter = Router();
  * POST /api/v1/pos/token/refresh
  * Refresh the current device token expiry
  * Requires valid device token
+ * GO-LIVE-188: Rate limit token refresh to prevent DoS
  */
-tokenManagementRouter.post("/token/refresh", requireDeviceToken, async (req: Request, res: Response) => {
+tokenManagementRouter.post("/token/refresh", requireDeviceToken, financialOperationsRateLimiter, async (req: Request, res: Response) => {
   const posDevice = (req as any).posDevice;
 
   if (!posDevice?.deviceId || !posDevice?.storeId) {
@@ -113,8 +116,9 @@ tokenManagementRouter.get("/token/status", requireDeviceToken, async (req: Reque
  * POST /api/v1/pos/token/revoke-self
  * Revoke the current device's own token (logout/de-enrollment)
  * Requires valid device token
+ * GO-LIVE-188: Rate limit token revocation to prevent DoS
  */
-tokenManagementRouter.post("/token/revoke-self", requireDeviceToken, async (req: Request, res: Response) => {
+tokenManagementRouter.post("/token/revoke-self", requireDeviceToken, tokenRevocationRateLimiter, async (req: Request, res: Response) => {
   const posDevice = (req as any).posDevice;
   const { reason } = req.body;
 
