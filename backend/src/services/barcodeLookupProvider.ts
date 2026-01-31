@@ -13,6 +13,9 @@
 const BARCODE_LOOKUP_ENABLED = process.env.BARCODE_LOOKUP_ENABLED !== "false";
 const UPC_DATABASE_API_KEY = process.env.UPC_DATABASE_API_KEY;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// GO-LIVE-190: Maximum cache size to prevent memory leak
+const MAX_CACHE_SIZE = 10000;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface BarcodeProductPrefill {
   barcode: string;
@@ -29,18 +32,41 @@ interface CacheEntry {
   timestamp: number;
 }
 
-// Simple in-memory cache
+// Simple in-memory cache with size limit
 const lookupCache = new Map<string, CacheEntry>();
+// GO-LIVE-190: Track last cleanup time for periodic cleanup
+let lastCleanupTime = Date.now();
 
 /**
- * Clean expired cache entries
+ * GO-LIVE-190: Clean expired cache entries with size limit enforcement
+ * Removes expired entries and enforces maximum cache size
  */
-function cleanCache(): void {
+function cleanCache(force = false): void {
   const now = Date.now();
+
+  // Only clean every CLEANUP_INTERVAL_MS unless forced
+  if (!force && now - lastCleanupTime < CLEANUP_INTERVAL_MS) {
+    return;
+  }
+
+  lastCleanupTime = now;
+
+  // Remove expired entries
   for (const [key, entry] of lookupCache.entries()) {
     if (now - entry.timestamp > CACHE_TTL_MS) {
       lookupCache.delete(key);
     }
+  }
+
+  // GO-LIVE-190: If still over limit, remove oldest entries (FIFO)
+  if (lookupCache.size > MAX_CACHE_SIZE) {
+    const entriesToRemove = lookupCache.size - MAX_CACHE_SIZE;
+    const iterator = lookupCache.keys();
+    for (let i = 0; i < entriesToRemove; i++) {
+      const key = iterator.next().value;
+      if (key) lookupCache.delete(key);
+    }
+    console.log(`[barcodeLookup] GO-LIVE-190: Cache pruned, removed ${entriesToRemove} entries`);
   }
 }
 
@@ -168,16 +194,14 @@ export async function lookupBarcodeExternal(barcode: string): Promise<BarcodePro
     return null;
   }
 
+  // GO-LIVE-190: Run cleanup periodically (time-based, not random)
+  cleanCache();
+
   // Check cache first
   const cached = lookupCache.get(normalizedBarcode);
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
     // Cache hit - no log needed for debug level
     return cached.data;
-  }
-
-  // Clean cache periodically (every 100 lookups)
-  if (lookupCache.size > 0 && Math.random() < 0.01) {
-    cleanCache();
   }
 
   console.log("[barcodeLookup] Looking up barcode from external providers:", normalizedBarcode);
@@ -191,6 +215,12 @@ export async function lookupBarcodeExternal(barcode: string): Promise<BarcodePro
   // 2. If not found and UPC Database is configured, try it
   if (!result && UPC_DATABASE_API_KEY) {
     result = await lookupUpcDatabase(normalizedBarcode);
+  }
+
+  // GO-LIVE-190: Check cache size before adding
+  // If at limit, force cleanup to make room
+  if (lookupCache.size >= MAX_CACHE_SIZE) {
+    cleanCache(true);
   }
 
   // Cache result (even if null to prevent repeated lookups)
@@ -217,10 +247,12 @@ export function clearLookupCache(): void {
 
 /**
  * Get cache stats (useful for monitoring)
+ * GO-LIVE-190: Added maxSize to monitor cache limits
  */
-export function getLookupCacheStats(): { size: number; ttlMs: number } {
+export function getLookupCacheStats(): { size: number; maxSize: number; ttlMs: number } {
   return {
     size: lookupCache.size,
+    maxSize: MAX_CACHE_SIZE,
     ttlMs: CACHE_TTL_MS
   };
 }
