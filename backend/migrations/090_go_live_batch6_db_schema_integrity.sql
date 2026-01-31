@@ -131,28 +131,33 @@ END $$;
 
 -- =============================================================================
 -- GO-LIVE-199: payments.sell_payments missing FK to sales
+-- NOTE: Cannot add FK due to type mismatch (sell_payments.sale_id is UUID,
+--       sales.id is VARCHAR). Adding a trigger-based check instead.
 -- =============================================================================
-DO $$
+
+-- Clean up orphan records (referential integrity cleanup)
+DELETE FROM payments.sell_payments sp
+WHERE NOT EXISTS (SELECT 1 FROM public.sales s WHERE s.id = sp.sale_id::text);
+
+-- Create a trigger to enforce referential integrity at INSERT/UPDATE
+CREATE OR REPLACE FUNCTION payments.check_sell_payment_sale_exists()
+RETURNS TRIGGER AS $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'fk_sell_payments_sale'
-    AND conrelid = 'payments.sell_payments'::regclass
-  ) THEN
-    -- Clean up orphan records
-    DELETE FROM payments.sell_payments sp
-    WHERE NOT EXISTS (SELECT 1 FROM public.sales s WHERE s.id = sp.sale_id::text);
-
-    ALTER TABLE payments.sell_payments
-      ADD CONSTRAINT fk_sell_payments_sale
-      FOREIGN KEY (sale_id) REFERENCES public.sales(id)
-      ON DELETE CASCADE;
-
-    RAISE NOTICE 'GO-LIVE-199: Added FK fk_sell_payments_sale';
-  ELSE
-    RAISE NOTICE 'GO-LIVE-199: FK already exists';
+  IF NOT EXISTS (SELECT 1 FROM public.sales WHERE id = NEW.sale_id::text) THEN
+    RAISE EXCEPTION 'GO-LIVE-199: sale_id % does not exist in public.sales', NEW.sale_id;
   END IF;
-END $$;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sell_payments_check_sale ON payments.sell_payments;
+CREATE TRIGGER trg_sell_payments_check_sale
+  BEFORE INSERT OR UPDATE ON payments.sell_payments
+  FOR EACH ROW
+  EXECUTE FUNCTION payments.check_sell_payment_sale_exists();
+
+COMMENT ON TRIGGER trg_sell_payments_check_sale ON payments.sell_payments IS
+'GO-LIVE-199: Enforces referential integrity between sell_payments.sale_id and sales.id (type mismatch prevents FK)';
 
 -- =============================================================================
 -- GO-LIVE-200: Missing composite index on (store_id, status, created_at)

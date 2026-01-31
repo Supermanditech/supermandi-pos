@@ -58,12 +58,12 @@ FK3=$($PSQL -c "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'fk_pending_r
 [ "$FK1" = "1" ] && [ "$FK2" = "1" ] && [ "$FK3" = "1" ] && pass "GO-LIVE-198: pending_reorders FKs exist" || fail "GO-LIVE-198" "FKs missing (store=$FK1, product=$FK2, supplier=$FK3)"
 
 # =============================================================================
-# GO-LIVE-199: payments.sell_payments FK to sales
+# GO-LIVE-199: payments.sell_payments referential integrity (trigger-based)
 # =============================================================================
 echo ""
-echo "=== GO-LIVE-199: payments.sell_payments FK ==="
-FK_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_constraint WHERE conname = 'fk_sell_payments_sale' AND conrelid = 'payments.sell_payments'::regclass")
-[ "$FK_EXISTS" = "1" ] && pass "GO-LIVE-199: FK fk_sell_payments_sale exists" || fail "GO-LIVE-199" "FK not found"
+echo "=== GO-LIVE-199: payments.sell_payments referential integrity ==="
+TRG_EXISTS=$($PSQL -c "SELECT COUNT(*) FROM pg_trigger WHERE tgname = 'trg_sell_payments_check_sale'")
+[ "$TRG_EXISTS" = "1" ] && pass "GO-LIVE-199: Trigger trg_sell_payments_check_sale exists" || fail "GO-LIVE-199" "Trigger not found"
 
 # =============================================================================
 # GO-LIVE-200: Composite index on (store_id, status, created_at)
