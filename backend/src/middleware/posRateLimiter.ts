@@ -99,6 +99,22 @@ export function createPosRateLimiter(config: RateLimiterConfig) {
       const retryAfterMs = config.windowMs - (now - entry.timestamps[0]);
       const retryAfterSec = Math.ceil(retryAfterMs / 1000);
 
+      // BATCH5-SUGGESTION-1: Structured logging for observability
+      const posDevice = (req as any).posDevice as PosDeviceContext | undefined;
+      console.log(JSON.stringify({
+        event: "rate_limited",
+        key_type: config.keyType,
+        route: req.path,
+        method: req.method,
+        limit: config.max,
+        window_ms: config.windowMs,
+        retry_after_ms: retryAfterMs,
+        storeId: posDevice?.storeId || null,
+        deviceId: posDevice?.deviceId || null,
+        ip: req.ip || "unknown",
+        error_code: config.errorCode ?? "RATE_LIMIT_EXCEEDED",
+      }));
+
       res.setHeader("Retry-After", retryAfterSec);
       res.setHeader("X-RateLimit-Limit", config.max);
       res.setHeader("X-RateLimit-Remaining", 0);

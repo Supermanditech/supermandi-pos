@@ -7,6 +7,7 @@ import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { noCacheHeaders } from "./middleware/noCache";
+import { perEndpointBodyLimit } from "./middleware/bodySizeLimit";
 import { getTranslationHealth } from "./services/translationService";
 import { initializeFirebase } from "@supermandi/common";
 
@@ -44,6 +45,23 @@ try {
 
 const app = express();
 
+// =============================================================================
+// BATCH5-SUGGESTION-2: Trust proxy configuration for correct IP detection
+// BATCH5-SUGGESTION-10: In-memory rate limits - document single-instance limitation
+// =============================================================================
+// IMPORTANT: Rate limits are in-memory per instance. If we scale horizontally,
+// move to Redis-based limiter. Set RATE_LIMIT_STORE=redis when ready.
+// Current: Single VM deployment - in-memory is sufficient.
+// =============================================================================
+
+// Trust proxy when behind nginx/load balancer (reads X-Forwarded-For correctly)
+// Set TRUST_PROXY_HOPS to the number of proxies in front (default: 1 for single nginx)
+const trustProxyHops = parseInt(process.env.TRUST_PROXY_HOPS || "1", 10);
+if (process.env.NODE_ENV === "production" || process.env.TRUST_PROXY === "true") {
+  app.set("trust proxy", trustProxyHops);
+  console.log(`[App] Trust proxy enabled (hops: ${trustProxyHops})`);
+}
+
 // ITER3-P0-001: Configure CORS with explicit allowed origins
 // In production, ALLOWED_ORIGINS should be set to comma-separated list of domains
 const corsOptions: cors.CorsOptions = {
@@ -57,8 +75,11 @@ const corsOptions: cors.CorsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token', 'X-Admin-Token', 'X-Request-ID'],
 };
 app.use(cors(corsOptions));
-// ITER4-P1-012: Set request body size limit to prevent DoS attacks
-app.use(express.json({ limit: '1mb' }));
+// GO-LIVE-194: Per-endpoint body size limits (replaces global 1MB limit)
+// ITER4-P1-012: Now using perEndpointBodyLimit which applies different limits per endpoint
+app.use("/api", perEndpointBodyLimit());
+// Keep 1MB fallback for non-API routes (webhooks, etc.)
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => {
   // Cloud health-check contract: must be JSON { status: "ok" }

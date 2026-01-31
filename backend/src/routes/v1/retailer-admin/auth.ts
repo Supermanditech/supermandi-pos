@@ -1,6 +1,7 @@
 // Retailer Admin Auth Routes - Firebase Token Exchange
 // GO-LIVE-FIX: Handles phone OTP authentication via Firebase for retailer portal
 // GO-LIVE-045: Server-side Firebase token verification
+// GO-LIVE-195: Enhanced auth protection for 10K stores scale
 
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
@@ -9,6 +10,8 @@ import { getPool } from "../../../db/client";
 import { logLoginSuccess } from "../../../services/authAuditService";
 // GO-LIVE-189: Import rate limiter to prevent store code enumeration
 import { authRateLimiter } from "../../../middleware/posRateLimiter";
+// GO-LIVE-195: Enhanced auth protection with per-store-code limiting and progressive lockout
+import { enhancedAuthProtection } from "../../../middleware/authProtection";
 
 // GO-LIVE-045: Import Firebase verification from common package
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -118,8 +121,9 @@ function normalizePhoneNumber(phone: string): string {
  * For go-live: This endpoint validates the store code and phone number,
  * then issues a session token. Firebase verification happens client-side.
  * GO-LIVE-189: Rate limited to prevent store code enumeration via brute force
+ * GO-LIVE-195: Enhanced auth protection (per-store-code limiting, progressive lockout)
  */
-router.post("/auth/firebase-login", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { idToken, storeCode, phoneNumber } = req.body as FirebaseLoginRequest;
 

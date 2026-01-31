@@ -1,7 +1,8 @@
 // SM-020: BnplDuesScreen
 // Screen showing active BNPL drawdowns with pay button
+// GO-LIVE-192: Added AbortController for proper polling cleanup
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -73,6 +74,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     pollingStatus: null,
   });
 
+  // GO-LIVE-192: AbortController ref for cancelling polling on modal close
+  const pollingAbortControllerRef = useRef<AbortController | null>(null);
+
   // Load data
   const loadData = useCallback(async () => {
     try {
@@ -97,6 +101,16 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     void loadData();
   }, [loadData]);
 
+  // GO-LIVE-192: Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingAbortControllerRef.current) {
+        pollingAbortControllerRef.current.abort();
+        pollingAbortControllerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
     void loadData();
@@ -118,8 +132,15 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   }, []);
 
   // GL-RJ-008: Start auto-polling for UPI payment status
+  // GO-LIVE-192: Use AbortController for proper cleanup on modal close
   const startAutoPolling = useCallback(
     async (drawdownId: string, repaymentId: string) => {
+      // GO-LIVE-192: Abort any existing polling before starting new one
+      if (pollingAbortControllerRef.current) {
+        pollingAbortControllerRef.current.abort();
+      }
+      pollingAbortControllerRef.current = new AbortController();
+
       setPaymentModal((prev) => ({
         ...prev,
         isPolling: true,
@@ -130,6 +151,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         const result = await bnplApi.pollBnplPaymentStatus(drawdownId, repaymentId, {
           intervalMs: 3000,
           maxAttempts: 60, // 3 minutes
+          signal: pollingAbortControllerRef.current.signal, // GO-LIVE-192: Pass signal for cancellation
           onStatusUpdate: (status) => {
             if (status.status === "processing") {
               setPaymentModal((prev) => ({
@@ -146,6 +168,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         });
 
         // Payment completed automatically
+        pollingAbortControllerRef.current = null;
         setPaymentModal((prev) => ({
           ...prev,
           isPolling: false,
@@ -162,8 +185,14 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           },
         ]);
       } catch (error: any) {
-        console.warn("[BnplDuesScreen] Auto-polling stopped:", error);
+        // GO-LIVE-192: Check if error was due to abort (user closed modal)
+        if (error?.message === "Payment polling cancelled") {
+          console.log("[BnplDuesScreen] Polling cancelled by user");
+        } else {
+          console.warn("[BnplDuesScreen] Auto-polling stopped:", error);
+        }
         // Polling timed out or failed - user can still enter UTR manually
+        pollingAbortControllerRef.current = null;
         setPaymentModal((prev) => ({
           ...prev,
           isPolling: false,
@@ -259,7 +288,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   }, [paymentModal, loadData]);
 
   // Close payment modal
+  // GO-LIVE-192: Abort any ongoing polling when modal closes
   const handleClosePaymentModal = useCallback(() => {
+    // Abort any active polling
+    if (pollingAbortControllerRef.current) {
+      pollingAbortControllerRef.current.abort();
+      pollingAbortControllerRef.current = null;
+    }
     setPaymentModal({
       visible: false,
       drawdown: null,

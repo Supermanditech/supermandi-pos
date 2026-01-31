@@ -154,10 +154,11 @@ export async function getBnplPaymentStatus(
 
 /**
  * GL-RJ-008: Poll BNPL payment status until completion or timeout
+ * GO-LIVE-192: Added AbortSignal support and fixed timer cleanup
  * @param drawdownId The drawdown being paid
  * @param repaymentId The repayment ID from payBnpl
- * @param options Polling options
- * @returns Promise that resolves when payment completes or rejects on timeout/failure
+ * @param options Polling options (including optional AbortSignal for cancellation)
+ * @returns Promise that resolves when payment completes or rejects on timeout/failure/abort
  */
 export async function pollBnplPaymentStatus(
   drawdownId: string,
@@ -166,39 +167,83 @@ export async function pollBnplPaymentStatus(
     intervalMs?: number;
     maxAttempts?: number;
     onStatusUpdate?: (status: BnplPaymentStatusResponse) => void;
+    signal?: AbortSignal; // GO-LIVE-192: Allow external cancellation
   } = {}
 ): Promise<BnplPaymentStatusResponse> {
   const {
     intervalMs = 3000, // Check every 3 seconds
     maxAttempts = 60, // 3 minutes max
     onStatusUpdate,
+    signal,
   } = options;
 
   return new Promise((resolve, reject) => {
     let attempts = 0;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
+    let isSettled = false; // GO-LIVE-192: Track if promise has settled
+
+    // GO-LIVE-192: Helper to clean up timer safely
+    const cleanup = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    // GO-LIVE-192: Handle external abort signal
+    const handleAbort = () => {
+      if (isSettled) return;
+      isSettled = true;
+      cleanup();
+      reject(new Error("Payment polling cancelled"));
+    };
+
+    if (signal?.aborted) {
+      reject(new Error("Payment polling cancelled"));
+      return;
+    }
+
+    signal?.addEventListener("abort", handleAbort);
 
     const checkStatus = async () => {
+      // GO-LIVE-192: Skip if already settled or aborted
+      if (isSettled || signal?.aborted) {
+        cleanup();
+        return;
+      }
+
       try {
         attempts++;
         const status = await getBnplPaymentStatus(drawdownId, repaymentId);
 
+        // GO-LIVE-192: Check again after async operation
+        if (isSettled || signal?.aborted) {
+          cleanup();
+          return;
+        }
+
         onStatusUpdate?.(status);
 
         if (status.status === "completed") {
-          if (pollTimer) clearInterval(pollTimer);
+          isSettled = true;
+          cleanup();
+          signal?.removeEventListener("abort", handleAbort);
           resolve(status);
           return;
         }
 
         if (status.status === "failed" || status.status === "expired") {
-          if (pollTimer) clearInterval(pollTimer);
+          isSettled = true;
+          cleanup();
+          signal?.removeEventListener("abort", handleAbort);
           reject(new Error(status.errorMessage || `Payment ${status.status}`));
           return;
         }
 
         if (attempts >= maxAttempts) {
-          if (pollTimer) clearInterval(pollTimer);
+          isSettled = true;
+          cleanup();
+          signal?.removeEventListener("abort", handleAbort);
           reject(new Error("Payment verification timed out. Please verify manually."));
           return;
         }
@@ -206,7 +251,9 @@ export async function pollBnplPaymentStatus(
         console.warn("[pollBnplPaymentStatus] Check failed:", error);
         // Don't stop polling on network errors, let it retry
         if (attempts >= maxAttempts) {
-          if (pollTimer) clearInterval(pollTimer);
+          isSettled = true;
+          cleanup();
+          signal?.removeEventListener("abort", handleAbort);
           reject(error);
         }
       }
