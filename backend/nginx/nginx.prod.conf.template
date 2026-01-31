@@ -95,6 +95,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # GO-LIVE-B9: Root URL redirects to retailer portal
+    location = / {
+        return 302 /retailer/;
+    }
+
     # Redirect all other traffic to HTTPS
     location / {
         return 301 https://$host$request_uri;
@@ -198,7 +203,25 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # All other API endpoints
+    # GO-LIVE-B9: Root URL redirects to retailer portal landing page
+    location = / {
+        return 302 /retailer/;
+    }
+
+    # API endpoints
+    location /api/ {
+        limit_req zone=api_limit burst=50 nodelay;
+
+        proxy_pass http://api_gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # All other paths (auth routes, webhooks, etc.)
     location / {
         limit_req zone=api_limit burst=50 nodelay;
 
