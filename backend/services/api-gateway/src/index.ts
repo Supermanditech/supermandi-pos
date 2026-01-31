@@ -108,9 +108,69 @@ app.use((req, res, next) => {
 // Security headers
 app.use(helmet());
 
+// =============================================================================
+// GO-LIVE-194: Per-endpoint body size limits
+// Prevents DoS via large payloads while allowing legitimate large uploads
+// =============================================================================
+const ENDPOINT_SIZE_LIMITS: { pattern: RegExp; limit: number }[] = [
+  // Voice/Audio: 5MB
+  { pattern: /\/voice\//, limit: 5 * 1024 * 1024 },
+  { pattern: /\/ai\/voice/, limit: 5 * 1024 * 1024 },
+  // Images: 2MB
+  { pattern: /\/upload\/image/, limit: 2 * 1024 * 1024 },
+  { pattern: /\/products\/.*\/image/, limit: 2 * 1024 * 1024 },
+  // Batch/sync: 500KB
+  { pattern: /\/batch/, limit: 500 * 1024 },
+  { pattern: /\/sync/, limit: 500 * 1024 },
+  // Sales: 200KB
+  { pattern: /\/sales/, limit: 200 * 1024 },
+  // Auth/enroll: 50KB
+  { pattern: /\/enroll$/, limit: 50 * 1024 },
+  { pattern: /\/auth\//, limit: 50 * 1024 },
+];
+const DEFAULT_BODY_LIMIT = 100 * 1024; // 100KB default
+
+function getBodyLimitForPath(path: string): number {
+  for (const { pattern, limit } of ENDPOINT_SIZE_LIMITS) {
+    if (pattern.test(path)) return limit;
+  }
+  return DEFAULT_BODY_LIMIT;
+}
+
+// Check Content-Length before body parsing
+app.use((req, res, next) => {
+  const contentLength = req.headers['content-length'];
+  if (contentLength) {
+    const bodySize = parseInt(contentLength, 10);
+    const limit = getBodyLimitForPath(req.path);
+    if (bodySize > limit) {
+      const limitKb = Math.round(limit / 1024);
+      logger.warn({
+        event: 'body_too_large',
+        path: req.path,
+        method: req.method,
+        contentLength: bodySize,
+        limit,
+        ip: req.ip || 'unknown',
+      });
+      res.status(413).json({
+        error: {
+          code: 'BODY_TOO_LARGE',
+          message: `Request body exceeds the ${limitKb}kb limit for this endpoint.`,
+          limit: `${limitKb}kb`,
+          received: `${Math.ceil(bodySize / 1024)}kb`,
+        },
+      });
+      return;
+    }
+  }
+  next();
+});
+
 // P1-001: Parse JSON bodies for PATCH/POST/PUT requests
 // This allows the proxy to re-serialize and forward the body to backend services
 // The proxy's onProxyReq handler will write req.body back to the proxy request
+// Note: Using 10mb as fallback since per-endpoint limit is checked above
 app.use(express.json({ limit: '10mb' }));
 
 // Correlation ID (must be first for logging)
