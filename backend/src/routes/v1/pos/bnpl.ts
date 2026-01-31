@@ -523,4 +523,105 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
   }
 });
 
+// =============================================================================
+// GO-LIVE-240: BNPL Dispute Submission
+// Allows stores to dispute a BNPL drawdown
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/bnpl/:drawdownId/dispute
+ * GO-LIVE-240: Submit a dispute for a BNPL drawdown
+ * Creates a dispute record for review by support team
+ */
+posBnplRouter.post("/bnpl/:drawdownId/dispute", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as unknown as PosRequest).posDevice;
+  const { drawdownId } = req.params;
+  const { reason, description } = req.body as { reason?: string; description?: string };
+
+  if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: "reason is required"
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Verify drawdown exists and belongs to this store
+    const drawdownResult = await client.query(`
+      SELECT id, store_id, status, supplier_id, principal_minor
+      FROM payments.bnpl_drawdowns
+      WHERE id = $1 AND store_id = $2
+    `, [drawdownId, storeId]);
+
+    if (drawdownResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({
+        success: false,
+        error: "Drawdown not found"
+      });
+    }
+
+    const drawdown = drawdownResult.rows[0];
+
+    // Check if dispute already exists
+    const existingDispute = await client.query(`
+      SELECT id FROM payments.bnpl_disputes
+      WHERE drawdown_id = $1 AND status NOT IN ('resolved', 'rejected')
+    `, [drawdownId]);
+
+    if (existingDispute.rows.length > 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        success: false,
+        error: "An active dispute already exists for this drawdown"
+      });
+    }
+
+    // Create dispute record
+    const disputeId = randomUUID();
+    await client.query(`
+      INSERT INTO payments.bnpl_disputes (
+        id, drawdown_id, store_id, supplier_id, reason, description, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'submitted', NOW())
+    `, [disputeId, drawdownId, storeId, drawdown.supplier_id, reason.trim(), description?.trim() || null]);
+
+    await client.query("COMMIT");
+
+    console.log(`[GO-LIVE-240] BNPL dispute submitted: disputeId=${disputeId}, drawdownId=${drawdownId}, reason=${reason}`);
+
+    return res.json({
+      success: true,
+      disputeId,
+      drawdownId,
+      status: "submitted",
+      createdAt: new Date().toISOString()
+    });
+
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[GO-LIVE-240] BNPL dispute error:", error.message);
+
+    // Handle missing table gracefully
+    if (error.code === "42P01") {
+      return res.status(503).json({
+        success: false,
+        error: "Dispute functionality not yet available"
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to submit dispute"
+    });
+  } finally {
+    client.release();
+  }
+});
+
 export default posBnplRouter;
