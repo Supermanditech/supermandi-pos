@@ -5,16 +5,12 @@
 # Copy this to VM and run: bash run-batch6-tests.sh
 # ============================================================================
 
-# Database connection
-DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
+# Database connection via Docker
+DB_CONTAINER="${DB_CONTAINER:-supermandi-postgres}"
 DB_NAME="${DB_NAME:-supermandi}"
 DB_USER="${DB_USER:-supermandi}"
-DB_PASSWORD="${DB_PASSWORD:-supermandi}"
 
-export PGPASSWORD="$DB_PASSWORD"
-
-PSQL="psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -t -A"
+PSQL="docker exec $DB_CONTAINER psql -U $DB_USER -d $DB_NAME -t -A"
 
 echo ""
 echo "========================================================================"
