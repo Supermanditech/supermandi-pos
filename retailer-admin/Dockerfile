@@ -14,8 +14,10 @@ RUN npm ci
 # Copy source
 COPY . .
 
-# Build with production env
-COPY .env.production .env
+# Build with production env (use .env.production.example as fallback)
+RUN if [ -f .env.production ]; then cp .env.production .env; \
+    elif [ -f .env.production.example ]; then cp .env.production.example .env; \
+    fi
 RUN npm run build
 
 # Production stage - serve with nginx
