@@ -210,4 +210,16 @@ export const financialOperationsRateLimiter = createPosRateLimiter({
   errorMessage: "Too many payment operations. Please wait before processing more payments."
 });
 
+/**
+ * GO-LIVE-189: Rate limiter for authentication endpoints
+ * 5 attempts per minute per IP (strict to prevent store code enumeration)
+ */
+export const authRateLimiter = createPosRateLimiter({
+  windowMs: 60 * 1000,  // 1 minute
+  max: 5,               // 5 auth attempts per minute per IP
+  keyType: "ip",
+  errorCode: "AUTH_RATE_LIMIT_EXCEEDED",
+  errorMessage: "Too many authentication attempts. Please wait before trying again."
+});
+
 export default createPosRateLimiter;
