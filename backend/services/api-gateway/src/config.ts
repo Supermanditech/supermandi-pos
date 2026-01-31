@@ -36,13 +36,14 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
  * 1. ADMIN_SERVICE_URL (production - http://supermandi-main-backend:3010)
  * 2. POS_SERVICE_URL (alias)
  * 3. BACKEND_SERVICE_URL (legacy)
- * 4. Default: http://localhost:3001 (local dev)
+ * 4. Default: http://localhost:3010 (main-backend port)
+ * GO-LIVE-FIX: Changed default from 3001 to 3010 to match main-backend port
  */
 function getMainBackendUrl(): string {
   return process.env['ADMIN_SERVICE_URL']
     || process.env['POS_SERVICE_URL']
     || process.env['BACKEND_SERVICE_URL']
-    || 'http://localhost:3001';
+    || 'http://localhost:3010';
 }
 
 /**
