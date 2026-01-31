@@ -105,9 +105,11 @@ services:
       # GO-LIVE-078: Use template + entrypoint for env var substitution
       - ./nginx/docker-entrypoint.sh:/docker-entrypoint.d/10-generate-config.sh:ro
       - ./nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.prod.conf.template:ro
-      # Note: Static fallback removed - was causing duplicate upstream conflict
+      # SSL certificates
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
+      # GO-LIVE-B9: Static file directories for portals
+      - /var/www/supermandi-superadmin:/var/www/supermandi-superadmin:ro
     depends_on:
       api-gateway:
         condition: service_healthy
