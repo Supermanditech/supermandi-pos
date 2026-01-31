@@ -151,7 +151,7 @@ export async function apiFetch<T>(
   const result = data.data ?? data;
   validateResponseStructure(result, endpoint);
 
-  return result;
+  return result as T;
 }
 
 // ============================================================================
