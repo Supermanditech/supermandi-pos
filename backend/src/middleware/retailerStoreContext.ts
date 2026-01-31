@@ -55,6 +55,11 @@ export function getUserId(req: Request): string | null {
  *   router.get('/products', (req, res) => { const storeId = req.storeId; ... });
  */
 export function requireStoreContext(req: Request, res: Response, next: NextFunction): void {
+  // GO-LIVE-RET-AUTH-001: Skip store context check for auth endpoints (they issue tokens, not consume them)
+  if (req.path.startsWith('/auth/')) {
+    return next();
+  }
+
   const storeId = getStoreId(req);
   const userId = getUserId(req);
   const actorType = req.headers['x-actor-type'] as string | undefined;
