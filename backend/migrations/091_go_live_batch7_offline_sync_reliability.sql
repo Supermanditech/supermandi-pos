@@ -156,10 +156,9 @@ CREATE TABLE IF NOT EXISTS processed_sync_events (
 CREATE INDEX IF NOT EXISTS idx_processed_sync_events_store_device
   ON processed_sync_events (store_id, device_id, processed_at DESC);
 
--- Partial index for recent events (for faster duplicate checking)
+-- Index for duplicate checking by event_id (no partial predicate - NOW() is not immutable)
 CREATE INDEX IF NOT EXISTS idx_processed_sync_events_recent
-  ON processed_sync_events (event_id, processed_at)
-  WHERE processed_at > NOW() - INTERVAL '7 days';
+  ON processed_sync_events (event_id, processed_at DESC);
 
 COMMENT ON TABLE processed_sync_events IS
 'GO-LIVE-221: Tracks all processed sync events for idempotency. Prevents duplicate processing.';
