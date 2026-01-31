@@ -1,6 +1,7 @@
 import app from "./app";
 import { ensureCoreSchema } from "./db/ensureSchema";
 import { logGcpValidationResults } from "./startup/validateGcp";
+import { startSyncCleanupScheduler } from "./services/syncCleanupScheduler";
 
 const PORT = process.env.PORT || 3001;
 const HOST = process.env.HOST || "0.0.0.0";
@@ -24,6 +25,10 @@ async function start(): Promise<void> {
 
   app.listen(Number(PORT), HOST, () => {
     console.log(`SuperMandi backend listening on http://${HOST}:${PORT}`);
+
+    // GO-LIVE Batch 7: Start sync cleanup scheduler for production scale
+    // Cleans stale sync_locks, old processed_events, and old failed_events
+    startSyncCleanupScheduler();
   });
 }
 
