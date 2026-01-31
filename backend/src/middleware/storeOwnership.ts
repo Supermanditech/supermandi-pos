@@ -266,6 +266,11 @@ export function requireStoreOwnership(
   res: Response,
   next: NextFunction
 ): void {
+  // GO-LIVE-RET-AUTH-001: Skip store ownership check for auth endpoints (they issue tokens, not consume them)
+  if (req.path.startsWith('/auth/')) {
+    return next();
+  }
+
   // SuperAdmin bypasses store ownership check
   if (isSuperAdmin(req)) {
     console.log('[StoreOwnership] GO-LIVE-129: SuperAdmin access - bypassing verification');

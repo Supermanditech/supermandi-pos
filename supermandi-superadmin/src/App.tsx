@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken, logout } from "./api/authToken";
+import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken, logout, sendAdminOtp, verifyAdminOtp } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -140,44 +140,89 @@ function PayloadDetails({ payload }: { payload: unknown }) {
   );
 }
 
-// ITER4-CRIT-001: Login gate component - blocks access to admin UI without valid token
+// GO-LIVE-LOGIN-004: Email OTP login gate component
 function LoginGate({ onLogin }: { onLogin: () => void }) {
-  const [tokenInput, setTokenInput] = useState("");
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    const token = tokenInput.trim();
-    if (!token) {
-      setError("Please enter an admin token");
+  // Admin email allowlist (for instant client-side feedback)
+  const ADMIN_EMAILS = ['supermanditech@gmail.com'];
+
+  const handleSendOtp = async () => {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    // Client-side allowlist check for instant feedback
+    if (!ADMIN_EMAILS.includes(normalizedEmail)) {
+      setError("This email is not authorized for admin access");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    const result = await sendAdminOtp(normalizedEmail);
+
+    if (!result.success) {
+      setError(result.error || "Failed to send verification code");
+      setLoading(false);
+      return;
+    }
+
+    setSuccess("Verification code sent to your email");
+    setStep('otp');
+    setLoading(false);
+  };
+
+  const handleVerifyOtp = async () => {
+    const normalizedEmail = email.toLowerCase().trim();
+    const otpTrimmed = otp.trim();
+
+    if (!otpTrimmed) {
+      setError("Please enter the verification code");
+      return;
+    }
+
+    if (otpTrimmed.length !== 6 || !/^\d+$/.test(otpTrimmed)) {
+      setError("Verification code must be 6 digits");
       return;
     }
 
     setLoading(true);
     setError("");
 
-    try {
-      // Validate token by making a test API call
-      const res = await fetch("/api/v1/admin/health", {
-        headers: { "X-Admin-Token": token }
-      });
+    const result = await verifyAdminOtp(normalizedEmail, otpTrimmed);
 
-      if (res.status === 401 || res.status === 403) {
-        setError("Invalid admin token");
-        setLoading(false);
-        return;
-      }
-
-      // Token is valid - save it and proceed
-      sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-      onLogin();
-    } catch (err) {
-      // Network error - still allow login attempt (backend might be down)
-      sessionStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
-      onLogin();
+    if (!result.success) {
+      setError(result.error || "Invalid verification code");
+      setLoading(false);
+      return;
     }
 
-    setLoading(false);
+    // Login successful
+    onLogin();
+  };
+
+  const handleBack = () => {
+    setStep('email');
+    setOtp("");
+    setError("");
+    setSuccess("");
   };
 
   return (
@@ -200,61 +245,157 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
 
-        <div style={{ marginBottom: "16px" }}>
-          <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#333" }}>
-            Admin Token
-          </label>
-          <input
-            type="password"
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-            placeholder="Enter your admin token"
-            style={{
-              width: "100%",
-              padding: "12px",
-              border: "1px solid #ddd",
-              borderRadius: "6px",
-              fontSize: "14px",
-              boxSizing: "border-box"
-            }}
-            autoFocus
-          />
-        </div>
+        {step === 'email' ? (
+          <>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#333" }}>
+                Admin Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
+                placeholder="Enter your admin email"
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid #ddd",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+                autoFocus
+              />
+            </div>
 
-        {error && (
-          <div style={{
-            color: "#dc2626",
-            background: "#fef2f2",
-            padding: "12px",
-            borderRadius: "6px",
-            marginBottom: "16px",
-            fontSize: "14px"
-          }}>
-            {error}
-          </div>
+            {error && (
+              <div style={{
+                color: "#dc2626",
+                background: "#fef2f2",
+                padding: "12px",
+                borderRadius: "6px",
+                marginBottom: "16px",
+                fontSize: "14px"
+              }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleSendOtp}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: loading ? "#9ca3af" : "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: loading ? "not-allowed" : "pointer"
+              }}
+            >
+              {loading ? "Sending..." : "Send Verification Code"}
+            </button>
+          </>
+        ) : (
+          <>
+            {success && (
+              <div style={{
+                color: "#059669",
+                background: "#ecfdf5",
+                padding: "12px",
+                borderRadius: "6px",
+                marginBottom: "16px",
+                fontSize: "14px"
+              }}>
+                {success}
+              </div>
+            )}
+
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#333" }}>
+                Verification Code
+              </label>
+              <p style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
+                Enter the 6-digit code sent to {email}
+              </p>
+              <input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
+                placeholder="123456"
+                maxLength={6}
+                style={{
+                  width: "100%",
+                  padding: "12px",
+                  border: "1px solid #ddd",
+                  borderRadius: "6px",
+                  fontSize: "18px",
+                  letterSpacing: "8px",
+                  textAlign: "center",
+                  boxSizing: "border-box"
+                }}
+                autoFocus
+              />
+            </div>
+
+            {error && (
+              <div style={{
+                color: "#dc2626",
+                background: "#fef2f2",
+                padding: "12px",
+                borderRadius: "6px",
+                marginBottom: "16px",
+                fontSize: "14px"
+              }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: loading ? "#9ca3af" : "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "14px",
+                fontWeight: 500,
+                cursor: loading ? "not-allowed" : "pointer",
+                marginBottom: "12px"
+              }}
+            >
+              {loading ? "Verifying..." : "Verify & Login"}
+            </button>
+
+            <button
+              onClick={handleBack}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "#fff",
+                color: "#666",
+                border: "1px solid #ddd",
+                borderRadius: "6px",
+                fontSize: "14px",
+                cursor: loading ? "not-allowed" : "pointer"
+              }}
+            >
+              Back to Email
+            </button>
+          </>
         )}
 
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "12px",
-            background: loading ? "#9ca3af" : "#2563eb",
-            color: "#fff",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "14px",
-            fontWeight: 500,
-            cursor: loading ? "not-allowed" : "pointer"
-          }}
-        >
-          {loading ? "Verifying..." : "Login"}
-        </button>
-
         <div style={{ marginTop: "24px", fontSize: "12px", color: "#666", textAlign: "center" }}>
-          Contact your system administrator if you don't have access credentials.
+          Only authorized administrators can access this portal.
         </div>
       </div>
     </div>

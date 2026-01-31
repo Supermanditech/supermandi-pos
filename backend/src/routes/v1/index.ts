@@ -34,6 +34,7 @@ import { adminUsersRouter } from "./admin/users";
 import { adminSettingsRouter } from "./admin/settings";
 import { adminAuditRouter } from "./admin/audit";  // GL-CRIT-0049: Audit log endpoint
 import { adminGstCreditsRouter } from "./admin/gstCredits";  // GO-LIVE-097: GST input credits
+import { adminAuthRouter } from "./admin/adminAuth";  // GO-LIVE-LOGIN-004: Admin email OTP auth
 import { adminAuditMiddleware } from "../../middleware/adminAudit";  // GL-CRIT-0049: Audit logging
 import { validateGatewayHeaders } from "../../middleware/validateGatewayHeaders";  // GO-LIVE-046: Validate gateway headers
 import { requireStoreOwnership } from "../../middleware/storeOwnership";  // GO-LIVE-047: Store ownership verification
@@ -78,6 +79,7 @@ v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
 v1Router.use("/catalog", catalogRouter);  // AUD-GOLIVE-003: Store catalog endpoints
 v1Router.use("/admin", adminHealthRouter);  // MED-011: Public health check (no auth)
+v1Router.use("/admin", adminAuthRouter);  // GO-LIVE-LOGIN-004: Admin email OTP auth (no auth required)
 // GL-CRIT-0049: Apply audit middleware to all admin mutation routes
 v1Router.use("/admin", adminAuditMiddleware());
 v1Router.use("/admin", adminPosEventsRouter);

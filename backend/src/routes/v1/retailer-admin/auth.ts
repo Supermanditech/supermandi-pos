@@ -5,6 +5,7 @@
 
 import { Router, Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
 import { logLoginSuccess } from "../../../services/authAuditService";
@@ -45,6 +46,73 @@ const JWT_SECRET = (() => {
 })();
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 const JWT_EXPIRES_IN = '24h';
+
+// GO-LIVE-LOGIN: Password hashing configuration
+const BCRYPT_SALT_ROUNDS = 12;
+
+// Password validation rules
+const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+function validatePassword(password: string): string | null {
+  if (!password || password.length < PASSWORD_MIN_LENGTH) {
+    return `Password must be at least ${PASSWORD_MIN_LENGTH} characters`;
+  }
+  if (!PASSWORD_REGEX.test(password)) {
+    return 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
+  }
+  return null;
+}
+
+// Rate limiting for password login attempts
+const loginAttempts = new Map<string, { count: number; lockedUntil: number }>();
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+
+function checkLoginAttempts(key: string): { allowed: boolean; waitMinutes?: number } {
+  const attempts = loginAttempts.get(key);
+  if (!attempts) return { allowed: true };
+
+  if (Date.now() < attempts.lockedUntil) {
+    const waitMinutes = Math.ceil((attempts.lockedUntil - Date.now()) / 60000);
+    return { allowed: false, waitMinutes };
+  }
+
+  // Reset if lockout expired
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS && Date.now() >= attempts.lockedUntil) {
+    loginAttempts.delete(key);
+    return { allowed: true };
+  }
+
+  return { allowed: true };
+}
+
+function recordLoginAttempt(key: string, success: boolean): void {
+  if (success) {
+    loginAttempts.delete(key);
+    return;
+  }
+
+  const attempts = loginAttempts.get(key) || { count: 0, lockedUntil: 0 };
+  attempts.count += 1;
+
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    attempts.lockedUntil = Date.now() + LOGIN_LOCKOUT_MS;
+    console.warn(`[RetailerAuth] GO-LIVE-LOGIN: Account locked for ${key} after ${attempts.count} failed attempts`);
+  }
+
+  loginAttempts.set(key, attempts);
+}
+
+// Cleanup expired lockouts
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, data] of loginAttempts.entries()) {
+    if (data.lockedUntil && now > data.lockedUntil) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 60000);
 
 const router = Router();
 
@@ -324,6 +392,674 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
           storeName: store.name,
         },
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/firebase-otp-login
+ * GO-LIVE-RET-AUTH-001: OTP-first login - Phone OTP → Store selection after
+ *
+ * Flow:
+ * 1. Client sends Firebase ID token (from OTP verification)
+ * 2. Backend verifies token and extracts phone
+ * 3. Looks up all stores this phone has access to
+ * 4. Issues JWT token + returns stores list
+ * 5. Client selects store (if multiple) or auto-enters (if single)
+ */
+router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken } = req.body as { idToken?: string };
+
+    // Validate input
+    if (!idToken) {
+      res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Firebase ID token is required" } });
+      return;
+    }
+
+    // Verify Firebase token
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: "SERVICE_UNAVAILABLE", message: "Authentication service unavailable. Firebase verification required." }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: "FIREBASE_REQUIRED", message: "Firebase verification required" }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid or expired verification. Please verify your phone again." }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(verifyResult.payload.phone_number);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Find user by phone
+    const userResult = await pool.query(
+      `SELECT id, phone, name FROM auth.users WHERE phone = $1 AND status = 'active'`,
+      [phoneNormalized]
+    );
+
+    let user = userResult.rows[0];
+
+    if (!user) {
+      // Check if phone is registered for any store (retailer_portal_phone)
+      const storeByPhoneResult = await pool.query(
+        `SELECT id, code, name FROM platform.stores
+         WHERE retailer_portal_enabled = true
+         AND retailer_portal_phone = $1`,
+        [phoneNormalized]
+      );
+
+      if (storeByPhoneResult.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "USER_NOT_FOUND", message: "No account found with this phone number. Please register first." }
+        });
+        return;
+      }
+
+      // Auto-create user and associate with store
+      const store = storeByPhoneResult.rows[0];
+      const newUserResult = await pool.query(
+        `INSERT INTO auth.users (phone, name, actor_type, actor_id, status)
+         VALUES ($1, 'Retailer Admin', 'store', $2, 'active')
+         RETURNING id, phone, name`,
+        [phoneNormalized, store.id]
+      );
+      user = newUserResult.rows[0];
+
+      // Create store_user association
+      await pool.query(
+        `INSERT INTO auth.store_users (store_id, user_id, role, is_owner, is_active)
+         VALUES ($1, $2, 'RETAILER_ADMIN', true, true)
+         ON CONFLICT (store_id, user_id) DO UPDATE SET is_active = true`,
+        [store.id, user.id]
+      );
+    }
+
+    // Get all stores this user has access to
+    const storesResult = await pool.query(
+      `SELECT s.id, s.code, s.name
+       FROM platform.stores s
+       INNER JOIN auth.store_users su ON s.id = su.store_id
+       WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true
+       ORDER BY s.name`,
+      [user.id]
+    );
+
+    // Also check for stores where phone is the retailer_portal_phone (legacy)
+    const storesByPhoneResult = await pool.query(
+      `SELECT s.id, s.code, s.name
+       FROM platform.stores s
+       WHERE s.retailer_portal_enabled = true
+       AND s.retailer_portal_phone = $1
+       AND s.id NOT IN (
+         SELECT store_id FROM auth.store_users WHERE user_id = $2
+       )`,
+      [phoneNormalized, user.id]
+    );
+
+    // Combine and deduplicate stores
+    const allStores = [...storesResult.rows, ...storesByPhoneResult.rows];
+    const uniqueStoresMap = new Map();
+    for (const store of allStores) {
+      uniqueStoresMap.set(store.id, store);
+    }
+    const stores = Array.from(uniqueStoresMap.values());
+
+    // Generate JWT token (generic, without specific store)
+    const jti = randomUUID();
+    const jwtPayload = {
+      sub: user.id,
+      actorType: 'RETAILER',
+      phone: phoneNormalized,
+      permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+      jti,
+    };
+
+    const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    // Generate refresh token
+    const refreshJti = randomUUID();
+    const refreshPayload = {
+      sub: user.id,
+      type: 'refresh',
+      jti: refreshJti,
+    };
+
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
+    // Log successful login
+    logLoginSuccess({
+      actorType: 'retailer',
+      actorId: user.id,
+      phone: phoneNormalized,
+      ipAddress: req.ip || undefined,
+      userAgent: req.get('user-agent'),
+    }).catch(() => {});
+
+    console.log(`[RetailerAuth] GO-LIVE-RET-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}, ${stores.length} stores`);
+
+    res.json({
+      success: true,
+      token: accessToken,
+      refreshToken,
+      expiresIn: 86400,
+      tokenType: 'Bearer',
+      user: {
+        id: user.id,
+        phone: maskPhoneNumber(phoneNormalized),
+        role: "RETAILER_ADMIN",
+      },
+      stores: stores.map(s => ({
+        id: s.id,
+        code: s.code,
+        name: s.name,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
+// GO-LIVE-LOGIN: Password-Based Registration & Login
+// =============================================================================
+
+/**
+ * POST /api/v1/retailer-admin/auth/register
+ * GO-LIVE-LOGIN: Register a new retailer with phone verification + password
+ *
+ * Request body:
+ * - idToken: Firebase ID token (proves phone ownership)
+ * - email: Email address
+ * - password: Password (min 8 chars, 1 uppercase, 1 lowercase, 1 number)
+ * - storeCode: Store code to register for
+ */
+router.post("/auth/register", enhancedAuthProtection(), authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken, email, password, storeCode } = req.body as {
+      idToken?: string;
+      email?: string;
+      password?: string;
+      storeCode?: string;
+    };
+
+    // Validate inputs
+    if (!idToken || !email || !password || !storeCode) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "All fields are required: idToken, email, password, storeCode" }
+      });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim().toLowerCase())) {
+      res.status(400).json({
+        error: { code: "INVALID_EMAIL", message: "Please enter a valid email address" }
+      });
+      return;
+    }
+
+    // Validate password
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      res.status(400).json({
+        error: { code: "INVALID_PASSWORD", message: passwordError }
+      });
+      return;
+    }
+
+    // Verify Firebase token to extract phone number
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: "SERVICE_UNAVAILABLE", message: "Authentication service unavailable" }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: "FIREBASE_REQUIRED", message: "Firebase verification required for registration" }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid or expired verification. Please verify your phone again." }
+      });
+      return;
+    }
+
+    const phone = verifyResult.payload.phone_number;
+    const phoneNormalized = normalizePhoneNumber(phone);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get store by code
+    const storeResult = await pool.query(
+      `SELECT id, code, name, retailer_portal_enabled
+       FROM platform.stores
+       WHERE code = $1`,
+      [storeCode.toUpperCase()]
+    );
+
+    const store = storeResult.rows[0];
+    if (!store) {
+      res.status(404).json({ error: { code: "STORE_NOT_FOUND", message: "Store not found" } });
+      return;
+    }
+
+    if (!store.retailer_portal_enabled) {
+      res.status(403).json({ error: { code: "PORTAL_DISABLED", message: "Retailer portal is not enabled for this store" } });
+      return;
+    }
+
+    // Check if phone already registered for this store
+    const existingUser = await pool.query(
+      `SELECT u.id FROM auth.users u
+       JOIN auth.store_users su ON su.user_id = u.id
+       WHERE u.phone = $1 AND su.store_id = $2`,
+      [phoneNormalized, store.id]
+    );
+
+    if (existingUser.rows[0]) {
+      res.status(409).json({
+        error: { code: "ALREADY_REGISTERED", message: "This phone number is already registered for this store. Please login instead." }
+      });
+      return;
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+
+    // Create user with password
+    const newUserResult = await pool.query(
+      `INSERT INTO auth.users (phone, email, password_hash, name, actor_type, actor_id, status)
+       VALUES ($1, $2, $3, 'Retailer Admin', 'store', $4, 'active')
+       RETURNING id, phone, email, name`,
+      [phoneNormalized, email.trim().toLowerCase(), passwordHash, store.id]
+    );
+
+    const user = newUserResult.rows[0];
+
+    // Create store_user record
+    await pool.query(
+      `INSERT INTO auth.store_users (store_id, user_id, role, is_owner, is_active)
+       VALUES ($1, $2, 'RETAILER_ADMIN', true, true)`,
+      [store.id, user.id]
+    );
+
+    // Update store's retailer_portal_phone
+    await pool.query(
+      `UPDATE platform.stores
+       SET retailer_portal_phone = $1
+       WHERE id = $2`,
+      [phoneNormalized, store.id]
+    );
+
+    console.log(`[RetailerAuth] GO-LIVE-LOGIN: Registration successful for store ${storeCode}, phone: ***${phoneNormalized.slice(-4)}`);
+
+    res.json({
+      success: true,
+      message: "Registration successful. Please login with your phone and password.",
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') {
+      // Unique constraint violation
+      res.status(409).json({
+        error: { code: "ALREADY_REGISTERED", message: "This phone or email is already registered." }
+      });
+      return;
+    }
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/login
+ * GO-LIVE-LOGIN: Password-based login for retailers
+ *
+ * Request body:
+ * - phone: Phone number
+ * - password: Password
+ * - storeCode: Store code
+ */
+router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone, password, storeCode } = req.body as {
+      phone?: string;
+      password?: string;
+      storeCode?: string;
+    };
+
+    // Validate inputs
+    if (!phone || !password || !storeCode) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "Phone, password, and store code are required" }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(phone);
+    const loginKey = `${storeCode.toUpperCase()}:${phoneNormalized}`;
+
+    // Check if locked out
+    const attemptCheck = checkLoginAttempts(loginKey);
+    if (!attemptCheck.allowed) {
+      res.status(429).json({
+        error: {
+          code: "TOO_MANY_ATTEMPTS",
+          message: `Too many failed attempts. Please try again in ${attemptCheck.waitMinutes} minutes.`
+        }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get store by code
+    const storeResult = await pool.query(
+      `SELECT id, code, name, retailer_portal_enabled
+       FROM platform.stores
+       WHERE code = $1`,
+      [storeCode.toUpperCase()]
+    );
+
+    const store = storeResult.rows[0];
+    if (!store) {
+      recordLoginAttempt(loginKey, false);
+      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid phone, password, or store code" } });
+      return;
+    }
+
+    if (!store.retailer_portal_enabled) {
+      res.status(403).json({ error: { code: "PORTAL_DISABLED", message: "Retailer portal is not enabled for this store" } });
+      return;
+    }
+
+    // Find user by phone and store
+    const userResult = await pool.query(
+      `SELECT u.id, u.phone, u.email, u.name, u.password_hash, su.role
+       FROM auth.users u
+       JOIN auth.store_users su ON su.user_id = u.id
+       WHERE u.phone = $1 AND su.store_id = $2 AND u.status = 'active' AND su.is_active = true`,
+      [phoneNormalized, store.id]
+    );
+
+    const user = userResult.rows[0];
+    if (!user) {
+      recordLoginAttempt(loginKey, false);
+      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid phone, password, or store code" } });
+      return;
+    }
+
+    // Check password
+    if (!user.password_hash) {
+      // User registered via old OTP-only flow, no password set
+      res.status(401).json({
+        error: {
+          code: "PASSWORD_NOT_SET",
+          message: "Password not set. Please use 'Forgot Password' to set a password."
+        }
+      });
+      return;
+    }
+
+    const passwordValid = await bcrypt.compare(password, user.password_hash);
+    if (!passwordValid) {
+      recordLoginAttempt(loginKey, false);
+      res.status(401).json({ error: { code: "INVALID_CREDENTIALS", message: "Invalid phone, password, or store code" } });
+      return;
+    }
+
+    // Login successful - clear attempts
+    recordLoginAttempt(loginKey, true);
+
+    // Generate JWT tokens
+    const jti = randomUUID();
+    const jwtPayload = {
+      sub: user.id,
+      actorType: 'STORE',
+      actorId: store.id,
+      permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
+      jti,
+    };
+
+    const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    const refreshJti = randomUUID();
+    const refreshPayload = {
+      sub: user.id,
+      type: 'refresh',
+      storeId: store.id,
+      jti: refreshJti,
+    };
+
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
+    // Log successful login
+    logLoginSuccess({
+      actorType: 'retailer',
+      actorId: user.id,
+      phone: phoneNormalized,
+      storeId: store.id,
+      ipAddress: req.ip || undefined,
+      userAgent: req.get('user-agent'),
+    }).catch(() => {});
+
+    console.log(`[RetailerAuth] GO-LIVE-LOGIN: Password login successful for store ${storeCode}`);
+
+    res.json({
+      success: true,
+      data: {
+        accessToken,
+        refreshToken,
+        expiresIn: 86400,
+        tokenType: 'Bearer',
+        user: {
+          id: user.id,
+          phone: maskPhoneNumber(phoneNormalized),
+          role: user.role || "RETAILER_ADMIN",
+        },
+        store: {
+          storeId: store.id,
+          storeCode: store.code,
+          storeName: store.name,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/forgot-password/request
+ * GO-LIVE-LOGIN: Request password reset (check if user exists)
+ *
+ * Request body:
+ * - phone: Phone number
+ * - storeCode: Store code
+ */
+router.post("/auth/forgot-password/request", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone, storeCode } = req.body as { phone?: string; storeCode?: string };
+
+    if (!phone || !storeCode) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "Phone and store code are required" }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(phone);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get store and user
+    const result = await pool.query(
+      `SELECT u.id FROM auth.users u
+       JOIN auth.store_users su ON su.user_id = u.id
+       JOIN platform.stores s ON s.id = su.store_id
+       WHERE u.phone = $1 AND s.code = $2 AND u.status = 'active'`,
+      [phoneNormalized, storeCode.toUpperCase()]
+    );
+
+    if (!result.rows[0]) {
+      // Don't reveal if user exists - always return success
+      res.json({
+        success: true,
+        message: "If an account exists with this phone and store, you can proceed to verify OTP.",
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: "Account found. Please verify your phone with OTP to reset password.",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/auth/forgot-password/reset
+ * GO-LIVE-LOGIN: Reset password with verified Firebase token
+ *
+ * Request body:
+ * - idToken: Firebase ID token (proves phone ownership)
+ * - newPassword: New password
+ * - storeCode: Store code
+ */
+router.post("/auth/forgot-password/reset", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken, newPassword, storeCode } = req.body as {
+      idToken?: string;
+      newPassword?: string;
+      storeCode?: string;
+    };
+
+    if (!idToken || !newPassword || !storeCode) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "All fields are required" }
+      });
+      return;
+    }
+
+    // Validate password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      res.status(400).json({
+        error: { code: "INVALID_PASSWORD", message: passwordError }
+      });
+      return;
+    }
+
+    // Verify Firebase token
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: "SERVICE_UNAVAILABLE", message: "Authentication service unavailable" }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: "FIREBASE_REQUIRED", message: "Firebase verification required" }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid or expired verification. Please verify your phone again." }
+      });
+      return;
+    }
+
+    const phone = verifyResult.payload.phone_number;
+    const phoneNormalized = normalizePhoneNumber(phone);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Find user by phone and store
+    const userResult = await pool.query(
+      `SELECT u.id FROM auth.users u
+       JOIN auth.store_users su ON su.user_id = u.id
+       JOIN platform.stores s ON s.id = su.store_id
+       WHERE u.phone = $1 AND s.code = $2 AND u.status = 'active'`,
+      [phoneNormalized, storeCode.toUpperCase()]
+    );
+
+    if (!userResult.rows[0]) {
+      res.status(404).json({
+        error: { code: "USER_NOT_FOUND", message: "No account found for this phone and store" }
+      });
+      return;
+    }
+
+    const userId = userResult.rows[0].id;
+
+    // Hash and update password
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+
+    await pool.query(
+      `UPDATE auth.users SET password_hash = $1, tokens_revoked_at = NOW() WHERE id = $2`,
+      [passwordHash, userId]
+    );
+
+    console.log(`[RetailerAuth] GO-LIVE-LOGIN: Password reset for user ${userId}, store ${storeCode}`);
+
+    res.json({
+      success: true,
+      message: "Password reset successful. Please login with your new password.",
     });
   } catch (error) {
     next(error);

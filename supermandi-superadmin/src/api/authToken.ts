@@ -281,3 +281,103 @@ export function handle401Response(): void {
   }
 }
 
+// =============================================================================
+// GO-LIVE-LOGIN-004: Email OTP Authentication
+// =============================================================================
+
+/**
+ * Send OTP to admin email
+ * GO-LIVE-LOGIN-004: Email-based admin authentication
+ */
+export async function sendAdminOtp(email: string): Promise<{ success: boolean; error?: string; expiresIn?: number }> {
+  if (!API_BASE) {
+    return { success: false, error: "API base URL not configured" };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/admin/auth/send-email-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data?.error?.message || `Failed to send OTP (${res.status})`,
+      };
+    }
+
+    return {
+      success: true,
+      expiresIn: data.expiresIn,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
+
+/**
+ * Verify OTP and login
+ * GO-LIVE-LOGIN-004: Email-based admin authentication
+ */
+export async function verifyAdminOtp(email: string, otp: string): Promise<{
+  success: boolean;
+  error?: string;
+  token?: string;
+  admin?: { email: string; role: string };
+}> {
+  if (!API_BASE) {
+    return { success: false, error: "API base URL not configured" };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/admin/auth/verify-email-otp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, otp }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: data?.error?.message || `Failed to verify OTP (${res.status})`,
+      };
+    }
+
+    // Store the JWT token
+    if (data.token) {
+      // Store as session token with 24h expiry
+      const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      try {
+        sessionStorage.setItem(SESSION_TOKEN_KEY, data.token);
+        sessionStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
+      } catch {
+        // ignore storage errors
+      }
+    }
+
+    return {
+      success: true,
+      token: data.token,
+      admin: data.admin,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Network error",
+    };
+  }
+}
+

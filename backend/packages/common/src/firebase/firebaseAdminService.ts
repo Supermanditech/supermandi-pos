@@ -83,9 +83,13 @@ export type VerifyTokenResponse = VerifyTokenResult | VerifyTokenError;
 // TOKEN VERIFICATION
 // =============================================================================
 
+// GO-LIVE-HOME-001: Firebase verification timeout (10 seconds) to fail fast instead of hanging
+const FIREBASE_VERIFY_TIMEOUT_MS = 10000;
+
 /**
  * Verify a Firebase ID token
  * Returns the decoded token payload if valid
+ * GO-LIVE-HOME-001: Added timeout to prevent hanging when credentials are misconfigured
  */
 export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyTokenResponse> {
   // Debug logging
@@ -98,7 +102,17 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
   const auth = app.auth();
 
   try {
-    const decodedToken = await auth.verifyIdToken(idToken, false); // checkRevoked = false (ADC on GCE lacks identitytoolkit scope)
+    // GO-LIVE-HOME-001: Add timeout to prevent hanging when Firebase creds are misconfigured
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Firebase verification timed out after 10 seconds - check GOOGLE_APPLICATION_CREDENTIALS'));
+      }, FIREBASE_VERIFY_TIMEOUT_MS);
+    });
+
+    const decodedToken = await Promise.race([
+      auth.verifyIdToken(idToken, false), // checkRevoked = false (ADC on GCE lacks identitytoolkit scope)
+      timeoutPromise,
+    ]);
     console.log(`[Firebase] Token verified! UID: ${decodedToken.uid}, phone: ${decodedToken.phone_number}`);
 
     // Extract sign-in provider
@@ -118,6 +132,15 @@ export async function verifyFirebaseIdToken(idToken: string): Promise<VerifyToke
   } catch (error: unknown) {
     const firebaseError = error as { code?: string; message?: string };
     console.error(`[Firebase] Token verification error - code: ${firebaseError.code}, message: ${firebaseError.message}`);
+
+    // GO-LIVE-HOME-001: Handle timeout errors specifically
+    if (firebaseError.message?.includes('timed out')) {
+      return {
+        success: false,
+        error: 'Firebase verification timed out - check credentials configuration',
+        code: 'UNKNOWN',
+      };
+    }
 
     if (firebaseError.code === 'auth/id-token-expired') {
       return {

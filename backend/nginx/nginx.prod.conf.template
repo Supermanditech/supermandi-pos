@@ -95,9 +95,12 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # GO-LIVE-B9: Root URL redirects to retailer portal
+    # GO-LIVE-HOME-001: Serve landing page portal selector at root
     location = / {
-        return 302 /retailer/;
+        root /var/www/supermandi-landing;
+        index index.html;
+        try_files /index.html =404;
+        add_header Cache-Control "no-store";
     }
 
     # Redirect all other traffic to HTTPS
@@ -203,9 +206,12 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # GO-LIVE-B9: Root URL redirects to retailer portal landing page
+    # GO-LIVE-HOME-001: Serve landing page portal selector at root
     location = / {
-        return 302 /retailer/;
+        root /var/www/supermandi-landing;
+        index index.html;
+        try_files /index.html =404;
+        add_header Cache-Control "no-store";
     }
 
     # API endpoints

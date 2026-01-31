@@ -48,8 +48,14 @@ const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // Routes that don't require JWT authentication
 // Only auth endpoints are public - all other routes require valid JWT
+// GO-LIVE-RET-AUTH-001: Added firebase-otp-login (OTP-first flow)
+// GO-LIVE-LOGIN: Added register, login, forgot-password endpoints
 const PUBLIC_PATHS = [
   '/api/v1/retailer-admin/auth/firebase-login',
+  '/api/v1/retailer-admin/auth/firebase-otp-login',  // GO-LIVE-RET-AUTH-001: OTP-first login
+  '/api/v1/retailer-admin/auth/register',  // GO-LIVE-LOGIN: Password registration
+  '/api/v1/retailer-admin/auth/login',  // GO-LIVE-LOGIN: Password login
+  '/api/v1/retailer-admin/auth/forgot-password',  // GO-LIVE-LOGIN: Password reset (covers /request and /reset)
   '/api/v1/retailer-admin/auth/refresh',
   '/api/v1/retailer-admin/health',  // RCAT-DEPLOY-001: Gateway routing verification
   '/health',

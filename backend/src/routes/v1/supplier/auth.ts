@@ -11,6 +11,18 @@ import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../../../services/ipBlockingService";
 import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../services/authAuditService";
+
+// GO-LIVE-LOGIN: Import Firebase verification for phone-based auth
+let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
+try {
+  const firebase = require("@supermandi/common");
+  if (firebase.verifyFirebaseIdToken) {
+    verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
+    console.log("[SupplierAuth] Firebase server-side verification available");
+  }
+} catch {
+  console.warn("[SupplierAuth] Firebase verification not available");
+}
 import {
   sendVerificationEmail,
   sendPasswordResetEmail,
@@ -1242,6 +1254,364 @@ router.post("/auth/logout-all", requireSupplierAuth, async (req: SupplierAuthReq
       data: {
         success: true,
         message: 'All sessions logged out. Please login again.',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
+// GO-LIVE-SUP-AUTH: Firebase Phone OTP ONLY - No Password
+// =============================================================================
+
+/**
+ * Normalize phone number to E.164 format
+ */
+function normalizePhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length === 12) {
+    return `+${digits}`;
+  }
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+  if (digits.length > 10) {
+    return `+${digits}`;
+  }
+  return `+${digits}`;
+}
+
+/**
+ * POST /api/v1/supplier/auth/firebase-register
+ * GO-LIVE-SUP-AUTH-002: Register a new supplier with phone OTP verification
+ * NO PASSWORD - OTP only model
+ *
+ * Request body:
+ * - idToken: Firebase ID token (proves phone ownership)
+ * - email: Email address
+ * - businessName: Business name
+ * - gstin: GSTIN (optional)
+ */
+router.post("/auth/firebase-register", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken, email, businessName, gstin } = req.body as {
+      idToken?: string;
+      email?: string;
+      businessName?: string;
+      gstin?: string;
+    };
+
+    // Validate inputs (NO PASSWORD)
+    if (!idToken || !email || !businessName) {
+      res.status(400).json({
+        error: { code: 'MISSING_FIELDS', message: 'All fields are required: idToken, email, businessName' }
+      });
+      return;
+    }
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim().toLowerCase())) {
+      res.status(400).json({
+        error: { code: 'INVALID_EMAIL', message: 'Please enter a valid email address' }
+      });
+      return;
+    }
+
+    // Validate GSTIN if provided (GL-CRIT-0031: position 14 can be any alphanumeric)
+    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/.test(gstin.toUpperCase())) {
+      res.status(400).json({
+        error: { code: 'INVALID_GSTIN', message: 'Invalid GSTIN format' }
+      });
+      return;
+    }
+
+    // Verify Firebase token
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: 'SERVICE_UNAVAILABLE', message: 'Authentication service unavailable' }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: 'FIREBASE_REQUIRED', message: 'Firebase verification required for registration' }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired verification. Please verify your phone again.' }
+      });
+      return;
+    }
+
+    const phone = normalizePhoneNumber(verifyResult.payload.phone_number);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Check if phone already registered
+    const existingPhone = await pool.query(
+      `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
+      [phone]
+    );
+    if (existingPhone.rows[0]) {
+      res.status(409).json({
+        error: { code: 'PHONE_EXISTS', message: 'This phone number is already registered. Please login instead.' }
+      });
+      return;
+    }
+
+    // Check if email already registered
+    const existingEmail = await pool.query(
+      `SELECT id FROM supplier.suppliers WHERE primary_email = $1`,
+      [email.toLowerCase()]
+    );
+    if (existingEmail.rows[0]) {
+      res.status(409).json({
+        error: { code: 'EMAIL_EXISTS', message: 'This email is already registered.' }
+      });
+      return;
+    }
+
+    // Check GSTIN if provided
+    if (gstin) {
+      const existingGstin = await pool.query(
+        `SELECT id FROM supplier.suppliers WHERE gstin = $1`,
+        [gstin.toUpperCase()]
+      );
+      if (existingGstin.rows[0]) {
+        res.status(409).json({
+          error: { code: 'GSTIN_EXISTS', message: 'A supplier with this GSTIN already exists' }
+        });
+        return;
+      }
+    }
+
+    // Create supplier with pending status (awaiting admin approval)
+    // NO password_hash - OTP only model
+    const result = await pool.query(
+      `INSERT INTO supplier.suppliers (
+        primary_phone,
+        primary_email,
+        business_name,
+        gstin,
+        verification_status,
+        status
+      ) VALUES ($1, $2, $3, $4, 'pending', 'pending')
+      RETURNING id, primary_phone, primary_email, business_name, gstin, verification_status, status`,
+      [
+        phone,
+        email.toLowerCase(),
+        businessName,
+        gstin?.toUpperCase() || null,
+      ]
+    );
+
+    const supplier = result.rows[0];
+
+    console.log(`[SupplierAuth] GO-LIVE-SUP-AUTH-002: Registration successful for phone ***${phone.slice(-4)}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration submitted for approval. You will be notified once approved.',
+      data: {
+        supplier: {
+          id: supplier.id,
+          phone: `***${phone.slice(-4)}`,
+          email: supplier.primary_email,
+          businessName: supplier.business_name,
+          status: supplier.status,
+        },
+      },
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') {
+      res.status(409).json({
+        error: { code: 'ALREADY_EXISTS', message: 'Phone, email, or GSTIN already registered.' }
+      });
+      return;
+    }
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/firebase-login
+ * GO-LIVE-SUP-AUTH-001: Login with Firebase Phone OTP only (no password)
+ *
+ * Request body:
+ * - idToken: Firebase ID token (proves phone ownership via OTP)
+ *
+ * Returns:
+ * - APPROVED supplier: JWT token + supplier data
+ * - PENDING_APPROVAL: Status indicator (no full JWT)
+ * - LOCKED/INACTIVE: Blocked with error
+ */
+router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken } = req.body as { idToken?: string };
+
+    if (!idToken) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'Firebase ID token is required' }
+      });
+      return;
+    }
+
+    // Verify Firebase token
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: 'SERVICE_UNAVAILABLE', message: 'Authentication service unavailable' }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: 'FIREBASE_REQUIRED', message: 'Firebase verification required' }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: 'INVALID_TOKEN', message: 'Invalid or expired verification. Please verify your phone again.' }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(verifyResult.payload.phone_number);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Find supplier by phone
+    const result = await pool.query(
+      `SELECT id, primary_email, primary_phone, business_name, gstin,
+              verification_status, status, locked_until
+       FROM supplier.suppliers
+       WHERE primary_phone = $1`,
+      [phoneNormalized]
+    );
+
+    const supplier = result.rows[0];
+    const clientIp = req.ip || req.socket?.remoteAddress || null;
+
+    if (!supplier) {
+      res.status(404).json({
+        error: { code: 'USER_NOT_FOUND', message: 'No account found with this phone number. Please register first.' }
+      });
+      return;
+    }
+
+    // Check if account is pending approval
+    if (supplier.status === 'pending') {
+      res.status(200).json({
+        success: true,
+        status: 'pending',
+        message: 'Your account is pending admin approval. You will be notified once approved.',
+      });
+      return;
+    }
+
+    // Check if account is locked
+    if (supplier.locked_until && new Date(supplier.locked_until) > new Date()) {
+      const remainingMinutes = Math.ceil((new Date(supplier.locked_until).getTime() - Date.now()) / 60000);
+      res.status(403).json({
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: `Account is temporarily locked. Please try again in ${remainingMinutes} minutes.`,
+          lockedUntil: supplier.locked_until,
+        }
+      });
+      return;
+    }
+
+    // Check if account is active
+    if (supplier.status !== 'active') {
+      res.status(403).json({
+        error: { code: 'ACCOUNT_INACTIVE', message: 'Your account is not active. Please contact support.' }
+      });
+      return;
+    }
+
+    // Update last login
+    await pool.query(
+      `UPDATE supplier.suppliers
+       SET last_login_ip = $1, failed_login_count = 0, locked_until = NULL
+       WHERE id = $2`,
+      [clientIp, supplier.id]
+    );
+
+    if (clientIp) {
+      clearIpFailures(clientIp);
+    }
+
+    // Generate JWT
+    const jti = randomUUID();
+    const jwtPayload = {
+      sub: supplier.id,
+      actorType: 'SUPPLIER',
+      actorId: supplier.id,
+      email: supplier.primary_email,
+      phone: phoneNormalized,
+      permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
+      jti,
+    };
+
+    const token = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    // Generate refresh token
+    const refreshJti = randomUUID();
+    const refreshPayload = {
+      sub: supplier.id,
+      type: 'refresh',
+      jti: refreshJti,
+    };
+
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
+    logLoginSuccess({
+      actorType: 'supplier',
+      actorId: supplier.id,
+      phone: phoneNormalized,
+      ipAddress: clientIp || undefined,
+      userAgent: req.get('user-agent'),
+    }).catch(() => {});
+
+    console.log(`[SupplierAuth] GO-LIVE-SUP-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}`);
+
+    res.json({
+      success: true,
+      status: 'active',
+      token,
+      refreshToken,
+      expiresIn: 86400,
+      tokenType: 'Bearer',
+      supplier: {
+        id: supplier.id,
+        phone: `***${phoneNormalized.slice(-4)}`,
+        email: supplier.primary_email,
+        businessName: supplier.business_name,
+        gstin: supplier.gstin,
+        verificationStatus: supplier.verification_status,
       },
     });
   } catch (error) {

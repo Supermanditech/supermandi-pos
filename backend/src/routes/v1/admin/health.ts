@@ -36,8 +36,10 @@ function requireAdminToken(req: Request, res: Response, next: NextFunction): voi
  * Returns minimal status for load balancers and basic monitoring
  */
 adminHealthRouter.get("/health", (_req: Request, res: Response) => {
+  const emailInfo = getEmailProviderInfo();
   res.json({
     status: "ok",
+    email_provider_configured: emailInfo.configured,
   });
 });
 

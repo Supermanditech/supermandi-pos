@@ -1,8 +1,9 @@
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import ProtectedLayout from './components/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import ImportPage from './pages/ImportPage';
@@ -50,11 +51,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const urlStoreCode = match?.[1];
 
   if (!isAuthenticated) {
-    if (!urlStoreCode) {
-      return <Navigate to="/" replace />;
-    }
-    // Redirect to login, preserving the intended destination
-    return <Navigate to={`/s/${urlStoreCode}/login`} state={{ from: location }} replace />;
+    // GO-LIVE-RET-AUTH-001: Always redirect to /retailer/login (OTP first, store selection after)
+    return <Navigate to="/retailer/login" state={{ from: location }} replace />;
   }
 
   // GL-CRIT-0023: Validate URL storeCode matches user's authenticated store
@@ -125,85 +123,23 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// GO-LIVE-B9: Retailer Login - Step 1: Store Code Entry
-function StoreLandingPage() {
-  const [storeCode, setStoreCode] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!storeCode.trim()) return;
-
-    setError('');
-    setIsLoading(true);
-
-    // Navigate to login page for this store
-    navigate(`/s/${storeCode.trim().toUpperCase()}/login`);
-  };
-
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <h1 className="login-title">SuperMandi</h1>
-        <p className="login-subtitle">Retailer Portal Login</p>
-
-        {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Store Code</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="e.g., STORE001"
-              value={storeCode}
-              onChange={(e) => setStoreCode(e.target.value.toUpperCase())}
-              style={{ textTransform: 'uppercase' }}
-              required
-              autoFocus
-            />
-            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
-              Your store code was provided during registration
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
-            disabled={isLoading || !storeCode.trim()}
-          >
-            {isLoading ? 'Loading...' : 'Continue to Login'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
+// GO-LIVE-RET-AUTH-001: Removed StoreLandingPage - now using direct /retailer/login with OTP first
 
 function AppRoutes() {
   return (
     <>
       <TrailingSlashRedirect />
       <Routes>
-        {/* GO-LIVE-B9: Root - show store code entry form */}
-        <Route path="/" element={<StoreLandingPage />} />
+        {/* GO-LIVE-RET-AUTH-001: Root redirects to /retailer/login (OTP first, store selection after) */}
+        <Route path="/" element={<Navigate to="/retailer/login" replace />} />
 
-        {/* Login page - always accessible */}
-        <Route path="/s/:storeCode/login" element={<LoginPage />} />
+        {/* Auth pages - accessible without authentication */}
+        <Route path="/retailer/login" element={<LoginPage />} />
+        <Route path="/retailer/register" element={<RegisterPage />} />
+
+        {/* Legacy routes - redirect to new paths */}
+        <Route path="/s/:storeCode/login" element={<Navigate to="/retailer/login" replace />} />
+        <Route path="/s/:storeCode/register" element={<Navigate to="/retailer/register" replace />} />
 
         {/* Protected routes */}
         <Route

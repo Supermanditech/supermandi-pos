@@ -252,6 +252,60 @@ export async function resetPassword(email: string, token: string, newPassword: s
   });
 }
 
+// =============================================================================
+// GO-LIVE-SUP-AUTH: Phone OTP ONLY Authentication (No Password)
+// =============================================================================
+
+export interface PhoneOtpRegisterInput {
+  idToken: string;  // Firebase ID token (proves phone ownership)
+  email: string;
+  businessName: string;
+  gstin?: string;
+  // NO PASSWORD - OTP only model
+}
+
+export interface PhoneOtpLoginResponse {
+  success: boolean;
+  status: 'active' | 'pending' | 'inactive' | 'locked';
+  token?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  tokenType?: string;
+  supplier?: {
+    id: string;
+    phone: string;
+    email: string;
+    businessName: string;
+    gstin?: string;
+    verificationStatus: string;
+  };
+  message?: string;
+}
+
+/**
+ * GO-LIVE-SUP-AUTH-002: Register supplier with Phone OTP + business details (no password)
+ */
+export async function phoneOtpRegister(input: PhoneOtpRegisterInput): Promise<{ success: boolean; message: string; data?: { supplier: Partial<Supplier> } }> {
+  return apiFetch<{ success: boolean; message: string; data?: { supplier: Partial<Supplier> } }>('/api/v1/supplier/auth/firebase-register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * GO-LIVE-SUP-AUTH-001: Login with Phone OTP only (exchange Firebase token for JWT)
+ */
+export async function phoneOtpLogin(idToken: string): Promise<PhoneOtpLoginResponse> {
+  const result = await apiFetch<PhoneOtpLoginResponse>('/api/v1/supplier/auth/firebase-login', {
+    method: 'POST',
+    body: JSON.stringify({ idToken }),
+  });
+  if (result.token) {
+    setAuthToken(result.token);
+  }
+  return result;
+}
+
 // GL-WF-034: Email verification functions
 // GO-LIVE: Updated response format - 'sent' boolean indicates actual email delivery
 export interface SendVerificationResponse {

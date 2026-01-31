@@ -1,445 +1,433 @@
 'use client';
 
-import { useState } from 'react';
+// GO-LIVE-SUP-AUTH-002: Phone OTP + Business Details registration for Supplier Portal
+// NO PASSWORD - Firebase Phone OTP → Business details → Pending approval
+
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { registerSupplier, ApiError } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
+import { phoneOtpRegister, ApiError } from '@/lib/api';
+import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
+
+type Step = 'phone' | 'otp' | 'details' | 'success';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { refreshProfile } = useAuth();
+
+  const [step, setStep] = useState<Step>('phone');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [email, setEmail] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [gstin, setGstin] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    // Step 1: Account
-    email: '',
-    password: '',
-    confirmPassword: '',
-    // Step 2: Business
-    businessName: '',
-    gstin: '',
-    phone: '',
-    // Step 3: Address
-    address: '',
-    city: '',
-    state: '',
-    pincode: '',
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState('');
+  const [idToken, setIdToken] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const recaptchaInitialized = useRef(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validateStep1 = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
+  // Setup reCAPTCHA on mount
+  useEffect(() => {
+    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
+      try {
+        setupRecaptcha('send-otp-button');
+        recaptchaInitialized.current = true;
+      } catch (err) {
+        console.error('Failed to setup reCAPTCHA:', err);
+      }
     }
 
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+    return () => {
+      cleanup();
+      recaptchaInitialized.current = false;
+    };
+  }, [step]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
     }
+  }, [resendCooldown]);
 
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStep2 = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.businessName.trim()) {
-      newErrors.businessName = 'Business name is required';
-    }
-
-    // GL-CRIT-0031: Fixed GSTIN regex - position 14 can be any alphanumeric, not just 'Z'
-    // Format: 2 digits (state) + 5 letters (PAN) + 4 digits + 1 letter + 1 alphanumeric + 1 alphanumeric + 1 checksum
-    if (formData.gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/.test(formData.gstin)) {
-      newErrors.gstin = 'Please enter a valid 15-character GSTIN';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid 10-digit phone number';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStep3 = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) {
-      newErrors.pincode = 'Please enter a valid 6-digit PIN code';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleNext = () => {
-    if (step === 1 && validateStep1()) {
-      setStep(2);
-    } else if (step === 2 && validateStep2()) {
-      setStep(3);
-    }
-  };
-
-  const handleBack = () => {
-    setStep((prev) => prev - 1);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    if (!validateStep3()) return;
+    // Validate phone
+    const cleanedPhone = phone.replace(/[\s-]/g, '');
+    if (!/^(\+91)?[6-9]\d{9}$/.test(cleanedPhone) && !/^\+?[0-9]{10,13}$/.test(cleanedPhone)) {
+      setError('Please enter a valid phone number');
+      return;
+    }
 
     setIsLoading(true);
+
     try {
-      await registerSupplier({
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password,
-        businessName: formData.businessName.trim(),
-        gstin: formData.gstin.trim().toUpperCase() || undefined,
-        phone: formData.phone.trim(),
-        address: formData.address.trim() || undefined,
-        city: formData.city.trim() || undefined,
-        state: formData.state || undefined,
-        pincode: formData.pincode.trim() || undefined,
+      if (!isFirebaseReady()) {
+        throw new Error('Firebase is not configured. Phone verification is required for registration.');
+      }
+
+      await sendOtp(phone);
+      setStep('otp');
+      setResendCooldown(60);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const token = await verifyOtp(otp);
+      setIdToken(token);
+      setStep('details');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+
+    setError('');
+    setIsLoading(true);
+
+    try {
+      cleanup();
+      recaptchaInitialized.current = false;
+      setupRecaptcha('resend-otp-button');
+      recaptchaInitialized.current = true;
+
+      await sendOtp(phone);
+      setResendCooldown(60);
+      toast.success('OTP sent successfully!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate business name
+    if (!businessName.trim()) {
+      setError('Business name is required');
+      return;
+    }
+
+    // Validate GSTIN if provided (optional field)
+    // GL-CRIT-0031: Fixed GSTIN regex - position 14 can be any alphanumeric
+    if (gstin.trim() && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/.test(gstin.trim().toUpperCase())) {
+      setError('Please enter a valid 15-character GSTIN');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await phoneOtpRegister({
+        idToken,
+        email: email.trim().toLowerCase(),
+        businessName: businessName.trim(),
+        gstin: gstin.trim().toUpperCase() || undefined,
       });
 
-      await refreshProfile();
-      toast.success('Registration successful! Welcome to SuperMandi.');
-      router.push('/dashboard');
-    } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.code === 'EMAIL_EXISTS') {
-          setStep(1);
-          setErrors({ email: 'This email is already registered' });
-        } else if (error.code === 'GSTIN_EXISTS') {
-          setStep(2);
-          setErrors({ gstin: 'This GSTIN is already registered' });
+      setStep('success');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.code === 'EMAIL_EXISTS') {
+          setError('This email is already registered');
+        } else if (err.code === 'PHONE_EXISTS') {
+          setError('This phone number is already registered');
+        } else if (err.code === 'GSTIN_EXISTS') {
+          setError('This GSTIN is already registered');
         } else {
-          toast.error(error.message);
+          setError(err.message);
         }
       } else {
-        toast.error('Registration failed. Please try again.');
+        setError('Registration failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const indianStates = [
-    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-    'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-    'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-    'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-    'Delhi', 'Jammu and Kashmir', 'Ladakh',
-  ];
-
   return (
     <>
       <h2 className="text-xl font-semibold text-slate-800 mb-2">
-        Register as Supplier
+        {step === 'success' ? 'Registration Submitted' : 'Register as Supplier'}
       </h2>
-      <p className="text-slate-600 text-sm mb-6">
-        Step {step} of 3:{' '}
-        {step === 1 ? 'Account' : step === 2 ? 'Business Details' : 'Address'}
-      </p>
 
-      {/* Progress bar */}
-      <div className="flex gap-2 mb-6">
-        {[1, 2, 3].map((s) => (
-          <div
-            key={s}
-            className={`h-1 flex-1 rounded-full ${
-              s <= step ? 'bg-primary-600' : 'bg-slate-200'
-            }`}
-          />
-        ))}
-      </div>
+      {step !== 'success' && (
+        <p className="text-slate-600 text-sm mb-6">
+          {step === 'phone' && 'Step 1 of 3: Verify Phone'}
+          {step === 'otp' && 'Step 2 of 3: Enter OTP'}
+          {step === 'details' && 'Step 3 of 3: Business Details'}
+        </p>
+      )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Step 1: Account */}
-        {step === 1 && (
-          <>
-            <div>
-              <label htmlFor="email" className="label">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`input ${errors.email ? 'input-error' : ''}`}
-                placeholder="supplier@example.com"
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500 mt-1">{errors.email}</p>
-              )}
-            </div>
+      {/* Firebase warning */}
+      {!isFirebaseReady() && step === 'phone' && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
+          <strong>Phone Verification Unavailable</strong>
+          <p className="mt-1">
+            Registration requires phone verification which is currently unavailable.
+          </p>
+        </div>
+      )}
 
-            <div>
-              <label htmlFor="password" className="label">
-                Password *
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`input ${errors.password ? 'input-error' : ''}`}
-                placeholder="Min 8 characters"
-              />
-              {errors.password && (
-                <p className="text-sm text-red-500 mt-1">{errors.password}</p>
-              )}
-            </div>
+      {/* Error display */}
+      {error && (
+        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+          {error}
+        </div>
+      )}
 
-            <div>
-              <label htmlFor="confirmPassword" className="label">
-                Confirm Password *
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className={`input ${errors.confirmPassword ? 'input-error' : ''}`}
-                placeholder="••••••••"
-              />
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
+      {/* Step 1: Phone Number */}
+      {step === 'phone' && (
+        <form onSubmit={handleSendOtp} className="space-y-4">
+          <div>
+            <label htmlFor="phone" className="label">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="input"
+              placeholder="+91 9876543210"
+              disabled={isLoading}
+              autoFocus
+            />
+            <p className="text-xs text-slate-500 mt-2">
+              We&apos;ll send an OTP to verify your phone number
+            </p>
+          </div>
 
+          <button
+            id="send-otp-button"
+            type="submit"
+            className="btn btn-primary w-full py-3"
+            disabled={isLoading || !isFirebaseReady()}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Sending OTP...
+              </span>
+            ) : (
+              'Send OTP'
+            )}
+          </button>
+
+          <p className="text-center text-sm text-slate-600">
+            Already have an account?{' '}
+            <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              Sign In
+            </Link>
+          </p>
+        </form>
+      )}
+
+      {/* Step 2: OTP Verification */}
+      {step === 'otp' && (
+        <form onSubmit={handleVerifyOtp} className="space-y-4">
+          <div>
+            <label htmlFor="otp" className="label">
+              Enter OTP
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              Enter the 6-digit code sent to {phone}
+            </p>
+            <input
+              type="text"
+              id="otp"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              className="input text-center text-xl tracking-widest"
+              placeholder="123456"
+              maxLength={6}
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full py-3"
+            disabled={isLoading || otp.length !== 6}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Verifying...
+              </span>
+            ) : (
+              'Verify OTP'
+            )}
+          </button>
+
+          <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={handleNext}
-              className="btn btn-primary w-full py-3"
+              className="text-sm text-slate-600 hover:text-slate-800"
+              onClick={() => {
+                setStep('phone');
+                setOtp('');
+                setError('');
+                recaptchaInitialized.current = false;
+              }}
+              disabled={isLoading}
             >
-              Continue
+              Change Phone Number
             </button>
-          </>
-        )}
 
-        {/* Step 2: Business */}
-        {step === 2 && (
-          <>
-            <div>
-              <label htmlFor="businessName" className="label">
-                Business Name *
-              </label>
-              <input
-                type="text"
-                id="businessName"
-                name="businessName"
-                value={formData.businessName}
-                onChange={handleChange}
-                className={`input ${errors.businessName ? 'input-error' : ''}`}
-                placeholder="Your Company Name"
-              />
-              {errors.businessName && (
-                <p className="text-sm text-red-500 mt-1">{errors.businessName}</p>
-              )}
-            </div>
+            <button
+              id="resend-otp-button"
+              type="button"
+              className={`text-sm font-medium ${
+                resendCooldown > 0
+                  ? 'text-slate-400 cursor-not-allowed'
+                  : 'text-primary-600 hover:text-primary-700'
+              }`}
+              onClick={handleResendOtp}
+              disabled={isLoading || resendCooldown > 0}
+            >
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+            </button>
+          </div>
+        </form>
+      )}
 
-            <div>
-              <label htmlFor="gstin" className="label">
-                GSTIN (optional)
-              </label>
-              <input
-                type="text"
-                id="gstin"
-                name="gstin"
-                value={formData.gstin}
-                onChange={handleChange}
-                className={`input ${errors.gstin ? 'input-error' : ''}`}
-                placeholder="22AAAAA0000A1Z5"
-                style={{ textTransform: 'uppercase' }}
-              />
-              {errors.gstin && (
-                <p className="text-sm text-red-500 mt-1">{errors.gstin}</p>
-              )}
-            </div>
+      {/* Step 3: Business Details (NO PASSWORD) */}
+      {step === 'details' && (
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm">
+            Phone verified successfully!
+          </div>
 
-            <div>
-              <label htmlFor="phone" className="label">
-                Phone Number *
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={`input ${errors.phone ? 'input-error' : ''}`}
-                placeholder="9876543210"
-              />
-              {errors.phone && (
-                <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
-              )}
-            </div>
+          <div>
+            <label htmlFor="email" className="label">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input"
+              placeholder="supplier@example.com"
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn btn-secondary flex-1 py-3"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={handleNext}
-                className="btn btn-primary flex-1 py-3"
-              >
-                Continue
-              </button>
-            </div>
-          </>
-        )}
+          <div>
+            <label htmlFor="businessName" className="label">
+              Business Name *
+            </label>
+            <input
+              type="text"
+              id="businessName"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              className="input"
+              placeholder="Your Company Name"
+              disabled={isLoading}
+            />
+          </div>
 
-        {/* Step 3: Address */}
-        {step === 3 && (
-          <>
-            <div>
-              <label htmlFor="address" className="label">
-                Address
-              </label>
-              <input
-                type="text"
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="input"
-                placeholder="Street address"
-              />
-            </div>
+          <div>
+            <label htmlFor="gstin" className="label">
+              GSTIN (Optional)
+            </label>
+            <input
+              type="text"
+              id="gstin"
+              value={gstin}
+              onChange={(e) => setGstin(e.target.value.toUpperCase())}
+              className="input"
+              placeholder="22AAAAA0000A1Z5"
+              maxLength={15}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              15-character GST Identification Number
+            </p>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="city" className="label">
-                  City
-                </label>
-                <input
-                  type="text"
-                  id="city"
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  className="input"
-                  placeholder="City"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="pincode" className="label">
-                  PIN Code
-                </label>
-                <input
-                  type="text"
-                  id="pincode"
-                  name="pincode"
-                  value={formData.pincode}
-                  onChange={handleChange}
-                  className={`input ${errors.pincode ? 'input-error' : ''}`}
-                  placeholder="400001"
-                  maxLength={6}
-                />
-                {errors.pincode && (
-                  <p className="text-sm text-red-500 mt-1">{errors.pincode}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="state" className="label">
-                State
-              </label>
-              <select
-                id="state"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                className="input"
-              >
-                <option value="">Select State</option>
-                {indianStates.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleBack}
-                className="btn btn-secondary flex-1 py-3"
-                disabled={isLoading}
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className="btn btn-primary flex-1 py-3"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                    Creating...
-                  </span>
-                ) : (
-                  'Create Account'
-                )}
-              </button>
-            </div>
-          </>
-        )}
-      </form>
-
-      <div className="mt-6 text-center">
-        <p className="text-slate-600">
-          Already have an account?{' '}
-          <Link
-            href="/login"
-            className="text-primary-600 hover:text-primary-700 font-medium"
+          <button
+            type="submit"
+            className="btn btn-primary w-full py-3"
+            disabled={isLoading || !email.trim() || !businessName.trim()}
           >
-            Sign In
-          </Link>
-        </p>
-      </div>
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Submitting...
+              </span>
+            ) : (
+              'Complete Registration'
+            )}
+          </button>
+        </form>
+      )}
+
+      {/* Step 4: Success */}
+      {step === 'success' && (
+        <div className="text-center py-4">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl text-amber-600">!</span>
+          </div>
+          <h3 className="text-lg font-semibold text-amber-600 mb-2">
+            Pending Admin Approval
+          </h3>
+          <p className="text-slate-600 mb-6">
+            Your supplier account has been submitted for review. You will receive a notification once your account is approved.
+          </p>
+          <button
+            className="btn btn-primary w-full py-3"
+            onClick={() => router.push('/login')}
+          >
+            Go to Login
+          </button>
+        </div>
+      )}
+
+      {step !== 'success' && step !== 'phone' && (
+        <div className="mt-6 text-center">
+          <p className="text-slate-600">
+            Already have an account?{' '}
+            <Link
+              href="/login"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Sign In
+            </Link>
+          </p>
+        </div>
+      )}
     </>
   );
 }

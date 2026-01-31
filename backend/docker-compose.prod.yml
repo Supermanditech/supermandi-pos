@@ -110,6 +110,8 @@ services:
       - /var/www/certbot:/var/www/certbot:ro
       # GO-LIVE-B9: Static file directories for portals
       - /var/www/supermandi-superadmin:/var/www/supermandi-superadmin:ro
+      # GO-LIVE-HOME-001: Landing page portal selector
+      - /var/www/supermandi-landing:/var/www/supermandi-landing:ro
     depends_on:
       api-gateway:
         condition: service_healthy
@@ -318,6 +320,13 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      # GO-LIVE-HOME-001: Firebase Admin SDK for phone OTP verification (supplier/retailer auth)
+      FIREBASE_ENABLED: ${FIREBASE_ENABLED:-true}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_SERVICE_ACCOUNT_PATH: /etc/supermandi/firebase-service-account.json
+    volumes:
+      # GO-LIVE-HOME-001: Firebase service account for phone OTP verification
+      - /etc/supermandi/firebase-service-account.json:/etc/supermandi/firebase-service-account.json:ro
     secrets:
       - admin_token
       - openai_api_key
