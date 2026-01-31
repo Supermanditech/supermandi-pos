@@ -259,7 +259,7 @@ ALTER TABLE public.pos_devices
 
 -- Function for optimistic locking on device sessions
 CREATE OR REPLACE FUNCTION update_device_session_safe(
-  p_device_id VARCHAR(100),
+  p_device_id UUID,
   p_expected_version INTEGER,
   p_new_token TEXT DEFAULT NULL
 )
@@ -270,9 +270,9 @@ BEGIN
   UPDATE public.pos_devices
   SET
     session_version = session_version + 1,
-    auth_token = COALESCE(p_new_token, auth_token),
+    device_token = COALESCE(p_new_token, device_token),
     updated_at = NOW()
-  WHERE device_id = p_device_id
+  WHERE id = p_device_id
     AND session_version = p_expected_version;
 
   GET DIAGNOSTICS rows_affected = ROW_COUNT;
