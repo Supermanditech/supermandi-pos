@@ -17,6 +17,14 @@ export class ApiError extends Error {
   }
 }
 
+// GO-LIVE-B9: Type for API error responses
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
+
 // GO-LIVE-169: Response validation utility
 function validateResponseStructure(data: unknown, endpoint: string): void {
   if (data === null || data === undefined) {
@@ -114,15 +122,15 @@ export async function apiFetch<T>(
 
   // GL-WF-046: Handle 401 (unauthorized) responses
   if (response.status === 401) {
-    const data = await response.json().catch(() => ({}));
+    const errorData: ApiErrorResponse = await response.json().catch(() => ({}));
     // Only redirect for token issues, not login attempts
     if (endpoint !== '/api/v1/supplier/auth/login' && endpoint !== '/api/v1/supplier/auth/register') {
       handle401Response();
     }
-    throw new ApiError(401, data.error?.code || 'UNAUTHORIZED', data.error?.message || 'Session expired. Please login again.');
+    throw new ApiError(401, errorData.error?.code || 'UNAUTHORIZED', errorData.error?.message || 'Session expired. Please login again.');
   }
 
-  let data: Record<string, unknown>;
+  let data: ApiErrorResponse & Record<string, unknown>;
   try {
     data = await response.json();
   } catch (parseError) {
