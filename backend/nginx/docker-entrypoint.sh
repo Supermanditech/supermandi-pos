@@ -1,12 +1,13 @@
 #!/bin/sh
 # GO-LIVE-078: NGINX entrypoint script for environment variable substitution
 # Generates nginx.conf from template using envsubst
+# GO-LIVE-B9: Updated for supermandi.tech production domain
 
 set -e
 
-# Default values
-SSL_DOMAIN="${SSL_DOMAIN:-34.14.220.171.nip.io}"
-SERVER_NAMES="${SERVER_NAMES:-${SSL_DOMAIN} api.supermandi.com _}"
+# Default values - GO-LIVE-B9: supermandi.tech as primary domain
+SSL_DOMAIN="${SSL_DOMAIN:-supermandi.tech}"
+SERVER_NAMES="${SERVER_NAMES:-${SSL_DOMAIN} 34.14.220.171.nip.io api.supermandi.com _}"
 API_RATE_LIMIT="${API_RATE_LIMIT:-30}"
 AUTH_RATE_LIMIT="${AUTH_RATE_LIMIT:-5}"
 
@@ -19,9 +20,13 @@ echo "  SERVER_NAMES: ${SERVER_NAMES}"
 echo "  API_RATE_LIMIT: ${API_RATE_LIMIT}r/m"
 echo "  AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT}r/m"
 
+# GO-LIVE-B9: Remove any existing default.conf that might interfere
+# This ensures our production config is the only one serving requests
+rm -f /etc/nginx/conf.d/default.conf 2>/dev/null || true
+
 # Check if template exists
 TEMPLATE_PATH="/etc/nginx/templates/nginx.prod.conf.template"
-OUTPUT_PATH="/etc/nginx/conf.d/default.conf"
+OUTPUT_PATH="/etc/nginx/conf.d/nginx.prod.conf"
 
 if [ -f "${TEMPLATE_PATH}" ]; then
     # Generate config from template
@@ -31,8 +36,13 @@ if [ -f "${TEMPLATE_PATH}" ]; then
         < "${TEMPLATE_PATH}" \
         > "${OUTPUT_PATH}"
     echo "Configuration generated: ${OUTPUT_PATH}"
+    # List active configs
+    echo "Active nginx configs:"
+    ls -la /etc/nginx/conf.d/
 else
-    echo "Template not found at ${TEMPLATE_PATH}, using default config"
+    echo "ERROR: Template not found at ${TEMPLATE_PATH}"
+    echo "NGINX will not start correctly without production config"
+    exit 1
 fi
 
 # Verify SSL certificates exist

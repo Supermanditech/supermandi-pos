@@ -96,8 +96,9 @@ services:
       - "443:443"
     environment:
       # GO-LIVE-078: Configurable SSL domain (no longer hardcoded)
-      SSL_DOMAIN: ${SSL_DOMAIN:-34.14.220.171.nip.io}
-      SERVER_NAMES: ${SERVER_NAMES:-34.14.220.171.nip.io api.supermandi.com _}
+      # GO-LIVE-B9: Use supermandi.tech as primary production domain
+      SSL_DOMAIN: ${SSL_DOMAIN:-supermandi.tech}
+      SERVER_NAMES: ${SERVER_NAMES:-supermandi.tech 34.14.220.171.nip.io api.supermandi.com _}
       API_RATE_LIMIT: ${API_RATE_LIMIT:-30}
       AUTH_RATE_LIMIT: ${AUTH_RATE_LIMIT:-5}
     volumes:
