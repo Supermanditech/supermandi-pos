@@ -15,6 +15,13 @@ upstream api_gateway {
     keepalive 32;
 }
 
+# Upstream retailer-admin frontend
+# GO-LIVE-B9: Retailer portal for Batch 9 UI testing
+upstream retailer_admin {
+    server retailer-admin:80;
+    keepalive 8;
+}
+
 # Rate limiting zones
 limit_req_zone $binary_remote_addr zone=api_limit:10m rate=${API_RATE_LIMIT}r/m;
 limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=${AUTH_RATE_LIMIT}r/m;
@@ -36,6 +43,17 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host $host;
+    }
+
+    # GO-LIVE-B9: Retailer Admin Portal (HTTP for testing)
+    location /admin/ {
+        proxy_pass http://retailer_admin/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
     # Redirect all other traffic to HTTPS
@@ -101,6 +119,17 @@ server {
         limit_req zone=auth_limit burst=10 nodelay;
 
         proxy_pass http://api_gateway;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # GO-LIVE-B9: Retailer Admin Portal
+    location /admin/ {
+        proxy_pass http://retailer_admin/;
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host $host;
