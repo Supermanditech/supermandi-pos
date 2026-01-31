@@ -64,10 +64,13 @@ server {
     }
 
     # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
-    location /admin/ {
-        alias /var/www/supermandi-superadmin/;
+    location /admin {
+        alias /var/www/supermandi-superadmin;
         index index.html;
         try_files $uri $uri/ /admin/index.html;
+    }
+    location = /admin/index.html {
+        alias /var/www/supermandi-superadmin/index.html;
     }
 
     # GO-LIVE-B9: Supplier Portal at /supplier/
@@ -175,10 +178,13 @@ server {
     }
 
     # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
-    location /admin/ {
-        alias /var/www/supermandi-superadmin/;
+    location /admin {
+        alias /var/www/supermandi-superadmin;
         index index.html;
         try_files $uri $uri/ /admin/index.html;
+    }
+    location = /admin/index.html {
+        alias /var/www/supermandi-superadmin/index.html;
     }
 
     # GO-LIVE-B9: Supplier Portal at /supplier/
