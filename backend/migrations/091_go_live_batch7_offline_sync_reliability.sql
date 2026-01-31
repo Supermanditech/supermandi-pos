@@ -258,8 +258,9 @@ ALTER TABLE public.pos_devices
   ADD COLUMN IF NOT EXISTS session_lock_holder VARCHAR(100);
 
 -- Function for optimistic locking on device sessions
+-- Note: pos_devices.id is TEXT type
 CREATE OR REPLACE FUNCTION update_device_session_safe(
-  p_device_id UUID,
+  p_device_id TEXT,
   p_expected_version INTEGER,
   p_new_token TEXT DEFAULT NULL
 )
