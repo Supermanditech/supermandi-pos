@@ -2,6 +2,8 @@ import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { validateBnplMaxDays, validateMargin, validateMoq } from "@supermandi/common";
+// GO-LIVE-185: Import rate limiter for approval operations
+import { supplierApprovalRateLimiter } from "../../../middleware/posRateLimiter";
 
 export const adminSuppliersRouter = Router();
 
@@ -122,7 +124,8 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
  * GO-LIVE-130: Enhanced authorization with admin tracking and audit logging
  */
 // GO-LIVE-128: Requires 'suppliers:approve' permission
-adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminToken, requirePermission("suppliers", "approve"), async (req, res) => {
+// GO-LIVE-185: Rate limit approval operations to 10/min per IP
+adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminToken, requirePermission("suppliers", "approve"), supplierApprovalRateLimiter, async (req, res) => {
   const { supplierId } = req.params;
   const { supplierId: linkedSupplierId, verifySupplier, notes } = req.body || {};
 
@@ -252,7 +255,8 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/verify", requireAdminT
  * GO-LIVE-130: Enhanced authorization with admin tracking and audit logging
  */
 // GO-LIVE-128: Requires 'suppliers:reject' permission
-adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), async (req, res) => {
+// GO-LIVE-185: Rate limit approval operations to 10/min per IP
+adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), supplierApprovalRateLimiter, async (req, res) => {
   const { supplierId } = req.params;
   // ITER2-003: Accept both 'notes' (from frontend) and 'reason' (legacy) field names
   const { notes, reason } = req.body || {};
@@ -404,7 +408,8 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermiss
  * Approve a self-registered supplier
  */
 // GO-LIVE-128: Requires 'suppliers:approve' permission
-adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, requirePermission("suppliers", "approve"), async (req, res) => {
+// GO-LIVE-185: Rate limit approval operations to 10/min per IP
+adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, requirePermission("suppliers", "approve"), supplierApprovalRateLimiter, async (req, res) => {
   const { supplierId } = req.params;
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -480,7 +485,8 @@ adminSuppliersRouter.post("/suppliers/:supplierId/approve", requireAdminToken, r
  * Reject a self-registered supplier
  */
 // GO-LIVE-128: Requires 'suppliers:reject' permission
-adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), async (req, res) => {
+// GO-LIVE-185: Rate limit approval operations to 10/min per IP
+adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, requirePermission("suppliers", "reject"), supplierApprovalRateLimiter, async (req, res) => {
   const { supplierId } = req.params;
   const { reason } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
@@ -600,7 +606,8 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
  * Approve a product for catalog visibility
  */
 // GO-LIVE-128: Requires 'products:approve' permission
-adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+// GO-LIVE-185: Rate limit approval operations to 10/min per IP
+adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, requirePermission("products", "approve"), supplierApprovalRateLimiter, async (req, res) => {
   const { productId } = req.params;
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -702,7 +709,8 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
  * Reject a product
  */
 // GO-LIVE-128: Requires 'products:reject' permission
-adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requirePermission("products", "reject"), async (req, res) => {
+// GO-LIVE-185: Rate limit approval operations to 10/min per IP
+adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requirePermission("products", "reject"), supplierApprovalRateLimiter, async (req, res) => {
   const { productId } = req.params;
   const { reason } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
