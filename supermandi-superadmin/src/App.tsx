@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { ADMIN_TOKEN_STORAGE_KEY, getAdminToken, logout, sendAdminOtp, verifyAdminOtp } from "./api/authToken";
+import { getAdminToken, logout, sendAdminOtp, verifyAdminOtp } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
