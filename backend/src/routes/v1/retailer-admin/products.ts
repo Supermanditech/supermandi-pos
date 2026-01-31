@@ -151,10 +151,12 @@ retailerAdminProductsRouter.get("/products", async (req: Request, res: Response)
       supplierName: row.supplierId ? (supplierMap[row.supplierId] || null) : null,
     }));
 
+    // GO-LIVE-261: Add lastUpdated timestamp for data freshness
     return res.json({
       success: true,
       data,
       count: data.length,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error("[RetailerProducts] GET error:", error.message);

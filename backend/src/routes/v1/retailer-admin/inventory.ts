@@ -296,10 +296,12 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
       totalSellRevenue: data.reduce((sum, r) => sum + r.totalSellRevenue, 0),
     };
 
+    // GO-LIVE-261: Add lastUpdated timestamp for data freshness
     return res.json({
       success: true,
       data,
       totals,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error("[RetailerInventory] Error:", error.message);
@@ -437,6 +439,7 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
       unitCost: Number(row.unitCost) || 0,
     }));
 
+    // GO-LIVE-261: Add lastUpdated timestamp for data freshness
     return res.json({
       success: true,
       data: entries,
@@ -447,6 +450,7 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
         offset: offsetNum,
         hasMore: offsetNum + result.rows.length < total,
       },
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error("[RetailerLedger] Error:", error.message);
@@ -551,10 +555,12 @@ retailerAdminInventoryRouter.get("/categories", async (req: Request, res: Respon
       isHidden: row.isHidden === true,
     }));
 
+    // GO-LIVE-261: Add lastUpdated timestamp for data freshness
     return res.json({
       success: true,
       data: categories,
       count: categories.length,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error("[RetailerCategories] Error:", error.message);

@@ -183,27 +183,20 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
     taxRate, operatingHours
   } = req.body;
 
+  // GO-LIVE-251: Collect all validation errors as field-mapped
+  const fieldErrors: Record<string, string> = {};
+
   // GO-LIVE-016: Receipt footer max length validation
   const MAX_RECEIPT_FOOTER = 200;
   if (receiptFooter !== undefined && receiptFooter.length > MAX_RECEIPT_FOOTER) {
-    return res.status(422).json({
-      error: {
-        code: "VALIDATION_ERROR",
-        message: `Receipt footer cannot exceed ${MAX_RECEIPT_FOOTER} characters`
-      }
-    });
+    fieldErrors.receiptFooter = `Receipt footer cannot exceed ${MAX_RECEIPT_FOOTER} characters`;
   }
 
   // Validate UPI VPA if provided
   if (upiVpa !== undefined && upiVpa !== null && upiVpa !== '') {
     const trimmedVpa = upiVpa.trim().toLowerCase();
     if (!isValidUpiVpa(trimmedVpa)) {
-      return res.status(422).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid UPI VPA format. Expected format: name@bank (e.g., store@ybl)"
-        }
-      });
+      fieldErrors.upiVpa = "Invalid UPI VPA format. Expected format: name@bank (e.g., store@ybl)";
     }
   }
 
@@ -211,12 +204,7 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
   if (phone !== undefined && phone !== null && phone !== '') {
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(phone)) {
-      return res.status(422).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid phone number. Must be 10 digits starting with 6-9"
-        }
-      });
+      fieldErrors.phone = "Invalid phone number. Must be 10 digits starting with 6-9";
     }
   }
 
@@ -224,13 +212,19 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
   if (gstNumber !== undefined && gstNumber !== null && gstNumber !== '') {
     const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     if (!gstRegex.test(gstNumber)) {
-      return res.status(422).json({
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid GSTIN format"
-        }
-      });
+      fieldErrors.gstNumber = "Invalid GSTIN format";
     }
+  }
+
+  // GO-LIVE-251: Return all field errors at once
+  if (Object.keys(fieldErrors).length > 0) {
+    return res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Validation failed",
+        errors: fieldErrors
+      }
+    });
   }
 
   try {

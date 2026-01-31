@@ -104,10 +104,12 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
       params
     );
 
+    // GO-LIVE-261: Add lastUpdated timestamp for data freshness
     return res.json({
       success: true,
       data: result.rows,
       count: result.rows.length,
+      lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error("[RetailerSuppliers] GET error:", error.message);
@@ -153,19 +155,28 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
     priceSource, categoriesSupplied, brandsSupplied, orderingChannel, notes,
   } = req.body;
 
+  // GO-LIVE-251: Collect all validation errors as field-mapped
+  const fieldErrors: Record<string, string> = {};
+
   // Validate required fields
   if (!name || !name.trim()) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Business name is required" } });
+    fieldErrors.name = "Business name is required";
   }
   if (!phone || !phone.trim()) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Phone number is required" } });
+    fieldErrors.phone = "Phone number is required";
+  } else {
+    // Validate phone format
+    const phoneValidation = validatePhone(phone);
+    if (!phoneValidation.valid) {
+      fieldErrors.phone = phoneValidation.error || "Invalid phone number";
+    }
   }
 
   // Validate GSTIN format if provided
   if (gstin && gstin.trim()) {
     const gstinRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
     if (!gstinRegex.test(gstin.trim())) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid GSTIN format" } });
+      fieldErrors.gstin = "Invalid GSTIN format";
     }
   }
 
@@ -174,31 +185,45 @@ retailerAdminSuppliersRouter.post("/suppliers", async (req: Request, res: Respon
   if (pan && pan.trim()) {
     const panValidation = validatePan(pan);
     if (!panValidation.valid) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid PAN format. Expected: AAAAA9999A" } });
+      fieldErrors.pan = "Invalid PAN format. Expected: AAAAA9999A";
+    } else {
+      validatedPan = panValidation.value || null;
     }
-    validatedPan = panValidation.value || null;
   }
 
   // GO-LIVE-155: Validate PIN code format if provided
   if (pincode && pincode.trim()) {
     const pincodeValidation = validatePinCode(pincode);
     if (!pincodeValidation.valid) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: pincodeValidation.error } });
+      fieldErrors.pincode = pincodeValidation.error || "Invalid PIN code";
     }
-  }
-
-  // Validate phone format
-  const phoneValidation = validatePhone(phone);
-  if (!phoneValidation.valid) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: phoneValidation.error } });
   }
 
   // Validate email format if provided
   if (email && email.trim()) {
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: emailValidation.error } });
+      fieldErrors.email = emailValidation.error || "Invalid email format";
     }
+  }
+
+  // GO-LIVE-253: Validate credit_days bounds (0-365)
+  if (creditDays !== undefined && creditDays !== null) {
+    const creditDaysNum = Number(creditDays);
+    if (isNaN(creditDaysNum) || creditDaysNum < 0 || creditDaysNum > 365) {
+      fieldErrors.creditDays = "Credit days must be between 0 and 365";
+    }
+  }
+
+  // GO-LIVE-251: Return all field errors at once
+  if (Object.keys(fieldErrors).length > 0) {
+    return res.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Validation failed",
+        errors: fieldErrors
+      }
+    });
   }
 
   const client = await pool.connect();
@@ -353,15 +378,19 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
     priceSource, categoriesSupplied, brandsSupplied, orderingChannel, notes,
   } = req.body;
 
+  // GO-LIVE-251: Collect all validation errors as field-mapped
+  const fieldErrors: Record<string, string> = {};
+
   // GO-LIVE-156: Validate PAN format if provided
   let validatedPan: string | null | undefined = undefined;
   if (pan !== undefined) {
     if (pan && pan.trim()) {
       const panValidation = validatePan(pan);
       if (!panValidation.valid) {
-        return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Invalid PAN format. Expected: AAAAA9999A" } });
+        fieldErrors.pan = "Invalid PAN format. Expected: AAAAA9999A";
+      } else {
+        validatedPan = panValidation.value || null;
       }
-      validatedPan = panValidation.value || null;
     } else {
       validatedPan = null;
     }
@@ -371,7 +400,7 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
   if (pincode !== undefined && pincode && pincode.trim()) {
     const pincodeValidation = validatePinCode(pincode);
     if (!pincodeValidation.valid) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: pincodeValidation.error } });
+      fieldErrors.pincode = pincodeValidation.error || "Invalid PIN code";
     }
   }
 
@@ -379,7 +408,7 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
   if (phone !== undefined && phone && phone.trim()) {
     const phoneValidation = validatePhone(phone);
     if (!phoneValidation.valid) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: phoneValidation.error } });
+      fieldErrors.phone = phoneValidation.error || "Invalid phone number";
     }
   }
 
@@ -387,8 +416,27 @@ retailerAdminSuppliersRouter.patch("/suppliers/:id", async (req: Request, res: R
   if (email !== undefined && email && email.trim()) {
     const emailValidation = validateEmail(email);
     if (!emailValidation.valid) {
-      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: emailValidation.error } });
+      fieldErrors.email = emailValidation.error || "Invalid email format";
     }
+  }
+
+  // GO-LIVE-253: Validate credit_days bounds (0-365)
+  if (creditDays !== undefined && creditDays !== null) {
+    const creditDaysNum = Number(creditDays);
+    if (isNaN(creditDaysNum) || creditDaysNum < 0 || creditDaysNum > 365) {
+      fieldErrors.creditDays = "Credit days must be between 0 and 365";
+    }
+  }
+
+  // GO-LIVE-251: Return all field errors at once
+  if (Object.keys(fieldErrors).length > 0) {
+    return res.status(400).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Validation failed",
+        errors: fieldErrors
+      }
+    });
   }
 
   const client = await pool.connect();
