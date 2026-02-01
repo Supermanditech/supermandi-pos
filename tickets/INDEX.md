@@ -3364,31 +3364,22 @@ cd /opt/supermandi/supplier-portal && npm run build
 
 ---
 
-### BATCH 2: Document Storage (CRITICAL)
-**Must deploy before KYC — KYC cannot work without document storage**
+### BATCH 2: Document Storage ✅ COMPLETE
+**Tested: 2026-02-01 by Claude**
 
-| Ticket | Title | Services to Rebuild |
-|--------|-------|---------------------|
-| DOCS-001 | Document Storage Backend | main-backend, api-gateway |
+| Ticket | Title | Services to Rebuild | Status |
+|--------|-------|---------------------|--------|
+| DOCS-001 | Document Storage Backend | main-backend, api-gateway | ✅ PASS |
 
-**Pre-requisites:**
-- GCS bucket or S3 bucket configured
-- IAM permissions set
-- CORS configured for direct uploads
-
-**🔐 SSH into VM first:**
-```bash
-gcloud compute ssh --zone "asia-south1-a" "supermandi-backend-vm" --project "supermandi-backend"
-# OR: ssh claude@34.14.220.171
-```
-
-**Deploy Commands:**
-```bash
-cd /opt/supermandi
-
-# 1. Rebuild with storage config
-docker compose -f docker-compose.prod.yml up -d --build main-backend api-gateway
-```
+**Real User Test Results:**
+- Upload: `POST /api/v1/documents/upload` works with multipart form-data
+- Download: `GET /api/v1/documents/:id` works with admin token auth
+- Admin pending queue: `GET /api/v1/admin/documents/pending` shows queue
+- Admin approve: `PATCH /api/v1/admin/documents/:id/verify` approved successfully
+- Admin reject: `PATCH /api/v1/admin/documents/:id/reject` with reason works
+- File size limit: 413 at nginx level for files > 10MB
+- File type validation: Non-image/PDF rejected
+- Persistence: Files survive container restart (Docker volume mounted)
 
 ---
 
