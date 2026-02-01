@@ -305,6 +305,15 @@ export const config: GatewayConfig = {
       stripPrefix: false,
     },
     // ==========================================================================
+    // DOCS-001: Document storage routes -> main backend
+    // ==========================================================================
+    {
+      name: 'documents',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/documents',
+      stripPrefix: false,
+    },
+    // ==========================================================================
     // GL-AUD-002: Webhook routes -> main backend (handles Razorpay callbacks)
     // ==========================================================================
     {
