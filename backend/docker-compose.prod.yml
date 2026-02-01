@@ -324,9 +324,13 @@ services:
       FIREBASE_ENABLED: ${FIREBASE_ENABLED:-true}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_SERVICE_ACCOUNT_PATH: /etc/supermandi/firebase-service-account.json
+      # DOCS-001: Document storage configuration
+      DOCUMENT_STORAGE_DIR: /var/supermandi/documents
     volumes:
       # GO-LIVE-HOME-001: Firebase service account for phone OTP verification
       - /etc/supermandi/firebase-service-account.json:/etc/supermandi/firebase-service-account.json:ro
+      # DOCS-001: Document storage volume for KYC documents (persistent)
+      - document-storage:/var/supermandi/documents
     secrets:
       - admin_token
       - openai_api_key
@@ -667,6 +671,9 @@ volumes:
   # GO-LIVE-091: Backup storage volume
   backup-data:
     name: supermanditech_backup-data
+  # DOCS-001: Document storage volume for KYC files
+  document-storage:
+    name: supermanditech_document-storage
 
 # =============================================================================
 # NETWORKS
