@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS platform.store_status_audit (
   changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-RAISE NOTICE 'CORE-001: Created platform.store_status_audit table';
+-- Created platform.store_status_audit table
 
 -- =============================================================================
 -- Step 2: Add indexes for efficient querying
@@ -60,7 +60,7 @@ WHERE changed_by IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_store_status_audit_store_time
 ON platform.store_status_audit(store_id, changed_at DESC);
 
-RAISE NOTICE 'CORE-001: Created audit log indexes';
+-- Created audit log indexes
 
 -- =============================================================================
 -- Step 3: Create trigger function to auto-log status changes
@@ -113,7 +113,7 @@ AFTER UPDATE OF status ON platform.stores
 FOR EACH ROW
 EXECUTE FUNCTION platform.log_store_status_change();
 
-RAISE NOTICE 'CORE-001: Created status change audit trigger';
+-- Created status change audit trigger
 
 -- =============================================================================
 -- Step 5: Seed initial audit records for existing stores
@@ -148,7 +148,7 @@ WHERE NOT EXISTS (
   WHERE a.store_id = s.id
 );
 
-RAISE NOTICE 'CORE-001: Seeded initial audit records for existing stores';
+-- Seeded initial audit records for existing stores
 
 -- =============================================================================
 -- Step 6: Add documentation comments

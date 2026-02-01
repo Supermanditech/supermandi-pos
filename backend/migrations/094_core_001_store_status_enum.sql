@@ -43,8 +43,6 @@ UPDATE platform.stores
 SET status = 'DRAFT'
 WHERE status IS NULL;
 
-RAISE NOTICE 'CORE-001: Migrated existing store status values to new enum';
-
 -- =============================================================================
 -- Step 3: Add new constraint with all valid statuses
 -- =============================================================================
@@ -61,8 +59,6 @@ CHECK (status IN (
   'deleted'             -- Soft-deleted (kept for backward compatibility)
 ));
 
-RAISE NOTICE 'CORE-001: Added new stores_status_check constraint with all valid statuses';
-
 -- =============================================================================
 -- Step 4: Add index for filtering by status (if not exists)
 -- =============================================================================
@@ -76,8 +72,6 @@ WHERE status = 'PAYMENTS_SUBMITTED';
 CREATE INDEX IF NOT EXISTS idx_stores_needs_fix
 ON platform.stores(status)
 WHERE status = 'NEEDS_FIX';
-
-RAISE NOTICE 'CORE-001: Created status indexes';
 
 COMMIT;
 

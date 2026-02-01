@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS supplier.supplier_status_audit (
   changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-RAISE NOTICE 'CORE-002: Created supplier.supplier_status_audit table';
+-- Created supplier.supplier_status_audit table
 
 -- =============================================================================
 -- Step 2: Add indexes for efficient querying
@@ -60,7 +60,7 @@ WHERE changed_by IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_supplier_status_audit_supplier_time
 ON supplier.supplier_status_audit(supplier_id, changed_at DESC);
 
-RAISE NOTICE 'CORE-002: Created audit log indexes';
+-- Created audit log indexes
 
 -- =============================================================================
 -- Step 3: Create trigger function to auto-log status changes
@@ -111,7 +111,7 @@ AFTER UPDATE OF verification_status ON supplier.suppliers
 FOR EACH ROW
 EXECUTE FUNCTION supplier.log_supplier_status_change();
 
-RAISE NOTICE 'CORE-002: Created supplier status change audit trigger';
+-- Created supplier status change audit trigger
 
 -- =============================================================================
 -- Step 5: Seed initial audit records for existing suppliers
@@ -145,7 +145,7 @@ WHERE NOT EXISTS (
   WHERE a.supplier_id = s.id
 );
 
-RAISE NOTICE 'CORE-002: Seeded initial audit records for existing suppliers';
+-- Seeded initial audit records for existing suppliers
 
 -- =============================================================================
 -- Step 6: Add documentation comments

@@ -37,7 +37,7 @@ ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE platform.stores
 ADD COLUMN IF NOT EXISTS status_updated_by UUID;
 
-RAISE NOTICE 'CORE-001: Added readiness flag columns to platform.stores';
+-- Added readiness flag columns to platform.stores
 
 -- =============================================================================
 -- Step 2: Update existing stores to have correct flag values
@@ -65,7 +65,7 @@ SET
   status_updated_at = COALESCE(updated_at, NOW())
 WHERE status != 'ACTIVE';
 
-RAISE NOTICE 'CORE-001: Updated existing stores with readiness flags';
+-- Updated existing stores with readiness flags
 
 -- =============================================================================
 -- Step 3: Add indexes for readiness queries
@@ -84,7 +84,7 @@ CREATE INDEX IF NOT EXISTS idx_stores_needs_attention
 ON platform.stores(status)
 WHERE status IN ('NEEDS_FIX', 'SUSPENDED');
 
-RAISE NOTICE 'CORE-001: Created readiness indexes';
+-- Created readiness indexes
 
 -- =============================================================================
 -- Step 4: Add comments for documentation

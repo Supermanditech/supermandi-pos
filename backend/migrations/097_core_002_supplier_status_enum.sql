@@ -47,7 +47,7 @@ UPDATE supplier.suppliers
 SET verification_status = 'KYC_SUBMITTED'
 WHERE verification_status IS NULL;
 
-RAISE NOTICE 'CORE-002: Migrated existing supplier verification_status values to new enum';
+-- Migrated existing supplier verification_status values to new enum
 
 -- =============================================================================
 -- Step 3: Add new constraint with all valid statuses
@@ -61,7 +61,7 @@ CHECK (verification_status IN (
   'SUSPENDED'      -- Admin suspended the supplier
 ));
 
-RAISE NOTICE 'CORE-002: Added new chk_suppliers_verification_status constraint';
+-- Added new chk_suppliers_verification_status constraint
 
 -- =============================================================================
 -- Step 4: Add status tracking columns (similar to stores)
@@ -75,7 +75,7 @@ ADD COLUMN IF NOT EXISTS status_updated_at TIMESTAMPTZ DEFAULT NOW();
 ALTER TABLE supplier.suppliers
 ADD COLUMN IF NOT EXISTS status_updated_by UUID;
 
-RAISE NOTICE 'CORE-002: Added status tracking columns to supplier.suppliers';
+-- Added status tracking columns to supplier.suppliers
 
 -- =============================================================================
 -- Step 5: Update existing suppliers with status timestamps
@@ -98,7 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_suppliers_needs_attention
 ON supplier.suppliers(verification_status)
 WHERE verification_status IN ('KYC_SUBMITTED', 'NEEDS_FIX');
 
-RAISE NOTICE 'CORE-002: Created supplier status indexes';
+-- Created supplier status indexes
 
 -- =============================================================================
 -- Step 7: Add documentation comments
