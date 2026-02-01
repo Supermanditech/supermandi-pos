@@ -45,7 +45,7 @@ router.get("/pending", async (req: Request, res: Response, next: NextFunction) =
         END AS entity_name,
         CASE
           WHEN d.entity_type = 'store' THEN s.contact_name
-          WHEN d.entity_type = 'supplier' THEN sup.contact_name
+          WHEN d.entity_type = 'supplier' THEN sup.primary_contact_name
         END AS owner_name,
         CASE
           WHEN d.entity_type = 'store' THEN s.status
@@ -132,11 +132,11 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
         END AS entity_name,
         CASE
           WHEN d.entity_type = 'store' THEN s.contact_name
-          WHEN d.entity_type = 'supplier' THEN sup.contact_name
+          WHEN d.entity_type = 'supplier' THEN sup.primary_contact_name
         END AS owner_name,
         CASE
           WHEN d.entity_type = 'store' THEN s.contact_phone
-          WHEN d.entity_type = 'supplier' THEN sup.phone
+          WHEN d.entity_type = 'supplier' THEN sup.primary_phone
         END AS contact_phone
       FROM platform.documents d
       LEFT JOIN platform.stores s ON d.entity_type = 'store' AND d.entity_id = s.id
@@ -356,7 +356,7 @@ router.get("/entity/:entityType/:entityId", async (req: Request, res: Response, 
       entityInfo = storeResult.rows[0];
     } else {
       const supplierResult = await pool.query(
-        `SELECT id, business_name, contact_name, phone, verification_status
+        `SELECT id, business_name, primary_contact_name, primary_phone, verification_status
          FROM supplier.suppliers WHERE id = $1::uuid`,
         [entityId]
       );

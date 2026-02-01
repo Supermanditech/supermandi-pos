@@ -262,7 +262,7 @@ SELECT
   END AS entity_name,
   CASE
     WHEN d.entity_type = 'store' THEN s.contact_name
-    WHEN d.entity_type = 'supplier' THEN sup.contact_name
+    WHEN d.entity_type = 'supplier' THEN sup.primary_contact_name
   END AS owner_name
 FROM platform.documents d
 LEFT JOIN platform.stores s ON d.entity_type = 'store' AND d.entity_id = s.id
