@@ -495,8 +495,9 @@ async function getStore(storeId: string): Promise<{ id: string; name: string; up
   if (!pool) return null;
   try {
     // AUD-053-A FIX: Query actual upi_vpa from database instead of hardcoding null
+    // BATCH-3 FIX: Use uppercase 'ACTIVE' to match StoreStatus enum
     const res = await pool.query(
-      `SELECT id::TEXT as id, name, upi_vpa, (status = 'active') as active FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, name, upi_vpa, (status = 'ACTIVE') as active FROM platform.stores WHERE id = $1::uuid`,
       [storeId]
     );
     const row = res.rows[0];
@@ -736,7 +737,7 @@ async function getPaymentStoreStatus(
   if (!pool) return null;
   const res = await pool.query(
     `
-      SELECT p.sale_id, s.store_id, (st.status = 'active') AS active
+      SELECT p.sale_id, s.store_id, (st.status = 'ACTIVE') AS active
       FROM payments p
       JOIN sales s ON s.id = p.sale_id
       JOIN platform.stores st ON st.id = s.store_id::uuid
@@ -755,7 +756,7 @@ async function getCollectionStoreStatus(
   if (!pool) return null;
   const res = await pool.query(
     `
-      SELECT c.store_id, (st.status = 'active') AS active
+      SELECT c.store_id, (st.status = 'ACTIVE') AS active
       FROM collections c
       JOIN platform.stores st ON st.id = c.store_id::uuid
       WHERE c.id = $1 AND c.store_id = $2

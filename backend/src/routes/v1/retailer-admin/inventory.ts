@@ -68,7 +68,7 @@ retailerAdminInventoryRouter.get("/store", async (req: Request, res: Response) =
         id as "storeId",
         name as "storeName",
         code as "storeCode",
-        (status = 'active') as "isActive"
+        (status = 'ACTIVE') as "isActive"
       FROM platform.stores
       WHERE id = $1`,
       [storeId]

@@ -170,7 +170,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     // GO-LIVE: Fetch store name, code, and max_devices for enrollment response
     // FINDING-027: Get configurable max_devices per store
     const storeRes = await client.query(
-      `SELECT id::TEXT as id, name, code, (status = 'active') as active, COALESCE(max_devices, $2) as max_devices FROM platform.stores WHERE id = $1::uuid`,
+      `SELECT id::TEXT as id, name, code, (status = 'ACTIVE') as active, COALESCE(max_devices, $2) as max_devices FROM platform.stores WHERE id = $1::uuid`,
       [enrollment.store_id, DEFAULT_MAX_DEVICES_PER_STORE]
     );
     const store = storeRes.rows[0];

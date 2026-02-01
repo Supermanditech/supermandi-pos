@@ -109,7 +109,7 @@ async function resolveDeviceFromToken(req: Request, res: Response): Promise<PosD
   const result = await pool.query(
     `
     SELECT d.id AS device_id, d.store_id, d.active AS device_active,
-           (s.status = 'active') AS store_active,
+           (s.status = 'ACTIVE') AS store_active,
            d.token_expires_at,
            d.token_revoked_at
     FROM pos_devices d
