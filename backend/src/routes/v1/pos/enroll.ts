@@ -617,3 +617,174 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
     return res.status(500).json({ error: "Failed to check label" });
   }
 });
+
+// =============================================================================
+// POS-DEV-001: Device-Generated Activation Codes
+// =============================================================================
+
+/**
+ * Generate activation code in SM-XXXX-XX format
+ * Uses crypto-safe random alphanumeric characters
+ */
+function generateActivationCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Removed ambiguous: 0,O,I,1
+  const part1 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const part2 = Array.from({ length: 2 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `SM-${part1}-${part2}`;
+}
+
+// Activation code expiry in minutes
+const ACTIVATION_CODE_EXPIRY_MINUTES = 15;
+
+// POST /api/v1/pos/generate-activation-code
+// POS-DEV-001: Generate a new activation code for device binding
+posEnrollRouter.post("/generate-activation-code", async (req, res) => {
+  const { device_fingerprint } = req.body as { device_fingerprint?: string };
+
+  if (!device_fingerprint || typeof device_fingerprint !== "string") {
+    return res.status(400).json({ error: { code: "FINGERPRINT_REQUIRED", message: "device_fingerprint is required" } });
+  }
+
+  // Validate fingerprint format
+  const fingerprintValidation = validateDeviceFingerprint(device_fingerprint);
+  if (!fingerprintValidation.valid) {
+    return res.status(400).json({ error: { code: "FINGERPRINT_INVALID", message: fingerprintValidation.error } });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Database service unavailable" } });
+
+  try {
+    // Invalidate any existing unused codes for this device fingerprint
+    await pool.query(
+      `UPDATE pos.device_activation_codes
+       SET expires_at = NOW()
+       WHERE device_fingerprint = $1
+         AND used_at IS NULL
+         AND expires_at > NOW()`,
+      [device_fingerprint]
+    );
+
+    // Generate new code (retry if collision)
+    let code: string = "";
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      code = generateActivationCode();
+      const existing = await pool.query(
+        `SELECT 1 FROM pos.device_activation_codes WHERE code = $1`,
+        [code]
+      );
+      if (existing.rowCount === 0) break;
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      return res.status(500).json({ error: { code: "CODE_GENERATION_FAILED", message: "Failed to generate unique code" } });
+    }
+
+    // Insert new activation code
+    const expiresAt = new Date(Date.now() + ACTIVATION_CODE_EXPIRY_MINUTES * 60 * 1000);
+
+    await pool.query(
+      `INSERT INTO pos.device_activation_codes (code, device_fingerprint, expires_at)
+       VALUES ($1, $2, $3)`,
+      [code, device_fingerprint, expiresAt.toISOString()]
+    );
+
+    console.log(`[POS-DEV-001] Generated activation code ${code} for device ${device_fingerprint.substring(0, 8)}...`);
+
+    return res.json({
+      success: true,
+      code,
+      expires_at: expiresAt.toISOString(),
+      expires_in_seconds: ACTIVATION_CODE_EXPIRY_MINUTES * 60
+    });
+
+  } catch (error: any) {
+    console.error("[POS-DEV-001] Generate activation code error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to generate activation code" } });
+  }
+});
+
+// GET /api/v1/pos/activation-status/:fingerprint
+// POS-DEV-001: Check if activation code was used (for POS polling)
+posEnrollRouter.get("/activation-status/:fingerprint", async (req, res) => {
+  const fingerprint = req.params.fingerprint;
+
+  if (!fingerprint) {
+    return res.status(400).json({ error: { code: "FINGERPRINT_REQUIRED", message: "Device fingerprint is required" } });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Database service unavailable" } });
+
+  try {
+    // Get the most recent activation code for this device
+    const result = await pool.query(
+      `SELECT
+        code,
+        expires_at,
+        used_at,
+        bound_store_id,
+        bound_device_id
+      FROM pos.device_activation_codes
+      WHERE device_fingerprint = $1
+      ORDER BY created_at DESC
+      LIMIT 1`,
+      [fingerprint]
+    );
+
+    if (result.rowCount === 0) {
+      return res.json({ status: "no_code", message: "No activation code found for this device" });
+    }
+
+    const record = result.rows[0];
+
+    // Check if code was used
+    if (record.used_at) {
+      // Get store details
+      const storeResult = await pool.query(
+        `SELECT id, name, code, status FROM platform.stores WHERE id = $1`,
+        [record.bound_store_id]
+      );
+
+      // Get device token
+      const deviceResult = await pool.query(
+        `SELECT device_token FROM pos.pos_devices WHERE id = $1`,
+        [record.bound_device_id]
+      );
+
+      const store = storeResult.rows[0];
+      const device = deviceResult.rows[0];
+
+      return res.json({
+        status: "activated",
+        device_id: record.bound_device_id,
+        store_id: record.bound_store_id,
+        store_name: store?.name,
+        store_code: store?.code,
+        device_token: device?.device_token
+      });
+    }
+
+    // Check if code expired
+    const expiresAt = new Date(record.expires_at);
+    if (expiresAt.getTime() <= Date.now()) {
+      return res.json({ status: "expired", code: record.code });
+    }
+
+    // Code is still pending
+    return res.json({
+      status: "pending",
+      code: record.code,
+      expires_at: record.expires_at,
+      expires_in_seconds: Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000))
+    });
+
+  } catch (error: any) {
+    console.error("[POS-DEV-001] Activation status check error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to check activation status" } });
+  }
+});

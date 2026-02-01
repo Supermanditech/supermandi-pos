@@ -706,3 +706,127 @@ adminStoresRouter.patch("/stores/:storeId/status", requirePermission("stores", "
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store status" });
   }
 });
+
+// =============================================================================
+// DEDUP-001: Duplicate Prevention - Admin Queue
+// =============================================================================
+
+// GET /api/v1/admin/duplicates
+// Returns flagged potential duplicates for review
+adminStoresRouter.get("/duplicates", requirePermission("manage_stores"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "db_unavailable" });
+
+  try {
+    const { status = "pending", type, limit = "50", offset = "0" } = req.query;
+
+    let query = `
+      SELECT
+        df.id,
+        df.entity_type,
+        df.entity_id,
+        df.duplicate_type,
+        df.duplicate_value,
+        df.matching_entity_id,
+        df.status,
+        df.resolved_at,
+        df.resolution_notes,
+        df.created_at,
+        s.name as entity_name,
+        ms.name as matching_entity_name
+      FROM platform.duplicate_flags df
+      LEFT JOIN platform.stores s ON df.entity_type = 'store' AND df.entity_id = s.id
+      LEFT JOIN platform.stores ms ON df.entity_type = 'store' AND df.matching_entity_id = ms.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (status) {
+      query += ` AND df.status = $${paramIndex++}`;
+      params.push(status);
+    }
+
+    if (type) {
+      query += ` AND df.duplicate_type = $${paramIndex++}`;
+      params.push(type);
+    }
+
+    query += ` ORDER BY df.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(parseInt(limit as string) || 50);
+    params.push(parseInt(offset as string) || 0);
+
+    const result = await pool.query(query, params);
+
+    // Get total count
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM platform.duplicate_flags df
+      WHERE 1=1
+    `;
+    const countParams: any[] = [];
+    let countParamIndex = 1;
+
+    if (status) {
+      countQuery += ` AND df.status = $${countParamIndex++}`;
+      countParams.push(status);
+    }
+    if (type) {
+      countQuery += ` AND df.duplicate_type = $${countParamIndex++}`;
+      countParams.push(type);
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+    const total = parseInt(countResult.rows[0].total);
+
+    return res.json({
+      duplicates: result.rows,
+      pagination: {
+        total,
+        limit: parseInt(limit as string) || 50,
+        offset: parseInt(offset as string) || 0,
+      },
+    });
+  } catch (err: any) {
+    console.error("[admin/duplicates] Error:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch duplicates" });
+  }
+});
+
+// PATCH /api/v1/admin/duplicates/:id
+// Resolve a duplicate flag
+adminStoresRouter.patch("/duplicates/:id", requirePermission("manage_stores"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "db_unavailable" });
+
+  const { id } = req.params;
+  const { status, resolution_notes } = req.body;
+
+  if (!status || !["resolved", "merged", "different"].includes(status)) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "Invalid status. Must be: resolved, merged, or different" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE platform.duplicate_flags
+       SET status = $1,
+           resolution_notes = $2,
+           resolved_at = NOW(),
+           resolved_by = $3
+       WHERE id = $4
+       RETURNING *`,
+      [status, resolution_notes || null, (req as any).adminUserId || null, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Duplicate flag not found" });
+    }
+
+    console.log(`[DEDUP-001] Resolved duplicate flag ${id} as ${status}`);
+
+    return res.json({ success: true, duplicate: result.rows[0] });
+  } catch (err: any) {
+    console.error("[admin/duplicates] Resolve error:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to resolve duplicate" });
+  }
+});

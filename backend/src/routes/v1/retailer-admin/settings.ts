@@ -1,9 +1,11 @@
 // Retailer Admin Settings Routes
 // GL-AUD-004: Store UPI VPA Configuration
+// RET-WEB-003: PAYMENTS_SUBMITTED status transition on UPI save
 // Store-scoped via JWT (x-actor-id header from gateway)
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { StoreStatus, type StoreStatusType } from "../../../services/storeStateMachine";
 
 export const retailerAdminSettingsRouter = Router();
 
@@ -132,9 +134,9 @@ retailerAdminSettingsRouter.put("/settings/upi", async (req: Request, res: Respo
   }
 
   try {
-    // Verify store exists
+    // RET-WEB-003: Get current store status for transition check
     const checkResult = await pool.query(
-      `SELECT id, name FROM platform.stores WHERE id = $1`,
+      `SELECT id, name, status FROM platform.stores WHERE id = $1`,
       [storeId]
     );
 
@@ -142,20 +144,41 @@ retailerAdminSettingsRouter.put("/settings/upi", async (req: Request, res: Respo
       return res.status(404).json({ error: { code: "NOT_FOUND", message: "Store not found" } });
     }
 
-    // Update UPI VPA
+    const currentStatus = checkResult.rows[0].status as StoreStatusType;
+
+    // RET-WEB-003: Determine if status should transition to PAYMENTS_SUBMITTED
+    // Valid transition: KYC_SUBMITTED → PAYMENTS_SUBMITTED when UPI is saved
+    const shouldTransition = currentStatus === StoreStatus.KYC_SUBMITTED;
+    const newStatus = shouldTransition ? StoreStatus.PAYMENTS_SUBMITTED : currentStatus;
+
+    // Update UPI VPA and upi_complete flag, optionally transition status
+    // Note: status_reason is set for the audit trigger; status_updated_by is retailer's store ID
     const result = await pool.query(
       `UPDATE platform.stores
-       SET upi_vpa = $1, updated_at = NOW()
+       SET upi_vpa = $1,
+           upi_complete = true,
+           status = $3,
+           status_reason = CASE WHEN $3 != status THEN 'UPI VPA saved via retailer-admin settings' ELSE status_reason END,
+           status_updated_by = CASE WHEN $3 != status THEN $2::uuid ELSE status_updated_by END,
+           updated_at = NOW()
        WHERE id = $2
-       RETURNING upi_vpa as "upiVpa"`,
-      [trimmedVpa, storeId]
+       RETURNING upi_vpa as "upiVpa", status`,
+      [trimmedVpa, storeId, newStatus]
     );
+
+    // RET-WEB-003: Log status transition if it occurred
+    if (shouldTransition) {
+      console.log(`[RET-WEB-003] Store ${storeId} transitioned: ${currentStatus} → ${newStatus}`);
+      // Audit log automatically created by trigger on platform.stores
+    }
 
     console.log(`[GL-AUD-004] Updated UPI VPA for store ${storeId} to ${trimmedVpa}`);
 
     return res.json({
       success: true,
-      upiVpa: result.rows[0].upiVpa
+      upiVpa: result.rows[0].upiVpa,
+      status: result.rows[0].status,
+      statusTransitioned: shouldTransition
     });
 
   } catch (error: any) {
