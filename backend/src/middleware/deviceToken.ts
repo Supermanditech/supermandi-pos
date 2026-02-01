@@ -226,10 +226,9 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
     res.status(403).json({ error: "device_inactive" });
     return;
   }
-  if (status.storeActive !== true) {
-    res.status(403).json({ error: "store_inactive" });
-    return;
-  }
+  // SEC-001: Removed storeActive check - let status gate middleware handle status-based access control
+  // This allows products endpoints to work for non-ACTIVE stores (ENROLLED, KYC_SUBMITTED, etc.)
+  // Routes that require ACTIVE status use requireActiveStore middleware
 
   // FINDING-026: Check token expiry - require re-enrollment if expired
   if (status.tokenExpired) {
