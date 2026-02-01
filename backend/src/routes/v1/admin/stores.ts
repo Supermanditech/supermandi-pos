@@ -713,7 +713,7 @@ adminStoresRouter.patch("/stores/:storeId/status", requirePermission("stores", "
 
 // GET /api/v1/admin/duplicates
 // Returns flagged potential duplicates for review
-adminStoresRouter.get("/duplicates", requirePermission("manage_stores"), async (req, res) => {
+adminStoresRouter.get("/duplicates", requirePermission("stores", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "db_unavailable" });
 
@@ -795,7 +795,7 @@ adminStoresRouter.get("/duplicates", requirePermission("manage_stores"), async (
 
 // PATCH /api/v1/admin/duplicates/:id
 // Resolve a duplicate flag
-adminStoresRouter.patch("/duplicates/:id", requirePermission("manage_stores"), async (req, res) => {
+adminStoresRouter.patch("/duplicates/:id", requirePermission("stores", "update"), async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "db_unavailable" });
 
