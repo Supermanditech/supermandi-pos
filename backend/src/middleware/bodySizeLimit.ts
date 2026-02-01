@@ -14,6 +14,9 @@ import express from "express";
 // Endpoint-specific size limits (in bytes)
 // Keys are route patterns (regex-matched against req.path)
 const ENDPOINT_SIZE_LIMITS: { pattern: RegExp; limit: string }[] = [
+  // DOCS-001: Document upload endpoints need larger limits for KYC documents (up to 10MB)
+  { pattern: /\/documents\/upload/, limit: "10mb" },
+
   // Voice/Audio endpoints need larger limits for audio files (up to 5MB)
   { pattern: /\/voice\/process/, limit: "5mb" },
   { pattern: /\/voice\/transcribe/, limit: "5mb" },
