@@ -3324,14 +3324,20 @@ NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech/api npm run build
 
 ---
 
-### BATCH 1: Authentication & Security
+### BATCH 1: Authentication & Security ✅ COMPLETE
 **Core auth + security gating**
+**Tested: 2026-02-01 by Claude**
 
-| Ticket | Title | Services to Rebuild |
-|--------|-------|---------------------|
-| AUTH-001 | OTP-First Authentication | main-backend, retailer-admin, supplier-portal |
-| SEC-001 | State-Based Feature Gating | main-backend |
-| SEC-002 | Token-to-Store Binding | main-backend |
+| Ticket | Title | Services to Rebuild | Status |
+|--------|-------|---------------------|--------|
+| AUTH-001 | OTP-First Authentication | main-backend, retailer-admin, supplier-portal | ✅ PASS |
+| SEC-001 | State-Based Feature Gating | main-backend | ✅ PASS |
+| SEC-002 | Token-to-Store Binding | main-backend | ✅ PASS |
+
+**Real User Test Results:**
+- AUTH-001: Supplier Firebase OTP endpoints exist (`/auth/firebase-login`, `/auth/firebase-register`)
+- SEC-001: POS routes use `requireActiveStore`, supplier routes use `requireActiveSupplier` for write ops
+- SEC-002: `enforceStoreBinding` in deviceToken middleware enforces store isolation
 
 **Migrations:** `064_supplier_phone_column.sql`, `065_supplier_firebase_uid.sql`
 
