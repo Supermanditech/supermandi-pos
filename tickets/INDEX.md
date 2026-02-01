@@ -3754,21 +3754,20 @@ cd /opt/supermandi/supplier-portal && npm run build
 
 ---
 
-### BATCH 5: Retailer Web Flow ✅ PASS
+### BATCH 5: Retailer Web Flow ⚠️ PARTIAL
 **Web registration + device binding + payments**
-**Deployed: 2026-02-01 16:14 UTC by Claude**
-**UI Completed & Production Deployed: 2026-02-01**
+**Deployed: 2026-02-01 16:30 UTC by Claude**
+**Commit: fe1e6dc**
+**Status: Automated testing PASSED, Browser testing PENDING**
 
 | Ticket | Title | Services to Rebuild | Status |
 |--------|-------|---------------------|--------|
-| RET-WEB-001 | Web Store Registration | main-backend, retailer-admin | ✅ PASS - Registration flow works |
-| RET-WEB-002 | Device Activation via Code | main-backend, api-gateway, retailer-admin | ✅ PASS - DeviceActivationPage.tsx created, tested end-to-end |
-| RET-WEB-003 | Payments Setup | main-backend, api-gateway, retailer-admin | ✅ PASS - PaymentsPage.tsx + UpiInput.tsx created |
-| FLOW-001 | Web Requires POS Activation | main-backend, retailer-admin | ✅ PASS - DeviceRequiredBanner.tsx created |
+| RET-WEB-001 | Web Store Registration | main-backend, retailer-admin | ⚠️ PARTIAL - UI deployed, browser test pending |
+| RET-WEB-002 | Device Activation via Code | main-backend, api-gateway, retailer-admin | ⚠️ PARTIAL - DeviceActivationPage.tsx deployed, browser test pending |
+| RET-WEB-003 | Payments Setup | main-backend, api-gateway, retailer-admin | ⚠️ PARTIAL - PaymentsPage.tsx deployed, browser test pending |
+| FLOW-001 | Web Requires POS Activation | main-backend, retailer-admin | ⚠️ PARTIAL - DeviceRequiredBanner.tsx deployed, browser test pending |
 | PAY-001 | Payments Data Validation | main-backend | ✅ PASS - UPI regex validation active |
-| DEDUP-001 | Duplicate Prevention | main-backend | ✅ PASS - Phone unique constraints (spec: phone column, not owner_phone) |
-
-**✅ COMPLETE: All UI components implemented and deployed to production.**
+| DEDUP-001 | Duplicate Prevention | main-backend | ✅ PASS - Phone unique constraints active |
 
 **Deployment Architecture:**
 - **retailer-admin is served from Docker container** (NOT nginx static files)
@@ -3776,21 +3775,52 @@ cd /opt/supermandi/supplier-portal && npm run build
 - Docker nginx (`supermandi-nginx`) proxies `/retailer/` → `retailer-admin:80`
 - Network: `backend_supermandi-network`
 
-**Domain Path Verification (2026-02-01 16:14 UTC):**
+**✅ Automated Verification on https://supermandi.tech (2026-02-01 16:30 UTC):**
 ```
-✅ GET /                  → 200 OK (landing page)
-✅ GET /retailer/login    → 200 OK (SPA serves index.html)
-✅ GET /supplier/login    → 308 redirect (working)
-✅ GET /admin/login       → 200 OK (SPA serves index.html)
-✅ GET /retailer/assets/* → 200 OK (JS/CSS served correctly)
+Domain Path Tests:
+✅ GET https://supermandi.tech/                  → 200 (landing page)
+✅ GET https://supermandi.tech/retailer/login    → 200 (SPA loads)
+✅ GET https://supermandi.tech/supplier/login    → 308 (redirect working)
+✅ GET https://supermandi.tech/admin/login       → 200 (SPA loads)
+✅ GET https://supermandi.tech/retailer/assets/* → 200 (JS/CSS served)
+
+API Route Tests (401 = route exists, requires auth):
+✅ GET  /api/v1/retailer-admin/settings         → 401
+✅ PUT  /api/v1/retailer-admin/settings/upi     → 401
+✅ GET  /api/v1/retailer-admin/devices          → 401
+✅ POST /api/v1/retailer-admin/devices/activate → 401
+
+Component Verification in JS Bundle:
+✅ "Payment Settings" - PaymentsPage heading
+✅ "Device Activation" - DeviceActivationPage heading
+✅ "Activate Device" - Button text
+✅ "UPI VPA" - UpiInput label
+✅ "Your store is incomplete" - DeviceRequiredBanner message
+✅ "Please activate a POS" - DeviceRequiredBanner message
 ```
 
-**API Route Verification (all return 401 = route exists, auth required):**
+**⚠️ BROWSER TESTING REQUIRED (Human must verify):**
 ```
-✅ GET  /api/v1/retailer-admin/settings      → 401
-✅ PUT  /api/v1/retailer-admin/settings/upi  → 401
-✅ GET  /api/v1/retailer-admin/devices       → 401
-✅ POST /api/v1/retailer-admin/devices/activate → 401
+Test A — Login + PaymentsPage (RET-WEB-003):
+1. Go: https://supermandi.tech/retailer/login
+2. Login with OTP
+3. Navigate to "Payments" in sidebar
+4. Verify page loads at /s/:storeCode/settings/payments
+5. Enter UPI VPA (e.g., test@upi) → Save
+6. Confirm success message
+7. Verify store status becomes PAYMENTS_SUBMITTED
+
+Test B — DeviceRequiredBanner (FLOW-001):
+1. Use a store with NO devices bound
+2. Verify banner shows: "Your store is incomplete"
+3. Click "Activate Device" → goes to devices page
+4. After device activated → banner disappears
+
+Evidence Required:
+- Screenshot: Login page on supermandi.tech
+- Screenshot: PaymentsPage before + after save
+- Screenshot: DeviceRequiredBanner visible
+- Screenshot: Banner removed after device activation
 ```
 
 **Work Completed:**
@@ -3855,7 +3885,7 @@ rm -rf node_modules
 echo -e "node_modules\ndist\n.git\n.env\n.env.local\n*.log" > .dockerignore
 
 # Build Docker image with env vars
-export VITE_API_BASE_URL="https://34.14.220.171.nip.io"
+export VITE_API_BASE_URL="https://supermandi.tech"
 export VITE_GIT_SHA=$(git rev-parse --short HEAD)
 export VITE_BUILD_TIME=$(date -Iseconds)
 
