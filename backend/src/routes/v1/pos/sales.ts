@@ -8,6 +8,8 @@ import {
   salesRateLimiter,
   financialOperationsRateLimiter
 } from "../../../middleware/posRateLimiter";
+// SEC-001: Import store status gate for ACTIVE store enforcement
+import { requireActiveStore, requireOperationalStore } from "../../../middleware/storeStatusGate";
 import {
   applyBulkDeductions,
   ensureSaleAvailability,
@@ -764,7 +766,8 @@ async function getCollectionStoreStatus(
 }
 
 // GO-LIVE-184: Rate limit sales creation to 60/min per store
-posSalesRouter.post("/sales", requireDeviceToken, salesRateLimiter, async (req, res) => {
+// SEC-001: POST /sales requires ACTIVE store status
+posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateLimiter, async (req, res) => {
   const { items, discountMinor, currency, saleId: requestedSaleIdRaw } = req.body as {
     items?: SaleItemInput[];
     discountMinor?: number;
@@ -1165,7 +1168,8 @@ posSalesRouter.post("/sales", requireDeviceToken, salesRateLimiter, async (req, 
 // This endpoint is called AFTER payment is confirmed
 // Stock is only deducted when payment is successful
 // GO-LIVE-184: Rate limit payment confirmations to 30/min per store
-posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
+// SEC-001: POST /sales/:saleId/confirm requires ACTIVE store status
+posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
   const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
   if (!saleId) {
     return res.status(400).json({ error: "saleId is required" });
@@ -1306,7 +1310,8 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, financialOpera
 
 // Cancel a pending sale (cleanup abandoned carts)
 // This endpoint restocks items if needed
-posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /sales/:saleId/cancel requires ACTIVE store status
+posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, requireActiveStore, async (req, res) => {
   const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
   if (!saleId) {
     return res.status(400).json({ error: "saleId is required" });
@@ -1375,7 +1380,8 @@ posSalesRouter.post("/sales/:saleId/cancel", requireDeviceToken, async (req, res
 // GO-LIVE-066/067: Sale Return/Refund endpoint
 // Reverses ledger entries and adds stock back for completed sales
 // =============================================================================
-posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /sales/:saleId/return requires ACTIVE store status
+posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveStore, async (req, res) => {
   const saleId = typeof req.params.saleId === "string" ? req.params.saleId.trim() : "";
   if (!saleId) {
     return res.status(400).json({ error: "saleId is required" });
@@ -1492,7 +1498,8 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, async (req, res
 // UPI intent / QR must NEVER be generated on backend.
 // POS generates intent locally using upiVpa.
 // Do not add payment gateway logic here.
-posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /payments/upi/init requires ACTIVE store status
+posSalesRouter.post("/payments/upi/init", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { saleId, transactionId, upiIntent } = req.body as {
     saleId?: string;
     transactionId?: string;
@@ -1555,7 +1562,8 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, async (req, res) =
 // GO-LIVE-037: UPI confirmation with idempotency
 // If payment is already confirmed, return success without re-processing
 // GO-LIVE-184: Rate limit payment confirmations to 30/min per store
-posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
+// SEC-001: POST /payments/upi/confirm-manual requires ACTIVE store status
+posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
   const { paymentId } = req.body as { paymentId?: string };
 
   if (typeof paymentId !== "string" || paymentId.trim().length === 0) {
@@ -1717,7 +1725,8 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, financia
 });
 
 // GO-LIVE-184: Rate limit cash payments to 30/min per store
-posSalesRouter.post("/payments/cash", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
+// SEC-001: POST /payments/cash requires ACTIVE store status
+posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
   const { saleId } = req.body as { saleId?: string };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
@@ -1851,7 +1860,8 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, financialOperationsRat
 });
 
 // GO-LIVE-184: Rate limit due payments to 30/min per store
-posSalesRouter.post("/payments/due", requireDeviceToken, financialOperationsRateLimiter, async (req, res) => {
+// SEC-001: POST /payments/due requires ACTIVE store status
+posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, financialOperationsRateLimiter, async (req, res) => {
   const { saleId } = req.body as { saleId?: string };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
@@ -1994,7 +2004,8 @@ posSalesRouter.post("/payments/due", requireDeviceToken, financialOperationsRate
   }
 });
 
-posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /collections/upi/init requires ACTIVE store status
+posSalesRouter.post("/collections/upi/init", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { amountMinor, reference, transactionId, upiIntent } = req.body as {
     amountMinor?: number;
     reference?: string | null;
@@ -2050,7 +2061,8 @@ posSalesRouter.post("/collections/upi/init", requireDeviceToken, async (req, res
   });
 });
 
-posSalesRouter.post("/collections/upi/confirm-manual", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /collections/upi/confirm-manual requires ACTIVE store status
+posSalesRouter.post("/collections/upi/confirm-manual", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { collectionId } = req.body as { collectionId?: string };
 
   if (typeof collectionId !== "string" || collectionId.trim().length === 0) {
@@ -2089,7 +2101,8 @@ posSalesRouter.post("/collections/upi/confirm-manual", requireDeviceToken, async
   return res.json({ status: "PAID" });
 });
 
-posSalesRouter.post("/collections/cash", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /collections/cash requires ACTIVE store status
+posSalesRouter.post("/collections/cash", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { amountMinor, reference } = req.body as {
     amountMinor?: number;
     reference?: string | null;
@@ -2123,7 +2136,8 @@ posSalesRouter.post("/collections/cash", requireDeviceToken, async (req, res) =>
   return res.json({ status: "PAID", collectionId });
 });
 
-posSalesRouter.post("/collections/due", requireDeviceToken, async (req, res) => {
+// SEC-001: POST /collections/due requires ACTIVE store status
+posSalesRouter.post("/collections/due", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { amountMinor, reference } = req.body as {
     amountMinor?: number;
     reference?: string | null;

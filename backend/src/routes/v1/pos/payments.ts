@@ -8,6 +8,8 @@ import { Router, Request, Response, NextFunction } from "express";
 import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
+// SEC-001: Import store status gate for ACTIVE store enforcement
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 
 export const posPaymentsRouter = Router();
 
@@ -77,9 +79,11 @@ function generateOrderId(): string {
  * Request: { saleId: string, amountMinor: number }
  * Response: { paymentId, orderId, qrData, upiVpa, expiresAt }
  */
+// SEC-001: POST /payments/upi/generate requires ACTIVE store status
 posPaymentsRouter.post(
   "/payments/upi/generate",
   requireDeviceToken,
+  requireActiveStore,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId, deviceId } = (req as unknown as PosRequest).posDevice;
     const { saleId, amountMinor } = req.body as UpiInitRequest;
@@ -341,9 +345,11 @@ interface SplitPaymentRequest {
  * Request: { saleId, payments: [{ mode: "UPI", amountMinor }, { mode: "CASH", amountMinor }] }
  * Response: { paymentIds, upiPayment?, cashPayment?, totalAmount }
  */
+// SEC-001: POST /payments/split requires ACTIVE store status
 posPaymentsRouter.post(
   "/payments/split",
   requireDeviceToken,
+  requireActiveStore,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId } = (req as unknown as PosRequest).posDevice;
     const { saleId, payments } = req.body as SplitPaymentRequest;
@@ -563,9 +569,11 @@ posPaymentsRouter.post(
  * Request: { receivedMinor?: number }
  * Response: { status, changeMinor }
  */
+// SEC-001: POST /payments/split/:paymentId/confirm-cash requires ACTIVE store status
 posPaymentsRouter.post(
   "/payments/split/:paymentId/confirm-cash",
   requireDeviceToken,
+  requireActiveStore,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId } = (req as unknown as PosRequest).posDevice;
     const { paymentId } = req.params;
@@ -797,9 +805,11 @@ interface UtrVerifyResponse {
  * 3. Amount matches the expected amount
  * 4. UTR hasn't been used before (prevents double-spending)
  */
+// SEC-001: POST /payments/upi/verify-utr requires ACTIVE store status
 posPaymentsRouter.post(
   "/payments/upi/verify-utr",
   requireDeviceToken,
+  requireActiveStore,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId } = (req as unknown as PosRequest).posDevice;
     const { utr, amountMinor, paymentId } = req.body as UtrVerifyRequest;
