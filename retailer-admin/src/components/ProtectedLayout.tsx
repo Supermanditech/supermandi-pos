@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
+// FLOW-001: Device Required Banner
+import DeviceRequiredBanner from './DeviceRequiredBanner';
 
 // A1: RouterDebug banner - shows routing info for debugging "no screens" issues
 const API_BASE_URL = '/api/v1/retailer-admin';
@@ -44,6 +46,8 @@ export default function ProtectedLayout() {
     { path: 'import', label: 'Import CSV', icon: '📄' },
     { path: 'compliance', label: 'Compliance', icon: '📑' },
     { path: 'settings', label: 'Settings', icon: '⚙️' }, // GL-RJ-005
+    { path: 'settings/payments', label: 'Payments', icon: '💳' }, // RET-WEB-003
+    { path: 'devices', label: 'Devices', icon: '📱' }, // RET-WEB-002
   ];
 
   // SM-024: Admin approval queue navigation
@@ -262,6 +266,9 @@ export default function ProtectedLayout() {
           <div><span style={{ color: '#64748b' }}>store:</span> <span style={{ color: '#a78bfa' }}>{storeCode}</span></div>
           <div><span style={{ color: '#64748b' }}>api:</span> <span style={{ color: '#fbbf24', wordBreak: 'break-all' }}>{getApiBaseUrl()}</span></div>
         </div>
+
+        {/* FLOW-001: Device Required Banner - shows when no device bound */}
+        <DeviceRequiredBanner />
 
         {/* Main Content */}
         <main style={{ flex: 1, overflow: 'auto' }}>

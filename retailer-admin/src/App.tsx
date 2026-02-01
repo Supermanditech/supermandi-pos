@@ -15,6 +15,10 @@ import CompliancePage from './pages/CompliancePage';
 import AllPagesPage from './pages/AllPagesPage';
 // GL-RJ-005: Store Settings page
 import SettingsPage from './pages/SettingsPage';
+// RET-WEB-002: Device Activation page
+import DeviceActivationPage from './pages/DeviceActivationPage';
+// RET-WEB-003: Payments Setup page
+import PaymentsPage from './pages/PaymentsPage';
 // SM-024: Admin approval queue pages
 import SupplierQueuePage from './pages/admin/SupplierQueuePage';
 import ProductQueuePage from './pages/admin/ProductQueuePage';
@@ -160,6 +164,10 @@ function AppRoutes() {
           <Route path="compliance" element={<CompliancePage />} />
           {/* GL-RJ-005: Store Settings page */}
           <Route path="settings" element={<SettingsPage />} />
+          {/* RET-WEB-003: Payments Setup page */}
+          <Route path="settings/payments" element={<PaymentsPage />} />
+          {/* RET-WEB-002: Device Activation page */}
+          <Route path="devices" element={<DeviceActivationPage />} />
           {/* SM-024: SuperAdmin approval queue pages */}
           {/* GL-WF-033: Wrap admin routes with role check */}
           <Route path="admin/suppliers" element={<AdminRoute><SupplierQueuePage /></AdminRoute>} />
