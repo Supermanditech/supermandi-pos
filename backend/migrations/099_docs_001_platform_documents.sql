@@ -261,7 +261,7 @@ SELECT
     WHEN d.entity_type = 'supplier' THEN sup.business_name
   END AS entity_name,
   CASE
-    WHEN d.entity_type = 'store' THEN s.owner_name
+    WHEN d.entity_type = 'store' THEN s.contact_name
     WHEN d.entity_type = 'supplier' THEN sup.contact_name
   END AS owner_name
 FROM platform.documents d

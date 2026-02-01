@@ -44,7 +44,7 @@ router.get("/pending", async (req: Request, res: Response, next: NextFunction) =
           WHEN d.entity_type = 'supplier' THEN sup.business_name
         END AS entity_name,
         CASE
-          WHEN d.entity_type = 'store' THEN s.owner_name
+          WHEN d.entity_type = 'store' THEN s.contact_name
           WHEN d.entity_type = 'supplier' THEN sup.contact_name
         END AS owner_name,
         CASE
@@ -131,11 +131,11 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
           WHEN d.entity_type = 'supplier' THEN sup.business_name
         END AS entity_name,
         CASE
-          WHEN d.entity_type = 'store' THEN s.owner_name
+          WHEN d.entity_type = 'store' THEN s.contact_name
           WHEN d.entity_type = 'supplier' THEN sup.contact_name
         END AS owner_name,
         CASE
-          WHEN d.entity_type = 'store' THEN s.owner_phone
+          WHEN d.entity_type = 'store' THEN s.contact_phone
           WHEN d.entity_type = 'supplier' THEN sup.phone
         END AS contact_phone
       FROM platform.documents d
@@ -349,7 +349,7 @@ router.get("/entity/:entityType/:entityId", async (req: Request, res: Response, 
     let entityInfo: any = null;
     if (entityType === 'store') {
       const storeResult = await pool.query(
-        `SELECT id, name, owner_name, owner_phone, status, kyc_complete
+        `SELECT id, name, contact_name, contact_phone, status, kyc_complete
          FROM platform.stores WHERE id = $1::uuid`,
         [entityId]
       );
