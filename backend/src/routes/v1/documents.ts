@@ -8,6 +8,29 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 
+// DOCS-001: Import admin token validation
+// Load admin token from secret file or env (same as adminToken middleware)
+function loadAdminTokenForValidation(): string | undefined {
+  const tokenFilePath = process.env.ADMIN_TOKEN_FILE;
+  if (tokenFilePath) {
+    try {
+      const token = fs.readFileSync(tokenFilePath, 'utf8').trim();
+      if (token) return token;
+    } catch { /* fall through */ }
+  }
+  return process.env.ADMIN_TOKEN?.trim();
+}
+const ADMIN_TOKEN_CACHED = loadAdminTokenForValidation();
+
+// DOCS-001: Check if request has valid admin token
+function isValidAdminRequest(req: Request): boolean {
+  const token = req.headers['x-admin-token'] as string | undefined;
+  if (!token || !ADMIN_TOKEN_CACHED) return false;
+  // Use timing-safe comparison
+  if (token.length !== ADMIN_TOKEN_CACHED.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(ADMIN_TOKEN_CACHED));
+}
+
 const router = Router();
 
 // =============================================================================
@@ -321,7 +344,8 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Authorization check - allow owner or admin
-    const isAdmin = (req as any).actorType === 'ADMIN' || (req as any).isAdmin;
+    // DOCS-001: Validate admin token properly (timing-safe comparison)
+    const isAdmin = isValidAdminRequest(req) || (req as any).actorType === 'ADMIN' || (req as any).isAdmin;
     const requesterId = (req as any).storeId || (req as any).supplierId || (req as any).userId;
     const isOwner = requesterId === doc.entity_id;
 
