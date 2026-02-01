@@ -81,7 +81,7 @@ $$;
 -- Added unique constraint on stores.phone
 
 -- =============================================================================
--- Step 3: Add unique constraint on phone for suppliers
+-- Step 3: Add unique constraint on primary_phone for suppliers
 -- =============================================================================
 
 DO $$
@@ -94,30 +94,30 @@ BEGIN
     -- Check if constraint already exists
     IF NOT EXISTS (
       SELECT 1 FROM pg_constraint
-      WHERE conname = 'uk_suppliers_phone'
+      WHERE conname = 'uk_suppliers_primary_phone'
       AND conrelid = 'supplier.suppliers'::regclass
     ) THEN
       -- Handle existing duplicates
       WITH duplicates AS (
-        SELECT id, phone,
-          ROW_NUMBER() OVER (PARTITION BY phone ORDER BY created_at DESC) as rn
+        SELECT id, primary_phone,
+          ROW_NUMBER() OVER (PARTITION BY primary_phone ORDER BY created_at DESC) as rn
         FROM supplier.suppliers
-        WHERE phone IS NOT NULL
+        WHERE primary_phone IS NOT NULL
       )
       UPDATE supplier.suppliers s
-      SET phone = NULL
+      SET primary_phone = NULL
       FROM duplicates d
       WHERE s.id = d.id AND d.rn > 1;
 
       -- Add constraint
       ALTER TABLE supplier.suppliers
-      ADD CONSTRAINT uk_suppliers_phone UNIQUE (phone);
+      ADD CONSTRAINT uk_suppliers_primary_phone UNIQUE (primary_phone);
     END IF;
   END IF;
 END;
 $$;
 
--- Added unique constraint on suppliers.phone (if table exists)
+-- Added unique constraint on suppliers.primary_phone (if table exists)
 
 -- =============================================================================
 -- Step 4: Add indexes for faster duplicate checking
