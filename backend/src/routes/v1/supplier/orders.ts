@@ -1,9 +1,11 @@
 // SM-005: Supplier Orders Routes
+// SEC-001: Status gating for write operations
 // View and manage orders from retailers
 
 import { Router, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
+import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middleware/supplierStatusGate";
 
 const router = Router();
 
@@ -15,8 +17,9 @@ const router = Router();
  * GET /api/v1/supplier/orders
  * List all orders for the authenticated supplier
  * GL-WF-063: Supports pagination via page and limit query params
+ * SEC-001: Allow registered suppliers to view orders
  */
-router.get("/orders", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const pool = getPool();
     if (!pool) {
@@ -121,8 +124,9 @@ router.get("/orders", requireSupplierAuth, async (req: SupplierAuthRequest, res:
 /**
  * PATCH /api/v1/supplier/orders/:id/status
  * Update order status
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.patch("/orders/:id/status", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.patch("/orders/:id/status", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -213,8 +217,9 @@ router.patch("/orders/:id/status", requireSupplierAuth, async (req: SupplierAuth
  * PATCH /api/v1/supplier/orders/:id/shipment
  * GL-WF-039: Add shipment tracking information
  * GO-LIVE-029: Added shipment date and expected delivery date fields
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.patch("/orders/:id/shipment", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.patch("/orders/:id/shipment", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { trackingNumber, carrier, shipmentDate, expectedDeliveryDate } = req.body;
@@ -327,8 +332,9 @@ router.patch("/orders/:id/shipment", requireSupplierAuth, async (req: SupplierAu
 /**
  * PATCH /api/v1/supplier/orders/:orderId/items/:itemId/status
  * GL-WF-038: Update individual order item status
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.patch("/orders/:orderId/items/:itemId/status", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.patch("/orders/:orderId/items/:itemId/status", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { orderId, itemId } = req.params;
     const { status, receivedQuantity } = req.body;
@@ -430,8 +436,9 @@ router.patch("/orders/:orderId/items/:itemId/status", requireSupplierAuth, async
 /**
  * GET /api/v1/supplier/orders/:id/notes
  * GO-LIVE-030: Get order notes/communication
+ * SEC-001: Allow registered suppliers to view order notes
  */
-router.get("/orders/:id/notes", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.get("/orders/:id/notes", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -486,8 +493,9 @@ router.get("/orders/:id/notes", requireSupplierAuth, async (req: SupplierAuthReq
 /**
  * POST /api/v1/supplier/orders/:id/notes
  * GO-LIVE-030: Add a note to an order
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.post("/orders/:id/notes", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.post("/orders/:id/notes", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const { message, isInternal } = req.body;

@@ -1,10 +1,12 @@
 // SM-006: Supplier Product CRUD Routes
 // SM-007: CSV Upload included
+// SEC-001: Status gating for write operations
 // Manages supplier product catalog
 
 import { Router, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
+import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middleware/supplierStatusGate";
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { validateMoq, validatePrice } from "@supermandi/common";
@@ -50,8 +52,9 @@ const upload = multer({
  * GET /api/v1/supplier/products
  * List all products for the authenticated supplier
  * GL-WF-063: Supports pagination via page and limit query params
+ * SEC-001: Allow registered suppliers (can view products during onboarding)
  */
-router.get("/products", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const pool = getPool();
     if (!pool) {
@@ -135,8 +138,9 @@ router.get("/products", requireSupplierAuth, async (req: SupplierAuthRequest, re
 /**
  * POST /api/v1/supplier/products
  * Create a new product
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.post("/products", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const {
       name,
@@ -270,8 +274,9 @@ router.post("/products", requireSupplierAuth, async (req: SupplierAuthRequest, r
 /**
  * PATCH /api/v1/supplier/products/:id
  * Update a product
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.patch("/products/:id", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const {
@@ -471,8 +476,9 @@ router.patch("/products/:id", requireSupplierAuth, async (req: SupplierAuthReque
 /**
  * DELETE /api/v1/supplier/products/:id
  * Delete a product
+ * SEC-001: Requires ACTIVE supplier status
  */
-router.delete("/products/:id", requireSupplierAuth, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+router.delete("/products/:id", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -505,10 +511,12 @@ router.delete("/products/:id", requireSupplierAuth, async (req: SupplierAuthRequ
 /**
  * POST /api/v1/supplier/products/csv-upload
  * SM-007: Upload products via CSV
+ * SEC-001: Requires ACTIVE supplier status
  */
 router.post(
   "/products/csv-upload",
   requireSupplierAuth,
+  requireActiveSupplier,
   upload.single('file'),
   async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
     try {
