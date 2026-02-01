@@ -1,9 +1,18 @@
 # Retailer Admin Portal - Production Dockerfile
 # GO-LIVE-B9: Batch 9 UI Testing deployment
+# ENV-001: Build-time ENV Injection
 
 FROM node:20-alpine AS builder
 
 WORKDIR /app
+
+# ENV-001: Build-time environment variables
+ARG VITE_API_BASE_URL=https://supermandi.tech/api
+ARG VITE_GIT_SHA=dev
+ARG VITE_BUILD_TIME
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_GIT_SHA=$VITE_GIT_SHA
+ENV VITE_BUILD_TIME=$VITE_BUILD_TIME
 
 # Copy package files
 COPY package*.json ./
@@ -18,7 +27,9 @@ COPY . .
 RUN if [ -f .env.production ]; then cp .env.production .env; \
     elif [ -f .env.production.example ]; then cp .env.production.example .env; \
     fi
-RUN npm run build
+
+# ENV-001: Set build time if not provided
+RUN if [ -z "$VITE_BUILD_TIME" ]; then export VITE_BUILD_TIME=$(date -Iseconds); fi && npm run build
 
 # Production stage - serve with nginx
 FROM nginx:alpine

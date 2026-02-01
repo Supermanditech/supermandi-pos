@@ -6,6 +6,18 @@ import { generateStoreCode } from "../../../services/storeCodeService";
 import { sanitizeHtml, validateEmail as validateEmailFn, validatePhone as validatePhoneFn, validatePinCode } from "@supermandi/common";
 // GO-LIVE-186: Import rate limiter for admin store operations
 import { adminStoreOperationsRateLimiter } from "../../../middleware/posRateLimiter";
+// CORE-001: Import store state machine service
+import {
+  StoreStatus,
+  type StoreStatusType,
+  transitionStore,
+  getStoresByStatus,
+  getPendingStoresCount,
+  getStoreStatusHistory,
+  getStoreStatus,
+  isValidTransition,
+  getValidTransitions,
+} from "../../../services/storeStateMachine";
 
 export const adminStoresRouter = Router();
 
@@ -431,5 +443,266 @@ adminStoresRouter.delete("/stores/:storeId", requirePermission("stores", "delete
   } catch (err: any) {
     console.error("[admin/stores DELETE] Delete failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to delete store" });
+  }
+});
+
+// =============================================================================
+// CORE-001: Store State Machine Endpoints
+// =============================================================================
+
+// GET /api/v1/admin/stores/pending - Get pending stores queue
+// GO-LIVE-128: Requires 'stores:read' permission
+adminStoresRouter.get("/stores/pending", requirePermission("stores", "read"), async (_req, res) => {
+  try {
+    const [stores, counts] = await Promise.all([
+      getStoresByStatus([StoreStatus.PAYMENTS_SUBMITTED, StoreStatus.NEEDS_FIX], { limit: 50 }),
+      getPendingStoresCount(),
+    ]);
+
+    return res.json({
+      count: counts.total_pending,
+      payments_submitted_count: counts.payments_submitted,
+      needs_fix_count: counts.needs_fix,
+      stores: stores.map((store) => ({
+        id: store.id,
+        name: store.name,
+        status: store.status,
+        device_bound: store.device_bound,
+        kyc_complete: store.kyc_complete,
+        upi_complete: store.upi_complete,
+        status_reason: store.status_reason,
+        status_updated_at: store.status_updated_at,
+      })),
+    });
+  } catch (err: any) {
+    console.error("[admin/stores/pending] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch pending stores" });
+  }
+});
+
+// GET /api/v1/admin/stores/:storeId/application - Get full store application for review
+// GO-LIVE-128: Requires 'stores:read' permission
+adminStoresRouter.get("/stores/:storeId/application", requirePermission("stores", "read"), async (req, res) => {
+  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+  if (!storeId || !UUID_PATTERN.test(storeId)) {
+    return res.status(400).json({ error: "storeId must be a valid UUID" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Get store details with all fields
+    const storeResult = await pool.query(
+      `SELECT
+        id::TEXT as id,
+        name,
+        code,
+        store_code,
+        store_type,
+        status,
+        upi_vpa,
+        address,
+        contact_name,
+        contact_phone,
+        contact_email,
+        location,
+        gstin,
+        device_bound,
+        kyc_complete,
+        upi_complete,
+        admin_approved,
+        status_reason,
+        status_updated_at,
+        status_updated_by,
+        created_at,
+        updated_at
+      FROM platform.stores
+      WHERE id = $1::uuid AND status != 'deleted'`,
+      [storeId]
+    );
+
+    const store = storeResult.rows[0];
+    if (!store) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    // Get documents (if table exists)
+    let documents: any[] = [];
+    try {
+      const docsResult = await pool.query(
+        `SELECT id, document_type, file_url, verified, verified_at, needs_reupload, reupload_reason, uploaded_at
+         FROM platform.store_documents
+         WHERE store_id = $1
+         ORDER BY uploaded_at DESC`,
+        [storeId]
+      );
+      documents = docsResult.rows;
+    } catch (e) {
+      // Table may not exist yet
+      console.log("[admin/stores/application] store_documents table not available");
+    }
+
+    // Get bound devices
+    let devices: any[] = [];
+    try {
+      const devicesResult = await pool.query(
+        `SELECT id, device_fingerprint, last_seen_at, created_at
+         FROM pos.pos_devices
+         WHERE store_id = $1 AND revoked_at IS NULL
+         ORDER BY created_at DESC`,
+        [storeId]
+      );
+      devices = devicesResult.rows;
+    } catch (e) {
+      console.log("[admin/stores/application] pos_devices query failed");
+    }
+
+    // Get status history
+    let statusHistory: any[] = [];
+    try {
+      statusHistory = await getStoreStatusHistory(storeId, { limit: 20 });
+    } catch (e) {
+      console.log("[admin/stores/application] status history not available");
+    }
+
+    // Get payment details (masked)
+    const payments = {
+      upi_address: store.upi_vpa,
+      bank_account_masked: null, // Will be populated when bank fields exist
+      bank_ifsc: null,
+      bank_name: null,
+    };
+
+    return res.json({
+      store: {
+        id: store.id,
+        name: store.name,
+        code: store.store_code || store.code,
+        store_type: store.store_type,
+        status: store.status,
+        address: store.address,
+        contact_name: store.contact_name,
+        contact_phone: store.contact_phone,
+        contact_email: store.contact_email,
+        gstin: store.gstin,
+        device_bound: store.device_bound ?? false,
+        kyc_complete: store.kyc_complete ?? false,
+        upi_complete: store.upi_complete ?? false,
+        admin_approved: store.admin_approved ?? false,
+        status_reason: store.status_reason,
+        status_updated_at: store.status_updated_at,
+        created_at: store.created_at,
+      },
+      documents,
+      payments,
+      devices,
+      status_history: statusHistory,
+    });
+  } catch (err: any) {
+    console.error("[admin/stores/application] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store application" });
+  }
+});
+
+// GET /api/v1/admin/stores/:storeId/status-history - Get store status history
+// GO-LIVE-128: Requires 'stores:read' permission
+adminStoresRouter.get("/stores/:storeId/status-history", requirePermission("stores", "read"), async (req, res) => {
+  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+  if (!storeId || !UUID_PATTERN.test(storeId)) {
+    return res.status(400).json({ error: "storeId must be a valid UUID" });
+  }
+
+  try {
+    const history = await getStoreStatusHistory(storeId, { limit: 50 });
+    return res.json({ status_history: history });
+  } catch (err: any) {
+    console.error("[admin/stores/status-history] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch status history" });
+  }
+});
+
+// PATCH /api/v1/admin/stores/:storeId/status - Update store status (state machine)
+// GO-LIVE-128: Requires 'stores:update' permission
+// GO-LIVE-186: Rate limit status changes
+adminStoresRouter.patch("/stores/:storeId/status", requirePermission("stores", "update"), adminStoreOperationsRateLimiter, async (req, res) => {
+  const storeId = typeof req.params.storeId === "string" ? req.params.storeId.trim() : "";
+  if (!storeId || !UUID_PATTERN.test(storeId)) {
+    return res.status(400).json({ error: "storeId must be a valid UUID" });
+  }
+
+  const { status, reason } = req.body as { status?: string; reason?: string };
+
+  if (!status) {
+    return res.status(400).json({ error: "status is required" });
+  }
+
+  // Validate status is a valid StoreStatus
+  const validStatuses = Object.values(StoreStatus) as string[];
+  if (!validStatuses.includes(status.toUpperCase())) {
+    return res.status(400).json({
+      error: "invalid_status",
+      message: `Status must be one of: ${validStatuses.join(", ")}`,
+    });
+  }
+
+  const newStatus = status.toUpperCase() as StoreStatusType;
+
+  // Get admin ID from token (if available)
+  const adminId = (req as any).admin?.id || (req as any).adminId || null;
+
+  try {
+    // Get current status first for validation
+    const currentStore = await getStoreStatus(storeId);
+    if (!currentStore) {
+      return res.status(404).json({ error: "store not found" });
+    }
+
+    // Check if transition is valid
+    if (!isValidTransition(currentStore.status, newStatus)) {
+      return res.status(400).json({
+        error: "invalid_transition",
+        message: `Cannot transition from ${currentStore.status} to ${newStatus}`,
+        current_status: currentStore.status,
+        valid_transitions: getValidTransitions(currentStore.status),
+      });
+    }
+
+    // Perform the transition
+    const result = await transitionStore(storeId, newStatus, {
+      reason: reason || undefined,
+      changedBy: adminId,
+      changedByType: "admin",
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        error: "transition_failed",
+        message: result.error,
+        previous_status: result.previousStatus,
+      });
+    }
+
+    // Get updated status history
+    const statusHistory = await getStoreStatusHistory(storeId, { limit: 5 });
+
+    return res.json({
+      store: {
+        id: result.store!.id,
+        name: result.store!.name,
+        status: result.store!.status,
+        device_bound: result.store!.device_bound,
+        kyc_complete: result.store!.kyc_complete,
+        upi_complete: result.store!.upi_complete,
+        admin_approved: result.store!.admin_approved,
+        status_reason: result.store!.status_reason,
+        status_updated_at: result.store!.status_updated_at,
+      },
+      previous_status: result.previousStatus,
+      status_history: statusHistory,
+    });
+  } catch (err: any) {
+    console.error("[admin/stores/status] Update failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update store status" });
   }
 });

@@ -4,6 +4,18 @@ import { requireAdminToken, requirePermission } from "../../../middleware/adminT
 import { validateBnplMaxDays, validateMargin, validateMoq } from "@supermandi/common";
 // GO-LIVE-185: Import rate limiter for approval operations
 import { supplierApprovalRateLimiter } from "../../../middleware/posRateLimiter";
+// CORE-002: Import supplier state machine service
+import {
+  SupplierStatus,
+  type SupplierStatusType,
+  transitionSupplier,
+  getSuppliersByStatus,
+  getPendingSuppliersCount,
+  getSupplierStatusHistory,
+  getSupplierStatus,
+  isValidTransition,
+  getValidTransitions,
+} from "../../../services/supplierStateMachine";
 
 export const adminSuppliersRouter = Router();
 
@@ -1144,5 +1156,266 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
   } catch (err: any) {
     console.error("[GO-LIVE-145] Admin password reset failed:", err);
     return res.status(500).json({ error: "Failed to initiate password reset" });
+  }
+});
+
+// =============================================================================
+// CORE-002: Supplier State Machine Endpoints
+// =============================================================================
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * GET /api/v1/admin/suppliers/queue
+ * Get suppliers pending review (KYC_SUBMITTED, NEEDS_FIX)
+ */
+adminSuppliersRouter.get("/suppliers/queue", requireAdminToken, requirePermission("suppliers", "read"), async (_req, res) => {
+  try {
+    const [suppliers, counts] = await Promise.all([
+      getSuppliersByStatus([SupplierStatus.KYC_SUBMITTED, SupplierStatus.NEEDS_FIX], { limit: 50 }),
+      getPendingSuppliersCount(),
+    ]);
+
+    return res.json({
+      count: counts.total_pending,
+      kyc_submitted_count: counts.kyc_submitted,
+      needs_fix_count: counts.needs_fix,
+      suppliers: suppliers.map((supplier) => ({
+        id: supplier.id,
+        business_name: supplier.business_name,
+        gstin: supplier.gstin,
+        verification_status: supplier.verification_status,
+        rejection_reason: supplier.rejection_reason,
+        status_updated_at: supplier.status_updated_at,
+        primary_phone: supplier.primary_phone,
+        primary_email: supplier.primary_email,
+      })),
+    });
+  } catch (err: any) {
+    console.error("[admin/suppliers/queue] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch supplier queue" });
+  }
+});
+
+/**
+ * GET /api/v1/admin/suppliers/:supplierId/kyc
+ * Get full supplier KYC data for review
+ */
+adminSuppliersRouter.get("/suppliers/:supplierId/kyc", requireAdminToken, requirePermission("suppliers", "read"), async (req, res) => {
+  const supplierId = typeof req.params.supplierId === "string" ? req.params.supplierId.trim() : "";
+  if (!supplierId || !UUID_PATTERN.test(supplierId)) {
+    return res.status(400).json({ error: "supplierId must be a valid UUID" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Get supplier details
+    const supplierResult = await pool.query(
+      `SELECT
+        id,
+        gstin,
+        pan,
+        business_name,
+        trade_name,
+        business_type,
+        primary_contact_name,
+        primary_phone,
+        primary_email,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        pincode,
+        verification_status,
+        rejection_reason,
+        verified_by_user_id,
+        verified_at,
+        bank_account_number,
+        bank_ifsc,
+        bank_account_name,
+        upi_vpa,
+        status_updated_at,
+        status_updated_by,
+        created_at,
+        updated_at
+      FROM supplier.suppliers
+      WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    const supplier = supplierResult.rows[0];
+    if (!supplier) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    // Get documents (if table exists)
+    let documents: any[] = [];
+    try {
+      const docsResult = await pool.query(
+        `SELECT id, document_type, file_url, verified, verified_at, needs_reupload, reupload_reason, uploaded_at
+         FROM supplier.supplier_documents
+         WHERE supplier_id = $1
+         ORDER BY uploaded_at DESC`,
+        [supplierId]
+      );
+      documents = docsResult.rows;
+    } catch (e) {
+      // Table may not exist yet
+      console.log("[admin/suppliers/kyc] supplier_documents table not available");
+    }
+
+    // Get status history
+    let statusHistory: any[] = [];
+    try {
+      statusHistory = await getSupplierStatusHistory(supplierId, { limit: 20 });
+    } catch (e) {
+      console.log("[admin/suppliers/kyc] status history not available");
+    }
+
+    // Mask bank account
+    const bankAccountMasked = supplier.bank_account_number
+      ? "******" + supplier.bank_account_number.slice(-4)
+      : null;
+
+    return res.json({
+      supplier: {
+        id: supplier.id,
+        gstin: supplier.gstin,
+        pan: supplier.pan,
+        business_name: supplier.business_name,
+        trade_name: supplier.trade_name,
+        business_type: supplier.business_type,
+        contact_name: supplier.primary_contact_name,
+        phone: supplier.primary_phone,
+        email: supplier.primary_email,
+        address: {
+          line1: supplier.address_line1,
+          line2: supplier.address_line2,
+          city: supplier.city,
+          state: supplier.state,
+          pincode: supplier.pincode,
+        },
+        verification_status: supplier.verification_status,
+        rejection_reason: supplier.rejection_reason,
+        verified_at: supplier.verified_at,
+        status_updated_at: supplier.status_updated_at,
+        created_at: supplier.created_at,
+      },
+      bank_details: {
+        account_number_masked: bankAccountMasked,
+        ifsc: supplier.bank_ifsc,
+        account_name: supplier.bank_account_name,
+        upi_vpa: supplier.upi_vpa,
+      },
+      documents,
+      status_history: statusHistory,
+    });
+  } catch (err: any) {
+    console.error("[admin/suppliers/kyc] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch supplier KYC" });
+  }
+});
+
+/**
+ * GET /api/v1/admin/suppliers/:supplierId/status-history
+ * Get supplier status change history
+ */
+adminSuppliersRouter.get("/suppliers/:supplierId/status-history", requireAdminToken, requirePermission("suppliers", "read"), async (req, res) => {
+  const supplierId = typeof req.params.supplierId === "string" ? req.params.supplierId.trim() : "";
+  if (!supplierId || !UUID_PATTERN.test(supplierId)) {
+    return res.status(400).json({ error: "supplierId must be a valid UUID" });
+  }
+
+  try {
+    const history = await getSupplierStatusHistory(supplierId, { limit: 50 });
+    return res.json({ status_history: history });
+  } catch (err: any) {
+    console.error("[admin/suppliers/status-history] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch status history" });
+  }
+});
+
+/**
+ * PATCH /api/v1/admin/suppliers/:supplierId/verification-status
+ * Update supplier verification status (state machine)
+ */
+adminSuppliersRouter.patch("/suppliers/:supplierId/verification-status", requireAdminToken, requirePermission("suppliers", "approve"), supplierApprovalRateLimiter, async (req, res) => {
+  const supplierId = typeof req.params.supplierId === "string" ? req.params.supplierId.trim() : "";
+  if (!supplierId || !UUID_PATTERN.test(supplierId)) {
+    return res.status(400).json({ error: "supplierId must be a valid UUID" });
+  }
+
+  const { status, reason } = req.body as { status?: string; reason?: string };
+
+  if (!status) {
+    return res.status(400).json({ error: "status is required" });
+  }
+
+  // Validate status is a valid SupplierStatus
+  const validStatuses = Object.values(SupplierStatus) as string[];
+  if (!validStatuses.includes(status.toUpperCase())) {
+    return res.status(400).json({
+      error: "invalid_status",
+      message: `Status must be one of: ${validStatuses.join(", ")}`,
+    });
+  }
+
+  const newStatus = status.toUpperCase() as SupplierStatusType;
+
+  // Get admin ID from token
+  const adminId = (req as any).adminId || null;
+
+  try {
+    // Get current status first for validation
+    const currentSupplier = await getSupplierStatus(supplierId);
+    if (!currentSupplier) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    // Check if transition is valid
+    if (!isValidTransition(currentSupplier.verification_status, newStatus)) {
+      return res.status(400).json({
+        error: "invalid_transition",
+        message: `Cannot transition from ${currentSupplier.verification_status} to ${newStatus}`,
+        current_status: currentSupplier.verification_status,
+        valid_transitions: getValidTransitions(currentSupplier.verification_status),
+      });
+    }
+
+    // Perform the transition
+    const result = await transitionSupplier(supplierId, newStatus, {
+      reason: reason || undefined,
+      changedBy: adminId,
+      changedByType: "admin",
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        error: "transition_failed",
+        message: result.error,
+        previous_status: result.previousStatus,
+      });
+    }
+
+    // Get updated status history
+    const statusHistory = await getSupplierStatusHistory(supplierId, { limit: 5 });
+
+    return res.json({
+      supplier: {
+        id: result.supplier!.id,
+        business_name: result.supplier!.business_name,
+        gstin: result.supplier!.gstin,
+        verification_status: result.supplier!.verification_status,
+        rejection_reason: result.supplier!.rejection_reason,
+        status_updated_at: result.supplier!.status_updated_at,
+      },
+      previous_status: result.previousStatus,
+      status_history: statusHistory,
+    });
+  } catch (err: any) {
+    console.error("[admin/suppliers/verification-status] Update failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update supplier status" });
   }
 });
