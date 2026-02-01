@@ -316,7 +316,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     const storeMaxDevices = store.max_devices ?? DEFAULT_MAX_DEVICES_PER_STORE;
     if (!existingDevice && !isDemo) {
       const deviceCountRes = await client.query(
-        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND is_active = true`,
+        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND active = true`,
         [enrollment.store_id]
       );
       const currentDeviceCount = deviceCountRes.rows[0]?.count ?? 0;
@@ -552,9 +552,9 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
     // Check for existing device with same label (case-insensitive)
     const existingRes = await pool.query(
       `
-      SELECT id, label, is_active, last_seen_online
+      SELECT id, label, active, last_seen_online
       FROM pos_devices
-      WHERE store_id = $1 AND lower(label) = lower($2) AND is_active = true
+      WHERE store_id = $1 AND lower(label) = lower($2) AND active = true
       `,
       [storeId, label]
     );
@@ -566,7 +566,7 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
       const labelsRes = await pool.query(
         `
         SELECT label FROM pos_devices
-        WHERE store_id = $1 AND is_active = true
+        WHERE store_id = $1 AND active = true
         ORDER BY label
         LIMIT 20
         `,
@@ -604,7 +604,7 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
         existingDevice: {
           label: existing.label,
           deviceId: existing.id,
-          status: existing.is_active ? "active" : "inactive",
+          status: existing.active ? "active" : "inactive",
           lastSeen: existing.last_seen_online,
         },
         suggestions,
