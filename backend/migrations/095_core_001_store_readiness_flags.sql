@@ -54,16 +54,34 @@ SET
 WHERE status = 'ACTIVE';
 
 -- For existing non-ACTIVE stores, estimate flags based on available data
-UPDATE platform.stores
-SET
-  device_bound = EXISTS (
-    SELECT 1 FROM pos.pos_devices pd
-    WHERE pd.store_id = platform.stores.id
-    AND pd.revoked_at IS NULL
-  ),
-  upi_complete = (upi_vpa IS NOT NULL AND upi_vpa != ''),
-  status_updated_at = COALESCE(updated_at, NOW())
-WHERE status != 'ACTIVE';
+-- Note: pos.pos_devices may not exist yet; handle gracefully
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'pos' AND table_name = 'pos_devices'
+  ) THEN
+    UPDATE platform.stores
+    SET
+      device_bound = EXISTS (
+        SELECT 1 FROM pos.pos_devices pd
+        WHERE pd.store_id = platform.stores.id
+        AND pd.revoked_at IS NULL
+      ),
+      upi_complete = (upi_vpa IS NOT NULL AND upi_vpa != ''),
+      status_updated_at = COALESCE(updated_at, NOW())
+    WHERE status != 'ACTIVE';
+  ELSE
+    -- Table doesn't exist, just set default flags
+    UPDATE platform.stores
+    SET
+      device_bound = FALSE,
+      upi_complete = (upi_vpa IS NOT NULL AND upi_vpa != ''),
+      status_updated_at = COALESCE(updated_at, NOW())
+    WHERE status != 'ACTIVE';
+  END IF;
+END;
+$$;
 
 -- Updated existing stores with readiness flags
 
