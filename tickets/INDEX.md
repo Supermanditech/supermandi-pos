@@ -3273,16 +3273,24 @@ curl -s -H "Metadata-Flavor: Google" \
 
 ---
 
-### BATCH 0: Infrastructure & Foundation
+### BATCH 0: Infrastructure & Foundation ✅ COMPLETE
 **Deploy First — Everything depends on this**
+**Tested: 2026-02-01 by Claude**
 
-| Ticket | Title | Services to Rebuild |
-|--------|-------|---------------------|
-| CORE-001 | Store State Machine | main-backend |
-| CORE-002 | Supplier State Machine | main-backend |
-| OPS-001 | VM Deployment Contract | main-backend, retailer-admin, supplier-portal |
-| ENV-001 | Build-time ENV Injection | retailer-admin, supplier-portal |
-| GW-001 | API Gateway Route Coverage | api-gateway |
+| Ticket | Title | Services to Rebuild | Status |
+|--------|-------|---------------------|--------|
+| CORE-001 | Store State Machine | main-backend | ✅ PASS |
+| CORE-002 | Supplier State Machine | main-backend | ✅ PASS |
+| OPS-001 | VM Deployment Contract | main-backend, retailer-admin, supplier-portal | ✅ PASS |
+| ENV-001 | Build-time ENV Injection | retailer-admin, supplier-portal | ✅ PASS |
+| GW-001 | API Gateway Route Coverage | api-gateway | ✅ PASS |
+
+**Real User Test Results:**
+- CORE-001: `platform.stores` has status, device_bound, kyc_complete, upi_complete, admin_approved columns
+- CORE-002: `supplier.suppliers` has status column, `supplier_status_audit` logs transitions
+- OPS-001: All portals return HTTP 200, health endpoint returns `{"status":"ok"}`
+- ENV-001: Retailer-admin uses relative `/api/v1/` paths, nginx proxies correctly
+- GW-001: API gateway routes admin/retailer/pos/supplier requests to main-backend
 
 **Migrations:** `064_store_status_enum.sql`, `065_store_readiness_flags.sql`, `066_store_status_audit.sql`, `067_supplier_status_enum.sql`
 
