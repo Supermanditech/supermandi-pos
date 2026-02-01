@@ -48,12 +48,20 @@ import {
   fetchAuditLogs,
   type AuditLogRecord
 } from "./api/audit";
+// DOCS-001: Import document management functions
+import {
+  fetchPendingDocuments,
+  approveDocument,
+  rejectDocument,
+  type DocumentRecord
+} from "./api/documents";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit";
+// DOCS-001: Added "documents" tab for document management
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -575,6 +583,18 @@ export default function App() {
     resource_type?: string;
   }>({});
   const auditLogsInFlightRef = useRef(false);
+
+  // DOCS-001: Document management state
+  const [pendingDocuments, setPendingDocuments] = useState<DocumentRecord[]>([]);
+  const [pendingDocsTotal, setPendingDocsTotal] = useState<number>(0);
+  const [documentsLoading, setDocumentsLoading] = useState<boolean>(false);
+  const [documentsError, setDocumentsError] = useState<string>("");
+  const [documentsPage, setDocumentsPage] = useState<number>(0);
+  const [documentsEntityFilter, setDocumentsEntityFilter] = useState<"" | "store" | "supplier">("");
+  const [selectedDocument, setSelectedDocument] = useState<DocumentRecord | null>(null);
+  const [docRejectReason, setDocRejectReason] = useState<string>("");
+  const [documentActionLoading, setDocumentActionLoading] = useState<string | null>(null);
+  const documentsInFlightRef = useRef(false);
 
   const setRateLimit = (until: number | null) => {
     rateLimitedUntilRef.current = until;
@@ -1110,6 +1130,63 @@ export default function App() {
     }
   }
 
+  // DOCS-001: Fetch pending documents
+  async function refreshDocuments() {
+    if (documentsInFlightRef.current) return;
+    documentsInFlightRef.current = true;
+    setDocumentsLoading(true);
+    setDocumentsError("");
+
+    try {
+      const entityType = documentsEntityFilter || undefined;
+      const res = await fetchPendingDocuments(entityType, 50, documentsPage * 50);
+      setPendingDocuments(res.documents);
+      setPendingDocsTotal(res.pagination.total);
+    } catch (e: any) {
+      setDocumentsError(e?.message ? String(e.message) : "Failed to fetch documents");
+    } finally {
+      setDocumentsLoading(false);
+      documentsInFlightRef.current = false;
+    }
+  }
+
+  // DOCS-001: Approve a document
+  async function handleApproveDocument(docId: string) {
+    setDocumentActionLoading(docId);
+    try {
+      await approveDocument(docId);
+      await logAdminAction("approve", "document", docId, { status: "approved" });
+      setSelectedDocument(null);
+      refreshDocuments();
+    } catch (e: any) {
+      await logAdminActionError("approve", "document", docId, e?.message || "Unknown error");
+      alert(e?.message || "Failed to approve document");
+    } finally {
+      setDocumentActionLoading(null);
+    }
+  }
+
+  // DOCS-001: Reject a document
+  async function handleRejectDocument(docId: string, reason: string) {
+    if (!reason.trim()) {
+      alert("Please provide a rejection reason");
+      return;
+    }
+    setDocumentActionLoading(docId);
+    try {
+      await rejectDocument(docId, reason);
+      await logAdminAction("reject", "document", docId, { status: "rejected", reason });
+      setSelectedDocument(null);
+      setDocRejectReason("");
+      refreshDocuments();
+    } catch (e: any) {
+      await logAdminActionError("reject", "document", docId, e?.message || "Unknown error");
+      alert(e?.message || "Failed to reject document");
+    } finally {
+      setDocumentActionLoading(null);
+    }
+  }
+
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
 
@@ -1121,6 +1198,7 @@ export default function App() {
     const shouldRefreshSettings = tab === "settings";
     const shouldRefreshAi = tab === "ai";
     const shouldRefreshAudit = tab === "audit"; // GO-LIVE-011
+    const shouldRefreshDocuments = tab === "documents"; // DOCS-001
 
     refreshHealth();
     if (shouldRefreshEvents) refreshEvents();
@@ -1135,6 +1213,7 @@ export default function App() {
         .catch(() => setAiConfigured(null));
     }
     if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
+    if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
 
     const id = setInterval(() => {
       if (isRateLimited()) return;
@@ -1151,6 +1230,7 @@ export default function App() {
           .catch(() => setAiConfigured(null));
       }
       if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
+      if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
   }, [tab]);
@@ -1167,6 +1247,13 @@ export default function App() {
       refreshAuditLogs();
     }
   }, [auditLogsPage, auditLogsFilter]);
+
+  // DOCS-001: Refresh documents when page or filter changes
+  useEffect(() => {
+    if (tab === "documents") {
+      refreshDocuments();
+    }
+  }, [documentsPage, documentsEntityFilter]);
 
   useEffect(() => {
     if (!enrollment) return;
@@ -1784,6 +1871,15 @@ export default function App() {
         </button>
         <button className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>
           Settings
+        </button>
+        {/* DOCS-001: Documents verification tab */}
+        <button className={tab === "documents" ? "tab tabActive" : "tab"} onClick={() => setTab("documents")}>
+          Documents
+          {pendingDocuments.length > 0 && (
+            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
+              {pendingDocsTotal}
+            </span>
+          )}
         </button>
         {/* GO-LIVE-011: Audit logs tab */}
         <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>
@@ -3796,6 +3892,220 @@ export default function App() {
               </div>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* DOCS-001: Documents Verification Tab */}
+      {tab === "documents" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">Document Verification Queue</div>
+            <div className="muted">Review and approve/reject KYC documents ({pendingDocsTotal} pending)</div>
+          </div>
+
+          <div className="tableWrap">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <button onClick={() => refreshDocuments()} disabled={documentsLoading}>
+                {documentsLoading ? "Loading..." : "Refresh"}
+              </button>
+
+              <select
+                value={documentsEntityFilter}
+                onChange={(e) => {
+                  setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier");
+                  setDocumentsPage(0);
+                }}
+                style={{ padding: "6px 10px" }}
+              >
+                <option value="">All Entities</option>
+                <option value="store">Stores</option>
+                <option value="supplier">Suppliers</option>
+              </select>
+
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  disabled={documentsPage === 0}
+                  onClick={() => setDocumentsPage(prev => Math.max(0, prev - 1))}
+                >
+                  ← Prev
+                </button>
+                <span className="muted">Page {documentsPage + 1} of {Math.max(1, Math.ceil(pendingDocsTotal / 50))}</span>
+                <button
+                  disabled={(documentsPage + 1) * 50 >= pendingDocsTotal}
+                  onClick={() => setDocumentsPage(prev => prev + 1)}
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+
+            {documentsError && <div className="errorText" style={{ marginBottom: 8 }}>{documentsError}</div>}
+
+            {pendingDocuments.length === 0 ? (
+              <div className="empty">No pending documents to review.</div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Entity</th>
+                    <th>Document Type</th>
+                    <th>File</th>
+                    <th>Uploaded</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingDocuments.map((doc) => (
+                    <tr key={doc.id}>
+                      <td>
+                        <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase" }}>{doc.entity_type}</div>
+                        <div className="mono" style={{ fontSize: 11 }}>{doc.entity_name || doc.entity_id.slice(0, 8)}</div>
+                        {doc.owner_name && <div style={{ fontSize: 11, color: "#666" }}>{doc.owner_name}</div>}
+                      </td>
+                      <td>{doc.document_type}</td>
+                      <td>
+                        <div>{doc.file_name}</div>
+                        <div className="muted" style={{ fontSize: 11 }}>{(doc.file_size / 1024).toFixed(1)} KB • {doc.content_type}</div>
+                      </td>
+                      <td className="mono" style={{ fontSize: 11 }}>{new Date(doc.uploaded_at).toLocaleString()}</td>
+                      <td>
+                        <span className={`badge ${doc.status === "pending" ? "badgeWarn" : doc.status === "approved" ? "badgeGood" : "badgeBad"}`}>
+                          {doc.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => setSelectedDocument(doc)}
+                          style={{ padding: "4px 8px", fontSize: 12 }}
+                        >
+                          Review
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Document Review Modal */}
+          {selectedDocument && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0,0,0,0.7)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 1000,
+              }}
+              onClick={() => setSelectedDocument(null)}
+            >
+              <div
+                style={{
+                  backgroundColor: "#1a1a2e",
+                  borderRadius: 8,
+                  padding: 24,
+                  maxWidth: "90vw",
+                  maxHeight: "90vh",
+                  overflow: "auto",
+                  minWidth: 400,
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <h3 style={{ margin: 0 }}>Review Document</h3>
+                  <button onClick={() => setSelectedDocument(null)} style={{ padding: "4px 8px" }}>✕</button>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Entity:</strong> {selectedDocument.entity_type} - {selectedDocument.entity_name || selectedDocument.entity_id}
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Document Type:</strong> {selectedDocument.document_type}
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>File:</strong> {selectedDocument.file_name} ({(selectedDocument.file_size / 1024).toFixed(1)} KB)
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Uploaded:</strong> {new Date(selectedDocument.uploaded_at).toLocaleString()}
+                  </div>
+                </div>
+
+                {/* Document Preview */}
+                <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#0f0f23", padding: 16, borderRadius: 4 }}>
+                  {selectedDocument.content_type.startsWith("image/") ? (
+                    <img
+                      src={selectedDocument.view_url}
+                      alt={selectedDocument.file_name}
+                      style={{ maxWidth: "100%", maxHeight: 400 }}
+                    />
+                  ) : selectedDocument.content_type === "application/pdf" ? (
+                    <iframe
+                      src={selectedDocument.view_url}
+                      title={selectedDocument.file_name}
+                      style={{ width: "100%", height: 400, border: "none" }}
+                    />
+                  ) : (
+                    <div>
+                      <a href={selectedDocument.view_url} target="_blank" rel="noopener noreferrer" style={{ color: "#7c3aed" }}>
+                        Download {selectedDocument.file_name}
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
+                  <button
+                    onClick={() => handleApproveDocument(selectedDocument.id)}
+                    disabled={documentActionLoading === selectedDocument.id}
+                    style={{
+                      padding: "10px 20px",
+                      backgroundColor: "#22c55e",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 4,
+                      cursor: documentActionLoading ? "wait" : "pointer",
+                    }}
+                  >
+                    {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
+                  </button>
+
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="text"
+                      placeholder="Rejection reason (required)"
+                      value={docRejectReason}
+                      onChange={(e) => setDocRejectReason(e.target.value)}
+                      style={{ flex: 1, padding: "8px 12px" }}
+                    />
+                    <button
+                      onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)}
+                      disabled={documentActionLoading === selectedDocument.id || !docRejectReason.trim()}
+                      style={{
+                        padding: "10px 20px",
+                        backgroundColor: "#ef4444",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 4,
+                        cursor: documentActionLoading || !docRejectReason.trim() ? "not-allowed" : "pointer",
+                        opacity: !docRejectReason.trim() ? 0.5 : 1,
+                      }}
+                    >
+                      ✕ Reject
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
