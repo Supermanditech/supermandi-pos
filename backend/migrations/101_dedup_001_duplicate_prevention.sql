@@ -45,7 +45,7 @@ ON platform.duplicate_flags(entity_type, entity_id);
 -- Created platform.duplicate_flags table
 
 -- =============================================================================
--- Step 2: Add unique constraint on owner_phone for stores
+-- Step 2: Add unique constraint on phone for stores
 -- DEDUP-001: Same phone cannot spawn multiple stores
 -- =============================================================================
 
@@ -55,30 +55,30 @@ BEGIN
   -- Add unique constraint only if it doesn't exist
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
-    WHERE conname = 'uk_stores_owner_phone'
+    WHERE conname = 'uk_stores_phone'
     AND conrelid = 'platform.stores'::regclass
   ) THEN
     -- Before adding constraint, handle any existing duplicates
-    -- by setting owner_phone to NULL for older duplicates
+    -- by setting phone to NULL for older duplicates
     WITH duplicates AS (
-      SELECT id, owner_phone,
-        ROW_NUMBER() OVER (PARTITION BY owner_phone ORDER BY created_at DESC) as rn
+      SELECT id, phone,
+        ROW_NUMBER() OVER (PARTITION BY phone ORDER BY created_at DESC) as rn
       FROM platform.stores
-      WHERE owner_phone IS NOT NULL
+      WHERE phone IS NOT NULL
     )
     UPDATE platform.stores s
-    SET owner_phone = NULL
+    SET phone = NULL
     FROM duplicates d
     WHERE s.id = d.id AND d.rn > 1;
 
     -- Now add the constraint (allowing NULL)
     ALTER TABLE platform.stores
-    ADD CONSTRAINT uk_stores_owner_phone UNIQUE (owner_phone);
+    ADD CONSTRAINT uk_stores_phone UNIQUE (phone);
   END IF;
 END;
 $$;
 
--- Added unique constraint on stores.owner_phone
+-- Added unique constraint on stores.phone
 
 -- =============================================================================
 -- Step 3: Add unique constraint on phone for suppliers

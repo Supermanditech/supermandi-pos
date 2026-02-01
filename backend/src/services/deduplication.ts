@@ -36,8 +36,8 @@ export async function checkStorePhoneDuplicate(
   const normalizedPhone = normalizePhone(phone);
 
   const query = excludeStoreId
-    ? `SELECT id, name FROM platform.stores WHERE owner_phone = $1 AND id != $2 LIMIT 1`
-    : `SELECT id, name FROM platform.stores WHERE owner_phone = $1 LIMIT 1`;
+    ? `SELECT id, name FROM platform.stores WHERE phone = $1 AND id != $2 LIMIT 1`
+    : `SELECT id, name FROM platform.stores WHERE phone = $1 LIMIT 1`;
 
   const params = excludeStoreId
     ? [normalizedPhone, excludeStoreId]
