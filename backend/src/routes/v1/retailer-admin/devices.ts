@@ -80,7 +80,7 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
         expires_at,
         used_at,
         bound_store_id
-      FROM pos.device_activation_codes
+      FROM public.device_activation_codes
       WHERE code = $1
       FOR UPDATE`,
       [normalizedCode]
@@ -137,7 +137,7 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
 
     // Mark activation code as used
     await client.query(
-      `UPDATE pos.device_activation_codes
+      `UPDATE public.device_activation_codes
        SET used_at = NOW(),
            bound_store_id = $1,
            bound_device_id = $2

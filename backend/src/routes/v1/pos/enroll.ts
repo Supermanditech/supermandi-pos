@@ -657,7 +657,7 @@ posEnrollRouter.post("/generate-activation-code", async (req, res) => {
   try {
     // Invalidate any existing unused codes for this device fingerprint
     await pool.query(
-      `UPDATE pos.device_activation_codes
+      `UPDATE public.device_activation_codes
        SET expires_at = NOW()
        WHERE device_fingerprint = $1
          AND used_at IS NULL
@@ -673,7 +673,7 @@ posEnrollRouter.post("/generate-activation-code", async (req, res) => {
     while (attempts < maxAttempts) {
       code = generateActivationCode();
       const existing = await pool.query(
-        `SELECT 1 FROM pos.device_activation_codes WHERE code = $1`,
+        `SELECT 1 FROM public.device_activation_codes WHERE code = $1`,
         [code]
       );
       if (existing.rowCount === 0) break;
@@ -688,7 +688,7 @@ posEnrollRouter.post("/generate-activation-code", async (req, res) => {
     const expiresAt = new Date(Date.now() + ACTIVATION_CODE_EXPIRY_MINUTES * 60 * 1000);
 
     await pool.query(
-      `INSERT INTO pos.device_activation_codes (code, device_fingerprint, expires_at)
+      `INSERT INTO public.device_activation_codes (code, device_fingerprint, expires_at)
        VALUES ($1, $2, $3)`,
       [code, device_fingerprint, expiresAt.toISOString()]
     );
@@ -729,7 +729,7 @@ posEnrollRouter.get("/activation-status/:fingerprint", async (req, res) => {
         used_at,
         bound_store_id,
         bound_device_id
-      FROM pos.device_activation_codes
+      FROM public.device_activation_codes
       WHERE device_fingerprint = $1
       ORDER BY created_at DESC
       LIMIT 1`,
