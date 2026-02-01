@@ -3754,20 +3754,27 @@ cd /opt/supermandi/supplier-portal && npm run build
 
 ---
 
-### BATCH 5: Retailer Web Flow ✅ COMPLETE (Backend Production-Safe)
+### BATCH 5: Retailer Web Flow ⚠️ PARTIAL (Backend Only - UI Testing Pending)
 **Web registration + device binding + payments**
-**Tested: 2026-02-01 by Claude**
+**Backend Deployed: 2026-02-01 by Claude**
 
 | Ticket | Title | Services to Rebuild | Status |
 |--------|-------|---------------------|--------|
 | RET-WEB-001 | Web Store Registration | main-backend, retailer-admin | ⏸️ UI pending (backend ready) |
-| RET-WEB-002 | Device Activation via Code | main-backend, api-gateway, retailer-admin | ✅ PASS - API endpoints deployed |
-| RET-WEB-003 | Payments Setup | main-backend, api-gateway, retailer-admin | ✅ PASS - PAYMENTS_SUBMITTED transition works |
+| RET-WEB-002 | Device Activation via Code | main-backend, api-gateway, retailer-admin | ⚠️ API deployed, **DeviceActivationPage.tsx NOT BUILT** |
+| RET-WEB-003 | Payments Setup | main-backend, api-gateway, retailer-admin | ⚠️ API deployed, **UI test pending** (SettingsPage.tsx exists) |
 | FLOW-001 | Web Requires POS Activation | main-backend, retailer-admin | ⏸️ Depends on RET-WEB-001 UI |
 | PAY-001 | Payments Data Validation | main-backend | ✅ PASS - UPI regex validation active |
 | DEDUP-001 | Duplicate Prevention | main-backend | ✅ PASS - Phone unique constraints added |
 
-**Tests Performed:**
+**⚠️ INCOMPLETE: Only API/curl tests done. Real user UI testing NOT performed.**
+
+**What's Missing for Full PASS:**
+1. RET-WEB-002: Need to CREATE `retailer-admin/src/pages/DeviceActivationPage.tsx`
+2. RET-WEB-003: Need to test UPI save via browser at https://supermandi.tech/retailer/settings
+3. All: Need real user login → navigate → submit → verify flow
+
+**API Tests Performed (curl only):**
 ```bash
 # POS-DEV-001: Generate activation code
 curl -X POST https://supermandi.tech/api/v1/pos/generate-activation-code \
