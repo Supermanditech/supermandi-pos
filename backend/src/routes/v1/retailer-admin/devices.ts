@@ -125,17 +125,21 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
     const deviceToken = generateDeviceToken();
     const deviceFingerprint = codeRecord.device_fingerprint;
 
-    // Create device in pos.pos_devices
+    // Create device in public.pos_devices
+    console.log(`[RET-WEB-002] Creating device: id=${deviceId}, storeId=${storeId}`);
     await client.query(
-      `INSERT INTO pos.pos_devices (
+      `INSERT INTO public.pos_devices (
         id, store_id, device_fingerprint, device_token, label, device_type, printing_mode, created_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, NOW()
       )`,
       [deviceId, storeId, deviceFingerprint, deviceToken, 'POS Device', 'RETAILER_PHONE', 'NONE']
     );
+    console.log(`[RET-WEB-002] Device created`);
 
     // Mark activation code as used
+    // Note: bound_store_id and bound_device_id are UUID type
+    console.log(`[RET-WEB-002] Marking code used: storeId=${storeId}, deviceId=${deviceId}, codeId=${codeRecord.id}`);
     await client.query(
       `UPDATE public.device_activation_codes
        SET used_at = NOW(),
@@ -144,20 +148,23 @@ retailerAdminDevicesRouter.post("/devices/activate", async (req: Request, res: R
        WHERE id = $3`,
       [storeId, deviceId, codeRecord.id]
     );
+    console.log(`[RET-WEB-002] Code marked used`);
 
     // RET-WEB-002: Status transition DRAFT → ENROLLED on device binding
     const shouldTransition = currentStatus === StoreStatus.DRAFT;
     const newStatus = shouldTransition ? StoreStatus.ENROLLED : currentStatus;
 
     // Update store: set device_bound = true, optionally transition status
+    // RET-WEB-002: Use explicit type cast to avoid type inference issues
+    const statusReason = shouldTransition ? 'Device activated via web dashboard' : null;
     await client.query(
       `UPDATE platform.stores
        SET device_bound = true,
-           status = $2,
-           status_reason = CASE WHEN $2 != status THEN 'Device activated via web dashboard' ELSE status_reason END,
+           status = $2::varchar,
+           status_reason = COALESCE($3, status_reason),
            updated_at = NOW()
        WHERE id = $1`,
-      [storeId, newStatus]
+      [storeId, newStatus, statusReason]
     );
 
     await client.query("COMMIT");
@@ -212,10 +219,11 @@ retailerAdminDevicesRouter.get("/devices", async (req: Request, res: Response) =
         manufacturer,
         model,
         app_version as "appVersion",
-        last_seen_at as "lastSeen",
+        last_seen_online as "lastSeen",
         created_at as "createdAt",
-        revoked_at as "revokedAt"
-      FROM pos.pos_devices
+        token_revoked_at as "revokedAt",
+        active
+      FROM public.pos_devices
       WHERE store_id = $1
       ORDER BY created_at DESC`,
       [storeId]
@@ -233,7 +241,7 @@ retailerAdminDevicesRouter.get("/devices", async (req: Request, res: Response) =
         appVersion: device.appVersion,
         lastSeen: device.lastSeen,
         createdAt: device.createdAt,
-        isActive: !device.revokedAt
+        isActive: device.active && !device.revokedAt
       }))
     });
 

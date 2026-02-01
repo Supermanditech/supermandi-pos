@@ -18,6 +18,8 @@ import {
 const ADMIN_PUBLIC_PATHS = [
   '/api/v1/admin/auth/login',
   '/api/v1/admin/auth/status',
+  '/api/v1/admin/auth/send-email-otp',   // GO-LIVE-LOGIN-004: Email OTP request
+  '/api/v1/admin/auth/verify-email-otp', // GO-LIVE-LOGIN-004: Email OTP verification
   '/api/v1/admin/health',
 ];
 

@@ -161,34 +161,58 @@ export function createAdminSession(ip: string, userAgent?: string): { token: str
 /**
  * Verify an admin session JWT
  * Returns the session if valid, null otherwise
+ * GO-LIVE-LOGIN-004: Also accepts JWTs from email OTP login (main-backend)
  */
 export function verifyAdminSession(token: string): AdminSession | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, {
-      issuer: JWT_ISSUER,
-    }) as AdminSessionPayload;
+    // First try with gateway's JWT_SECRET and issuer (legacy master token flow)
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET, {
+        issuer: JWT_ISSUER,
+      }) as AdminSessionPayload;
 
-    // Check it's an admin token
-    if (decoded.type !== 'admin') {
-      console.log('[AdminSession] Token is not an admin session token');
-      return null;
+      // Check it's an admin token
+      if (decoded.type !== 'admin') {
+        console.log('[AdminSession] Token is not an admin session token');
+        return null;
+      }
+
+      // Check session exists and hasn't been revoked
+      const session = activeSessions.get(decoded.sub);
+      if (!session) {
+        console.log(`[AdminSession] Session not found or revoked: ${decoded.sub.substring(0, 8)}...`);
+        // Don't return null yet - might be an email OTP token
+      } else {
+        // Check session hasn't expired (belt and suspenders - JWT also checks)
+        if (session.expiresAt < Date.now()) {
+          activeSessions.delete(decoded.sub);
+          console.log(`[AdminSession] Session expired: ${decoded.sub.substring(0, 8)}...`);
+          return null;
+        }
+        return session;
+      }
+    } catch {
+      // Gateway JWT verification failed - try email OTP token below
     }
 
-    // Check session exists and hasn't been revoked
-    const session = activeSessions.get(decoded.sub);
-    if (!session) {
-      console.log(`[AdminSession] Session not found or revoked: ${decoded.sub.substring(0, 8)}...`);
-      return null;
+    // GO-LIVE-LOGIN-004: Try verifying as email OTP JWT from main-backend
+    // Email OTP tokens have { email, role, type } payload and use the shared JWT_SECRET
+    const emailOtpDecoded = jwt.verify(token, JWT_SECRET) as { email?: string; role?: string; type?: string; exp?: number };
+
+    if (emailOtpDecoded.email && emailOtpDecoded.role === 'super_admin' && emailOtpDecoded.type === 'admin') {
+      console.log(`[AdminSession] Verified email OTP token for: ${emailOtpDecoded.email}`);
+      // Return a synthetic session for email OTP tokens
+      return {
+        sessionId: `email-otp-${emailOtpDecoded.email}`,
+        createdAt: Date.now(),
+        expiresAt: (emailOtpDecoded.exp || 0) * 1000, // JWT exp is in seconds
+        ip: 'email-otp',
+        userAgent: 'email-otp-login',
+      };
     }
 
-    // Check session hasn't expired (belt and suspenders - JWT also checks)
-    if (session.expiresAt < Date.now()) {
-      activeSessions.delete(decoded.sub);
-      console.log(`[AdminSession] Session expired: ${decoded.sub.substring(0, 8)}...`);
-      return null;
-    }
-
-    return session;
+    console.log('[AdminSession] Token is not a valid admin or email OTP token');
+    return null;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       console.log('[AdminSession] Session token expired');

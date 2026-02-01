@@ -1,7 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap");
-
+/* Using system fonts to avoid CSP issues with external font imports */
 :root {
-  font-family: "Sora", "Space Grotesk", "DM Sans", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 

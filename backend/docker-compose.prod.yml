@@ -295,6 +295,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-supermandi}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-supermandi}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-supermandi}
       # GO-LIVE-103: ADMIN_TOKEN read from Docker secret file (not env var)
       ADMIN_TOKEN_FILE: /run/secrets/admin_token
       # Fallback to env var for backwards compatibility during migration

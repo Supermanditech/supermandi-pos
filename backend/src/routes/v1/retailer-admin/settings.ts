@@ -153,17 +153,20 @@ retailerAdminSettingsRouter.put("/settings/upi", async (req: Request, res: Respo
 
     // Update UPI VPA and upi_complete flag, optionally transition status
     // Note: status_reason is set for the audit trigger; status_updated_by is retailer's store ID
+    // RET-WEB-003: Use explicit values to avoid type inference issues
+    const statusReason = shouldTransition ? 'UPI VPA saved via retailer-admin settings' : null;
+    const statusUpdatedBy = shouldTransition ? storeId : null;
     const result = await pool.query(
       `UPDATE platform.stores
        SET upi_vpa = $1,
            upi_complete = true,
-           status = $3,
-           status_reason = CASE WHEN $3 != status THEN 'UPI VPA saved via retailer-admin settings' ELSE status_reason END,
-           status_updated_by = CASE WHEN $3 != status THEN $2::uuid ELSE status_updated_by END,
+           status = $3::varchar,
+           status_reason = COALESCE($4, status_reason),
+           status_updated_by = COALESCE($5::uuid, status_updated_by),
            updated_at = NOW()
        WHERE id = $2
        RETURNING upi_vpa as "upiVpa", status`,
-      [trimmedVpa, storeId, newStatus]
+      [trimmedVpa, storeId, newStatus, statusReason, statusUpdatedBy]
     );
 
     // RET-WEB-003: Log status transition if it occurred

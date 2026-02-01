@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperMandi POS System Audit Report</title>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --secondary: #2d3748;
+            --accent: #3182ce;
+            --danger: #e53e3e;
+            --warning: #dd6b20;
+            --success: #38a169;
+            --bg: #f7fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--secondary);
+            background: var(--bg);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 3rem;
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            border-bottom: 4px solid var(--accent);
+            padding-bottom: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 1.75rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        h3 {
+            color: var(--secondary);
+            font-size: 1.25rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        h4 {
+            color: var(--accent);
+            font-size: 1.1rem;
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: #718096;
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .meta {
+            background: #edf2f7;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .meta p {
+            margin: 0.25rem 0;
+            font-size: 0.95rem;
+        }
+
+        .meta strong {
+            color: var(--primary);
+        }
+
+        .toc {
+            background: #f0f5ff;
+            padding: 1.5rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .toc h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+
+        .toc ol {
+            margin-left: 1.5rem;
+        }
+
+        .toc a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .executive-summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+        }
+
+        .executive-summary h2 {
+            color: white;
+            border-bottom-color: rgba(255,255,255,0.3);
+        }
+
+        .executive-summary p {
+            font-size: 1.1rem;
+        }
+
+        .key-finding {
+            background: rgba(255,255,255,0.15);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 4px solid #fbd38d;
+        }
+
+        pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 1rem 0;
+        }
+
+        code {
+            background: #edf2f7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+            font-size: 0.9rem;
+            color: var(--danger);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background: #f7fafc;
+        }
+
+        tr:hover {
+            background: #edf2f7;
+        }
+
+        .conflict-card, .bottleneck-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .conflict-card {
+            border-left: 4px solid var(--warning);
+        }
+
+        .bottleneck-card {
+            border-left: 4px solid var(--danger);
+        }
+
+        .conflict-card h4, .bottleneck-card h4 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .severity {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .severity-critical {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .severity-high {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .severity-medium {
+            background: #fefcbf;
+            color: #975a16;
+        }
+
+        .severity-low {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .verdict-box {
+            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            margin: 2rem 0;
+        }
+
+        .verdict-box h3 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: white;
+        }
+
+        .verdict-box .verdict {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .justification {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .justification h4 {
+            color: var(--danger);
+        }
+
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin: 0.5rem 0;
+        }
+
+        .flow-section {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .state-section {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .appendix {
+            background: #f7fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #718096;
+            font-size: 0.9rem;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                padding: 1rem;
+            }
+            pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            .executive-summary, .verdict-box {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SuperMandi POS System Audit Report</h1>
+        <p class="subtitle">Retailer, Supplier & Admin Onboarding/Activation Flow</p>
+
+        <div class="meta">
+            <p><strong>Audit Date:</strong> 2026-02-01</p>
+            <p><strong>System Version:</strong> Commit <code>ceaa165</code></p>
+            <p><strong>Audit Type:</strong> Read-Only Code Inspection (No Refactoring)</p>
+        </div>
+
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <ol>
+                <li><a href="#executive-summary">Executive Summary</a></li>
+                <li><a href="#flow-diagrams">Flow Diagrams</a></li>
+                <li><a href="#state-tables">State Tables</a></li>
+                <li><a href="#conflict-list">Conflict List</a></li>
+                <li><a href="#bottleneck-list">Bottleneck List</a></li>
+                <li><a href="#readiness-verdict">Readiness Verdict</a></li>
+            </ol>
+        </div>
+
+        <div class="executive-summary" id="executive-summary">
+            <h2>Executive Summary</h2>
+            <p>This audit traces the complete onboarding and activation flows for retailers, suppliers, and admin operations in the SuperMandi POS system. The inspection covers UI → API → DB → VM paths using real routes, guards, and states as they exist in production code.</p>
+            <div class="key-finding">
+                <strong>Key Finding:</strong> The system has a critical dependency on SuperAdmin for all store creation and supplier approval operations, creating a bottleneck that prevents safe scaling to 10,000 stores.
+            </div>
+        </div>
+
+        <h2 id="flow-diagrams">1. Flow Diagrams</h2>
+
+        <div class="flow-section">
+            <h3>1.1 Retailer POS-First Flow (Primary Path)</h3>
+            <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RETAILER POS-FIRST FLOW                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+[SuperAdmin Portal]
+        │
+        ▼
+┌───────────────────┐
+│ 1. Create Store   │ ◄── POST /api/admin/stores
+│    (SuperAdmin)   │     backend/services/platform-service/src/routes/admin.ts:111-130
+│                   │     Status: 'active'
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 2. Generate       │ ◄── POST /api/admin/stores/:storeId/enrollments
+│    Enrollment     │     Creates 6-char alphanumeric code
+│    Code           │     expires_at = NOW + 24 hours
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐     ┌─────────────────────────────────────────────────┐
+│ 3. Share Code     │ ──► │ OFFLINE: SuperAdmin shares code with retailer   │
+│    with Retailer  │     │ (WhatsApp, Phone, Email - outside system)       │
+└────────┬──────────┘     └─────────────────────────────────────────────────┘
+         │
+         ▼
+[POS Device]
+         │
+         ▼
+┌───────────────────┐
+│ 4. Enter          │ ◄── POST /api/v1/pos/enroll
+│    Enrollment     │     backend/src/routes/v1/pos/enroll.ts:84-512
+│    Code           │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 5. Validate       │     Checks:
+│    Enrollment     │     • Code exists & not expired
+│                   │     • Store exists & active
+│                   │     • max_devices limit not reached
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 6. Issue Device   │     Returns:
+│    Token          │     • device_token (JWT, 90-day expiry)
+│                   │     • store_id, device_id
+│                   │     Device status: 'active'
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────────────────────────┐
+│ ✅ DEVICE CAN NOW PROCESS SALES       │
+│    POS is operational                 │
+└───────────────────────────────────────┘
+            </pre>
+        </div>
+
+        <div class="flow-section">
+            <h3>1.2 Retailer Web-First Flow (Shows Dead End)</h3>
+            <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RETAILER WEB-FIRST FLOW                             │
+│                           (SHOWS DEAD END)                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+[Retailer Web Portal]
+        │
+        ▼
+┌───────────────────┐
+│ 1. Enter Phone    │ ◄── Retailer Portal Login Page
+│    Number         │     apps/retailer-portal/src/app/login/page.tsx
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 2. Firebase OTP   │ ◄── Firebase Phone Auth
+│    Verification   │     Returns Firebase ID Token
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 3. Backend        │ ◄── POST /api/retailer/auth/firebase-login
+│    Validation     │     backend/services/auth-service/src/routes/retailerAuth.ts:199-217
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 4. Store Lookup   │     Query: SELECT * FROM stores
+│    by Phone       │     WHERE retailer_portal_phone = :phone
+└────────┬──────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌────────┐  ┌────────────────────────────────────────────────────────────────┐
+│ Store  │  │ ❌ NO STORE FOUND                                              │
+│ EXISTS │  │                                                                │
+└───┬────┘  │ Response: 404 "No store found for this phone number"          │
+    │       │                                                                │
+    │       │ ┌────────────────────────────────────────────────────────────┐ │
+    │       │ │ DEAD END: Retailer cannot self-register                   │ │
+    │       │ │ Must wait for SuperAdmin to create store first            │ │
+    │       │ └────────────────────────────────────────────────────────────┘ │
+    │       └────────────────────────────────────────────────────────────────┘
+    ▼
+┌───────────────────┐
+│ 5. Issue JWT      │     Token includes:
+│    Token          │     • store_id, user_id
+│                   │     • role: 'store_owner'
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────────────────────────┐
+│ ✅ ACCESS TO RETAILER DASHBOARD       │
+│    Can view sales, manage inventory   │
+└───────────────────────────────────────┘
+            </pre>
+        </div>
+
+        <div class="flow-section">
+            <h3>1.3 Supplier Registration & Approval Flow</h3>
+            <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         SUPPLIER REGISTRATION FLOW                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+[Supplier Portal]
+        │
+        ▼
+┌───────────────────┐
+│ 1. Enter Phone    │ ◄── Supplier Portal Registration
+│    for Firebase   │     apps/supplier-portal/src/app/register/page.tsx
+│    OTP            │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 2. Firebase OTP   │ ◄── Firebase Phone Auth
+│    Verification   │     Returns Firebase ID Token
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 3. Submit         │ ◄── POST /api/v1/supplier/auth/firebase-register
+│    Registration   │     backend/src/routes/v1/supplier/auth.ts:1296-1444
+│    Details        │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 4. Create         │     INSERT INTO suppliers:
+│    Supplier       │     • status = 'pending'
+│    Record         │     • verification_status = 'pending'
+│                   │     • firebase_uid = :uid
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│ ⚠️  NO JWT TOKEN ISSUED                                                   │
+│     Supplier cannot access portal until approved                          │
+│     Response: { success: true, message: "Registration pending approval" } │
+└────────┬──────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 5. Wait for       │ ◄── MANUAL PROCESS
+│    SuperAdmin     │     SuperAdmin reviews in admin portal
+│    Approval       │
+└────────┬──────────┘
+         │
+         ▼
+[SuperAdmin Portal]
+         │
+         ▼
+┌───────────────────┐
+│ 6. Review         │ ◄── GET /api/admin/suppliers?status=pending
+│    Pending        │
+│    Suppliers      │
+└────────┬──────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌────────┐  ┌────────┐
+│APPROVE │  │REJECT  │
+└───┬────┘  └───┬────┘
+    │           │
+    ▼           ▼
+┌────────┐  ┌────────────────────────────────────────┐
+│status= │  │status='rejected'                       │
+│'active'│  │Supplier cannot login                   │
+└───┬────┘  └────────────────────────────────────────┘
+    │
+    ▼
+┌───────────────────┐
+│ 7. Supplier       │ ◄── POST /api/v1/supplier/auth/firebase-login
+│    Can Now        │     Now returns JWT token
+│    Login          │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────────────────────────┐
+│ ✅ ACCESS TO SUPPLIER DASHBOARD       │
+│    Can manage products, view orders   │
+└───────────────────────────────────────┘
+            </pre>
+        </div>
+
+        <div class="flow-section">
+            <h3>1.4 Legacy Password Registration Flow (Bypass)</h3>
+            <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    LEGACY PASSWORD REGISTRATION                             │
+│                    (BYPASSES APPROVAL GATE)                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+[Supplier Portal - Legacy Path]
+        │
+        ▼
+┌───────────────────┐
+│ 1. Submit         │ ◄── POST /api/v1/supplier/auth/register
+│    Email/Password │     backend/src/routes/v1/supplier/auth.ts:268-447
+│    Registration   │
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 2. Create         │     INSERT INTO suppliers:
+│    Supplier       │     • status = 'active'  ◄── IMMEDIATELY ACTIVE
+│    Record         │     • verification_status = 'pending'
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│ 3. Issue JWT      │ ◄── Token issued immediately
+│    Token          │     No approval required
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│ ⚠️  CONFLICT: Password registration bypasses the approval gate            │
+│     Firebase registration requires approval, password does not            │
+└───────────────────────────────────────────────────────────────────────────┘
+            </pre>
+        </div>
+
+        <div class="flow-section">
+            <h3>1.5 Admin Touchpoints Summary</h3>
+            <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         SUPERADMIN TOUCHPOINTS                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+BLOCKING ACTIONS (Cannot proceed without SuperAdmin):
+═══════════════════════════════════════════════════════
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 1. STORE CREATION                                                       │
+  │    Route: POST /api/admin/stores                                        │
+  │    File: backend/services/platform-service/src/routes/admin.ts:111-130  │
+  │    Impact: No store = No retailer operations possible                   │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 2. ENROLLMENT CODE GENERATION                                           │
+  │    Route: POST /api/admin/stores/:storeId/enrollments                   │
+  │    File: backend/services/platform-service/src/routes/admin.ts          │
+  │    Impact: No code = No POS device enrollment                           │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 3. RETAILER PORTAL PHONE INITIALIZATION                                 │
+  │    Route: PUT /api/admin/stores/:storeId                                │
+  │    File: backend/services/platform-service/src/routes/admin.ts          │
+  │    Impact: No phone = Retailer cannot login to web portal               │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 4. SUPPLIER APPROVAL                                                    │
+  │    Route: PUT /api/admin/suppliers/:supplierId/approve                  │
+  │    File: backend/services/platform-service/src/routes/admin.ts          │
+  │    Impact: Pending suppliers cannot access portal or sell               │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │ 5. UPI CONFIGURATION                                                    │
+  │    Route: PUT /api/admin/stores/:storeId/upi                            │
+  │    File: backend/services/platform-service/src/routes/admin.ts          │
+  │    Impact: Store cannot accept UPI payments                             │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+
+OPTIONAL ACTIONS (System works without these):
+══════════════════════════════════════════════
+
+  • View all stores list
+  • View store details
+  • View sales analytics
+  • Suspend/unsuspend stores
+  • Block/unblock devices
+  • Reject suppliers (vs approve)
+            </pre>
+        </div>
+
+        <h2 id="state-tables">2. State Tables</h2>
+
+        <div class="state-section">
+            <h3>2.1 Retailer Store States</h3>
+            <table>
+                <tr>
+                    <th>State</th>
+                    <th>Description</th>
+                    <th>Entry Trigger</th>
+                    <th>Exit Trigger</th>
+                    <th>Who Changes</th>
+                </tr>
+                <tr>
+                    <td><code>created</code></td>
+                    <td>Store record exists in DB</td>
+                    <td>SuperAdmin creates store</td>
+                    <td>Portal phone added</td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>portal_initialized</code></td>
+                    <td>retailer_portal_phone set</td>
+                    <td>SuperAdmin adds phone</td>
+                    <td>UPI configured</td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>upi_configured</code></td>
+                    <td>UPI VPA validated</td>
+                    <td>SuperAdmin adds UPI</td>
+                    <td>Manual suspension</td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>active</code></td>
+                    <td>Fully operational</td>
+                    <td>Default on creation</td>
+                    <td>Suspension</td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>suspended</code></td>
+                    <td>Temporarily disabled</td>
+                    <td>SuperAdmin action</td>
+                    <td>Reactivation</td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>inactive</code></td>
+                    <td>Long-term disabled</td>
+                    <td>SuperAdmin action</td>
+                    <td>Reactivation</td>
+                    <td>SuperAdmin</td>
+                </tr>
+            </table>
+            <p><strong>Database Location:</strong> <code>backend/migrations/001_initial_schema.sql</code> - stores table</p>
+        </div>
+
+        <div class="state-section">
+            <h3>2.2 Device States</h3>
+            <table>
+                <tr>
+                    <th>State</th>
+                    <th>Description</th>
+                    <th>Entry Trigger</th>
+                    <th>Exit Trigger</th>
+                    <th>Who Changes</th>
+                </tr>
+                <tr>
+                    <td><code>not_enrolled</code></td>
+                    <td>No device record</td>
+                    <td>N/A</td>
+                    <td>Enrollment</td>
+                    <td>N/A</td>
+                </tr>
+                <tr>
+                    <td><code>active</code></td>
+                    <td>Device can transact</td>
+                    <td>Valid enrollment code used</td>
+                    <td>Token expiry/block</td>
+                    <td>System/SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>expired</code></td>
+                    <td>90-day token expired</td>
+                    <td>Time passage</td>
+                    <td>Re-enrollment</td>
+                    <td>System</td>
+                </tr>
+                <tr>
+                    <td><code>blocked</code></td>
+                    <td>Manually disabled</td>
+                    <td>SuperAdmin blocks</td>
+                    <td>Unblock action</td>
+                    <td>SuperAdmin</td>
+                </tr>
+            </table>
+            <p><strong>Database Location:</strong> <code>backend/migrations/001_initial_schema.sql</code> - devices table</p>
+        </div>
+
+        <div class="state-section">
+            <h3>2.3 Supplier States</h3>
+            <table>
+                <tr>
+                    <th>State</th>
+                    <th>Description</th>
+                    <th>Entry Trigger</th>
+                    <th>Exit Trigger</th>
+                    <th>Who Changes</th>
+                </tr>
+                <tr>
+                    <td><code>pending</code></td>
+                    <td>Awaiting approval</td>
+                    <td>Firebase registration</td>
+                    <td>Approval/Rejection</td>
+                    <td>System → SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>active</code></td>
+                    <td>Can operate</td>
+                    <td>SuperAdmin approves OR password registration</td>
+                    <td>Suspension</td>
+                    <td>SuperAdmin/System</td>
+                </tr>
+                <tr>
+                    <td><code>rejected</code></td>
+                    <td>Denied access</td>
+                    <td>SuperAdmin rejects</td>
+                    <td>N/A (terminal)</td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>suspended</code></td>
+                    <td>Temporarily disabled</td>
+                    <td>SuperAdmin action</td>
+                    <td>Reactivation</td>
+                    <td>SuperAdmin</td>
+                </tr>
+            </table>
+            <p><strong>Database Location:</strong> <code>backend/migrations/001_initial_schema.sql</code> - suppliers table</p>
+        </div>
+
+        <div class="state-section">
+            <h3>2.4 Supplier KYC States</h3>
+            <table>
+                <tr>
+                    <th>State</th>
+                    <th>Field</th>
+                    <th>Values</th>
+                    <th>Who Updates</th>
+                </tr>
+                <tr>
+                    <td><code>verification_status</code></td>
+                    <td>Overall KYC status</td>
+                    <td><code>pending</code>, <code>partial</code>, <code>verified</code>, <code>rejected</code></td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>pan_verified</code></td>
+                    <td>PAN document</td>
+                    <td><code>true</code>/<code>false</code></td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>gstin_verified</code></td>
+                    <td>GSTIN document</td>
+                    <td><code>true</code>/<code>false</code></td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>bank_verified</code></td>
+                    <td>Cancelled cheque</td>
+                    <td><code>true</code>/<code>false</code></td>
+                    <td>SuperAdmin</td>
+                </tr>
+                <tr>
+                    <td><code>address_verified</code></td>
+                    <td>Address proof</td>
+                    <td><code>true</code>/<code>false</code></td>
+                    <td>SuperAdmin</td>
+                </tr>
+            </table>
+            <p><strong>Database Location:</strong> <code>backend/migrations/001_initial_schema.sql</code> - suppliers table</p>
+        </div>
+
+        <div class="state-section">
+            <h3>2.5 Enrollment Code States</h3>
+            <table>
+                <tr>
+                    <th>State</th>
+                    <th>Description</th>
+                    <th>Entry Trigger</th>
+                    <th>Exit Trigger</th>
+                    <th>Who Changes</th>
+                </tr>
+                <tr>
+                    <td><code>active</code></td>
+                    <td>Code can be used</td>
+                    <td>SuperAdmin generates</td>
+                    <td>Usage/Expiry</td>
+                    <td>SuperAdmin/System</td>
+                </tr>
+                <tr>
+                    <td><code>used</code></td>
+                    <td>Code consumed</td>
+                    <td>Device enrollment</td>
+                    <td>N/A (terminal)</td>
+                    <td>System</td>
+                </tr>
+                <tr>
+                    <td><code>expired</code></td>
+                    <td>Past expires_at</td>
+                    <td>Time passage (24h)</td>
+                    <td>N/A (terminal)</td>
+                    <td>System</td>
+                </tr>
+            </table>
+            <p><strong>Note:</strong> Demo codes (<code>DEMO01</code>, <code>DEMO02</code>) have special handling - see CONFLICT-005.</p>
+        </div>
+
+        <h2 id="conflict-list">3. Conflict List</h2>
+
+        <div class="conflict-card">
+            <h4>CONFLICT-001: Web Cannot Create Store Before POS <span class="severity severity-high">HIGH</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Location</td><td><code>backend/services/auth-service/src/routes/retailerAuth.ts:199-217</code></td></tr>
+                <tr><td>Description</td><td>Retailer web portal login requires store to exist with matching <code>retailer_portal_phone</code>. If retailer tries to login before SuperAdmin creates their store, they get 404 error with no path forward.</td></tr>
+                <tr><td>Impact</td><td>Retailers cannot self-onboard. Every retailer requires SuperAdmin intervention before first login.</td></tr>
+                <tr><td>Evidence</td><td>Code queries <code>SELECT * FROM stores WHERE retailer_portal_phone = :phone</code> and returns 404 if no match.</td></tr>
+            </table>
+        </div>
+
+        <div class="conflict-card">
+            <h4>CONFLICT-002: Phone Uniqueness Across All Users <span class="severity severity-medium">MEDIUM</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Location</td><td><code>backend/migrations/002_auth_schema.sql:60-66</code></td></tr>
+                <tr><td>Description</td><td>Phone numbers must be unique across ALL user types (retailers, suppliers, admins). A phone registered as supplier cannot be used for retailer.</td></tr>
+                <tr><td>Impact</td><td>Store owners who are also suppliers must use different phones for each role. Creates friction for multi-role users.</td></tr>
+                <tr><td>Evidence</td><td><code>UNIQUE(phone)</code> constraint on users table with no role scoping.</td></tr>
+            </table>
+        </div>
+
+        <div class="conflict-card">
+            <h4>CONFLICT-003: User Actor Binding Conflict <span class="severity severity-medium">MEDIUM</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Location</td><td><code>backend/src/middleware/storeOwnership.ts:228-236</code></td></tr>
+                <tr><td>Description</td><td>Users are bound to exactly one store via <code>actor_id</code>. Multi-store operators cannot manage multiple stores from single account.</td></tr>
+                <tr><td>Impact</td><td>Franchise operators need separate accounts per store. No consolidated view possible.</td></tr>
+                <tr><td>Evidence</td><td>Middleware checks <code>user.actor_id === store.id</code> for all store operations.</td></tr>
+            </table>
+        </div>
+
+        <div class="conflict-card">
+            <h4>CONFLICT-004: Password vs Firebase Registration Disparity <span class="severity severity-high">HIGH</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Location</td><td><code>backend/src/routes/v1/supplier/auth.ts:268-447</code> (password) vs <code>backend/src/routes/v1/supplier/auth.ts:1296-1444</code> (Firebase)</td></tr>
+                <tr><td>Description</td><td>Password registration sets <code>status='active'</code> immediately. Firebase registration sets <code>status='pending'</code> requiring approval. Same system, two different onboarding paths with different security models.</td></tr>
+                <tr><td>Impact</td><td>Approval gate can be bypassed by using password registration. Inconsistent security posture.</td></tr>
+                <tr><td>Evidence</td><td>Password path: <code>status: 'active'</code> on line 312. Firebase path: <code>status: 'pending'</code> on line 1356.</td></tr>
+            </table>
+        </div>
+
+        <div class="conflict-card">
+            <h4>CONFLICT-005: Enrollment Code Reuse for Demo vs Production <span class="severity severity-low">LOW</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Location</td><td><code>backend/src/routes/v1/pos/enroll.ts</code></td></tr>
+                <tr><td>Description</td><td>Demo enrollment codes (<code>DEMO01</code>, <code>DEMO02</code>) have special handling that bypasses normal validation. If these codes leak or are guessed, devices can enroll to demo stores.</td></tr>
+                <tr><td>Impact</td><td>Potential unauthorized demo access. Demo data could be polluted.</td></tr>
+                <tr><td>Evidence</td><td>Special case handling for codes matching <code>/^DEMO\d{2}$/</code> pattern.</td></tr>
+            </table>
+        </div>
+
+        <div class="conflict-card">
+            <h4>CONFLICT-006: Token Auto-Refresh Without Invalidation <span class="severity severity-medium">MEDIUM</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Location</td><td><code>backend/src/middleware/deviceToken.ts:154-190</code></td></tr>
+                <tr><td>Description</td><td>When device tokens are refreshed, old tokens remain valid for their full 90-day lifetime. No token revocation on refresh.</td></tr>
+                <tr><td>Impact</td><td>Stolen tokens cannot be invalidated by refresh. Security incident recovery requires manual block.</td></tr>
+                <tr><td>Evidence</td><td>Refresh endpoint issues new token but no <code>UPDATE tokens SET revoked=true</code> for old token.</td></tr>
+            </table>
+        </div>
+
+        <h2 id="bottleneck-list">4. Bottleneck List</h2>
+
+        <div class="bottleneck-card">
+            <h4>BOTTLENECK-001: Store Creation Requires SuperAdmin <span class="severity severity-critical">CRITICAL</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Route</td><td><code>POST /api/admin/stores</code></td></tr>
+                <tr><td>File</td><td><code>backend/services/platform-service/src/routes/admin.ts:111-130</code></td></tr>
+                <tr><td>Guard</td><td><code>requireSuperAdmin</code> middleware</td></tr>
+                <tr><td>Impact</td><td>Every new retailer requires manual SuperAdmin action. No self-service store creation.</td></tr>
+                <tr><td>Scaling Issue</td><td>10,000 stores = 10,000 manual creation actions by SuperAdmin</td></tr>
+            </table>
+        </div>
+
+        <div class="bottleneck-card">
+            <h4>BOTTLENECK-002: Enrollment Code Generation Requires SuperAdmin <span class="severity severity-critical">CRITICAL</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Route</td><td><code>POST /api/admin/stores/:storeId/enrollments</code></td></tr>
+                <tr><td>File</td><td><code>backend/services/platform-service/src/routes/admin.ts</code></td></tr>
+                <tr><td>Guard</td><td><code>requireSuperAdmin</code> middleware</td></tr>
+                <tr><td>Impact</td><td>Every POS device enrollment requires SuperAdmin to generate code first.</td></tr>
+                <tr><td>Scaling Issue</td><td>10,000 stores × avg 2 devices = 20,000 manual code generations</td></tr>
+            </table>
+        </div>
+
+        <div class="bottleneck-card">
+            <h4>BOTTLENECK-003: Retailer Portal Initialization Requires SuperAdmin <span class="severity severity-high">HIGH</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Route</td><td><code>PUT /api/admin/stores/:storeId</code></td></tr>
+                <tr><td>File</td><td><code>backend/services/platform-service/src/routes/admin.ts</code></td></tr>
+                <tr><td>Guard</td><td><code>requireSuperAdmin</code> middleware</td></tr>
+                <tr><td>Impact</td><td>Retailer web portal access requires SuperAdmin to set <code>retailer_portal_phone</code>.</td></tr>
+                <tr><td>Scaling Issue</td><td>Additional manual step for every store wanting web access</td></tr>
+            </table>
+        </div>
+
+        <div class="bottleneck-card">
+            <h4>BOTTLENECK-004: Supplier Approval Requires SuperAdmin <span class="severity severity-critical">CRITICAL</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Route</td><td><code>PUT /api/admin/suppliers/:supplierId/approve</code></td></tr>
+                <tr><td>File</td><td><code>backend/services/platform-service/src/routes/admin.ts</code></td></tr>
+                <tr><td>Guard</td><td><code>requireSuperAdmin</code> middleware</td></tr>
+                <tr><td>Impact</td><td>Every Firebase-registered supplier waits for manual approval.</td></tr>
+                <tr><td>Scaling Issue</td><td>High supplier volume creates approval backlog</td></tr>
+            </table>
+        </div>
+
+        <div class="bottleneck-card">
+            <h4>BOTTLENECK-005: UPI Configuration Requires SuperAdmin <span class="severity severity-high">HIGH</span></h4>
+            <table>
+                <tr><th>Attribute</th><th>Value</th></tr>
+                <tr><td>Route</td><td><code>PUT /api/admin/stores/:storeId/upi</code></td></tr>
+                <tr><td>File</td><td><code>backend/services/platform-service/src/routes/admin.ts</code></td></tr>
+                <tr><td>Guard</td><td><code>requireSuperAdmin</code> middleware</td></tr>
+                <tr><td>Impact</td><td>Stores cannot accept UPI payments until SuperAdmin configures VPA.</td></tr>
+                <tr><td>Scaling Issue</td><td>Payment enablement blocked on manual action</td></tr>
+            </table>
+        </div>
+
+        <h2 id="readiness-verdict">5. Readiness Verdict</h2>
+
+        <h3>Can the system safely scale to 10,000 stores?</h3>
+
+        <div class="verdict-box">
+            <h3>READINESS VERDICT</h3>
+            <div class="verdict">NO</div>
+            <p>System is NOT ready to scale to 10,000 stores</p>
+        </div>
+
+        <div class="justification">
+            <h4>Justification</h4>
+            <p>The current implementation has <strong>fundamental architectural constraints</strong> that prevent scaling:</p>
+
+            <h4>1. Single Point of Failure</h4>
+            <p>All critical operations (store creation, enrollment, approvals) require <code>SuperAdmin</code> role:</p>
+            <ul>
+                <li>No delegation model exists</li>
+                <li>No regional admin hierarchy</li>
+                <li>No automated approval workflows</li>
+            </ul>
+
+            <h4>2. Manual Intervention Requirements</h4>
+            <p>For 10,000 stores, SuperAdmin must manually perform:</p>
+            <ul>
+                <li><strong>10,000</strong> store creation actions</li>
+                <li><strong>20,000+</strong> enrollment code generations (assuming 2 devices/store)</li>
+                <li><strong>10,000</strong> retailer portal phone configurations</li>
+                <li><strong>10,000</strong> UPI VPA configurations</li>
+                <li><strong>Unknown</strong> supplier approvals (depends on supplier count)</li>
+            </ul>
+
+            <h4>3. No Self-Service Paths</h4>
+            <ul>
+                <li>Retailers cannot create their own stores</li>
+                <li>Retailers cannot generate their own enrollment codes</li>
+                <li>Suppliers cannot auto-approve based on KYC verification</li>
+                <li>No batch operations exist for any of these actions</li>
+            </ul>
+
+            <h4>4. Missing Scalability Features</h4>
+            <ul>
+                <li>No admin role hierarchy (SuperAdmin → RegionalAdmin → etc.)</li>
+                <li>No automated approval rules/workflows</li>
+                <li>No bulk import/batch processing</li>
+                <li>No API for programmatic onboarding</li>
+            </ul>
+        </div>
+
+        <h3>Recommendations for Scale (Not Part of Audit Scope)</h3>
+        <p>If scaling is required, the following would need to be addressed:</p>
+        <ol>
+            <li><strong>Admin Hierarchy:</strong> Implement regional/area admin roles with delegated permissions</li>
+            <li><strong>Self-Service Onboarding:</strong> Allow retailers to register and create stores with verification</li>
+            <li><strong>Automated Approvals:</strong> Rule-based approval for suppliers meeting KYC thresholds</li>
+            <li><strong>Batch Operations:</strong> Bulk store creation, enrollment generation, configuration APIs</li>
+            <li><strong>Workflow Engine:</strong> Automated state transitions based on business rules</li>
+        </ol>
+
+        <div class="appendix">
+            <h2>Appendix: File References</h2>
+            <table>
+                <tr>
+                    <th>Component</th>
+                    <th>File Path</th>
+                    <th>Key Lines</th>
+                </tr>
+                <tr>
+                    <td>Store Creation</td>
+                    <td><code>backend/services/platform-service/src/routes/admin.ts</code></td>
+                    <td>111-130</td>
+                </tr>
+                <tr>
+                    <td>Device Enrollment</td>
+                    <td><code>backend/src/routes/v1/pos/enroll.ts</code></td>
+                    <td>84-512</td>
+                </tr>
+                <tr>
+                    <td>Retailer Auth</td>
+                    <td><code>backend/services/auth-service/src/routes/retailerAuth.ts</code></td>
+                    <td>199-217</td>
+                </tr>
+                <tr>
+                    <td>Supplier Firebase Register</td>
+                    <td><code>backend/src/routes/v1/supplier/auth.ts</code></td>
+                    <td>1296-1444</td>
+                </tr>
+                <tr>
+                    <td>Supplier Password Register</td>
+                    <td><code>backend/src/routes/v1/supplier/auth.ts</code></td>
+                    <td>268-447</td>
+                </tr>
+                <tr>
+                    <td>Phone Uniqueness</td>
+                    <td><code>backend/migrations/002_auth_schema.sql</code></td>
+                    <td>60-66</td>
+                </tr>
+                <tr>
+                    <td>Store Ownership</td>
+                    <td><code>backend/src/middleware/storeOwnership.ts</code></td>
+                    <td>228-236</td>
+                </tr>
+                <tr>
+                    <td>Device Token Refresh</td>
+                    <td><code>backend/src/middleware/deviceToken.ts</code></td>
+                    <td>154-190</td>
+                </tr>
+                <tr>
+                    <td>Initial Schema</td>
+                    <td><code>backend/migrations/001_initial_schema.sql</code></td>
+                    <td>-</td>
+                </tr>
+            </table>
+        </div>
+
+        <footer>
+            <p><em>Report generated by Claude Code audit system</em></p>
+            <p><strong>Commit:</strong> ceaa165 | <strong>Date:</strong> 2026-02-01</p>
+        </footer>
+    </div>
+</body>
+</html>
