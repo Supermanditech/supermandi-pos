@@ -113,6 +113,8 @@ app.use(helmet());
 // Prevents DoS via large payloads while allowing legitimate large uploads
 // =============================================================================
 const ENDPOINT_SIZE_LIMITS: { pattern: RegExp; limit: number }[] = [
+  // DOCS-001: Document upload: 10MB
+  { pattern: /\/documents\/upload/, limit: 10 * 1024 * 1024 },
   // Voice/Audio: 5MB
   { pattern: /\/voice\//, limit: 5 * 1024 * 1024 },
   { pattern: /\/ai\/voice/, limit: 5 * 1024 * 1024 },
