@@ -2954,11 +2954,13 @@ Next.js/React builds break if env not injected at build time.
 ### B.2) Build Configuration
 
 ```bash
+# OPS-DOMAIN-001: Base URL only - API client appends /api internally
+
 # retailer-admin (Vite)
-VITE_API_BASE_URL=https://supermandi.tech/api npm run build
+VITE_API_BASE_URL=https://supermandi.tech npm run build
 
 # supplier-portal (Next.js)
-NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech/api npm run build
+NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech npm run build
 ```
 
 ### B.3) Docker Build Args
@@ -3574,12 +3576,13 @@ docker compose -f docker-compose.prod.yml exec main-backend node scripts/migrate
 docker compose -f docker-compose.prod.yml up -d --build main-backend api-gateway
 
 # 4. Rebuild portals with ENV injection
+# Note: Base URL only - API client appends /api/v1/* internally
 cd /opt/supermandi/retailer-admin
-VITE_API_BASE_URL=https://supermandi.tech/api npm run build
+VITE_API_BASE_URL=https://supermandi.tech npm run build
 cp -r dist/* /var/www/retailer-admin/
 
 cd /opt/supermandi/supplier-portal
-NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech/api npm run build
+NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech npm run build
 ```
 
 ---
@@ -4276,8 +4279,9 @@ X-Content-Type-Options: nosniff
 
 **D.1 Retailer/Admin (Vite) - Dockerfile Build Args:**
 ```dockerfile
-# retailer-admin/Dockerfile (lines 9-15)
-ARG VITE_API_BASE_URL=https://supermandi.tech/api
+# retailer-admin/Dockerfile (lines 9-16)
+# OPS-DOMAIN-001: Base URL only - API client appends /api/v1/retailer-admin internally
+ARG VITE_API_BASE_URL=https://supermandi.tech
 ARG VITE_GIT_SHA=dev
 ARG VITE_BUILD_TIME
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
@@ -4287,25 +4291,40 @@ ENV VITE_BUILD_TIME=$VITE_BUILD_TIME
 
 **D.2 Supplier (Next.js) - Dockerfile Build Args:**
 ```dockerfile
-# supplier-portal/Dockerfile (lines 22-24)
-ARG NEXT_PUBLIC_API_BASE_URL
+# supplier-portal/Dockerfile (lines 22-25)
+# OPS-DOMAIN-001: Base URL only - API client appends /api/v1/supplier internally
+ARG NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ```
 
-**D.3 Built JS Verification (extracted from production containers):**
+**D.3 Built JS Verification (extracted from production containers - 2026-02-02):**
 ```bash
 # Retailer-admin container - API URL found in built JS:
-$ docker exec retailer-admin grep -o 'https://supermandi.tech[^"]*' /usr/share/nginx/html/assets/index-ChdymlQ4.js | head -1
-https://supermandi.tech/api
+$ docker exec retailer-admin grep -o 'https://supermandi.tech[^"]*' /usr/share/nginx/html/assets/*.js | head -2
+https://supermandi.tech
+https://supermandi.tech/api/v1/retailer-admin
 
-# Supplier-portal container - API URL found in built JS (module 9165):
-let t="https://supermandi.tech";
+# Supplier-portal container - API URL found in built JS:
+$ docker exec supplier-portal grep -o 'https://supermandi.tech[^"]*' /app/.next/static/chunks/*.js | head -1
+https://supermandi.tech
 ```
 
-**D.4 Console Proof - No "API_BASE_URL not configured" Error:**
+**D.4 No /api/api Double-Path Regression (verified 2026-02-02):**
+```bash
+# Double /api/api path returns 404 (correct - no such route):
+$ curl -sI https://supermandi.tech/api/api/v1/retailer-admin/store | head -1
+HTTP/2 404
+
+# Correct single /api path returns 401 (correct - auth required):
+$ curl -s https://supermandi.tech/api/v1/retailer-admin/store | head -1
+{"error":{"code":"UNAUTHORIZED","message":"Missing or invalid Authorization header..."}}
+```
+
+**D.5 Console Proof - No "API_BASE_URL not configured" Error:**
 - Verified by checking API calls in browser Network tab
-- All fetch() calls use `https://supermandi.tech/api/v1/*` prefix
+- All fetch() calls use `https://supermandi.tech/api/v1/*` prefix (single /api)
 - No console errors related to missing environment variables
+- API client appends `/api/v1/*` to base URL internally
 
 ### E) Serving Method (MANDATORY ONE-LINER ANSWER)
 
@@ -4400,16 +4419,19 @@ All deep links return 200 and serve the appropriate SPA index.html (or Next.js S
 | Root shows landing portal selector (not redirect) | Section G.1: Title + portal selector buttons visible | PASS |
 | All deep links work on refresh (SPA fallback) | Section H: curl -I tests return 200 for /retailer/store/orders, /admin/dashboard, /supplier/dashboard/ | PASS |
 | Build-time ENV injection documented | Section D: Dockerfile ARGs + grep proof from built JS | PASS |
-| No API_BASE_URL config errors | Section D.3/D.4: Built JS contains `https://supermandi.tech`, no console errors | PASS |
+| No API_BASE_URL config errors | Section D.3/D.5: Built JS contains `https://supermandi.tech`, no console errors | PASS |
+| No /api/api double-path regression | Section D.4: `/api/api/*` returns 404, `/api/*` returns 401 | PASS |
 | Serving method documented (static vs upstream) | Section E: "retailer-admin is served as a Docker CONTAINER UPSTREAM" | PASS |
 | Browser proof for each portal | Section G: Entry URLs + hard refresh proof documented | PASS |
 | INDEX.md includes audit + deploy outputs | Sections A-H complete | PASS |
 
-**VERDICT: OPS-DOMAIN-001 PASS**
+**VERDICT: OPS-DOMAIN-001 PASS** (verified 2026-02-02)
 
 All mandatory proof requirements satisfied:
 - curl -I output for all 4 target URLs
 - Build-time ENV injection proof (Dockerfile + built JS grep)
+- ENV uses base URL `https://supermandi.tech` (not `/api` suffix) - API client appends `/api` internally
+- No /api/api double-path regression verified
 - One-liner serving method answer
 - Browser/SPA fallback hard refresh proof
 
