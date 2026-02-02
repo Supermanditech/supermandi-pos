@@ -212,6 +212,7 @@ docker compose -f docker-compose.prod.yml ps
 | 0.3 | [REG-AUTH-201](./REG-AUTH-201.md) | **Retailer Registration API** | AUTH & IDENTITY (API) |
 | 0.4 | [REG-AUTH-202](./REG-AUTH-202.md) | **Supplier Registration API** | AUTH & IDENTITY (API) |
 | 0.5 | [REG-AUTH-203](./REG-AUTH-203.md) | **OTP Guardrail (Registration-First Enforcement)** | AUTH & IDENTITY (SECURITY) |
+| 0.6 | [REG-AUTH-204](./REG-AUTH-204.md) | **Limited Mode + Status Gates** | AUTH & IDENTITY (ACCESS CONTROL) |
 | 1 | [AUTH-001](#auth-001--otp-first-authentication-retailer--supplier) | ~~OTP-First Authentication~~ (SUPERSEDED by REG-AUTH-000) | AUTH & IDENTITY |
 | 2 | [CORE-001](#core-001--canonical-store-state-machine) | Canonical Store State Machine | DATA MODEL |
 | 3 | [CORE-002](#core-002--supplier-state-machine) | Supplier State Machine | DATA MODEL |
