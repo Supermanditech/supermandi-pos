@@ -3,8 +3,7 @@ import React, { useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import ProtectedLayout from './components/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-// REG-AUTH-301: Registration-First Onboarding for New Retailers
+// GO-LIVE-AUTH-FIX: Removed old RegisterPage - use RetailerOnboardingPage for full store registration (RET-WEB-001)
 import RetailerOnboardingPage from './pages/RetailerOnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
@@ -141,8 +140,9 @@ function AppRoutes() {
 
         {/* Auth pages - accessible without authentication */}
         <Route path="/retailer/login" element={<LoginPage />} />
-        <Route path="/retailer/register" element={<RegisterPage />} />
-        {/* REG-AUTH-301: Registration-First Onboarding for New Retailers */}
+        {/* GO-LIVE-AUTH-FIX: /retailer/register now routes to full store onboarding (RET-WEB-001) */}
+        <Route path="/retailer/register" element={<RetailerOnboardingPage />} />
+        {/* REG-AUTH-301: Alias for onboarding page */}
         <Route path="/retailer/onboard" element={<RetailerOnboardingPage />} />
 
         {/* Legacy routes - redirect to new paths */}

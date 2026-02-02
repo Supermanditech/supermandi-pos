@@ -64,7 +64,7 @@ const ALLOWED_ACTIONS = [
   'Upload Documents',
 ];
 
-export default function LimitedModeBanner({ status, storeName, onDismiss }: LimitedModeBannerProps) {
+export default function LimitedModeBanner({ status, storeName: _storeName, onDismiss }: LimitedModeBannerProps) {
   // Don't show for ACTIVE status
   if (status === 'ACTIVE' || status === 'active') {
     return null;

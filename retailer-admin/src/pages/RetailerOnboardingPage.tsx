@@ -34,20 +34,7 @@ interface ApplicationResponse {
   action?: 'CREATED' | 'RESUMED';
 }
 
-interface StatusResponse {
-  success: boolean;
-  application: {
-    id: string;
-    status: string;
-    storeName: string;
-    ownerName: string;
-    gstin: string;
-    phoneVerified: boolean;
-    approvedStoreId?: string;
-    approvedStoreCode?: string;
-    rejectionReason?: string;
-  };
-}
+// GO-LIVE-AUTH-FIX: StatusResponse interface removed (unused in current flow)
 
 export default function RetailerOnboardingPage() {
   const navigate = useNavigate();
@@ -77,7 +64,9 @@ export default function RetailerOnboardingPage() {
   // Application state
   const [applicationId, setApplicationId] = useState('');
   const [applicationStatus, setApplicationStatus] = useState('');
-  const [approvedStoreCode, setApprovedStoreCode] = useState('');
+  // GO-LIVE-AUTH-FIX: Store code kept for future display in success step
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_approvedStoreCode, setApprovedStoreCode] = useState('');
 
   // KYC documents (Step 4)
   const [panFile, setPanFile] = useState<File | null>(null);
