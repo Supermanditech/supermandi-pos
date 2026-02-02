@@ -11,11 +11,13 @@
 
 import { Request, Response, NextFunction } from "express";
 import { REG_AUTH_ERRORS } from "./registrationGuard";
+import type { StoreStatusType } from "../services/storeStateMachine";
 
 // Extended request interface with status fields
+// Note: storeStatus is already declared globally in storeStatusGate.ts as StoreStatusType
 export interface StatusAwareRequest extends Request {
   applicationStatus?: string;
-  storeStatus?: string;
+  // storeStatus inherited from global Express.Request (StoreStatusType)
   userId?: string;
   storeId?: string;
 }
