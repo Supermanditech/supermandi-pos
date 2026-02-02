@@ -47,6 +47,7 @@ import { retailerComplianceRouter } from "./retailer-admin/compliance";
 import { retailerAdminAuthRouter } from "./retailer-admin/auth";
 import { retailerAdminSettingsRouter } from "./retailer-admin/settings";  // GL-AUD-004: Store settings
 import { retailerAdminDevicesRouter } from "./retailer-admin/devices";  // RET-WEB-002: Device activation
+import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
@@ -102,6 +103,10 @@ v1Router.use("/admin/documents", adminDocumentsRouter);  // DOCS-001: Admin docu
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
+
+// REG-AUTH-201: Retailer registration routes (public, no auth required)
+// Must be BEFORE validateGatewayHeaders middleware
+v1Router.use("/retailer-admin/registration", retailerRegistrationRouter);
 
 // GO-LIVE-046: Apply gateway header validation to retailer-admin routes
 // GO-LIVE-047: Apply store ownership verification to retailer-admin routes

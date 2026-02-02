@@ -1,0 +1,743 @@
+// REG-AUTH-201: Retailer Registration API
+// Registration-First Authentication - Application must exist before OTP login
+//
+// Flow:
+// 1. User submits registration with GSTIN, business details, phone
+// 2. System creates application (status: DRAFT)
+// 3. User verifies phone via OTP → application gets firebase_uid
+// 4. User uploads documents → status: KYC_SUBMITTED
+// 5. Admin reviews → status: ACTIVE (creates store)
+// 6. ONLY THEN can user access full features
+
+import { Router, Request, Response, NextFunction } from "express";
+import { getPool } from "../../../db/client";
+import { authRateLimiter } from "../../../middleware/posRateLimiter";
+
+const router = Router();
+
+// Firebase verification
+let verifyFirebaseIdToken: ((idToken: string) => Promise<{
+  success: boolean;
+  payload?: { phone_number?: string; uid?: string };
+  error?: string;
+  code?: string;
+}>) | null = null;
+
+try {
+  const firebase = require("@supermandi/common");
+  if (firebase.verifyFirebaseIdToken) {
+    verifyFirebaseIdToken = firebase.verifyFirebaseIdToken;
+    console.log("[RetailerReg] Firebase server-side verification available");
+  }
+} catch {
+  console.warn("[RetailerReg] Firebase verification not available");
+}
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface CreateApplicationRequest {
+  phone: string;
+  businessName: string;
+  ownerName: string;
+  gstin: string;
+  email?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
+interface VerifyOtpRequest {
+  idToken: string;
+  applicationId: string;
+}
+
+// =============================================================================
+// UTILITIES
+// =============================================================================
+
+function normalizePhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length === 12) {
+    return `+${digits}`;
+  }
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+  if (digits.length > 10) {
+    return `+${digits}`;
+  }
+  return `+${digits}`;
+}
+
+// GSTIN format validation
+// Format: 22AAAAA0000A1Z5 (15 chars)
+// Position 14 can be any alphanumeric (GL-CRIT-0031)
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[0-9A-Z]{1}[0-9A-Z]{1}$/;
+
+function validateGSTIN(gstin: string): boolean {
+  return GSTIN_REGEX.test(gstin.trim().toUpperCase());
+}
+
+// =============================================================================
+// ROUTES
+// =============================================================================
+
+/**
+ * POST /api/v1/retailer-admin/registration/check-gstin
+ * REG-AUTH-201: Check if GSTIN is already registered
+ *
+ * Returns:
+ * - exists: true/false
+ * - action: 'CREATE' | 'RESUME' | 'LOGIN'
+ * - applicationId: (if exists and can resume)
+ */
+router.post("/check-gstin", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { gstin } = req.body as { gstin?: string };
+
+    if (!gstin) {
+      res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "GSTIN is required" }
+      });
+      return;
+    }
+
+    const gstinNormalized = gstin.trim().toUpperCase();
+
+    if (!validateGSTIN(gstinNormalized)) {
+      res.status(400).json({
+        error: { code: "INVALID_GSTIN", message: "Please enter a valid 15-character GSTIN" }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Use the helper function to check GSTIN uniqueness
+    const result = await pool.query(
+      `SELECT * FROM auth.check_gstin_uniqueness($1, 'retailer')`,
+      [gstinNormalized]
+    );
+
+    if (result.rows.length === 0) {
+      // GSTIN not found - can create new application
+      res.json({
+        exists: false,
+        action: 'CREATE',
+        message: 'GSTIN is available for registration'
+      });
+      return;
+    }
+
+    const { exists_in, entity_id, entity_status, can_resume } = result.rows[0];
+
+    if (exists_in === 'store') {
+      // Already an approved store
+      res.json({
+        exists: true,
+        action: 'LOGIN',
+        message: 'This GSTIN is already registered. Please login instead.',
+        storeId: entity_id,
+      });
+      return;
+    }
+
+    if (exists_in === 'application') {
+      if (can_resume) {
+        // Can resume existing application
+        res.json({
+          exists: true,
+          action: 'RESUME',
+          message: 'An application with this GSTIN already exists. You can resume it.',
+          applicationId: entity_id,
+          applicationStatus: entity_status,
+        });
+      } else {
+        // Application exists but can't resume (ACTIVE or EXPIRED)
+        res.json({
+          exists: true,
+          action: 'LOGIN',
+          message: entity_status === 'ACTIVE'
+            ? 'This GSTIN is already approved. Please login.'
+            : 'The application for this GSTIN has expired. Please contact support.',
+          applicationId: entity_id,
+          applicationStatus: entity_status,
+        });
+      }
+      return;
+    }
+
+    // Fallback
+    res.json({
+      exists: false,
+      action: 'CREATE',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/registration/create
+ * REG-AUTH-201: Create new retailer registration application
+ *
+ * This creates an application in DRAFT status.
+ * Phone must be verified via OTP before proceeding.
+ */
+router.post("/create", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const {
+      phone,
+      businessName,
+      ownerName,
+      gstin,
+      email,
+      addressLine1,
+      addressLine2,
+      city,
+      state,
+      pincode,
+    } = req.body as CreateApplicationRequest;
+
+    // Validate required fields
+    if (!phone || !businessName || !ownerName || !gstin) {
+      res.status(400).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Phone, business name, owner name, and GSTIN are required"
+        }
+      });
+      return;
+    }
+
+    const gstinNormalized = gstin.trim().toUpperCase();
+    const phoneNormalized = normalizePhoneNumber(phone);
+
+    // Validate GSTIN format
+    if (!validateGSTIN(gstinNormalized)) {
+      res.status(400).json({
+        error: { code: "INVALID_GSTIN", message: "Please enter a valid 15-character GSTIN" }
+      });
+      return;
+    }
+
+    // Validate email if provided
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim().toLowerCase())) {
+        res.status(400).json({
+          error: { code: "INVALID_EMAIL", message: "Please enter a valid email address" }
+        });
+        return;
+      }
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Check GSTIN uniqueness
+    const gstinCheck = await pool.query(
+      `SELECT * FROM auth.check_gstin_uniqueness($1, 'retailer')`,
+      [gstinNormalized]
+    );
+
+    if (gstinCheck.rows.length > 0) {
+      const { exists_in, entity_id, entity_status, can_resume } = gstinCheck.rows[0];
+
+      if (exists_in === 'store') {
+        res.status(409).json({
+          error: {
+            code: "GSTIN_EXISTS",
+            message: "This GSTIN is already registered as an approved store. Please login instead."
+          }
+        });
+        return;
+      }
+
+      if (exists_in === 'application') {
+        if (can_resume) {
+          res.status(409).json({
+            error: {
+              code: "APPLICATION_EXISTS",
+              message: "An application with this GSTIN already exists. Please resume it.",
+              applicationId: entity_id,
+              applicationStatus: entity_status,
+            }
+          });
+        } else {
+          res.status(409).json({
+            error: {
+              code: "GSTIN_EXISTS",
+              message: "This GSTIN is already registered.",
+            }
+          });
+        }
+        return;
+      }
+    }
+
+    // Create application
+    const result = await pool.query(
+      `INSERT INTO auth.applications (
+        entity_type,
+        phone,
+        email,
+        business_name,
+        owner_name,
+        gstin,
+        address_line1,
+        address_line2,
+        city,
+        state,
+        pincode,
+        status
+      ) VALUES (
+        'retailer',
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        'DRAFT'
+      )
+      RETURNING id, status, created_at`,
+      [
+        phoneNormalized,
+        email?.trim().toLowerCase() || null,
+        businessName.trim(),
+        ownerName.trim(),
+        gstinNormalized,
+        addressLine1?.trim() || null,
+        addressLine2?.trim() || null,
+        city?.trim() || null,
+        state?.trim() || null,
+        pincode?.trim() || null,
+      ]
+    );
+
+    const application = result.rows[0];
+
+    // Log status change
+    await pool.query(
+      `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
+       VALUES ($1, NULL, 'DRAFT', 'Application created')`,
+      [application.id]
+    );
+
+    console.log(`[RetailerReg] REG-AUTH-201: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+
+    res.status(201).json({
+      success: true,
+      application: {
+        id: application.id,
+        status: application.status,
+        createdAt: application.created_at,
+      },
+      nextStep: 'VERIFY_PHONE',
+      message: 'Application created. Please verify your phone number with OTP.',
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') {
+      // Unique constraint violation
+      res.status(409).json({
+        error: {
+          code: "DUPLICATE_ENTRY",
+          message: "This phone number or GSTIN is already registered."
+        }
+      });
+      return;
+    }
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/registration/verify-otp
+ * REG-AUTH-201: Verify phone OTP for application
+ *
+ * CRITICAL: Requires application_id - cannot verify without existing application
+ * This is the REG-AUTH-203 guardrail enforcement
+ */
+router.post("/verify-otp", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { idToken, applicationId } = req.body as VerifyOtpRequest;
+
+    // CRITICAL: application_id is REQUIRED
+    if (!applicationId) {
+      res.status(403).json({
+        error: {
+          code: "REGISTRATION_REQUIRED",
+          message: "Registration required before login. Please complete registration first.",
+        }
+      });
+      return;
+    }
+
+    if (!idToken) {
+      res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "Firebase ID token is required" }
+      });
+      return;
+    }
+
+    // Verify Firebase token
+    if (!verifyFirebaseIdToken) {
+      if (process.env.NODE_ENV === 'production') {
+        res.status(503).json({
+          error: { code: "SERVICE_UNAVAILABLE", message: "Phone verification service unavailable" }
+        });
+        return;
+      }
+      res.status(400).json({
+        error: { code: "FIREBASE_REQUIRED", message: "Firebase verification required" }
+      });
+      return;
+    }
+
+    const verifyResult = await verifyFirebaseIdToken(idToken);
+    if (!verifyResult.success || !verifyResult.payload?.phone_number) {
+      res.status(401).json({
+        error: { code: "INVALID_TOKEN", message: "Invalid or expired OTP. Please try again." }
+      });
+      return;
+    }
+
+    const phoneFromToken = normalizePhoneNumber(verifyResult.payload.phone_number);
+    const firebaseUid = verifyResult.payload.uid;
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get application
+    const appResult = await pool.query(
+      `SELECT id, phone, status, firebase_uid
+       FROM auth.applications
+       WHERE id = $1::uuid`,
+      [applicationId]
+    );
+
+    if (appResult.rows.length === 0) {
+      res.status(404).json({
+        error: { code: "APPLICATION_NOT_FOUND", message: "Application not found" }
+      });
+      return;
+    }
+
+    const application = appResult.rows[0];
+
+    // Check application status
+    if (application.status === 'EXPIRED') {
+      res.status(403).json({
+        error: {
+          code: "APPLICATION_EXPIRED",
+          message: "This application has expired. Please create a new registration."
+        }
+      });
+      return;
+    }
+
+    if (application.status === 'ACTIVE') {
+      res.status(400).json({
+        error: {
+          code: "ALREADY_APPROVED",
+          message: "This application is already approved. Please login instead."
+        }
+      });
+      return;
+    }
+
+    // Verify phone matches
+    if (application.phone !== phoneFromToken) {
+      res.status(403).json({
+        error: {
+          code: "PHONE_MISMATCH",
+          message: "The verified phone number does not match the application."
+        }
+      });
+      return;
+    }
+
+    // Update application with Firebase UID
+    await pool.query(
+      `UPDATE auth.applications
+       SET firebase_uid = $1, updated_at = NOW()
+       WHERE id = $2`,
+      [firebaseUid, applicationId]
+    );
+
+    console.log(`[RetailerReg] REG-AUTH-201: Phone verified for application ${applicationId}`);
+
+    res.json({
+      success: true,
+      application: {
+        id: application.id,
+        status: application.status,
+        phoneVerified: true,
+      },
+      nextStep: application.status === 'DRAFT' ? 'UPLOAD_DOCUMENTS' : 'AWAIT_APPROVAL',
+      message: 'Phone verified successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/retailer-admin/registration/submit-kyc
+ * REG-AUTH-201: Submit application for KYC review
+ *
+ * Changes status from DRAFT → KYC_SUBMITTED
+ */
+router.post("/submit-kyc", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { applicationId } = req.body as { applicationId?: string };
+
+    if (!applicationId) {
+      res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "Application ID is required" }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get application
+    const appResult = await pool.query(
+      `SELECT id, status, firebase_uid FROM auth.applications WHERE id = $1::uuid`,
+      [applicationId]
+    );
+
+    if (appResult.rows.length === 0) {
+      res.status(404).json({
+        error: { code: "APPLICATION_NOT_FOUND", message: "Application not found" }
+      });
+      return;
+    }
+
+    const application = appResult.rows[0];
+
+    // Must be in DRAFT or NEEDS_FIX status
+    if (!['DRAFT', 'NEEDS_FIX'].includes(application.status)) {
+      res.status(400).json({
+        error: {
+          code: "INVALID_STATUS",
+          message: `Cannot submit KYC from status: ${application.status}`
+        }
+      });
+      return;
+    }
+
+    // Must have verified phone
+    if (!application.firebase_uid) {
+      res.status(400).json({
+        error: {
+          code: "PHONE_NOT_VERIFIED",
+          message: "Please verify your phone number before submitting KYC"
+        }
+      });
+      return;
+    }
+
+    // Check document completeness
+    const docsResult = await pool.query(
+      `SELECT * FROM auth.check_application_documents($1)`,
+      [applicationId]
+    );
+
+    const missingDocs = docsResult.rows.filter(d => d.is_required && !d.is_complete);
+    if (missingDocs.length > 0) {
+      res.status(400).json({
+        error: {
+          code: "MISSING_DOCUMENTS",
+          message: `Missing required documents: ${missingDocs.map(d => d.document_type).join(', ')}`
+        },
+        missingDocuments: missingDocs.map(d => d.document_type),
+      });
+      return;
+    }
+
+    // Update status
+    await pool.query(
+      `SELECT auth.update_application_status($1, 'KYC_SUBMITTED', NULL, 'KYC documents submitted')`,
+      [applicationId]
+    );
+
+    console.log(`[RetailerReg] REG-AUTH-201: KYC submitted for application ${applicationId}`);
+
+    res.json({
+      success: true,
+      application: {
+        id: applicationId,
+        status: 'KYC_SUBMITTED',
+      },
+      nextStep: 'AWAIT_APPROVAL',
+      message: 'KYC submitted successfully. Your application is now under review.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/retailer-admin/registration/status/:applicationId
+ * REG-AUTH-201: Get application status
+ */
+router.get("/status/:applicationId", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { applicationId } = req.params;
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get application details
+    const appResult = await pool.query(
+      `SELECT
+        id, entity_type, phone, email, business_name, owner_name, gstin,
+        address_line1, address_line2, city, state, pincode,
+        status, rejection_reason, firebase_uid IS NOT NULL as phone_verified,
+        approved_store_id, created_at, updated_at, submitted_at
+       FROM auth.applications
+       WHERE id = $1::uuid`,
+      [applicationId]
+    );
+
+    if (appResult.rows.length === 0) {
+      res.status(404).json({
+        error: { code: "APPLICATION_NOT_FOUND", message: "Application not found" }
+      });
+      return;
+    }
+
+    const application = appResult.rows[0];
+
+    // Get document status
+    const docsResult = await pool.query(
+      `SELECT * FROM auth.check_application_documents($1)`,
+      [applicationId]
+    );
+
+    // Get status history
+    const historyResult = await pool.query(
+      `SELECT old_status, new_status, change_reason, created_at
+       FROM auth.application_status_log
+       WHERE application_id = $1
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [applicationId]
+    );
+
+    res.json({
+      application: {
+        id: application.id,
+        entityType: application.entity_type,
+        businessName: application.business_name,
+        ownerName: application.owner_name,
+        gstin: application.gstin,
+        email: application.email,
+        address: {
+          line1: application.address_line1,
+          line2: application.address_line2,
+          city: application.city,
+          state: application.state,
+          pincode: application.pincode,
+        },
+        status: application.status,
+        phoneVerified: application.phone_verified,
+        rejectionReason: application.rejection_reason,
+        approvedStoreId: application.approved_store_id,
+        createdAt: application.created_at,
+        updatedAt: application.updated_at,
+        submittedAt: application.submitted_at,
+      },
+      documents: docsResult.rows.map(d => ({
+        documentType: d.document_type,
+        isRequired: d.is_required,
+        status: d.status,
+        isComplete: d.is_complete,
+      })),
+      statusHistory: historyResult.rows,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/retailer-admin/registration/resume/:gstin
+ * REG-AUTH-201: Resume existing application by GSTIN
+ */
+router.get("/resume/:gstin", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { gstin } = req.params;
+    const gstinNormalized = gstin.trim().toUpperCase();
+
+    if (!validateGSTIN(gstinNormalized)) {
+      res.status(400).json({
+        error: { code: "INVALID_GSTIN", message: "Please enter a valid 15-character GSTIN" }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Find application by GSTIN
+    const result = await pool.query(
+      `SELECT id, status, business_name, phone
+       FROM auth.applications
+       WHERE gstin = $1 AND entity_type = 'retailer' AND status NOT IN ('EXPIRED', 'ACTIVE')
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [gstinNormalized]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({
+        error: { code: "APPLICATION_NOT_FOUND", message: "No active application found for this GSTIN" }
+      });
+      return;
+    }
+
+    const application = result.rows[0];
+
+    // Mask phone for privacy
+    const maskedPhone = application.phone
+      ? `****${application.phone.slice(-4)}`
+      : null;
+
+    res.json({
+      application: {
+        id: application.id,
+        status: application.status,
+        businessName: application.business_name,
+        maskedPhone: maskedPhone,
+      },
+      nextStep: application.status === 'DRAFT' ? 'VERIFY_PHONE' : 'AWAIT_APPROVAL',
+      message: 'Application found. Please verify your phone to continue.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export const retailerRegistrationRouter = router;
