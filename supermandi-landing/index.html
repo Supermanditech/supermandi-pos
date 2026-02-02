@@ -379,9 +379,9 @@
                 <span class="logo-text">supermandi</span>
             </a>
 
-            <!-- GO-LIVE-UI-REG-001: Portal selector links to REGISTER pages (Registration-First) -->
+            <!-- GO-LIVE-UX-001: Single role entry system - all routes go to LOGIN pages -->
             <div class="nav-right">
-                <a href="/supplier/register" class="nav-btn nav-btn-ghost">
+                <a href="/supplier/login" class="nav-btn nav-btn-ghost">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                         <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
@@ -390,7 +390,7 @@
                     <span>Supplier</span>
                 </a>
 
-                <a href="/retailer/register" class="nav-btn nav-btn-ghost">
+                <a href="/retailer/login" class="nav-btn nav-btn-ghost">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                         <polyline points="9 22 9 12 15 12 15 22"/>
@@ -426,24 +426,24 @@
                     <strong>Not a feature. Not optional.</strong> The backbone that powers commerce at scale.
                 </p>
 
-                <!-- GO-LIVE-UI-REG-001: Portal selector cards -->
+                <!-- GO-LIVE-UX-001: Role selector cards - single entry point to LOGIN pages -->
                 <div class="portal-cards" style="display: flex; gap: 16px; justify-content: center; margin-top: 48px; flex-wrap: wrap; animation: fadeInUp 0.6s ease-out 0.3s both;">
-                    <a href="/retailer/register" class="portal-card" style="display: flex; flex-direction: column; align-items: center; padding: 24px 32px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--foreground); transition: all 0.2s; min-width: 180px;">
+                    <a href="/retailer/login" class="portal-card" style="display: flex; flex-direction: column; align-items: center; padding: 24px 32px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--foreground); transition: all 0.2s; min-width: 180px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px; margin-bottom: 12px;">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                             <polyline points="9 22 9 12 15 12 15 22"/>
                         </svg>
-                        <span style="font-weight: 600; font-size: 16px;">Register as Retailer</span>
-                        <span style="font-size: 13px; color: var(--gray-500); margin-top: 4px;">Start your store</span>
+                        <span style="font-weight: 600; font-size: 16px;">For Retailers</span>
+                        <span style="font-size: 13px; color: var(--gray-500); margin-top: 4px;">Manage your store</span>
                     </a>
 
-                    <a href="/supplier/register" class="portal-card" style="display: flex; flex-direction: column; align-items: center; padding: 24px 32px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--foreground); transition: all 0.2s; min-width: 180px;">
+                    <a href="/supplier/login" class="portal-card" style="display: flex; flex-direction: column; align-items: center; padding: 24px 32px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--foreground); transition: all 0.2s; min-width: 180px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px; margin-bottom: 12px;">
                             <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                             <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
                             <line x1="12" y1="22.08" x2="12" y2="12"/>
                         </svg>
-                        <span style="font-weight: 600; font-size: 16px;">Register as Supplier</span>
+                        <span style="font-weight: 600; font-size: 16px;">For Suppliers</span>
                         <span style="font-size: 13px; color: var(--gray-500); margin-top: 4px;">Sell your products</span>
                     </a>
 
@@ -451,17 +451,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px; margin-bottom: 12px;">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                         </svg>
-                        <span style="font-weight: 600; font-size: 16px;">Admin Login</span>
+                        <span style="font-weight: 600; font-size: 16px;">Admin</span>
                         <span style="font-size: 13px; color: var(--gray-500); margin-top: 4px;">System management</span>
                     </a>
                 </div>
-
-                <!-- Existing user links -->
-                <p style="margin-top: 24px; font-size: 14px; color: var(--gray-500); animation: fadeInUp 0.6s ease-out 0.4s both;">
-                    Already registered?
-                    <a href="/retailer/login" style="color: var(--foreground); text-decoration: underline;">Retailer Login</a> |
-                    <a href="/supplier/login" style="color: var(--foreground); text-decoration: underline;">Supplier Login</a>
-                </p>
             </section>
         </main>
 
