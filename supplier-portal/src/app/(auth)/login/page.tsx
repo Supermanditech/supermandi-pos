@@ -291,13 +291,6 @@ export default function LoginPage() {
               'Continue'
             )}
           </button>
-
-          <p className="text-center text-sm text-slate-600">
-            Don't have an account?{' '}
-            <Link href="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-              Register as Supplier
-            </Link>
-          </p>
         </form>
       )}
 
@@ -409,20 +402,18 @@ export default function LoginPage() {
         </form>
       )}
 
-      {/* GO-LIVE-AUTH-FIX: Register link only shown during OTP step (phone step already has link in form) */}
-      {step === 'otp' && (
-        <div className="mt-6 text-center">
-          <p className="text-slate-600">
-            Don't have an account?{' '}
-            <Link
-              href="/register"
-              className="text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Register as Supplier
-            </Link>
-          </p>
-        </div>
-      )}
+      {/* GO-LIVE-AUTH-FIX: Single register link at bottom - shown on all steps except success */}
+      <div className="mt-6 text-center">
+        <p className="text-slate-600">
+          Don't have an account?{' '}
+          <Link
+            href="/register"
+            className="text-primary-600 hover:text-primary-700 font-medium"
+          >
+            Register as Supplier
+          </Link>
+        </p>
+      </div>
     </>
   );
 }
