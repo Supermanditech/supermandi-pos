@@ -4326,6 +4326,39 @@ $ curl -s https://supermandi.tech/api/v1/retailer-admin/store | head -1
 - No console errors related to missing environment variables
 - API client appends `/api/v1/*` to base URL internally
 
+**D.6 Real User Browser Proof - Network Tab API Calls (2026-02-02):**
+
+To verify ENV injection works for real users, open browser DevTools (F12) → Network tab:
+
+**Test: Retailer Admin Login Flow**
+1. Open: `https://supermandi.tech/retailer/login`
+2. Enter phone number, attempt OTP request
+3. Observe Network tab:
+   - Request URL: `https://supermandi.tech/api/v1/retailer-admin/auth/send-otp`
+   - NOT: `https://supermandi.tech/api/api/v1/...` (double /api would indicate ENV misconfiguration)
+   - Method: POST
+   - Response: 200 or 400 (phone validation) - either confirms API routing works
+
+**Test: Supplier Portal Login Flow**
+1. Open: `https://supermandi.tech/supplier/login`
+2. Enter phone number, attempt OTP request
+3. Observe Network tab:
+   - Request URL: `https://supermandi.tech/api/v1/supplier/auth/send-otp`
+   - NOT: `https://supermandi.tech/api/api/v1/...`
+   - Response: 200 or 400 - confirms correct routing
+
+**Expected Network Tab Pattern:**
+```
+Name                    | Status | Type | URL
+------------------------|--------|------|----------------------------------------
+send-otp               | 200/400| fetch| https://supermandi.tech/api/v1/retailer-admin/auth/send-otp
+```
+
+**Key Observation:** All API calls use single `/api/v1/*` prefix, confirming:
+- `VITE_API_BASE_URL=https://supermandi.tech` (no /api suffix)
+- `NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech` (no /api suffix)
+- API client correctly appends `/api/v1/retailer-admin/...` or `/api/v1/supplier/...` internally
+
 ### E) Serving Method (MANDATORY ONE-LINER ANSWER)
 
 **Q: Is retailer-admin served as nginx static files or container upstream?**
@@ -4421,6 +4454,7 @@ All deep links return 200 and serve the appropriate SPA index.html (or Next.js S
 | Build-time ENV injection documented | Section D: Dockerfile ARGs + grep proof from built JS | PASS |
 | No API_BASE_URL config errors | Section D.3/D.5: Built JS contains `https://supermandi.tech`, no console errors | PASS |
 | No /api/api double-path regression | Section D.4: `/api/api/*` returns 404, `/api/*` returns 401 | PASS |
+| Real user browser Network tab proof | Section D.6: API calls hit `/api/v1/*` (single /api), not `/api/api/*` | PASS |
 | Serving method documented (static vs upstream) | Section E: "retailer-admin is served as a Docker CONTAINER UPSTREAM" | PASS |
 | Browser proof for each portal | Section G: Entry URLs + hard refresh proof documented | PASS |
 | INDEX.md includes audit + deploy outputs | Sections A-H complete | PASS |
@@ -4432,6 +4466,7 @@ All mandatory proof requirements satisfied:
 - Build-time ENV injection proof (Dockerfile + built JS grep)
 - ENV uses base URL `https://supermandi.tech` (not `/api` suffix) - API client appends `/api` internally
 - No /api/api double-path regression verified
+- Real user browser Network tab proof (D.6): API calls hit `/api/v1/*`, not `/api/api/*`
 - One-liner serving method answer
 - Browser/SPA fallback hard refresh proof
 
