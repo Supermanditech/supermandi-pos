@@ -2,7 +2,7 @@
 
 // P0-SUP-001: Full Supplier Registration + KYC Form
 // 3-Step Flow: Phone OTP → Business Details → KYC Documents
-// NO PASSWORD - Firebase Phone OTP authentication only
+// FULL-WIDTH ONBOARDING LAYOUT (not compact login-card)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -449,37 +449,79 @@ export default function RegisterPage() {
     }
   };
 
-  return (
-    <>
-      {/* Header */}
-      <h2 className="text-xl font-semibold text-slate-800 mb-2">
-        {step === 'success' ? 'Application Submitted' : 'Register as Supplier'}
-      </h2>
+  const stepLabels = ['Verify Phone', 'Business Details', 'KYC Documents'];
 
-      {/* Progress indicator */}
-      {step !== 'success' && (
-        <div className="mb-6">
-          <p className="text-slate-600 text-sm mb-3">
-            Step {getStepNumber()} of 3:{' '}
-            {step === 'phone' || step === 'otp' ? 'Verify Phone' :
-             step === 'details' ? 'Business Details' : 'KYC Documents'}
+  return (
+    <div className="space-y-8">
+      {/* Page Title */}
+      <div className="text-center">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
+          {step === 'success' ? 'Application Submitted' : 'Register as Supplier'}
+        </h2>
+        {step !== 'success' && (
+          <p className="text-slate-600 mt-2">
+            Complete the registration form to join SuperMandi as a supplier partner
           </p>
-          <div className="flex gap-2">
-            {[1, 2, 3].map((s) => (
-              <div
-                key={s}
-                className={`h-1.5 flex-1 rounded-full ${
-                  s <= getStepNumber() ? 'bg-primary-600' : 'bg-slate-200'
-                }`}
-              />
-            ))}
+        )}
+      </div>
+
+      {/* Full-Width Stepper */}
+      {step !== 'success' && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex items-center justify-between">
+            {stepLabels.map((label, index) => {
+              const stepNum = index + 1;
+              const isActive = getStepNumber() === stepNum;
+              const isCompleted = getStepNumber() > stepNum;
+
+              return (
+                <div key={label} className="flex-1 flex items-center">
+                  {/* Step indicator */}
+                  <div className="flex items-center">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                        isCompleted
+                          ? 'bg-green-500 text-white'
+                          : isActive
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-slate-200 text-slate-500'
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        stepNum
+                      )}
+                    </div>
+                    <span
+                      className={`ml-3 text-sm font-medium hidden sm:block ${
+                        isActive ? 'text-primary-600' : isCompleted ? 'text-green-600' : 'text-slate-500'
+                      }`}
+                    >
+                      {label}
+                    </span>
+                  </div>
+
+                  {/* Connector line */}
+                  {index < stepLabels.length - 1 && (
+                    <div
+                      className={`flex-1 h-1 mx-4 rounded-full ${
+                        isCompleted ? 'bg-green-500' : 'bg-slate-200'
+                      }`}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Firebase warning */}
       {!isFirebaseReady() && step === 'phone' && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-xl text-sm">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">
             Registration requires phone verification which is currently unavailable.
@@ -490,142 +532,146 @@ export default function RegisterPage() {
 
       {/* Error display */}
       {error && (
-        <div className="bg-red-50 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl text-sm">
           {error}
         </div>
       )}
 
-      {/* Step 1: Phone Number */}
+      {/* Step 1: Phone Number - Centered card for phone entry */}
       {step === 'phone' && (
-        <form onSubmit={handleSendOtp} className="space-y-4">
-          <div>
-            <label htmlFor="phone" className="label">
-              Phone Number *
-            </label>
-            <input
-              type="tel"
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="input"
-              placeholder="+91 9876543210"
-              disabled={isLoading}
-              autoFocus
-            />
-            <p className="text-xs text-slate-500 mt-2">
-              We&apos;ll send an OTP to verify your phone number
-            </p>
-          </div>
-
-          <button
-            id="send-otp-button"
-            type="submit"
-            className="btn btn-primary w-full py-3"
-            disabled={isLoading || !isFirebaseReady()}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Sending OTP...
-              </span>
-            ) : (
-              'Send OTP'
-            )}
-          </button>
-
-          <p className="text-center text-sm text-slate-600">
-            Already have an account?{' '}
-            <Link href="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-              Sign In
-            </Link>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">Verify Your Phone Number</h3>
+          <p className="text-slate-600 text-sm mb-6">
+            We&apos;ll send a one-time password (OTP) to verify your phone number
           </p>
-        </form>
+
+          <form onSubmit={handleSendOtp} className="space-y-6">
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-2">
+                Phone Number *
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="input text-lg"
+                placeholder="+91 9876543210"
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+
+            <button
+              id="send-otp-button"
+              type="submit"
+              className="btn btn-primary w-full py-3 text-base"
+              disabled={isLoading || !isFirebaseReady()}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                  Sending OTP...
+                </span>
+              ) : (
+                'Send OTP'
+              )}
+            </button>
+          </form>
+        </div>
       )}
 
-      {/* Step 1b: OTP Verification */}
+      {/* Step 1b: OTP Verification - Centered card */}
       {step === 'otp' && (
-        <form onSubmit={handleVerifyOtp} className="space-y-4">
-          <div>
-            <label htmlFor="otp" className="label">
-              Enter OTP
-            </label>
-            <p className="text-xs text-slate-500 mb-2">
-              Enter the 6-digit code sent to {phone}
-            </p>
-            <input
-              type="text"
-              id="otp"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="input text-center text-xl tracking-widest"
-              placeholder="123456"
-              maxLength={6}
-              disabled={isLoading}
-              autoFocus
-            />
-          </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">Enter Verification Code</h3>
+          <p className="text-slate-600 text-sm mb-6">
+            Enter the 6-digit code sent to <strong>{phone}</strong>
+          </p>
 
-          <button
-            type="submit"
-            className="btn btn-primary w-full py-3"
-            disabled={isLoading || otp.length !== 6}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Verifying...
-              </span>
-            ) : (
-              'Verify OTP'
-            )}
-          </button>
-
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              className="text-sm text-slate-600 hover:text-slate-800"
-              onClick={() => {
-                setStep('phone');
-                setOtp('');
-                setError('');
-                recaptchaInitialized.current = false;
-              }}
-              disabled={isLoading}
-            >
-              Change Phone Number
-            </button>
+          <form onSubmit={handleVerifyOtp} className="space-y-6">
+            <div>
+              <input
+                type="text"
+                id="otp"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="input text-center text-2xl tracking-[0.5em] font-mono"
+                placeholder="------"
+                maxLength={6}
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
 
             <button
-              id="resend-otp-button"
-              type="button"
-              className={`text-sm font-medium ${
-                resendCooldown > 0
-                  ? 'text-slate-400 cursor-not-allowed'
-                  : 'text-primary-600 hover:text-primary-700'
-              }`}
-              onClick={handleResendOtp}
-              disabled={isLoading || resendCooldown > 0}
+              type="submit"
+              className="btn btn-primary w-full py-3 text-base"
+              disabled={isLoading || otp.length !== 6}
             >
-              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                  Verifying...
+                </span>
+              ) : (
+                'Verify OTP'
+              )}
             </button>
-          </div>
-        </form>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                className="text-sm text-slate-600 hover:text-slate-800"
+                onClick={() => {
+                  setStep('phone');
+                  setOtp('');
+                  setError('');
+                  recaptchaInitialized.current = false;
+                }}
+                disabled={isLoading}
+              >
+                Change Phone Number
+              </button>
+
+              <button
+                id="resend-otp-button"
+                type="button"
+                className={`text-sm font-medium ${
+                  resendCooldown > 0
+                    ? 'text-slate-400 cursor-not-allowed'
+                    : 'text-primary-600 hover:text-primary-700'
+                }`}
+                onClick={handleResendOtp}
+                disabled={isLoading || resendCooldown > 0}
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
-      {/* Step 2: Business Details */}
+      {/* Step 2: Business Details - Full-width spacious form */}
       {step === 'details' && (
-        <form onSubmit={handleSubmitDetails} className="space-y-4">
-          <div className="bg-green-50 text-green-700 px-4 py-3 rounded-lg text-sm mb-4">
-            Phone verified: {phone}
+        <form onSubmit={handleSubmitDetails} className="space-y-6">
+          {/* Phone verified banner */}
+          <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl flex items-center gap-3">
+            <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Phone verified: <strong>{phone}</strong></span>
           </div>
 
           {/* Business Identity Section */}
-          <div className="border-b border-slate-200 pb-4">
-            <h3 className="font-medium text-slate-800 mb-3">Business Identity</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-800 mb-6 pb-3 border-b border-slate-200">
+              Business Identity
+            </h3>
 
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="businessName" className="label">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="sm:col-span-2">
+                <label htmlFor="businessName" className="block text-sm font-medium text-slate-700 mb-2">
                   Business / Company Name *
                 </label>
                 <input
@@ -640,7 +686,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="supplierType" className="label">
+                <label htmlFor="supplierType" className="block text-sm font-medium text-slate-700 mb-2">
                   Supplier Type *
                 </label>
                 <select
@@ -661,7 +707,7 @@ export default function RegisterPage() {
 
               {supplierType === 'other' && (
                 <div>
-                  <label htmlFor="supplierTypeOther" className="label">
+                  <label htmlFor="supplierTypeOther" className="block text-sm font-medium text-slate-700 mb-2">
                     Specify Supplier Type *
                   </label>
                   <input
@@ -677,7 +723,7 @@ export default function RegisterPage() {
               )}
 
               <div>
-                <label htmlFor="gstin" className="label">
+                <label htmlFor="gstin" className="block text-sm font-medium text-slate-700 mb-2">
                   GSTIN (Optional)
                 </label>
                 <input
@@ -685,7 +731,7 @@ export default function RegisterPage() {
                   id="gstin"
                   value={gstin}
                   onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                  className="input"
+                  className="input font-mono"
                   placeholder="22AAAAA0000A1Z5"
                   maxLength={15}
                   disabled={isLoading}
@@ -698,12 +744,14 @@ export default function RegisterPage() {
           </div>
 
           {/* Contact Person Section */}
-          <div className="border-b border-slate-200 pb-4">
-            <h3 className="font-medium text-slate-800 mb-3">Contact Person</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-800 mb-6 pb-3 border-b border-slate-200">
+              Contact Person
+            </h3>
 
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="ownerName" className="label">
+                <label htmlFor="ownerName" className="block text-sm font-medium text-slate-700 mb-2">
                   Authorized Person Name *
                 </label>
                 <input
@@ -718,7 +766,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="email" className="label">
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
                   Email *
                 </label>
                 <input
@@ -733,11 +781,11 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="label">Phone (Verified)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Phone (Verified)</label>
                 <input
                   type="text"
                   value={phone}
-                  className="input bg-slate-100"
+                  className="input bg-slate-100 cursor-not-allowed"
                   disabled
                 />
               </div>
@@ -745,12 +793,14 @@ export default function RegisterPage() {
           </div>
 
           {/* Address Section */}
-          <div className="border-b border-slate-200 pb-4">
-            <h3 className="font-medium text-slate-800 mb-3">Address</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-800 mb-6 pb-3 border-b border-slate-200">
+              Business Address
+            </h3>
 
-            <div className="space-y-3">
-              <div>
-                <label htmlFor="addressLine1" className="label">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="sm:col-span-2">
+                <label htmlFor="addressLine1" className="block text-sm font-medium text-slate-700 mb-2">
                   Address Line 1 *
                 </label>
                 <input
@@ -764,9 +814,9 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <div>
-                <label htmlFor="addressLine2" className="label">
-                  Address Line 2
+              <div className="sm:col-span-2">
+                <label htmlFor="addressLine2" className="block text-sm font-medium text-slate-700 mb-2">
+                  Address Line 2 (Optional)
                 </label>
                 <input
                   type="text"
@@ -779,41 +829,23 @@ export default function RegisterPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="city" className="label">
-                    City *
-                  </label>
-                  <input
-                    type="text"
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="input"
-                    placeholder="City"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="pincode" className="label">
-                    Pincode *
-                  </label>
-                  <input
-                    type="text"
-                    id="pincode"
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="input"
-                    placeholder="400001"
-                    maxLength={6}
-                    disabled={isLoading}
-                  />
-                </div>
+              <div>
+                <label htmlFor="city" className="block text-sm font-medium text-slate-700 mb-2">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  id="city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="input"
+                  placeholder="City"
+                  disabled={isLoading}
+                />
               </div>
 
               <div>
-                <label htmlFor="state" className="label">
+                <label htmlFor="state" className="block text-sm font-medium text-slate-700 mb-2">
                   State *
                 </label>
                 <select
@@ -831,81 +863,111 @@ export default function RegisterPage() {
                   ))}
                 </select>
               </div>
+
+              <div>
+                <label htmlFor="pincode" className="block text-sm font-medium text-slate-700 mb-2">
+                  Pincode *
+                </label>
+                <input
+                  type="text"
+                  id="pincode"
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="input font-mono"
+                  placeholder="400001"
+                  maxLength={6}
+                  disabled={isLoading}
+                />
+              </div>
             </div>
           </div>
 
           {/* Agreement Section */}
-          <div className="pb-4">
-            <label className="flex items-start gap-3 cursor-pointer">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <label className="flex items-start gap-4 cursor-pointer">
               <input
                 type="checkbox"
                 checked={agreement}
                 onChange={(e) => setAgreement(e.target.checked)}
-                className="mt-1 w-4 h-4 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
+                className="mt-1 w-5 h-5 text-primary-600 border-slate-300 rounded focus:ring-primary-500"
                 disabled={isLoading}
               />
-              <span className="text-sm text-slate-700">
-                I confirm that all the details provided are correct and accurate. *
+              <span className="text-slate-700">
+                I confirm that all the details provided are correct and accurate. I agree to the Terms of Service and Privacy Policy. *
               </span>
             </label>
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary w-full py-3"
+            className="btn btn-primary w-full py-4 text-base font-semibold"
             disabled={isLoading || !agreement}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Saving...
+                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                Saving Details...
               </span>
             ) : (
-              'Continue to Documents'
+              'Continue to Document Upload'
             )}
           </button>
         </form>
       )}
 
-      {/* Step 3: KYC Documents */}
+      {/* Step 3: KYC Documents - Full-width spacious form */}
       {step === 'documents' && (
-        <form onSubmit={handleSubmitDocuments} className="space-y-4">
-          <p className="text-sm text-slate-600 mb-4">
-            Please upload the following documents. Supported formats: JPEG, PNG, PDF (max 5MB each)
-          </p>
+        <form onSubmit={handleSubmitDocuments} className="space-y-6">
+          {/* Instructions */}
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-xl">
+            <h4 className="font-medium mb-1">Document Upload Guidelines</h4>
+            <ul className="text-sm list-disc list-inside space-y-1">
+              <li>Supported formats: JPEG, PNG, PDF</li>
+              <li>Maximum file size: 5MB per document</li>
+              <li>Ensure documents are clear and readable</li>
+            </ul>
+          </div>
 
           {/* GST Certificate (required if GSTIN provided) */}
           {gstin.trim() && (
-            <DocumentUploadField
-              label="GST Certificate *"
-              docType="gstin_certificate"
-              document={documents.gstin_certificate}
-              onSelect={(file) => handleDocumentSelect('gstin_certificate', file)}
-              accept="image/*,application/pdf"
-              disabled={isLoading}
-            />
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">GST Certificate *</h3>
+              <p className="text-slate-600 text-sm mb-4">Upload your GST registration certificate</p>
+              <DocumentUploadField
+                label=""
+                docType="gstin_certificate"
+                document={documents.gstin_certificate}
+                onSelect={(file) => handleDocumentSelect('gstin_certificate', file)}
+                accept="image/*,application/pdf"
+                disabled={isLoading}
+                hideLabelSpace
+              />
+            </div>
           )}
 
           {/* ID Proof */}
-          <div className="border border-slate-200 rounded-lg p-4">
-            <label className="label mb-2">Authorized Signatory ID Proof *</label>
-            <div className="flex gap-2 mb-3">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Authorized Signatory ID Proof *</h3>
+            <p className="text-slate-600 text-sm mb-4">Select ID type and upload a clear copy</p>
+
+            <div className="flex flex-wrap gap-3 mb-6">
               {(['aadhaar', 'pan', 'driving_license'] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
-                  className={`px-3 py-1 text-xs rounded-full border ${
+                  className={`px-4 py-2 text-sm rounded-lg border-2 transition-colors ${
                     idProofType === type
-                      ? 'bg-primary-100 border-primary-300 text-primary-700'
+                      ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                   onClick={() => setIdProofType(type)}
                   disabled={isLoading}
                 >
-                  {type === 'aadhaar' ? 'Aadhaar' : type === 'pan' ? 'PAN Card' : 'Driving License'}
+                  {type === 'aadhaar' ? 'Aadhaar Card' : type === 'pan' ? 'PAN Card' : 'Driving License'}
                 </button>
               ))}
             </div>
+
             <DocumentUploadField
               label=""
               docType="pan_card"
@@ -918,27 +980,30 @@ export default function RegisterPage() {
           </div>
 
           {/* Business Proof */}
-          <div className="border border-slate-200 rounded-lg p-4">
-            <label className="label mb-2">Business Proof *</label>
-            <div className="flex flex-wrap gap-2 mb-3">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Business Proof *</h3>
+            <p className="text-slate-600 text-sm mb-4">Select proof type and upload a clear copy</p>
+
+            <div className="flex flex-wrap gap-3 mb-6">
               {(['shop_license', 'msme', 'incorporation', 'trade_license'] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
-                  className={`px-3 py-1 text-xs rounded-full border ${
+                  className={`px-4 py-2 text-sm rounded-lg border-2 transition-colors ${
                     businessProofType === type
-                      ? 'bg-primary-100 border-primary-300 text-primary-700'
+                      ? 'bg-primary-50 border-primary-500 text-primary-700 font-medium'
                       : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                   onClick={() => setBusinessProofType(type)}
                   disabled={isLoading}
                 >
                   {type === 'shop_license' ? 'Shop License' :
-                   type === 'msme' ? 'MSME' :
-                   type === 'incorporation' ? 'Incorporation' : 'Trade License'}
+                   type === 'msme' ? 'MSME Certificate' :
+                   type === 'incorporation' ? 'Incorporation Cert' : 'Trade License'}
                 </button>
               ))}
             </div>
+
             <DocumentUploadField
               label=""
               docType="business_license"
@@ -951,22 +1016,30 @@ export default function RegisterPage() {
           </div>
 
           {/* Selfie */}
-          <div className="border border-slate-200 rounded-lg p-4">
-            <label className="label mb-2">Authorized Person Selfie *</label>
-            <p className="text-xs text-slate-500 mb-3">
-              Please take a clear photo of yourself
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Authorized Person Selfie *</h3>
+            <p className="text-slate-600 text-sm mb-6">
+              Take a clear photo of yourself for identity verification
             </p>
-            <div className="flex gap-2">
+
+            <div className="flex gap-4 mb-4">
               <button
                 type="button"
-                className="flex-1 py-2 px-4 border border-primary-300 text-primary-600 rounded-lg hover:bg-primary-50 text-sm"
+                className="flex-1 py-3 px-6 border-2 border-primary-500 text-primary-600 rounded-lg hover:bg-primary-50 font-medium flex items-center justify-center gap-2"
                 onClick={() => handleCameraCapture('owner_photo')}
                 disabled={isLoading}
               >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
                 Take Photo
               </button>
-              <label className="flex-1 py-2 px-4 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 text-sm text-center cursor-pointer">
-                Gallery
+              <label className="flex-1 py-3 px-6 border-2 border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium flex items-center justify-center gap-2 cursor-pointer">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Upload from Gallery
                 <input
                   type="file"
                   accept="image/*"
@@ -976,32 +1049,38 @@ export default function RegisterPage() {
                 />
               </label>
             </div>
+
             {documents.owner_photo.preview && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <img
                   src={documents.owner_photo.preview}
                   alt="Selfie preview"
-                  className="w-24 h-24 object-cover rounded-lg border border-slate-200"
+                  className="w-32 h-32 object-cover rounded-lg border-2 border-slate-200"
                 />
               </div>
             )}
             {documents.owner_photo.status === 'uploaded' && (
-              <p className="text-green-600 text-xs mt-2">Uploaded</p>
+              <p className="text-green-600 text-sm mt-2 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Uploaded successfully
+              </p>
             )}
             {documents.owner_photo.error && (
-              <p className="text-red-600 text-xs mt-2">{documents.owner_photo.error}</p>
+              <p className="text-red-600 text-sm mt-2">{documents.owner_photo.error}</p>
             )}
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary w-full py-3"
+            className="btn btn-primary w-full py-4 text-base font-semibold"
             disabled={isLoading}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Submitting...
+                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                Submitting Application...
               </span>
             ) : (
               'Submit Application'
@@ -1012,44 +1091,32 @@ export default function RegisterPage() {
 
       {/* Step 4: Success */}
       {step === 'success' && (
-        <div className="text-center py-4">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">!</span>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 sm:p-12 max-w-xl mx-auto text-center">
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
-          <h3 className="text-lg font-semibold text-amber-600 mb-2">
+          <h3 className="text-2xl font-bold text-amber-600 mb-3">
             Pending Verification
           </h3>
-          <p className="text-slate-600 mb-6">
+          <p className="text-slate-600 mb-6 text-lg">
             Your supplier application has been submitted for review.
             You will receive a notification once your account is approved.
           </p>
-          <p className="text-sm text-slate-500 mb-6">
-            Application ID: {applicationId}
-          </p>
+          <div className="bg-slate-50 rounded-lg p-4 mb-8">
+            <p className="text-sm text-slate-500">Application ID</p>
+            <p className="font-mono text-slate-800">{applicationId}</p>
+          </div>
           <button
-            className="btn btn-primary w-full py-3"
+            className="btn btn-primary w-full py-4 text-base font-semibold"
             onClick={() => router.push('/login')}
           >
             Go to Login
           </button>
         </div>
       )}
-
-      {/* Login link at bottom */}
-      {step !== 'success' && step !== 'phone' && (
-        <div className="mt-6 text-center">
-          <p className="text-slate-600">
-            Already have an account?{' '}
-            <Link
-              href="/login"
-              className="text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Sign In
-            </Link>
-          </p>
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -1072,10 +1139,10 @@ function DocumentUploadField({
   hideLabelSpace?: boolean;
 }) {
   return (
-    <div className={hideLabelSpace ? '' : 'border border-slate-200 rounded-lg p-4'}>
-      {label && <label className="label mb-2">{label}</label>}
+    <div>
+      {label && <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>}
 
-      <label className="flex items-center justify-center w-full py-3 px-4 border-2 border-dashed border-slate-300 rounded-lg hover:border-primary-400 hover:bg-primary-50/50 cursor-pointer transition-colors">
+      <label className="flex flex-col items-center justify-center w-full py-8 px-6 border-2 border-dashed border-slate-300 rounded-xl hover:border-primary-400 hover:bg-primary-50/50 cursor-pointer transition-colors">
         <input
           type="file"
           accept={accept}
@@ -1084,33 +1151,41 @@ function DocumentUploadField({
           disabled={disabled}
         />
         {document.status === 'uploading' ? (
-          <span className="text-slate-500 text-sm flex items-center gap-2">
-            <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600" />
-            Uploading...
-          </span>
+          <div className="text-center">
+            <span className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 inline-block mb-2" />
+            <p className="text-slate-500">Uploading...</p>
+          </div>
         ) : document.file || document.status === 'uploaded' ? (
-          <span className="text-green-600 text-sm">
-            {document.file?.name || 'Uploaded'}
-          </span>
+          <div className="text-center">
+            <svg className="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <p className="text-green-600 font-medium">{document.file?.name || 'Uploaded'}</p>
+            <p className="text-slate-500 text-sm mt-1">Click to replace</p>
+          </div>
         ) : (
-          <span className="text-slate-500 text-sm">
-            Click to upload or drag and drop
-          </span>
+          <div className="text-center">
+            <svg className="w-10 h-10 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p className="text-slate-600 font-medium">Click to upload</p>
+            <p className="text-slate-400 text-sm mt-1">or drag and drop</p>
+          </div>
         )}
       </label>
 
       {document.preview && (
-        <div className="mt-2">
+        <div className="mt-4">
           <img
             src={document.preview}
             alt="Preview"
-            className="max-w-full h-20 object-contain rounded border border-slate-200"
+            className="max-w-full h-24 object-contain rounded-lg border border-slate-200"
           />
         </div>
       )}
 
       {document.error && (
-        <p className="text-red-600 text-xs mt-2">{document.error}</p>
+        <p className="text-red-600 text-sm mt-2">{document.error}</p>
       )}
     </div>
   );
