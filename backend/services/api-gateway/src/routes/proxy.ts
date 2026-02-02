@@ -1,6 +1,7 @@
 // Proxy Routes - V3.0.10 compliant
 // Routes requests to appropriate backend services
 // P1-001: Fixed body forwarding for PATCH/POST/PUT requests
+// GO-LIVE-UI-001: Added x-admin-token forwarding for authenticated admin requests
 
 import { Router, Request, Response } from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
@@ -8,6 +9,7 @@ import type { Options } from 'http-proxy-middleware';
 import type { ClientRequest, IncomingMessage } from 'http';
 import { config, ServiceConfig } from '../config';
 import { CORRELATION_ID_HEADER } from '../middleware/correlationId';
+import { getMasterToken } from '../services/adminSessionService';
 
 const router: Router = Router();
 
@@ -41,6 +43,16 @@ function createProxyOptions(service: ServiceConfig): Options {
       // Forward correlation ID to backend service
       if (req.correlationId) {
         proxyReq.setHeader(CORRELATION_ID_HEADER, req.correlationId);
+      }
+
+      // GO-LIVE-UI-001: Forward x-admin-token for authenticated admin routes
+      // The adminAuthMiddleware has already validated the JWT, so we can safely
+      // add the master token header for the backend's requireAdminToken middleware
+      if (req.path.startsWith('/api/v1/admin') && req.headers.authorization) {
+        const masterToken = getMasterToken();
+        if (masterToken) {
+          proxyReq.setHeader('x-admin-token', masterToken);
+        }
       }
 
       // P1-001: Handle body forwarding for POST/PUT/PATCH requests

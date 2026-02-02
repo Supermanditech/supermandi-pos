@@ -276,3 +276,11 @@ export function getActiveSessionCount(): number {
 export function isMasterTokenConfigured(): boolean {
   return !!ADMIN_TOKEN;
 }
+
+/**
+ * GO-LIVE-UI-001: Get master token for proxy forwarding
+ * Used by proxy to add x-admin-token header for authenticated admin requests
+ */
+export function getMasterToken(): string | undefined {
+  return ADMIN_TOKEN;
+}
