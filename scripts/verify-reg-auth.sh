@@ -202,12 +202,12 @@ echo ""
 # =============================================================================
 echo -e "${BLUE}--- 4. OTP Guardrail (REG-AUTH-203) ---${NC}"
 
-# Test OTP verify without application_id returns 400/403
+# Test OTP verify without application_id returns 403 (REGISTRATION_REQUIRED)
 test_endpoint \
   "Retailer OTP verify without application_id (blocked)" \
   "POST" \
   "/api/v1/retailer-admin/registration/verify-otp" \
-  "400" \
+  "403" \
   "-H 'Content-Type: application/json'" \
   '{"idToken":"fake-token"}'
 
@@ -215,7 +215,7 @@ test_endpoint \
   "Supplier OTP verify without application_id (blocked)" \
   "POST" \
   "/api/v1/supplier/registration/verify-otp" \
-  "400" \
+  "403" \
   "-H 'Content-Type: application/json'" \
   '{"idToken":"fake-token"}'
 
