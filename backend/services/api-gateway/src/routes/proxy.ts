@@ -46,7 +46,8 @@ function createProxyOptions(service: ServiceConfig): Options {
       // P1-001: Handle body forwarding for POST/PUT/PATCH requests
       // When express.json() or body-parser middleware has already parsed the body,
       // the raw stream is consumed. We need to re-serialize and write it to the proxy request.
-      if (req.body && Object.keys(req.body).length > 0) {
+      // GO-LIVE-FIX: Forward body even if empty object {} (for validation endpoints)
+      if (req.body !== undefined && req.body !== null) {
         const bodyData = JSON.stringify(req.body);
         // Update content-length header to match the actual body size
         proxyReq.setHeader('Content-Type', 'application/json');
