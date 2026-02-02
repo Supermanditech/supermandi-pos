@@ -249,12 +249,13 @@ echo ""
 # =============================================================================
 echo -e "${BLUE}--- 6. Document Upload (REG-AUTH-102) ---${NC}"
 
-# Test document upload endpoint validation (missing required fields)
+# Test document upload endpoint exists and validates file type
+# (sends empty file which triggers file type validation before field validation)
 test_response_contains \
-  "Document upload endpoint validates required fields" \
+  "Document upload endpoint validates file type" \
   "POST" \
   "/api/v1/documents/upload" \
-  "entity_type, entity_id, and document_type are required" \
+  "Invalid file type" \
   "-F 'file=@/dev/null'"
 
 # Test end-to-end document upload with real application
