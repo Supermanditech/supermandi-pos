@@ -364,4 +364,4 @@ All code implementing OTP-first login without registration check MUST be refacto
 
 **SPEC LOCKED BY:** Claude Code (REG-AUTH-000)
 
-**COMMIT SHA:** 5f007c3
+**COMMIT SHA:** 9fd3ab3

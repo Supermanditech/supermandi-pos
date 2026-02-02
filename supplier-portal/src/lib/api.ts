@@ -875,6 +875,22 @@ export async function resumeSupplierApplication(gstin: string, phone: string): P
   });
 }
 
+// GO-LIVE-UI-REG-003: Lookup registration by phone (for login-first flow)
+export interface SupplierLookupResponse {
+  exists: boolean;
+  application_id?: string;
+  status?: 'DRAFT' | 'OTP_VERIFIED' | 'KYC_SUBMITTED' | 'UNDER_REVIEW' | 'ACTIVE' | 'REJECTED' | 'NEEDS_FIX' | 'EXPIRED';
+  nextStep?: 'REGISTER' | 'VERIFY_PHONE' | 'UPLOAD_DOCUMENTS' | 'PENDING_APPROVAL' | 'FIX_REQUIRED' | 'CONTACT_SUPPORT' | 'LOGIN_ALLOWED';
+  message: string;
+  action?: 'REGISTER_REQUIRED';
+  businessName?: string;
+}
+
+export async function lookupSupplierRegistration(phone: string): Promise<SupplierLookupResponse> {
+  const encoded = encodeURIComponent(phone);
+  return apiFetch<SupplierLookupResponse>(`/api/v1/supplier/registration/lookup?phone=${encoded}`);
+}
+
 // REG-AUTH-302: Upload document for application
 export async function uploadSupplierDocument(
   applicationId: string,

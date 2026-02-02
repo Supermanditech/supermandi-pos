@@ -249,13 +249,60 @@ echo ""
 # =============================================================================
 echo -e "${BLUE}--- 6. Document Upload (REG-AUTH-102) ---${NC}"
 
-# Test document upload endpoint exists (expects auth error)
-test_endpoint \
-  "Document upload endpoint exists (needs auth)" \
+# Test document upload endpoint validation (missing required fields)
+test_response_contains \
+  "Document upload endpoint validates required fields" \
   "POST" \
   "/api/v1/documents/upload" \
-  "401" \
-  "-H 'Content-Type: multipart/form-data'"
+  "entity_type, entity_id, and document_type are required" \
+  "-F 'file=@/dev/null'"
+
+# Test end-to-end document upload with real application
+echo -e "${YELLOW}Testing end-to-end document upload...${NC}"
+
+# Create a test application
+TEST_GSTIN="27AADCT$(date +%s | tail -c 5)Z1ZP"
+CREATE_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/retailer-admin/registration/create" \
+  -H "Content-Type: application/json" \
+  -d "{\"phone\":\"+919876500001\",\"businessName\":\"Doc Upload Test\",\"ownerName\":\"Test\",\"gstin\":\"$TEST_GSTIN\"}")
+
+APP_ID=$(echo "$CREATE_RESPONSE" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+if [ -n "$APP_ID" ] && [ "$APP_ID" != "null" ]; then
+  echo -e "${GREEN}PASS${NC} [created app $APP_ID] Test application created for document upload"
+  PASSED=$((PASSED + 1))
+  TOTAL=$((TOTAL + 1))
+
+  # Create a minimal PNG file for upload
+  TEMP_PNG="/tmp/test_upload_$$.png"
+  printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' > "$TEMP_PNG" 2>/dev/null
+
+  # Upload document
+  UPLOAD_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/documents/upload" \
+    -F "file=@$TEMP_PNG;type=image/png" \
+    -F "entity_type=application" \
+    -F "entity_id=$APP_ID" \
+    -F "document_type=pan")
+
+  rm -f "$TEMP_PNG" 2>/dev/null
+
+  TOTAL=$((TOTAL + 1))
+  if echo "$UPLOAD_RESPONSE" | grep -q '"document_id"'; then
+    DOC_ID=$(echo "$UPLOAD_RESPONSE" | grep -o '"document_id":"[^"]*"' | cut -d'"' -f4)
+    echo -e "${GREEN}PASS${NC} [doc_id: $DOC_ID] Document uploaded successfully"
+    echo "       file_url: /api/v1/documents/$DOC_ID"
+    PASSED=$((PASSED + 1))
+  else
+    echo -e "${RED}FAIL${NC} [upload failed] Document upload did not return document_id"
+    echo "       Response: $(echo "$UPLOAD_RESPONSE" | head -c 300)"
+    FAILED=$((FAILED + 1))
+  fi
+else
+  echo -e "${RED}FAIL${NC} [no app created] Could not create test application for document upload"
+  echo "       Response: $(echo "$CREATE_RESPONSE" | head -c 300)"
+  FAILED=$((FAILED + 1))
+  TOTAL=$((TOTAL + 1))
+fi
 
 echo ""
 
@@ -300,6 +347,71 @@ test_endpoint \
 echo ""
 
 # =============================================================================
+# 8. ADMIN EMAIL OTP (GO-LIVE-ADMIN-EMAIL-001)
+# =============================================================================
+echo -e "${BLUE}--- 8. Admin Email OTP (GO-LIVE-ADMIN-EMAIL-001) ---${NC}"
+
+# Test admin email OTP send endpoint exists
+test_endpoint \
+  "Admin email OTP send endpoint exists" \
+  "POST" \
+  "/api/v1/admin/auth/send-email-otp" \
+  "400" \
+  "-H 'Content-Type: application/json'" \
+  '{}'
+
+# Test with invalid/unauthorized email (should return 403)
+test_endpoint \
+  "Admin email OTP rejects unauthorized email" \
+  "POST" \
+  "/api/v1/admin/auth/send-email-otp" \
+  "403" \
+  "-H 'Content-Type: application/json'" \
+  '{"email":"unauthorized@example.com"}'
+
+# Test admin email OTP verify endpoint exists
+test_endpoint \
+  "Admin email OTP verify endpoint exists" \
+  "POST" \
+  "/api/v1/admin/auth/verify-email-otp" \
+  "400" \
+  "-H 'Content-Type: application/json'" \
+  '{}'
+
+# Test admin auth check endpoint
+test_endpoint \
+  "Admin auth check endpoint exists" \
+  "GET" \
+  "/api/v1/admin/auth/check" \
+  "401" \
+  "-H 'Content-Type: application/json'"
+
+echo ""
+
+# =============================================================================
+# 9. RETAILER/SUPPLIER LOOKUP APIs (GO-LIVE-UI-REG-004)
+# =============================================================================
+echo -e "${BLUE}--- 9. Registration Lookup APIs (GO-LIVE-UI-REG-004) ---${NC}"
+
+# Test retailer lookup endpoint
+test_endpoint \
+  "Retailer registration lookup endpoint exists" \
+  "GET" \
+  "/api/v1/retailer-admin/registration/lookup?phone=%2B919999999999" \
+  "200" \
+  "-H 'Content-Type: application/json'"
+
+# Test supplier lookup endpoint
+test_endpoint \
+  "Supplier registration lookup endpoint exists" \
+  "GET" \
+  "/api/v1/supplier/registration/lookup?phone=%2B919999999999" \
+  "200" \
+  "-H 'Content-Type: application/json'"
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 echo "=============================================="
@@ -322,6 +434,8 @@ if [ $FAILED -eq 0 ]; then
   echo "  [x] REG-AUTH-204: LIMITED MODE endpoints"
   echo "  [x] REG-AUTH-401: POS App ui-status integration"
   echo "  [x] REG-AUTH-102: Document upload endpoint"
+  echo "  [x] GO-LIVE-ADMIN-EMAIL-001: Admin Email OTP endpoints"
+  echo "  [x] GO-LIVE-UI-REG-004: Registration Lookup APIs"
   exit 0
 else
   echo -e "${RED}SOME REG-AUTH TESTS FAILED${NC}"

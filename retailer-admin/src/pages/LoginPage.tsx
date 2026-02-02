@@ -4,7 +4,8 @@ import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 
-// GO-LIVE-RET-AUTH-001: Phone OTP first, store selection after OTP
+// GO-LIVE-UI-REG-002: Registration-First Login (Lookup-First, NOT OTP-First)
+// User must have a registration before they can request OTP
 
 type Step = 'phone' | 'otp' | 'stores';
 
@@ -26,6 +27,18 @@ interface OtpLoginResponse {
   stores: Store[];
 }
 
+// GO-LIVE-UI-REG-004: Lookup response from backend
+interface LookupResponse {
+  exists: boolean;
+  type?: string;
+  application_id?: string;
+  status?: string;
+  nextStep?: string;
+  businessName?: string;
+  message?: string;
+  action?: string;
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -40,9 +53,12 @@ export default function LoginPage() {
   const [authData, setAuthData] = useState<{ token: string; refreshToken: string; user: OtpLoginResponse['user'] } | null>(null);
   const recaptchaInitialized = useRef(false);
 
-  // Setup reCAPTCHA on mount
+  // GO-LIVE-UI-REG-002: Track if lookup was successful (registration exists)
+  const [lookupComplete, setLookupComplete] = useState(false);
+
+  // Setup reCAPTCHA only when ready to send OTP (after successful lookup)
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
+    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && lookupComplete) {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -55,7 +71,7 @@ export default function LoginPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step]);
+  }, [step, lookupComplete]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -65,7 +81,8 @@ export default function LoginPage() {
     }
   }, [resendCooldown]);
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  // GO-LIVE-UI-REG-002: Lookup registration by phone FIRST
+  const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -76,6 +93,76 @@ export default function LoginPage() {
       return;
     }
 
+    setIsLoading(true);
+
+    try {
+      // Normalize phone for lookup
+      let normalizedPhone = cleanedPhone;
+      if (!normalizedPhone.startsWith('+')) {
+        normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+      }
+
+      // GO-LIVE-UI-REG-004: Call lookup endpoint
+      const response = await fetch(
+        `${API_GATEWAY_BASE}/api/v1/retailer-admin/registration/lookup?phone=${encodeURIComponent(normalizedPhone)}`,
+        { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+      );
+
+      const data = await response.json() as LookupResponse;
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to check registration status');
+      }
+
+      // Handle lookup result
+      if (!data.exists) {
+        // No registration found - redirect to register
+        setError('No registration found for this phone number.');
+        setTimeout(() => {
+          navigate('/retailer/register', {
+            state: {
+              message: 'No registration found for this phone number. Please register first.',
+              phone: normalizedPhone
+            }
+          });
+        }, 1500);
+        return;
+      }
+
+      // Registration exists - check if login is allowed
+      if (data.nextStep === 'LOGIN_ALLOWED') {
+        // Can proceed with OTP
+        setLookupComplete(true);
+        // reCAPTCHA will be setup by useEffect
+      } else if (data.nextStep === 'PENDING_APPROVAL') {
+        setError('Your application is under review. You will be able to login once approved.');
+      } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
+        setError('Please complete your registration before logging in.');
+        setTimeout(() => {
+          navigate('/retailer/register', {
+            state: {
+              message: 'Please complete your registration.',
+              applicationId: data.application_id
+            }
+          });
+        }, 1500);
+      } else if (data.nextStep === 'CONTACT_SUPPORT') {
+        setError('Your application was not approved. Please contact support for assistance.');
+      } else {
+        // Unknown status - show message
+        setError(data.message || 'Unable to proceed. Please contact support.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to check registration. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Send OTP (only after successful lookup)
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
     setIsLoading(true);
 
     try {
@@ -102,7 +189,7 @@ export default function LoginPage() {
       // Verify OTP with Firebase and get ID token
       const idToken = await verifyOtp(otp);
 
-      // GO-LIVE-RET-AUTH-001: Exchange Firebase token with backend for session JWT + stores list
+      // Exchange Firebase token with backend for session JWT + stores list
       const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/firebase-otp-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -173,15 +260,30 @@ export default function LoginPage() {
     }
   };
 
+  // Reset to initial state
+  const handleChangePhone = () => {
+    setStep('phone');
+    setOtp('');
+    setError('');
+    setLookupComplete(false);
+    recaptchaInitialized.current = false;
+  };
+
   return (
     <div className="login-page">
       <div className="login-card">
         <h1 className="login-title">SuperMandi</h1>
         <p className="login-subtitle">Retailer Portal</p>
 
-        {step === 'phone' && (
+        {step === 'phone' && !lookupComplete && (
           <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-            Enter your phone number to receive a verification code
+            Enter your registered phone number to continue
+          </p>
+        )}
+
+        {step === 'phone' && lookupComplete && (
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+            Click "Send OTP" to receive a verification code at {phone}
           </p>
         )}
 
@@ -192,7 +294,7 @@ export default function LoginPage() {
         )}
 
         {/* Firebase warning */}
-        {!isFirebaseReady() && step === 'phone' && (
+        {!isFirebaseReady() && step === 'phone' && lookupComplete && (
           <div style={{
             background: '#fef2f2',
             border: '1px solid #fecaca',
@@ -223,9 +325,9 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* Step 1: Phone Number */}
-        {step === 'phone' && (
-          <form onSubmit={handleSendOtp}>
+        {/* Step 1: Phone Number - Lookup First */}
+        {step === 'phone' && !lookupComplete && (
+          <form onSubmit={handleContinue}>
             <div className="form-group">
               <label className="form-label">Phone Number</label>
               <input
@@ -240,13 +342,12 @@ export default function LoginPage() {
             </div>
 
             <button
-              id="send-otp-button"
               type="submit"
               className="btn btn-primary"
               style={{ width: '100%', marginBottom: '1rem' }}
-              disabled={isLoading || !isFirebaseReady()}
+              disabled={isLoading}
             >
-              {isLoading ? 'Sending OTP...' : 'Send OTP'}
+              {isLoading ? 'Checking...' : 'Continue'}
             </button>
 
             <div style={{
@@ -260,6 +361,51 @@ export default function LoginPage() {
                   Register
                 </Link>
               </p>
+            </div>
+          </form>
+        )}
+
+        {/* Step 1b: Phone Number - Send OTP (after successful lookup) */}
+        {step === 'phone' && lookupComplete && (
+          <form onSubmit={handleSendOtp}>
+            <div className="form-group">
+              <label className="form-label">Phone Number</label>
+              <input
+                type="tel"
+                className="form-input"
+                placeholder="+91 9876543210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                disabled={true}
+              />
+            </div>
+
+            <button
+              id="send-otp-button"
+              type="submit"
+              className="btn btn-primary"
+              style={{ width: '100%', marginBottom: '1rem' }}
+              disabled={isLoading || !isFirebaseReady()}
+            >
+              {isLoading ? 'Sending OTP...' : 'Send OTP'}
+            </button>
+
+            <div style={{ textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={handleChangePhone}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b7280',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+                disabled={isLoading}
+              >
+                Use different phone number
+              </button>
             </div>
           </form>
         )}
@@ -294,12 +440,7 @@ export default function LoginPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <button
                 type="button"
-                onClick={() => {
-                  setStep('phone');
-                  setOtp('');
-                  setError('');
-                  recaptchaInitialized.current = false;
-                }}
+                onClick={handleChangePhone}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -361,6 +502,7 @@ export default function LoginPage() {
                     setOtp('');
                     setPhone('');
                     setAuthData(null);
+                    setLookupComplete(false);
                   }}
                   className="btn btn-secondary"
                   style={{ width: '100%' }}

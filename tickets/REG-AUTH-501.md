@@ -161,7 +161,41 @@ curl http://34.14.220.171:3000/api/v1/pos/ui-status \
 # Expected: "ACTIVE" or status value
 ```
 
-### 4. Database Verification
+### 4. Document Upload Success Test
+
+```bash
+# Step 1: Create a test application
+curl -X POST http://34.14.220.171:3000/api/v1/retailer-admin/registration/create \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "+919876543299", "businessName": "Document Upload Test Store", "ownerName": "Test Owner", "gstin": "27AADCT9999Z1ZP"}'
+
+# Expected: {"success":true,"application":{"id":"<uuid>","status":"DRAFT",...}}
+
+# Step 2: Upload a document to the application
+curl -X POST http://34.14.220.171:3000/api/v1/documents/upload \
+  -F "file=@test_pan.png;type=image/png" \
+  -F "entity_type=application" \
+  -F "entity_id=<application-id-from-step-1>" \
+  -F "document_type=pan"
+
+# Expected: {"document_id":"uuid","file_url":"/api/v1/documents/uuid","status":"pending",...}
+
+# Step 3: Verify document via URL (admin token required for download)
+curl http://34.14.220.171:3000/api/v1/documents/<document-id>/metadata
+
+# Expected: {"id":"uuid","document_type":"pan","status":"pending",...}
+```
+
+**VERIFIED PROOF (2026-02-02):**
+```json
+// Create Application Response:
+{"success":true,"application":{"id":"d6e7abf2-070e-4a5e-a4e0-c350bdb16453","status":"DRAFT","createdAt":"2026-02-02T11:15:50.378Z"},"nextStep":"VERIFY_PHONE","message":"Application created. Please verify your phone number with OTP."}
+
+// Upload Document Response:
+{"document_id":"2563bc55-dff2-410a-b7cd-c35f7c7cdfa0","entity_type":"application","entity_id":"d6e7abf2-070e-4a5e-a4e0-c350bdb16453","document_type":"pan","file_name":"test_pan.png","file_size":70,"content_type":"image/png","status":"pending","created_at":"2026-02-02T11:17:34.936Z","file_url":"/api/v1/documents/2563bc55-dff2-410a-b7cd-c35f7c7cdfa0","message":"Document uploaded successfully. It will be reviewed within 1-2 business days."}
+```
+
+### 5. Database Verification
 
 ```bash
 # SSH to VM and check tables
@@ -298,11 +332,73 @@ Registration-First Authentication Flow:
 
 ---
 
+---
+
+## Document Upload Evidence Pack
+
+**Verified: 2026-02-02 @ 11:19 UTC**
+
+### Test 1: Validation Error (Missing Fields)
+```bash
+curl -s -X POST http://34.14.220.171:3000/api/v1/documents/upload -F "file=@test.png"
+```
+**Response:**
+```json
+{"error":"VALIDATION_ERROR","message":"entity_type, entity_id, and document_type are required"}
+```
+
+### Test 2: Successful Upload (PAN Document)
+```bash
+# Create application
+curl -X POST http://34.14.220.171:3000/api/v1/retailer-admin/registration/create \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"+919876599888","businessName":"Final Doc Proof Store","ownerName":"Proof Owner","gstin":"27AADCT8888Z1ZP"}'
+```
+**Response:**
+```json
+{"success":true,"application":{"id":"5e841974-54d9-49cc-86b9-52fc427d7570","status":"DRAFT","createdAt":"2026-02-02T11:19:14.307Z"},"nextStep":"VERIFY_PHONE","message":"Application created. Please verify your phone number with OTP."}
+```
+
+```bash
+# Upload PAN document
+curl -X POST http://34.14.220.171:3000/api/v1/documents/upload \
+  -F "file=@proof_pan.png;type=image/png" \
+  -F "entity_type=application" \
+  -F "entity_id=5e841974-54d9-49cc-86b9-52fc427d7570" \
+  -F "document_type=pan"
+```
+**Response:**
+```json
+{"document_id":"1cda2d5e-cd58-45fb-b03d-73e99572fea0","entity_type":"application","entity_id":"5e841974-54d9-49cc-86b9-52fc427d7570","document_type":"pan","file_name":"proof_pan.png","file_size":70,"content_type":"image/png","status":"pending","created_at":"2026-02-02T11:19:22.075Z","file_url":"/api/v1/documents/1cda2d5e-cd58-45fb-b03d-73e99572fea0","message":"Document uploaded successfully. It will be reviewed within 1-2 business days."}
+```
+
+### Test 3: Successful Upload (GSTIN Certificate)
+```bash
+curl -X POST http://34.14.220.171:3000/api/v1/documents/upload \
+  -F "file=@gstin_cert.png;type=image/png" \
+  -F "entity_type=application" \
+  -F "entity_id=5e841974-54d9-49cc-86b9-52fc427d7570" \
+  -F "document_type=gstin_certificate"
+```
+**Response:**
+```json
+{"document_id":"70df3184-c915-496e-a988-ee496ededbe5","entity_type":"application","entity_id":"5e841974-54d9-49cc-86b9-52fc427d7570","document_type":"gstin_certificate","file_name":"proof_pan.png","file_size":70,"content_type":"image/png","status":"pending","created_at":"2026-02-02T11:19:38.323Z","file_url":"/api/v1/documents/70df3184-c915-496e-a988-ee496ededbe5","message":"Document uploaded successfully. It will be reviewed within 1-2 business days."}
+```
+
+### Document URLs (Accessible with Admin Token)
+| Document Type | Document ID | URL |
+|---------------|-------------|-----|
+| PAN | `1cda2d5e-cd58-45fb-b03d-73e99572fea0` | http://34.14.220.171:3000/api/v1/documents/1cda2d5e-cd58-45fb-b03d-73e99572fea0 |
+| GSTIN Certificate | `70df3184-c915-496e-a988-ee496ededbe5` | http://34.14.220.171:3000/api/v1/documents/70df3184-c915-496e-a988-ee496ededbe5 |
+
+---
+
 ## Change Log
 
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-02-02 | 1.0.0 | Initial deployment verification |
+| 2026-02-02 | 1.0.1 | Added document upload success proof evidence pack |
 
 ---
 

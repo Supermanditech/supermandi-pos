@@ -126,6 +126,148 @@ function isValidUpiVpa(vpa: string): boolean {
 // =============================================================================
 
 /**
+ * GET /api/v1/supplier/registration/lookup
+ * GO-LIVE-UI-REG-004: Lookup registration by phone number
+ *
+ * This endpoint is used by the login page to check if a phone number
+ * has a registration before allowing OTP login.
+ *
+ * Query params:
+ * - phone: Phone number to lookup (required)
+ *
+ * Returns:
+ * - exists: true/false
+ * - application_id: (if exists)
+ * - status: Application status
+ * - nextStep: What the user should do next
+ */
+router.get("/lookup", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone } = req.query as { phone?: string };
+
+    if (!phone) {
+      res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "Phone number is required" }
+      });
+      return;
+    }
+
+    const phoneNormalized = normalizePhoneNumber(phone);
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // First check if phone has an approved supplier (can login directly)
+    const supplierResult = await pool.query(
+      `SELECT id, business_name, verification_status
+       FROM supplier.suppliers
+       WHERE phone = $1 AND verification_status IN ('verified', 'active')
+       LIMIT 1`,
+      [phoneNormalized]
+    );
+
+    if (supplierResult.rows.length > 0) {
+      // Phone has an approved supplier - can login directly
+      const supplier = supplierResult.rows[0];
+      res.json({
+        exists: true,
+        type: 'supplier',
+        status: 'ACTIVE',
+        nextStep: 'LOGIN_ALLOWED',
+        businessName: supplier.business_name,
+        message: 'Account found. You can proceed with OTP login.',
+      });
+      return;
+    }
+
+    // Check for existing application
+    const appResult = await pool.query(
+      `SELECT id, status, firebase_uid IS NOT NULL as phone_verified, business_name
+       FROM auth.applications
+       WHERE phone = $1 AND entity_type = 'supplier'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [phoneNormalized]
+    );
+
+    if (appResult.rows.length === 0) {
+      // No registration found
+      res.json({
+        exists: false,
+        action: 'REGISTER_REQUIRED',
+        message: 'No registration found for this phone number. Please register first.',
+      });
+      return;
+    }
+
+    const application = appResult.rows[0];
+
+    // Determine next step based on status
+    let nextStep: string;
+    switch (application.status) {
+      case 'ACTIVE':
+        nextStep = 'LOGIN_ALLOWED';
+        break;
+      case 'EXPIRED':
+        nextStep = 'REGISTER_REQUIRED';
+        break;
+      case 'KYC_SUBMITTED':
+      case 'UNDER_REVIEW':
+      case 'PAYMENTS_SUBMITTED':
+        nextStep = 'PENDING_APPROVAL';
+        break;
+      case 'NEEDS_FIX':
+        nextStep = 'FIX_REQUIRED';
+        break;
+      case 'REJECTED':
+        nextStep = 'CONTACT_SUPPORT';
+        break;
+      default: // DRAFT
+        nextStep = application.phone_verified ? 'UPLOAD_DOCUMENTS' : 'VERIFY_PHONE';
+    }
+
+    // For expired applications, tell user to register again
+    if (application.status === 'EXPIRED') {
+      res.json({
+        exists: false,
+        action: 'REGISTER_REQUIRED',
+        message: 'Your previous application has expired. Please register again.',
+      });
+      return;
+    }
+
+    // For active applications, allow login
+    if (application.status === 'ACTIVE') {
+      res.json({
+        exists: true,
+        application_id: application.id,
+        status: application.status,
+        nextStep: 'LOGIN_ALLOWED',
+        message: 'Your registration is approved. You can proceed with OTP login.',
+      });
+      return;
+    }
+
+    // For pending/in-progress applications
+    res.json({
+      exists: true,
+      application_id: application.id,
+      status: application.status,
+      nextStep,
+      businessName: application.business_name,
+      message: nextStep === 'PENDING_APPROVAL'
+        ? 'Your application is under review. OTP login is not yet available.'
+        : 'Please complete your registration before logging in.',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * POST /api/v1/supplier/registration/check-gstin
  * REG-AUTH-202: Check if GSTIN is already registered
  *

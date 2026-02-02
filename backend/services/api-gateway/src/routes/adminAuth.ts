@@ -218,3 +218,63 @@ adminAuthRouter.get('/status', (_req: Request, res: Response): void => {
     activeSessions: getActiveSessionCount(),
   });
 });
+
+// =============================================================================
+// GO-LIVE-ADMIN-EMAIL-001: Email OTP Routes (Proxy to Backend)
+// These routes proxy email OTP login requests to the main backend service
+// where the actual email sending and OTP verification logic resides.
+// =============================================================================
+
+import { createProxyMiddleware } from 'http-proxy-middleware';
+
+const mainBackendUrl = process.env.ADMIN_SERVICE_URL || process.env.BACKEND_SERVICE_URL || 'http://localhost:3010';
+
+// Proxy middleware for email OTP routes
+const emailOtpProxy = createProxyMiddleware({
+  target: mainBackendUrl,
+  changeOrigin: true,
+  // Don't strip the path - forward as-is to /api/v1/admin/auth/*
+  pathRewrite: undefined,
+  onProxyReq: (proxyReq, req: Request) => {
+    // Forward body for POST requests
+    if (req.body && Object.keys(req.body).length > 0) {
+      const bodyData = JSON.stringify(req.body);
+      proxyReq.setHeader('Content-Type', 'application/json');
+      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+      proxyReq.write(bodyData);
+    }
+    console.log(`[AdminAuth] Proxying email OTP request: ${req.method} ${req.path} -> ${mainBackendUrl}`);
+  },
+  onError: (err, _req, res) => {
+    console.error('[AdminAuth] Email OTP proxy error:', err.message);
+    if (!res.headersSent) {
+      res.status(503).json({
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Email service temporarily unavailable. Please try again.',
+        },
+      });
+    }
+  },
+});
+
+/**
+ * POST /api/v1/admin/auth/send-email-otp
+ * GO-LIVE-ADMIN-EMAIL-001: Request OTP for admin email login
+ * Proxies to backend email OTP service
+ */
+adminAuthRouter.post('/send-email-otp', emailOtpProxy);
+
+/**
+ * POST /api/v1/admin/auth/verify-email-otp
+ * GO-LIVE-ADMIN-EMAIL-001: Verify OTP and login
+ * Proxies to backend email OTP service
+ */
+adminAuthRouter.post('/verify-email-otp', emailOtpProxy);
+
+/**
+ * GET /api/v1/admin/auth/check
+ * GO-LIVE-ADMIN-EMAIL-001: Check if admin token is valid
+ * Proxies to backend auth check
+ */
+adminAuthRouter.get('/check', emailOtpProxy);
