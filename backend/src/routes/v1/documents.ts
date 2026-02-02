@@ -46,6 +46,7 @@ const VALID_STORE_DOC_TYPES = [
   'aadhaar',
   'pan',
   'gstin',
+  'gstin_certificate',
   'fssai',
   'shop_license',
   'owner_photo',
@@ -59,6 +60,23 @@ const VALID_SUPPLIER_DOC_TYPES = [
   'gstin_certificate',
   'address_proof',
   'cancelled_cheque',
+  'business_license',
+];
+
+// REG-AUTH-102: Document types for registration applications
+const VALID_APPLICATION_DOC_TYPES = [
+  // Retailer application docs
+  'aadhaar',
+  'pan',
+  'gstin_certificate',
+  'fssai',
+  'shop_license',
+  'owner_photo',
+  'store_photo',
+  'cancelled_cheque',
+  'address_proof',
+  // Supplier application docs
+  'pan_card',
   'business_license',
 ];
 
@@ -115,10 +133,12 @@ const upload = multer({
 
 /**
  * Get document types for an entity type
+ * REG-AUTH-102: Added 'application' support for registration documents
  */
 function getValidDocTypes(entityType: string): string[] {
   if (entityType === 'store') return VALID_STORE_DOC_TYPES;
   if (entityType === 'supplier') return VALID_SUPPLIER_DOC_TYPES;
+  if (entityType === 'application') return VALID_APPLICATION_DOC_TYPES;
   return [];
 }
 
@@ -164,10 +184,11 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
     }
 
     // Validate entity type
-    if (!['store', 'supplier'].includes(entity_type)) {
+    // REG-AUTH-102: Added 'application' for registration documents
+    if (!['store', 'supplier', 'application'].includes(entity_type)) {
       res.status(400).json({
         error: 'INVALID_ENTITY_TYPE',
-        message: 'entity_type must be "store" or "supplier"',
+        message: 'entity_type must be "store", "supplier", or "application"',
       });
       return;
     }
@@ -198,6 +219,7 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
     }
 
     // Verify entity exists
+    // REG-AUTH-102: Added application check for registration documents
     let entityExists = false;
     if (entity_type === 'store') {
       const storeResult = await pool.query(
@@ -211,6 +233,12 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
         [entity_id]
       );
       entityExists = supplierResult.rows.length > 0;
+    } else if (entity_type === 'application') {
+      const applicationResult = await pool.query(
+        'SELECT id FROM auth.applications WHERE id = $1::uuid AND status NOT IN ($2, $3)',
+        [entity_id, 'EXPIRED', 'ACTIVE']
+      );
+      entityExists = applicationResult.rows.length > 0;
     }
 
     if (!entityExists) {
@@ -509,10 +537,11 @@ router.get("/entity/:entityType/:entityId", async (req: Request, res: Response, 
   try {
     const { entityType, entityId } = req.params;
 
-    if (!['store', 'supplier'].includes(entityType)) {
+    // REG-AUTH-102: Added 'application' for registration documents
+    if (!['store', 'supplier', 'application'].includes(entityType)) {
       res.status(400).json({
         error: 'INVALID_ENTITY_TYPE',
-        message: 'entityType must be "store" or "supplier"',
+        message: 'entityType must be "store", "supplier", or "application"',
       });
       return;
     }

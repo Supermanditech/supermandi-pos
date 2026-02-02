@@ -208,6 +208,7 @@ docker compose -f docker-compose.prod.yml ps
 |---|--------|-------|----------|
 | 0 | [REG-AUTH-000](./REG-AUTH-000.md) | **Registration-First Authentication (SPEC LOCK)** | AUTH & IDENTITY (SUPERSEDES AUTH-001) |
 | 0.1 | [REG-AUTH-101](./REG-AUTH-101.md) | **Database Foundation (applications table)** | AUTH & IDENTITY (DATABASE) |
+| 0.2 | [REG-AUTH-102](./REG-AUTH-102.md) | **Document Storage Backend** | AUTH & IDENTITY (KYC) |
 | 1 | [AUTH-001](#auth-001--otp-first-authentication-retailer--supplier) | ~~OTP-First Authentication~~ (SUPERSEDED by REG-AUTH-000) | AUTH & IDENTITY |
 | 2 | [CORE-001](#core-001--canonical-store-state-machine) | Canonical Store State Machine | DATA MODEL |
 | 3 | [CORE-002](#core-002--supplier-state-machine) | Supplier State Machine | DATA MODEL |
