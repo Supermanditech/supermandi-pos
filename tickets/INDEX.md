@@ -206,7 +206,8 @@ docker compose -f docker-compose.prod.yml ps
 
 | # | Ticket | Title | Category |
 |---|--------|-------|----------|
-| 1 | [AUTH-001](#auth-001--otp-first-authentication-retailer--supplier) | OTP-First Authentication | AUTH & IDENTITY |
+| 0 | [REG-AUTH-000](./REG-AUTH-000.md) | **Registration-First Authentication (SPEC LOCK)** | AUTH & IDENTITY (SUPERSEDES AUTH-001) |
+| 1 | [AUTH-001](#auth-001--otp-first-authentication-retailer--supplier) | ~~OTP-First Authentication~~ (SUPERSEDED by REG-AUTH-000) | AUTH & IDENTITY |
 | 2 | [CORE-001](#core-001--canonical-store-state-machine) | Canonical Store State Machine | DATA MODEL |
 | 3 | [CORE-002](#core-002--supplier-state-machine) | Supplier State Machine | DATA MODEL |
 | 4 | [POS-DEV-001](#pos-dev-001--device-generated-activation-code) | Device-Generated Activation Code | POS DEVICE |
@@ -248,9 +249,17 @@ docker compose -f docker-compose.prod.yml ps
 
 # AUTH-001 — OTP-First Authentication (Retailer + Supplier)
 
+> **⚠️ SUPERSEDED BY [REG-AUTH-000](./REG-AUTH-000.md)**
+>
+> This ticket has been superseded by REG-AUTH-000 (Registration-First Authentication).
+> The core change: **OTP login is only permitted after registration with a valid application_id.**
+> Without registration, OTP verify returns 403: "Registration required before login."
+
 **Category:** AUTH & IDENTITY (FOUNDATION)
 
 **Scope:** Backend + POS + Retailer Web + Supplier Portal
+
+**Status:** SUPERSEDED
 
 ---
 
