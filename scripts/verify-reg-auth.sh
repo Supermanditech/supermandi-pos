@@ -162,11 +162,11 @@ test_response_contains \
   "-H 'Content-Type: application/json'" \
   '{"phone":""}'
 
-# Test application status lookup
+# Test application lookup (uses /lookup endpoint, not /status)
 test_endpoint \
-  "Retailer application status endpoint" \
+  "Retailer application lookup endpoint" \
   "GET" \
-  "/api/v1/retailer-admin/registration/status?phone=invalid" \
+  "/api/v1/retailer-admin/registration/lookup?phone=%2B919999999999" \
   "200" \
   "-H 'Content-Type: application/json'"
 
