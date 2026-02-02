@@ -1,15 +1,23 @@
 // GO-LIVE-099: Service Worker for SuperMandi SuperAdmin
 // Provides offline caching for static assets and API responses
 
-// GO-LIVE-UI-001: Updated cache version to force old cache purge
-const CACHE_VERSION = 'superadmin-v2-20260202';
+// GO-LIVE-SOP: Updated cache version to force old cache purge on every deploy
+// IMPORTANT: Never cache HTML/index files - they must always be fresh
+const CACHE_VERSION = 'superadmin-v3-20260203';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 
-// Static assets to cache on install
+// GO-LIVE-SOP: REMOVED HTML from static assets - only cache hashed JS/CSS
+// Static assets to cache on install (NO HTML FILES)
 const STATIC_ASSETS = [
-  '/admin/',
-  '/admin/index.html',
+  // Do NOT cache index.html or / routes - they must always fetch fresh
+];
+
+// GO-LIVE-SOP: Patterns that should NEVER be cached (always network-only)
+const NEVER_CACHE_PATTERNS = [
+  /\/admin\/?$/,           // Main admin route
+  /\/admin\/index\.html$/, // Admin index HTML
+  /\.html$/,               // Any HTML file
 ];
 
 // API endpoints to cache (with network-first strategy)
@@ -20,12 +28,14 @@ const CACHEABLE_API_PATTERNS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
+  console.log('[SW] Installing service worker v3...');
 
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
-        console.log('[SW] Caching static assets');
+        console.log('[SW] Caching static assets (excluding HTML)');
+        // GO-LIVE-SOP: Empty list - we don't pre-cache anything now
+        // Hashed assets will be cached on first request
         return cache.addAll(STATIC_ASSETS).catch((err) => {
           console.warn('[SW] Failed to cache some static assets:', err);
         });
@@ -39,7 +49,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
+  console.log('[SW] Activating service worker v3...');
 
   event.waitUntil(
     caches.keys()
@@ -75,6 +85,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // GO-LIVE-SOP: NEVER cache HTML files or root paths - always fetch fresh
+  const shouldNeverCache = NEVER_CACHE_PATTERNS.some((pattern) => pattern.test(url.pathname));
+  if (shouldNeverCache) {
+    console.log('[SW] Network-only for:', url.pathname);
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // Check if this is an API request
   const isApiRequest = url.pathname.includes('/api/');
 
@@ -82,8 +100,14 @@ self.addEventListener('fetch', (event) => {
     // Network-first strategy for API requests
     event.respondWith(networkFirstStrategy(request));
   } else {
-    // Cache-first strategy for static assets
-    event.respondWith(cacheFirstStrategy(request));
+    // GO-LIVE-SOP: Cache-first ONLY for hashed static assets (JS/CSS with hash in filename)
+    const isHashedAsset = /\.[a-f0-9]{8,}\.(js|css)$/.test(url.pathname);
+    if (isHashedAsset) {
+      event.respondWith(cacheFirstStrategy(request));
+    } else {
+      // For non-hashed assets (images, fonts, etc.), use network-first
+      event.respondWith(networkFirstStrategy(request));
+    }
   }
 });
 
@@ -92,8 +116,7 @@ async function cacheFirstStrategy(request) {
   const cachedResponse = await caches.match(request);
 
   if (cachedResponse) {
-    // Return cached response and update cache in background
-    updateCacheInBackground(request);
+    // Return cached response (no background update needed for hashed assets)
     return cachedResponse;
   }
 
@@ -109,8 +132,8 @@ async function cacheFirstStrategy(request) {
     return networkResponse;
   } catch (error) {
     console.error('[SW] Network request failed:', error);
-    // Return offline page if available
-    return caches.match('/admin/');
+    // GO-LIVE-SOP: Don't return cached HTML - just fail
+    return new Response('Network error', { status: 503 });
   }
 }
 
@@ -158,21 +181,6 @@ async function networkFirstStrategy(request) {
       }
     );
   }
-}
-
-// Update cache in background without blocking
-function updateCacheInBackground(request) {
-  fetch(request)
-    .then((response) => {
-      if (response.ok) {
-        caches.open(STATIC_CACHE).then((cache) => {
-          cache.put(request, response);
-        });
-      }
-    })
-    .catch(() => {
-      // Ignore background update failures
-    });
 }
 
 // Listen for messages from the main thread

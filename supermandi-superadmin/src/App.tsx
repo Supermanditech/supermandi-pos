@@ -57,6 +57,7 @@ import {
 } from "./api/documents";
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
+import { BuildStamp } from "./components/BuildStamp";
 import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
@@ -504,6 +505,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
           color: "#64748b"
         }}>
           &copy; 2024 SuperMandi. All rights reserved.
+          <BuildStamp />
         </div>
       </footer>
     </div>
@@ -4475,6 +4477,7 @@ export default function App() {
 
       <footer className="footer muted">
         Tip: this dashboard is static-deployable. Set <span className="mono">VITE_API_BASE_URL</span> in hosting env.
+        <BuildStamp />
       </footer>
     </div>
   );

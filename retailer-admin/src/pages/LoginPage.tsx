@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
+import { BuildStamp } from '../components/BuildStamp';
 
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
@@ -740,6 +741,7 @@ export default function LoginPage() {
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
           &copy; 2024 SuperMandi. All rights reserved.
+          <BuildStamp />
         </div>
       </footer>
     </div>

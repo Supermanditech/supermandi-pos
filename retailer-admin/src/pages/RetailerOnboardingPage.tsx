@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_GATEWAY_BASE } from '../lib/api';
 import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
+import { BuildStamp } from '../components/BuildStamp';
 
 // UI-SPEC-002: Stripe-level calm infrastructure design for registration
 // Layout: Header (64px) + Wide container (1024px) + Footer - solid #F7F9FC background
@@ -1250,6 +1251,7 @@ export default function RetailerOnboardingPage() {
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
           &copy; 2024 SuperMandi. All rights reserved.
+          <BuildStamp />
         </div>
       </footer>
 

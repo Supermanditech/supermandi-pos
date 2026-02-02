@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { BuildStamp } from '@/components/BuildStamp';
 
 // UI-SPEC-004: Stripe-level calm infrastructure design for auth layout
 export default function AuthLayout({
@@ -39,6 +40,7 @@ export default function AuthLayout({
       <footer className="bg-white border-t border-slate-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
           &copy; 2024 SuperMandi. All rights reserved.
+          <BuildStamp />
         </div>
       </footer>
     </div>

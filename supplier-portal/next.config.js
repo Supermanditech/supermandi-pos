@@ -1,4 +1,19 @@
 /** @type {import('next').NextConfig} */
+
+// GO-LIVE-SOP: Get build info for cache-proof deployment verification
+function getBuildInfo() {
+  try {
+    const { execSync } = require('child_process');
+    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }).replace(',', '');
+    return { sha, time };
+  } catch {
+    return { sha: 'unknown', time: new Date().toISOString() };
+  }
+}
+
+const buildInfo = getBuildInfo();
+
 const nextConfig = {
   // SM-023: Supplier Portal config
   // Production deployment with /supplier base path
@@ -9,6 +24,9 @@ const nextConfig = {
   // GL-WF-009: Removed localhost fallback - API URL must be explicitly configured
   env: {
     API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || '',
+    // GO-LIVE-SOP: Inject build info at compile time
+    NEXT_PUBLIC_BUILD_SHA: buildInfo.sha,
+    NEXT_PUBLIC_BUILD_TIME: buildInfo.time,
   },
   // Allow images from any domain for product images
   images: {

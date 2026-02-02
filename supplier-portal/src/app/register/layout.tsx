@@ -1,5 +1,6 @@
 import { Toaster } from 'react-hot-toast';
 import Link from 'next/link';
+import { BuildStamp } from '@/components/BuildStamp';
 
 // UI-SPEC-005: Stripe-level calm infrastructure design for registration
 export default function RegisterLayout({
@@ -37,6 +38,7 @@ export default function RegisterLayout({
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
           &copy; 2024 SuperMandi. All rights reserved.
+          <BuildStamp />
         </div>
       </footer>
 
