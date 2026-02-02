@@ -1,8 +1,10 @@
 // SM-005, SM-006, SM-007: Supplier Routes Index
 // GL-WF-008, GL-WF-018, GL-WF-044: KYC and Payouts routes
+// REG-AUTH-202: Registration-First Authentication
 // Combines all supplier-related routes
 
 import { Router } from "express";
+import { supplierRegistrationRouter } from "./registration";  // REG-AUTH-202: Registration API
 import { supplierAuthRouter } from "./auth";
 import { supplierProfileRouter } from "./profile";
 import { supplierProductsRouter } from "./products";
@@ -12,6 +14,10 @@ import { supplierKycRouter } from "./kyc";
 import { supplierPayoutsRouter } from "./payouts";
 
 export const supplierRouter = Router();
+
+// REG-AUTH-202: Registration routes (public, no auth required)
+// Must be FIRST, before any other routes that might require auth
+supplierRouter.use("/registration", supplierRegistrationRouter);
 
 // Mount all supplier routes
 supplierRouter.use("/", supplierAuthRouter);
