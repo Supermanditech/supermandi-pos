@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './lib/AuthContext';
 import ProtectedLayout from './components/ProtectedLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+// REG-AUTH-301: Registration-First Onboarding for New Retailers
+import RetailerOnboardingPage from './pages/RetailerOnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import ImportPage from './pages/ImportPage';
@@ -140,6 +142,8 @@ function AppRoutes() {
         {/* Auth pages - accessible without authentication */}
         <Route path="/retailer/login" element={<LoginPage />} />
         <Route path="/retailer/register" element={<RegisterPage />} />
+        {/* REG-AUTH-301: Registration-First Onboarding for New Retailers */}
+        <Route path="/retailer/onboard" element={<RetailerOnboardingPage />} />
 
         {/* Legacy routes - redirect to new paths */}
         <Route path="/s/:storeCode/login" element={<Navigate to="/retailer/login" replace />} />

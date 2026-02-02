@@ -10,6 +10,9 @@ interface User {
   id: string;
   phone: string;
   role: string;
+  // REG-AUTH-301: Application status fields for LIMITED MODE
+  applicationId?: string;
+  applicationStatus?: string;
 }
 
 interface Store {
@@ -29,6 +32,9 @@ interface AuthContextType {
   // GL-WF-028: Session expiry warning state
   showSessionWarning: boolean;
   dismissSessionWarning: () => void;
+  // REG-AUTH-301: LIMITED MODE status
+  isLimitedMode: boolean;
+  applicationStatus: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -417,6 +423,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [accessToken, logout]);
 
+  // REG-AUTH-301: Compute LIMITED MODE status
+  // User is in limited mode if they have an application status that is NOT 'ACTIVE'
+  const applicationStatus = user?.applicationStatus || null;
+  const isLimitedMode = !!applicationStatus && applicationStatus.toUpperCase() !== 'ACTIVE';
+
   return (
     <AuthContext.Provider
       value={{
@@ -430,6 +441,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // GL-WF-028: Session warning
         showSessionWarning,
         dismissSessionWarning,
+        // REG-AUTH-301: LIMITED MODE
+        isLimitedMode,
+        applicationStatus,
       }}
     >
       {children}

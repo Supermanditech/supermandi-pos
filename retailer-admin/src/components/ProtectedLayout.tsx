@@ -4,13 +4,15 @@ import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 // FLOW-001: Device Required Banner
 import DeviceRequiredBanner from './DeviceRequiredBanner';
+// REG-AUTH-301: LIMITED MODE Banner
+import LimitedModeBanner from './LimitedModeBanner';
 
 // A1: RouterDebug banner - shows routing info for debugging "no screens" issues
 const API_BASE_URL = '/api/v1/retailer-admin';
 
 export default function ProtectedLayout() {
   const { storeCode } = useParams<{ storeCode: string }>();
-  const { logout, store, user, showSessionWarning, dismissSessionWarning } = useAuth();
+  const { logout, store, user, showSessionWarning, dismissSessionWarning, isLimitedMode, applicationStatus } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   // GL-WF-053: Logout confirmation state
@@ -269,6 +271,13 @@ export default function ProtectedLayout() {
 
         {/* FLOW-001: Device Required Banner - shows when no device bound */}
         <DeviceRequiredBanner />
+
+        {/* REG-AUTH-301: LIMITED MODE Banner - shows when user status is not ACTIVE */}
+        {isLimitedMode && applicationStatus && (
+          <div style={{ padding: '0 2rem', paddingTop: '1rem' }}>
+            <LimitedModeBanner status={applicationStatus} storeName={store?.name} />
+          </div>
+        )}
 
         {/* Main Content */}
         <main style={{ flex: 1, overflow: 'auto' }}>
