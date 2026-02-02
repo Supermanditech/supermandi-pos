@@ -4151,6 +4151,123 @@ cp -r /var/www/supermandi-superadmin /var/www/supermandi-superadmin.bak
 
 ---
 
+## OPS-DOMAIN-001 — Domain Paths + Correct Deployment (GO-LIVE Grade)
+
+### Status: COMPLETE - 2026-02-02
+
+### Target URLs Verification
+
+| URL | Expected | Actual | Status |
+|-----|----------|--------|--------|
+| https://supermandi.tech/ | 200 (portal selector) | 200 | PASS |
+| https://supermandi.tech/retailer/login | 200 | 200 | PASS |
+| https://supermandi.tech/supplier/login/ | 200 | 200 | PASS |
+| https://supermandi.tech/admin/login | 200 | 200 | PASS |
+
+### A) Code Audit Results
+
+**A.1 Repo searches completed:**
+- `nginx.prod.conf.template` - lines 56, 67, 77, 88, 99-104 define routing for /retailer/, /admin, /supplier/, /api/, /
+- Landing page at `supermandi-landing/index.html` with portal selector links
+- Dockerfiles exist for `retailer-admin` and `supplier-portal`
+
+**A.2 VM reality check (2026-02-02):**
+```
+/var/www/supermandi-landing/index.html  - EXISTS (13KB)
+/var/www/retailer-admin/               - EXISTS with assets/
+/var/www/supplier-portal/              - EXISTS with static export
+/var/www/supermandi-superadmin/        - EXISTS with assets/
+```
+
+**A.3 Live URL probe results:**
+```
+=== ROOT https://supermandi.tech/ ===
+HTTP/2 200
+content-type: text/html
+content-length: 13149
+
+=== RETAILER https://supermandi.tech/retailer/login ===
+HTTP/2 200
+content-type: text/html
+content-length: 781
+
+=== SUPPLIER https://supermandi.tech/supplier/login/ ===
+HTTP/2 200
+content-type: text/html; charset=utf-8
+x-nextjs-cache: HIT
+
+=== ADMIN https://supermandi.tech/admin/login ===
+HTTP/2 200
+content-type: text/html
+content-length: 1190
+```
+
+### B) Domain Routing Verification
+
+| Route | Nginx Config | Serving Method | SPA Fallback |
+|-------|--------------|----------------|--------------|
+| `/` | `location = /` root `/var/www/supermandi-landing` | Static HTML | N/A |
+| `/retailer/*` | `location /retailer/` proxy to `retailer_portal` | Docker container | PASS (200 on /store/orders) |
+| `/admin/*` | `location /admin` alias `/var/www/supermandi-superadmin` | Static files | PASS (200 on /dashboard) |
+| `/supplier/*` | `location /supplier/` proxy to `supplier_portal` | Docker container | PASS (200 on /dashboard/) |
+| `/api/*` | `location /api/` proxy to `api_gateway` | Docker container | N/A |
+
+### C) Build-time ENV Contract
+
+| Portal | ENV Variable | Required Value | Status |
+|--------|--------------|----------------|--------|
+| retailer-admin | VITE_API_BASE_URL | https://supermandi.tech | Built in Dockerfile |
+| supermandi-superadmin | VITE_API_BASE_URL | https://supermandi.tech | Built in Dockerfile |
+| supplier-portal | NEXT_PUBLIC_API_BASE_URL | https://supermandi.tech | Built in Dockerfile |
+
+### D) Deployment State
+
+**Docker containers (2026-02-02):**
+```
+NAMES                          IMAGE                       STATUS
+supermandi-nginx               nginx:alpine                Up 17h
+supermandi-api-gateway         backend-api-gateway         Up 19h (healthy)
+supermandi-main-backend        backend-main-backend        Up 17h (healthy)
+retailer-admin                 retailer-admin:latest       Up 15h
+supplier-portal                supplier-portal:latest      Up 37h
+supermandi-postgres            postgres:15-alpine          Up 41h (healthy)
+supermandi-redis               redis:7-alpine              Up 18h (healthy)
+```
+
+**API Health:** `{"status":"ok"}`
+
+### E) Post-Deploy Proof
+
+**E.1 HTTP Proof (all 200):**
+- ROOT: 200 (landing page with Supplier/Retailer/Admin buttons)
+- RETAILER: 200 (SPA loads correctly)
+- SUPPLIER: 200 (Next.js SSR working)
+- ADMIN: 200 (SPA loads correctly)
+
+**E.2 SPA Fallback Test:**
+- `/retailer/store/orders` → 200 (deep link works)
+- `/admin/dashboard` → 200 (deep link works)
+- `/supplier/dashboard/` → 200 (deep link works)
+
+**E.3 Content Verification:**
+- Root page shows: "SuperMandi — Infrastructure for Global Retail" with portal selector
+- No "API_BASE_URL not configured" errors detected
+- All assets loading correctly (JS, CSS)
+
+### Pass/Fail Assessment
+
+| Criteria | Status |
+|----------|--------|
+| All four URLs return 200 | PASS |
+| Root shows landing portal selector (not redirect) | PASS |
+| All deep links work on refresh (SPA fallback) | PASS |
+| No API_BASE_URL config errors | PASS |
+| INDEX.md includes audit + deploy outputs | PASS |
+
+**VERDICT: OPS-DOMAIN-001 COMPLETE**
+
+---
+
 ## FINAL RULE
 
 **If any behavior deviates from this ticket pack, it is a BUG, not a design choice.**
