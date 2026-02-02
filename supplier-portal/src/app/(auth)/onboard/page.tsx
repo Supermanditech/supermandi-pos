@@ -355,7 +355,7 @@ export default function SupplierOnboardingPage() {
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-slate-800 mb-2">
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">
         {step === 'success' ? 'Application Submitted' : 'Register as Supplier'}
       </h2>
 
@@ -657,7 +657,7 @@ export default function SupplierOnboardingPage() {
           <div className="flex items-center justify-between">
             <button
               type="button"
-              className="text-sm text-slate-600 hover:text-slate-800"
+              className="text-sm text-slate-600 hover:text-slate-900"
               onClick={() => {
                 setStep('phone');
                 setOtp('');

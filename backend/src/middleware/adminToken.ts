@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import crypto from "crypto";
 import fs from "fs";
+import jwt from "jsonwebtoken";
 import { getPool } from "../db/client";
 
 // GO-LIVE-128: Admin type definitions for RBAC
@@ -124,20 +125,41 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
   }
 }
 
+// GO-LIVE-SESSION: JWT secret for session token verification
+const JWT_SECRET = process.env.JWT_SECRET || process.env.ADMIN_TOKEN || 'dev-jwt-secret';
+
 /**
  * GO-LIVE-128: Enhanced admin token middleware with RBAC support
  *
  * Authentication methods (in order of precedence):
- * 1. X-Admin-Api-Key header - Individual admin API key (RBAC)
- * 2. X-Admin-Token header - Legacy master token (super_admin by default)
+ * 1. Authorization: Bearer <jwt> - Session JWT from email OTP login (GO-LIVE-SESSION)
+ * 2. X-Admin-Api-Key header - Individual admin API key (RBAC)
+ * 3. X-Admin-Token header - Legacy master token (super_admin by default)
  *
  * Sets on request:
- * - adminId: UUID of the admin (or 'master-token' for legacy)
+ * - adminId: UUID of the admin (or 'jwt-session'/'master-token' for session/legacy)
  * - adminRole: The admin's role
  * - adminInfo: Full admin details (for RBAC auth only)
  */
 export async function requireAdminToken(req: Request, res: Response, next: NextFunction): Promise<void> {
-  // Method 1: Check for individual admin API key (GO-LIVE-128 RBAC)
+  // Method 1: Check for JWT Bearer token (GO-LIVE-SESSION - from email OTP login)
+  const authHeader = req.header("authorization")?.trim();
+  if (authHeader?.startsWith("Bearer ")) {
+    const bearerToken = authHeader.slice(7);
+    try {
+      const decoded = jwt.verify(bearerToken, JWT_SECRET) as { email?: string; role?: string; type?: string };
+      if (decoded.type === 'admin' || decoded.role === 'super_admin') {
+        req.adminId = decoded.email || 'jwt-session';
+        req.adminRole = (decoded.role as AdminRole) || 'super_admin';
+        return next();
+      }
+    } catch (err) {
+      // JWT invalid or expired - fall through to other methods
+      console.warn('[AdminToken] JWT verification failed:', err instanceof Error ? err.message : 'unknown error');
+    }
+  }
+
+  // Method 2: Check for individual admin API key (GO-LIVE-128 RBAC)
   const apiKey = req.header("x-admin-api-key")?.trim();
   if (apiKey) {
     const adminInfo = await verifyAdminApiKey(apiKey);
@@ -152,7 +174,7 @@ export async function requireAdminToken(req: Request, res: Response, next: NextF
     return;
   }
 
-  // Method 2: Legacy master token (backwards compatible)
+  // Method 3: Legacy master token (backwards compatible)
   const masterToken = ADMIN_TOKEN_CACHE;
   if (!masterToken) {
     res.status(503).json({ error: "admin_disabled" });

@@ -219,7 +219,7 @@ export default function LoginPage() {
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-slate-800 mb-2">
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">
         Sign in to your account
       </h2>
 
@@ -378,7 +378,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-between">
             <button
               type="button"
-              className="text-sm text-slate-600 hover:text-slate-800"
+              className="text-sm text-slate-600 hover:text-slate-900"
               onClick={handleChangePhone}
               disabled={isLoading}
             >
@@ -410,7 +410,7 @@ export default function LoginPage() {
             href="/register"
             className="text-primary-600 hover:text-primary-700 font-medium"
           >
-            Register as Supplier
+            Register
           </Link>
         </p>
       </div>

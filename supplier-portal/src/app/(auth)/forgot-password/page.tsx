@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <>
-      <h2 className="text-xl font-semibold text-slate-800 mb-2">
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">
         Password Not Required
       </h2>
 

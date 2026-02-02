@@ -455,7 +455,7 @@ export default function RegisterPage() {
     <div className="space-y-8">
       {/* Page Title */}
       <div className="text-center">
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
           {step === 'success' ? 'Application Submitted' : 'Register as Supplier'}
         </h2>
         {step !== 'success' && (
@@ -467,7 +467,7 @@ export default function RegisterPage() {
 
       {/* Full-Width Stepper */}
       {step !== 'success' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between">
             {stepLabels.map((label, index) => {
               const stepNum = index + 1;
@@ -479,7 +479,7 @@ export default function RegisterPage() {
                   {/* Step indicator */}
                   <div className="flex items-center">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                      className={`w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-semibold transition-colors ${
                         isCompleted
                           ? 'bg-green-500 text-white'
                           : isActive
@@ -521,7 +521,7 @@ export default function RegisterPage() {
 
       {/* Firebase warning */}
       {!isFirebaseReady() && step === 'phone' && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-xl text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg text-sm">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">
             Registration requires phone verification which is currently unavailable.
@@ -532,15 +532,15 @@ export default function RegisterPage() {
 
       {/* Error display */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {/* Step 1: Phone Number - Centered card for phone entry */}
       {step === 'phone' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">Verify Your Phone Number</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Verify Your Phone Number</h3>
           <p className="text-slate-600 text-sm mb-6">
             We&apos;ll send a one-time password (OTP) to verify your phone number
           </p>
@@ -583,8 +583,8 @@ export default function RegisterPage() {
 
       {/* Step 1b: OTP Verification - Centered card */}
       {step === 'otp' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">Enter Verification Code</h3>
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 max-w-lg mx-auto">
+          <h3 className="text-lg font-semibold text-slate-900 mb-2">Enter Verification Code</h3>
           <p className="text-slate-600 text-sm mb-6">
             Enter the 6-digit code sent to <strong>{phone}</strong>
           </p>
@@ -622,7 +622,7 @@ export default function RegisterPage() {
             <div className="flex items-center justify-between pt-2">
               <button
                 type="button"
-                className="text-sm text-slate-600 hover:text-slate-800"
+                className="text-sm text-slate-600 hover:text-slate-900"
                 onClick={() => {
                   setStep('phone');
                   setOtp('');
@@ -656,7 +656,7 @@ export default function RegisterPage() {
       {step === 'details' && (
         <form onSubmit={handleSubmitDetails} className="space-y-6">
           {/* Phone verified banner */}
-          <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-xl flex items-center gap-3">
+          <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded-lg flex items-center gap-3">
             <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
@@ -664,8 +664,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Business Identity Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-slate-800 mb-6 pb-3 border-b border-slate-200">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-6 pb-3 border-b border-slate-200">
               Business Identity
             </h3>
 
@@ -744,8 +744,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Contact Person Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-slate-800 mb-6 pb-3 border-b border-slate-200">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-6 pb-3 border-b border-slate-200">
               Contact Person
             </h3>
 
@@ -793,8 +793,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Address Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-slate-800 mb-6 pb-3 border-b border-slate-200">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-6 pb-3 border-b border-slate-200">
               Business Address
             </h3>
 
@@ -883,7 +883,7 @@ export default function RegisterPage() {
           </div>
 
           {/* Agreement Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
             <label className="flex items-start gap-4 cursor-pointer">
               <input
                 type="checkbox"
@@ -919,7 +919,7 @@ export default function RegisterPage() {
       {step === 'documents' && (
         <form onSubmit={handleSubmitDocuments} className="space-y-6">
           {/* Instructions */}
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-xl">
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-6 py-4 rounded-lg">
             <h4 className="font-medium mb-1">Document Upload Guidelines</h4>
             <ul className="text-sm list-disc list-inside space-y-1">
               <li>Supported formats: JPEG, PNG, PDF</li>
@@ -930,8 +930,8 @@ export default function RegisterPage() {
 
           {/* GST Certificate (required if GSTIN provided) */}
           {gstin.trim() && (
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4">GST Certificate *</h3>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">GST Certificate *</h3>
               <p className="text-slate-600 text-sm mb-4">Upload your GST registration certificate</p>
               <DocumentUploadField
                 label=""
@@ -946,8 +946,8 @@ export default function RegisterPage() {
           )}
 
           {/* ID Proof */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">Authorized Signatory ID Proof *</h3>
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Authorized Signatory ID Proof *</h3>
             <p className="text-slate-600 text-sm mb-4">Select ID type and upload a clear copy</p>
 
             <div className="flex flex-wrap gap-3 mb-6">
@@ -980,8 +980,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Business Proof */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">Business Proof *</h3>
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Business Proof *</h3>
             <p className="text-slate-600 text-sm mb-4">Select proof type and upload a clear copy</p>
 
             <div className="flex flex-wrap gap-3 mb-6">
@@ -1016,8 +1016,8 @@ export default function RegisterPage() {
           </div>
 
           {/* Selfie */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">Authorized Person Selfie *</h3>
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Authorized Person Selfie *</h3>
             <p className="text-slate-600 text-sm mb-6">
               Take a clear photo of yourself for identity verification
             </p>
@@ -1091,7 +1091,7 @@ export default function RegisterPage() {
 
       {/* Step 4: Success */}
       {step === 'success' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 sm:p-12 max-w-xl mx-auto text-center">
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8 sm:p-12 max-w-xl mx-auto text-center">
           <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1106,7 +1106,7 @@ export default function RegisterPage() {
           </p>
           <div className="bg-slate-50 rounded-lg p-4 mb-8">
             <p className="text-sm text-slate-500">Application ID</p>
-            <p className="font-mono text-slate-800">{applicationId}</p>
+            <p className="font-mono text-slate-900">{applicationId}</p>
           </div>
           <button
             className="btn btn-primary w-full py-4 text-base font-semibold"
@@ -1142,7 +1142,7 @@ function DocumentUploadField({
     <div>
       {label && <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>}
 
-      <label className="flex flex-col items-center justify-center w-full py-8 px-6 border-2 border-dashed border-slate-300 rounded-xl hover:border-primary-400 hover:bg-primary-50/50 cursor-pointer transition-colors">
+      <label className="flex flex-col items-center justify-center w-full py-8 px-6 border-2 border-dashed border-slate-300 rounded-lg hover:border-primary-400 hover:bg-primary-50/50 cursor-pointer transition-colors">
         <input
           type="file"
           accept={accept}

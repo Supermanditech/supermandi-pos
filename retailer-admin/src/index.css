@@ -1,3 +1,6 @@
+/* UI-SPEC: Stripe-level infrastructure design system */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
@@ -5,10 +8,10 @@
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --background: #f8fafc;
+  --background: #F7F9FC;
   --surface: #ffffff;
   --border: #e2e8f0;
-  --text: #1e293b;
+  --text: #0F172A;
   --text-muted: #64748b;
   --sidebar-width: 240px;
 }
@@ -20,7 +23,7 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--background);
   color: var(--text);
   line-height: 1.5;
@@ -163,16 +166,17 @@ input, select, textarea {
   margin-bottom: 1rem;
 }
 
-/* Buttons */
+/* Buttons - 44-48px height per spec */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
+  height: 46px;
+  padding: 0 1.25rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  border-radius: 0.375rem;
+  border-radius: 6px;
   border: none;
   transition: all 0.2s;
 }
@@ -238,10 +242,11 @@ input, select, textarea {
 
 .form-input {
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  height: 42px;
+  padding: 0 0.875rem;
   border: 1px solid var(--border);
-  border-radius: 0.375rem;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 0.9375rem;
   transition: border-color 0.2s;
 }
 
@@ -299,27 +304,28 @@ input, select, textarea {
   color: #22c55e;
 }
 
-/* Login Page */
+/* Login Page - UI-SPEC compliant */
 .login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: var(--background);
 }
 
 .login-card {
   background: white;
-  padding: 2.5rem;
-  border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
   width: 100%;
-  max-width: 400px;
+  max-width: 448px;
 }
 
 .login-title {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 600;
   text-align: center;
   margin-bottom: 0.5rem;
 }
@@ -327,7 +333,7 @@ input, select, textarea {
 .login-subtitle {
   text-align: center;
   color: var(--text-muted);
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Grid */

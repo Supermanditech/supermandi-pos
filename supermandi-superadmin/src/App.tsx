@@ -86,7 +86,6 @@ const PRINTING_MODE_LABELS: Record<string, string> = {
 };
 
 const ADMIN_POLL_MS = 60000;
-const RATE_LIMIT_BACKOFF_MS = 60000;
 const UPI_VPA_PATTERN = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/;
 
 function clamp(n: number, min: number, max: number): number {
@@ -233,179 +232,280 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
     setSuccess("");
   };
 
+  // UI-SPEC-003: Stripe-level calm infrastructure design for admin portal
   return (
-    <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
-      <div style={{
-        background: "#fff",
-        padding: "40px",
-        borderRadius: "12px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-        maxWidth: "400px",
-        width: "100%"
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      background: "#F7F9FC",
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      {/* Header Bar - 64px height per spec */}
+      <header style={{
+        background: "white",
+        borderBottom: "1px solid #e2e8f0",
+        height: "64px",
+        display: "flex",
+        alignItems: "center"
       }}>
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <div className="title" style={{ marginBottom: "8px" }}>
-            <span className="brandPill">SuperMandi</span>
-            SuperAdmin
+        <div style={{
+          maxWidth: "1152px",
+          width: "100%",
+          margin: "0 auto",
+          padding: "0 1.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{
+              fontSize: "1.5rem",
+              fontWeight: 600,
+              color: "#2563eb"
+            }}>SuperMandi</span>
+            <span style={{ color: "#94a3b8" }}>|</span>
+            <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: 500 }}>SuperAdmin</span>
           </div>
-          <div style={{ color: "#666", fontSize: "14px" }}>
-            Cloud POS operational dashboard
+          <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
+            Cloud POS Dashboard
+          </span>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main style={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "2rem 1rem"
+      }}>
+        <div style={{ width: "100%", maxWidth: "448px" }}>
+          <div style={{
+            background: "#fff",
+            padding: "2rem",
+            borderRadius: "8px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
+            border: "1px solid #e2e8f0"
+          }}>
+            <h2 style={{
+              fontSize: "1.5rem",
+              fontWeight: 600,
+              color: "#0F172A",
+              marginBottom: "0.5rem"
+            }}>
+              Admin Sign In
+            </h2>
+            <p style={{
+              color: "#64748b",
+              fontSize: "0.875rem",
+              marginBottom: "1.5rem"
+            }}>
+              {step === 'email' ? 'Enter your admin email to continue' : `Enter the 6-digit code sent to ${email}`}
+            </p>
+
+            {step === 'email' ? (
+              <>
+                <div style={{ marginBottom: "1rem" }}>
+                  <label style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    color: "#0F172A",
+                    marginBottom: "0.5rem"
+                  }}>
+                    Admin Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
+                    placeholder="admin@example.com"
+                    style={{
+                      width: "100%",
+                      height: "42px",
+                      padding: "0 1rem",
+                      fontSize: "0.9375rem",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                {error && (
+                  <div style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#991b1b",
+                    padding: "0.875rem 1rem",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    marginBottom: "1rem"
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSendOtp}
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    height: "46px",
+                    padding: "0 1.5rem",
+                    fontSize: "0.9375rem",
+                    fontWeight: 500,
+                    color: "white",
+                    background: loading ? "#93c5fd" : "#2563eb",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    marginBottom: "1rem"
+                  }}
+                >
+                  {loading ? "Sending..." : "Send Verification Code"}
+                </button>
+              </>
+            ) : (
+              <>
+                {success && (
+                  <div style={{
+                    background: "#ecfdf5",
+                    border: "1px solid #a7f3d0",
+                    color: "#065f46",
+                    padding: "0.875rem 1rem",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    marginBottom: "1rem"
+                  }}>
+                    {success}
+                  </div>
+                )}
+
+                <div style={{ marginBottom: "1rem" }}>
+                  <label style={{
+                    display: "block",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    color: "#0F172A",
+                    marginBottom: "0.5rem"
+                  }}>
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
+                    placeholder="------"
+                    maxLength={6}
+                    style={{
+                      width: "100%",
+                      height: "48px",
+                      padding: "0 1rem",
+                      fontSize: "1.25rem",
+                      letterSpacing: "0.5rem",
+                      textAlign: "center",
+                      fontFamily: "monospace",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      outline: "none",
+                      boxSizing: "border-box"
+                    }}
+                    autoFocus
+                  />
+                </div>
+
+                {error && (
+                  <div style={{
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    color: "#991b1b",
+                    padding: "0.875rem 1rem",
+                    borderRadius: "6px",
+                    fontSize: "0.875rem",
+                    marginBottom: "1rem"
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    height: "46px",
+                    padding: "0 1.5rem",
+                    fontSize: "0.9375rem",
+                    fontWeight: 500,
+                    color: "white",
+                    background: loading ? "#93c5fd" : "#2563eb",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: loading ? "not-allowed" : "pointer",
+                    marginBottom: "0.75rem"
+                  }}
+                >
+                  {loading ? "Verifying..." : "Verify & Login"}
+                </button>
+
+                <button
+                  onClick={handleBack}
+                  disabled={loading}
+                  style={{
+                    width: "100%",
+                    height: "46px",
+                    padding: "0 1.5rem",
+                    fontSize: "0.9375rem",
+                    fontWeight: 500,
+                    color: "#0F172A",
+                    background: "white",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "6px",
+                    cursor: loading ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Back to Email
+                </button>
+              </>
+            )}
+
+            <div style={{
+              marginTop: "1.5rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid #e5e7eb",
+              fontSize: "0.75rem",
+              color: "#64748b",
+              textAlign: "center"
+            }}>
+              Only authorized administrators can access this portal.
+            </div>
           </div>
         </div>
+      </main>
 
-        {step === 'email' ? (
-          <>
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#333" }}>
-                Admin Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
-                placeholder="Enter your admin email"
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  border: "1px solid #ddd",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                  boxSizing: "border-box"
-                }}
-                autoFocus
-              />
-            </div>
-
-            {error && (
-              <div style={{
-                color: "#dc2626",
-                background: "#fef2f2",
-                padding: "12px",
-                borderRadius: "6px",
-                marginBottom: "16px",
-                fontSize: "14px"
-              }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleSendOtp}
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: loading ? "#9ca3af" : "#2563eb",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: loading ? "not-allowed" : "pointer"
-              }}
-            >
-              {loading ? "Sending..." : "Send Verification Code"}
-            </button>
-          </>
-        ) : (
-          <>
-            {success && (
-              <div style={{
-                color: "#059669",
-                background: "#ecfdf5",
-                padding: "12px",
-                borderRadius: "6px",
-                marginBottom: "16px",
-                fontSize: "14px"
-              }}>
-                {success}
-              </div>
-            )}
-
-            <div style={{ marginBottom: "16px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: 500, color: "#333" }}>
-                Verification Code
-              </label>
-              <p style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
-                Enter the 6-digit code sent to {email}
-              </p>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
-                placeholder="123456"
-                maxLength={6}
-                style={{
-                  width: "100%",
-                  padding: "12px",
-                  border: "1px solid #ddd",
-                  borderRadius: "6px",
-                  fontSize: "18px",
-                  letterSpacing: "8px",
-                  textAlign: "center",
-                  boxSizing: "border-box"
-                }}
-                autoFocus
-              />
-            </div>
-
-            {error && (
-              <div style={{
-                color: "#dc2626",
-                background: "#fef2f2",
-                padding: "12px",
-                borderRadius: "6px",
-                marginBottom: "16px",
-                fontSize: "14px"
-              }}>
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleVerifyOtp}
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: loading ? "#9ca3af" : "#2563eb",
-                color: "#fff",
-                border: "none",
-                borderRadius: "6px",
-                fontSize: "14px",
-                fontWeight: 500,
-                cursor: loading ? "not-allowed" : "pointer",
-                marginBottom: "12px"
-              }}
-            >
-              {loading ? "Verifying..." : "Verify & Login"}
-            </button>
-
-            <button
-              onClick={handleBack}
-              disabled={loading}
-              style={{
-                width: "100%",
-                padding: "12px",
-                background: "#fff",
-                color: "#666",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                fontSize: "14px",
-                cursor: loading ? "not-allowed" : "pointer"
-              }}
-            >
-              Back to Email
-            </button>
-          </>
-        )}
-
-        <div style={{ marginTop: "24px", fontSize: "12px", color: "#666", textAlign: "center" }}>
-          Only authorized administrators can access this portal.
+      {/* Footer - minimal, muted per spec */}
+      <footer style={{
+        background: "white",
+        borderTop: "1px solid #e2e8f0"
+      }}>
+        <div style={{
+          maxWidth: "1152px",
+          margin: "0 auto",
+          padding: "1rem 1.5rem",
+          textAlign: "center",
+          fontSize: "0.8125rem",
+          color: "#64748b"
+        }}>
+          &copy; 2024 SuperMandi. All rights reserved.
         </div>
-      </div>
+      </footer>
     </div>
   );
 }
@@ -430,8 +530,6 @@ export default function App() {
   const [eventsError, setEventsError] = useState<string>("");
   const [healthError, setHealthError] = useState<string>("");
   const [lastRefreshAt, setLastRefreshAt] = useState<string>("");
-  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
-  const rateLimitedUntilRef = useRef<number | null>(null);
   const healthInFlightRef = useRef(false);
   const eventsInFlightRef = useRef(false);
   const devicesInFlightRef = useRef(false);
@@ -443,6 +541,10 @@ export default function App() {
   const [aiError, setAiError] = useState<string>("");
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
+  const [aiPanelOpen, setAiPanelOpen] = useState<boolean>(false);
+  const [aiIdleSeconds, setAiIdleSeconds] = useState<number>(0);
+  const aiIdleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const AI_AUTO_COLLAPSE_SECONDS = 120; // Auto-collapse after 2 minutes of inactivity
 
   // Store admin (UPI VPA activation)
   const [storeAdminId, setStoreAdminId] = useState<string>("");
@@ -597,20 +699,6 @@ export default function App() {
   const [documentActionLoading, setDocumentActionLoading] = useState<string | null>(null);
   const documentsInFlightRef = useRef(false);
 
-  const setRateLimit = (until: number | null) => {
-    rateLimitedUntilRef.current = until;
-    setRateLimitedUntil(until);
-  };
-
-  const isRateLimited = (): boolean => {
-    const until = rateLimitedUntilRef.current;
-    return typeof until === "number" && Date.now() < until;
-  };
-
-  const isRateLimitMessage = (message: string): boolean => {
-    const m = message.toLowerCase();
-    return m.includes("rate limit") || m.includes("429");
-  };
 
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
@@ -624,21 +712,15 @@ export default function App() {
   const [page, setPage] = useState<number>(0);
 
   async function refreshHealth() {
-    if (isRateLimited() || healthInFlightRef.current) return;
+    if (healthInFlightRef.current) return;
     healthInFlightRef.current = true;
     try {
       const data = await fetchHealth();
       const ok = String(data.status).toLowerCase() === "ok";
       setHealth({ ok, statusText: data.status, lastCheckedAt: new Date().toISOString() });
       setHealthError("");
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Backend unreachable";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setHealth({ ok: false, statusText: "down", lastCheckedAt: new Date().toISOString() });
       setHealthError(message);
     } finally {
@@ -647,7 +729,7 @@ export default function App() {
   }
 
   async function refreshEvents() {
-    if (isRateLimited() || eventsInFlightRef.current) return;
+    if (eventsInFlightRef.current) return;
     eventsInFlightRef.current = true;
     try {
       // Fetch raw stream (filters are applied client-side in the UI).
@@ -657,14 +739,8 @@ export default function App() {
       setEvents(data);
       setEventsError("");
       setLastRefreshAt(new Date().toISOString());
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch events";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setEventsError(message);
       setLastRefreshAt(new Date().toISOString());
     } finally {
@@ -673,20 +749,14 @@ export default function App() {
   }
 
   async function refreshDevices() {
-    if (isRateLimited() || devicesInFlightRef.current) return;
+    if (devicesInFlightRef.current) return;
     devicesInFlightRef.current = true;
     try {
       const data = await fetchDevices();
       setDeviceRecords(data);
       setDevicesError("");
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch devices";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setDevicesError(message);
     } finally {
       devicesInFlightRef.current = false;
@@ -694,21 +764,15 @@ export default function App() {
   }
 
   async function refreshStores() {
-    if (isRateLimited() || storesInFlightRef.current) return;
+    if (storesInFlightRef.current) return;
     storesInFlightRef.current = true;
     setStoreDirectoryLoading(true);
     try {
       const data = await fetchStores();
       setStoreDirectory(data);
       setStoreDirectoryError("");
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch stores";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setStoreDirectoryError(message);
     } finally {
       storesInFlightRef.current = false;
@@ -717,7 +781,7 @@ export default function App() {
   }
 
   async function refreshSuppliers() {
-    if (isRateLimited() || suppliersInFlightRef.current) return;
+    if (suppliersInFlightRef.current) return;
     suppliersInFlightRef.current = true;
     setSuppliersLoading(true);
     setSuppliersError("");
@@ -730,14 +794,8 @@ export default function App() {
       setPendingSuppliers(pending);
       setVerifiedSuppliers(verified);
       setPendingProducts(products);
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch suppliers";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setSuppliersError(message);
     } finally {
       suppliersInFlightRef.current = false;
@@ -747,21 +805,15 @@ export default function App() {
 
   // ADM-SCR-002: Fetch users
   async function refreshUsers() {
-    if (isRateLimited() || usersInFlightRef.current) return;
+    if (usersInFlightRef.current) return;
     usersInFlightRef.current = true;
     setUsersLoading(true);
     setUsersError("");
     try {
       const users = await fetchUsers();
       setUserRecords(users);
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch users";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setUsersError(message);
     } finally {
       usersInFlightRef.current = false;
@@ -891,7 +943,7 @@ export default function App() {
 
   // ADM-SCR-003: Fetch settings
   async function refreshSettings() {
-    if (isRateLimited() || settingsInFlightRef.current) return;
+    if (settingsInFlightRef.current) return;
     settingsInFlightRef.current = true;
     setSettingsLoading(true);
     setSettingsError("");
@@ -902,14 +954,8 @@ export default function App() {
       ]);
       setSystemSettings(settings);
       setSystemStats(stats);
-      if (rateLimitedUntilRef.current) {
-        setRateLimit(null);
-      }
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch settings";
-      if (isRateLimitMessage(message)) {
-        setRateLimit(Date.now() + RATE_LIMIT_BACKOFF_MS);
-      }
       setSettingsError(message);
     } finally {
       settingsInFlightRef.current = false;
@@ -1217,7 +1263,6 @@ export default function App() {
     if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
 
     const id = setInterval(() => {
-      if (isRateLimited()) return;
       refreshHealth();
       if (shouldRefreshEvents) refreshEvents();
       if (shouldRefreshDevices) refreshDevices();
@@ -1311,6 +1356,43 @@ export default function App() {
       return next;
     });
   }, [storeDirectory]);
+
+  // AI Panel: Auto-collapse after inactivity
+  useEffect(() => {
+    if (aiPanelOpen) {
+      setAiIdleSeconds(0);
+      aiIdleTimerRef.current = setInterval(() => {
+        setAiIdleSeconds((prev) => {
+          const next = prev + 1;
+          if (next >= AI_AUTO_COLLAPSE_SECONDS) {
+            setAiPanelOpen(false);
+            return 0;
+          }
+          return next;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (aiIdleTimerRef.current) {
+        clearInterval(aiIdleTimerRef.current);
+        aiIdleTimerRef.current = null;
+      }
+    };
+  }, [aiPanelOpen]);
+
+  // AI Panel: Reset idle timer on activity
+  const resetAiIdleTimer = () => {
+    setAiIdleSeconds(0);
+  };
+
+  // AI Panel: Fetch AI health when panel opens
+  useEffect(() => {
+    if (aiPanelOpen && aiConfigured === null) {
+      fetchAiHealth()
+        .then((res) => setAiConfigured(res.configured))
+        .catch(() => setAiConfigured(null));
+    }
+  }, [aiPanelOpen]);
 
   const filteredEvents = useMemo(() => {
     const d = deviceIdFilter.trim();
@@ -1824,20 +1906,15 @@ export default function App() {
         <div className="banner" role="alert">
           <strong>Backend warning:</strong>
           <div className="bannerDetails">
-            {rateLimitedUntil && Date.now() < rateLimitedUntil && (
-              <div>
-                Rate limit exceeded. Retrying in {Math.ceil((rateLimitedUntil - Date.now()) / 1000)}s.
-              </div>
-            )}
             {healthError && <div>Health: {healthError}</div>}
             {eventsError && <div>Events: {eventsError}</div>}
-          {devicesError && <div>Devices: {devicesError}</div>}
+            {devicesError && <div>Devices: {devicesError}</div>}
+          </div>
+          <div className="muted">
+            UI will keep retrying every {Math.round(ADMIN_POLL_MS / 1000)} seconds.
+          </div>
         </div>
-        <div className="muted">
-          UI will keep retrying every {Math.round(ADMIN_POLL_MS / 1000)} seconds (longer if rate limited).
-        </div>
-      </div>
-    )}
+      )}
 
       <nav className="tabs">
         <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>
@@ -1863,9 +1940,14 @@ export default function App() {
         <button className={tab === "payments" ? "tab tabActive" : "tab"} onClick={() => setTab("payments")}>
           Payments
         </button>
-        <button className={tab === "ai" ? "tab tabActive" : "tab"} onClick={() => setTab("ai")}>
+        <button
+          className={`tab ${aiPanelOpen ? "tabActive" : ""}`}
+          onClick={() => setAiPanelOpen(true)}
+          title="Open AI Assistant Panel"
+        >
           <span className="brandPill">SuperMandi</span>
           AI
+          {aiAnswer && <span style={{ marginLeft: 4 }}>💬</span>}
         </button>
         <button className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>
           Users
@@ -3551,96 +3633,6 @@ export default function App() {
         </section>
       )}
 
-      {tab === "ai" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">
-              <span className="brandPill">SuperMandi</span>
-              AI (Ops Copilot)
-            </div>
-            <div className="muted">Read-only - Uses analytics endpoints for context</div>
-          </div>
-
-          <div className="tableWrap">
-            <div style={{ display: "grid", gap: 10 }}>
-              <div className="badgeRow">
-                <span className={`badge ${aiConfigured ? "badgeOk" : "badgeWarn"}`}>
-                  {aiConfigured ? "AI configured" : "AI not configured"}
-                </span>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  className="tab"
-                  onClick={() => setAiQuestion("Explain the last hour of POS activity. Focus on issues and anomalies.")}
-                >
-                  Explain last hour
-                </button>
-                <button
-                  className="tab"
-                  onClick={() => setAiQuestion("Why did payments fail? List likely causes from events and next steps.")}
-                >
-                  Why did payments fail?
-                </button>
-                <button
-                  className="tab"
-                  onClick={() => setAiQuestion("Summarize today: devices active, stores active, and any printer/network problems.")}
-                >
-                  Summarize today
-                </button>
-              </div>
-
-              <textarea
-                value={aiQuestion}
-                onChange={(e) => setAiQuestion(e.target.value)}
-                rows={4}
-                placeholder="Ask a question about POS activityâ€¦"
-                className="textArea"
-              />
-
-              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                <button
-                  onClick={async () => {
-                    setAiLoading(true);
-                    setAiError("");
-                    setAiAnswer("");
-                    try {
-                      const res = await askAi(aiQuestion);
-                      setAiAnswer(res.answer);
-                    } catch (e: any) {
-                      setAiError(e?.message ? String(e.message) : "AI request failed");
-                    } finally {
-                      setAiLoading(false);
-                    }
-                  }}
-                  disabled={aiLoading}
-                >
-                  {aiLoading ? "Askingâ€¦" : "Ask"}
-                </button>
-
-                <button
-                  className="tab"
-                  onClick={() => {
-                    setAiQuestion("");
-                    setAiAnswer("");
-                    setAiError("");
-                  }}
-                >
-                  Clear
-                </button>
-
-                {aiError && <span className="errorText">{aiError}</span>}
-              </div>
-
-              {aiAnswer && (
-                <pre className="json" style={{ whiteSpace: "pre-wrap" }}>
-                  {aiAnswer}
-                </pre>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ADM-SCR-002: Users Management Tab */}
       {tab === "users" && (
         <section className="card">
@@ -4360,6 +4352,126 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* AI Floating Button */}
+      {!aiPanelOpen && (
+        <button
+          className={`aiPanelToggle ${aiAnswer ? "hasAnswer" : ""}`}
+          onClick={() => setAiPanelOpen(true)}
+          title="Open AI Assistant"
+        >
+          🤖
+        </button>
+      )}
+
+      {/* AI Side Panel */}
+      <div className={`aiPanel ${aiPanelOpen ? "open" : ""}`}>
+        <div className="aiPanelHeader">
+          <div className="aiPanelTitle">
+            <span className="brandPill">SuperMandi</span>
+            AI Copilot
+          </div>
+          <button className="aiPanelClose" onClick={() => setAiPanelOpen(false)} title="Close">
+            ✕
+          </button>
+        </div>
+
+        <div className="aiPanelBody" onClick={resetAiIdleTimer}>
+          <div className="badgeRow">
+            <span className={`badge ${aiConfigured ? "badgeOk" : "badgeWarn"}`}>
+              {aiConfigured ? "AI configured" : "AI not configured"}
+            </span>
+          </div>
+
+          <div className="aiQuickActions">
+            <button
+              className="aiQuickBtn"
+              onClick={() => {
+                setAiQuestion("Explain the last hour of POS activity. Focus on issues and anomalies.");
+                resetAiIdleTimer();
+              }}
+            >
+              📊 Explain last hour
+            </button>
+            <button
+              className="aiQuickBtn"
+              onClick={() => {
+                setAiQuestion("Why did payments fail? List likely causes from events and next steps.");
+                resetAiIdleTimer();
+              }}
+            >
+              💳 Payment issues?
+            </button>
+            <button
+              className="aiQuickBtn"
+              onClick={() => {
+                setAiQuestion("Summarize today: devices active, stores active, and any printer/network problems.");
+                resetAiIdleTimer();
+              }}
+            >
+              📋 Summarize today
+            </button>
+          </div>
+
+          <textarea
+            className="aiTextarea"
+            value={aiQuestion}
+            onChange={(e) => {
+              setAiQuestion(e.target.value);
+              resetAiIdleTimer();
+            }}
+            placeholder="Ask about POS activity, devices, payments..."
+            rows={3}
+          />
+
+          <div className="aiActions">
+            <button
+              className="aiAskBtn"
+              onClick={async () => {
+                resetAiIdleTimer();
+                setAiLoading(true);
+                setAiError("");
+                setAiAnswer("");
+                try {
+                  const res = await askAi(aiQuestion);
+                  setAiAnswer(res.answer);
+                } catch (e: any) {
+                  setAiError(e?.message ? String(e.message) : "AI request failed");
+                } finally {
+                  setAiLoading(false);
+                }
+              }}
+              disabled={aiLoading || !aiQuestion.trim()}
+            >
+              {aiLoading ? "Thinking..." : "Ask AI"}
+            </button>
+            <button
+              className="aiClearBtn"
+              onClick={() => {
+                setAiQuestion("");
+                setAiAnswer("");
+                setAiError("");
+                resetAiIdleTimer();
+              }}
+            >
+              Clear
+            </button>
+            {aiError && <span className="errorText" style={{ fontSize: 12 }}>{aiError}</span>}
+          </div>
+
+          {aiAnswer && (
+            <div className="aiResponse">
+              <div className="aiResponseContent">{aiAnswer}</div>
+            </div>
+          )}
+        </div>
+
+        {aiPanelOpen && (
+          <div className="aiIdleTimer">
+            Auto-closes in {AI_AUTO_COLLAPSE_SECONDS - aiIdleSeconds}s of inactivity
+          </div>
+        )}
+      </div>
 
       <footer className="footer muted">
         Tip: this dashboard is static-deployable. Set <span className="mono">VITE_API_BASE_URL</span> in hosting env.

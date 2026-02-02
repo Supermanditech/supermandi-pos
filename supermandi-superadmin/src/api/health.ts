@@ -12,7 +12,8 @@ function requireApiBase(): string {
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const base = requireApiBase();
-  const res = await fetch(`${base}/health`, {
+  // GO-LIVE-SESSION: Use correct admin health endpoint path
+  const res = await fetch(`${base}/api/v1/admin/health`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -23,14 +24,14 @@ export async function fetchHealth(): Promise<HealthResponse> {
 
   if (!res.ok) {
     if (res.status === 401) {
-      throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
+      throw new Error("Session expired or unauthorized. Please log in again.");
     }
     throw new Error(`Health check failed (${res.status})`);
   }
 
   const data = (await res.json()) as unknown;
   if (!data || typeof data !== "object" || !("status" in data)) {
-    throw new Error("Invalid /health response");
+    throw new Error("Invalid health response");
   }
 
   const status = (data as any).status;

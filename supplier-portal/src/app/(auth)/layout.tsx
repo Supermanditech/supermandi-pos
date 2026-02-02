@@ -1,27 +1,46 @@
+import Link from 'next/link';
+
+// UI-SPEC-004: Stripe-level calm infrastructure design for auth layout
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-            SuperMandi
-          </h1>
-          <p className="text-slate-600 mt-1">Supplier Portal</p>
+    <div className="min-h-screen flex flex-col bg-[#F7F9FC]">
+      {/* Header Bar - 64px height per spec */}
+      <header className="bg-white border-b border-slate-200 h-16 flex items-center">
+        <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-primary-600">
+              SuperMandi
+            </h1>
+            <span className="text-slate-400">|</span>
+            <span className="text-slate-600 text-sm font-medium">Supplier Portal</span>
+          </div>
+          <Link
+            href="/register"
+            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+          >
+            New here? Register
+          </Link>
         </div>
+      </header>
 
-        {/* Auth Card */}
-        <div className="card">{children}</div>
+      {/* Main Content */}
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-[448px]">
+          {/* Auth Card - white with subtle shadow per spec */}
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">{children}</div>
+        </div>
+      </main>
 
-        {/* Footer */}
-        <p className="text-center text-sm text-slate-500 mt-6">
+      {/* Footer - minimal, muted per spec */}
+      <footer className="bg-white border-t border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
           &copy; 2024 SuperMandi. All rights reserved.
-        </p>
-      </div>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -4,8 +4,8 @@ import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 
-// GO-LIVE-UI-REG-002: Registration-First Login (Lookup-First, NOT OTP-First)
-// User must have a registration before they can request OTP
+// UI-SPEC-001: Stripe-level calm infrastructure design
+// Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
 
 type Step = 'phone' | 'otp' | 'stores';
 
@@ -38,6 +38,234 @@ interface LookupResponse {
   message?: string;
   action?: string;
 }
+
+// UI-SPEC: Stripe-level infrastructure design system
+const styles = {
+  // Page layout - solid neutral background per spec
+  pageContainer: {
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    background: '#F7F9FC',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
+  header: {
+    background: 'white',
+    borderBottom: '1px solid #e2e8f0',
+    height: '64px',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  headerInner: {
+    maxWidth: '1152px',
+    width: '100%',
+    margin: '0 auto',
+    padding: '0 1.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  logoText: {
+    fontSize: '1.5rem',
+    fontWeight: 600,
+    color: '#2563eb',
+  },
+  logoSeparator: {
+    color: '#94a3b8',
+  },
+  logoSubtext: {
+    color: '#475569',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+  },
+  headerLink: {
+    fontSize: '0.875rem',
+    color: '#2563eb',
+    textDecoration: 'none',
+    fontWeight: 500,
+  },
+  // Main content
+  main: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '2rem 1rem',
+  },
+  cardContainer: {
+    width: '100%',
+    maxWidth: '448px',
+  },
+  // Card styling - white with subtle shadow per spec
+  card: {
+    background: 'white',
+    borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+    border: '1px solid #e2e8f0',
+    padding: '2rem',
+  },
+  cardTitle: {
+    fontSize: '1.5rem',
+    fontWeight: 600,
+    color: '#0F172A',
+    marginBottom: '0.5rem',
+  },
+  cardSubtitle: {
+    color: '#64748b',
+    fontSize: '0.875rem',
+    marginBottom: '1.5rem',
+  },
+  // Form elements - 40-44px height per spec
+  formGroup: {
+    marginBottom: '1rem',
+  },
+  label: {
+    display: 'block',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: '#0F172A',
+    marginBottom: '0.5rem',
+  },
+  input: {
+    width: '100%',
+    height: '42px',
+    padding: '0 1rem',
+    fontSize: '0.9375rem',
+    border: '1px solid #cbd5e1',
+    borderRadius: '6px',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.15s, box-shadow 0.15s',
+  },
+  inputDisabled: {
+    background: '#f8fafc',
+    cursor: 'not-allowed',
+  },
+  // Buttons - 44-48px height per spec
+  btnPrimary: {
+    width: '100%',
+    height: '46px',
+    padding: '0 1.5rem',
+    fontSize: '0.9375rem',
+    fontWeight: 500,
+    color: 'white',
+    background: '#2563eb',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'background 0.15s',
+    marginBottom: '1rem',
+  },
+  btnPrimaryDisabled: {
+    background: '#93c5fd',
+    cursor: 'not-allowed',
+  },
+  btnSecondary: {
+    width: '100%',
+    height: '46px',
+    padding: '0 1.5rem',
+    fontSize: '0.9375rem',
+    fontWeight: 500,
+    color: '#0F172A',
+    background: 'white',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'background 0.15s, border-color 0.15s',
+  },
+  // Alert styles - soft red background per spec
+  alertError: {
+    background: '#fef2f2',
+    border: '1px solid #fecaca',
+    color: '#991b1b',
+    padding: '0.875rem 1rem',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    marginBottom: '1rem',
+  },
+  alertWarning: {
+    background: '#fffbeb',
+    border: '1px solid #fde68a',
+    color: '#92400e',
+    padding: '0.875rem 1rem',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    marginBottom: '1rem',
+  },
+  // Footer - minimal, muted per spec
+  footer: {
+    background: 'white',
+    borderTop: '1px solid #e2e8f0',
+  },
+  footerInner: {
+    maxWidth: '1152px',
+    margin: '0 auto',
+    padding: '1rem 1.5rem',
+    textAlign: 'center' as const,
+    fontSize: '0.8125rem',
+    color: '#64748b',
+  },
+  // Links
+  textLink: {
+    color: '#2563eb',
+    textDecoration: 'none',
+    fontWeight: 500,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    background: 'none',
+    border: 'none',
+    padding: 0,
+  },
+  textLinkDisabled: {
+    color: '#9ca3af',
+    cursor: 'not-allowed',
+  },
+  // Divider
+  divider: {
+    borderTop: '1px solid #e5e7eb',
+    margin: '1.5rem 0',
+    paddingTop: '1rem',
+  },
+  // Store selector
+  storeButton: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'flex-start',
+    padding: '1rem',
+    background: '#F7F9FC',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    width: '100%',
+    marginBottom: '0.75rem',
+    transition: 'all 0.15s',
+  },
+  storeName: {
+    fontWeight: 600,
+    color: '#0F172A',
+  },
+  storeCode: {
+    fontSize: '0.8125rem',
+    color: '#64748b',
+  },
+  // Warning icon container
+  warningIconContainer: {
+    width: '4rem',
+    height: '4rem',
+    background: '#fef3c7',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: '0 auto 1rem',
+    fontSize: '1.5rem',
+  },
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -270,287 +498,250 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <h1 className="login-title">SuperMandi</h1>
-        <p className="login-subtitle">Retailer Portal</p>
-
-        {step === 'phone' && !lookupComplete && (
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-            Enter your registered phone number to continue
-          </p>
-        )}
-
-        {step === 'phone' && lookupComplete && (
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-            Click "Send OTP" to receive a verification code at {phone}
-          </p>
-        )}
-
-        {step === 'otp' && (
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-            Enter the 6-digit code sent to {phone}
-          </p>
-        )}
-
-        {/* Firebase warning */}
-        {!isFirebaseReady() && step === 'phone' && lookupComplete && (
-          <div style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
-            <strong>Phone Verification Unavailable</strong>
-            <p style={{ marginTop: '0.25rem', marginBottom: 0 }}>
-              Login requires phone verification which is currently unavailable.
-            </p>
+    <div style={styles.pageContainer}>
+      {/* Header Bar */}
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <div style={styles.logo}>
+            <span style={styles.logoText}>SuperMandi</span>
+            <span style={styles.logoSeparator}>|</span>
+            <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>
-        )}
+          <Link to="/retailer/register" style={styles.headerLink}>
+            New here? Register
+          </Link>
+        </div>
+      </header>
 
-        {/* Error display */}
-        {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem'
-          }}>
-            {error}
-          </div>
-        )}
+      {/* Main Content */}
+      <main style={styles.main}>
+        <div style={styles.cardContainer}>
+          <div style={styles.card}>
+            <h2 style={styles.cardTitle}>Sign in to your account</h2>
 
-        {/* Step 1: Phone Number - Lookup First */}
-        {step === 'phone' && !lookupComplete && (
-          <form onSubmit={handleContinue}>
-            <div className="form-group">
-              <label className="form-label">Phone Number</label>
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="+91 9876543210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={isLoading}
-                autoFocus
-              />
-            </div>
+            {step === 'phone' && !lookupComplete && (
+              <p style={styles.cardSubtitle}>Enter your registered phone number to continue</p>
+            )}
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', marginBottom: '1rem' }}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Checking...' : 'Continue'}
-            </button>
+            {step === 'phone' && lookupComplete && (
+              <p style={styles.cardSubtitle}>Click "Send OTP" to receive a verification code at {phone}</p>
+            )}
 
-            <div style={{
-              borderTop: '1px solid #e5e7eb',
-              paddingTop: '1rem',
-              textAlign: 'center',
-            }}>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0 }}>
-                Don't have an account?{' '}
-                <Link to="/retailer/register" style={{ color: '#2563eb', textDecoration: 'none' }}>
-                  Register
-                </Link>
-              </p>
-            </div>
-          </form>
-        )}
+            {step === 'otp' && (
+              <p style={styles.cardSubtitle}>Enter the 6-digit code sent to {phone}</p>
+            )}
 
-        {/* Step 1b: Phone Number - Send OTP (after successful lookup) */}
-        {step === 'phone' && lookupComplete && (
-          <form onSubmit={handleSendOtp}>
-            <div className="form-group">
-              <label className="form-label">Phone Number</label>
-              <input
-                type="tel"
-                className="form-input"
-                placeholder="+91 9876543210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={true}
-              />
-            </div>
+            {step === 'stores' && stores.length > 0 && (
+              <p style={styles.cardSubtitle}>Select a store to continue</p>
+            )}
 
-            <button
-              id="send-otp-button"
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', marginBottom: '1rem' }}
-              disabled={isLoading || !isFirebaseReady()}
-            >
-              {isLoading ? 'Sending OTP...' : 'Send OTP'}
-            </button>
-
-            <div style={{ textAlign: 'center' }}>
-              <button
-                type="button"
-                onClick={handleChangePhone}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#6b7280',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-                disabled={isLoading}
-              >
-                Use different phone number
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 2: OTP Verification */}
-        {step === 'otp' && (
-          <form onSubmit={handleVerifyOtp}>
-            <div className="form-group">
-              <label className="form-label">Verification Code</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="123456"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.5rem' }}
-                maxLength={6}
-                disabled={isLoading}
-                autoFocus
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', marginBottom: '1rem' }}
-              disabled={isLoading || otp.length !== 6}
-            >
-              {isLoading ? 'Verifying...' : 'Verify & Sign In'}
-            </button>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={handleChangePhone}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#6b7280',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  padding: 0,
-                }}
-                disabled={isLoading}
-              >
-                Change Phone
-              </button>
-
-              <button
-                id="resend-otp-button"
-                type="button"
-                onClick={handleResendOtp}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: resendCooldown > 0 ? '#9ca3af' : '#2563eb',
-                  fontSize: '0.875rem',
-                  cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
-                  padding: 0,
-                }}
-                disabled={isLoading || resendCooldown > 0}
-              >
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: Store Selection */}
-        {step === 'stores' && (
-          <div>
-            {stores.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <div style={{
-                  width: '4rem',
-                  height: '4rem',
-                  background: '#fef3c7',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 1rem',
-                  fontSize: '1.5rem',
-                }}>
-                  !
-                </div>
-                <h3 style={{ color: '#d97706', marginBottom: '0.5rem' }}>No Store Assigned</h3>
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
-                  Your account is not associated with any store. Please contact your administrator.
+            {/* Firebase warning */}
+            {!isFirebaseReady() && step === 'phone' && lookupComplete && (
+              <div style={styles.alertWarning}>
+                <strong>Phone Verification Unavailable</strong>
+                <p style={{ marginTop: '0.25rem', marginBottom: 0 }}>
+                  Login requires phone verification which is currently unavailable.
                 </p>
-                <button
-                  onClick={() => {
-                    setStep('phone');
-                    setOtp('');
-                    setPhone('');
-                    setAuthData(null);
-                    setLookupComplete(false);
-                  }}
-                  className="btn btn-secondary"
-                  style={{ width: '100%' }}
-                >
-                  Back to Login
-                </button>
               </div>
-            ) : (
-              <>
-                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1rem', textAlign: 'center' }}>
-                  Select a store to continue
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {stores.map((store) => (
-                    <button
-                      key={store.id}
-                      onClick={() => handleStoreSelect(store)}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        padding: '1rem',
-                        background: '#f9fafb',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '0.5rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        width: '100%',
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = '#f3f4f6';
-                        e.currentTarget.style.borderColor = '#3b82f6';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = '#f9fafb';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }}
-                    >
-                      <span style={{ fontWeight: '600', color: '#111827' }}>{store.name}</span>
-                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Code: {store.code}</span>
-                    </button>
-                  ))}
+            )}
+
+            {/* Error display */}
+            {error && <div style={styles.alertError}>{error}</div>}
+
+            {/* Step 1: Phone Number - Lookup First */}
+            {step === 'phone' && !lookupComplete && (
+              <form onSubmit={handleContinue}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Phone Number</label>
+                  <input
+                    type="tel"
+                    style={styles.input}
+                    placeholder="+91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={isLoading}
+                    autoFocus
+                  />
                 </div>
-              </>
+
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.btnPrimary,
+                    ...(isLoading ? styles.btnPrimaryDisabled : {}),
+                  }}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Checking...' : 'Continue'}
+                </button>
+
+                <div style={styles.divider}>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
+                    Don't have an account?{' '}
+                    <Link to="/retailer/register" style={styles.textLink}>
+                      Register
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            )}
+
+            {/* Step 1b: Phone Number - Send OTP (after successful lookup) */}
+            {step === 'phone' && lookupComplete && (
+              <form onSubmit={handleSendOtp}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Phone Number</label>
+                  <input
+                    type="tel"
+                    style={{ ...styles.input, ...styles.inputDisabled }}
+                    placeholder="+91 9876543210"
+                    value={phone}
+                    disabled={true}
+                  />
+                </div>
+
+                <button
+                  id="send-otp-button"
+                  type="submit"
+                  style={{
+                    ...styles.btnPrimary,
+                    ...(isLoading || !isFirebaseReady() ? styles.btnPrimaryDisabled : {}),
+                  }}
+                  disabled={isLoading || !isFirebaseReady()}
+                >
+                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                </button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleChangePhone}
+                    style={styles.textLink}
+                    disabled={isLoading}
+                  >
+                    Use different phone number
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Step 2: OTP Verification */}
+            {step === 'otp' && (
+              <form onSubmit={handleVerifyOtp}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Verification Code</label>
+                  <input
+                    type="text"
+                    style={{
+                      ...styles.input,
+                      textAlign: 'center',
+                      fontSize: '1.25rem',
+                      letterSpacing: '0.5rem',
+                      fontFamily: 'monospace',
+                    }}
+                    placeholder="------"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.btnPrimary,
+                    ...(isLoading || otp.length !== 6 ? styles.btnPrimaryDisabled : {}),
+                  }}
+                  disabled={isLoading || otp.length !== 6}
+                >
+                  {isLoading ? 'Verifying...' : 'Verify & Sign In'}
+                </button>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={handleChangePhone}
+                    style={styles.textLink}
+                    disabled={isLoading}
+                  >
+                    Change Phone
+                  </button>
+
+                  <button
+                    id="resend-otp-button"
+                    type="button"
+                    onClick={handleResendOtp}
+                    style={{
+                      ...styles.textLink,
+                      ...(resendCooldown > 0 ? styles.textLinkDisabled : {}),
+                    }}
+                    disabled={isLoading || resendCooldown > 0}
+                  >
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Step 3: Store Selection */}
+            {step === 'stores' && (
+              <div>
+                {stores.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                    <div style={styles.warningIconContainer}>!</div>
+                    <h3 style={{ color: '#d97706', marginBottom: '0.5rem' }}>No Store Assigned</h3>
+                    <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                      Your account is not associated with any store. Please contact your administrator.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setStep('phone');
+                        setOtp('');
+                        setPhone('');
+                        setAuthData(null);
+                        setLookupComplete(false);
+                      }}
+                      style={styles.btnSecondary}
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {stores.map((store) => (
+                      <button
+                        key={store.id}
+                        onClick={() => handleStoreSelect(store)}
+                        style={styles.storeButton}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = '#f3f4f6';
+                          e.currentTarget.style.borderColor = '#3b82f6';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = '#f9fafb';
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }}
+                      >
+                        <span style={styles.storeName}>{store.name}</span>
+                        <span style={styles.storeCode}>Code: {store.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer style={styles.footer}>
+        <div style={styles.footerInner}>
+          &copy; 2024 SuperMandi. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 }

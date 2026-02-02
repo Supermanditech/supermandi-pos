@@ -56,7 +56,7 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
       // ignore parse errors
     }
     if (res.status === 401) {
-      throw new Error("Unauthorized (set VITE_ADMIN_TOKEN to match backend ADMIN_TOKEN)");
+      throw new Error("Session expired or unauthorized. Please log in again.");
     }
     const suffix = detail ? `: ${detail}` : "";
     throw new Error(`Failed to fetch POS events (${res.status})${suffix}`);

@@ -7,7 +7,7 @@ import Link from 'next/link';
 export default function PendingApprovalPage() {
   return (
     <>
-      <h2 className="text-xl font-semibold text-slate-800 mb-2">
+      <h2 className="text-2xl font-semibold text-slate-900 mb-2">
         Account Pending Approval
       </h2>
 
@@ -38,7 +38,7 @@ export default function PendingApprovalPage() {
         </p>
 
         <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
-          <h4 className="font-medium text-slate-800 mb-2">What happens next?</h4>
+          <h4 className="font-medium text-slate-900 mb-2">What happens next?</h4>
           <ul className="text-sm text-slate-600 space-y-2">
             <li className="flex items-start gap-2">
               <span className="text-amber-500 mt-0.5">1.</span>
