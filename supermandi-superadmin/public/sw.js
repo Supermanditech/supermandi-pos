@@ -1,7 +1,8 @@
 // GO-LIVE-099: Service Worker for SuperMandi SuperAdmin
 // Provides offline caching for static assets and API responses
 
-const CACHE_VERSION = 'superadmin-v1';
+// GO-LIVE-UI-001: Updated cache version to force old cache purge
+const CACHE_VERSION = 'superadmin-v2-20260202';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 

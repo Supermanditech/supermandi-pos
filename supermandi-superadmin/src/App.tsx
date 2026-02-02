@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { getAdminToken, logout, sendAdminOtp, verifyAdminOtp } from "./api/authToken";
+import { hasValidSession, logout, sendAdminOtp, verifyAdminOtp } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -414,9 +414,10 @@ export default function App() {
   const [tab, setTab] = useState<TabKey>("events");
 
   // ITER4-CRIT-001: Track authentication state
+  // GO-LIVE-UI-001: Use hasValidSession() to ensure valid JWT, not just any stale token
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    // Check if token exists on initial load
-    return !!getAdminToken();
+    // Check if VALID session token exists on initial load (prevents 401 loop)
+    return hasValidSession();
   });
 
   // ITER4-CRIT-001: Removed adminTokenInput state - login now handled by LoginGate component
