@@ -29,6 +29,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
 
   let storeName: string | null = null;
   let storeCode: string | null = null; // STORECODE-003
+  // REG-AUTH-401: Store status for LIMITED MODE display
+  let storeStatus: string | null = null;
   let upiVpa: string | null = null;
   let storeScanLookupV2Enabled = false;
   // GO-LIVE-REVEAL-001: Feature flags for tab visibility (default enabled for live testing)
@@ -50,6 +52,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       const storeRow = storeRes.rows[0];
       storeName = storeRow?.name ? String(storeRow.name) : null;
       storeCode = storeRow?.code ? String(storeRow.code) : null;
+      // REG-AUTH-401: Store status for LIMITED MODE banner
+      storeStatus = storeRow?.status ? String(storeRow.status).toUpperCase() : null;
       // GL-AUD-007: BNPL enabled status
       bnplEnabled = storeRow?.bnpl_enabled === true;
       // CA-1.4-005: Credit enabled status from store settings
@@ -112,6 +116,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     storeId: status.storeId,
     storeName,
     storeCode, // STORECODE-003: Human-readable store code
+    // REG-AUTH-401: Store status for LIMITED MODE display
+    storeStatus,
     deviceId: status.deviceId,
     storeActive: status.storeActive,
     deviceActive: status.deviceActive,

@@ -6,6 +6,8 @@ export type UiStatusResponse = {
   storeId?: string | null;
   storeName?: string | null;
   storeCode?: string | null; // STORECODE-003: Human-readable store code
+  // REG-AUTH-401: Store status for LIMITED MODE display
+  storeStatus?: string | null;
   deviceId?: string | null;
   storeActive: boolean | null;
   deviceActive: boolean | null;
@@ -45,6 +47,8 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
       storeId: (store.id as string) ?? null,
       storeName: (store.name as string) ?? null,
       storeCode: (store.code as string) ?? null,
+      // REG-AUTH-401: Store status for LIMITED MODE display
+      storeStatus: store.status ? String(store.status).toUpperCase() : null,
       deviceId: (device.id as string) ?? (device.label as string) ?? null,
       storeActive: store.isDemo !== undefined ? true : ((store.status ?? 'active') === 'active'),
       deviceActive: (device.active as boolean) ?? true,
@@ -63,11 +67,13 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
     };
   }
 
-  // Legacy flat format: { storeId, storeName, storeCode, deviceId, ... }
+  // Legacy flat format: { storeId, storeName, storeCode, storeStatus, deviceId, ... }
   return {
     storeId: (obj.storeId as string) ?? null,
     storeName: (obj.storeName as string) ?? null,
     storeCode: (obj.storeCode as string) ?? null,
+    // REG-AUTH-401: Store status for LIMITED MODE display
+    storeStatus: obj.storeStatus ? String(obj.storeStatus).toUpperCase() : null,
     deviceId: (obj.deviceId as string) ?? null,
     storeActive: (obj.storeActive as boolean) ?? null,
     deviceActive: (obj.deviceActive as boolean) ?? null,

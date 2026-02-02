@@ -27,6 +27,8 @@ import { useTranslation } from "react-i18next";
 import PosStatusBar from "../components/PosStatusBar";
 import ScanNoticeBanner from "../components/ScanNoticeBanner";
 import { TabBadge } from "../components/TabBadge";
+// REG-AUTH-401: LIMITED MODE banner for non-ACTIVE stores
+import LimitedModeBanner from "../components/LimitedModeBanner";
 import MenuScreen from "./MenuScreen";
 import SellScanScreen from "./SellScanScreen";
 import PurchaseScreen from "./PurchaseScreen";
@@ -140,6 +142,8 @@ export default function PosRootLayout() {
   const [deviceType, setDeviceType] = useState<string | null>(null);
   const [storeName, setStoreName] = useState<string | null>(null);
   const [storeCode, setStoreCode] = useState<string | null>(null); // GO-LIVE: Human-readable store code
+  // REG-AUTH-401: Store status for LIMITED MODE display
+  const [storeStatus, setStoreStatus] = useState<string | null>(null);
   const [deviceStoreId, setDeviceStoreId] = useState<string | null>(null);
   const [pendingOutboxCount, setPendingOutboxCount] = useState(0);
   const [printerOk, setPrinterOk] = useState<boolean | null>(null);
@@ -420,6 +424,10 @@ export default function PosRootLayout() {
         }
         if (status.storeCode) {
           setStoreCode((prev) => status.storeCode ?? prev);
+        }
+        // REG-AUTH-401: Update storeStatus for LIMITED MODE display
+        if (status.storeStatus !== undefined) {
+          setStoreStatus(status.storeStatus);
         }
         // Persist to settingsStore for offline display
         if (status.storeName || status.storeCode) {
@@ -970,15 +978,9 @@ export default function PosRootLayout() {
         cameraAvailable={cameraAvailable}
       />
 
-      {/* DEV-055: Store inactive banner */}
-      {storeActive === false && (
-        <View style={styles.storeInactiveBanner}>
-          <MaterialCommunityIcons name="alert-circle" size={16} color={theme.colors.error} />
-          <Text style={styles.storeInactiveBannerText}>
-            {POS_MESSAGES.storeInactive}
-          </Text>
-        </View>
-      )}
+      {/* REG-AUTH-401: LIMITED MODE banner - shows when store status is not ACTIVE */}
+      {/* Replaces DEV-055 store inactive banner with status-aware messaging */}
+      <LimitedModeBanner status={storeStatus} storeName={storeName} />
 
       {/* UI-REVEAL: API connection error banner - show warning but keep UI functional */}
       {apiConnectionError && storeActive !== false && (
@@ -1254,22 +1256,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  storeInactiveBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.errorSoft,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.error,
-  },
-  storeInactiveBannerText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "600",
-    color: theme.colors.error,
-  },
+  // REG-AUTH-401: storeInactiveBanner styles removed - replaced by LimitedModeBanner component
   // UI-REVEAL: API connection error banner styles
   apiConnectionBanner: {
     flexDirection: "row",
