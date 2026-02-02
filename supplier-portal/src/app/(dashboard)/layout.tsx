@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { sendVerificationEmail, verifyEmail } from '@/lib/api';
+// REG-AUTH-302: LIMITED MODE Banner
+import LimitedModeBanner from '@/components/LimitedModeBanner';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -168,6 +170,16 @@ export default function DashboardLayout({
               <span className="font-medium">Verification Rejected:</span>{' '}
               Please contact support for more information.
             </p>
+          </div>
+        )}
+
+        {/* REG-AUTH-302: LIMITED MODE Banner for non-verified suppliers */}
+        {supplier?.verificationStatus && supplier.verificationStatus !== 'verified' && (
+          <div className="px-6 pt-4">
+            <LimitedModeBanner
+              status={supplier.verificationStatus}
+              businessName={supplier.businessName}
+            />
           </div>
         )}
 

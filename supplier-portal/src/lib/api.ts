@@ -778,3 +778,133 @@ export async function addOrderNote(orderId: string, input: OrderNoteInput): Prom
     body: JSON.stringify(input),
   });
 }
+
+// ============================================================================
+// REG-AUTH-302: REGISTRATION-FIRST AUTHENTICATION APIs
+// ============================================================================
+
+export interface SupplierRegistrationInput {
+  phone: string;
+  email: string;
+  businessName: string;
+  ownerName: string;
+  gstin: string;  // Required for suppliers
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  bankAccountName?: string;
+  upiVpa?: string;
+}
+
+export interface SupplierApplicationResponse {
+  success: boolean;
+  applicationId: string;
+  status: string;
+  message?: string;
+  action?: 'CREATED' | 'RESUMED';
+}
+
+export interface SupplierCheckGstinResponse {
+  exists: boolean;
+  applicationId?: string;
+  status?: string;
+  supplierId?: string;
+  message: string;
+}
+
+export interface SupplierApplicationStatusResponse {
+  success: boolean;
+  application: {
+    id: string;
+    status: string;
+    businessName: string;
+    ownerName: string;
+    gstin: string;
+    phoneVerified: boolean;
+    approvedSupplierId?: string;
+    rejectionReason?: string;
+  };
+}
+
+// REG-AUTH-302: Check if GSTIN already exists
+export async function checkSupplierGstin(gstin: string): Promise<SupplierCheckGstinResponse> {
+  return apiFetch<SupplierCheckGstinResponse>('/api/v1/supplier/registration/check-gstin', {
+    method: 'POST',
+    body: JSON.stringify({ gstin }),
+  });
+}
+
+// REG-AUTH-302: Create new supplier application
+export async function createSupplierApplication(input: SupplierRegistrationInput): Promise<SupplierApplicationResponse> {
+  return apiFetch<SupplierApplicationResponse>('/api/v1/supplier/registration/create', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// REG-AUTH-302: Verify OTP with applicationId (CRITICAL: requires applicationId!)
+export async function verifySupplierOtp(idToken: string, applicationId: string): Promise<{ success: boolean; status: string; message?: string }> {
+  return apiFetch<{ success: boolean; status: string; message?: string }>('/api/v1/supplier/registration/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ idToken, applicationId }),
+  });
+}
+
+// REG-AUTH-302: Submit KYC documents
+export async function submitSupplierKyc(applicationId: string): Promise<{ success: boolean; status: string; message: string }> {
+  return apiFetch<{ success: boolean; status: string; message: string }>('/api/v1/supplier/registration/submit-kyc', {
+    method: 'POST',
+    body: JSON.stringify({ applicationId }),
+  });
+}
+
+// REG-AUTH-302: Get application status
+export async function getSupplierApplicationStatus(applicationId: string): Promise<SupplierApplicationStatusResponse> {
+  return apiFetch<SupplierApplicationStatusResponse>(`/api/v1/supplier/registration/status/${applicationId}`);
+}
+
+// REG-AUTH-302: Resume existing application
+export async function resumeSupplierApplication(gstin: string, phone: string): Promise<SupplierApplicationResponse> {
+  return apiFetch<SupplierApplicationResponse>('/api/v1/supplier/registration/resume', {
+    method: 'POST',
+    body: JSON.stringify({ gstin, phone }),
+  });
+}
+
+// REG-AUTH-302: Upload document for application
+export async function uploadSupplierDocument(
+  applicationId: string,
+  documentType: string,
+  file: File
+): Promise<{ success: boolean; documentId: string; message: string }> {
+  if (!API_BASE_URL) {
+    throw new ApiError(500, 'CONFIG_ERROR', 'API URL is not configured.');
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new ApiError(400, 'FILE_TOO_LARGE', 'File size exceeds maximum allowed (5MB)');
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('documentType', documentType);
+  formData.append('entityType', 'supplier_application');
+  formData.append('entityId', applicationId);
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new ApiError(response.status, data.error?.code || 'UNKNOWN', data.error?.message || 'Upload failed');
+  }
+
+  const data = await response.json();
+  return data.data ?? data;
+}
