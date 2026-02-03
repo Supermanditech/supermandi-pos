@@ -29,9 +29,9 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
 
   try {
     // Group inventory_ledger entries by reference_id where reference_type = 'po'
-    let whereClause = `WHERE il.store_id = $1 AND il.reference_type = 'po'`;
+    const whereClause = `WHERE il.store_id = $1 AND il.reference_type = 'po'`;
     const params: any[] = [storeId];
-    let paramIdx = 2;
+    const paramIdx = 2;
 
     if (filterStatus && typeof filterStatus === "string") {
       // For now all stock-in entries are 'completed' once written

@@ -58,6 +58,8 @@ function resolveTextCodeType(format: string | null | undefined): string {
 function normalizeTextValue(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
+  // Intentionally strip control characters from barcode scans
+  // eslint-disable-next-line no-control-regex
   const withoutControls = trimmed.replace(/[\x00-\x1F\x7F]/g, "");
   const cleaned = withoutControls.trim();
   return cleaned ? cleaned : null;

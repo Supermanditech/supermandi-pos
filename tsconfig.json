@@ -4,5 +4,23 @@
     "strict": true,
     "skipLibCheck": true
   },
-  "exclude": ["backend", "backend/**", "backend/dist", "dist", "supermandi-superadmin", "supermandi-superadmin/**", "e2e", "e2e/**", "src/screens/deprecated", "src/screens/deprecated/**"]
+  "exclude": [
+    "backend",
+    "backend/**",
+    "backend/dist",
+    "dist",
+    "supermandi-superadmin",
+    "supermandi-superadmin/**",
+    "e2e",
+    "e2e/**",
+    "src/screens/deprecated",
+    "src/screens/deprecated/**",
+    "retailer-admin",
+    "retailer-admin/**",
+    "supplier-portal",
+    "supplier-portal/**",
+    "deploy-package",
+    "deploy-package/**",
+    "node_modules"
+  ]
 }

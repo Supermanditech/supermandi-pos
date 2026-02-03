@@ -31,14 +31,14 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let storeCode: string | null = null; // STORECODE-003
   // REG-AUTH-401: Store status for LIMITED MODE display
   let storeStatus: string | null = null;
-  let upiVpa: string | null = null;
-  let storeScanLookupV2Enabled = false;
+  const upiVpa: string | null = null;
+  const storeScanLookupV2Enabled = false;
   // GO-LIVE-REVEAL-001: Feature flags for tab visibility (default enabled for live testing)
-  let buyEnabled = true;
+  const buyEnabled = true;
   let reorderEnabled = true;
   // CONTRACT-LOCK-UI-STATUS-001: Add missing feature flags expected by frontend
-  let inventoryEnabled = true;
-  let suppliersEnabled = true;
+  const inventoryEnabled = true;
+  const suppliersEnabled = true;
   // GL-AUD-007: BNPL status for BUY screen badge
   let bnplEnabled = false;
   // CA-1.4-005: Credit enabled status for credit/loans feature

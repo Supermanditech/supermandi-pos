@@ -1208,7 +1208,7 @@ posInventoryRouter.post("/inventory/physical-count/:countId/complete", requireDe
       [countId]
     );
 
-    let itemsCounted = itemsRes.rows.length;
+    const itemsCounted = itemsRes.rows.length;
     let variancesFound = 0;
 
     if (applyAdjustments) {

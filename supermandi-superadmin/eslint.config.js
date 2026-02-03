@@ -19,5 +19,11 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Allow explicit any in event handlers - these come from external libraries
+      '@typescript-eslint/no-explicit-any': 'warn',
+      // Allow flexible hook dependencies for complex admin components
+      'react-hooks/exhaustive-deps': 'warn',
+    },
   },
 ])

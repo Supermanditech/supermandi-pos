@@ -36,7 +36,7 @@ if (firebaseEnabled && (firebaseServiceAccountPath || firebaseProjectId)) {
 
 // DEV-071: Capture build info at startup for /health endpoint
 let GIT_SHA = "unknown";
-let BUILD_TIME = new Date().toISOString();
+const BUILD_TIME = new Date().toISOString();
 try {
   GIT_SHA = execSync("git rev-parse --short HEAD", { encoding: "utf-8" }).trim();
 } catch {

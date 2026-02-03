@@ -38,25 +38,25 @@ jobs:
         working-directory: retailer-admin
         run: |
           npm ci
-          npm run typecheck || npm run tsc --noEmit || echo "No typecheck script, skipping"
+          npm run typecheck --if-present || npx tsc --noEmit
 
       - name: Install & Typecheck supermandi-superadmin
         working-directory: supermandi-superadmin
         run: |
           npm ci
-          npm run typecheck || npm run tsc --noEmit || echo "No typecheck script, skipping"
+          npm run typecheck --if-present || npx tsc --noEmit
 
       - name: Install & Typecheck supplier-portal
         working-directory: supplier-portal
         run: |
           npm ci
-          npm run typecheck || npx tsc --noEmit || echo "No typecheck script, skipping"
+          npm run typecheck --if-present || npx tsc --noEmit
 
       - name: Install & Typecheck backend
         working-directory: backend
         run: |
           npm ci
-          npm run typecheck || npx tsc --noEmit || echo "No typecheck script, skipping"
+          npm run typecheck --if-present || npx tsc --noEmit
 
   # ==========================================================================
   # JOB 2: Lint all projects
@@ -77,25 +77,25 @@ jobs:
         working-directory: retailer-admin
         run: |
           npm ci
-          npm run lint || echo "No lint script, skipping"
+          npm run lint --if-present
 
       - name: Lint supermandi-superadmin
         working-directory: supermandi-superadmin
         run: |
           npm ci
-          npm run lint || echo "No lint script, skipping"
+          npm run lint --if-present
 
       - name: Lint supplier-portal
         working-directory: supplier-portal
         run: |
           npm ci
-          npm run lint || echo "No lint script, skipping"
+          npm run lint --if-present
 
       - name: Lint backend
         working-directory: backend
         run: |
           npm ci
-          npm run lint || echo "No lint script, skipping"
+          npm run lint --if-present
 
   # ==========================================================================
   # JOB 3: Run tests
@@ -116,25 +116,25 @@ jobs:
         working-directory: retailer-admin
         run: |
           npm ci
-          npm test || echo "No test script, skipping"
+          npm test --if-present
 
       - name: Test supermandi-superadmin
         working-directory: supermandi-superadmin
         run: |
           npm ci
-          npm test || echo "No test script, skipping"
+          npm test --if-present
 
       - name: Test supplier-portal
         working-directory: supplier-portal
         run: |
           npm ci
-          npm test || echo "No test script, skipping"
+          npm test --if-present
 
       - name: Test backend
         working-directory: backend
         run: |
           npm ci
-          npm test || echo "No test script, skipping"
+          npm test --if-present
 
   # ==========================================================================
   # JOB 4: Build all portals and verify outputs (CRITICAL)
