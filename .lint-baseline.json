@@ -1,0 +1,16 @@
+{
+  "description": "ESLint warning budgets. CI fails if any package exceeds its budget. Decrease these values as you fix warnings.",
+  "updated": "2026-02-03",
+  "budgets": {
+    "supermandi-superadmin": 56,
+    "backend": 599,
+    "retailer-admin": 0,
+    "supplier-portal": 0
+  },
+  "notes": {
+    "supermandi-superadmin": "56 no-explicit-any warnings - fix gradually",
+    "backend": "520 no-explicit-any + 79 no-unused-vars - fix in sprints",
+    "retailer-admin": "No ESLint configured yet - TODO: add ESLint",
+    "supplier-portal": "Next.js 16 removed lint command - TODO: add standalone ESLint"
+  }
+}

@@ -38,25 +38,30 @@ jobs:
         working-directory: retailer-admin
         run: |
           npm ci
-          npm run typecheck --if-present || npx tsc --noEmit
+          npm run typecheck
 
       - name: Install & Typecheck supermandi-superadmin
         working-directory: supermandi-superadmin
         run: |
           npm ci
-          npm run typecheck --if-present || npx tsc --noEmit
+          npm run typecheck
 
       - name: Install & Typecheck supplier-portal
         working-directory: supplier-portal
         run: |
           npm ci
-          npm run typecheck --if-present || npx tsc --noEmit
+          npm run typecheck
+
+      - name: Setup pnpm for backend
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
       - name: Install & Typecheck backend
         working-directory: backend
         run: |
-          npm ci
-          npm run typecheck --if-present || npx tsc --noEmit
+          pnpm install --frozen-lockfile
+          pnpm run typecheck || pnpm exec tsc --noEmit
 
   # ==========================================================================
   # JOB 2: Lint all projects
@@ -91,18 +96,90 @@ jobs:
           npm ci
           npm run lint --if-present
 
+      - name: Setup pnpm for backend
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
       - name: Lint backend
         working-directory: backend
         run: |
-          npm ci
-          npm run lint --if-present
+          pnpm install --frozen-lockfile
+          pnpm run lint
+
+      # Check that warning counts don't exceed budgets (prevents warning creep)
+      - name: Lint Warning Budget Check
+        run: |
+          echo "Checking ESLint warning budgets..."
+
+          # Read budgets from baseline file
+          SUPERADMIN_BUDGET=$(cat .lint-baseline.json | grep -A1 '"supermandi-superadmin"' | grep -oP '\d+' | head -1)
+          BACKEND_BUDGET=$(cat .lint-baseline.json | grep -A1 '"backend"' | grep -oP '\d+' | head -1)
+
+          FAILED=0
+
+          # Check supermandi-superadmin
+          cd supermandi-superadmin
+          SUPERADMIN_OUTPUT=$(npm run lint 2>&1 || true)
+          SUPERADMIN_COUNT=$(echo "$SUPERADMIN_OUTPUT" | grep -oP '\d+(?= warning)' | tail -1 || echo "0")
+          SUPERADMIN_COUNT=${SUPERADMIN_COUNT:-0}
+          cd ..
+
+          if [ "$SUPERADMIN_COUNT" -gt "$SUPERADMIN_BUDGET" ]; then
+            echo "❌ supermandi-superadmin: $SUPERADMIN_COUNT warnings (budget: $SUPERADMIN_BUDGET)"
+            FAILED=1
+          else
+            echo "✅ supermandi-superadmin: $SUPERADMIN_COUNT warnings (budget: $SUPERADMIN_BUDGET)"
+          fi
+
+          # Check backend (uses pnpm)
+          cd backend
+          BACKEND_OUTPUT=$(pnpm run lint 2>&1 || true)
+          BACKEND_COUNT=$(echo "$BACKEND_OUTPUT" | grep -oP '\d+(?= warning)' | tail -1 || echo "0")
+          BACKEND_COUNT=${BACKEND_COUNT:-0}
+          cd ..
+
+          if [ "$BACKEND_COUNT" -gt "$BACKEND_BUDGET" ]; then
+            echo "❌ backend: $BACKEND_COUNT warnings (budget: $BACKEND_BUDGET)"
+            FAILED=1
+          else
+            echo "✅ backend: $BACKEND_COUNT warnings (budget: $BACKEND_BUDGET)"
+          fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "════════════════════════════════════════════════════════════"
+            echo "❌ LINT BUDGET CHECK FAILED"
+            echo "════════════════════════════════════════════════════════════"
+            echo "Warning count increased! Fix warnings or update .lint-baseline.json"
+            exit 1
+          fi
+
+          echo ""
+          echo "════════════════════════════════════════════════════════════"
+          echo "✅ LINT BUDGET CHECK PASSED"
+          echo "════════════════════════════════════════════════════════════"
 
   # ==========================================================================
-  # JOB 3: Run tests
+  # JOB 3: Run tests (with Postgres for backend integration tests)
   # ==========================================================================
   test:
-    name: Unit Tests
+    name: Unit & Integration Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: supermandi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -130,11 +207,29 @@ jobs:
           npm ci
           npm test --if-present
 
-      - name: Test backend
+      - name: Setup pnpm for backend
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup backend database schema
         working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
         run: |
-          npm ci
-          npm test --if-present
+          pnpm install --frozen-lockfile
+          # Run migrations if available
+          pnpm run migrate:up || echo "Migrations failed or not available - tests will fail if schema missing"
+
+      - name: Test backend (with Postgres)
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          NODE_ENV: test
+        run: |
+          pnpm test
 
   # ==========================================================================
   # JOB 4: Build all portals and verify outputs (CRITICAL)
