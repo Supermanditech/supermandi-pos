@@ -108,6 +108,10 @@ v1Router.use("/documents", documentsRouter);
 // Must be BEFORE validateGatewayHeaders middleware
 v1Router.use("/retailer-admin/registration", retailerRegistrationRouter);
 
+// RET-AUD-019: Alias registration route at /registration for backward compatibility
+// Maps /api/v1/registration/* -> same retailerRegistrationRouter
+v1Router.use("/registration", retailerRegistrationRouter);
+
 // GO-LIVE-046: Apply gateway header validation to retailer-admin routes
 // GO-LIVE-047: Apply store ownership verification to retailer-admin routes
 v1Router.use("/retailer-admin", validateGatewayHeaders);

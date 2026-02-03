@@ -25,9 +25,12 @@ export const rateLimiterMiddleware = rateLimit({
     },
   },
 
-  // Skip rate limiting for health checks
+  // Skip rate limiting for health checks and admin routes
+  // RET-AUD-019: Admin routes are authenticated and have separate adminRateLimiter
   skip: (req) => {
-    return req.path === '/healthz' || req.path === '/health';
+    return req.path === '/healthz' ||
+           req.path === '/health' ||
+           req.path.startsWith('/api/v1/admin');
   },
 
   // Key generator (use IP + correlation ID for more granular limiting)

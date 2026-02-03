@@ -305,6 +305,16 @@ export const config: GatewayConfig = {
       stripPrefix: false,
     },
     // ==========================================================================
+    // RET-AUD-019: Registration routes (alias for /retailer-admin/registration)
+    // Public endpoint for retailer self-registration
+    // ==========================================================================
+    {
+      name: 'registration',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/registration',
+      stripPrefix: false,
+    },
+    // ==========================================================================
     // DOCS-001: Document storage routes -> main backend
     // ==========================================================================
     {
