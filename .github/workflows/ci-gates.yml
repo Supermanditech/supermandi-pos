@@ -32,7 +32,6 @@ jobs:
             retailer-admin/package-lock.json
             supermandi-superadmin/package-lock.json
             supplier-portal/package-lock.json
-            backend/package-lock.json
 
       - name: Install & Typecheck retailer-admin
         working-directory: retailer-admin
@@ -212,15 +211,16 @@ jobs:
         with:
           version: 8
 
-      - name: Setup backend database schema
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run database migrations
         working-directory: backend
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
-        run: |
-          pnpm install --frozen-lockfile
-          # Run migrations if available
-          pnpm run migrate:up || echo "Migrations failed or not available - tests will fail if schema missing"
+        run: pnpm run migrate:up
 
       - name: Test backend (with Postgres)
         working-directory: backend
