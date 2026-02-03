@@ -251,4 +251,123 @@ retailerAdminDevicesRouter.get("/devices", async (req: Request, res: Response) =
   }
 });
 
+// =============================================================================
+// PATCH /api/v1/retailer-admin/devices/:deviceId
+// RET-AUD-027: Deactivate/reactivate device from retailer portal
+// Only allows updating own store's devices
+// =============================================================================
+
+retailerAdminDevicesRouter.patch("/devices/:deviceId", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { deviceId } = req.params;
+  if (!deviceId || typeof deviceId !== 'string') {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "deviceId is required" } });
+  }
+
+  const { active, label } = req.body as { active?: boolean; label?: string };
+
+  // Validate at least one field is being updated
+  const hasActive = typeof active === 'boolean';
+  const hasLabel = typeof label === 'string' && label.trim().length > 0;
+
+  if (!hasActive && !hasLabel) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "At least one field (active or label) is required" } });
+  }
+
+  try {
+    // First verify the device belongs to this store
+    const deviceCheck = await pool.query(
+      `SELECT id, store_id, active, label, token_revoked_at FROM public.pos_devices WHERE id = $1`,
+      [deviceId]
+    );
+
+    if (deviceCheck.rowCount === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Device not found" } });
+    }
+
+    const device = deviceCheck.rows[0];
+    if (device.store_id !== storeId) {
+      // Security: Don't reveal that the device exists for another store
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Device not found" } });
+    }
+
+    // Build update query
+    const updates: string[] = [];
+    const params: (string | boolean)[] = [];
+    let paramIndex = 1;
+
+    if (hasActive) {
+      params.push(active);
+      updates.push(`active = $${paramIndex}`);
+      paramIndex++;
+
+      // If deactivating, also revoke the token
+      if (!active) {
+        updates.push(`token_revoked_at = NOW()`);
+      } else {
+        // If reactivating, clear the revoked_at (but device will need new token via re-enrollment)
+        // Note: We don't clear token_revoked_at on reactivation - device must re-enroll
+      }
+    }
+
+    if (hasLabel) {
+      params.push(label.trim());
+      updates.push(`label = $${paramIndex}`);
+      paramIndex++;
+    }
+
+    updates.push(`updated_at = NOW()`);
+    params.push(deviceId);
+
+    const result = await pool.query(
+      `UPDATE public.pos_devices
+       SET ${updates.join(', ')}
+       WHERE id = $${paramIndex}
+       RETURNING
+         id,
+         device_fingerprint as "fingerprint",
+         label,
+         device_type as "deviceType",
+         manufacturer,
+         model,
+         app_version as "appVersion",
+         last_seen_online as "lastSeen",
+         created_at as "createdAt",
+         token_revoked_at as "revokedAt",
+         active`,
+      params
+    );
+
+    const updatedDevice = result.rows[0];
+    console.log(`[RET-AUD-027] Device ${deviceId} updated by store ${storeId}: active=${updatedDevice.active}`);
+
+    return res.json({
+      success: true,
+      device: {
+        id: updatedDevice.id,
+        fingerprint: updatedDevice.fingerprint,
+        label: updatedDevice.label || 'POS Device',
+        deviceType: updatedDevice.deviceType,
+        manufacturer: updatedDevice.manufacturer,
+        model: updatedDevice.model,
+        appVersion: updatedDevice.appVersion,
+        lastSeen: updatedDevice.lastSeen,
+        createdAt: updatedDevice.createdAt,
+        isActive: updatedDevice.active && !updatedDevice.revokedAt
+      }
+    });
+
+  } catch (error: any) {
+    console.error("[RET-AUD-027] Update device error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Failed to update device" } });
+  }
+});
+
 export default retailerAdminDevicesRouter;

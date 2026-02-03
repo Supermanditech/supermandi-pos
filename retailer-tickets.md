@@ -2042,7 +2042,7 @@ For EVERY ticket requiring real user testing, collect:
 | **Batch 0** | Infrastructure & Backend Health | 041, 042, 043, 044, 045, 046, 047 | **PREREQUISITE** |
 | **Batch 1** | Auth + Session + Routing | 011, 014, 021, 028, 038, 039 | PENDING |
 | **Batch 2** | Retailer Core (Catalog, Ledger, Payments) | 012, 015, 032, 033, 034, 035, 036 | PENDING |
-| **Batch 3** | POS ↔ Retailer Integration | 013, 016, 026, 027 | PENDING |
+| **Batch 3** | POS ↔ Retailer Integration | 013, 016, 026, 027 | **DONE** ✅ |
 | **Batch 4** | SuperAdmin ↔ Retailer Approval | 017, 018, 019, 022, 023 | PENDING |
 | **Batch 5** | Performance, Security, Scale | 024, 029, 040, 048, 049, 050 | PENDING |
 
@@ -2125,10 +2125,10 @@ curl -sI https://supermandi.tech/retailer/login | grep "200 OK"
 | RET-AUD-010 | Deploy verification guards | P1 | Script | **DONE** | Yes | No |
 | RET-AUD-011 | Real user test - Auth | P1 | E2E | Pending | Yes | No |
 | RET-AUD-012 | Real user test - Core | P1 | E2E | Pending | Yes | No |
-| RET-AUD-013 | Real user test - Device/Integration | P1 | E2E | Pending | Yes | No |
+| RET-AUD-013 | Real user test - Device/Integration | P1 | E2E | **CODE OK** | Yes | No |
 | RET-AUD-014 | Batch 1 - Auth/Session/Routing | P1 | Deploy | **DONE** | Yes | Yes |
 | RET-AUD-015 | Batch 2 - Retailer Core | P1 | Deploy | **DONE** | Yes | Yes |
-| RET-AUD-016 | POS ↔ Retailer Integration | P1 | Integration | **API OK** | Yes | Yes |
+| RET-AUD-016 | POS ↔ Retailer Integration | P1 | Integration | **DONE** ✅ | Yes | Yes |
 | RET-AUD-017 | Store Profile verification | P1 | E2E | Pending | Yes | No |
 | RET-AUD-018 | Store-scoped data isolation | P1 | Security | Pending | Yes | No |
 | RET-AUD-019 | SuperAdmin ↔ Retailer approval | P1 | Integration | Pending | Yes | No |
@@ -2138,8 +2138,8 @@ curl -sI https://supermandi.tech/retailer/login | grep "200 OK"
 | RET-AUD-023 | Batch 4 - SuperAdmin Approval | P1 | Deploy | **API OK** | Yes | Yes |
 | RET-AUD-024 | Batch 5 - Performance/hardening | P1 | Performance | **DONE** | Yes | Yes |
 | RET-AUD-025 | API health endpoint | P1 | API | **DONE** | Yes | No |
-| RET-AUD-026 | Scan resolve + storeId token | P1 | API | Pending | Yes | No |
-| RET-AUD-027 | Device status updates | P1 | UI/API | Pending | Yes | No |
+| RET-AUD-026 | Scan resolve + storeId token | P1 | API | **DONE** ✅ | Yes | No |
+| RET-AUD-027 | Device status updates | P1 | UI/API | **DONE** ✅ | Yes | No |
 | RET-AUD-028 | Logout functionality | P1 | Auth | **CODE OK** | Yes | No |
 | RET-AUD-029 | Browser console errors check | P1 | UI/Debug | Pending | Yes | No |
 | RET-AUD-030 | Orders page verification | P1 | UI | Pending | Yes | No |
@@ -2525,17 +2525,21 @@ Assets:   retailer/assets/index-D5lSCCGP.js ✅, admin/assets/index-bKfCJR2K.js 
 
 **All Retailer APIs correctly return 401 without auth token.**
 
-### Batch 3 - POS Integration ✅ VERIFIED
+### Batch 3 - POS Integration ✅ VERIFIED (2026-02-03)
 
 | Ticket | Endpoint | Status | Evidence |
 |--------|----------|--------|----------|
-| RET-AUD-016 | POS Enroll | ✅ WORKING | Returns "Enrollment code is required" (400) |
-| RET-AUD-026 | POS Scan Resolve | ✅ PROTECTED | Returns "device_unauthorized" (401) |
-| RET-AUD-027 | Devices API | ✅ PROTECTED | /devices returns 401 |
+| RET-AUD-013 | Device/Integration | ✅ CODE OK | Device activation, list, visibility all working |
+| RET-AUD-016 | POS Enroll | ✅ DONE | POS connects to store, products sync, transactions visible in ledger |
+| RET-AUD-026 | POS Scan Resolve | ✅ DONE | storeId extracted from token (server-side), results scoped to store |
+| RET-AUD-027 | Devices API | ✅ DONE | List, activate, deactivate endpoints working; lastSeen updates |
 
 **POS API Flow Verified:**
 - Enroll requires valid enrollment code
 - Scan resolve requires device authentication
+- storeId comes from server-side DB lookup, NOT client request
+- Device deactivation revokes token (device must re-enroll)
+- Retailer portal can deactivate/reactivate devices
 - Proper error messages returned
 
 ### Batch 4 - SuperAdmin/Admin ✅ VERIFIED

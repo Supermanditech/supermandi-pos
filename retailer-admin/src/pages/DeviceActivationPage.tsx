@@ -19,6 +19,13 @@ interface Device {
   isActive: boolean;
 }
 
+// RET-AUD-027: Device deactivation response
+interface DeviceUpdateResponse {
+  success: boolean;
+  device?: Device;
+  error?: { code: string; message: string };
+}
+
 export default function DeviceActivationPage() {
   const { accessToken, store } = useAuth();
 
@@ -30,6 +37,7 @@ export default function DeviceActivationPage() {
 
   // UI state
   const [activating, setActivating] = useState(false);
+  const [deactivatingDeviceId, setDeactivatingDeviceId] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -148,6 +156,43 @@ export default function DeviceActivationPage() {
       setError(err.message || 'Network error. Please check your connection.');
     } finally {
       setActivating(false);
+    }
+  };
+
+  // RET-AUD-027: Handle device deactivation/reactivation
+  const handleToggleDevice = async (deviceId: string, currentlyActive: boolean) => {
+    if (!accessToken) return;
+
+    const action = currentlyActive ? 'deactivate' : 'reactivate';
+    if (!window.confirm(`Are you sure you want to ${action} this device?${currentlyActive ? ' The device will need to be re-enrolled to use the POS again.' : ''}`)) {
+      return;
+    }
+
+    setDeactivatingDeviceId(deviceId);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await authFetch(`/api/v1/retailer-admin/devices/${deviceId}`, accessToken, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !currentlyActive }),
+      });
+
+      const data: DeviceUpdateResponse = await response.json();
+
+      if (response.ok && data.success) {
+        setSuccess(`Device ${currentlyActive ? 'deactivated' : 'reactivated'} successfully.`);
+        // Reload devices list
+        loadDevices();
+      } else {
+        setError(data.error?.message || `Failed to ${action} device.`);
+      }
+    } catch (err: any) {
+      console.error('Device toggle error:', err);
+      setError(err.message || 'Network error. Please check your connection.');
+    } finally {
+      setDeactivatingDeviceId(null);
     }
   };
 
@@ -433,12 +478,36 @@ export default function DeviceActivationPage() {
                     {device.lastSeen && ` | Last seen: ${new Date(device.lastSeen).toLocaleString()}`}
                   </div>
                 </div>
-                <div style={{
-                  fontSize: '0.7rem',
-                  color: '#94a3b8',
-                  fontFamily: 'monospace',
-                }}>
-                  {device.id.substring(0, 8)}...
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                  <div style={{
+                    fontSize: '0.7rem',
+                    color: '#94a3b8',
+                    fontFamily: 'monospace',
+                  }}>
+                    {device.id.substring(0, 8)}...
+                  </div>
+                  {/* RET-AUD-027: Deactivate/Reactivate button */}
+                  <button
+                    onClick={() => handleToggleDevice(device.id, device.isActive)}
+                    disabled={deactivatingDeviceId === device.id}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      background: device.isActive ? '#fee2e2' : '#dcfce7',
+                      color: device.isActive ? '#dc2626' : '#166534',
+                      border: `1px solid ${device.isActive ? '#fca5a5' : '#86efac'}`,
+                      borderRadius: '6px',
+                      fontSize: '0.7rem',
+                      fontWeight: '500',
+                      cursor: deactivatingDeviceId === device.id ? 'not-allowed' : 'pointer',
+                      opacity: deactivatingDeviceId === device.id ? 0.6 : 1,
+                    }}
+                  >
+                    {deactivatingDeviceId === device.id
+                      ? 'Processing...'
+                      : device.isActive
+                        ? 'Deactivate'
+                        : 'Reactivate'}
+                  </button>
                 </div>
               </div>
             ))}
