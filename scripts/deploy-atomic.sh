@@ -6,11 +6,22 @@
 # MANDATORY: This is the ONLY allowed deployment method for production.
 #
 # Usage:
-#   ./deploy-atomic.sh --tag <TAG>           Deploy specific tag
+#   ./deploy-atomic.sh --tag <TAG>           Deploy specific tag (PRODUCTION)
+#   ./deploy-atomic.sh --tag main --staging  Deploy main branch (STAGING ONLY)
 #   ./deploy-atomic.sh --rollback last       Rollback to previous release
 #   ./deploy-atomic.sh --rollback <ID>       Rollback to specific release
 #   ./deploy-atomic.sh --list-releases       List available releases
 #   ./deploy-atomic.sh --smoke-only          Run smoke gate without deploying
+#
+# Environment options:
+#   --env production    (default) Require annotated tags, block 'main' branch
+#   --env staging       Allow branch deploys (for dev/staging only)
+#   --staging           Shorthand for --env staging
+#
+# PRODUCTION RULES:
+#   - MUST use annotated tags (not branches)
+#   - 'main' and 'master' are BLOCKED for production
+#   - Use --staging flag ONLY for dev/staging environments
 #
 # Features:
 #   - Atomic deployment via staging → symlink swap
@@ -18,6 +29,7 @@
 #   - Release history preservation (5 releases kept)
 #   - Instant rollback capability
 #   - Comprehensive logging
+#   - Version fingerprinting (version.txt per portal)
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -40,6 +52,7 @@ MAX_RELEASES=5
 ACTION="deploy"
 TAG=""
 ROLLBACK_TARGET=""
+DEPLOY_ENV="production"  # Default to production (strict mode)
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -58,6 +71,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --smoke-only)
             ACTION="smoke"
+            shift
+            ;;
+        --env)
+            DEPLOY_ENV="$2"
+            shift 2
+            ;;
+        --staging)
+            DEPLOY_ENV="staging"
             shift
             ;;
         *)
@@ -350,9 +371,44 @@ do_deploy() {
         fail_with_diagnostics "No tag specified. Usage: ./deploy-atomic.sh --tag <TAG>"
     fi
 
+    # =========================================================================
+    # PRODUCTION SAFETY: Enforce tag-only deploys for production
+    # =========================================================================
+
+    if [ "$DEPLOY_ENV" = "production" ]; then
+        # Block "main" branch for production
+        if [ "$tag" = "main" ] || [ "$tag" = "master" ]; then
+            echo ""
+            echo -e "${RED}═══════════════════════════════════════════════════════════════════${NC}"
+            echo -e "${RED}${BOLD}PRODUCTION DEPLOY BLOCKED${NC}"
+            echo -e "${RED}═══════════════════════════════════════════════════════════════════${NC}"
+            echo ""
+            echo -e "${RED}Cannot deploy '$tag' branch to production.${NC}"
+            echo ""
+            echo "Production deploys MUST use an annotated tag, not a branch."
+            echo ""
+            echo "Options:"
+            echo "  1. Create a tag:  git tag -a v1.2.3 -m 'Release v1.2.3'"
+            echo "                    git push origin v1.2.3"
+            echo "                    ./deploy-atomic.sh --tag v1.2.3"
+            echo ""
+            echo "  2. For staging/dev only, use: ./deploy-atomic.sh --tag main --env staging"
+            echo "                            or: ./deploy-atomic.sh --tag main --staging"
+            echo ""
+            exit 1
+        fi
+
+        # Verify tag is annotated (not lightweight)
+        if ! git cat-file -t "refs/tags/$tag" 2>/dev/null | grep -q "tag"; then
+            warn "Tag '$tag' appears to be a lightweight tag (not annotated)."
+            warn "Annotated tags are recommended for production: git tag -a <tag> -m 'message'"
+        fi
+    fi
+
     header "SUPERMANDI ZERO-REGRESSION DEPLOYMENT"
     echo ""
     echo "  Tag:    $tag"
+    echo "  Env:    $DEPLOY_ENV"
     echo "  Time:   $DEPLOY_TIME_IST"
     echo "  Domain: $DOMAIN"
     echo ""
@@ -437,12 +493,28 @@ do_deploy() {
     # Copy retailer
     cp -r "$REPO_DIR/retailer-admin/dist/"* "$RELEASE_PATH/retailer/"
     [ -f "$RELEASE_PATH/retailer/index.html" ] || fail_with_diagnostics "Staging failed: retailer/index.html missing"
-    success "retailer staged"
+    # Create version fingerprint for retailer
+    cat > "$RELEASE_PATH/retailer/version.txt" << EOF
+tag=$tag
+sha=$COMMIT_SHA
+full_sha=$COMMIT_FULL
+deploy_time=$DEPLOY_TIME_IST
+release_id=$RELEASE_ID
+EOF
+    success "retailer staged (with version.txt)"
 
     # Copy admin
     cp -r "$REPO_DIR/supermandi-superadmin/dist/"* "$RELEASE_PATH/admin/"
     [ -f "$RELEASE_PATH/admin/index.html" ] || fail_with_diagnostics "Staging failed: admin/index.html missing"
-    success "admin staged"
+    # Create version fingerprint for admin
+    cat > "$RELEASE_PATH/admin/version.txt" << EOF
+tag=$tag
+sha=$COMMIT_SHA
+full_sha=$COMMIT_FULL
+deploy_time=$DEPLOY_TIME_IST
+release_id=$RELEASE_ID
+EOF
+    success "admin staged (with version.txt)"
 
     # Store metadata
     cat > "$RELEASE_PATH/RELEASE.txt" << EOF
@@ -490,6 +562,17 @@ EOF
         "$REPO_DIR/supplier-portal/" "/home/supermanditech/supplier-portal/"
 
     cd /home/supermanditech/supplier-portal
+
+    # Create version fingerprint for supplier (in public directory)
+    mkdir -p public
+    cat > "public/version.txt" << EOF
+tag=$tag
+sha=$COMMIT_SHA
+full_sha=$COMMIT_FULL
+deploy_time=$DEPLOY_TIME_IST
+release_id=$RELEASE_ID
+EOF
+    success "supplier version.txt created"
 
     # Install production dependencies
     if [ ! -d "node_modules" ] || [ package.json -nt node_modules ]; then

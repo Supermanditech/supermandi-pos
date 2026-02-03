@@ -10,6 +10,8 @@
 #   ./smoke-gate.sh                    Run smoke gate against production
 #   ./smoke-gate.sh --json             Output results as JSON
 #   ./smoke-gate.sh --base URL         Test against specific base URL
+#   ./smoke-gate.sh --verify-tag TAG   Verify portals have expected tag deployed
+#   ./smoke-gate.sh --verify-sha SHA   Verify portals have expected SHA deployed
 #   DOMAIN=staging.supermandi.tech ./smoke-gate.sh
 #
 # Exit codes:
@@ -26,6 +28,8 @@ GATEWAY="${GATEWAY:-http://127.0.0.1:3000}"
 BASE_URL="https://$DOMAIN"
 JSON_OUTPUT=false
 LOG_FILE="${LOG_FILE:-/var/log/supermandi/smoke-gate.log}"
+VERIFY_TAG=""
+VERIFY_SHA=""
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -36,6 +40,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --base)
             BASE_URL="$2"
+            shift 2
+            ;;
+        --verify-tag)
+            VERIFY_TAG="$2"
+            shift 2
+            ;;
+        --verify-sha)
+            VERIFY_SHA="$2"
             shift 2
             ;;
         *)
@@ -136,6 +148,39 @@ check_nginx_config() {
     fi
 }
 
+check_version_fingerprint() {
+    local name="$1"
+    local url="$2"
+    local expected_tag="${3:-}"
+    local expected_sha="${4:-}"
+
+    local version_content=$(curl -sS --max-time 15 "$url" 2>/dev/null || echo "")
+
+    # Check if version.txt exists and is not empty
+    if [ -z "$version_content" ] || echo "$version_content" | grep -qi "404\|not found"; then
+        RESULTS+=("{\"name\":\"$name version\",\"url\":\"$url\",\"pass\":false,\"reason\":\"not found\"}")
+        return 1
+    fi
+
+    # Extract tag and sha from version.txt
+    local deployed_tag=$(echo "$version_content" | grep "^tag=" | cut -d= -f2)
+    local deployed_sha=$(echo "$version_content" | grep "^sha=" | cut -d= -f2)
+
+    # If expected tag/sha provided, verify they match
+    if [ -n "$expected_tag" ] && [ "$deployed_tag" != "$expected_tag" ]; then
+        RESULTS+=("{\"name\":\"$name version\",\"expected_tag\":\"$expected_tag\",\"deployed_tag\":\"$deployed_tag\",\"pass\":false}")
+        return 1
+    fi
+
+    if [ -n "$expected_sha" ] && [ "$deployed_sha" != "$expected_sha" ]; then
+        RESULTS+=("{\"name\":\"$name version\",\"expected_sha\":\"$expected_sha\",\"deployed_sha\":\"$deployed_sha\",\"pass\":false}")
+        return 1
+    fi
+
+    RESULTS+=("{\"name\":\"$name version\",\"tag\":\"$deployed_tag\",\"sha\":\"$deployed_sha\",\"pass\":true}")
+    return 0
+}
+
 # =============================================================================
 # MAIN CHECKS
 # =============================================================================
@@ -149,6 +194,8 @@ if [ "$JSON_OUTPUT" = false ]; then
     echo "Time:   $TIMESTAMP"
     echo "Domain: $DOMAIN"
     echo "Base:   $BASE_URL"
+    [ -n "$VERIFY_TAG" ] && echo "Verify: tag=$VERIFY_TAG"
+    [ -n "$VERIFY_SHA" ] && echo "Verify: sha=$VERIFY_SHA"
     echo ""
 fi
 
@@ -280,6 +327,52 @@ if command -v pm2 &> /dev/null || [ -n "$(which pm2 2>/dev/null)" ]; then
         [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${YELLOW}⚠ check manually${NC}\n" "PM2 supplier-portal:"
     fi
 fi
+
+# -----------------------------------------------------------------------------
+# VERSION FINGERPRINT CHECKS
+# -----------------------------------------------------------------------------
+
+if [ "$JSON_OUTPUT" = false ]; then
+    echo ""
+    echo "Version Fingerprint Checks:"
+    echo "────────────────────────────────────────"
+fi
+
+for portal in retailer admin supplier; do
+    version_url="$BASE_URL/$portal/version.txt"
+
+    version_content=$(curl -sS --max-time 15 "$version_url" 2>/dev/null || echo "")
+
+    if [ -z "$version_content" ] || echo "$version_content" | grep -qi "404\|not found\|<!DOCTYPE"; then
+        [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${YELLOW}⚠ not found (deploy needed)${NC}\n" "/$portal/version.txt:"
+    else
+        deployed_tag=$(echo "$version_content" | grep "^tag=" | cut -d= -f2)
+        deployed_sha=$(echo "$version_content" | grep "^sha=" | cut -d= -f2)
+
+        # Verify tag if specified
+        if [ -n "$VERIFY_TAG" ]; then
+            if [ "$deployed_tag" = "$VERIFY_TAG" ]; then
+                [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${GREEN}✓ $deployed_tag ($deployed_sha)${NC}\n" "/$portal/version.txt:"
+            else
+                [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${RED}✗ expected $VERIFY_TAG, got $deployed_tag${NC}\n" "/$portal/version.txt:"
+                FAILED=1
+            fi
+        # Verify SHA if specified
+        elif [ -n "$VERIFY_SHA" ]; then
+            if [ "$deployed_sha" = "$VERIFY_SHA" ]; then
+                [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${GREEN}✓ $deployed_tag ($deployed_sha)${NC}\n" "/$portal/version.txt:"
+            else
+                [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${RED}✗ expected SHA $VERIFY_SHA, got $deployed_sha${NC}\n" "/$portal/version.txt:"
+                FAILED=1
+            fi
+        else
+            # Just display what's deployed
+            [ "$JSON_OUTPUT" = false ] && printf "  %-30s ${GREEN}✓ $deployed_tag ($deployed_sha)${NC}\n" "/$portal/version.txt:"
+        fi
+
+        RESULTS+=("{\"name\":\"$portal version\",\"tag\":\"$deployed_tag\",\"sha\":\"$deployed_sha\",\"pass\":true}")
+    fi
+done
 
 # =============================================================================
 # OUTPUT RESULTS
