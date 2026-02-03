@@ -1,0 +1,3 @@
+"Endpoint","URL","Status","Timestamp"
+"API Gateway Health","https://34.14.220.171.nip.io/api/v1/health","FAIL (The SSL connection could not be established, see inner exception.)","20:19:29"
+"API Gateway Healthz","https://34.14.220.171.nip.io/api/v1/healthz","FAIL (The SSL connection could not be established, see inner exception.)","20:19:29"

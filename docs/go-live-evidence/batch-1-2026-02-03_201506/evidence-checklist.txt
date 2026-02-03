@@ -1,0 +1,45 @@
+﻿# BATCH 1 EVIDENCE CHECKLIST
+
+## RET-AUD-011 (Firebase OTP Login)
+[ ] RET-011-01-login-page.png
+[ ] RET-011-02-otp-screen.png
+[ ] RET-011-03-dashboard.png
+[ ] RET-011-04-storage.png
+[ ] Console output from checkFirebase()
+[ ] Console output from checkRetailerAuth()
+[ ] Network HAR export (optional)
+
+## RET-AUD-014 (Session Persistence)
+[ ] RET-014-01-pre-refresh.png
+[ ] RET-014-02-storage-pre.png
+[ ] RET-014-03-post-refresh.png
+[ ] RET-014-04-storage-post.png
+
+## RET-AUD-021 (Protected Route Redirect)
+[ ] RET-021-01-incognito-empty.png
+[ ] RET-021-02-redirect-complete.png
+[ ] RET-021-03-network.png
+
+## RET-AUD-028 (Logout)
+[ ] RET-028-01-pre-logout-storage.png
+[ ] RET-028-02-logout-button.png
+[ ] RET-028-03-post-logout-url.png
+[ ] RET-028-04-post-logout-storage.png
+[ ] Console output from verifyLogout()
+
+## RET-AUD-038 (Token Auto-Refresh)
+[ ] RET-038-01-initial-token.png
+[ ] RET-038-02-network-refresh.png (if observable)
+[ ] RET-038-03-new-token.png (if observable)
+[ ] OR mark as BLOCKED with reason
+
+## RET-AUD-039 (Registration with GSTIN)
+[ ] RET-039-01-register-page.png
+[ ] RET-039-02-gstin-entered.png
+[ ] RET-039-03-otp-screen.png
+[ ] RET-039-04-success.png
+
+## FINAL
+[ ] All screenshots named correctly
+[ ] exportResults() JSON saved
+[ ] Summary table completed

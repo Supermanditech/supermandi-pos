@@ -49,6 +49,7 @@ body {
   }
 
   .label {
-    @apply block text-sm font-medium text-slate-900 mb-1;
+    /* RET-AUD-057: Standardized label margin (8px = mb-2) to match Retailer */
+    @apply block text-sm font-medium text-slate-900 mb-2;
   }
 }

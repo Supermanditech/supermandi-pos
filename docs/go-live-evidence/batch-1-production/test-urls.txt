@@ -1,0 +1,32 @@
+# BATCH 1 TEST URLS (PRODUCTION — supermandi.tech)
+# Go-Live verification MUST use these URLs
+# Generated: 2026-02-03
+
+## LANDING PAGE
+Landing:            https://supermandi.tech/
+
+## RETAILER PORTAL
+Retailer Login:     https://supermandi.tech/retailer/login
+Retailer Register:  https://supermandi.tech/retailer/register
+Retailer Dashboard: https://supermandi.tech/retailer/dashboard
+Retailer Catalog:   https://supermandi.tech/retailer/catalog
+Retailer Orders:    https://supermandi.tech/retailer/orders
+Retailer Payments:  https://supermandi.tech/retailer/payments
+Retailer Settings:  https://supermandi.tech/retailer/settings
+
+## SUPPLIER PORTAL
+Supplier Login:     https://supermandi.tech/supplier/login
+Supplier Login (/): https://supermandi.tech/supplier/login/
+Supplier Register:  https://supermandi.tech/supplier/register
+Supplier Dashboard: https://supermandi.tech/supplier/dashboard
+
+## ADMIN PORTAL
+Admin:              https://supermandi.tech/admin/
+
+## API ENDPOINTS
+API Health:         https://supermandi.tech/api/v1/health
+API Healthz:        https://supermandi.tech/api/v1/healthz
+
+## PROTECTED ROUTE REDIRECT TEST (use in Incognito)
+Protected Retailer: https://supermandi.tech/s/TESTSTORE/products
+Protected Supplier: https://supermandi.tech/supplier/dashboard

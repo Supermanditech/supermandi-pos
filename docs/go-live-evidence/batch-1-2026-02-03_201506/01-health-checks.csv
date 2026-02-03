@@ -1,0 +1,3 @@
+"Endpoint","URL","Status","Timestamp"
+"API Gateway Health","https://api.supermandi.tech/health","FAIL (The remote server returned an error: (404) Not Found.)","20:15:07"
+"Retailer Admin Health","https://api.supermandi.tech/api/v1/retailer-admin/health","FAIL (The remote server returned an error: (401) Unauthorized.)","20:15:07"

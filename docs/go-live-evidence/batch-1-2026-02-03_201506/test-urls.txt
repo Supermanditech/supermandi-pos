@@ -1,0 +1,16 @@
+﻿# BATCH 1 TEST URLS
+# Copy-paste these into browser
+
+## RETAILER PORTAL
+Retailer Login:     https://retailer.supermandi.tech/retailer/login
+Retailer Register:  https://retailer.supermandi.tech/retailer/register
+Protected Route:    https://retailer.supermandi.tech/s/TESTSTORE/products
+
+## SUPPLIER PORTAL
+Supplier Login:     https://supplier.supermandi.tech/login
+Supplier Register:  https://supplier.supermandi.tech/register
+Protected Route:    https://supplier.supermandi.tech/dashboard
+
+## API ENDPOINTS (for Network tab verification)
+Health Check:       https://api.supermandi.tech/health
+Retailer Health:    https://api.supermandi.tech/api/v1/retailer-admin/health

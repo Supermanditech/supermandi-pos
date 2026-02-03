@@ -1,0 +1,29 @@
+HTTP/1.1 200 OK
+Server: nginx/1.22.1
+Date: Tue, 03 Feb 2026 13:55:43 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 15
+Connection: keep-alive
+Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token
+Access-Control-Allow-Credentials: true
+Content-Security-Policy: default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+x-correlation-id: 339a0f5e-51d8-45cf-9f0e-1c9a2cd6bc2c
+RateLimit-Policy: 30;w=60
+RateLimit-Limit: 30
+RateLimit-Remaining: 27
+RateLimit-Reset: 6
+ETag: W/"f-VaSQ4oDUiZblZNAEkkN+sX+q3Sg"
+Cache-Control: no-store
+

@@ -28,8 +28,8 @@ export default function AuthLayout({
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center p-4">
+      {/* Main Content - RET-AUD-057: Standardized padding (2rem 1rem = py-8 px-4) */}
+      <main className="flex-1 flex items-center justify-center py-8 px-4">
         <div className="w-full max-w-[448px]">
           {/* Auth Card - white with subtle shadow per spec */}
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-8">{children}</div>

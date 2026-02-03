@@ -2,8 +2,11 @@
 # GO-LIVE-078: Configuration template with environment variable substitution
 # Production reverse proxy with SSL certificate management
 #
+# Production Domain: https://supermandi.tech
+# Debug Mirror (optional): https://34.14.220.171.nip.io
+#
 # Environment variables:
-#   SSL_DOMAIN        - Domain for SSL certificates (e.g., 34.14.220.171.nip.io)
+#   SSL_DOMAIN        - Domain for SSL certificates (e.g., supermandi.tech)
 #   SERVER_NAMES      - Space-separated list of server names (default: SSL_DOMAIN)
 #   API_RATE_LIMIT    - API rate limit per minute (default: 30)
 #   AUTH_RATE_LIMIT   - Auth rate limit per minute (default: 5)
@@ -65,12 +68,12 @@ server {
 
     # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
     location /admin {
-        alias /var/www/supermandi-superadmin;
+        alias /var/www/admin;
         index index.html;
         try_files $uri $uri/ /admin/index.html;
     }
     location = /admin/index.html {
-        alias /var/www/supermandi-superadmin/index.html;
+        alias /var/www/admin/index.html;
     }
 
     # GO-LIVE-B9: Supplier Portal at /supplier/
@@ -187,12 +190,12 @@ server {
 
     # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
     location /admin {
-        alias /var/www/supermandi-superadmin;
+        alias /var/www/admin;
         index index.html;
         try_files $uri $uri/ /admin/index.html;
     }
     location = /admin/index.html {
-        alias /var/www/supermandi-superadmin/index.html;
+        alias /var/www/admin/index.html;
     }
 
     # GO-LIVE-B9: Supplier Portal at /supplier/

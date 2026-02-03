@@ -1,0 +1,16 @@
+# BATCH 1 TEST URLS
+# Copy-paste these into browser
+
+## RETAILER PORTAL (on 34.14.220.171.nip.io)
+Retailer Login:     https://34.14.220.171.nip.io/retailer/login
+Retailer Register:  https://34.14.220.171.nip.io/retailer/register
+Protected Route:    https://34.14.220.171.nip.io/s/TESTSTORE/products
+
+## SUPPLIER PORTAL (on 34.14.220.171.nip.io)
+Supplier Login:     https://34.14.220.171.nip.io/supplier/login
+Supplier Register:  https://34.14.220.171.nip.io/supplier/register
+Protected Route:    https://34.14.220.171.nip.io/supplier/dashboard
+
+## API ENDPOINTS (for Network tab verification)
+Health Check:       https://34.14.220.171.nip.io/api/v1/health
+Health Check (z):   https://34.14.220.171.nip.io/api/v1/healthz
