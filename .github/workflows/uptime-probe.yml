@@ -77,12 +77,29 @@ jobs:
         id: versions
         run: |
           echo "Checking version fingerprints..."
+          FINGERPRINT_FAILURES=""
+
           for portal in retailer admin supplier; do
-            VERSION=$(curl -sS --max-time 30 "https://${{ env.DOMAIN }}/$portal/version.txt" 2>/dev/null || echo "not found")
-            echo "--- $portal/version.txt ---"
-            echo "$VERSION" | head -5
+            STATUS=$(curl -sS -o /tmp/${portal}_version.txt -w "%{http_code}" --max-time 30 "https://${{ env.DOMAIN }}/$portal/version.txt" 2>/dev/null || echo "000")
+            echo "--- $portal/version.txt (HTTP $STATUS) ---"
+
+            if [ "$STATUS" = "200" ]; then
+              cat /tmp/${portal}_version.txt
+              # Verify it contains expected fields
+              if grep -q "^tag=" /tmp/${portal}_version.txt && grep -q "^sha=" /tmp/${portal}_version.txt; then
+                echo "✓ Valid fingerprint"
+              else
+                echo "::error::$portal version.txt missing required fields"
+                FINGERPRINT_FAILURES="$FINGERPRINT_FAILURES$portal (invalid format), "
+              fi
+            else
+              echo "::error::$portal version.txt returned $STATUS"
+              FINGERPRINT_FAILURES="$FINGERPRINT_FAILURES$portal ($STATUS), "
+            fi
             echo ""
           done
+
+          echo "fingerprint_failures=$FINGERPRINT_FAILURES" >> $GITHUB_OUTPUT
 
       - name: Evaluate Results
         id: evaluate
@@ -105,17 +122,24 @@ jobs:
             FAILURES="$FAILURES- Supplier: ${{ steps.supplier.outputs.status }}\n"
           fi
 
+          # Check version fingerprints (FAIL if missing after first deploy)
+          FINGERPRINT_ISSUES="${{ steps.versions.outputs.fingerprint_failures }}"
+          if [ -n "$FINGERPRINT_ISSUES" ]; then
+            FAILED=1
+            FAILURES="$FAILURES- Version fingerprints: $FINGERPRINT_ISSUES\n"
+          fi
+
           echo "failed=$FAILED" >> $GITHUB_OUTPUT
           echo "failures<<EOF" >> $GITHUB_OUTPUT
           echo -e "$FAILURES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
           if [ $FAILED -eq 1 ]; then
-            echo "::error::One or more portals are DOWN"
+            echo "::error::One or more portals are DOWN or fingerprints invalid"
             exit 1
           fi
 
-          echo "✅ All portals are healthy"
+          echo "✅ All portals are healthy with valid fingerprints"
 
       - name: Create Alert Issue
         if: failure() && github.event.inputs.alert_on_failure != 'false'
@@ -129,12 +153,15 @@ jobs:
             **Time**: ${new Date().toISOString()}
             **Domain**: ${{ env.DOMAIN }}
 
-            ### Status
+            ### Portal Status
             | Portal | Status |
             |--------|--------|
             | Retailer | ${{ steps.retailer.outputs.status }} |
             | Admin | ${{ steps.admin.outputs.status }} |
             | Supplier | ${{ steps.supplier.outputs.status }} |
+
+            ### Version Fingerprint Issues
+            ${{ steps.versions.outputs.fingerprint_failures || 'None' }}
 
             ### Action Required
             1. Check VM status: \`ssh claude@34.14.220.171\`
