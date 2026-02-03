@@ -182,7 +182,8 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
   }
 
   // No authentication provided
-  recordFailedAttempt(clientIp);
+  // RET-AUD-019: Do NOT count missing auth as failed attempt (only count actual invalid tokens)
+  // This allows legitimate API discovery/testing while still blocking brute force attacks
   console.log(`[ADMIN-AUTH] ${req.method} ${req.path} - No authentication provided (IP: ${clientIp})`);
   res.status(401).json({
     error: {
