@@ -1,0 +1,17 @@
+{
+  "name": "supermandi-e2e-tests",
+  "version": "1.0.0",
+  "description": "E2E tests for SuperMandi platform using Playwright",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "verify": "playwright test --project=chromium",
+    "verify:all": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.41.0"
+  }
+}

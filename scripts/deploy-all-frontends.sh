@@ -46,25 +46,30 @@ fi
 echo "  ✓ All builds verified"
 
 # Create directories on VM
-echo "[3/7] Creating directories on VM..."
-ssh $VM_USER@$VM_HOST "sudo mkdir -p /var/www/retailer /var/www/admin /var/www/supplier && sudo chown -R $VM_USER:$VM_USER /var/www/"
+echo "[3/8] Creating directories on VM..."
+ssh $VM_USER@$VM_HOST "sudo mkdir -p /var/www/retailer /var/www/admin /var/www/supplier /var/www/supermandi-landing && sudo chown -R $VM_USER:$VM_USER /var/www/"
+
+# Deploy landing page (RET-AUD-051)
+echo "[4/8] Deploying landing page to /var/www/supermandi-landing/..."
+scp "$PROJECT_ROOT/supermandi-landing/index.html" $VM_USER@$VM_HOST:/var/www/supermandi-landing/
+echo "  ✓ landing page deployed"
 
 # Deploy retailer-admin (Vite static)
-echo "[4/7] Deploying retailer-admin to /var/www/retailer/..."
+echo "[5/8] Deploying retailer-admin to /var/www/retailer/..."
 rsync -avz --delete --progress \
   "$PROJECT_ROOT/retailer-admin/dist/" \
   $VM_USER@$VM_HOST:/var/www/retailer/
 echo "  ✓ retailer-admin deployed"
 
 # Deploy supermandi-superadmin (Vite static)
-echo "[5/7] Deploying admin-portal to /var/www/admin/..."
+echo "[6/8] Deploying admin-portal to /var/www/admin/..."
 rsync -avz --delete --progress \
   "$PROJECT_ROOT/supermandi-superadmin/dist/" \
   $VM_USER@$VM_HOST:/var/www/admin/
 echo "  ✓ admin-portal deployed"
 
 # Deploy supplier-portal (Next.js server mode)
-echo "[6/7] Deploying supplier-portal..."
+echo "[7/8] Deploying supplier-portal..."
 rsync -avz --progress \
   --exclude 'node_modules' \
   --exclude '.git' \
@@ -88,7 +93,7 @@ EOF
 echo "  ✓ supplier-portal deployed"
 
 # Reload nginx
-echo "[7/7] Reloading nginx..."
+echo "[8/8] Reloading nginx..."
 ssh $VM_USER@$VM_HOST "sudo nginx -t && sudo nginx -s reload"
 echo "  ✓ nginx reloaded"
 
@@ -101,13 +106,24 @@ echo ""
 
 # Test each endpoint (HTML)
 echo "Testing HTML endpoints..."
+LANDING_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/" 2>/dev/null || echo "000")
 RETAILER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/retailer/" 2>/dev/null || echo "000")
 ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/admin/" 2>/dev/null || echo "000")
 SUPPLIER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/supplier/" 2>/dev/null || echo "000")
 
+echo "  Landing Page:     $LANDING_STATUS"
 echo "  Retailer Portal:  $RETAILER_STATUS"
 echo "  Admin Portal:     $ADMIN_STATUS"
 echo "  Supplier Portal:  $SUPPLIER_STATUS"
+
+# RET-AUD-051: Verify landing page is NOT redirecting
+LANDING_REDIRECT=$(curl -sI "https://supermandi.tech/" 2>/dev/null | grep -i "^location:" | head -1 || echo "")
+if [ -n "$LANDING_REDIRECT" ]; then
+  echo "  ✗ WARNING: Landing page redirects to: $LANDING_REDIRECT"
+  echo "    Expected: No redirect (200 OK with HTML content)"
+else
+  echo "  ✓ Landing page serves directly (no redirect)"
+fi
 
 # RET-AUD-004: Verify JS/CSS assets are accessible (FAIL HARD if not)
 echo ""
@@ -202,6 +218,7 @@ echo "Deployment Complete! All Checks Passed"
 echo "=========================================="
 echo ""
 echo "URLs:"
+echo "  Landing:  https://supermandi.tech/"
 echo "  Retailer: https://supermandi.tech/retailer/"
 echo "  Admin:    https://supermandi.tech/admin/"
 echo "  Supplier: https://supermandi.tech/supplier/"

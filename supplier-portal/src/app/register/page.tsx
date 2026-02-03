@@ -91,6 +91,12 @@ export default function RegisterPage() {
   const [idProofType, setIdProofType] = useState<'aadhaar' | 'pan' | 'driving_license'>('aadhaar');
   const [businessProofType, setBusinessProofType] = useState<'shop_license' | 'msme' | 'incorporation' | 'trade_license'>('shop_license');
 
+  // Track if component has mounted (for SSR compatibility)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Setup reCAPTCHA on mount
   useEffect(() => {
     if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
@@ -519,8 +525,8 @@ export default function RegisterPage() {
         </div>
       )}
 
-      {/* Firebase warning */}
-      {!isFirebaseReady() && step === 'phone' && (
+      {/* Firebase warning - only show after client mount */}
+      {mounted && !isFirebaseReady() && step === 'phone' && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg text-sm">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">

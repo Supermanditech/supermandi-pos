@@ -24,6 +24,7 @@ import {
 } from './middleware';
 import { setupProxyRoutes } from './routes/proxy';
 import { adminAuthRouter } from './routes/adminAuth';
+import { createTestAuthRouter } from './routes/testAuth';
 
 // =============================================================================
 // GO-LIVE-079: STRUCTURED LOGGING
@@ -215,6 +216,13 @@ app.use('/api/v1', createHealthRouter(healthChecker));
 // Session-based authentication with JWT tokens
 // =============================================================================
 app.use('/api/v1/admin/auth', adminAuthRouter);
+
+// =============================================================================
+// TEST AUTH ROUTES - Only enabled in non-production environments
+// Provides: /api/test/mint-token, /api/test/verify-token, /api/test/refresh-token
+// Used for automated E2E testing of token refresh flows
+// =============================================================================
+app.use('/api/test', createTestAuthRouter());
 
 // =============================================================================
 // PROXY ROUTES

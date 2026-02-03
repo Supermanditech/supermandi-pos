@@ -264,7 +264,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
               fontSize: "1.5rem",
               fontWeight: 600,
               color: "#2563eb"
-            }}>SuperMandi</span>
+            }}>SuperManditech</span>
             <span style={{ color: "#94a3b8" }}>|</span>
             <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: 500 }}>SuperAdmin</span>
           </div>
@@ -504,7 +504,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
           fontSize: "0.8125rem",
           color: "#64748b"
         }}>
-          &copy; 2026 SuperMandi. All rights reserved.
+          &copy; 2026 SuperManditech. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

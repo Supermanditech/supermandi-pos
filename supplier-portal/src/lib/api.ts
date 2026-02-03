@@ -1,10 +1,7 @@
 // SM-023: API client for supplier portal
-// GL-WF-009: Removed localhost fallback - API URL must be configured in production
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
-
-if (!API_BASE_URL && typeof window !== 'undefined') {
-  console.error('CRITICAL: API_BASE_URL is not configured. Set NEXT_PUBLIC_API_BASE_URL environment variable.');
-}
+// SUP-LOGIN-001: Use same-origin fallback (empty string) when no API URL configured
+// This allows relative paths to work through nginx reverse proxy in production
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || '';
 
 export class ApiError extends Error {
   constructor(
@@ -78,11 +75,7 @@ export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // GL-WF-009: Fail explicitly if API URL not configured
-  if (!API_BASE_URL) {
-    throw new ApiError(500, 'CONFIG_ERROR', 'API URL is not configured. Contact administrator.');
-  }
-
+  // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
   const token = getAuthToken();
 
   const headers: Record<string, string> = {
@@ -487,10 +480,7 @@ export interface CsvUploadResult {
 const MAX_CSV_FILE_SIZE = 5 * 1024 * 1024;
 
 export async function uploadProductsCsv(file: File): Promise<CsvUploadResult> {
-  // GL-WF-009: Fail explicitly if API URL not configured
-  if (!API_BASE_URL) {
-    throw new ApiError(500, 'CONFIG_ERROR', 'API URL is not configured. Contact administrator.');
-  }
+  // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
 
   // GL-WF-059: Enforce file size limit
   if (file.size > MAX_CSV_FILE_SIZE) {
@@ -600,9 +590,7 @@ export async function uploadKycDocument(
   type: KycDocument['documentType'],
   file: File
 ): Promise<KycDocument & { message: string }> {
-  if (!API_BASE_URL) {
-    throw new ApiError(500, 'CONFIG_ERROR', 'API URL is not configured. Contact administrator.');
-  }
+  // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
 
   // Max 5MB per document
   if (file.size > 5 * 1024 * 1024) {
@@ -897,9 +885,7 @@ export async function uploadSupplierDocument(
   documentType: string,
   file: File
 ): Promise<{ success: boolean; documentId: string; message: string }> {
-  if (!API_BASE_URL) {
-    throw new ApiError(500, 'CONFIG_ERROR', 'API URL is not configured.');
-  }
+  // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
 
   if (file.size > 5 * 1024 * 1024) {
     throw new ApiError(400, 'FILE_TOO_LARGE', 'File size exceeds maximum allowed (5MB)');

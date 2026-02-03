@@ -52,25 +52,30 @@ server {
         proxy_set_header Host $host;
     }
 
-    # GO-LIVE-B9: Retailer Portal at /retailer/
-    location /retailer/ {
-        proxy_pass http://retailer_portal/;
-        proxy_http_version 1.1;
-        proxy_set_header Connection "";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # PORTAL-ROUTING-002: Retailer Portal at /retailer/ (SPA static files)
+    # Serves static files with try_files for SPA client-side routing
+    location /retailer {
+        alias /var/www/retailer-admin;
+        index index.html;
+        try_files $uri $uri/ /retailer/index.html;
+    }
+
+    # PORTAL-ROUTING-002: Cache retailer static assets (hashed filenames)
+    location ~* ^/retailer/assets/.*\.(js|css)$ {
+        root /var/www;
+        rewrite ^/retailer/(.*)$ /retailer-admin/$1 break;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 
     # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
     location /admin {
-        alias /var/www/supermandi-superadmin;
+        alias /var/www/admin;
         index index.html;
         try_files $uri $uri/ /admin/index.html;
     }
     location = /admin/index.html {
-        alias /var/www/supermandi-superadmin/index.html;
+        alias /var/www/admin/index.html;
     }
 
     # GO-LIVE-B9: Supplier Portal at /supplier/
@@ -174,25 +179,30 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # GO-LIVE-B9: Retailer Portal at /retailer/
-    location /retailer/ {
-        proxy_pass http://retailer_portal/;
-        proxy_http_version 1.1;
-        proxy_set_header Connection "";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # PORTAL-ROUTING-002: Retailer Portal at /retailer/ (SPA static files)
+    # Serves static files with try_files for SPA client-side routing
+    location /retailer {
+        alias /var/www/retailer-admin;
+        index index.html;
+        try_files $uri $uri/ /retailer/index.html;
+    }
+
+    # PORTAL-ROUTING-002: Cache retailer static assets (hashed filenames)
+    location ~* ^/retailer/assets/.*\.(js|css)$ {
+        root /var/www;
+        rewrite ^/retailer/(.*)$ /retailer-admin/$1 break;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
     }
 
     # GO-LIVE-B9: Super Admin Portal at /admin/ (static files)
     location /admin {
-        alias /var/www/supermandi-superadmin;
+        alias /var/www/admin;
         index index.html;
         try_files $uri $uri/ /admin/index.html;
     }
     location = /admin/index.html {
-        alias /var/www/supermandi-superadmin/index.html;
+        alias /var/www/admin/index.html;
     }
 
     # GO-LIVE-B9: Supplier Portal at /supplier/

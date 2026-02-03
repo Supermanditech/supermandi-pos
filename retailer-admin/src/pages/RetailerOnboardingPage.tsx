@@ -666,7 +666,7 @@ export default function RetailerOnboardingPage() {
       <header style={styles.header}>
         <div style={styles.headerInner}>
           <div style={styles.logo}>
-            <span style={styles.logoText}>SuperMandi</span>
+            <span style={styles.logoText}>SuperManditech</span>
             <span style={styles.logoSeparator}>|</span>
             <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>
@@ -685,7 +685,7 @@ export default function RetailerOnboardingPage() {
           </h2>
           {step !== 'success' && (
             <p style={styles.pageSubtitle}>
-              Complete the registration form to join SuperMandi as a retail partner
+              Complete the registration form to join SuperManditech as a retail partner
             </p>
           )}
         </div>
@@ -1250,7 +1250,7 @@ export default function RetailerOnboardingPage() {
       {/* Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
-          &copy; 2026 SuperMandi. All rights reserved.
+          &copy; 2026 SuperManditech. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

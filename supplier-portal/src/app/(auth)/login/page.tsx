@@ -11,7 +11,7 @@ import { phoneOtpLogin, ApiError, lookupSupplierRegistration } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 
-type Step = 'phone' | 'otp';
+type Step = 'phone' | 'otp' | 'not_onboarded';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,6 +27,12 @@ export default function LoginPage() {
 
   // GO-LIVE-UI-REG-003: Track if lookup was successful (registration exists)
   const [lookupComplete, setLookupComplete] = useState(false);
+
+  // Track if component has mounted (for SSR compatibility)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Setup reCAPTCHA only when ready to send OTP (after successful lookup)
   useEffect(() => {
@@ -79,11 +85,8 @@ export default function LoginPage() {
 
       // Handle lookup result
       if (!data.exists) {
-        // No registration found - redirect to register
-        setError('No registration found for this phone number.');
-        setTimeout(() => {
-          router.push('/register');
-        }, 1500);
+        // PORTAL-AUTH-001: Show "not onboarded" state with Register CTA
+        setStep('not_onboarded');
         return;
       }
 
@@ -241,8 +244,8 @@ export default function LoginPage() {
         </p>
       )}
 
-      {/* Firebase warning */}
-      {!isFirebaseReady() && step === 'phone' && lookupComplete && (
+      {/* Firebase warning - only show after client mount */}
+      {mounted && !isFirebaseReady() && step === 'phone' && lookupComplete && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">
@@ -402,18 +405,52 @@ export default function LoginPage() {
         </form>
       )}
 
-      {/* GO-LIVE-AUTH-FIX: Single register link at bottom - shown on all steps except success */}
-      <div className="mt-6 text-center">
-        <p className="text-slate-600">
-          Don't have an account?{' '}
+      {/* AUTH-UX-LOGIN-001: Account Not Found State - Professional messaging */}
+      {step === 'not_onboarded' && (
+        <div className="text-center py-4">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl text-slate-500">!</span>
+          </div>
+          <h3 className="text-slate-700 font-semibold mb-2">Account not found</h3>
+          <p className="text-slate-500 text-sm mb-6">
+            This phone number is not associated with an active account. Please complete registration to continue.
+          </p>
           <Link
             href="/register"
-            className="text-primary-600 hover:text-primary-700 font-medium"
+            className="btn btn-primary w-full py-3 block text-center"
           >
             Register
           </Link>
-        </p>
-      </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setStep('phone');
+                setPhone('');
+                setError('');
+              }}
+              className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+            >
+              Use a different phone number
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* GO-LIVE-AUTH-FIX: Single register link at bottom - shown on phone/otp steps only */}
+      {(step === 'phone' || step === 'otp') && (
+        <div className="mt-6 text-center">
+          <p className="text-slate-600">
+            Don't have an account?{' '}
+            <Link
+              href="/register"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Register
+            </Link>
+          </p>
+        </div>
+      )}
     </>
   );
 }

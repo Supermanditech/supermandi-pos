@@ -161,10 +161,11 @@ router.get("/lookup", registrationRateLimiter, async (req: Request, res: Respons
     }
 
     // First check if phone has an approved supplier (can login directly)
+    // PORTAL-AUTH-001: Use primary_phone column (not phone) - matches supplier.suppliers schema
     const supplierResult = await pool.query(
       `SELECT id, business_name, verification_status
        FROM supplier.suppliers
-       WHERE phone = $1 AND verification_status IN ('verified', 'active')
+       WHERE primary_phone = $1 AND verification_status IN ('verified', 'active')
        LIMIT 1`,
       [phoneNormalized]
     );

@@ -8,7 +8,7 @@ import { BuildStamp } from '../components/BuildStamp';
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
 
-type Step = 'phone' | 'otp' | 'stores';
+type Step = 'phone' | 'otp' | 'stores' | 'not_onboarded';
 
 interface Store {
   id: string;
@@ -254,17 +254,18 @@ const styles = {
     fontSize: '0.8125rem',
     color: '#64748b',
   },
-  // Warning icon container
+  // AUTH-UX-LOGIN-001: Neutral icon container for "Account not found" state
   warningIconContainer: {
     width: '4rem',
     height: '4rem',
-    background: '#fef3c7',
+    background: '#f1f5f9',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     margin: '0 auto 1rem',
     fontSize: '1.5rem',
+    color: '#64748b',
   },
 };
 
@@ -345,16 +346,8 @@ export default function LoginPage() {
 
       // Handle lookup result
       if (!data.exists) {
-        // No registration found - redirect to register
-        setError('No registration found for this phone number.');
-        setTimeout(() => {
-          navigate('/retailer/register', {
-            state: {
-              message: 'No registration found for this phone number. Please register first.',
-              phone: normalizedPhone
-            }
-          });
-        }, 1500);
+        // PORTAL-AUTH-001: Show "not onboarded" state with Register CTA
+        setStep('not_onboarded');
         return;
       }
 
@@ -504,7 +497,7 @@ export default function LoginPage() {
       <header style={styles.header}>
         <div style={styles.headerInner}>
           <div style={styles.logo}>
-            <span style={styles.logoText}>SuperMandi</span>
+            <span style={styles.logoText}>SuperManditech</span>
             <span style={styles.logoSeparator}>|</span>
             <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>
@@ -730,6 +723,42 @@ export default function LoginPage() {
                 )}
               </div>
             )}
+
+            {/* AUTH-UX-LOGIN-001: Account Not Found State - Professional messaging */}
+            {step === 'not_onboarded' && (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={styles.warningIconContainer}>!</div>
+                <h3 style={{ color: '#475569', marginBottom: '0.5rem', fontWeight: 600 }}>Account not found</h3>
+                <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                  This phone number is not associated with an active account. Please complete registration to continue.
+                </p>
+                <Link
+                  to="/retailer/register"
+                  state={{ phone }}
+                  style={{
+                    ...styles.btnPrimary,
+                    display: 'block',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    lineHeight: '46px',
+                  }}
+                >
+                  Register
+                </Link>
+                <div style={{ marginTop: '1rem' }}>
+                  <button
+                    onClick={() => {
+                      setStep('phone');
+                      setPhone('');
+                      setError('');
+                    }}
+                    style={styles.textLink}
+                  >
+                    Use a different phone number
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -737,7 +766,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
-          &copy; 2026 SuperMandi. All rights reserved.
+          &copy; 2026 SuperManditech. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

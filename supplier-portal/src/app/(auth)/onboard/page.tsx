@@ -77,6 +77,12 @@ export default function SupplierOnboardingPage() {
   const [addressProofFile, setAddressProofFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<Record<string, boolean>>({});
 
+  // Track if component has mounted (for SSR compatibility)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Setup reCAPTCHA when on phone step
   useEffect(() => {
     if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone') {
@@ -375,8 +381,8 @@ export default function SupplierOnboardingPage() {
         </div>
       )}
 
-      {/* Firebase warning */}
-      {!isFirebaseReady() && (step === 'phone' || step === 'otp') && (
+      {/* Firebase warning - only show after client mount */}
+      {mounted && !isFirebaseReady() && (step === 'phone' || step === 'otp') && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1 text-xs">Please try again later.</p>

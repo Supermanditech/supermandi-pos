@@ -58,6 +58,9 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [, setPagination] = useState({ total: 0, hasMore: false });
   const [totals, setTotals] = useState({ totalSkus: 0, totalEntries: 0, todaysMovements: 0 });
+  // RET-AUD-034: Date range filters
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // GO-LIVE-021: Extract fetchLedger to allow retry on error
   const fetchLedger = useCallback(async () => {
@@ -74,6 +77,14 @@ export default function InventoryPage() {
         url += '&transactionType=sale';
       } else if (filter === 'ADJUSTMENT') {
         url += '&transactionType=adjustment';
+      }
+
+      // RET-AUD-034: Add date range filter parameters
+      if (startDate) {
+        url += `&startDate=${encodeURIComponent(startDate)}`;
+      }
+      if (endDate) {
+        url += `&endDate=${encodeURIComponent(endDate)}`;
       }
 
       const response = await authFetch(url, accessToken);
@@ -96,7 +107,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [accessToken, filter]);
+  }, [accessToken, filter, startDate, endDate]);
 
   // Fetch ledger entries from API
   useEffect(() => {
@@ -145,6 +156,50 @@ export default function InventoryPage() {
               {f === 'all' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()}
             </button>
           ))}
+        </div>
+
+        {/* RET-AUD-034: Date Range Filter */}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>From:</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{
+                padding: '0.5rem',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                fontSize: '0.875rem',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <label style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>To:</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              style={{
+                padding: '0.5rem',
+                borderRadius: '6px',
+                border: '1px solid var(--border)',
+                fontSize: '0.875rem',
+              }}
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setStartDate('');
+                setEndDate('');
+              }}
+              style={{ fontSize: '0.875rem' }}
+            >
+              Clear Dates
+            </button>
+          )}
         </div>
 
         {/* Ledger Table */}

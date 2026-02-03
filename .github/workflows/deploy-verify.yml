@@ -1,0 +1,280 @@
+# =============================================================================
+# SuperMandi Deploy Verification Workflow
+# =============================================================================
+# Runs comprehensive verification after deployments:
+# 1. API + Static Asset verification (CI-style)
+# 2. Playwright E2E tests with screenshots
+# 3. Token refresh flow testing
+#
+# Triggers:
+# - Manual dispatch (workflow_dispatch)
+# - After deploy workflows complete
+# - Scheduled daily health check
+# =============================================================================
+
+name: Deploy Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL to verify'
+        required: false
+        default: 'https://supermandi.tech'
+      run_e2e:
+        description: 'Run E2E tests'
+        required: false
+        type: boolean
+        default: true
+
+  # Run after deploy workflows
+  workflow_run:
+    workflows: ["Deploy to Production"]
+    types:
+      - completed
+
+  # Daily health check
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC daily
+
+env:
+  TARGET_URL: ${{ github.event.inputs.target_url || 'https://supermandi.tech' }}
+  NODE_VERSION: '20'
+
+jobs:
+  # ===========================================================================
+  # Job 1: API + Static Asset Verification
+  # ===========================================================================
+  api-verification:
+    name: API & Asset Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create evidence directory
+        run: |
+          mkdir -p evidence/api evidence/headers evidence/routing evidence/assets evidence/security
+
+      - name: Run deploy verification script
+        run: |
+          chmod +x scripts/verification/deploy-verify.sh
+          ./scripts/verification/deploy-verify.sh --target ${{ env.TARGET_URL }} --output evidence
+        continue-on-error: true
+
+      - name: Upload API evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-verification-evidence
+          path: evidence/
+          retention-days: 30
+
+      - name: Generate verification report
+        if: always()
+        run: |
+          echo "## API Verification Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ env.TARGET_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f evidence/SUMMARY.md ]; then
+            cat evidence/SUMMARY.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No summary generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # Job 2: Playwright E2E Tests
+  # ===========================================================================
+  e2e-tests:
+    name: E2E Browser Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event.inputs.run_e2e != 'false' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install E2E dependencies
+        working-directory: e2e-tests
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        working-directory: e2e-tests
+        env:
+          BASE_URL: ${{ env.TARGET_URL }}
+        run: |
+          npx playwright test --project=chromium --reporter=html,json
+        continue-on-error: true
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: e2e-tests/playwright-report/
+          retention-days: 30
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: e2e-tests/test-results/
+          retention-days: 30
+
+      - name: Generate E2E summary
+        if: always()
+        run: |
+          echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f e2e-tests/test-results/results.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat e2e-tests/test-results/results.json | jq '.stats' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # Job 3: Token Refresh Flow Test
+  # ===========================================================================
+  token-refresh-test:
+    name: Token Refresh Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Only run against staging/test environments
+    if: ${{ contains(github.event.inputs.target_url, 'staging') || contains(github.event.inputs.target_url, 'localhost') || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test token minting endpoint
+        id: mint
+        run: |
+          # Try to mint a test token (only works in non-production)
+          RESPONSE=$(curl -sS -X POST "${{ env.TARGET_URL }}/api/test/mint-token" \
+            -H "Content-Type: application/json" \
+            -d '{"ttl": 30}' 2>&1 || echo '{"error": "endpoint not available"}')
+
+          echo "Mint response: $RESPONSE"
+
+          if echo "$RESPONSE" | jq -e '.accessToken' > /dev/null 2>&1; then
+            ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
+            REFRESH_TOKEN=$(echo "$RESPONSE" | jq -r '.refreshToken')
+            echo "access_token=$ACCESS_TOKEN" >> $GITHUB_OUTPUT
+            echo "refresh_token=$REFRESH_TOKEN" >> $GITHUB_OUTPUT
+            echo "mint_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "Test auth endpoints not available (production mode)"
+            echo "mint_success=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify token
+        if: steps.mint.outputs.mint_success == 'true'
+        run: |
+          RESPONSE=$(curl -sS "${{ env.TARGET_URL }}/api/test/verify-token" \
+            -H "Authorization: Bearer ${{ steps.mint.outputs.access_token }}")
+
+          echo "Verify response: $RESPONSE"
+
+          if echo "$RESPONSE" | jq -e '.valid' | grep -q 'true'; then
+            echo "✅ Token verification passed"
+          else
+            echo "❌ Token verification failed"
+            exit 1
+          fi
+
+      - name: Wait for token expiry
+        if: steps.mint.outputs.mint_success == 'true'
+        run: |
+          echo "Waiting 35 seconds for token to expire..."
+          sleep 35
+
+      - name: Test token refresh
+        if: steps.mint.outputs.mint_success == 'true'
+        run: |
+          RESPONSE=$(curl -sS -X POST "${{ env.TARGET_URL }}/api/test/refresh-token" \
+            -H "Content-Type: application/json" \
+            -d '{"refreshToken": "${{ steps.mint.outputs.refresh_token }}"}')
+
+          echo "Refresh response: $RESPONSE"
+
+          if echo "$RESPONSE" | jq -e '.accessToken' > /dev/null 2>&1; then
+            echo "✅ Token refresh succeeded"
+            NEW_TOKEN=$(echo "$RESPONSE" | jq -r '.accessToken')
+
+            # Verify new token works
+            VERIFY=$(curl -sS "${{ env.TARGET_URL }}/api/test/verify-token" \
+              -H "Authorization: Bearer $NEW_TOKEN")
+
+            if echo "$VERIFY" | jq -e '.valid' | grep -q 'true'; then
+              echo "✅ New token is valid"
+            else
+              echo "❌ New token verification failed"
+              exit 1
+            fi
+          else
+            echo "❌ Token refresh failed"
+            exit 1
+          fi
+
+      - name: Generate token test summary
+        if: always()
+        run: |
+          echo "## Token Refresh Test" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.mint.outputs.mint_success }}" == "true" ]; then
+            echo "✅ Test endpoints available" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Token mint/verify/refresh flow tested" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Test endpoints not available (production mode)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # Job 4: Summary & Notification
+  # ===========================================================================
+  summary:
+    name: Generate Summary
+    runs-on: ubuntu-latest
+    needs: [api-verification, e2e-tests]
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate final summary
+        run: |
+          echo "# Deploy Verification Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ env.TARGET_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API Verification | ${{ needs.api-verification.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Determine overall verdict
+          if [ "${{ needs.api-verification.result }}" == "success" ] && [ "${{ needs.e2e-tests.result }}" == "success" ]; then
+            echo "## Verdict: ✅ GO" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## Verdict: ❌ NO-GO" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -1354,23 +1354,63 @@ router.post(
 /**
  * GET /retailer-admin/inventory
  * Get inventory ledger for the store
+ *
+ * Query params:
+ * - page: Page number (default 1)
+ * - limit: Items per page (default 50, max 100)
+ * - productId: Filter by product UUID
+ * - transactionType: Filter by transaction type (opening_stock, sale, purchase_received, adjustment, etc.)
+ * - startDate: Filter entries from this date (inclusive, ISO 8601 format)
+ * - endDate: Filter entries until this date (inclusive, ISO 8601 format)
+ *
+ * RET-AUD-034: Added date range and transaction type filters
  */
 router.get(
   '/inventory',
   asyncHandler(async (req, res) => {
     const { storeId } = getRetailerContext(req);
-    const { page = '1', limit = '50', productId } = req.query;
+    const { page = '1', limit = '50', productId, transactionType, startDate, endDate } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10)));
     const offset = (pageNum - 1) * limitNum;
 
     let whereClause = 'il.store_id = $1';
-    const params: (string | number)[] = [storeId];
+    const params: (string | number | Date)[] = [storeId];
 
+    // Product filter
     if (productId) {
       params.push(productId as string);
       whereClause += ` AND il.product_id = $${params.length}`;
+    }
+
+    // Transaction type filter (RET-AUD-034)
+    if (transactionType) {
+      const validTypes = ['opening_stock', 'sale', 'purchase_received', 'adjustment', 'return', 'wastage', 'transfer'];
+      const txType = (transactionType as string).toLowerCase();
+      if (validTypes.includes(txType)) {
+        params.push(txType);
+        whereClause += ` AND il.transaction_type = $${params.length}`;
+      }
+    }
+
+    // Date range filter (RET-AUD-034)
+    if (startDate) {
+      const start = new Date(startDate as string);
+      if (!isNaN(start.getTime())) {
+        params.push(start);
+        whereClause += ` AND il.created_at >= $${params.length}`;
+      }
+    }
+
+    if (endDate) {
+      const end = new Date(endDate as string);
+      if (!isNaN(end.getTime())) {
+        // Set to end of day for inclusive end date
+        end.setHours(23, 59, 59, 999);
+        params.push(end);
+        whereClause += ` AND il.created_at <= $${params.length}`;
+      }
     }
 
     // FIX: Use correct column names (transaction_type, delta_qty instead of movement_type, quantity)
@@ -1400,6 +1440,12 @@ router.get(
       pagination: {
         page: pageNum,
         limit: limitNum,
+      },
+      filters: {
+        productId: productId || null,
+        transactionType: transactionType || null,
+        startDate: startDate || null,
+        endDate: endDate || null,
       },
     });
   })
@@ -3019,9 +3065,10 @@ router.post(
           let supplierId: string | null = null;
 
           // Try to find existing supplier
+          // PORTAL-AUTH-001: Use primary_phone column (not phone) - matches supplier.suppliers schema
           if (supplierPhone) {
             const existing = await query<{ id: string }>(
-              `SELECT id FROM supplier.suppliers WHERE phone = $1`,
+              `SELECT id FROM supplier.suppliers WHERE primary_phone = $1`,
               [supplierPhone]
             );
             supplierId = existing[0]?.id || null;
