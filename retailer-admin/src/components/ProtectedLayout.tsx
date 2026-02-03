@@ -6,6 +6,8 @@ import { API_GATEWAY_BASE } from '../lib/api';
 import DeviceRequiredBanner from './DeviceRequiredBanner';
 // REG-AUTH-301: LIMITED MODE Banner
 import LimitedModeBanner from './LimitedModeBanner';
+// RET-AUD-005: Build fingerprint in UI footer
+import BuildStamp from './BuildStamp';
 
 // A1: RouterDebug banner - shows routing info for debugging "no screens" issues
 const API_BASE_URL = '/api/v1/retailer-admin';
@@ -293,10 +295,16 @@ export default function ProtectedLayout() {
           display: 'flex',
           gap: '2rem',
           borderTop: '1px solid #1e293b',
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}>
-          <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
-          <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
-          <span>API: <strong style={{ color: '#38bdf8' }}>{window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin}</strong></span>
+          <div style={{ display: 'flex', gap: '2rem' }}>
+            <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
+            <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
+            <span>API: <strong style={{ color: '#38bdf8' }}>{window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin}</strong></span>
+          </div>
+          {/* RET-AUD-005: Build fingerprint for deployment verification */}
+          <BuildStamp />
         </footer>
       </div>
 

@@ -207,6 +207,9 @@ app.use(adminAuthMiddleware);
 // =============================================================================
 app.use(createHealthRouter(healthChecker));
 
+// RET-AUD-025: Also mount health endpoints under /api/v1/ for nginx proxy compatibility
+app.use('/api/v1', createHealthRouter(healthChecker));
+
 // =============================================================================
 // GO-LIVE-002: ADMIN AUTH ROUTES
 // Session-based authentication with JWT tokens

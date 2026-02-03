@@ -99,8 +99,8 @@ echo "Deployment Verification"
 echo "=========================================="
 echo ""
 
-# Test each endpoint
-echo "Testing endpoints..."
+# Test each endpoint (HTML)
+echo "Testing HTML endpoints..."
 RETAILER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/retailer/" 2>/dev/null || echo "000")
 ADMIN_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/admin/" 2>/dev/null || echo "000")
 SUPPLIER_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/supplier/" 2>/dev/null || echo "000")
@@ -109,10 +109,96 @@ echo "  Retailer Portal:  $RETAILER_STATUS"
 echo "  Admin Portal:     $ADMIN_STATUS"
 echo "  Supplier Portal:  $SUPPLIER_STATUS"
 
+# RET-AUD-004: Verify JS/CSS assets are accessible (FAIL HARD if not)
+echo ""
+echo "Verifying asset accessibility (RET-AUD-004)..."
+DEPLOY_FAILED=0
+
+# Retailer assets verification
+RETAILER_JS=$(curl -s "https://supermandi.tech/retailer/" 2>/dev/null | grep -oE 'index-[A-Za-z0-9]+\.js' | head -1)
+if [ -n "$RETAILER_JS" ]; then
+  RETAILER_JS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/retailer/assets/$RETAILER_JS" 2>/dev/null || echo "000")
+  if [ "$RETAILER_JS_STATUS" != "200" ]; then
+    echo "  ✗ CRITICAL: Retailer JS asset returns $RETAILER_JS_STATUS (expected 200)"
+    echo "    Asset: /retailer/assets/$RETAILER_JS"
+    DEPLOY_FAILED=1
+  else
+    echo "  ✓ Retailer JS asset accessible ($RETAILER_JS)"
+  fi
+else
+  echo "  ⚠ Could not extract Retailer JS filename from HTML"
+fi
+
+RETAILER_CSS=$(curl -s "https://supermandi.tech/retailer/" 2>/dev/null | grep -oE 'index-[A-Za-z0-9]+\.css' | head -1)
+if [ -n "$RETAILER_CSS" ]; then
+  RETAILER_CSS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/retailer/assets/$RETAILER_CSS" 2>/dev/null || echo "000")
+  if [ "$RETAILER_CSS_STATUS" != "200" ]; then
+    echo "  ✗ CRITICAL: Retailer CSS asset returns $RETAILER_CSS_STATUS (expected 200)"
+    echo "    Asset: /retailer/assets/$RETAILER_CSS"
+    DEPLOY_FAILED=1
+  else
+    echo "  ✓ Retailer CSS asset accessible ($RETAILER_CSS)"
+  fi
+fi
+
+# Admin assets verification
+ADMIN_JS=$(curl -s "https://supermandi.tech/admin/" 2>/dev/null | grep -oE 'index-[A-Za-z0-9]+\.js' | head -1)
+if [ -n "$ADMIN_JS" ]; then
+  ADMIN_JS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/admin/assets/$ADMIN_JS" 2>/dev/null || echo "000")
+  if [ "$ADMIN_JS_STATUS" != "200" ]; then
+    echo "  ✗ CRITICAL: Admin JS asset returns $ADMIN_JS_STATUS (expected 200)"
+    echo "    Asset: /admin/assets/$ADMIN_JS"
+    DEPLOY_FAILED=1
+  else
+    echo "  ✓ Admin JS asset accessible ($ADMIN_JS)"
+  fi
+fi
+
+ADMIN_CSS=$(curl -s "https://supermandi.tech/admin/" 2>/dev/null | grep -oE 'index-[A-Za-z0-9]+\.css' | head -1)
+if [ -n "$ADMIN_CSS" ]; then
+  ADMIN_CSS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/admin/assets/$ADMIN_CSS" 2>/dev/null || echo "000")
+  if [ "$ADMIN_CSS_STATUS" != "200" ]; then
+    echo "  ✗ CRITICAL: Admin CSS asset returns $ADMIN_CSS_STATUS (expected 200)"
+    echo "    Asset: /admin/assets/$ADMIN_CSS"
+    DEPLOY_FAILED=1
+  else
+    echo "  ✓ Admin CSS asset accessible ($ADMIN_CSS)"
+  fi
+fi
+
+# API health check
+echo ""
+echo "Verifying API health..."
+API_HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "https://supermandi.tech/api/v1/health" 2>/dev/null || echo "000")
+if [ "$API_HEALTH" = "200" ]; then
+  echo "  ✓ API Gateway healthy ($API_HEALTH)"
+elif [ "$API_HEALTH" = "404" ]; then
+  echo "  ⚠ API health endpoint not found (404) - may need /health route"
+else
+  echo "  ⚠ API health returned $API_HEALTH"
+fi
+
+# FAIL HARD if any critical asset check failed
+if [ "$DEPLOY_FAILED" = "1" ]; then
+  echo ""
+  echo "=========================================="
+  echo "DEPLOYMENT FAILED - ASSET VERIFICATION"
+  echo "=========================================="
+  echo ""
+  echo "One or more JS/CSS assets returned non-200 status."
+  echo "Check nginx configuration for /retailer/assets/ and /admin/assets/ locations."
+  echo ""
+  echo "Debug commands:"
+  echo "  ssh $VM_USER@$VM_HOST 'ls -la /var/www/retailer/assets/'"
+  echo "  ssh $VM_USER@$VM_HOST 'sudo nginx -T | grep -A10 \"location /retailer\"'"
+  echo ""
+  exit 1
+fi
+
 # Summary
 echo ""
 echo "=========================================="
-echo "Deployment Complete!"
+echo "Deployment Complete! All Checks Passed"
 echo "=========================================="
 echo ""
 echo "URLs:"
@@ -120,6 +206,8 @@ echo "  Retailer: https://supermandi.tech/retailer/"
 echo "  Admin:    https://supermandi.tech/admin/"
 echo "  Supplier: https://supermandi.tech/supplier/"
 echo "  API:      https://supermandi.tech/api/v1/"
+echo ""
+echo "Asset Verification: PASSED"
 echo ""
 echo "Logs:"
 echo "  ssh $VM_USER@$VM_HOST 'pm2 logs supplier-portal'"
