@@ -51,12 +51,12 @@ check_requirements() {
   fi
   log_info "Docker: $(docker --version)"
 
-  # Check Docker Compose
-  if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-    log_error "Docker Compose is not installed"
+  # Check Docker Compose (prefer 'docker compose' plugin over legacy 'docker-compose')
+  if ! docker compose version &> /dev/null; then
+    log_error "Docker Compose plugin is not installed. Install with: sudo apt-get install docker-compose-plugin"
     exit 1
   fi
-  log_info "Docker Compose: available"
+  log_info "Docker Compose: $(docker compose version)"
 
   # Check compose file exists
   if [[ ! -f "$COMPOSE_FILE" ]]; then
@@ -93,7 +93,7 @@ build_images() {
 
   cd "$PROJECT_DIR"
 
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --parallel
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --parallel
 
   log_info "Images built successfully"
 }
@@ -102,7 +102,7 @@ run_migrations() {
   log_step "Running database migrations..."
 
   # Start only postgres first
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d postgres
 
   # Wait for postgres to be ready
   log_info "Waiting for PostgreSQL to be ready..."
@@ -138,7 +138,7 @@ start_services() {
 
   cd "$PROJECT_DIR"
 
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 
   log_info "All services started"
 }
@@ -167,7 +167,7 @@ wait_for_healthy() {
 show_status() {
   log_step "Service Status:"
 
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" ps
 }
 
 stop_services() {
@@ -175,7 +175,7 @@ stop_services() {
 
   cd "$PROJECT_DIR"
 
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
 
   log_info "All services stopped"
 }
@@ -187,7 +187,7 @@ restart_service() {
 
   cd "$PROJECT_DIR"
 
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart "$service"
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart "$service"
 
   log_info "$service restarted"
 }
@@ -199,9 +199,9 @@ view_logs() {
   cd "$PROJECT_DIR"
 
   if [[ -n "$service" ]]; then
-    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail="$lines" -f "$service"
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail="$lines" -f "$service"
   else
-    docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail="$lines" -f
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" logs --tail="$lines" -f
   fi
 }
 
@@ -211,7 +211,7 @@ cleanup() {
   cd "$PROJECT_DIR"
 
   # Remove stopped containers
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" rm -f
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" rm -f
 
   # Remove unused images
   docker image prune -f
@@ -225,10 +225,10 @@ rollback() {
   cd "$PROJECT_DIR"
 
   # Stop current containers
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down
 
   # Start with previous images (if tagged)
-  docker-compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 
   log_info "Rollback completed"
 }

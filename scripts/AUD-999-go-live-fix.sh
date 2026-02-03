@@ -163,7 +163,7 @@ if command -v pm2 &> /dev/null; then
 else
     # Docker compose restart
     if [ -f "$BACKEND_DIR/docker-compose.yml" ]; then
-        docker-compose restart
+        docker compose restart
     fi
 fi
 

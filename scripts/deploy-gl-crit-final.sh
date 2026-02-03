@@ -192,16 +192,16 @@ cd ~/supermandi-pos/backend || cd /opt/supermandi-pos/backend
 
 # Stop existing containers gracefully
 echo "    Stopping existing containers..."
-docker-compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
+docker compose -f docker-compose.prod.yml down --remove-orphans 2>/dev/null || true
 
 # Rebuild images
 echo "    Rebuilding Docker images..."
-docker-compose -f docker-compose.prod.yml build --parallel 2>/dev/null || \
-  docker-compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml build --parallel 2>/dev/null || \
+  docker compose -f docker-compose.prod.yml build
 
 # Start services
 echo "    Starting services..."
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # Wait for services to be healthy
 echo "    Waiting for services to be healthy..."
@@ -209,7 +209,7 @@ sleep 30
 
 # Show running containers
 echo "    Running containers:"
-docker-compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 echo "    Docker deployment complete"
 DEPLOY_EOF

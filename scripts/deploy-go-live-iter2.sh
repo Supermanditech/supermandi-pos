@@ -53,19 +53,19 @@ echo ""
 
 # Rebuild main-backend (includes device enrollment fix)
 echo "[4/7] Rebuilding main-backend..."
-ssh "$VM_HOST" "cd $REMOTE_DIR && docker-compose -f docker-compose.prod.yml build --no-cache main-backend"
+ssh "$VM_HOST" "cd $REMOTE_DIR && docker compose -f docker-compose.prod.yml build --no-cache main-backend"
 echo "  ✓ main-backend rebuilt"
 echo ""
 
 # Rebuild supplier-service (includes token validation fix)
 echo "[5/7] Rebuilding supplier-service..."
-ssh "$VM_HOST" "cd $REMOTE_DIR && docker-compose -f docker-compose.prod.yml build --no-cache supplier-service"
+ssh "$VM_HOST" "cd $REMOTE_DIR && docker compose -f docker-compose.prod.yml build --no-cache supplier-service"
 echo "  ✓ supplier-service rebuilt"
 echo ""
 
 # Restart services
 echo "[6/7] Restarting services..."
-ssh "$VM_HOST" "cd $REMOTE_DIR && docker-compose -f docker-compose.prod.yml up -d main-backend supplier-service"
+ssh "$VM_HOST" "cd $REMOTE_DIR && docker compose -f docker-compose.prod.yml up -d main-backend supplier-service"
 echo "  ✓ Services restarted"
 echo ""
 

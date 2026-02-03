@@ -58,13 +58,13 @@ echo ""
 
 # Rebuild Docker images
 echo "[4/6] Rebuilding Docker images..."
-ssh "$VM_HOST" "cd $REMOTE_DIR && docker-compose -f docker-compose.prod.yml build --no-cache main-backend"
+ssh "$VM_HOST" "cd $REMOTE_DIR && docker compose -f docker-compose.prod.yml build --no-cache main-backend"
 echo "  ✓ Docker images rebuilt"
 echo ""
 
 # Restart services
 echo "[5/6] Restarting services..."
-ssh "$VM_HOST" "cd $REMOTE_DIR && docker-compose -f docker-compose.prod.yml up -d main-backend"
+ssh "$VM_HOST" "cd $REMOTE_DIR && docker compose -f docker-compose.prod.yml up -d main-backend"
 echo "  ✓ Services restarted"
 echo ""
 

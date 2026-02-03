@@ -45,7 +45,7 @@ SHELL=/bin/bash
 PATH=/usr/local/bin:/usr/bin:/bin
 
 # Run backup at 2 AM every day
-0 2 * * * claude cd /home/claude/supermandi-pos/backend && docker-compose -f docker-compose.prod.yml run --rm backup >> /var/log/supermandi/backup.log 2>&1
+0 2 * * * claude cd /home/claude/supermandi-pos/backend && docker compose -f docker-compose.prod.yml run --rm backup >> /var/log/supermandi/backup.log 2>&1
 EOF
 
 chmod 644 "${CRON_FILE}"
@@ -57,7 +57,7 @@ log "Backup location: Docker volume 'supermanditech_backup-data'"
 log "Logs: ${BACKUP_LOG_DIR}/backup.log"
 log ""
 log "To run a backup manually:"
-log "  cd ${SUPERMANDI_DIR} && docker-compose -f docker-compose.prod.yml run --rm backup"
+log "  cd ${SUPERMANDI_DIR} && docker compose -f docker-compose.prod.yml run --rm backup"
 log ""
 log "To list backups:"
 log "  docker run --rm -v supermanditech_backup-data:/backups alpine ls -la /backups"

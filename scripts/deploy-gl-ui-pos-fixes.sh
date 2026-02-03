@@ -68,12 +68,12 @@ if [ -f "supermandi-pos/backend/docker-compose.prod.yml" ]; then
   cd supermandi-pos/backend
 
   # Rebuild only the main-backend service
-  docker-compose -f docker-compose.prod.yml build main-backend 2>&1 || {
+  docker compose -f docker-compose.prod.yml build main-backend 2>&1 || {
     echo "Docker Compose build failed, trying alternative..."
   }
 
   # Restart the service
-  docker-compose -f docker-compose.prod.yml up -d main-backend 2>&1 || {
+  docker compose -f docker-compose.prod.yml up -d main-backend 2>&1 || {
     echo "Trying docker restart..."
     docker restart supermandi-main-backend 2>/dev/null || true
   }
