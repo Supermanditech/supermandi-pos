@@ -1,0 +1,14 @@
+[Unit]
+Description=SuperMandi Post-Boot Smoke Check
+After=network-online.target nginx.service docker.service pm2-supermanditech.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/supermanditech/supermandi-pos/scripts/post-boot-check.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

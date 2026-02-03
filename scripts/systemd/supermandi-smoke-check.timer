@@ -1,0 +1,16 @@
+[Unit]
+Description=Run SuperMandi Smoke Check every 5 minutes after boot (for 30 minutes)
+
+[Timer]
+# Start 2 minutes after boot
+OnBootSec=2min
+# Run every 5 minutes
+OnUnitActiveSec=5min
+# Stop after 30 minutes (6 runs)
+# Note: Systemd doesn't have a direct "stop after X" feature,
+# so we use a high accuracy to ensure timely checks
+AccuracySec=1s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

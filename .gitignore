@@ -123,3 +123,7 @@ package-lock.json
 **/*.d.ts.map
 deploy-package/
 *.tar.gz
+
+# WIP / Session saves (go in notes/ directory, never committed)
+notes/
+WIP_SAVE_*.txt
