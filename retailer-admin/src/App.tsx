@@ -1,28 +1,48 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import ProtectedLayout from './components/ProtectedLayout';
+
+// RET-AUD-048: Lazy load pages for code splitting and better performance at scale
+// Critical auth pages loaded eagerly for fast initial load
 import LoginPage from './pages/LoginPage';
 // GO-LIVE-AUTH-FIX: Removed old RegisterPage - use RetailerOnboardingPage for full store registration (RET-WEB-001)
-import RetailerOnboardingPage from './pages/RetailerOnboardingPage';
-import DashboardPage from './pages/DashboardPage';
-import ProductsPage from './pages/ProductsPage';
-import ImportPage from './pages/ImportPage';
-import InventoryPage from './pages/InventoryPage';
-import SuppliersPage from './pages/SuppliersPage';
+const RetailerOnboardingPage = lazy(() => import('./pages/RetailerOnboardingPage'));
+
+// RET-AUD-048: Dashboard pages - lazy loaded for route-level code splitting
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ProductsPage = lazy(() => import('./pages/ProductsPage'));
+const ImportPage = lazy(() => import('./pages/ImportPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const SuppliersPage = lazy(() => import('./pages/SuppliersPage'));
 // CA-1.4-001: Supplier Catalog - browse approved products from verified suppliers
-import SupplierCatalogPage from './pages/SupplierCatalogPage';
-import CompliancePage from './pages/CompliancePage';
-import AllPagesPage from './pages/AllPagesPage';
+const SupplierCatalogPage = lazy(() => import('./pages/SupplierCatalogPage'));
+const CompliancePage = lazy(() => import('./pages/CompliancePage'));
+const AllPagesPage = lazy(() => import('./pages/AllPagesPage'));
 // GL-RJ-005: Store Settings page
-import SettingsPage from './pages/SettingsPage';
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 // RET-WEB-002: Device Activation page
-import DeviceActivationPage from './pages/DeviceActivationPage';
+const DeviceActivationPage = lazy(() => import('./pages/DeviceActivationPage'));
 // RET-WEB-003: Payments Setup page
-import PaymentsPage from './pages/PaymentsPage';
+const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 // SM-024: Admin approval queue pages
-import SupplierQueuePage from './pages/admin/SupplierQueuePage';
-import ProductQueuePage from './pages/admin/ProductQueuePage';
+const SupplierQueuePage = lazy(() => import('./pages/admin/SupplierQueuePage'));
+const ProductQueuePage = lazy(() => import('./pages/admin/ProductQueuePage'));
+
+// RET-AUD-048: Loading fallback component for Suspense boundaries
+const PageLoadingFallback = () => (
+  <div style={{
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    minHeight: '200px',
+    color: '#64748b',
+    fontSize: '0.9rem',
+  }}>
+    Loading...
+  </div>
+);
 
 // Normalize trailing slashes
 function TrailingSlashRedirect() {
@@ -141,15 +161,16 @@ function AppRoutes() {
         {/* Auth pages - accessible without authentication */}
         <Route path="/retailer/login" element={<LoginPage />} />
         {/* GO-LIVE-AUTH-FIX: /retailer/register now routes to full store onboarding (RET-WEB-001) */}
-        <Route path="/retailer/register" element={<RetailerOnboardingPage />} />
+        {/* RET-AUD-048: Lazy loaded with Suspense */}
+        <Route path="/retailer/register" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
         {/* REG-AUTH-301: Alias for onboarding page */}
-        <Route path="/retailer/onboard" element={<RetailerOnboardingPage />} />
+        <Route path="/retailer/onboard" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
 
         {/* Legacy routes - redirect to new paths */}
         <Route path="/s/:storeCode/login" element={<Navigate to="/retailer/login" replace />} />
         <Route path="/s/:storeCode/register" element={<Navigate to="/retailer/register" replace />} />
 
-        {/* Protected routes */}
+        {/* Protected routes - RET-AUD-048: All pages lazy loaded with Suspense for code splitting */}
         <Route
           path="/s/:storeCode"
           element={
@@ -158,26 +179,26 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="import" element={<ImportPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="suppliers" element={<SuppliersPage />} />
+          <Route index element={<Suspense fallback={<PageLoadingFallback />}><DashboardPage /></Suspense>} />
+          <Route path="products" element={<Suspense fallback={<PageLoadingFallback />}><ProductsPage /></Suspense>} />
+          <Route path="import" element={<Suspense fallback={<PageLoadingFallback />}><ImportPage /></Suspense>} />
+          <Route path="inventory" element={<Suspense fallback={<PageLoadingFallback />}><InventoryPage /></Suspense>} />
+          <Route path="suppliers" element={<Suspense fallback={<PageLoadingFallback />}><SuppliersPage /></Suspense>} />
           {/* CA-1.4-001: Supplier Catalog - browse and add approved products */}
-          <Route path="supplier-catalog" element={<SupplierCatalogPage />} />
-          <Route path="compliance" element={<CompliancePage />} />
+          <Route path="supplier-catalog" element={<Suspense fallback={<PageLoadingFallback />}><SupplierCatalogPage /></Suspense>} />
+          <Route path="compliance" element={<Suspense fallback={<PageLoadingFallback />}><CompliancePage /></Suspense>} />
           {/* GL-RJ-005: Store Settings page */}
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings" element={<Suspense fallback={<PageLoadingFallback />}><SettingsPage /></Suspense>} />
           {/* RET-WEB-003: Payments Setup page */}
-          <Route path="settings/payments" element={<PaymentsPage />} />
+          <Route path="settings/payments" element={<Suspense fallback={<PageLoadingFallback />}><PaymentsPage /></Suspense>} />
           {/* RET-WEB-002: Device Activation page */}
-          <Route path="devices" element={<DeviceActivationPage />} />
+          <Route path="devices" element={<Suspense fallback={<PageLoadingFallback />}><DeviceActivationPage /></Suspense>} />
           {/* SM-024: SuperAdmin approval queue pages */}
           {/* GL-WF-033: Wrap admin routes with role check */}
-          <Route path="admin/suppliers" element={<AdminRoute><SupplierQueuePage /></AdminRoute>} />
-          <Route path="admin/products" element={<AdminRoute><ProductQueuePage /></AdminRoute>} />
+          <Route path="admin/suppliers" element={<AdminRoute><Suspense fallback={<PageLoadingFallback />}><SupplierQueuePage /></Suspense></AdminRoute>} />
+          <Route path="admin/products" element={<AdminRoute><Suspense fallback={<PageLoadingFallback />}><ProductQueuePage /></Suspense></AdminRoute>} />
           {/* P2-RD-002: QA page hidden in production */}
-          {import.meta.env.DEV && <Route path="_pages" element={<AllPagesPage />} />}
+          {import.meta.env.DEV && <Route path="_pages" element={<Suspense fallback={<PageLoadingFallback />}><AllPagesPage /></Suspense>} />}
         </Route>
 
         {/* Catch-all */}

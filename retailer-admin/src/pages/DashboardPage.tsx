@@ -43,6 +43,8 @@ export default function DashboardPage() {
   const [catEditNameHi, setCatEditNameHi] = useState('');
   const [catEditSaving, setCatEditSaving] = useState(false);
   const [showHiddenCategories, setShowHiddenCategories] = useState(false);
+  // RET-AUD-040: Track category toggle errors for user feedback
+  const [catToggleError, setCatToggleError] = useState<string | null>(null);
 
   // GL-CRIT-0078: Close modals with Escape key
   useEscapeKey(
@@ -92,8 +94,10 @@ export default function DashboardPage() {
   };
 
   // RCAT-CAT-002: Hide/unhide category (store override)
+  // RET-AUD-040: Updated to show errors to user instead of silent failure
   const handleCategoryToggleHidden = async (category: FmcgCategory) => {
     if (!accessToken) return;
+    setCatToggleError(null); // Clear previous error
     try {
       const response = await authFetch(`/api/v1/retailer-admin/categories/${category.id}`, accessToken, {
         method: 'DELETE',
@@ -103,9 +107,15 @@ export default function DashboardPage() {
         setCategories(prev => prev.map(c =>
           c.id === category.id ? { ...c, isHidden: data.isHidden } : c
         ));
+      } else {
+        // RET-AUD-040: Show API error to user
+        const data = await response.json().catch(() => ({}));
+        setCatToggleError(data.error?.message || `Failed to ${category.isHidden ? 'show' : 'hide'} category. Please try again.`);
       }
     } catch (err) {
       console.error('Failed to toggle category visibility:', err);
+      // RET-AUD-040: Show network error to user
+      setCatToggleError('Network error. Please check your connection and try again.');
     }
   };
 
@@ -919,6 +929,39 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* RET-AUD-040: Category toggle error banner */}
+      {catToggleError && (
+        <div style={{
+          padding: '0.75rem 1rem',
+          marginBottom: '1rem',
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '8px',
+          color: '#dc2626',
+          fontSize: '0.875rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span>{catToggleError}</span>
+          <button
+            onClick={() => setCatToggleError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#dc2626',
+              cursor: 'pointer',
+              fontSize: '1.25rem',
+              lineHeight: 1,
+              padding: '0 0.25rem',
+            }}
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {/* FE-RETAILER-CAT-001: Categories Section */}
       <div style={{ marginBottom: '2rem' }}>

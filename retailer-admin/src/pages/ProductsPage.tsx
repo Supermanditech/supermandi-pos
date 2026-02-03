@@ -133,6 +133,8 @@ export default function ProductsPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  // RET-AUD-040: Track supplier fetch errors for user feedback
+  const [supplierFetchError, setSupplierFetchError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   // FE-RETAILER-CAT-001: Categories from POS taxonomy
@@ -204,15 +206,23 @@ export default function ProductsPage() {
   };
 
   // Fetch suppliers for dropdown
+  // RET-AUD-040: Updated to show errors to user instead of silent failure
   const fetchSuppliers = async () => {
+    setSupplierFetchError(false);
     try {
       const response = await authFetch('/api/v1/retailer-admin/suppliers', accessToken);
       if (response.status === 401) return;
-      if (!response.ok) return;
+      if (!response.ok) {
+        // RET-AUD-040: Show feedback that supplier list couldn't be loaded
+        setSupplierFetchError(true);
+        return;
+      }
       const data = await response.json();
       setSuppliers(data.data || []);
     } catch (err) {
       console.error('Error fetching suppliers:', err);
+      // RET-AUD-040: Show feedback that supplier list couldn't be loaded
+      setSupplierFetchError(true);
     }
   };
 
@@ -1188,7 +1198,22 @@ export default function ProductsPage() {
                       </option>
                     ))}
                   </select>
-                  {suppliers.filter(s => s.isSupermandi).length === 0 && (
+                  {/* RET-AUD-040: Show error when supplier fetch fails */}
+                  {supplierFetchError && (
+                    <span style={{
+                      display: 'block',
+                      marginTop: '4px',
+                      fontSize: '0.75rem',
+                      color: '#dc2626',
+                      backgroundColor: '#fef2f2',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid #fecaca'
+                    }}>
+                      Failed to load suppliers. You can still add products without a supplier.
+                    </span>
+                  )}
+                  {!supplierFetchError && suppliers.filter(s => s.isSupermandi).length === 0 && (
                     <span style={{
                       display: 'block',
                       marginTop: '4px',

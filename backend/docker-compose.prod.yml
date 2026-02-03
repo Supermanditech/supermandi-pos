@@ -12,6 +12,12 @@ services:
     image: postgres:15-alpine
     container_name: supermandi-postgres
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-supermandi}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -48,6 +54,12 @@ services:
     image: redis:7-alpine
     container_name: supermandi-redis
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
     # CRITICAL: AOF persistence for Bull queue durability (V3.0.9)
     # FIX: stop-writes-on-bgsave-error=no prevents 500s when disk is low (2026-01-18)
     command: >
@@ -91,6 +103,12 @@ services:
     image: nginx:alpine
     container_name: supermandi-nginx
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     ports:
       - "80:80"
       - "443:443"
@@ -142,6 +160,12 @@ services:
       dockerfile: services/api-gateway/Dockerfile
     container_name: supermandi-api-gateway
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -201,6 +225,12 @@ services:
       dockerfile: services/auth-service/Dockerfile
     container_name: supermandi-auth-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -249,6 +279,12 @@ services:
       dockerfile: services/platform-service/Dockerfile
     container_name: supermandi-platform-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       PORT: 3002
@@ -289,6 +325,12 @@ services:
       dockerfile: Dockerfile.main
     container_name: supermandi-main-backend
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "5"
     environment:
       NODE_ENV: production
       PORT: 3010
@@ -369,6 +411,12 @@ services:
       dockerfile: services/supplier-service/Dockerfile
     container_name: supermandi-supplier-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       SUPPLIER_SERVICE_PORT: 3003
@@ -414,6 +462,12 @@ services:
       dockerfile: services/catalog-service/Dockerfile
     container_name: supermandi-catalog-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       CATALOG_SERVICE_PORT: 3004
@@ -459,6 +513,12 @@ services:
       dockerfile: services/inventory-service/Dockerfile
     container_name: supermandi-inventory-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       INVENTORY_SERVICE_PORT: 3005
@@ -504,6 +564,12 @@ services:
       dockerfile: services/order-service/Dockerfile
     container_name: supermandi-order-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       ORDER_SERVICE_PORT: 3006
@@ -549,6 +615,12 @@ services:
       dockerfile: services/reorder-service/Dockerfile
     container_name: supermandi-reorder-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       REORDER_SERVICE_PORT: 3007
@@ -596,6 +668,12 @@ services:
       dockerfile: services/voice-service/Dockerfile
     container_name: supermandi-voice-service
     restart: unless-stopped
+    # RET-AUD-049: Log rotation to prevent disk exhaustion
+    logging:
+      driver: json-file
+      options:
+        max-size: "30m"
+        max-file: "3"
     environment:
       NODE_ENV: production
       VOICE_SERVICE_PORT: 3008
