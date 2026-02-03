@@ -189,7 +189,7 @@ done
 
 # Login pages (may redirect, so allow 200 or 3xx)
 for portal in retailer supplier; do
-    local login_url="$BASE_URL/$portal/login"
+    login_url="$BASE_URL/$portal/login"
     [ "$portal" = "supplier" ] && login_url="$BASE_URL/$portal/login/"
 
     status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 15 "$login_url" 2>/dev/null || echo "000")
