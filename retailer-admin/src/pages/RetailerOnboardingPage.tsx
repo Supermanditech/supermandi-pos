@@ -1250,7 +1250,7 @@ export default function RetailerOnboardingPage() {
       {/* Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
-          &copy; 2024 SuperMandi. All rights reserved.
+          &copy; 2026 SuperMandi. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

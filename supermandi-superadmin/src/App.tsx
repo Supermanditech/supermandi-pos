@@ -504,7 +504,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
           fontSize: "0.8125rem",
           color: "#64748b"
         }}>
-          &copy; 2024 SuperMandi. All rights reserved.
+          &copy; 2026 SuperMandi. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

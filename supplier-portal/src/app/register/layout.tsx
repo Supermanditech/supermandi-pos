@@ -37,7 +37,7 @@ export default function RegisterLayout({
       {/* Footer - minimal, muted per spec */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
-          &copy; 2024 SuperMandi. All rights reserved.
+          &copy; 2026 SuperMandi. All rights reserved.
           <BuildStamp />
         </div>
       </footer>

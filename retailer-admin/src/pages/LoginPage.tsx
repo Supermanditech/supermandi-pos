@@ -508,9 +508,6 @@ export default function LoginPage() {
             <span style={styles.logoSeparator}>|</span>
             <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>
-          <Link to="/retailer/register" style={styles.headerLink}>
-            New here? Register
-          </Link>
         </div>
       </header>
 
@@ -740,7 +737,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer style={styles.footer}>
         <div style={styles.footerInner}>
-          &copy; 2024 SuperMandi. All rights reserved.
+          &copy; 2026 SuperMandi. All rights reserved.
           <BuildStamp />
         </div>
       </footer>
