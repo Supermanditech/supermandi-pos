@@ -125,11 +125,11 @@ Infrastructure batch - no items from retailer-tickets.md.
 | **Scope** | Registration flow fixes: link removal, error handling, banner copy |
 | **Tickets from retailer-tickets.md** | REG-RET-001, REG-RET-002, REG-SUP-001, REG-SUP-002, REG-COPY-001 |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | 6e4196a |
-| **Commit SHA (full)** | 6e4196ac7694fb6ca07bcc062c122093de920a2e |
+| **Commit SHA (short)** | cb3bf95 |
+| **Commit SHA (full)** | cb3bf951fd224739134a83f38a978c34388df405 |
 | **Rollback SHA** | f6d0f52 |
 | **Evidence Path** | `RELEASES/EVIDENCE/BATCH-002/` |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha 6e4196a` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha cb3bf95` |
 
 ### Items
 | # | Ticket/Task | Acceptance Test | Status |
