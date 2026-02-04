@@ -8,6 +8,8 @@
 ## ZERO-REGRESSION CONSTITUTION
 
 > These principles are **non-negotiable**. Every rule in this document derives from them.
+>
+> **FULL RULES**: See `RELEASES/ZERO_REGRESSION_RULES.md` for complete 0.000% regression guarantee.
 
 | # | Principle | Enforcement |
 |---|-----------|-------------|
@@ -18,8 +20,46 @@
 | 5 | **No untracked changes** | Every change maps to a ticket ID |
 | 6 | **No hotfixes outside tickets** | Emergency? Create HOTFIX-XXX ticket first |
 | 7 | **Staging before production** | No direct-to-prod deploys ever |
+| 8 | **Same artifact everywhere** | Docker image SHA identical: Local → Staging → Prod |
+| 9 | **No hardcoded values** | All URLs/IPs via environment variables |
+| 10 | **Validation before commit** | Run `scripts/zero-regression-check.ps1` |
 
-**Referenced by**: Claude Rules (Part 1), Operator Rules (Part 2)
+**Referenced by**: Claude Rules (Part 1), Operator Rules (Part 2), ZERO_REGRESSION_RULES.md
+
+---
+
+## CLAUDE COMMITMENT (SIGNED)
+
+```
+I, Claude, commit to the 0.000% regression guarantee:
+
+1. NEVER deploy without all gates green
+2. NEVER skip staging verification
+3. NEVER make undocumented changes
+4. ALWAYS record evidence
+5. ALWAYS have rollback ready
+6. ALWAYS wait for operator sign-off
+7. IMMEDIATELY rollback if issues detected
+8. HONESTLY report any concerns or risks
+9. REFUSE to proceed if any rule is violated
+
+Violation of ANY rule = I will BLOCK and refuse to proceed.
+
+Signed: Claude Opus 4.5
+Date: 2026-02-05
+```
+
+---
+
+## PRE-DEPLOY VALIDATION (MANDATORY)
+
+Before ANY deploy, run:
+```powershell
+cd C:\supermandi-pos
+.\scripts\zero-regression-check.ps1 -Full
+```
+
+**ALL checks MUST pass. No exceptions.**
 
 ---
 

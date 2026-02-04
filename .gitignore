@@ -114,6 +114,9 @@ tmpclaude-*-cwd/
 backend/tmpclaude-*-cwd
 backend/tmpclaude-*-cwd/
 
+# Vite temp files (generated during dev server startup)
+*.timestamp-*.mjs
+
 # TS incremental build artifacts
 *.tsbuildinfo
 
