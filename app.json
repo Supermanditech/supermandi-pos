@@ -19,8 +19,8 @@
       "permissions": ["RECORD_AUDIO"]
     },
     "extra": {
-      "API_URL": "http://34.14.220.171:3000",
-      "POS_API_URL": "http://34.14.220.171:3009"
+      "API_URL": "https://supermandi.tech",
+      "POS_API_URL": "https://supermandi.tech"
     },
     "plugins": [
       "expo-secure-store",
