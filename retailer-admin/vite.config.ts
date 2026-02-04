@@ -1,6 +1,8 @@
-import { defineConfig } from 'vite';
+import { defineConfig, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { execSync } from 'child_process';
+import { writeFileSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 // GO-LIVE-SOP: Get build info for cache-proof deployment verification
 function getBuildInfo() {
@@ -15,8 +17,30 @@ function getBuildInfo() {
 
 const buildInfo = getBuildInfo();
 
+// GO-LIVE: Version endpoint plugin - writes _version.json to dist
+function versionPlugin(): Plugin {
+  return {
+    name: 'version-plugin',
+    closeBundle() {
+      const versionData = {
+        commit: buildInfo.sha,
+        buildTime: buildInfo.time,
+        portal: 'retailer',
+      };
+      const distPath = join(__dirname, 'dist');
+      try {
+        mkdirSync(distPath, { recursive: true });
+        writeFileSync(join(distPath, '_version.json'), JSON.stringify(versionData, null, 2));
+        console.log('[version-plugin] Wrote _version.json:', versionData);
+      } catch (err) {
+        console.error('[version-plugin] Failed to write _version.json:', err);
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), versionPlugin()],
   base: '/retailer/',
   // GO-LIVE-SOP: Inject build info at compile time
   define: {
