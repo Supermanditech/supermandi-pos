@@ -127,3 +127,7 @@ deploy-package/
 # WIP / Session saves (go in notes/ directory, never committed)
 notes/
 WIP_SAVE_*.txt
+
+# E2E Test Artifacts (regenerated on each test run - do not commit)
+e2e-tests/playwright-report/
+e2e-tests/test-results/

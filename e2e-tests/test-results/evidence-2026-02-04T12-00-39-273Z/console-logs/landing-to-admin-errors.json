@@ -1,8 +1,0 @@
-[
-  {
-    "type": "error",
-    "text": "Failed to load resource: the server responded with a status of 401 ()",
-    "location": "https://supermandi.tech/api/v1/admin/pos/events?limit=200",
-    "timestamp": "2026-02-04T12:00:51.288Z"
-  }
-]
