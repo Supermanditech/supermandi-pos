@@ -37,15 +37,17 @@
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-001 |
-| **Status** | `DRAFT` |
+| **Status** | `READY_FOR_DEPLOY` |
 | **Scope** | Deploy ops infrastructure: ledger, gates, verification |
+| **Tickets from retailer-tickets.md** | none (infrastructure batch) |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | pending |
-| **Commit SHA (full)** | pending |
+| **Commit SHA (short)** | a00d2c9 |
+| **Commit SHA (full)** | a00d2c93f65fab90fc3e15ba194f3a20e987f124 |
 | **Rollback SHA** | a6803ab |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha {SHA}` |
+| **Evidence Path** | `RELEASES/EVIDENCE/BATCH-001/` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha a00d2c9` |
 
-### Items
+### Items (Internal DEPLOY-OPS tasks)
 | # | Ticket/Task | Acceptance Test | Status |
 |---|-------------|-----------------|--------|
 | 1 | DEPLOY-OPS-001: Batch Ledger | RELEASES/BATCH_LEDGER.md + BATCH_TEMPLATE.md exist | DONE |
@@ -55,24 +57,24 @@
 
 ### Local Gates
 ```
-Date: pending
+Date: 2026-02-04 18:02 IST
 ```
 
 | Gate | Result |
 |------|--------|
-| `pnpm install` | pending |
-| `pnpm -r typecheck` | pending |
-| `retailer-admin build` | pending |
-| `supplier-portal build` | pending |
-| `supermandi-superadmin build` | pending |
-| `e2e: prod-smoke` | **MUST BE 0 FAILURES** |
+| `pnpm install` | PASS |
+| `pnpm -r typecheck` | PASS |
+| `retailer-admin build` | PASS |
+| `supplier-portal build` | PASS |
+| `supermandi-superadmin build` | PASS |
+| `e2e: prod-smoke` | **PASS (0 failures)** |
 
 #### E2E Test Suites
 > For go-live: **prod-smoke MUST be 0 failures**. Other suites may be skipped with explicit reason.
 
 | Suite | Tag | Required | Pass/Fail | Notes |
 |-------|-----|----------|-----------|-------|
-| **prod-smoke** | `@prod` | **YES** | pending | Must pass 100% for go-live |
+| **prod-smoke** | `@prod` | **YES** | **PASS (75/75)** | 0 failures - go-live ready |
 | testonly | `@testonly` | No | skipped | Test-only endpoints disabled in prod |
 | admin | `@admin` | No | skipped | Admin not in go-live scope for BATCH-001 |
 
@@ -88,7 +90,26 @@ Date: pending
 Deployed SHA: pending
 ```
 
+| Check | Result |
+|-------|--------|
+| `nginx -t` | pending |
+| `nginx reload` | pending |
+| Container/PM2 status | pending |
+| SHA proof file on VM | pending |
+
+**7-URL Verification:**
+| Endpoint | Expected | Actual |
+|----------|----------|--------|
+| https://supermandi.tech/ | 200 | pending |
+| https://supermandi.tech/retailer/ | 200 | pending |
+| https://supermandi.tech/retailer/login | 200 | pending |
+| https://supermandi.tech/supplier/ | 200 | pending |
+| https://supermandi.tech/supplier/login/ | 200 | pending |
+| https://supermandi.tech/admin/ | 200 | pending |
+| https://supermandi.tech/api/v1/health | 200 | pending |
+
 ### Notes
 This batch establishes the deployment operations infrastructure per rules.pdf.
+Infrastructure batch - no items from retailer-tickets.md.
 
 ---

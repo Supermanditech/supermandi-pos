@@ -6,10 +6,12 @@
 | **Batch ID** | BATCH-{ID} |
 | **Status** | `DRAFT` / `READY_FOR_DEPLOY` / `DEPLOYED` / `ROLLED_BACK` / `BLOCKED` |
 | **Scope** | {brief description} |
+| **Tickets from retailer-tickets.md** | {list ticket IDs/headings, or "none" for infrastructure batches} |
 | **Contracts Touched** | none / {list if any} |
 | **Commit SHA (short)** | {7-char} |
 | **Commit SHA (full)** | {40-char} |
 | **Rollback SHA** | {previous known-good SHA} |
+| **Evidence Path** | `RELEASES/EVIDENCE/BATCH-{ID}/` |
 | **Deploy Command** | `./scripts/deploy-production.sh --sha {SHA}` |
 
 ## Items (5-12 items)
@@ -64,7 +66,9 @@ Deployed SHA: {SHA}
 | Check | Result |
 |-------|--------|
 | `nginx -t` | |
-| `docker ps` (if backend) | |
+| `nginx reload` | |
+| Container/PM2 status | |
+| SHA proof file on VM | |
 
 **URL Verification (7 endpoints):**
 | Endpoint | Expected | Actual |
