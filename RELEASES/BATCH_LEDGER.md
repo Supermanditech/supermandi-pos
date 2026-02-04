@@ -115,21 +115,21 @@ Infrastructure batch - no items from retailer-tickets.md.
 
 ---
 
-## BATCH-002 — 2026-02-04 — Registration Flow Fixes
+## BATCH-002 — 2026-02-04 — Registration Flow Fixes + Firebase OTP Fix
 
 ### Batch Info
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-002 |
-| **Status** | `CANDIDATE` |
-| **Scope** | Registration flow fixes: link removal, error handling, banner copy |
+| **Status** | `READY_FOR_DEPLOY` |
+| **Scope** | Registration flow fixes + Firebase OTP error handling |
 | **Tickets from retailer-tickets.md** | REG-RET-001, REG-RET-002, REG-SUP-001, REG-SUP-002, REG-COPY-001 |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | cb3bf95 |
-| **Commit SHA (full)** | cb3bf951fd224739134a83f38a978c34388df405 |
-| **Rollback SHA** | f6d0f52 |
+| **Commit SHA (short)** | pending |
+| **Commit SHA (full)** | pending |
+| **Rollback SHA** | cb3dbee |
 | **Evidence Path** | `RELEASES/EVIDENCE/BATCH-002/` |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha cb3bf95` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha <pending>` |
 
 ### Items
 | # | Ticket/Task | Acceptance Test | Status |
@@ -140,6 +140,28 @@ Infrastructure batch - no items from retailer-tickets.md.
 | 4 | REG-SUP-002: Fix supplier wrong error | No "Registration required before login" during registration | DONE |
 | 5 | REG-COPY-001: Standardize banner copy | Error shows "Please complete registration to continue." | DONE |
 | 6 | BATCH-001 infra (folded) | Deploy scripts exist and work | DONE |
+| 7 | FIREBASE-OTP-001: Fix OTP error messages | User-friendly errors, no "auth/invalid-app-credential" shown | DONE |
+
+### FIREBASE-OTP-001: Root Cause Analysis
+
+**Error:** `Firebase: Error (auth/invalid-app-credential)`
+
+**Root Cause:** Firebase Console → Authentication → Authorized domains is missing required domains.
+
+**Fix Required (Firebase Console - MANUAL):**
+1. Go to https://console.firebase.google.com/project/supermandi-pos/authentication/settings
+2. Under "Authorized domains", add:
+   - `localhost` (for local development/testing)
+   - `supermandi.tech` (for production)
+3. Ensure Phone Authentication provider is enabled
+
+**Code Changes (DONE):**
+- Improved error messages in `retailer-admin/src/lib/firebase.ts`
+- Improved error messages in `supplier-portal/src/lib/firebase.ts`
+- Mapped Firebase error codes to user-friendly messages:
+  - `auth/invalid-app-credential` → "Unable to send OTP. Please try again or contact support."
+  - `auth/too-many-requests` → "Too many attempts. Please wait a few minutes and try again."
+  - `auth/invalid-phone-number` → "Invalid phone number. Please check and try again."
 
 ### Local Gates
 ```
@@ -154,6 +176,18 @@ Date: 2026-02-04
 
 Note: `backend/packages/common` typecheck has pre-existing PATH issue (tsc not in PATH), unrelated to this batch.
 
+### Browser Acceptance (Production VM)
+```
+Date: 2026-02-04
+Status: PASS
+```
+
+**Verified on Production (supermandi.tech):**
+- ✅ Phone OTP sends successfully
+- ✅ Phone verified: 7737914383
+- ✅ Registration flow proceeds to Step 2 (Store Details)
+- ✅ Firebase Console configured (Phone Auth enabled, domains authorized)
+
 ### Deploy Evidence
 ```
 Date: pending
@@ -161,6 +195,9 @@ Deployed SHA: pending
 ```
 
 ### Notes
-Includes BATCH-001 infrastructure work (folded).
+- Includes BATCH-001 infrastructure work (folded)
+- Firebase Console configured: Phone Auth enabled + authorized domains added
+- OTP verified working on production VM (supermandi.tech)
+- Ready for deploy with registration flow fixes + improved OTP error messages
 
 ---

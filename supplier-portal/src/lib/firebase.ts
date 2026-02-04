@@ -152,10 +152,30 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
       recaptchaVerifier.clear();
       recaptchaVerifier = null;
     }
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorCode = (error as { code?: string })?.code || 'no-code';
-    console.error('[Firebase] signInWithPhoneNumber FAILED:', { code: errorCode, message: errorMessage, error });
-    throw new Error(`Failed to send OTP: ${errorMessage}`);
+
+    // FIREBASE-OTP-001: Map Firebase error codes to user-friendly messages
+    const firebaseError = error as { code?: string; message?: string };
+    const errorCode = firebaseError.code || '';
+
+    // Log technical error for debugging
+    console.error('[Firebase OTP Error]', { code: errorCode, message: firebaseError.message });
+
+    // User-friendly error messages
+    let userMessage = 'Unable to send OTP. Please try again.';
+
+    if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/captcha-check-failed') {
+      userMessage = 'Unable to send OTP. Please try again or contact support.';
+    } else if (errorCode === 'auth/too-many-requests') {
+      userMessage = 'Too many attempts. Please wait a few minutes and try again.';
+    } else if (errorCode === 'auth/invalid-phone-number') {
+      userMessage = 'Invalid phone number. Please check and try again.';
+    } else if (errorCode === 'auth/quota-exceeded') {
+      userMessage = 'Service temporarily unavailable. Please try again later.';
+    } else if (errorCode === 'auth/network-request-failed') {
+      userMessage = 'Network error. Please check your connection and try again.';
+    }
+
+    throw new Error(userMessage);
   }
 }
 
