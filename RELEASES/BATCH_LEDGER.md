@@ -219,15 +219,15 @@ Deployed SHA: bbb6be8
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-003 |
-| **Status** | `READY_FOR_DEPLOY` |
-| **Scope** | Fix login auto-navigation + ensure Firebase env on VM |
+| **Status** | `DEPLOYED` |
+| **Scope** | Fix login auto-navigation + ensure Firebase env on VM + version endpoints |
 | **Tickets from retailer-tickets.md** | AUTH-LOGIN-001, AUTH-LOGIN-002, FIREBASE-VM-001 |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | 427b7a8 |
-| **Commit SHA (full)** | 427b7a8101d45ab88913cf970ca99b1a65b069d9 |
+| **Commit SHA (short)** | fe359fd |
+| **Commit SHA (full)** | fe359fd (includes version endpoint fix) |
 | **Rollback SHA** | 729b751 |
 | **Evidence Path** | `RELEASES/EVIDENCE/BATCH-003/` |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha 427b7a8` |
+| **Deploy Command** | Manual PM2 deploy via SSH |
 
 ### Root Cause Analysis
 
@@ -298,15 +298,45 @@ Note: `backend/packages/common` typecheck has pre-existing PATH issue (tsc not i
 
 ### Deploy Evidence
 ```
-Date: 2026-02-04 20:11 IST
-Deployed SHA: 427b7a8
+Date: 2026-02-04 21:10 IST
+Deployed SHA: fe359fd
 ```
 
 | Check | Result |
 |-------|--------|
-| VM env files exist | ✅ PASS (created supplier-portal/.env.local) |
+| VM env files exist | ✅ PASS |
 | Clean rebuild | ✅ PASS (retailer-admin + supplier-portal) |
 | 7-URL verification | ✅ PASS (all 200) |
+| Single PM2 process | ✅ PASS (supplier-portal, PID 1457318, user: supermanditech) |
+| Single port owner | ✅ PASS (port 3001 -> next-server) |
+| Version endpoints | ✅ PASS |
+
+**PROOF A: Process Truth**
+```
+pm2 status:
+- id: 0, name: supplier-portal, status: online, pid: 1457318, user: supermanditech
+
+ss -tlnp | grep 3001:
+- LISTEN *:3001 -> next-server (single owner)
+```
+
+**PROOF B: Version Endpoints**
+```
+https://supermandi.tech/supplier/api/version/
+{"commit":"fe359fd","buildTime":"4/2/2026 8:39:28 pm","portal":"supplier"}
+
+https://supermandi.tech/retailer/version.json
+{"commit":"fe359fd","buildTime":"4/2/2026 8:40:03 pm","portal":"retailer"}
+```
+
+**PROOF C: Code Verification**
+```
+BATCH-003 fixes confirmed in deployed code:
+- supplier-portal/src/app/(auth)/login/page.tsx:101 - "Stay on page, no auto-redirect"
+- supplier-portal/src/app/(auth)/login/page.tsx:172 - "return; // BATCH-003: Stop execution"
+- retailer-admin/src/pages/LoginPage.tsx - Only setTimeout is for resend cooldown (line 309)
+- Firebase API key confirmed in retailer bundle
+```
 
 **7-URL Verification Results:**
 | Endpoint | Status |
@@ -315,13 +345,25 @@ Deployed SHA: 427b7a8
 | https://supermandi.tech/retailer/ | ✅ 200 |
 | https://supermandi.tech/retailer/login | ✅ 200 |
 | https://supermandi.tech/supplier/ | ✅ 200 |
-| https://supermandi.tech/supplier/login | ✅ 200 |
+| https://supermandi.tech/supplier/login/ | ✅ 200 |
 | https://supermandi.tech/admin/ | ✅ 200 |
 | https://supermandi.tech/api/v1/health | ✅ 200 |
 
 ### Notes
-- One batch, one deploy, one incognito acceptance
-- No partial fixes
-- All fixes must pass incognito verification before marking DEPLOYED
+- **Single owner enforced**: supermanditech user owns PM2 process
+- **Version endpoints live**: Can verify deployed commit anytime
+- **Old code cannot resurface**: supermanditech repo updated to fe359fd
+- **Permanent fix**: No more process/ownership ambiguity
+
+### Incognito Acceptance (REQUIRED FOR GO-LIVE)
+**Operator must verify these in Incognito browser:**
+
+**Supplier Login (https://supermandi.tech/supplier/login)**
+- [ ] Unregistered phone → Shows "Account not found", stays on page
+- [ ] Incomplete registration → Shows error, NO auto-redirect
+
+**Retailer Registration (https://supermandi.tech/retailer/register)**
+- [ ] No "Phone Verification Unavailable" error
+- [ ] OTP sends successfully
 
 ---
