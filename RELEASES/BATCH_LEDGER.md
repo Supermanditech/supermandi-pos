@@ -19,8 +19,12 @@
 | Field | Value |
 |-------|-------|
 | **Status** | `DEPLOYED` |
-| **SHA** | fe359fd |
+| **Environment** | Production |
+| **PROD_SHA** | `fe359fd` |
+| **ROLLBACK_SHA** | `8c90592` (BATCH-002) |
 | **Deployed** | 2026-02-04 21:10 IST |
+| **CI Run** | — (pre-CI era) |
+| **Evidence** | `RELEASES/EVIDENCE/BATCH-003/` |
 
 **Items:**
 - AUTH-LOGIN-001: Remove supplier login auto-redirect ✅
@@ -39,8 +43,12 @@
 | Field | Value |
 |-------|-------|
 | **Status** | `DEPLOYED` |
-| **SHA** | 8c90592 |
+| **Environment** | Production |
+| **PROD_SHA** | `8c90592` |
+| **ROLLBACK_SHA** | `a00d2c9` (BATCH-001) |
 | **Deployed** | 2026-02-04 19:30 IST |
+| **CI Run** | — (pre-CI era) |
+| **Evidence** | `RELEASES/EVIDENCE/BATCH-002/` |
 
 **Items:**
 - REG-RET-001: Remove sign-in link from retailer register ✅
@@ -61,7 +69,7 @@
 | Field | Value |
 |-------|-------|
 | **Status** | `SKIPPED` (folded into BATCH-002) |
-| **SHA** | a00d2c9 |
+| **BATCH_SHA** | `a00d2c9` |
 
 **Items:**
 - DEPLOY-OPS-001: Batch Ledger ✅
@@ -83,7 +91,24 @@
 | https://supermandi.tech/admin/ | ✅ 200 |
 | https://supermandi.tech/api/v1/health | ✅ 200 |
 
-**Current Live SHA**: fe359fd (BATCH-003)
+**Current PROD_SHA**: `fe359fd` (BATCH-003)
+**ROLLBACK_SHA**: `8c90592` (BATCH-002)
+
+---
+
+## Rollback History
+
+| Date | From SHA | To SHA | Reason | Duration |
+|------|----------|--------|--------|----------|
+| — | — | — | No rollbacks yet | — |
+
+---
+
+## Rollback Drills
+
+| Date | Environment | Result | Notes |
+|------|-------------|--------|-------|
+| — | — | — | No drills yet |
 
 ---
 
