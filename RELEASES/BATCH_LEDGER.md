@@ -12,6 +12,33 @@
 
 ---
 
+## Infrastructure Batches
+
+### BATCH-000 — 2026-02-05 — INFRA FOUNDATION
+
+| Field | Value |
+|-------|-------|
+| **Status** | `PUSHED` |
+| **Environment** | Local development tooling (no deploy) |
+| **HEAD_SHA** | `789f08f` |
+| **Base SHA** | `42a5bae` (BATCH-004/005/006/007 code verification) |
+| **Pushed** | 2026-02-05 |
+
+**Commits (4):**
+- `d70444b` HOTFIX-TSC-001: Add missing TypeScript devDependencies to workspace packages
+- `bcdec29` chore: Add production verification script
+- `8203ead` INFRA-LOCAL-001: Configure local development stack
+- `789f08f` INFRA-ZR-001: Zero-regression framework + local stack tooling
+
+**Items:**
+- HOTFIX-TSC-001: Missing TypeScript devDependencies across workspace packages
+- INFRA-LOCAL-001: Docker Compose (Postgres + Redis), `start-local-stack.bat`
+- INFRA-ZR-001: `ZERO_REGRESSION_RULES.md`, `zero-regression-check.ps1`, MASTER_PLAN principles 8-10, Claude commitment, Vite gitignore
+
+**Purpose:** Stable infrastructure base for all subsequent portal batches (004-011).
+
+---
+
 ## Deployed Batches
 
 ### BATCH-003 — 2026-02-04 — Go-Live Zero-Regression Fixes
