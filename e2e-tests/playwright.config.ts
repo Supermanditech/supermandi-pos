@@ -9,9 +9,23 @@ import { defineConfig, devices } from '@playwright/test';
  * - Network trace (HAR) recording
  * - Multi-browser support
  * - Evidence output for go-live verification
+ *
+ * Test Suites (use --grep flag):
+ * - @prod     : Production smoke tests - MUST pass 100% for go-live
+ * - @testonly : Tests requiring test-only endpoints (skipped in production)
+ * - @admin    : Admin portal tests (separate from retailer/supplier scope)
+ *
+ * Usage:
+ *   npx playwright test --grep @prod          # Production gate (must be 0 failures)
+ *   npx playwright test --grep @testonly      # Test-only endpoint tests
+ *   npx playwright test --grep @admin         # Admin portal tests
+ *   npx playwright test                       # All tests
  */
 
 const BASE_URL = process.env.BASE_URL || 'https://supermandi.tech';
+
+// Environment flag for test-only endpoints
+export const TEST_ENDPOINTS_ENABLED = process.env.TEST_ENDPOINTS_ENABLED === 'true';
 
 export default defineConfig({
   testDir: './tests',

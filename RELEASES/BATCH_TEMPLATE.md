@@ -33,7 +33,22 @@ Date: {YYYY-MM-DD HH:MM IST}
 | `retailer-admin build` | |
 | `supplier-portal build` | |
 | `supermandi-superadmin build` | |
-| `e2e-tests` | |
+| `e2e: prod-smoke` | **MUST BE 0 FAILURES** |
+
+### E2E Test Suites
+> For go-live: **prod-smoke MUST be 0 failures**. Other suites may be skipped with explicit reason.
+
+| Suite | Tag | Required | Pass/Fail | Notes |
+|-------|-----|----------|-----------|-------|
+| **prod-smoke** | `@prod` | **YES** | | Must pass 100% for go-live |
+| testonly | `@testonly` | No | skipped | Test-only endpoints disabled in prod |
+| admin | `@admin` | If in scope | | Admin portal tests |
+
+**Skipped Tests (Expected in Production):**
+| Test | Reason |
+|------|--------|
+| Token Refresh Flow | test-only endpoints disabled in production (/api/test/* not available) |
+| Admin Portal Tests | Admin not in go-live scope for this batch |
 
 **Gate Output:**
 ```

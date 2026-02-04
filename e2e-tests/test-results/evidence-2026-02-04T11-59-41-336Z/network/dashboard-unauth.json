@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Missing or invalid Authorization header. Use Bearer <token>."
+  },
+  "requestId": "9d3884c8-9ff9-4cd0-8676-e9e41ece0581"
+}

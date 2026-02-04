@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 
 /**
- * Token Refresh Flow E2E Tests
+ * Token Refresh Flow E2E Tests (@testonly)
  *
  * Tests the complete token refresh lifecycle:
  * 1. Mint a short-lived test token
@@ -14,6 +14,10 @@ import * as fs from 'fs';
  * PREREQUISITES:
  * - Test endpoints must be enabled (NODE_ENV !== 'production')
  * - Target: /api/test/mint-token, /api/test/verify-token, /api/test/refresh-token
+ *
+ * NOTE: This suite is tagged @testonly because it requires test-only API endpoints
+ * that are disabled in production. These tests will be skipped when running against
+ * production and should only run in local/dev environments where test endpoints exist.
  */
 
 const EVIDENCE_DIR = 'test-results/token-refresh';
@@ -41,7 +45,7 @@ interface RefreshResponse {
   error?: { code: string; message: string };
 }
 
-test.describe('Token Refresh Flow', () => {
+test.describe('Token Refresh Flow @testonly', { tag: '@testonly' }, () => {
   test.beforeAll(async () => {
     fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
   });
@@ -50,7 +54,7 @@ test.describe('Token Refresh Flow', () => {
     const response = await request.get('/api/test/config');
 
     if (response.status() === 404) {
-      test.skip(true, 'Test endpoints not available (production mode)');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 
@@ -68,7 +72,7 @@ test.describe('Token Refresh Flow', () => {
     // Check if test endpoints are available
     const configResponse = await request.get('/api/test/config');
     if (configResponse.status() === 404) {
-      test.skip(true, 'Test endpoints not available');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 
@@ -99,7 +103,7 @@ test.describe('Token Refresh Flow', () => {
     // Check if test endpoints are available
     const configResponse = await request.get('/api/test/config');
     if (configResponse.status() === 404) {
-      test.skip(true, 'Test endpoints not available');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 
@@ -134,7 +138,7 @@ test.describe('Token Refresh Flow', () => {
     // Check if test endpoints are available
     const configResponse = await request.get('/api/test/config');
     if (configResponse.status() === 404) {
-      test.skip(true, 'Test endpoints not available');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 
@@ -170,7 +174,7 @@ test.describe('Token Refresh Flow', () => {
     // Check if test endpoints are available
     const configResponse = await request.get('/api/test/config');
     if (configResponse.status() === 404) {
-      test.skip(true, 'Test endpoints not available');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 
@@ -241,7 +245,7 @@ test.describe('Token Refresh Flow', () => {
     // Check if test endpoints are available
     const configResponse = await request.get('/api/test/config');
     if (configResponse.status() === 404) {
-      test.skip(true, 'Test endpoints not available');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 
@@ -261,7 +265,7 @@ test.describe('Token Refresh Flow', () => {
     // Check if test endpoints are available
     const configResponse = await request.get('/api/test/config');
     if (configResponse.status() === 404) {
-      test.skip(true, 'Test endpoints not available');
+      test.skip(true, 'Skipped: test-only endpoints disabled in production (/api/test/* not available)');
       return;
     }
 

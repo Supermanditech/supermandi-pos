@@ -10,7 +10,12 @@
 #   3. Build retailer-admin
 #   4. Build supplier-portal
 #   5. Build supermandi-superadmin
-#   6. Run e2e tests
+#   6. Run prod-smoke e2e tests (--grep @prod)
+#
+# E2E Test Suites:
+#   @prod     - Production smoke tests (MUST be 0 failures for go-live)
+#   @testonly - Tests requiring test-only endpoints (skipped in prod gate)
+#   @admin    - Admin portal tests (skipped if admin not in batch scope)
 #
 # Exit codes:
 #   0 = All gates passed
@@ -21,19 +26,20 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 # Ensure Node.js is in PATH (fix for Windows environments)
-$NodePath = "C:\Program Files\nodejs"
-if (Test-Path $NodePath) {
+$NodeDir = "C:\Program Files\nodejs"
+$NodeExe = "$NodeDir\node.exe"
+if (Test-Path $NodeDir) {
     # Set for current process AND child processes
-    $env:Path = "$NodePath;$env:Path"
+    $env:Path = "$NodeDir;$env:Path"
     [Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::Process)
 }
 
 # Verify node is accessible
 try {
-    $nodeVersion = & "$NodePath\node.exe" --version 2>&1
+    $nodeVersion = & $NodeExe --version 2>&1
     Write-Host "  Node.js: $nodeVersion" -ForegroundColor Gray
 } catch {
-    Write-Host "  [ERROR] Node.js not found at $NodePath" -ForegroundColor Red
+    Write-Host "  [ERROR] Node.js not found at $NodeExe" -ForegroundColor Red
     exit 1
 }
 
@@ -110,11 +116,10 @@ foreach ($proj in $typecheckProjects) {
     try {
         # Call tsc via node directly (bypasses .cmd wrapper PATH issues)
         $tscJs = Join-Path $proj.path "node_modules\typescript\bin\tsc"
-        $nodePath = "$NodePath\node.exe"
-        if (-not (Test-Path $tscJs)) {
+                if (-not (Test-Path $tscJs)) {
             throw "tsc not found at $tscJs"
         }
-        $output = & $nodePath $tscJs --noEmit 2>&1
+        $output = & $NodeExe $tscJs --noEmit 2>&1
         if ($LASTEXITCODE -ne 0) {
             Write-Fail "$($proj.name) typecheck failed"
             Write-Host $output -ForegroundColor Red
@@ -145,16 +150,15 @@ Push-Location "$ProjectRoot\retailer-admin"
 try {
     Write-Info "Building retailer-admin (Vite)..."
     # Run tsc then vite via node directly
-    $nodePath = "$NodePath\node.exe"
-    $tscJs = ".\node_modules\typescript\bin\tsc"
+        $tscJs = ".\node_modules\typescript\bin\tsc"
     $viteJs = ".\node_modules\vite\bin\vite.js"
-    $output = & $nodePath $tscJs 2>&1
+    $output = & $NodeExe $tscJs 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Fail "retailer-admin tsc failed"
         Write-Host $output -ForegroundColor Red
         $script:Errors++
     } else {
-        $output = & $nodePath $viteJs build 2>&1
+        $output = & $NodeExe $viteJs build 2>&1
         if ($LASTEXITCODE -ne 0) {
             Write-Fail "retailer-admin vite build failed"
             Write-Host $output -ForegroundColor Red
@@ -188,9 +192,8 @@ Push-Location "$ProjectRoot\supplier-portal"
 try {
     Write-Info "Building supplier-portal (Next.js)..."
     # Run next build via node directly
-    $nodePath = "$NodePath\node.exe"
-    $nextJs = ".\node_modules\next\dist\bin\next"
-    $output = & $nodePath $nextJs build 2>&1
+        $nextJs = ".\node_modules\next\dist\bin\next"
+    $output = & $NodeExe $nextJs build 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Fail "supplier-portal build failed"
         Write-Host $output -ForegroundColor Red
@@ -223,16 +226,15 @@ Push-Location "$ProjectRoot\supermandi-superadmin"
 try {
     Write-Info "Building supermandi-superadmin (Vite)..."
     # Run tsc -b then vite via node directly
-    $nodePath = "$NodePath\node.exe"
-    $tscJs = ".\node_modules\typescript\bin\tsc"
+        $tscJs = ".\node_modules\typescript\bin\tsc"
     $viteJs = ".\node_modules\vite\bin\vite.js"
-    $output = & $nodePath $tscJs -b 2>&1
+    $output = & $NodeExe $tscJs -b 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Fail "supermandi-superadmin tsc failed"
         Write-Host $output -ForegroundColor Red
         $script:Errors++
     } else {
-        $output = & $nodePath $viteJs build 2>&1
+        $output = & $NodeExe $viteJs build 2>&1
         if ($LASTEXITCODE -ne 0) {
             Write-Fail "supermandi-superadmin vite build failed"
             Write-Host $output -ForegroundColor Red
@@ -257,27 +259,27 @@ if ($script:Errors -gt 0) {
 }
 
 # =============================================================================
-# GATE 6: E2E Tests
+# GATE 6: E2E Tests (prod-smoke only - MUST be 0 failures for go-live)
 # =============================================================================
 $script:Step++
-Write-Step "E2E Tests (Playwright)"
+Write-Step "E2E Tests (prod-smoke @prod)"
 
 Push-Location "$ProjectRoot\e2e-tests"
 try {
     # Install playwright browsers if needed
     Write-Info "Ensuring Playwright browsers installed..."
-    $nodePath = "$NodePath\node.exe"
     $playwrightJs = ".\node_modules\@playwright\test\cli.js"
-    & $nodePath $playwrightJs install chromium 2>&1 | Out-Null
+    & $NodeExe $playwrightJs install chromium 2>&1 | Out-Null
 
-    Write-Info "Running e2e tests..."
-    $output = & $nodePath $playwrightJs test 2>&1
+    Write-Info "Running prod-smoke tests (--grep @prod)..."
+    Write-Info "NOTE: @testonly and @admin tests are intentionally excluded"
+    $output = & $NodeExe $playwrightJs test --grep "@prod" 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Fail "e2e tests failed"
+        Write-Fail "prod-smoke e2e tests failed"
         Write-Host $output -ForegroundColor Red
         $script:Errors++
     } else {
-        Write-OK "e2e tests passed"
+        Write-OK "prod-smoke e2e tests passed (0 failures required for go-live)"
     }
 } catch {
     Write-Fail "e2e test error: $_"
@@ -287,7 +289,7 @@ try {
 }
 
 if ($script:Errors -gt 0) {
-    Write-Host "`n[GATE 6 FAILED] E2E tests failed" -ForegroundColor Red
+    Write-Host "`n[GATE 6 FAILED] prod-smoke E2E tests failed" -ForegroundColor Red
     exit 1
 }
 
@@ -306,7 +308,11 @@ Write-Host "    2. Typecheck passed"
 Write-Host "    3. retailer-admin built"
 Write-Host "    4. supplier-portal built"
 Write-Host "    5. supermandi-superadmin built"
-Write-Host "    6. E2E tests passed"
+Write-Host "    6. prod-smoke E2E passed (0 failures)"
+Write-Host ""
+Write-Host "  Excluded from gate (expected):"
+Write-Host "    - @testonly: test-only endpoints disabled in prod"
+Write-Host "    - @admin: admin portal not in go-live scope"
 Write-Host ""
 Write-Host "  Ready for commit and deploy."
 Write-Host ""

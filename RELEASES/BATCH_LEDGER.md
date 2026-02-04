@@ -65,7 +65,22 @@ Date: pending
 | `retailer-admin build` | pending |
 | `supplier-portal build` | pending |
 | `supermandi-superadmin build` | pending |
-| `e2e-tests` | pending |
+| `e2e: prod-smoke` | **MUST BE 0 FAILURES** |
+
+#### E2E Test Suites
+> For go-live: **prod-smoke MUST be 0 failures**. Other suites may be skipped with explicit reason.
+
+| Suite | Tag | Required | Pass/Fail | Notes |
+|-------|-----|----------|-----------|-------|
+| **prod-smoke** | `@prod` | **YES** | pending | Must pass 100% for go-live |
+| testonly | `@testonly` | No | skipped | Test-only endpoints disabled in prod |
+| admin | `@admin` | No | skipped | Admin not in go-live scope for BATCH-001 |
+
+**Skipped Tests (Expected in Production):**
+| Test | Reason |
+|------|--------|
+| Token Refresh Flow @testonly | test-only endpoints disabled in production (/api/test/* not available) |
+| Admin Portal Tests @admin | Admin not in go-live scope for BATCH-001 |
 
 ### Deploy Evidence
 ```

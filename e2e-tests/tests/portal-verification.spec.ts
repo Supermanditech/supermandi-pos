@@ -84,9 +84,9 @@ async function saveHtmlSnapshot(page: Page, name: string) {
 }
 
 // =============================================================================
-// Test Suite: Landing Page
+// Test Suite: Landing Page (@prod - Production Smoke)
 // =============================================================================
-test.describe('Landing Page', () => {
+test.describe('Landing Page @prod', { tag: '@prod' }, () => {
   test('should load landing page without redirect', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'landing-page');
 
@@ -108,14 +108,12 @@ test.describe('Landing Page', () => {
     const title = await page.title();
     expect(title.toLowerCase()).toContain('supermandi');
 
-    // Check for nav links
+    // Check for required nav links (retailer and supplier - admin is separate scope)
     const retailerLink = page.locator('a[href*="/retailer"]').first();
     const supplierLink = page.locator('a[href*="/supplier"]').first();
-    const adminLink = page.locator('a[href*="/admin"]').first();
 
     await expect(retailerLink).toBeVisible();
     await expect(supplierLink).toBeVisible();
-    await expect(adminLink).toBeVisible();
 
     // Save and check console logs
     const errors = saveConsoleLogs(logs, 'landing-page');
@@ -153,6 +151,24 @@ test.describe('Landing Page', () => {
     const errors = saveConsoleLogs(logs, 'landing-to-supplier');
     expect(errors.filter((e) => e.type === 'error')).toHaveLength(0);
   });
+});
+
+// =============================================================================
+// Test Suite: Landing Page Admin Navigation (@admin - separate scope)
+// =============================================================================
+test.describe('Landing Page Admin Navigation @admin', { tag: '@admin' }, () => {
+  test('should have Admin link on landing page', async ({ page }) => {
+    const logs = setupConsoleCollector(page, 'landing-admin-link');
+
+    await page.goto('/');
+
+    // Check for admin link presence
+    const adminLink = page.locator('a[href*="/admin"]').first();
+    await expect(adminLink).toBeVisible();
+
+    const errors = saveConsoleLogs(logs, 'landing-admin-link');
+    expect(errors.filter((e) => e.type === 'error')).toHaveLength(0);
+  });
 
   test('should navigate to Admin portal from landing', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'landing-to-admin');
@@ -170,9 +186,9 @@ test.describe('Landing Page', () => {
 });
 
 // =============================================================================
-// Test Suite: Retailer Portal
+// Test Suite: Retailer Portal (@prod - Production Smoke)
 // =============================================================================
-test.describe('Retailer Portal', () => {
+test.describe('Retailer Portal @prod', { tag: '@prod' }, () => {
   test('should load login page correctly', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'retailer-login');
 
@@ -257,9 +273,9 @@ test.describe('Retailer Portal', () => {
 });
 
 // =============================================================================
-// Test Suite: Supplier Portal
+// Test Suite: Supplier Portal (@prod - Production Smoke)
 // =============================================================================
-test.describe('Supplier Portal', () => {
+test.describe('Supplier Portal @prod', { tag: '@prod' }, () => {
   test('should load supplier login page', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'supplier-login');
 
@@ -295,9 +311,9 @@ test.describe('Supplier Portal', () => {
 });
 
 // =============================================================================
-// Test Suite: Admin Portal
+// Test Suite: Admin Portal (@admin - separate scope)
 // =============================================================================
-test.describe('Admin Portal', () => {
+test.describe('Admin Portal @admin', { tag: '@admin' }, () => {
   test('should load admin portal', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'admin-portal');
 
@@ -317,9 +333,9 @@ test.describe('Admin Portal', () => {
 });
 
 // =============================================================================
-// Test Suite: API Health & Assets
+// Test Suite: API Health & Assets (@prod - Production Smoke)
 // =============================================================================
-test.describe('API & Assets', () => {
+test.describe('API & Assets @prod', { tag: '@prod' }, () => {
   test('should have healthy API', async ({ request }) => {
     const response = await request.get('/api/v1/health');
     expect(response.status()).toBe(200);
@@ -377,9 +393,9 @@ test.describe('API & Assets', () => {
 });
 
 // =============================================================================
-// Test Suite: Session Persistence
+// Test Suite: Session Persistence (@prod - Production Smoke)
 // =============================================================================
-test.describe('Session Persistence', () => {
+test.describe('Session Persistence @prod', { tag: '@prod' }, () => {
   test('should maintain state across page reloads', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'session-reload');
 
@@ -432,9 +448,9 @@ test.describe('Session Persistence', () => {
 });
 
 // =============================================================================
-// Test Suite: Network Failures
+// Test Suite: Network Failures (@prod - Production Smoke)
 // =============================================================================
-test.describe('Network Resilience', () => {
+test.describe('Network Resilience @prod', { tag: '@prod' }, () => {
   test('should handle API errors gracefully', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'network-error');
 
@@ -465,9 +481,9 @@ test.describe('Network Resilience', () => {
 });
 
 // =============================================================================
-// Test Suite: HAR Recording
+// Test Suite: HAR Recording (@prod - Production Smoke)
 // =============================================================================
-test.describe('Network Trace', () => {
+test.describe('Network Trace @prod', { tag: '@prod' }, () => {
   test('should record HAR for full page load', async ({ page, context }) => {
     // Start HAR recording
     await context.tracing.start({
