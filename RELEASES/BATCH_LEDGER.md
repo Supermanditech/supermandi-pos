@@ -125,11 +125,11 @@ Infrastructure batch - no items from retailer-tickets.md.
 | **Scope** | Registration flow fixes + Firebase OTP error handling |
 | **Tickets from retailer-tickets.md** | REG-RET-001, REG-RET-002, REG-SUP-001, REG-SUP-002, REG-COPY-001 |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | pending |
-| **Commit SHA (full)** | pending |
+| **Commit SHA (short)** | 8c90592 |
+| **Commit SHA (full)** | 8c90592e1cc3f0b4e25c4b2f577c5b425d693461 |
 | **Rollback SHA** | cb3dbee |
 | **Evidence Path** | `RELEASES/EVIDENCE/BATCH-002/` |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha <pending>` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha 8c90592` |
 
 ### Items
 | # | Ticket/Task | Acceptance Test | Status |
