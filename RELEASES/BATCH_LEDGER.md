@@ -223,11 +223,11 @@ Deployed SHA: bbb6be8
 | **Scope** | Fix login auto-navigation + ensure Firebase env on VM |
 | **Tickets from retailer-tickets.md** | AUTH-LOGIN-001, AUTH-LOGIN-002, FIREBASE-VM-001 |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | 9901ec4 |
-| **Commit SHA (full)** | 9901ec4f8d8c2926f8098aa68cc81eb73a4aaf68 |
+| **Commit SHA (short)** | 427b7a8 |
+| **Commit SHA (full)** | 427b7a8101d45ab88913cf970ca99b1a65b069d9 |
 | **Rollback SHA** | 729b751 |
 | **Evidence Path** | `RELEASES/EVIDENCE/BATCH-003/` |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha 9901ec4` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha 427b7a8` |
 
 ### Root Cause Analysis
 
@@ -260,7 +260,7 @@ Deployed SHA: bbb6be8
 | 1 | AUTH-LOGIN-001: Remove supplier login auto-redirect | Incomplete registration shows error, stays on page | DONE |
 | 2 | AUTH-LOGIN-002: Add missing return after pending-approval push | No silent continuation after redirect | DONE |
 | 3 | AUTH-LOGIN-003: Remove retailer login auto-redirect | Incomplete registration shows error, stays on page | DONE |
-| 4 | FIREBASE-VM-001: Verify env files on VM + clean rebuild | Firebase initialized, no "Phone Verification Unavailable" | PENDING (deploy phase) |
+| 4 | FIREBASE-VM-001: Verify env files on VM + clean rebuild | Firebase initialized, no "Phone Verification Unavailable" | DONE (created .env.local) |
 
 ### Acceptance Criteria (Incognito Browser Required)
 
@@ -298,15 +298,26 @@ Note: `backend/packages/common` typecheck has pre-existing PATH issue (tsc not i
 
 ### Deploy Evidence
 ```
-Date: pending
-Deployed SHA: pending
+Date: 2026-02-04 20:11 IST
+Deployed SHA: 427b7a8
 ```
 
 | Check | Result |
 |-------|--------|
-| VM env files exist | pending |
-| Clean rebuild | pending |
-| 7-URL verification | pending |
+| VM env files exist | ✅ PASS (created supplier-portal/.env.local) |
+| Clean rebuild | ✅ PASS (retailer-admin + supplier-portal) |
+| 7-URL verification | ✅ PASS (all 200) |
+
+**7-URL Verification Results:**
+| Endpoint | Status |
+|----------|--------|
+| https://supermandi.tech/ | ✅ 200 |
+| https://supermandi.tech/retailer/ | ✅ 200 |
+| https://supermandi.tech/retailer/login | ✅ 200 |
+| https://supermandi.tech/supplier/ | ✅ 200 |
+| https://supermandi.tech/supplier/login | ✅ 200 |
+| https://supermandi.tech/admin/ | ✅ 200 |
+| https://supermandi.tech/api/v1/health | ✅ 200 |
 
 ### Notes
 - One batch, one deploy, one incognito acceptance
