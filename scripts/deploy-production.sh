@@ -1,11 +1,17 @@
 #!/bin/bash
 # =============================================================================
-# SuperMandi One-Click Production Deployment
+# SuperMandi One-Click Production Deployment (DEPLOY-OPS-003)
 # =============================================================================
 # Deploys: Retailer Portal, Admin Portal, Supplier Portal, Backend, Nginx
 # Target: supermandi.tech (Google Cloud VM)
 #
-# Usage: ./scripts/deploy-production.sh [--skip-backend] [--skip-build]
+# Usage: ./scripts/deploy-production.sh [OPTIONS]
+#
+# Options:
+#   --sha <commit>    Deploy specific commit (default: current HEAD)
+#   --skip-backend    Skip backend deployment
+#   --skip-build      Use existing builds (skip npm build)
+#   --dry-run         Show what would be deployed without deploying
 #
 # Prerequisites:
 # - SSH key configured: ssh-copy-id supermanditech@34.14.220.171
@@ -28,10 +34,32 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Parse arguments
 SKIP_BACKEND=false
 SKIP_BUILD=false
-for arg in "$@"; do
-  case $arg in
-    --skip-backend) SKIP_BACKEND=true ;;
-    --skip-build) SKIP_BUILD=true ;;
+DRY_RUN=false
+TARGET_SHA=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --sha)
+      TARGET_SHA="$2"
+      shift 2
+      ;;
+    --skip-backend)
+      SKIP_BACKEND=true
+      shift
+      ;;
+    --skip-build)
+      SKIP_BUILD=true
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--sha <commit>] [--skip-backend] [--skip-build] [--dry-run]"
+      exit 1
+      ;;
   esac
 done
 
@@ -45,8 +73,11 @@ NC='\033[0m'
 
 # Counters
 STEP=0
-TOTAL_STEPS=10
+TOTAL_STEPS=11
 ERRORS=0
+
+# Evidence collection
+EVIDENCE_FILE="/tmp/deploy-evidence-$(date +%Y%m%d-%H%M%S).txt"
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -75,12 +106,14 @@ verify_url() {
   local url=$1
   local expected=$2
   local name=$3
-  local status=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+  local status=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time 10 2>/dev/null || echo "000")
   if [ "$status" = "$expected" ]; then
     success "$name: $status"
+    echo "$name: $status" >> "$EVIDENCE_FILE"
     return 0
   else
     fail "$name: Expected $expected, got $status"
+    echo "$name: FAIL - Expected $expected, got $status" >> "$EVIDENCE_FILE"
     return 1
   fi
 }
@@ -91,15 +124,65 @@ verify_url() {
 
 echo ""
 echo -e "${BLUE}╔═══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║       SUPERMANDI PRODUCTION DEPLOYMENT (ONE-CLICK)            ║${NC}"
+echo -e "${BLUE}║       SUPERMANDI PRODUCTION DEPLOYMENT (DEPLOY-OPS-003)       ║${NC}"
 echo -e "${BLUE}╠═══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "${BLUE}║  Target: https://$DOMAIN                            ║${NC}"
 echo -e "${BLUE}║  VM:     $VM_USER@$VM_HOST                        ║${NC}"
-echo -e "${BLUE}║  Time:   $(date '+%Y-%m-%d %H:%M:%S %Z')                       ║${NC}"
+echo -e "${BLUE}║  Time:   $(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M:%S IST' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S')                       ║${NC}"
 echo -e "${BLUE}╚═══════════════════════════════════════════════════════════════╝${NC}"
 
 # =============================================================================
-# STEP 1: PRE-FLIGHT CHECKS
+# STEP 1: RESOLVE AND CHECKOUT TARGET SHA
+# =============================================================================
+
+step "Resolve target SHA"
+
+cd "$PROJECT_ROOT"
+
+# Resolve target SHA
+if [ -n "$TARGET_SHA" ]; then
+  # Verify the SHA exists
+  if ! git rev-parse --verify "$TARGET_SHA" >/dev/null 2>&1; then
+    fatal "SHA '$TARGET_SHA' does not exist in repository"
+  fi
+  GIT_SHA_FULL=$(git rev-parse "$TARGET_SHA")
+  GIT_SHA=$(git rev-parse --short "$TARGET_SHA")
+
+  # Checkout the specific SHA
+  echo "  Checking out SHA: $TARGET_SHA..."
+  git checkout "$GIT_SHA_FULL" --quiet
+  success "Checked out $GIT_SHA"
+else
+  # Use current HEAD
+  GIT_SHA=$(git rev-parse --short HEAD)
+  GIT_SHA_FULL=$(git rev-parse HEAD)
+  success "Using current HEAD: $GIT_SHA"
+fi
+
+GIT_BRANCH=$(git branch --show-current 2>/dev/null || echo "detached")
+
+# Start evidence file
+cat > "$EVIDENCE_FILE" << EOF
+═══════════════════════════════════════════════════════════════
+SUPERMANDI DEPLOYMENT EVIDENCE
+═══════════════════════════════════════════════════════════════
+Deployed SHA (short): $GIT_SHA
+Deployed SHA (full):  $GIT_SHA_FULL
+Branch:               $GIT_BRANCH
+Deploy Time (IST):    $(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M:%S IST' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S')
+Deploy Command:       $0 $@
+───────────────────────────────────────────────────────────────
+
+EOF
+
+if [ "$DRY_RUN" = true ]; then
+  echo ""
+  echo -e "${YELLOW}DRY RUN MODE - No actual deployment will occur${NC}"
+  echo ""
+fi
+
+# =============================================================================
+# STEP 2: PRE-FLIGHT CHECKS
 # =============================================================================
 
 step "Pre-flight checks"
@@ -112,16 +195,13 @@ fi
 success "SSH connection OK"
 
 # Check Git status
-cd "$PROJECT_ROOT"
 if [ -n "$(git status --porcelain)" ]; then
-  warn "Uncommitted changes detected - deploying current state"
+  warn "Uncommitted changes detected (deploying from SHA: $GIT_SHA)"
 fi
-GIT_SHA=$(git rev-parse --short HEAD)
-GIT_BRANCH=$(git branch --show-current)
 success "Git: $GIT_BRANCH @ $GIT_SHA"
 
 # =============================================================================
-# STEP 2: BUILD FRONTENDS
+# STEP 3: BUILD FRONTENDS
 # =============================================================================
 
 if [ "$SKIP_BUILD" = true ]; then
@@ -130,94 +210,147 @@ if [ "$SKIP_BUILD" = true ]; then
 else
   step "Build frontends"
 
-  # Retailer Admin
-  echo "  Building retailer-admin..."
-  cd "$PROJECT_ROOT/retailer-admin"
-  npm ci --silent 2>/dev/null || npm install --silent
-  npm run build >/dev/null 2>&1
-  if [ -f "dist/index.html" ]; then
-    success "retailer-admin built"
+  if [ "$DRY_RUN" = true ]; then
+    success "[DRY RUN] Would build retailer-admin"
+    success "[DRY RUN] Would build supermandi-superadmin"
+    success "[DRY RUN] Would build supplier-portal"
   else
-    fatal "retailer-admin build failed"
-  fi
+    # Retailer Admin
+    echo "  Building retailer-admin..."
+    cd "$PROJECT_ROOT/retailer-admin"
+    npm ci --silent 2>/dev/null || npm install --silent
+    npm run build >/dev/null 2>&1
+    if [ -f "dist/index.html" ]; then
+      success "retailer-admin built"
+    else
+      fatal "retailer-admin build failed"
+    fi
 
-  # SuperAdmin
-  echo "  Building supermandi-superadmin..."
-  cd "$PROJECT_ROOT/supermandi-superadmin"
-  npm ci --silent 2>/dev/null || npm install --silent
-  npm run build >/dev/null 2>&1
-  if [ -f "dist/index.html" ]; then
-    success "supermandi-superadmin built"
-  else
-    fatal "supermandi-superadmin build failed"
-  fi
+    # SuperAdmin
+    echo "  Building supermandi-superadmin..."
+    cd "$PROJECT_ROOT/supermandi-superadmin"
+    npm ci --silent 2>/dev/null || npm install --silent
+    npm run build >/dev/null 2>&1
+    if [ -f "dist/index.html" ]; then
+      success "supermandi-superadmin built"
+    else
+      fatal "supermandi-superadmin build failed"
+    fi
 
-  # Supplier Portal
-  echo "  Building supplier-portal..."
-  cd "$PROJECT_ROOT/supplier-portal"
-  npm ci --silent 2>/dev/null || npm install --silent
-  npm run build >/dev/null 2>&1
-  if [ -d ".next" ]; then
-    success "supplier-portal built"
-  else
-    fatal "supplier-portal build failed"
+    # Supplier Portal
+    echo "  Building supplier-portal..."
+    cd "$PROJECT_ROOT/supplier-portal"
+    npm ci --silent 2>/dev/null || npm install --silent
+    npm run build >/dev/null 2>&1
+    if [ -d ".next" ]; then
+      success "supplier-portal built"
+    else
+      fatal "supplier-portal build failed"
+    fi
   fi
 fi
 
 # =============================================================================
-# STEP 3: CREATE DIRECTORIES ON VM
+# STEP 4: CREATE VERSIONED DIRECTORIES ON VM
 # =============================================================================
 
-step "Prepare VM directories"
+step "Prepare VM directories (versioned)"
 
-ssh $VM_USER@$VM_HOST "sudo mkdir -p /var/www/retailer /var/www/admin /var/www/supermandi-landing && sudo chown -R $VM_USER:$VM_USER /var/www/"
-success "Directories ready"
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would create /var/www/supermandi/releases/$GIT_SHA/"
+else
+  ssh $VM_USER@$VM_HOST << MKDIR_EOF
+sudo mkdir -p /var/www/supermandi/releases/$GIT_SHA/retailer
+sudo mkdir -p /var/www/supermandi/releases/$GIT_SHA/admin
+sudo mkdir -p /var/www/supermandi-landing
+sudo chown -R $VM_USER:$VM_USER /var/www/supermandi
+sudo chown -R $VM_USER:$VM_USER /var/www/supermandi-landing
+MKDIR_EOF
+  success "Directories ready: /var/www/supermandi/releases/$GIT_SHA/"
+fi
 
 # =============================================================================
-# STEP 4: DEPLOY LANDING PAGE
+# STEP 5: DEPLOY LANDING PAGE
 # =============================================================================
 
 step "Deploy landing page"
 
-scp -q "$PROJECT_ROOT/supermandi-landing/index.html" $VM_USER@$VM_HOST:/var/www/supermandi-landing/
-success "Landing page deployed"
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would deploy landing page"
+else
+  scp -q "$PROJECT_ROOT/supermandi-landing/index.html" $VM_USER@$VM_HOST:/var/www/supermandi-landing/
+  success "Landing page deployed"
+fi
 
 # =============================================================================
-# STEP 5: DEPLOY RETAILER PORTAL
+# STEP 6: DEPLOY RETAILER PORTAL (versioned)
 # =============================================================================
 
 step "Deploy retailer portal"
 
-rsync -az --delete --info=progress2 \
-  "$PROJECT_ROOT/retailer-admin/dist/" \
-  $VM_USER@$VM_HOST:/var/www/retailer/
-success "Retailer portal deployed"
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would deploy retailer portal"
+else
+  rsync -az --delete --info=progress2 \
+    "$PROJECT_ROOT/retailer-admin/dist/" \
+    $VM_USER@$VM_HOST:/var/www/supermandi/releases/$GIT_SHA/retailer/
+  success "Retailer portal deployed to releases/$GIT_SHA/retailer/"
+fi
 
 # =============================================================================
-# STEP 6: DEPLOY ADMIN PORTAL
+# STEP 7: DEPLOY ADMIN PORTAL (versioned)
 # =============================================================================
 
 step "Deploy admin portal"
 
-rsync -az --delete --info=progress2 \
-  "$PROJECT_ROOT/supermandi-superadmin/dist/" \
-  $VM_USER@$VM_HOST:/var/www/admin/
-success "Admin portal deployed"
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would deploy admin portal"
+else
+  rsync -az --delete --info=progress2 \
+    "$PROJECT_ROOT/supermandi-superadmin/dist/" \
+    $VM_USER@$VM_HOST:/var/www/supermandi/releases/$GIT_SHA/admin/
+  success "Admin portal deployed to releases/$GIT_SHA/admin/"
+fi
 
 # =============================================================================
-# STEP 7: DEPLOY SUPPLIER PORTAL
+# STEP 8: UPDATE SYMLINKS (atomic switch)
+# =============================================================================
+
+step "Update symlinks (atomic switch)"
+
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would update symlinks"
+else
+  ssh $VM_USER@$VM_HOST << SYMLINK_EOF
+# Create/update symlinks atomically
+ln -sfn /var/www/supermandi/releases/$GIT_SHA/retailer /var/www/retailer
+ln -sfn /var/www/supermandi/releases/$GIT_SHA/admin /var/www/admin
+
+# Record current deployment
+echo "$GIT_SHA" > /var/www/supermandi/CURRENT_SHA
+echo "$GIT_SHA_FULL" > /var/www/supermandi/CURRENT_SHA_FULL
+SYMLINK_EOF
+  success "Symlinks updated: /var/www/retailer -> releases/$GIT_SHA/retailer"
+  success "Symlinks updated: /var/www/admin -> releases/$GIT_SHA/admin"
+fi
+
+# =============================================================================
+# STEP 9: DEPLOY SUPPLIER PORTAL
 # =============================================================================
 
 step "Deploy supplier portal"
 
-rsync -az --info=progress2 \
-  --exclude 'node_modules' \
-  --exclude '.git' \
-  --exclude '.next/cache' \
-  "$PROJECT_ROOT/supplier-portal/" \
-  $VM_USER@$VM_HOST:/home/$VM_USER/supplier-portal/
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would deploy supplier portal"
+else
+  rsync -az --info=progress2 \
+    --exclude 'node_modules' \
+    --exclude '.git' \
+    --exclude '.next/cache' \
+    "$PROJECT_ROOT/supplier-portal/" \
+    $VM_USER@$VM_HOST:/home/$VM_USER/supplier-portal/
 
-ssh $VM_USER@$VM_HOST << 'SUPPLIER_EOF'
+  ssh $VM_USER@$VM_HOST << 'SUPPLIER_EOF'
 cd /home/supermanditech/supplier-portal
 if [ ! -d "node_modules" ] || [ package.json -nt node_modules ]; then
   npm ci --production --silent 2>/dev/null || npm install --production --silent
@@ -226,18 +359,23 @@ pm2 delete supplier-portal 2>/dev/null || true
 pm2 start npm --name "supplier-portal" -- start
 pm2 save --force >/dev/null 2>&1
 SUPPLIER_EOF
-success "Supplier portal deployed"
+  success "Supplier portal deployed"
+fi
 
 # =============================================================================
-# STEP 8: UPDATE NGINX CONFIG
+# STEP 10: UPDATE NGINX CONFIG
 # =============================================================================
 
 step "Update nginx configuration"
 
-# Upload nginx config
-scp -q "$PROJECT_ROOT/nginx.prod.conf" $VM_USER@$VM_HOST:/tmp/nginx.prod.conf
+if [ "$DRY_RUN" = true ]; then
+  success "[DRY RUN] Would update nginx config"
+  NGINX_RESULT="[DRY RUN]"
+else
+  # Upload nginx config
+  scp -q "$PROJECT_ROOT/nginx.prod.conf" $VM_USER@$VM_HOST:/tmp/nginx.prod.conf
 
-ssh $VM_USER@$VM_HOST << 'NGINX_EOF'
+  NGINX_RESULT=$(ssh $VM_USER@$VM_HOST << 'NGINX_EOF'
 # Backup current config
 sudo cp /etc/nginx/sites-enabled/supermandi.tech /etc/nginx/sites-enabled/supermandi.tech.bak 2>/dev/null || true
 
@@ -245,7 +383,7 @@ sudo cp /etc/nginx/sites-enabled/supermandi.tech /etc/nginx/sites-enabled/superm
 sudo cp /tmp/nginx.prod.conf /etc/nginx/sites-enabled/supermandi.tech
 
 # Test config
-if sudo nginx -t 2>/dev/null; then
+if sudo nginx -t 2>&1; then
   sudo systemctl reload nginx
   echo "NGINX_OK"
 else
@@ -254,20 +392,34 @@ else
   echo "NGINX_FAIL"
 fi
 NGINX_EOF
+)
 
-success "Nginx configuration updated (HSTS enabled)"
+  if echo "$NGINX_RESULT" | grep -q "NGINX_OK"; then
+    success "Nginx configuration updated"
+  else
+    fail "Nginx configuration failed - rolled back"
+  fi
+fi
+
+echo "nginx -t result: $NGINX_RESULT" >> "$EVIDENCE_FILE"
 
 # =============================================================================
-# STEP 9: DEPLOY BACKEND (Optional)
+# STEP 11: DEPLOY BACKEND (Optional)
 # =============================================================================
+
+DOCKER_PS_OUTPUT=""
 
 if [ "$SKIP_BACKEND" = true ]; then
   step "Deploy backend (SKIPPED)"
   warn "Backend deployment skipped"
+  echo "Backend: SKIPPED" >> "$EVIDENCE_FILE"
 else
   step "Deploy backend"
 
-  ssh $VM_USER@$VM_HOST << 'BACKEND_EOF'
+  if [ "$DRY_RUN" = true ]; then
+    success "[DRY RUN] Would deploy backend"
+  else
+    BACKEND_RESULT=$(ssh $VM_USER@$VM_HOST << 'BACKEND_EOF'
 cd /var/supermandi
 git pull origin main >/dev/null 2>&1 || true
 
@@ -283,20 +435,37 @@ if curl -s http://localhost:3000/health | grep -q "ok"; then
 else
   echo "BACKEND_WARN"
 fi
+
+# Get docker ps
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null | head -5
 BACKEND_EOF
-  success "Backend deployed"
+)
+
+    if echo "$BACKEND_RESULT" | grep -q "BACKEND_OK"; then
+      success "Backend deployed and healthy"
+    else
+      warn "Backend deployed but health check inconclusive"
+    fi
+
+    DOCKER_PS_OUTPUT=$(echo "$BACKEND_RESULT" | tail -4)
+    echo "docker ps:" >> "$EVIDENCE_FILE"
+    echo "$DOCKER_PS_OUTPUT" >> "$EVIDENCE_FILE"
+  fi
 fi
 
 # =============================================================================
-# STEP 10: VERIFICATION
+# VERIFICATION
 # =============================================================================
 
 step "Production verification"
 
+echo "" >> "$EVIDENCE_FILE"
+echo "URL Verification:" >> "$EVIDENCE_FILE"
+
 echo ""
 echo "  Testing endpoints..."
 
-# Core endpoints
+# Core endpoints (7 mandatory per DEPLOY-OPS-004)
 verify_url "https://$DOMAIN/" "200" "Landing page"
 verify_url "https://$DOMAIN/retailer/" "200" "Retailer portal"
 verify_url "https://$DOMAIN/retailer/login" "200" "Retailer login"
@@ -330,15 +499,48 @@ echo "  Testing security headers..."
 HSTS=$(curl -sI "https://$DOMAIN/" 2>/dev/null | grep -i "strict-transport-security" | head -1)
 if [ -n "$HSTS" ]; then
   success "HSTS header present"
+  echo "HSTS: PRESENT" >> "$EVIDENCE_FILE"
 else
   fail "HSTS header missing"
+  echo "HSTS: MISSING" >> "$EVIDENCE_FILE"
 fi
+
+CSP=$(curl -sI "https://$DOMAIN/" 2>/dev/null | grep -i "content-security-policy" | head -1)
+if [ -n "$CSP" ]; then
+  success "CSP header present"
+  echo "CSP: PRESENT" >> "$EVIDENCE_FILE"
+else
+  warn "CSP header missing (recommended)"
+  echo "CSP: MISSING" >> "$EVIDENCE_FILE"
+fi
+
+# =============================================================================
+# EVIDENCE BLOCK
+# =============================================================================
+
+echo ""
+echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}                    DEPLOYMENT EVIDENCE                         ${NC}"
+echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
+echo ""
+echo "  Deployed SHA:     $GIT_SHA ($GIT_SHA_FULL)"
+echo "  Branch:           $GIT_BRANCH"
+echo "  Time (IST):       $(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M:%S IST' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S')"
+echo "  nginx -t:         $NGINX_RESULT"
+if [ -n "$DOCKER_PS_OUTPUT" ]; then
+  echo ""
+  echo "  Docker containers:"
+  echo "$DOCKER_PS_OUTPUT" | sed 's/^/    /'
+fi
+echo ""
+echo "  Rollback command:"
+echo "    ./scripts/deploy-production.sh --sha <previous-sha> --skip-build"
+echo ""
 
 # =============================================================================
 # SUMMARY
 # =============================================================================
 
-echo ""
 echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
 
 if [ "$ERRORS" -gt 0 ]; then
@@ -346,14 +548,15 @@ if [ "$ERRORS" -gt 0 ]; then
   echo -e "${RED}═══════════════════════════════════════════════════════════════${NC}"
   echo ""
   echo "  Review the errors above and fix manually if needed."
+  echo "  Evidence saved to: $EVIDENCE_FILE"
   echo ""
   exit 1
 else
   echo -e "${GREEN}DEPLOYMENT SUCCESSFUL - ALL CHECKS PASSED${NC}"
   echo -e "${BLUE}═══════════════════════════════════════════════════════════════${NC}"
   echo ""
-  echo -e "  ${GREEN}Git:${NC}       $GIT_BRANCH @ $GIT_SHA"
-  echo -e "  ${GREEN}Time:${NC}      $(date '+%Y-%m-%d %H:%M:%S %Z')"
+  echo -e "  ${GREEN}Deployed:${NC}  $GIT_SHA"
+  echo -e "  ${GREEN}Time:${NC}      $(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M:%S IST' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S')"
   echo ""
   echo -e "  ${CYAN}URLs:${NC}"
   echo "    Landing:   https://$DOMAIN/"
@@ -365,5 +568,8 @@ else
   echo -e "  ${CYAN}Logs:${NC}"
   echo "    ssh $VM_USER@$VM_HOST 'pm2 logs supplier-portal'"
   echo "    ssh $VM_USER@$VM_HOST 'docker logs backend-api-gateway-1 --tail 50'"
+  echo ""
+  echo -e "  ${CYAN}Evidence:${NC}"
+  echo "    $EVIDENCE_FILE"
   echo ""
 fi

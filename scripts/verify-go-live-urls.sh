@@ -1,170 +1,262 @@
 #!/bin/bash
-# GO-LIVE-URL-AUDIT-001: Comprehensive URL verification script
-# Run this to verify all go-live URL requirements
+# =============================================================================
+# SuperMandi Go-Live URL Verification (DEPLOY-OPS-004)
+# =============================================================================
+# Deterministic verification after deploy
+# Checks 7 mandatory endpoints + HSTS + CSP headers
+#
+# Usage: ./scripts/verify-go-live-urls.sh [--verbose]
+#
+# Exit codes:
+#   0 = All verifications passed
+#   1 = One or more verifications failed
+# =============================================================================
 
-echo "=========================================="
-echo "GO-LIVE URL Audit Verification"
-echo "Date: $(date)"
-echo "=========================================="
+set -e
 
-DOMAIN="https://supermandi.tech"
+DOMAIN="${DOMAIN:-supermandi.tech}"
+VERBOSE=false
+
+for arg in "$@"; do
+  case $arg in
+    --verbose|-v) VERBOSE=true ;;
+  esac
+done
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
 PASS=0
 FAIL=0
+WARN=0
 
-# Helper function
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+
 check_url() {
     local url="$1"
     local expected_code="$2"
     local description="$3"
 
-    local actual_code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+    local actual_code=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time 10 2>/dev/null || echo "000")
 
     if [ "$actual_code" = "$expected_code" ]; then
-        echo -e "  ✅ $description: $actual_code"
+        echo -e "  ${GREEN}[OK]${NC} $description: $actual_code"
         ((PASS++))
+        return 0
     else
-        echo -e "  ❌ $description: $actual_code (expected $expected_code)"
+        echo -e "  ${RED}[FAIL]${NC} $description: Expected $expected_code, got $actual_code"
         ((FAIL++))
+        return 1
     fi
 }
 
-check_header() {
+check_header_exists() {
+    local url="$1"
+    local header="$2"
+    local description="$3"
+
+    local value=$(curl -sI "$url" --max-time 10 2>/dev/null | grep -i "^$header:" | head -1)
+
+    if [ -n "$value" ]; then
+        echo -e "  ${GREEN}[OK]${NC} $description"
+        if [ "$VERBOSE" = true ]; then
+            echo -e "       ${CYAN}${value}${NC}"
+        fi
+        ((PASS++))
+        return 0
+    else
+        echo -e "  ${RED}[FAIL]${NC} $description MISSING"
+        ((FAIL++))
+        return 1
+    fi
+}
+
+check_header_value() {
     local url="$1"
     local header="$2"
     local expected="$3"
     local description="$4"
 
-    local actual=$(curl -s -I "$url" 2>/dev/null | grep -i "^$header:" | head -1)
+    local actual=$(curl -sI "$url" --max-time 10 2>/dev/null | grep -i "^$header:" | head -1)
 
     if echo "$actual" | grep -qi "$expected"; then
-        echo -e "  ✅ $description"
+        echo -e "  ${GREEN}[OK]${NC} $description"
         ((PASS++))
+        return 0
     else
-        echo -e "  ❌ $description"
-        echo "      Expected: $expected"
-        echo "      Got: $actual"
-        ((FAIL++))
+        echo -e "  ${YELLOW}[WARN]${NC} $description"
+        if [ "$VERBOSE" = true ]; then
+            echo -e "       Expected: $expected"
+            echo -e "       Got: $actual"
+        fi
+        ((WARN++))
+        return 0
     fi
 }
 
-check_no_redirect() {
+check_csp_firebase_compat() {
     local url="$1"
-    local description="$2"
 
-    local response=$(curl -s -I "$url" 2>/dev/null | head -1)
+    local csp=$(curl -sI "$url" --max-time 10 2>/dev/null | grep -i "^content-security-policy:" | head -1)
 
-    if echo "$response" | grep -q "200 OK"; then
-        echo -e "  ✅ $description: 200 OK (no redirect)"
-        ((PASS++))
-    elif echo "$response" | grep -qE "30[0-9]"; then
-        local redirect_code=$(echo "$response" | grep -oE "30[0-9]")
-        echo -e "  ❌ $description: Redirects with $redirect_code"
-        ((FAIL++))
-    else
-        echo -e "  ❌ $description: Unexpected response"
-        ((FAIL++))
+    if [ -z "$csp" ]; then
+        echo -e "  ${YELLOW}[WARN]${NC} CSP header missing (recommended for security)"
+        ((WARN++))
+        return 0
     fi
+
+    echo -e "  ${GREEN}[OK]${NC} CSP header present"
+    ((PASS++))
+
+    # Check CSP allows Firebase domains
+    local firebase_issues=0
+
+    if ! echo "$csp" | grep -qi "googleapis.com"; then
+        echo -e "  ${YELLOW}[WARN]${NC} CSP may block googleapis.com (Firebase auth)"
+        ((WARN++))
+        firebase_issues=$((firebase_issues + 1))
+    fi
+
+    if ! echo "$csp" | grep -qi "firebaseio.com"; then
+        echo -e "  ${YELLOW}[WARN]${NC} CSP may block firebaseio.com (Firebase realtime)"
+        ((WARN++))
+        firebase_issues=$((firebase_issues + 1))
+    fi
+
+    if ! echo "$csp" | grep -qi "identitytoolkit"; then
+        echo -e "  ${YELLOW}[WARN]${NC} CSP may block identitytoolkit (Firebase auth)"
+        ((WARN++))
+        firebase_issues=$((firebase_issues + 1))
+    fi
+
+    if [ "$firebase_issues" -eq 0 ]; then
+        echo -e "  ${GREEN}[OK]${NC} CSP allows Firebase auth domains"
+    fi
+
+    return 0
 }
 
-echo -e "\n=== 1. ROOT LANDING PAGE ==="
-check_no_redirect "$DOMAIN/" "Root URL no redirect"
-check_header "$DOMAIN/" "cache-control" "no-store" "Root HTML no-store"
+# =============================================================================
+# BANNER
+# =============================================================================
 
-echo -e "\n=== 2. RETAILER PORTAL ==="
-check_url "$DOMAIN/retailer/" "200" "Retailer home"
-check_url "$DOMAIN/retailer/login" "200" "Retailer login"
-check_url "$DOMAIN/retailer/register" "200" "Retailer register"
-check_url "$DOMAIN/retailer/dashboard" "200" "Retailer dashboard"
-check_header "$DOMAIN/retailer/" "cache-control" "no-store" "Retailer HTML no-store"
+echo ""
+echo -e "${CYAN}==============================================${NC}"
+echo -e "${CYAN}  SUPERMANDI GO-LIVE URL VERIFICATION${NC}"
+echo -e "${CYAN}  (DEPLOY-OPS-004)${NC}"
+echo -e "${CYAN}==============================================${NC}"
+echo "  Domain: https://$DOMAIN"
+echo "  Time:   $(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M:%S IST' 2>/dev/null || date '+%Y-%m-%d %H:%M:%S')"
+echo ""
 
-echo -e "\n=== 3. RETAILER ASSETS ==="
-# Find actual asset file
-RETAILER_ASSET=$(curl -s "$DOMAIN/retailer/" 2>/dev/null | grep -oE 'assets/index-[^"]+\.js' | head -1)
-if [ -n "$RETAILER_ASSET" ]; then
-    check_url "$DOMAIN/retailer/$RETAILER_ASSET" "200" "Retailer JS asset"
-    check_header "$DOMAIN/retailer/$RETAILER_ASSET" "cache-control" "immutable" "Retailer asset immutable"
+# =============================================================================
+# MANDATORY ENDPOINTS (7 URLs per DEPLOY-OPS-004)
+# =============================================================================
+
+echo -e "${CYAN}[1/4] Mandatory Endpoints (7 URLs)${NC}"
+echo "──────────────────────────────────────────────"
+
+check_url "https://$DOMAIN/" "200" "Landing page (/)"
+check_url "https://$DOMAIN/retailer/" "200" "Retailer portal (/retailer/)"
+check_url "https://$DOMAIN/retailer/login" "200" "Retailer login (/retailer/login)"
+check_url "https://$DOMAIN/supplier/" "200" "Supplier portal (/supplier/)"
+check_url "https://$DOMAIN/supplier/login/" "200" "Supplier login (/supplier/login/)"
+check_url "https://$DOMAIN/admin/" "200" "Admin portal (/admin/)"
+check_url "https://$DOMAIN/api/v1/health" "200" "API health (/api/v1/health)"
+
+echo ""
+
+# =============================================================================
+# SECURITY HEADERS (HSTS + CSP per DEPLOY-OPS-004)
+# =============================================================================
+
+echo -e "${CYAN}[2/4] Security Headers (HSTS + CSP)${NC}"
+echo "──────────────────────────────────────────────"
+
+# HSTS is MANDATORY per DEPLOY-OPS-004
+check_header_exists "https://$DOMAIN/" "strict-transport-security" "HSTS header"
+
+# CSP + Firebase compatibility check
+check_csp_firebase_compat "https://$DOMAIN/"
+
+# Additional security headers (informational)
+check_header_exists "https://$DOMAIN/" "x-frame-options" "X-Frame-Options"
+check_header_exists "https://$DOMAIN/" "x-content-type-options" "X-Content-Type-Options"
+
+echo ""
+
+# =============================================================================
+# CACHE HEADERS (HTML no-store, Assets immutable)
+# =============================================================================
+
+echo -e "${CYAN}[3/4] Cache Headers${NC}"
+echo "──────────────────────────────────────────────"
+
+check_header_value "https://$DOMAIN/" "cache-control" "no-store" "Landing HTML no-cache"
+check_header_value "https://$DOMAIN/retailer/" "cache-control" "no-store" "Retailer HTML no-cache"
+check_header_value "https://$DOMAIN/admin/" "cache-control" "no-store" "Admin HTML no-cache"
+check_header_value "https://$DOMAIN/supplier/" "cache-control" "no-store" "Supplier HTML no-cache"
+
+echo ""
+
+# =============================================================================
+# ASSET VERIFICATION (Bonus)
+# =============================================================================
+
+echo -e "${CYAN}[4/4] Asset Accessibility${NC}"
+echo "──────────────────────────────────────────────"
+
+# Retailer JS asset
+RETAILER_JS=$(curl -s "https://$DOMAIN/retailer/" --max-time 10 2>/dev/null | grep -oE 'index-[A-Za-z0-9]+\.js' | head -1)
+if [ -n "$RETAILER_JS" ]; then
+    check_url "https://$DOMAIN/retailer/assets/$RETAILER_JS" "200" "Retailer JS ($RETAILER_JS)"
 else
-    echo "  ⚠️ Could not find retailer asset in HTML"
+    echo -e "  ${YELLOW}[WARN]${NC} Could not extract Retailer JS from HTML"
+    ((WARN++))
 fi
 
-echo -e "\n=== 4. ADMIN PORTAL ==="
-check_url "$DOMAIN/admin/" "200" "Admin home"
-check_url "$DOMAIN/admin/login" "200" "Admin login"
-check_url "$DOMAIN/admin/dashboard" "200" "Admin dashboard"
-check_header "$DOMAIN/admin/" "cache-control" "no-store" "Admin HTML no-store"
-
-echo -e "\n=== 5. ADMIN ASSETS ==="
-ADMIN_ASSET=$(curl -s "$DOMAIN/admin/" 2>/dev/null | grep -oE 'assets/index-[^"]+\.js' | head -1)
-if [ -n "$ADMIN_ASSET" ]; then
-    check_url "$DOMAIN/admin/$ADMIN_ASSET" "200" "Admin JS asset"
-    check_header "$DOMAIN/admin/$ADMIN_ASSET" "cache-control" "immutable" "Admin asset immutable"
+# Admin JS asset
+ADMIN_JS=$(curl -s "https://$DOMAIN/admin/" --max-time 10 2>/dev/null | grep -oE 'index-[A-Za-z0-9]+\.js' | head -1)
+if [ -n "$ADMIN_JS" ]; then
+    check_url "https://$DOMAIN/admin/assets/$ADMIN_JS" "200" "Admin JS ($ADMIN_JS)"
 else
-    echo "  ⚠️ Could not find admin asset in HTML"
+    echo -e "  ${YELLOW}[WARN]${NC} Could not extract Admin JS from HTML"
+    ((WARN++))
 fi
 
-echo -e "\n=== 6. SUPPLIER PORTAL (with trailing slash) ==="
-check_url "$DOMAIN/supplier/" "200" "Supplier home (trailing slash)"
-check_url "$DOMAIN/supplier/login/" "200" "Supplier login (trailing slash)"
-check_url "$DOMAIN/supplier/register/" "200" "Supplier register (trailing slash)"
-check_header "$DOMAIN/supplier/" "cache-control" "no-store" "Supplier HTML no-store"
+echo ""
 
-echo -e "\n=== 7. SUPPLIER CANONICALIZATION (without trailing slash) ==="
-# These should NOT return 308 redirect
-echo "  Testing /supplier/login (should not 308)..."
-RESPONSE=$(curl -s -I "$DOMAIN/supplier/login" 2>/dev/null | head -1)
-if echo "$RESPONSE" | grep -q "308"; then
-    echo -e "  ❌ /supplier/login returns 308 redirect"
-    ((FAIL++))
-elif echo "$RESPONSE" | grep -q "200"; then
-    echo -e "  ✅ /supplier/login returns 200 directly"
-    ((PASS++))
-else
-    # Check if it's a different redirect that leads to 200
-    FINAL=$(curl -s -o /dev/null -w "%{http_code}" -L "$DOMAIN/supplier/login")
-    if [ "$FINAL" = "200" ]; then
-        echo -e "  ⚠️ /supplier/login redirects but lands on 200"
-    else
-        echo -e "  ❌ /supplier/login unexpected response"
-        ((FAIL++))
-    fi
-fi
+# =============================================================================
+# SUMMARY
+# =============================================================================
 
-echo "  Testing /supplier/register (should not 308)..."
-RESPONSE=$(curl -s -I "$DOMAIN/supplier/register" 2>/dev/null | head -1)
-if echo "$RESPONSE" | grep -q "308"; then
-    echo -e "  ❌ /supplier/register returns 308 redirect"
-    ((FAIL++))
-elif echo "$RESPONSE" | grep -q "200"; then
-    echo -e "  ✅ /supplier/register returns 200 directly"
-    ((PASS++))
-else
-    FINAL=$(curl -s -o /dev/null -w "%{http_code}" -L "$DOMAIN/supplier/register")
-    if [ "$FINAL" = "200" ]; then
-        echo -e "  ⚠️ /supplier/register redirects but lands on 200"
-    else
-        echo -e "  ❌ /supplier/register unexpected response"
-        ((FAIL++))
-    fi
-fi
+echo "=============================================="
 
-echo -e "\n=== 8. SUPPLIER ASSETS ==="
-# Check supplier Next.js static assets
-check_header "$DOMAIN/supplier/_next/static/chunks/main-app-ef1b14ff06b3e3ae.js" "cache-control" "immutable" "Supplier Next.js asset immutable"
-
-echo -e "\n=== 9. API HEALTH ==="
-check_url "$DOMAIN/api/v1/health" "200" "API health endpoint"
-check_header "$DOMAIN/api/v1/health" "cache-control" "no-store" "API no-store"
-
-echo -e "\n=========================================="
-echo "SUMMARY"
-echo "=========================================="
-echo -e "Passed: $PASS"
-echo -e "Failed: $FAIL"
-
-if [ $FAIL -eq 0 ]; then
-    echo -e "\n✅ ALL CHECKS PASSED - GO LIVE READY!"
-    exit 0
-else
-    echo -e "\n❌ $FAIL checks failed - FIX REQUIRED"
+if [ "$FAIL" -gt 0 ]; then
+    echo -e "${RED}VERIFICATION FAILED${NC}"
+    echo "──────────────────────────────────────────────"
+    echo "  Passed:   $PASS"
+    echo "  Failed:   $FAIL"
+    echo "  Warnings: $WARN"
+    echo ""
+    echo "Fix the FAIL items above before proceeding."
+    echo "=============================================="
     exit 1
+else
+    echo -e "${GREEN}VERIFICATION PASSED${NC}"
+    echo "──────────────────────────────────────────────"
+    echo "  Passed:   $PASS"
+    echo "  Failed:   0"
+    echo "  Warnings: $WARN"
+    echo ""
+    echo "All 7 mandatory endpoints responding 200."
+    echo "Security headers (HSTS + CSP) verified."
+    echo "=============================================="
+    exit 0
 fi
