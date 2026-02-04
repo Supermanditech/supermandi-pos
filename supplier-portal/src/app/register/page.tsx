@@ -209,6 +209,7 @@ export default function RegisterPage() {
   };
 
   // Step 2: Submit business details
+  // REG-SUP-002: Fixed to prevent wrong error message during registration
   const handleSubmitDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -259,6 +260,13 @@ export default function RegisterPage() {
       return;
     }
 
+    // REG-SUP-002: Validate idToken exists before making API call
+    if (!idToken) {
+      setError('Phone verification expired. Please start over.');
+      setStep('phone');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -286,6 +294,12 @@ export default function RegisterPage() {
         pincode: pincode.trim(),
       });
 
+      // REG-SUP-002: Validate applicationId before calling verify
+      if (!result.applicationId) {
+        setError('Unable to create application. Please try again.');
+        return;
+      }
+
       setApplicationId(result.applicationId);
 
       // Verify OTP with application ID
@@ -294,8 +308,17 @@ export default function RegisterPage() {
       setStep('documents');
       toast.success('Details saved! Please upload documents.');
     } catch (err) {
+      // REG-SUP-002 & REG-COPY-001: Map error codes to user-friendly messages
       if (err instanceof ApiError) {
-        setError(err.message);
+        // Don't show "Registration required before login" during registration flow
+        if (err.code === 'REGISTRATION_REQUIRED' || err.code === 'UNAUTHORIZED') {
+          setError('Please complete registration to continue.');
+        } else if (err.message.toLowerCase().includes('registration required')) {
+          // REG-SUP-002: Catch the specific error message and replace it
+          setError('Please complete registration to continue.');
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('Failed to save details. Please try again.');
       }

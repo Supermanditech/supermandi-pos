@@ -37,7 +37,7 @@
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-001 |
-| **Status** | `READY_FOR_DEPLOY` |
+| **Status** | `SKIPPED` (folded into BATCH-002) |
 | **Scope** | Deploy ops infrastructure: ledger, gates, verification |
 | **Tickets from retailer-tickets.md** | none (infrastructure batch) |
 | **Contracts Touched** | none |
@@ -111,5 +111,56 @@ Deployed SHA: pending
 ### Notes
 This batch establishes the deployment operations infrastructure per rules.pdf.
 Infrastructure batch - no items from retailer-tickets.md.
+**SKIPPED** - Folded into BATCH-002.
+
+---
+
+## BATCH-002 — 2026-02-04 — Registration Flow Fixes
+
+### Batch Info
+| Field | Value |
+|-------|-------|
+| **Batch ID** | BATCH-002 |
+| **Status** | `CANDIDATE` |
+| **Scope** | Registration flow fixes: link removal, error handling, banner copy |
+| **Tickets from retailer-tickets.md** | REG-RET-001, REG-RET-002, REG-SUP-001, REG-SUP-002, REG-COPY-001 |
+| **Contracts Touched** | none |
+| **Commit SHA (short)** | 6e4196a |
+| **Commit SHA (full)** | 6e4196ac7694fb6ca07bcc062c122093de920a2e |
+| **Rollback SHA** | f6d0f52 |
+| **Evidence Path** | `RELEASES/EVIDENCE/BATCH-002/` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha 6e4196a` |
+
+### Items
+| # | Ticket/Task | Acceptance Test | Status |
+|---|-------------|-----------------|--------|
+| 1 | REG-RET-001: Remove "Already registered? Sign In" from Retailer | /retailer/register has no sign-in link | DONE |
+| 2 | REG-SUP-001: Remove "Already registered? Sign In" from Supplier | /supplier/register has no sign-in link | DONE |
+| 3 | REG-RET-002: Fix retailer Step-2 navigation | Step-2 → Step-3 works, shows proper errors | DONE |
+| 4 | REG-SUP-002: Fix supplier wrong error | No "Registration required before login" during registration | DONE |
+| 5 | REG-COPY-001: Standardize banner copy | Error shows "Please complete registration to continue." | DONE |
+| 6 | BATCH-001 infra (folded) | Deploy scripts exist and work | DONE |
+
+### Local Gates
+```
+Date: 2026-02-04
+```
+
+| Gate | Result |
+|------|--------|
+| `retailer-admin typecheck` | PASS |
+| `supplier-portal typecheck` | PASS |
+| `e2e: @prod` | **PASS (75/75, 0 failures)** |
+
+Note: `backend/packages/common` typecheck has pre-existing PATH issue (tsc not in PATH), unrelated to this batch.
+
+### Deploy Evidence
+```
+Date: pending
+Deployed SHA: pending
+```
+
+### Notes
+Includes BATCH-001 infrastructure work (folded).
 
 ---

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { API_GATEWAY_BASE } from '../lib/api';
 import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
@@ -438,6 +438,7 @@ export default function RetailerOnboardingPage() {
   };
 
   // Step 3: Submit Business Details
+  // REG-RET-002: Fixed to ensure proper error handling and step transition
   const handleSubmitDetails = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -480,6 +481,13 @@ export default function RetailerOnboardingPage() {
       return;
     }
 
+    // REG-RET-002: Validate idToken exists before making API call
+    if (!idToken) {
+      setError('Phone verification expired. Please start over.');
+      setStep('phone');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -506,14 +514,40 @@ export default function RetailerOnboardingPage() {
       const data: ApplicationResponse = await response.json();
 
       if (!response.ok) {
-        throw new Error((data as { error?: { message?: string } }).error?.message || 'Failed to submit details');
+        // REG-COPY-001: Map backend error codes to user-friendly messages
+        const errorData = data as { error?: { code?: string; message?: string } };
+        const errorCode = errorData.error?.code;
+        const errorMsg = errorData.error?.message;
+
+        if (errorCode === 'REGISTRATION_REQUIRED' || errorCode === 'UNAUTHORIZED') {
+          setError('Please complete registration to continue.');
+        } else {
+          setError(errorMsg || 'Failed to submit details. Please try again.');
+        }
+        return;
+      }
+
+      // REG-RET-002: Validate applicationId before proceeding
+      if (!data.applicationId) {
+        setError('Unable to create application. Please try again.');
+        return;
       }
 
       setApplicationId(data.applicationId);
       localStorage.setItem('retailer_application_id', data.applicationId);
       setStep('documents');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit details. Please try again.');
+      // REG-RET-002: Improved error handling
+      if (err instanceof Error) {
+        // Handle network errors specifically
+        if (err.message.includes('fetch') || err.message.includes('network')) {
+          setError('Network error. Please check your connection and try again.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('Failed to submit details. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -670,9 +704,7 @@ export default function RetailerOnboardingPage() {
             <span style={styles.logoSeparator}>|</span>
             <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>
-          <Link to="/retailer/login" style={styles.headerLink}>
-            Already registered? Sign In
-          </Link>
+{/* REG-RET-001: "Already registered? Sign In" link removed per requirement */}
         </div>
       </header>
 

@@ -1,5 +1,4 @@
 import { Toaster } from 'react-hot-toast';
-import Link from 'next/link';
 import { BuildStamp } from '@/components/BuildStamp';
 
 // UI-SPEC-005: Stripe-level calm infrastructure design for registration
@@ -20,12 +19,7 @@ export default function RegisterLayout({
             <span className="text-slate-400">|</span>
             <span className="text-slate-600 text-sm font-medium">Supplier Portal</span>
           </div>
-          <Link
-            href="/login"
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            Already registered? Sign In
-          </Link>
+{/* REG-SUP-001: "Already registered? Sign In" link removed per requirement */}
         </div>
       </header>
 
