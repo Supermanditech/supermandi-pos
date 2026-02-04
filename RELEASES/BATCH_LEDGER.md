@@ -121,7 +121,7 @@ Infrastructure batch - no items from retailer-tickets.md.
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-002 |
-| **Status** | `READY_FOR_DEPLOY` |
+| **Status** | `DEPLOYED` |
 | **Scope** | Registration flow fixes + Firebase OTP error handling |
 | **Tickets from retailer-tickets.md** | REG-RET-001, REG-RET-002, REG-SUP-001, REG-SUP-002, REG-COPY-001 |
 | **Contracts Touched** | none |
@@ -190,9 +190,20 @@ Status: PASS
 
 ### Deploy Evidence
 ```
-Date: pending
-Deployed SHA: pending
+Date: 2026-02-04 19:30 IST
+Deployed SHA: bbb6be8
 ```
+
+**7-URL Verification (All 200):**
+| Endpoint | Status |
+|----------|--------|
+| https://supermandi.tech/ | ✅ 200 |
+| https://supermandi.tech/retailer/ | ✅ 200 |
+| https://supermandi.tech/retailer/login | ✅ 200 |
+| https://supermandi.tech/supplier/ | ✅ 200 |
+| https://supermandi.tech/supplier/login | ✅ 200 |
+| https://supermandi.tech/admin/ | ✅ 200 |
+| https://supermandi.tech/api/v1/health | ✅ 200 |
 
 ### Notes
 - Includes BATCH-001 infrastructure work (folded)
