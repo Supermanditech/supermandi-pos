@@ -98,10 +98,8 @@ export default function LoginPage() {
       } else if (data.nextStep === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
       } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
-        setError('Please complete your registration before logging in.');
-        setTimeout(() => {
-          router.push('/register');
-        }, 1500);
+        // BATCH-003: Stay on page, no auto-redirect - user requested explicit navigation
+        setError('Your registration is incomplete. Please complete registration first, then return to login.');
       } else if (data.nextStep === 'CONTACT_SUPPORT') {
         setError('Your application was not approved. Please contact support for assistance.');
       } else {
@@ -171,6 +169,7 @@ export default function LoginPage() {
       if (err instanceof ApiError) {
         if (err.code === 'PENDING_APPROVAL') {
           router.push('/pending-approval');
+          return; // BATCH-003: Stop execution after navigation
         } else if (err.code === 'ACCOUNT_LOCKED') {
           setError('Your account has been locked. Please contact support.');
         } else if (err.code === 'ACCOUNT_INACTIVE') {

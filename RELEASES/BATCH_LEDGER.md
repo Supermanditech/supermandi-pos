@@ -212,3 +212,105 @@ Deployed SHA: bbb6be8
 - Ready for deploy with registration flow fixes + improved OTP error messages
 
 ---
+
+## BATCH-003 — 2026-02-04 — Go-Live Zero-Regression Fixes
+
+### Batch Info
+| Field | Value |
+|-------|-------|
+| **Batch ID** | BATCH-003 |
+| **Status** | `DRAFT` |
+| **Scope** | Fix login auto-navigation + ensure Firebase env on VM |
+| **Tickets from retailer-tickets.md** | AUTH-LOGIN-001, AUTH-LOGIN-002, FIREBASE-VM-001 |
+| **Contracts Touched** | none |
+| **Commit SHA (short)** | pending |
+| **Commit SHA (full)** | pending |
+| **Rollback SHA** | 729b751 |
+| **Evidence Path** | `RELEASES/EVIDENCE/BATCH-003/` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha <pending>` |
+
+### Root Cause Analysis
+
+**Issue 1: Supplier Login Auto-Navigation**
+- **Symptom**: Error shows briefly, then auto-redirects to /register
+- **Root Cause**: Code has `setTimeout(() => router.push('/register'), 1500)` on incomplete registration
+- **Fix**: Remove auto-redirect, stay on page with error message
+- **File**: `supplier-portal/src/app/(auth)/login/page.tsx` lines 100-104
+
+**Issue 2: Supplier Login Missing Return**
+- **Symptom**: Navigation to /pending-approval doesn't stop execution
+- **Root Cause**: Missing `return` statement after `router.push('/pending-approval')`
+- **Fix**: Add `return;` after the push
+- **File**: `supplier-portal/src/app/(auth)/login/page.tsx` line 173
+
+**Issue 3: Retailer Login Auto-Navigation (same pattern)**
+- **Root Cause**: Same setTimeout redirect pattern
+- **Fix**: Remove auto-redirect
+- **File**: `retailer-admin/src/pages/LoginPage.tsx` lines 361-370
+
+**Issue 4: Firebase Env on VM**
+- **Symptom**: "Phone Verification Unavailable" on retailer registration
+- **Root Cause**: .env files may not exist on VM or build was done without them
+- **Fix**: Verify env files on VM, force clean rebuild
+- **Note**: Local env files are correct (VITE_FIREBASE_* and NEXT_PUBLIC_FIREBASE_*)
+
+### Items
+| # | Ticket/Task | Acceptance Test | Status |
+|---|-------------|-----------------|--------|
+| 1 | AUTH-LOGIN-001: Remove supplier login auto-redirect | Incomplete registration shows error, stays on page | DONE |
+| 2 | AUTH-LOGIN-002: Add missing return after pending-approval push | No silent continuation after redirect | DONE |
+| 3 | AUTH-LOGIN-003: Remove retailer login auto-redirect | Incomplete registration shows error, stays on page | DONE |
+| 4 | FIREBASE-VM-001: Verify env files on VM + clean rebuild | Firebase initialized, no "Phone Verification Unavailable" | PENDING (deploy phase) |
+
+### Acceptance Criteria (Incognito Browser Required)
+
+**Supplier Login (https://supermandi.tech/supplier/login)**
+- [ ] Unregistered phone → Shows "Account not found", stays on page
+- [ ] Incomplete registration → Shows error, NO auto-redirect
+- [ ] Valid login → Works normally
+
+**Retailer Login (https://supermandi.tech/retailer/login)**
+- [ ] Unregistered phone → Shows "Account not found", stays on page
+- [ ] Incomplete registration → Shows error, NO auto-redirect
+- [ ] Valid login → Works normally
+
+**Retailer Registration (https://supermandi.tech/retailer/register)**
+- [ ] No "Phone Verification Unavailable" error
+- [ ] OTP sends successfully
+- [ ] OTP verifies successfully
+
+**Supplier Registration (https://supermandi.tech/supplier/register)**
+- [ ] OTP sends successfully
+- [ ] OTP verifies successfully
+
+### Local Gates
+```
+Date: 2026-02-04
+```
+
+| Gate | Result |
+|------|--------|
+| `retailer-admin typecheck` | PASS |
+| `supplier-portal typecheck` | PASS |
+| `e2e: @prod` | **PASS (75/75, 0 failures)** |
+
+Note: `backend/packages/common` typecheck has pre-existing PATH issue (tsc not in PATH), unrelated to this batch.
+
+### Deploy Evidence
+```
+Date: pending
+Deployed SHA: pending
+```
+
+| Check | Result |
+|-------|--------|
+| VM env files exist | pending |
+| Clean rebuild | pending |
+| 7-URL verification | pending |
+
+### Notes
+- One batch, one deploy, one incognito acceptance
+- No partial fixes
+- All fixes must pass incognito verification before marking DEPLOYED
+
+---

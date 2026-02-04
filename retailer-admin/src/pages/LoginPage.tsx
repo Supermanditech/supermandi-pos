@@ -359,15 +359,8 @@ export default function LoginPage() {
       } else if (data.nextStep === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
       } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
-        setError('Please complete your registration before logging in.');
-        setTimeout(() => {
-          navigate('/retailer/register', {
-            state: {
-              message: 'Please complete your registration.',
-              applicationId: data.application_id
-            }
-          });
-        }, 1500);
+        // BATCH-003: Stay on page, no auto-redirect - user requested explicit navigation
+        setError('Your registration is incomplete. Please complete registration first, then return to login.');
       } else if (data.nextStep === 'CONTACT_SUPPORT') {
         setError('Your application was not approved. Please contact support for assistance.');
       } else {
