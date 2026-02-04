@@ -219,15 +219,15 @@ Deployed SHA: bbb6be8
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-003 |
-| **Status** | `DRAFT` |
+| **Status** | `READY_FOR_DEPLOY` |
 | **Scope** | Fix login auto-navigation + ensure Firebase env on VM |
 | **Tickets from retailer-tickets.md** | AUTH-LOGIN-001, AUTH-LOGIN-002, FIREBASE-VM-001 |
 | **Contracts Touched** | none |
-| **Commit SHA (short)** | pending |
-| **Commit SHA (full)** | pending |
+| **Commit SHA (short)** | 9901ec4 |
+| **Commit SHA (full)** | 9901ec4f8d8c2926f8098aa68cc81eb73a4aaf68 |
 | **Rollback SHA** | 729b751 |
 | **Evidence Path** | `RELEASES/EVIDENCE/BATCH-003/` |
-| **Deploy Command** | `./scripts/deploy-production.sh --sha <pending>` |
+| **Deploy Command** | `./scripts/deploy-production.sh --sha 9901ec4` |
 
 ### Root Cause Analysis
 
