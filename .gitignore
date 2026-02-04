@@ -134,3 +134,8 @@ WIP_SAVE_*.txt
 # E2E Test Artifacts (regenerated on each test run - do not commit)
 e2e-tests/playwright-report/
 e2e-tests/test-results/
+
+# generated plan artifacts (keep PDF only)
+RELEASES/*.html
+RELEASES/**/*.html
+
