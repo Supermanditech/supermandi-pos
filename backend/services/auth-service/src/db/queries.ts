@@ -20,6 +20,9 @@ interface UserRow {
   status: string;
   created_at: Date;
   updated_at: Date;
+  // AUTH-OTP-003: Lockout columns (from migration 086)
+  failed_login_count: number;
+  locked_until: Date | null;
 }
 
 interface RoleRow {
@@ -420,4 +423,61 @@ export async function getUserPermissions(userId: UUID): Promise<string[]> {
   interface PermRow { permission: string }
   const rows = await query<PermRow>(sql, [userId]);
   return rows.map((r) => r.permission);
+}
+
+// =============================================================================
+// AUTH-OTP-003: FAILED LOGIN ATTEMPT TRACKING & LOCKOUT
+// =============================================================================
+
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_MINUTES = 30;
+
+/**
+ * AUTH-OTP-003: Check if a user is currently locked out.
+ * Returns the lockout expiry if locked, null otherwise.
+ */
+export async function checkUserLockout(userId: UUID): Promise<Date | null> {
+  const sql = `
+    SELECT locked_until FROM auth.users
+    WHERE id = $1 AND locked_until IS NOT NULL AND locked_until > NOW()
+  `;
+  const row = await queryOne<{ locked_until: Date }>(sql, [userId]);
+  return row?.locked_until ?? null;
+}
+
+/**
+ * AUTH-OTP-003: Record a failed login attempt.
+ * Returns true if the account is now locked.
+ */
+export async function recordFailedLogin(userId: UUID, ip?: string): Promise<boolean> {
+  const sql = `
+    UPDATE auth.users
+    SET failed_login_count = failed_login_count + 1,
+        last_failed_login_at = NOW(),
+        last_login_ip = COALESCE($2, last_login_ip),
+        locked_until = CASE
+          WHEN failed_login_count + 1 >= $3 THEN NOW() + ($4 || ' minutes')::INTERVAL
+          ELSE locked_until
+        END
+    WHERE id = $1
+    RETURNING failed_login_count >= $3 as is_locked
+  `;
+  const row = await queryOne<{ is_locked: boolean }>(sql, [
+    userId, ip ?? null, MAX_FAILED_ATTEMPTS, String(LOCKOUT_MINUTES),
+  ]);
+  return row?.is_locked ?? false;
+}
+
+/**
+ * AUTH-OTP-003: Clear failed login attempts on successful login.
+ */
+export async function clearFailedLogins(userId: UUID, ip?: string): Promise<void> {
+  const sql = `
+    UPDATE auth.users
+    SET failed_login_count = 0,
+        locked_until = NULL,
+        last_login_ip = COALESCE($2, last_login_ip)
+    WHERE id = $1
+  `;
+  await query(sql, [userId, ip ?? null]);
 }

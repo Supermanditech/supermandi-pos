@@ -11,6 +11,8 @@ export interface AuthServiceConfig {
     refreshTokenExpiresInDays: number;
     issuer: string;
   };
+  // AUTH-IDLE-001: Server-side idle timeout
+  idleTimeoutMinutes: number;
   firebase: {
     serviceAccountPath?: string;
     projectId?: string;
@@ -51,6 +53,8 @@ export const config: AuthServiceConfig = {
     refreshTokenExpiresInDays: getEnvIntOrDefault('JWT_REFRESH_TOKEN_EXPIRES_DAYS', 7),
     issuer: getEnvOrDefault('JWT_ISSUER', 'supermandi-auth'),
   },
+  // AUTH-IDLE-001: Server-side idle timeout (default 35 min, slightly > client 30 min)
+  idleTimeoutMinutes: getEnvIntOrDefault('IDLE_TIMEOUT_MINUTES', 35),
   firebase: {
     serviceAccountPath: process.env['FIREBASE_SERVICE_ACCOUNT_PATH'],
     projectId: process.env['FIREBASE_PROJECT_ID'],

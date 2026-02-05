@@ -152,6 +152,16 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  // AUTH-OTP-001: OTP expiry countdown
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
+
+  // AUTH-OTP-001: OTP expiry countdown
+  useEffect(() => {
+    if (otpExpirySeconds > 0) {
+      const timer = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpirySeconds]);
 
   // Admin email allowlist (for instant client-side feedback)
   const ADMIN_EMAILS = ['supermanditech@gmail.com'];
@@ -190,6 +200,8 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
 
     setSuccess("Verification code sent to your email");
     setStep('otp');
+    // AUTH-OTP-001: Use expiresIn from API (default 600s / 10 min)
+    setOtpExpirySeconds(result.expiresIn || 600);
     setLoading(false);
   };
 
@@ -227,6 +239,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
     setOtp("");
     setError("");
     setSuccess("");
+    setOtpExpirySeconds(0); // AUTH-OTP-001: Clear countdown
   };
 
   // UI-SPEC-003: Stripe-level calm infrastructure design for admin portal
@@ -417,6 +430,28 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
                     autoFocus
                   />
                 </div>
+
+                {/* AUTH-OTP-001: OTP expiry countdown */}
+                {otpExpirySeconds > 0 && (
+                  <p style={{
+                    fontSize: "0.8125rem",
+                    color: otpExpirySeconds <= 60 ? "#dc2626" : "#64748b",
+                    textAlign: "center",
+                    marginBottom: "1rem",
+                  }}>
+                    Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+                  </p>
+                )}
+                {otpExpirySeconds === 0 && step === 'otp' && (
+                  <p style={{
+                    fontSize: "0.8125rem",
+                    color: "#dc2626",
+                    textAlign: "center",
+                    marginBottom: "1rem",
+                  }}>
+                    Code expired. Please request a new one.
+                  </p>
+                )}
 
                 {error && (
                   <div style={{

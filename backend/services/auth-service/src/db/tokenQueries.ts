@@ -17,6 +17,7 @@ interface RefreshTokenRow {
   user_agent: string | null;
   ip_address: string | null;
   created_at: Date;
+  last_activity_at: Date; // AUTH-IDLE-001
 }
 
 export interface RefreshTokenRecord {
@@ -28,6 +29,7 @@ export interface RefreshTokenRecord {
   userAgent?: string;
   ipAddress?: string;
   createdAt: Date;
+  lastActivityAt: Date; // AUTH-IDLE-001
 }
 
 function rowToRecord(row: RefreshTokenRow): RefreshTokenRecord {
@@ -40,6 +42,7 @@ function rowToRecord(row: RefreshTokenRow): RefreshTokenRecord {
     userAgent: row.user_agent ?? undefined,
     ipAddress: row.ip_address ?? undefined,
     createdAt: row.created_at,
+    lastActivityAt: row.last_activity_at,
   };
 }
 
@@ -149,4 +152,42 @@ export async function countActiveRefreshTokens(userId: UUID): Promise<number> {
   interface CountRow { count: string }
   const row = await queryOne<CountRow>(sql, [userId]);
   return row ? parseInt(row.count, 10) : 0;
+}
+
+// =============================================================================
+// AUTH-IDLE-001: SERVER-SIDE IDLE TIMEOUT TRACKING
+// =============================================================================
+
+/**
+ * AUTH-IDLE-001: Update last_activity_at for all active tokens of a user.
+ * Called from authenticate middleware (fire-and-forget, throttled).
+ */
+export async function updateUserLastActivity(userId: UUID): Promise<void> {
+  const sql = `
+    UPDATE auth.refresh_tokens
+    SET last_activity_at = NOW()
+    WHERE user_id = $1
+      AND revoked_at IS NULL
+      AND expires_at > NOW()
+  `;
+  await query(sql, [userId]);
+}
+
+/**
+ * AUTH-IDLE-001: Check if a refresh token has been idle too long.
+ * Returns true if the token is still active (within idle timeout).
+ */
+export async function isRefreshTokenActive(
+  tokenHash: string,
+  idleTimeoutMinutes: number
+): Promise<boolean> {
+  const sql = `
+    SELECT 1 FROM auth.refresh_tokens
+    WHERE token_hash = $1
+      AND revoked_at IS NULL
+      AND expires_at > NOW()
+      AND last_activity_at > NOW() - ($2 || ' minutes')::INTERVAL
+  `;
+  const row = await queryOne<{ '?column?': number }>(sql, [tokenHash, String(idleTimeoutMinutes)]);
+  return !!row;
 }

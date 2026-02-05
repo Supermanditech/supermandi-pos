@@ -279,6 +279,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  // AUTH-OTP-001: OTP expiry countdown (Firebase OTP ~5 min)
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const [stores, setStores] = useState<Store[]>([]);
   const [authData, setAuthData] = useState<{ token: string; refreshToken: string; user: OtpLoginResponse['user'] } | null>(null);
   const recaptchaInitialized = useRef(false);
@@ -310,6 +312,14 @@ export default function LoginPage() {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // AUTH-OTP-001: OTP expiry countdown
+  useEffect(() => {
+    if (otpExpirySeconds > 0) {
+      const timer = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpirySeconds]);
 
   // GO-LIVE-UI-REG-002: Lookup registration by phone FIRST
   const handleContinue = async (e: React.FormEvent) => {
@@ -388,6 +398,7 @@ export default function LoginPage() {
       await sendOtp(phone);
       setStep('otp');
       setResendCooldown(60);
+      setOtpExpirySeconds(300); // AUTH-OTP-001: Firebase OTP ~5 min
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
     } finally {
@@ -468,6 +479,7 @@ export default function LoginPage() {
 
       await sendOtp(phone);
       setResendCooldown(60);
+      setOtpExpirySeconds(300); // AUTH-OTP-001: Reset expiry on resend
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
     } finally {
@@ -637,6 +649,28 @@ export default function LoginPage() {
                     autoFocus
                   />
                 </div>
+
+                {/* AUTH-OTP-001: OTP expiry countdown */}
+                {otpExpirySeconds > 0 && (
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: otpExpirySeconds <= 60 ? '#dc2626' : '#64748b',
+                    textAlign: 'center',
+                    marginBottom: '1rem',
+                  }}>
+                    Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+                  </p>
+                )}
+                {otpExpirySeconds === 0 && step === 'otp' && (
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: '#dc2626',
+                    textAlign: 'center',
+                    marginBottom: '1rem',
+                  }}>
+                    Code expired. Please resend OTP.
+                  </p>
+                )}
 
                 <button
                   type="submit"

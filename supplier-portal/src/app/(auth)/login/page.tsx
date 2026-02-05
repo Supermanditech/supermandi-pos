@@ -23,6 +23,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+  // AUTH-OTP-001: OTP expiry countdown (Firebase OTP ~5 min)
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
 
   // GO-LIVE-UI-REG-003: Track if lookup was successful (registration exists)
@@ -58,6 +60,14 @@ export default function LoginPage() {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // AUTH-OTP-001: OTP expiry countdown
+  useEffect(() => {
+    if (otpExpirySeconds > 0) {
+      const timer = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpirySeconds]);
 
   // GO-LIVE-UI-REG-003: Lookup registration by phone FIRST
   const handleContinue = async (e: React.FormEvent) => {
@@ -131,6 +141,7 @@ export default function LoginPage() {
       await sendOtp(phone);
       setStep('otp');
       setResendCooldown(60);
+      setOtpExpirySeconds(300); // AUTH-OTP-001: Firebase OTP ~5 min
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
     } finally {
@@ -202,6 +213,7 @@ export default function LoginPage() {
 
       await sendOtp(phone);
       setResendCooldown(60);
+      setOtpExpirySeconds(300); // AUTH-OTP-001: Reset expiry on resend
       toast.success('OTP sent successfully!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resend OTP.');
@@ -361,6 +373,18 @@ export default function LoginPage() {
               autoFocus
             />
           </div>
+
+          {/* AUTH-OTP-001: OTP expiry countdown */}
+          {otpExpirySeconds > 0 && (
+            <p className={`text-xs text-center ${otpExpirySeconds <= 60 ? 'text-red-600' : 'text-slate-500'}`}>
+              Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
+            </p>
+          )}
+          {otpExpirySeconds === 0 && step === 'otp' && (
+            <p className="text-xs text-center text-red-600">
+              Code expired. Please resend OTP.
+            </p>
+          )}
 
           <button
             type="submit"

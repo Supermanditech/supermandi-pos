@@ -18,6 +18,9 @@ import {
   getUserRoles,
   getUserPermissions,
   getRoleByName,
+  checkUserLockout,
+  recordFailedLogin,
+  clearFailedLogins,
   type CreateUserParams,
   type UpdateUserParams,
   type ListUsersParams,
@@ -217,17 +220,37 @@ export async function verifyPassword(userId: UUID, password: string): Promise<bo
 
 export async function verifyUserCredentials(
   identifier: string,
-  password: string
+  password: string,
+  ip?: string
 ): Promise<User | null> {
   const user = await getUserByIdentifier(identifier);
   if (!user || !user.passwordHash) {
     return null;
   }
 
+  // AUTH-OTP-003: Check if account is locked out
+  const lockedUntil = await checkUserLockout(user.id);
+  if (lockedUntil) {
+    const minutesLeft = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000);
+    throw ApiError.forbidden(
+      `Account temporarily locked due to too many failed attempts. Try again in ${minutesLeft} minute(s).`
+    );
+  }
+
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
+    // AUTH-OTP-003: Track failed attempt
+    const isNowLocked = await recordFailedLogin(user.id, ip);
+    if (isNowLocked) {
+      throw ApiError.forbidden(
+        'Account temporarily locked due to too many failed attempts. Try again in 30 minutes.'
+      );
+    }
     return null;
   }
+
+  // AUTH-OTP-003: Clear failed attempts on success
+  await clearFailedLogins(user.id, ip);
 
   // Check user status
   if (user.status !== 'active') {

@@ -21,10 +21,43 @@ import {
   revokeRefreshToken,
   findRefreshTokenByHash,
   revokeAllUserRefreshTokens,
+  isRefreshTokenActive,
 } from '../db/tokenQueries';
 import { authenticate, getAuthUser } from '../middleware';
+import { config } from '../config';
 
 const router: Router = Router();
+
+// =============================================================================
+// AUTH-OTP-002: IN-MEMORY RATE LIMITING
+// =============================================================================
+
+const loginAttempts = new Map<string, { count: number; windowStart: number }>();
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_LOGIN_ATTEMPTS = 10; // per IP per window
+
+function checkLoginRateLimit(ip: string): void {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.set(ip, { count: 1, windowStart: now });
+    return;
+  }
+
+  entry.count++;
+  if (entry.count > MAX_LOGIN_ATTEMPTS) {
+    throw ApiError.rateLimited('login');
+  }
+}
+
+// Cleanup stale entries every 5 minutes
+setInterval(() => {
+  const cutoff = Date.now() - RATE_LIMIT_WINDOW_MS;
+  for (const [key, entry] of loginAttempts) {
+    if (entry.windowStart < cutoff) loginAttempts.delete(key);
+  }
+}, 5 * 60 * 1000);
 
 // =============================================================================
 // ERROR HANDLER WRAPPER
@@ -76,13 +109,16 @@ router.post(
   asyncHandler(async (req: Request, res: Response) => {
     const { identifier, password } = req.body as LoginRequest;
 
+    // AUTH-OTP-002: Rate limit login attempts by IP
+    checkLoginRateLimit(req.ip || req.socket.remoteAddress || 'unknown');
+
     // Validate input
     if (!identifier || !password) {
       throw ApiError.badRequest('Email/phone and password are required');
     }
 
-    // Verify credentials
-    const user = await verifyUserCredentials(identifier, password);
+    // AUTH-OTP-003: Verify credentials with lockout tracking
+    const user = await verifyUserCredentials(identifier, password, req.ip || req.socket.remoteAddress);
     if (!user) {
       throw ApiError.unauthorized('Invalid credentials');
     }
@@ -173,6 +209,14 @@ router.post(
     // Verify the token belongs to the user in the payload
     if (storedToken.userId !== payload.sub) {
       throw ApiError.unauthorized('Token mismatch');
+    }
+
+    // AUTH-IDLE-001: Server-side idle timeout enforcement
+    const isActive = await isRefreshTokenActive(tokenHash, config.idleTimeoutMinutes);
+    if (!isActive) {
+      // Revoke the idle token and reject
+      await revokeRefreshToken(tokenHash);
+      throw ApiError.unauthorized('Session expired due to inactivity. Please log in again.');
     }
 
     // Get fresh user data with current permissions

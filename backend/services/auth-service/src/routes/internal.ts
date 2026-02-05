@@ -137,7 +137,8 @@ router.post(
     if (!identifier || !password) {
       throw ApiError.badRequest('identifier and password required');
     }
-    const user = await verifyUserCredentials(identifier, password);
+    // AUTH-OTP-003: Verify credentials with lockout tracking
+    const user = await verifyUserCredentials(identifier, password, req.ip || req.socket.remoteAddress);
     if (!user) {
       throw ApiError.unauthorized('Invalid credentials');
     }

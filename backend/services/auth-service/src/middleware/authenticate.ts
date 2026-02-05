@@ -5,6 +5,31 @@ import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '@supermandi/common';
 import type { JwtPayload, AuthUser } from '@supermandi/common';
 import { verifyAccessToken, verifyAccessTokenWithError } from '../services/jwtService';
+import { updateUserLastActivity } from '../db/tokenQueries';
+
+// AUTH-IDLE-001: Throttled activity tracking (max once per 5 min per user)
+const activityCache = new Map<string, number>();
+const ACTIVITY_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
+
+function trackActivity(userId: string): void {
+  const now = Date.now();
+  const lastUpdate = activityCache.get(userId) ?? 0;
+  if (now - lastUpdate < ACTIVITY_THROTTLE_MS) return;
+
+  activityCache.set(userId, now);
+  // Fire-and-forget — do not block the request
+  updateUserLastActivity(userId).catch((err) => {
+    console.warn('[AUTH-IDLE-001] Failed to update activity:', err);
+  });
+
+  // Periodically clean stale entries (every 100 calls)
+  if (activityCache.size > 1000) {
+    const cutoff = now - ACTIVITY_THROTTLE_MS * 2;
+    for (const [key, ts] of activityCache) {
+      if (ts < cutoff) activityCache.delete(key);
+    }
+  }
+}
 
 // Extend Express Request to include authenticated user
 declare global {
@@ -96,6 +121,9 @@ export function authenticate(
   // Attach user and token to request
   req.user = payloadToAuthUser(result.payload);
   req.token = token;
+
+  // AUTH-IDLE-001: Track user activity (throttled, fire-and-forget)
+  trackActivity(result.payload.userId);
 
   next();
 }
