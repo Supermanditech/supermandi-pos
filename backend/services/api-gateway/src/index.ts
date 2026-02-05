@@ -21,6 +21,7 @@ import {
   stripClientAuthHeaders,
   jwtAuthMiddleware,
   adminAuthMiddleware,
+  actorTypeMiddleware,
 } from './middleware';
 import { setupProxyRoutes } from './routes/proxy';
 import { adminAuthRouter } from './routes/adminAuth';
@@ -186,6 +187,10 @@ app.use(jwtAuthMiddleware);
 
 // SEC-ADMIN-001: Admin authentication for /api/v1/admin/* routes (superadmin)
 app.use(adminAuthMiddleware);
+
+// AUTH-GATEWAY-001 + AUTH-PERM-001: Actor type enforcement
+// Prevents cross-portal access (e.g., supplier JWT accessing retailer routes)
+app.use(actorTypeMiddleware);
 
 // =============================================================================
 // GO-LIVE-008 & GO-LIVE-081: HEALTH CHECK ENDPOINTS

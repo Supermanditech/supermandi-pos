@@ -17,6 +17,10 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
 // Storage keys
 const SESSION_TOKEN_KEY = "supermandi_admin_session";
 const SESSION_EXPIRY_KEY = "supermandi_admin_session_expiry";
+const LAST_ACTIVITY_KEY = "supermandi_admin_last_activity";
+
+// AUTH-EXPIRY-003: Idle timeout configuration (30 minutes)
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 // =============================================================================
 // SESSION TOKEN MANAGEMENT (GO-LIVE-002)
@@ -64,6 +68,7 @@ function clearSessionToken(): void {
   try {
     sessionStorage.removeItem(SESSION_TOKEN_KEY);
     sessionStorage.removeItem(SESSION_EXPIRY_KEY);
+    sessionStorage.removeItem(LAST_ACTIVITY_KEY);
   } catch {
     // ignore
   }
@@ -282,6 +287,8 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
       try {
         sessionStorage.setItem(SESSION_TOKEN_KEY, data.token);
         sessionStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
+        // AUTH-EXPIRY-003: Set initial activity on login
+        sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
       } catch {
         // ignore storage errors
       }
@@ -297,6 +304,84 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
       success: false,
       error: err instanceof Error ? err.message : "Network error",
     };
+  }
+}
+
+// =============================================================================
+// AUTH-EXPIRY-003: Idle Timeout for SuperAdmin
+// =============================================================================
+
+let idleCheckInterval: ReturnType<typeof setInterval> | null = null;
+let activityListenersAttached = false;
+let lastWrite = 0;
+
+function updateActivity(): void {
+  const now = Date.now();
+  if (now - lastWrite > 60000) { // Write at most once per minute
+    try {
+      sessionStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
+    } catch {
+      // ignore
+    }
+    lastWrite = now;
+  }
+}
+
+/**
+ * AUTH-EXPIRY-003: Start idle timeout tracking.
+ * Calls onTimeout when user has been idle for 30 minutes.
+ */
+export function startIdleTimeout(onTimeout: () => void): void {
+  stopIdleTimeout();
+
+  // Set initial activity
+  try {
+    if (!sessionStorage.getItem(LAST_ACTIVITY_KEY)) {
+      sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    }
+  } catch {
+    // ignore
+  }
+
+  // Listen for user activity
+  if (typeof window !== "undefined") {
+    window.addEventListener("mousemove", updateActivity);
+    window.addEventListener("keydown", updateActivity);
+    window.addEventListener("click", updateActivity);
+    window.addEventListener("scroll", updateActivity);
+    activityListenersAttached = true;
+  }
+
+  // Check for idle timeout every 30 seconds
+  idleCheckInterval = setInterval(() => {
+    try {
+      const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+      if (!lastActivity) return;
+      const elapsed = Date.now() - parseInt(lastActivity, 10);
+      if (elapsed > IDLE_TIMEOUT_MS) {
+        console.log("[AUTH-EXPIRY-003] Logging out due to inactivity");
+        onTimeout();
+      }
+    } catch {
+      // ignore
+    }
+  }, 30000);
+}
+
+/**
+ * AUTH-EXPIRY-003: Stop idle timeout tracking.
+ */
+export function stopIdleTimeout(): void {
+  if (idleCheckInterval) {
+    clearInterval(idleCheckInterval);
+    idleCheckInterval = null;
+  }
+  if (activityListenersAttached && typeof window !== "undefined") {
+    window.removeEventListener("mousemove", updateActivity);
+    window.removeEventListener("keydown", updateActivity);
+    window.removeEventListener("click", updateActivity);
+    window.removeEventListener("scroll", updateActivity);
+    activityListenersAttached = false;
   }
 }
 

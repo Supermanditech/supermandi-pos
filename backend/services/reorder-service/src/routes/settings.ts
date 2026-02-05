@@ -4,6 +4,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   getSettings,
   getOrCreateSettings,
@@ -11,6 +12,10 @@ import {
 } from '../services/settingsService';
 
 const router: RouterType = Router();
+
+// AUTH-CONCURRENT-002: Apply authentication + store ownership validation to all settings routes
+router.use(authenticate);
+router.use(requireStoreAccess);
 
 // =============================================================================
 // SETTINGS ENDPOINTS

@@ -46,20 +46,49 @@ declare global {
 const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
-// Routes that don't require JWT authentication
-// Only auth endpoints are public - all other routes require valid JWT
-// GO-LIVE-RET-AUTH-001: Added firebase-otp-login (OTP-first flow)
-// GO-LIVE-LOGIN: Added register, login, forgot-password endpoints
-// REG-AUTH-201: Added registration routes (public, no auth required)
+// =============================================================================
+// AUTH-GATEWAY-001: Route prefixes that REQUIRE JWT authentication at gateway.
+// Routes NOT listed here pass through without gateway JWT check (POS, admin, etc.).
+// POS uses device tokens (validated by backend). Admin uses adminAuth middleware.
+// =============================================================================
+const JWT_REQUIRED_PREFIXES = [
+  '/api/v1/retailer-admin',
+  '/api/v1/supplier',
+  '/api/v1/inventory',
+  '/api/v1/orders',
+  '/api/v1/catalog',
+  '/api/v1/reorder',
+  '/api/v1/voice',
+  '/api/v1/platform',
+  '/api/v1/suppliers',
+  '/api/v1/documents',
+];
+
+// Public paths within JWT-required prefixes (no auth needed)
+// GO-LIVE-RET-AUTH-001: firebase-otp-login (OTP-first flow)
+// GO-LIVE-LOGIN: register, login, forgot-password
+// REG-AUTH-201: Registration routes (public, no auth required)
+// AUTH-GATEWAY-001: Added supplier auth + registration paths
 const PUBLIC_PATHS = [
+  // Retailer auth (public)
   '/api/v1/retailer-admin/auth/firebase-login',
-  '/api/v1/retailer-admin/auth/firebase-otp-login',  // GO-LIVE-RET-AUTH-001: OTP-first login
-  '/api/v1/retailer-admin/auth/register',  // GO-LIVE-LOGIN: Password registration
-  '/api/v1/retailer-admin/auth/login',  // GO-LIVE-LOGIN: Password login
-  '/api/v1/retailer-admin/auth/forgot-password',  // GO-LIVE-LOGIN: Password reset (covers /request and /reset)
+  '/api/v1/retailer-admin/auth/firebase-otp-login',
+  '/api/v1/retailer-admin/auth/register',
+  '/api/v1/retailer-admin/auth/login',
+  '/api/v1/retailer-admin/auth/forgot-password',
   '/api/v1/retailer-admin/auth/refresh',
-  '/api/v1/retailer-admin/health',  // RCAT-DEPLOY-001: Gateway routing verification
-  '/api/v1/retailer-admin/registration',  // REG-AUTH-201: Registration endpoints (no auth)
+  '/api/v1/retailer-admin/health',
+  '/api/v1/retailer-admin/registration',
+  // Supplier auth (public)
+  '/api/v1/supplier/auth/register',
+  '/api/v1/supplier/auth/login',
+  '/api/v1/supplier/auth/forgot-password',
+  '/api/v1/supplier/auth/reset-password',
+  '/api/v1/supplier/auth/firebase-register',
+  '/api/v1/supplier/auth/firebase-login',
+  '/api/v1/supplier/auth/refresh',
+  '/api/v1/supplier/registration/',
+  // Health
   '/health',
   '/healthz',
 ];
@@ -79,14 +108,17 @@ const PUBLIC_PATHS = [
  * Public routes (listed in PUBLIC_PATHS) bypass authentication.
  */
 export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
-  // Check if this is a public path
+  // Check if this is a public path (auth, registration, health endpoints)
   const isPublicPath = PUBLIC_PATHS.some(path => req.path.startsWith(path));
   if (isPublicPath) {
     return next();
   }
 
-  // Only apply to retailer-admin routes (except auth which is public)
-  if (!req.path.startsWith('/api/v1/retailer-admin')) {
+  // AUTH-GATEWAY-001: Only apply JWT validation to routes in JWT_REQUIRED_PREFIXES.
+  // Routes not listed (POS, admin, auth, demo, webhooks) pass through.
+  // Admin routes are handled by adminAuthMiddleware separately.
+  const requiresJwt = JWT_REQUIRED_PREFIXES.some(prefix => req.path.startsWith(prefix));
+  if (!requiresJwt) {
     return next();
   }
 

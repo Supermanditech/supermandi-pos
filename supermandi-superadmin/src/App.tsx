@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { hasValidSession, logout, sendAdminOtp, verifyAdminOtp } from "./api/authToken";
+import { hasValidSession, logout, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -519,6 +519,19 @@ export default function App() {
   });
 
   // ITER4-CRIT-001: Removed adminTokenInput state - login now handled by LoginGate component
+
+  // AUTH-EXPIRY-003: Idle timeout - logout after 30 minutes of inactivity
+  useEffect(() => {
+    if (!isAuthenticated) {
+      stopIdleTimeout();
+      return;
+    }
+    startIdleTimeout(async () => {
+      await logout();
+      setIsAuthenticated(false);
+    });
+    return () => stopIdleTimeout();
+  }, [isAuthenticated]);
 
   const [health, setHealth] = useState<{ ok: boolean; statusText: string; lastCheckedAt?: string }>(
     { ok: false, statusText: "unknown" }

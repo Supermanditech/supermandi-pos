@@ -151,6 +151,27 @@ export async function safeJson<T = any>(response: Response, fallback: T | null =
  * GO-LIVE-020: Safe JSON parsing with error extraction
  * Returns { data, error } tuple - use this for API calls that need error messages
  */
+/**
+ * AUTH-LOGOUT-001: Revoke refresh token on backend (fire-and-forget)
+ * Called during logout to invalidate the server-side session.
+ * Non-blocking: local logout succeeds even if backend call fails.
+ */
+export async function logoutApi(accessToken: string, refreshToken: string): Promise<void> {
+  try {
+    const apiBase = API_GATEWAY_BASE || '';
+    await fetch(`${apiBase}/api/v1/retailer-admin/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch {
+    console.warn('[AUTH-LOGOUT-001] Backend logout call failed (non-blocking)');
+  }
+}
+
 export async function safeJsonWithError<T = any>(response: Response): Promise<{
   data: T | null;
   error: { code: string; message: string } | null;

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { onAuthFailure, API_GATEWAY_BASE } from './api';
+import { onAuthFailure, API_GATEWAY_BASE, logoutApi } from './api';
 
 // GO-LIVE-109: Token refresh configuration
 // Refresh token 5 minutes before expiry (JWT expires in 24h)
@@ -220,6 +220,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     // GO-LIVE-133: Get current store ID before clearing state
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
+
+    // AUTH-LOGOUT-001: Revoke session on backend (fire-and-forget)
+    if (activeStoreId) {
+      const currentToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_TOKEN));
+      const refreshToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_REFRESH_TOKEN));
+      if (currentToken && refreshToken) {
+        logoutApi(currentToken, refreshToken);
+      }
+    }
 
     setAccessToken(null);
     setUser(null);

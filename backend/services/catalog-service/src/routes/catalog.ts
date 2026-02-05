@@ -9,11 +9,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError, ERROR_CODES, query } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import { getStoreCatalog, getStoreCatalogProduct } from '../services/catalogService';
 import { searchStoreProducts, getStoreProductByBarcode, type StoreSearchGroup } from '../db/queries';
 import { config } from '../config';
 
 const router: RouterType = Router();
+
+// AUTH-CONCURRENT-002: Apply authentication + store ownership validation to all catalog routes
+router.use(authenticate);
+router.use(requireStoreAccess);
 
 // =============================================================================
 // STORE CATALOG ENDPOINTS

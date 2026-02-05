@@ -2,11 +2,15 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuthToken, clearAuthToken, getSupplierProfile, Supplier } from './api';
+import { getAuthToken, clearAuthToken, logoutApi, getSupplierProfile, refreshAccessToken, Supplier } from './api';
 
 // GO-LIVE-111: Idle timeout configuration (30 minutes)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const LAST_ACTIVITY_KEY = 'supplier_last_activity';
+
+// AUTH-EXPIRY-002: Token refresh configuration
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 minutes before expiry
+const TOKEN_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
 
 interface AuthContextType {
   supplier: Supplier | null;
@@ -73,6 +77,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfile]);
 
   const logout = useCallback(() => {
+    // AUTH-LOGOUT-002: Revoke session on backend (fire-and-forget)
+    logoutApi();
     clearAuthToken();
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     setSupplier(null);
@@ -128,6 +134,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (idleCheckRef.current) {
         clearInterval(idleCheckRef.current);
         idleCheckRef.current = null;
+      }
+    };
+  }, [supplier, logout]);
+
+  // AUTH-EXPIRY-002: Periodic token refresh before expiry
+  const tokenRefreshRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!supplier) {
+      if (tokenRefreshRef.current) {
+        clearInterval(tokenRefreshRef.current);
+        tokenRefreshRef.current = null;
+      }
+      return;
+    }
+
+    const getTokenExpiry = (token: string): number | null => {
+      try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const payload = JSON.parse(atob(parts[1]));
+        return payload.exp ? payload.exp * 1000 : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const checkAndRefresh = async () => {
+      const token = getAuthToken();
+      if (!token) return;
+
+      const expiry = getTokenExpiry(token);
+      if (!expiry) return;
+
+      const timeUntilExpiry = expiry - Date.now();
+
+      if (timeUntilExpiry > 0 && timeUntilExpiry <= TOKEN_EXPIRY_BUFFER_MS) {
+        console.log('[Auth] Token expires soon, refreshing...');
+        const success = await refreshAccessToken();
+        if (!success) {
+          console.warn('[Auth] Token refresh failed, user may need to re-login');
+        }
+      } else if (timeUntilExpiry <= 0) {
+        console.log('[Auth] Token expired, attempting refresh...');
+        const success = await refreshAccessToken();
+        if (!success) {
+          logout();
+        }
+      }
+    };
+
+    checkAndRefresh();
+    tokenRefreshRef.current = setInterval(checkAndRefresh, TOKEN_CHECK_INTERVAL_MS);
+
+    return () => {
+      if (tokenRefreshRef.current) {
+        clearInterval(tokenRefreshRef.current);
+        tokenRefreshRef.current = null;
       }
     };
   }, [supplier, logout]);

@@ -4,6 +4,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
 import { ApiError } from '@supermandi/common';
+import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 import {
   getPolicyByProduct,
   getPolicyByIdService,
@@ -15,6 +16,9 @@ import {
 import { config } from '../config';
 
 const router: RouterType = Router();
+
+// AUTH-CONCURRENT-002: Apply authentication to all policy routes
+router.use(authenticate);
 
 // =============================================================================
 // POLICY ENDPOINTS
@@ -32,6 +36,7 @@ const router: RouterType = Router();
 // Alias route for POS compatibility: /stores/:storeId/reorder/policies
 router.get(
   '/stores/:storeId/reorder/policies',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -63,6 +68,7 @@ router.get(
 
 router.get(
   '/stores/:storeId/policies',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -98,6 +104,7 @@ router.get(
  */
 router.get(
   '/stores/:storeId/policies/product/:productId',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, productId } = req.params;
@@ -165,6 +172,7 @@ router.get(
  */
 router.post(
   '/stores/:storeId/policies',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId } = req.params;
@@ -281,6 +289,7 @@ router.delete(
  */
 router.patch(
   '/stores/:storeId/reorder/policies/:identifier',
+  requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, identifier } = req.params;

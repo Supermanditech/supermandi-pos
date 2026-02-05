@@ -52,6 +52,85 @@ export function setAuthToken(token: string): void {
 // Clear auth token
 export function clearAuthToken(): void {
   localStorage.removeItem('supplier_token');
+  localStorage.removeItem('supplier_refresh_token');
+}
+
+// AUTH-EXPIRY-002: Refresh token storage
+export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('supplier_refresh_token');
+}
+
+export function setRefreshToken(token: string): void {
+  localStorage.setItem('supplier_refresh_token', token);
+}
+
+// AUTH-EXPIRY-002: Refresh access token using stored refresh token
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+export async function refreshAccessToken(): Promise<boolean> {
+  // Deduplicate concurrent refresh calls
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/supplier/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        console.warn('[AUTH-EXPIRY-002] Token refresh failed:', response.status);
+        return false;
+      }
+
+      const data = await response.json();
+      const newAccessToken = data.data?.accessToken || data.accessToken;
+
+      if (newAccessToken) {
+        setAuthToken(newAccessToken);
+        console.log('[AUTH-EXPIRY-002] Token refreshed successfully');
+        return true;
+      }
+
+      return false;
+    } catch {
+      console.warn('[AUTH-EXPIRY-002] Token refresh error (non-blocking)');
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+// AUTH-LOGOUT-002: Revoke session on backend before clearing local state.
+// Fire-and-forget: logout should succeed locally even if backend call fails.
+export async function logoutApi(): Promise<void> {
+  const token = getAuthToken();
+  if (!token) return;
+  try {
+    await fetch(`${API_BASE_URL}/api/v1/supplier/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  } catch {
+    // Swallow errors — local logout should always succeed
+    console.warn('[AUTH-LOGOUT-002] Backend logout call failed (non-blocking)');
+  }
 }
 
 // GL-WF-046: Handle 401 responses by redirecting to login
@@ -113,11 +192,37 @@ export async function apiFetch<T>(
     clearTimeout(timeoutId);
   }
 
-  // GL-WF-046: Handle 401 (unauthorized) responses
+  // GL-WF-046 + AUTH-EXPIRY-002: Handle 401 with token refresh attempt
   if (response.status === 401) {
     const errorData: ApiErrorResponse = await response.json().catch(() => ({}));
-    // Only redirect for token issues, not login attempts
-    if (endpoint !== '/api/v1/supplier/auth/login' && endpoint !== '/api/v1/supplier/auth/register') {
+    const isAuthEndpoint = endpoint === '/api/v1/supplier/auth/login' ||
+                           endpoint === '/api/v1/supplier/auth/register' ||
+                           endpoint === '/api/v1/supplier/auth/refresh';
+
+    // AUTH-EXPIRY-002: Try token refresh before giving up
+    if (!isAuthEndpoint && getRefreshToken()) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        // Retry the original request with the new token
+        const newToken = getAuthToken();
+        const retryHeaders = { ...headers };
+        if (newToken) retryHeaders['Authorization'] = `Bearer ${newToken}`;
+        const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+          ...options,
+          headers: retryHeaders,
+        });
+        if (retryResponse.ok) {
+          const retryData = await retryResponse.json();
+          const retryResult = retryData.data ?? retryData;
+          validateResponseStructure(retryResult, endpoint);
+          return retryResult as T;
+        }
+        // Retry also failed — fall through to logout
+      }
+    }
+
+    // Token refresh failed or no refresh token — redirect to login
+    if (!isAuthEndpoint) {
       handle401Response();
     }
     throw new ApiError(401, errorData.error?.code || 'UNAUTHORIZED', errorData.error?.message || 'Session expired. Please login again.');
@@ -191,6 +296,7 @@ export interface Supplier {
 
 export interface AuthResponse {
   token: string;
+  refreshToken?: string; // AUTH-EXPIRY-002: Refresh token for automatic renewal
   supplier: Supplier;
 }
 
@@ -209,6 +315,10 @@ export async function loginSupplier(input: LoginInput): Promise<AuthResponse> {
     body: JSON.stringify(input),
   });
   setAuthToken(result.token);
+  // AUTH-EXPIRY-002: Store refresh token for automatic renewal
+  if (result.refreshToken) {
+    setRefreshToken(result.refreshToken);
+  }
   return result;
 }
 
@@ -295,6 +405,10 @@ export async function phoneOtpLogin(idToken: string): Promise<PhoneOtpLoginRespo
   });
   if (result.token) {
     setAuthToken(result.token);
+  }
+  // AUTH-EXPIRY-002: Store refresh token for automatic token renewal
+  if (result.refreshToken) {
+    setRefreshToken(result.refreshToken);
   }
   return result;
 }
