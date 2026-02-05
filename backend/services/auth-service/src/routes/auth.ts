@@ -11,6 +11,7 @@ import {
 import {
   generateTokenPair,
   generateAccessToken,
+  generateRefreshToken,
   hashRefreshToken,
   getRefreshTokenExpiry,
   verifyRefreshToken,
@@ -138,12 +139,14 @@ interface RefreshRequest {
 
 interface RefreshResponse {
   accessToken: string;
+  refreshToken: string; // AUTH-REFRESH-001: New refresh token (rotation)
   expiresIn: number;
 }
 
 /**
  * POST /auth/refresh
- * Exchange refresh token for new access token
+ * Exchange refresh token for new access token + new refresh token (rotation)
+ * AUTH-REFRESH-001: Implements token rotation - old refresh token is revoked
  */
 router.post(
   '/refresh',
@@ -184,11 +187,24 @@ router.post(
       permissions: userWithRoles.permissions,
     });
 
+    // AUTH-REFRESH-001: Rotate refresh token - revoke old, issue new
+    await revokeRefreshToken(tokenHash);
+    const { token: newRefreshToken } = generateRefreshToken(user.id);
+    const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
+    await createRefreshToken({
+      userId: user.id,
+      tokenHash: newRefreshTokenHash,
+      expiresAt: getRefreshTokenExpiry(),
+      userAgent: req.get('user-agent'),
+      ipAddress: req.ip || req.socket.remoteAddress,
+    });
+
     // Calculate expiresIn (same as in jwtService)
     const expiresIn = 900; // 15 minutes default
 
     const response: RefreshResponse = {
       accessToken,
+      refreshToken: newRefreshToken,
       expiresIn,
     };
 

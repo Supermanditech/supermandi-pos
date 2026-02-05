@@ -1,10 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { onAuthFailure, API_GATEWAY_BASE, logoutApi } from './api';
 
-// GO-LIVE-109: Token refresh configuration
-// Refresh token 5 minutes before expiry (JWT expires in 24h)
-const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
-const TOKEN_CHECK_INTERVAL_MS = 60 * 1000; // Check every minute
+// GO-LIVE-109 + AUTH-EXPIRY-001: Token refresh configuration
+// Access token expires in 15 minutes. Refresh 5 minutes before expiry.
+// Check interval of 30s ensures we catch expiry within half a minute.
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 minutes before expiry
+const TOKEN_CHECK_INTERVAL_MS = 30 * 1000; // Check every 30 seconds
 
 interface User {
   id: string;
@@ -307,6 +308,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(newAccessToken);
         // GO-LIVE-133: Store with namespaced key
         localStorage.setItem(getNamespacedKey(activeStoreId, KEY_TOKEN), newAccessToken);
+        // AUTH-REFRESH-001: Store rotated refresh token if provided
+        const newRefreshToken = data.data?.refreshToken;
+        if (newRefreshToken) {
+          localStorage.setItem(getNamespacedKey(activeStoreId, KEY_REFRESH_TOKEN), newRefreshToken);
+        }
         console.log('[Auth] Token refreshed successfully');
         return true;
       }

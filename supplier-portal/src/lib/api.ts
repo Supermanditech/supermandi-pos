@@ -97,6 +97,11 @@ export async function refreshAccessToken(): Promise<boolean> {
 
       if (newAccessToken) {
         setAuthToken(newAccessToken);
+        // AUTH-REFRESH-001: Store rotated refresh token if provided
+        const newRefreshToken = data.data?.refreshToken || data.refreshToken;
+        if (newRefreshToken) {
+          setRefreshToken(newRefreshToken);
+        }
         console.log('[AUTH-EXPIRY-002] Token refreshed successfully');
         return true;
       }
