@@ -22,9 +22,13 @@ import {
   findRefreshTokenByHash,
   revokeAllUserRefreshTokens,
   isRefreshTokenActive,
+  listUserActiveSessions,
+  revokeSessionById,
+  enforceSessionLimit,
 } from '../db/tokenQueries';
 import { authenticate, getAuthUser } from '../middleware';
 import { config } from '../config';
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from '../utils/cookies';
 
 const router: Router = Router();
 
@@ -144,7 +148,16 @@ router.post(
       ipAddress: req.ip || req.socket.remoteAddress,
     });
 
-    // Build response
+    // AUTH-CONCURRENT-001: Enforce session limit (revoke oldest if over limit)
+    if (config.maxConcurrentSessions > 0) {
+      await enforceSessionLimit(user.id, config.maxConcurrentSessions);
+    }
+
+    // AUTH-STORAGE-001: Set HttpOnly cookies (web clients use cookies, POS uses body)
+    const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;
+    setAuthCookies(res, tokenPair.accessToken, tokenPair.refreshToken, tokenPair.expiresIn, refreshTokenExpirySeconds);
+
+    // Build response (tokens still in body for POS app backward compatibility)
     const response: LoginResponse = {
       accessToken: tokenPair.accessToken,
       refreshToken: tokenPair.refreshToken,
@@ -169,10 +182,6 @@ router.post(
 // REFRESH TOKEN ENDPOINT
 // =============================================================================
 
-interface RefreshRequest {
-  refreshToken: string;
-}
-
 interface RefreshResponse {
   accessToken: string;
   refreshToken: string; // AUTH-REFRESH-001: New refresh token (rotation)
@@ -187,7 +196,8 @@ interface RefreshResponse {
 router.post(
   '/refresh',
   asyncHandler(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body as RefreshRequest;
+    // AUTH-STORAGE-001: Read refresh token from body (POS) or cookie (web)
+    const refreshToken = getRefreshTokenFromRequest(req);
 
     if (!refreshToken) {
       throw ApiError.badRequest('Refresh token is required');
@@ -245,6 +255,10 @@ router.post(
 
     // Calculate expiresIn (same as in jwtService)
     const expiresIn = 900; // 15 minutes default
+
+    // AUTH-STORAGE-001: Set new HttpOnly cookies with rotated tokens
+    const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;
+    setAuthCookies(res, accessToken, newRefreshToken, expiresIn, refreshTokenExpirySeconds);
 
     const response: RefreshResponse = {
       accessToken,
@@ -313,12 +327,16 @@ router.get(
 router.post(
   '/logout',
   asyncHandler(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body as { refreshToken?: string };
+    // AUTH-STORAGE-001: Read refresh token from body (POS) or cookie (web)
+    const refreshToken = getRefreshTokenFromRequest(req);
 
     if (refreshToken) {
       const tokenHash = hashRefreshToken(refreshToken);
       await revokeRefreshToken(tokenHash);
     }
+
+    // AUTH-STORAGE-001: Clear HttpOnly cookies
+    clearAuthCookies(res);
 
     res.json({ message: 'Logged out successfully' });
   })
@@ -335,10 +353,64 @@ router.post(
     const authUser = getAuthUser(req);
     const revokedCount = await revokeAllUserRefreshTokens(authUser.id);
 
+    // AUTH-STORAGE-001: Clear HttpOnly cookies for current browser session
+    clearAuthCookies(res);
+
     res.json({
       message: 'All sessions logged out',
       revokedSessions: revokedCount,
     });
+  })
+);
+
+// =============================================================================
+// AUTH-CONCURRENT-001: SESSION MANAGEMENT ENDPOINTS
+// =============================================================================
+
+/**
+ * GET /auth/sessions
+ * List active sessions for the authenticated user
+ */
+router.get(
+  '/sessions',
+  authenticate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const authUser = getAuthUser(req);
+    const sessions = await listUserActiveSessions(authUser.id);
+
+    res.json({
+      data: sessions.map((s) => ({
+        id: s.id,
+        userAgent: s.userAgent,
+        ipAddress: s.ipAddress,
+        createdAt: s.createdAt,
+        lastActivityAt: s.lastActivityAt,
+      })),
+    });
+  })
+);
+
+/**
+ * DELETE /auth/sessions/:sessionId
+ * Revoke a specific session
+ */
+router.delete(
+  '/sessions/:sessionId',
+  authenticate,
+  asyncHandler(async (req: Request, res: Response) => {
+    const authUser = getAuthUser(req);
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      throw ApiError.badRequest('Session ID is required');
+    }
+
+    const revoked = await revokeSessionById(sessionId, authUser.id);
+    if (!revoked) {
+      throw ApiError.notFound('Session not found or already revoked');
+    }
+
+    res.json({ message: 'Session revoked successfully' });
   })
 );
 

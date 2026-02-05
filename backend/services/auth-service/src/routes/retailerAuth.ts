@@ -8,6 +8,8 @@ import {
   normalizePhoneNumber,
 } from '@supermandi/common';
 import { generateTokenPair } from '../services/jwtService';
+import { config } from '../config';
+import { setAuthCookies } from '../utils/cookies';
 
 const router: Router = Router();
 
@@ -239,6 +241,10 @@ router.post(
       store.id, // actorId (storeId)
       permissions
     );
+
+    // AUTH-STORAGE-001: Set HttpOnly cookies for web clients
+    const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;
+    setAuthCookies(res, tokenPair.accessToken, tokenPair.refreshToken, tokenPair.expiresIn, refreshTokenExpirySeconds);
 
     res.json({
       success: true,

@@ -14,8 +14,6 @@ export const API_GATEWAY_BASE = import.meta.env.VITE_API_BASE_URL || '';
  */
 type AuthFailureListener = () => void;
 const authFailureListeners: AuthFailureListener[] = [];
-const TOKEN_STORAGE_KEY = 'retailerAdminToken';
-const LEGACY_TOKEN_STORAGE_KEY = 'retailer_access_token';
 const RETAILER_ADMIN_PATH = '/api/v1/retailer-admin';
 const RETAILER_ADMIN_AUTH_PATH = '/api/v1/retailer-admin/auth';
 
@@ -40,9 +38,17 @@ function isRetailerAdminAuthRequest(url: string) {
 }
 
 /**
+ * AUTH-STORAGE-001: Check if auth indicator cookie is present.
+ * The sm_auth cookie is non-HttpOnly and indicates an active session.
+ */
+export function hasAuthCookie(): boolean {
+  return typeof document !== 'undefined' && document.cookie.includes('sm_auth=');
+}
+
+/**
  * Authenticated fetch wrapper
- * - Automatically adds Authorization header with access token or localStorage token
- * - Skips protected requests when no token is available
+ * AUTH-STORAGE-001: Uses HttpOnly cookies for auth (credentials: 'include').
+ * Falls back to Authorization header if accessToken provided (for POS app / backward compat).
  * - Handles 401 responses by notifying auth failure listeners (triggers logout)
  * - Returns response for further processing
  */
@@ -54,32 +60,15 @@ export async function authFetch(
   // DEPLOY-003: Prefix relative API paths with gateway base URL
   const resolvedUrl = (url.startsWith('/') && API_GATEWAY_BASE) ? API_GATEWAY_BASE + url : url;
 
-  const storedToken = typeof window !== 'undefined'
-    ? (localStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY))
-    : null;
-  const resolvedToken = accessToken || storedToken;
   const isAuthRequest = isRetailerAdminAuthRequest(url);
-  const isRetailerAdmin = isRetailerAdminRequest(url);
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string> || {}),
   };
 
-  // Add auth header if token exists
-  if (resolvedToken) {
-    headers['Authorization'] = `Bearer ${resolvedToken}`;
-  } else if (isRetailerAdmin && !isAuthRequest) {
-    return new Response(
-      JSON.stringify({
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'Missing authentication token',
-        },
-      }),
-      {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+  // AUTH-STORAGE-001: If explicit accessToken provided (in-memory), add Authorization header
+  // This is belt-and-suspenders: cookie also sent via credentials: 'include'
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
   // Add Content-Type for JSON if body exists and not already set
@@ -87,15 +76,17 @@ export async function authFetch(
     headers['Content-Type'] = 'application/json';
   }
 
+  // AUTH-STORAGE-001: credentials: 'include' sends HttpOnly cookies automatically
   // CACHE-000: Prevent browser from caching API responses
   const response = await fetch(resolvedUrl, {
     ...options,
     headers,
+    credentials: 'include',
     cache: "no-store",
   });
 
-  // Handle 401 Unauthorized - trigger logout
-  if (response.status === 401 && resolvedToken && !isAuthRequest) {
+  // Handle 401 Unauthorized - trigger logout for non-auth retailer requests
+  if (response.status === 401 && !isAuthRequest && isRetailerAdminRequest(url)) {
     notifyAuthFailure();
   }
 
@@ -153,19 +144,16 @@ export async function safeJson<T = any>(response: Response, fallback: T | null =
  */
 /**
  * AUTH-LOGOUT-001: Revoke refresh token on backend (fire-and-forget)
- * Called during logout to invalidate the server-side session.
+ * AUTH-STORAGE-001: Uses HttpOnly cookies - tokens sent automatically via credentials: 'include'
  * Non-blocking: local logout succeeds even if backend call fails.
  */
-export async function logoutApi(accessToken: string, refreshToken: string): Promise<void> {
+export async function logoutApi(): Promise<void> {
   try {
     const apiBase = API_GATEWAY_BASE || '';
     await fetch(`${apiBase}/api/v1/retailer-admin/auth/logout`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
     });
   } catch {
     console.warn('[AUTH-LOGOUT-001] Backend logout call failed (non-blocking)');

@@ -94,6 +94,20 @@ const PUBLIC_PATHS = [
 ];
 
 // =============================================================================
+// AUTH-STORAGE-001: COOKIE HELPER
+// =============================================================================
+
+/**
+ * Extract a cookie value from the Cookie header without cookie-parser dependency.
+ */
+function getCookieValue(req: Request, name: string): string | undefined {
+  const cookieHeader = req.headers.cookie;
+  if (!cookieHeader) return undefined;
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match && match[1] ? decodeURIComponent(match[1]) : undefined;
+}
+
+// =============================================================================
 // MIDDLEWARE
 // =============================================================================
 
@@ -122,12 +136,21 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     return next();
   }
 
-  // Get token from Authorization header
+  // Get token from Authorization header or HttpOnly cookie (AUTH-STORAGE-001)
   const authHeader = req.headers.authorization;
-  console.log(`[JWT-DEBUG] ${req.method} ${req.path} - Auth header: ${authHeader ? `"${authHeader.substring(0, 50)}..."` : 'MISSING'}`);
+  let token: string | undefined;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.log(`[JWT-DEBUG] Rejecting: No valid Bearer token`);
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7);
+  } else {
+    // AUTH-STORAGE-001: Fall back to HttpOnly cookie for web clients
+    token = getCookieValue(req, 'sm_access_token');
+  }
+
+  console.log(`[JWT-DEBUG] ${req.method} ${req.path} - Token source: ${authHeader ? 'header' : token ? 'cookie' : 'MISSING'}`);
+
+  if (!token) {
+    console.log(`[JWT-DEBUG] Rejecting: No valid Bearer token or auth cookie`);
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
@@ -137,8 +160,6 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     });
     return;
   }
-
-  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
   try {
     console.log(`[JWT-DEBUG] Verifying token (len=${token.length}), secret preview: ${JWT_SECRET.substring(0, 10)}..., issuer: ${JWT_ISSUER}`);

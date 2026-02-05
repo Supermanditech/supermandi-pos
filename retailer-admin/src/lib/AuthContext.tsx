@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { onAuthFailure, API_GATEWAY_BASE, logoutApi } from './api';
+import { onAuthFailure, API_GATEWAY_BASE, logoutApi, hasAuthCookie } from './api';
 
 // GO-LIVE-109 + AUTH-EXPIRY-001: Token refresh configuration
 // Access token expires in 15 minutes. Refresh 5 minutes before expiry.
@@ -48,13 +48,13 @@ const ACTIVE_STORE_KEY = 'retailer_active_store_id'; // Tracks which store is cu
 const getNamespacedKey = (storeId: string, key: string): string => `retailer_${storeId}_${key}`;
 
 // Key suffixes for namespaced storage
-const KEY_TOKEN = 'token';
-const KEY_REFRESH_TOKEN = 'refresh_token';
+// AUTH-STORAGE-001: Tokens NO LONGER stored in localStorage (moved to HttpOnly cookies)
 const KEY_USER = 'user';
 const KEY_STORE = 'store';
 const KEY_LAST_ACTIVITY = 'last_activity';
+const KEY_TOKEN_EXPIRES_AT = 'token_expires_at'; // AUTH-STORAGE-001: Non-sensitive timestamp for refresh scheduling
 
-// Legacy keys for migration (will be cleared after successful migration)
+// Legacy keys to clear (migration + security cleanup)
 const LEGACY_KEYS = [
   'retailerAdminToken',
   'retailer_access_token',
@@ -79,17 +79,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [store, setStore] = useState<Store | null>(null);
   // GL-WF-028: Session expiry warning state
   const [showSessionWarning, setShowSessionWarning] = useState(false);
+  // AUTH-STORAGE-001: Track token expiry for refresh scheduling (in-memory)
+  const tokenExpiresAtRef = useRef<number>(0);
 
   // RCAT-AUTH-001: Track whether session has been expired by idle timeout
   const idleCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // GO-LIVE-133: Helper to clear all auth data for a specific store
+  // AUTH-STORAGE-001: Helper to clear all auth data for a specific store
+  // Tokens are no longer in localStorage (they're in HttpOnly cookies, cleared by server)
   const clearStoreAuth = useCallback((storeId: string) => {
-    localStorage.removeItem(getNamespacedKey(storeId, KEY_TOKEN));
-    localStorage.removeItem(getNamespacedKey(storeId, KEY_REFRESH_TOKEN));
     localStorage.removeItem(getNamespacedKey(storeId, KEY_USER));
     localStorage.removeItem(getNamespacedKey(storeId, KEY_STORE));
     localStorage.removeItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY));
+    localStorage.removeItem(getNamespacedKey(storeId, KEY_TOKEN_EXPIRES_AT));
+    // AUTH-STORAGE-001: Also clean up any leftover token keys from before migration
+    localStorage.removeItem(getNamespacedKey(storeId, 'token'));
+    localStorage.removeItem(getNamespacedKey(storeId, 'refresh_token'));
   }, []);
 
   // GO-LIVE-133: Helper to clear legacy (non-namespaced) auth data
@@ -97,74 +102,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     LEGACY_KEYS.forEach(key => localStorage.removeItem(key));
   }, []);
 
-  // Load from localStorage on mount
+  // AUTH-STORAGE-001: Load auth state from localStorage + cookie on mount
+  // Tokens are in HttpOnly cookies (not readable by JS), user/store data in localStorage
   useEffect(() => {
-    // GO-LIVE-133: First check for active store ID
+    // Always clear legacy keys on mount (security cleanup)
+    clearLegacyAuth();
+
+    // Check for active store ID
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
 
-    // GO-LIVE-133: Try to migrate from legacy keys if no active store
     if (!activeStoreId) {
-      // Check for legacy data to migrate
-      const legacyToken = localStorage.getItem('retailerAdminToken') || localStorage.getItem('retailer_access_token');
-      const legacyStore = localStorage.getItem('retailer_store');
-
-      if (legacyToken && legacyStore) {
-        try {
-          const parsedStore = JSON.parse(legacyStore);
-          const storeId = parsedStore.id;
-
-          if (storeId) {
-            console.log('[Auth] GO-LIVE-133: Migrating legacy auth data to namespaced storage');
-
-            // Migrate all legacy data to namespaced keys
-            const legacyUser = localStorage.getItem('retailer_user');
-            const legacyRefresh = localStorage.getItem('retailer_refresh_token');
-            const legacyActivity = localStorage.getItem('retailer_last_activity');
-
-            localStorage.setItem(ACTIVE_STORE_KEY, storeId);
-            localStorage.setItem(getNamespacedKey(storeId, KEY_TOKEN), legacyToken);
-            if (legacyRefresh) localStorage.setItem(getNamespacedKey(storeId, KEY_REFRESH_TOKEN), legacyRefresh);
-            if (legacyUser) localStorage.setItem(getNamespacedKey(storeId, KEY_USER), legacyUser);
-            localStorage.setItem(getNamespacedKey(storeId, KEY_STORE), legacyStore);
-            if (legacyActivity) localStorage.setItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY), legacyActivity);
-
-            // Clear legacy keys after migration
-            clearLegacyAuth();
-
-            // Now proceed with normal loading using the migrated data
-            const lastActivityTime = legacyActivity ? parseInt(legacyActivity, 10) : Date.now();
-            const isExpired = Date.now() - lastActivityTime > IDLE_TIMEOUT_MS;
-
-            if (isExpired) {
-              clearStoreAuth(storeId);
-              localStorage.removeItem(ACTIVE_STORE_KEY);
-            } else {
-              setAccessToken(legacyToken);
-              setUser(legacyUser ? JSON.parse(legacyUser) : null);
-              setStore(parsedStore);
-              localStorage.setItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY), String(Date.now()));
-            }
-            setIsLoading(false);
-            return;
-          }
-        } catch (e) {
-          console.error('[Auth] GO-LIVE-133: Migration failed:', e);
-          clearLegacyAuth();
-        }
-      } else {
-        // No legacy data and no active store - clean slate
-        clearLegacyAuth();
-      }
+      // No active store - not authenticated
       setIsLoading(false);
       return;
     }
 
-    // GO-LIVE-133: Load from namespaced keys using active store ID
-    const storedToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_TOKEN));
+    // Check for stored user/store data AND auth cookie
     const storedUser = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_USER));
     const storedStore = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_STORE));
 
-    if (storedToken && storedUser && storedStore) {
+    // AUTH-STORAGE-001: Auth state = user data in localStorage + sm_auth cookie present
+    if (storedUser && storedStore && hasAuthCookie()) {
       // RCAT-AUTH-001: Check if session has expired due to idle timeout
       const lastActivity = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY));
       const lastActivityTime = lastActivity ? parseInt(lastActivity, 10) : Date.now();
@@ -176,9 +134,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(ACTIVE_STORE_KEY);
       } else {
         try {
-          setAccessToken(storedToken);
           setUser(JSON.parse(storedUser));
           setStore(JSON.parse(storedStore));
+          // Restore tokenExpiresAt for refresh scheduling
+          const storedExpiresAt = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_TOKEN_EXPIRES_AT));
+          if (storedExpiresAt) {
+            tokenExpiresAtRef.current = parseInt(storedExpiresAt, 10);
+          }
           // Update last activity on successful restore
           localStorage.setItem(getNamespacedKey(activeStoreId, KEY_LAST_ACTIVITY), String(Date.now()));
         } catch {
@@ -188,14 +150,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } else {
-      // Incomplete data - clear everything for this store
+      // No valid session data - clear everything
       clearStoreAuth(activeStoreId);
       localStorage.removeItem(ACTIVE_STORE_KEY);
     }
     setIsLoading(false);
   }, [clearLegacyAuth, clearStoreAuth]);
 
-  const login = (newAccessToken: string, newRefreshToken: string, newUser: User, newStore: Store) => {
+  const login = (newAccessToken: string, _newRefreshToken: string, newUser: User, newStore: Store) => {
+    // AUTH-STORAGE-001: Store access token in memory only (NOT in localStorage)
+    // Tokens are in HttpOnly cookies set by the server
     setAccessToken(newAccessToken);
     setUser(newUser);
     setStore(newStore);
@@ -206,13 +170,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set active store ID first (this is the only non-namespaced key)
     localStorage.setItem(ACTIVE_STORE_KEY, storeId);
 
-    // Store all auth data under namespaced keys
-    localStorage.setItem(getNamespacedKey(storeId, KEY_TOKEN), newAccessToken);
-    localStorage.setItem(getNamespacedKey(storeId, KEY_REFRESH_TOKEN), newRefreshToken);
+    // AUTH-STORAGE-001: Store user/store data (non-sensitive) but NOT tokens
     localStorage.setItem(getNamespacedKey(storeId, KEY_USER), JSON.stringify(newUser));
     localStorage.setItem(getNamespacedKey(storeId, KEY_STORE), JSON.stringify(newStore));
     // RCAT-AUTH-001: Set initial last activity on login
     localStorage.setItem(getNamespacedKey(storeId, KEY_LAST_ACTIVITY), String(Date.now()));
+
+    // AUTH-STORAGE-001: Store token expiry timestamp (non-sensitive) for refresh scheduling
+    // Parse the JWT to extract exp claim (access token is in memory so this is safe)
+    try {
+      const parts = newAccessToken.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp) {
+          const expiresAt = payload.exp * 1000;
+          tokenExpiresAtRef.current = expiresAt;
+          localStorage.setItem(getNamespacedKey(storeId, KEY_TOKEN_EXPIRES_AT), String(expiresAt));
+        }
+      }
+    } catch { /* ignore parse errors */ }
 
     // Clear any legacy keys that might exist
     clearLegacyAuth();
@@ -222,18 +198,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // GO-LIVE-133: Get current store ID before clearing state
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
 
-    // AUTH-LOGOUT-001: Revoke session on backend (fire-and-forget)
-    if (activeStoreId) {
-      const currentToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_TOKEN));
-      const refreshToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_REFRESH_TOKEN));
-      if (currentToken && refreshToken) {
-        logoutApi(currentToken, refreshToken);
-      }
-    }
+    // AUTH-LOGOUT-001 + AUTH-STORAGE-001: Revoke session on backend via cookies (fire-and-forget)
+    logoutApi();
 
     setAccessToken(null);
     setUser(null);
     setStore(null);
+    tokenExpiresAtRef.current = 0;
 
     // GO-LIVE-133: Clear namespaced keys for the active store
     if (activeStoreId) {
@@ -261,39 +232,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // GO-LIVE-109: Parse JWT to get expiry time
-  const getTokenExpiry = useCallback((token: string): number | null => {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return null;
-      const payload = JSON.parse(atob(parts[1]));
-      return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
-    } catch {
-      return null;
-    }
-  }, []);
-
-  // GO-LIVE-109: Refresh access token using refresh token
+  // AUTH-STORAGE-001: Refresh access token using HttpOnly cookie (no token in body needed)
   const refreshAccessToken = useCallback(async (): Promise<boolean> => {
-    // GO-LIVE-133: Use namespaced key for refresh token
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
     if (!activeStoreId) {
       console.log('[Auth] No active store for token refresh');
       return false;
     }
 
-    const refreshToken = localStorage.getItem(getNamespacedKey(activeStoreId, KEY_REFRESH_TOKEN));
-    if (!refreshToken) {
-      console.log('[Auth] No refresh token available');
+    // AUTH-STORAGE-001: Check for auth cookie (refresh token is in HttpOnly cookie)
+    if (!hasAuthCookie()) {
+      console.log('[Auth] No auth cookie, cannot refresh');
       return false;
     }
 
     try {
       const apiBase = API_GATEWAY_BASE || '';
+      // AUTH-STORAGE-001: credentials: 'include' sends the refresh token cookie automatically
       const response = await fetch(`${apiBase}/api/v1/retailer-admin/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -303,15 +262,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       const newAccessToken = data.data?.accessToken;
+      const expiresIn = data.data?.expiresIn;
 
       if (newAccessToken) {
+        // Store in memory only (cookies are set by server)
         setAccessToken(newAccessToken);
-        // GO-LIVE-133: Store with namespaced key
-        localStorage.setItem(getNamespacedKey(activeStoreId, KEY_TOKEN), newAccessToken);
-        // AUTH-REFRESH-001: Store rotated refresh token if provided
-        const newRefreshToken = data.data?.refreshToken;
-        if (newRefreshToken) {
-          localStorage.setItem(getNamespacedKey(activeStoreId, KEY_REFRESH_TOKEN), newRefreshToken);
+        // Update tokenExpiresAt
+        if (expiresIn) {
+          const expiresAt = Date.now() + expiresIn * 1000;
+          tokenExpiresAtRef.current = expiresAt;
+          localStorage.setItem(getNamespacedKey(activeStoreId, KEY_TOKEN_EXPIRES_AT), String(expiresAt));
         }
         console.log('[Auth] Token refreshed successfully');
         return true;
@@ -328,7 +288,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const tokenRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!accessToken) {
+    // AUTH-STORAGE-001: Use user state (not accessToken) as auth indicator
+    // On page refresh, accessToken may be null but cookies are valid
+    if (!user) {
       // Clear refresh interval when logged out
       if (tokenRefreshRef.current) {
         clearInterval(tokenRefreshRef.current);
@@ -339,10 +301,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Check token expiry periodically and refresh if needed
     const checkAndRefresh = async () => {
-      const expiry = getTokenExpiry(accessToken);
-      if (!expiry) return;
+      const expiresAt = tokenExpiresAtRef.current;
 
-      const timeUntilExpiry = expiry - Date.now();
+      // If no known expiry (e.g., page refresh), refresh immediately to get fresh token
+      if (!expiresAt || expiresAt === 0) {
+        console.log('[Auth] No known token expiry, refreshing to get fresh token...');
+        const success = await refreshAccessToken();
+        if (!success) {
+          console.warn('[Auth] Initial token refresh failed');
+          logout();
+        }
+        return;
+      }
+
+      const timeUntilExpiry = expiresAt - Date.now();
 
       // Refresh if token expires within the buffer time
       if (timeUntilExpiry > 0 && timeUntilExpiry <= TOKEN_EXPIRY_BUFFER_MS) {
@@ -373,7 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tokenRefreshRef.current = null;
       }
     };
-  }, [accessToken, getTokenExpiry, refreshAccessToken, logout]);
+  }, [user, refreshAccessToken, logout]);
 
   // Subscribe to auth failures (401 responses) - triggers logout
   useEffect(() => {
@@ -384,7 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // RCAT-AUTH-001: Activity tracking + idle timeout
   useEffect(() => {
-    if (!accessToken) return;
+    if (!user) return;
 
     // GO-LIVE-133: Get active store ID for namespaced storage
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
@@ -436,7 +408,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idleCheckRef.current = null;
       }
     };
-  }, [accessToken, logout]);
+  }, [user, logout]);
 
   // REG-AUTH-301: Compute LIMITED MODE status
   // User is in limited mode if they have an application status that is NOT 'ACTIVE'
@@ -446,7 +418,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated: !!accessToken,
+        // AUTH-STORAGE-001: Auth state based on user data + cookie, not just accessToken
+        isAuthenticated: !!user && !!store,
         isLoading,
         user,
         store,

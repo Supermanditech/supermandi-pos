@@ -38,31 +38,44 @@ function validateResponseStructure(data: unknown, endpoint: string): void {
   }
 }
 
-// Get stored auth token
-export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('supplier_token');
+// AUTH-STORAGE-001: Token storage migrated to HttpOnly cookies
+// These functions now use in-memory storage only (NOT localStorage)
+// Actual auth is handled by HttpOnly cookies via credentials: 'include'
+let _inMemoryToken: string | null = null;
+
+// AUTH-STORAGE-001: Check if auth indicator cookie is present
+export function hasAuthCookie(): boolean {
+  return typeof document !== 'undefined' && document.cookie.includes('sm_auth=');
 }
 
-// Set auth token
+// Get auth token (in-memory only, for backward compat)
+export function getAuthToken(): string | null {
+  return _inMemoryToken;
+}
+
+// Set auth token (in-memory only)
 export function setAuthToken(token: string): void {
-  localStorage.setItem('supplier_token', token);
+  _inMemoryToken = token;
 }
 
 // Clear auth token
 export function clearAuthToken(): void {
-  localStorage.removeItem('supplier_token');
-  localStorage.removeItem('supplier_refresh_token');
+  _inMemoryToken = null;
+  // AUTH-STORAGE-001: Also clean up any leftover localStorage keys from before migration
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('supplier_token');
+    localStorage.removeItem('supplier_refresh_token');
+  }
 }
 
-// AUTH-EXPIRY-002: Refresh token storage
+// AUTH-EXPIRY-002: Refresh token no longer stored client-side (in HttpOnly cookie)
 export function getRefreshToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('supplier_refresh_token');
+  // AUTH-STORAGE-001: Check for auth cookie presence instead of localStorage token
+  return hasAuthCookie() ? 'cookie' : null;
 }
 
-export function setRefreshToken(token: string): void {
-  localStorage.setItem('supplier_refresh_token', token);
+export function setRefreshToken(_token: string): void {
+  // AUTH-STORAGE-001: No-op, refresh token is in HttpOnly cookie set by server
 }
 
 // AUTH-EXPIRY-002: Refresh access token using stored refresh token
@@ -75,16 +88,17 @@ export async function refreshAccessToken(): Promise<boolean> {
     return refreshPromise;
   }
 
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
+  // AUTH-STORAGE-001: Check for auth cookie instead of localStorage token
+  if (!hasAuthCookie()) return false;
 
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      // AUTH-STORAGE-001: credentials: 'include' sends refresh token cookie automatically
       const response = await fetch(`${API_BASE_URL}/api/v1/supplier/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -96,12 +110,7 @@ export async function refreshAccessToken(): Promise<boolean> {
       const newAccessToken = data.data?.accessToken || data.accessToken;
 
       if (newAccessToken) {
-        setAuthToken(newAccessToken);
-        // AUTH-REFRESH-001: Store rotated refresh token if provided
-        const newRefreshToken = data.data?.refreshToken || data.refreshToken;
-        if (newRefreshToken) {
-          setRefreshToken(newRefreshToken);
-        }
+        setAuthToken(newAccessToken); // In-memory only
         console.log('[AUTH-EXPIRY-002] Token refreshed successfully');
         return true;
       }
@@ -119,18 +128,14 @@ export async function refreshAccessToken(): Promise<boolean> {
   return refreshPromise;
 }
 
-// AUTH-LOGOUT-002: Revoke session on backend before clearing local state.
+// AUTH-LOGOUT-002 + AUTH-STORAGE-001: Revoke session on backend via cookies.
 // Fire-and-forget: logout should succeed locally even if backend call fails.
 export async function logoutApi(): Promise<void> {
-  const token = getAuthToken();
-  if (!token) return;
   try {
     await fetch(`${API_BASE_URL}/api/v1/supplier/auth/logout`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
     });
   } catch {
     // Swallow errors — local logout should always succeed
@@ -159,7 +164,7 @@ export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
+  // AUTH-STORAGE-001: Get in-memory token (if available) for Authorization header
   const token = getAuthToken();
 
   const headers: Record<string, string> = {
@@ -167,6 +172,7 @@ export async function apiFetch<T>(
     ...(options.headers as Record<string, string>),
   };
 
+  // AUTH-STORAGE-001: If in-memory token available, add header (belt-and-suspenders with cookies)
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -177,9 +183,11 @@ export async function apiFetch<T>(
 
   let response: Response;
   try {
+    // AUTH-STORAGE-001: credentials: 'include' sends HttpOnly cookies automatically
     response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      credentials: 'include',
       signal: controller.signal,
     });
   } catch (error) {
@@ -204,17 +212,18 @@ export async function apiFetch<T>(
                            endpoint === '/api/v1/supplier/auth/register' ||
                            endpoint === '/api/v1/supplier/auth/refresh';
 
-    // AUTH-EXPIRY-002: Try token refresh before giving up
-    if (!isAuthEndpoint && getRefreshToken()) {
+    // AUTH-EXPIRY-002 + AUTH-STORAGE-001: Try token refresh before giving up
+    if (!isAuthEndpoint && hasAuthCookie()) {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
-        // Retry the original request with the new token
+        // Retry the original request with new cookies + in-memory token
         const newToken = getAuthToken();
         const retryHeaders = { ...headers };
         if (newToken) retryHeaders['Authorization'] = `Bearer ${newToken}`;
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
           ...options,
           headers: retryHeaders,
+          credentials: 'include',
         });
         if (retryResponse.ok) {
           const retryData = await retryResponse.json();
@@ -609,11 +618,13 @@ export async function uploadProductsCsv(file: File): Promise<CsvUploadResult> {
   const formData = new FormData();
   formData.append('file', file);
 
+  // AUTH-STORAGE-001: Use credentials: 'include' for cookie auth + optional Authorization header
   const token = getAuthToken();
   const response = await fetch(`${API_BASE_URL}/api/v1/supplier/products/csv-upload`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
+    credentials: 'include',
   });
 
   // GL-WF-046: Handle 401 responses
@@ -719,11 +730,13 @@ export async function uploadKycDocument(
   const formData = new FormData();
   formData.append('document', file);
 
+  // AUTH-STORAGE-001: Use credentials: 'include' for cookie auth
   const token = getAuthToken();
   const response = await fetch(`${API_BASE_URL}/api/v1/supplier/kyc/documents/${type}`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
+    credentials: 'include',
   });
 
   if (response.status === 401) {
@@ -1016,9 +1029,11 @@ export async function uploadSupplierDocument(
   formData.append('entityType', 'supplier_application');
   formData.append('entityId', applicationId);
 
+  // AUTH-STORAGE-001: credentials: 'include' for cookie auth
   const response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
     method: 'POST',
     body: formData,
+    credentials: 'include',
   });
 
   if (!response.ok) {

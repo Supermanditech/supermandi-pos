@@ -13,6 +13,8 @@ export interface AuthServiceConfig {
   };
   // AUTH-IDLE-001: Server-side idle timeout
   idleTimeoutMinutes: number;
+  // AUTH-CONCURRENT-001: Maximum concurrent sessions per user
+  maxConcurrentSessions: number;
   firebase: {
     serviceAccountPath?: string;
     projectId?: string;
@@ -55,6 +57,8 @@ export const config: AuthServiceConfig = {
   },
   // AUTH-IDLE-001: Server-side idle timeout (default 35 min, slightly > client 30 min)
   idleTimeoutMinutes: getEnvIntOrDefault('IDLE_TIMEOUT_MINUTES', 35),
+  // AUTH-CONCURRENT-001: Max concurrent sessions (0 = unlimited)
+  maxConcurrentSessions: getEnvIntOrDefault('MAX_CONCURRENT_SESSIONS', 3),
   firebase: {
     serviceAccountPath: process.env['FIREBASE_SERVICE_ACCOUNT_PATH'],
     projectId: process.env['FIREBASE_PROJECT_ID'],

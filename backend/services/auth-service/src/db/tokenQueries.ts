@@ -191,3 +191,86 @@ export async function isRefreshTokenActive(
   const row = await queryOne<{ '?column?': number }>(sql, [tokenHash, String(idleTimeoutMinutes)]);
   return !!row;
 }
+
+// =============================================================================
+// AUTH-CONCURRENT-001: DEVICE SESSION TRACKING
+// =============================================================================
+
+export interface SessionInfo {
+  id: string;
+  userAgent?: string;
+  ipAddress?: string;
+  createdAt: Date;
+  lastActivityAt: Date;
+}
+
+/**
+ * AUTH-CONCURRENT-001: List active sessions for a user.
+ */
+export async function listUserActiveSessions(userId: UUID): Promise<SessionInfo[]> {
+  const sql = `
+    SELECT id, user_agent, ip_address, created_at, last_activity_at
+    FROM auth.refresh_tokens
+    WHERE user_id = $1
+      AND revoked_at IS NULL
+      AND expires_at > NOW()
+    ORDER BY last_activity_at DESC
+  `;
+  interface SessionRow {
+    id: string;
+    user_agent: string | null;
+    ip_address: string | null;
+    created_at: Date;
+    last_activity_at: Date;
+  }
+  const rows = await query<SessionRow>(sql, [userId]);
+  return rows.map((row) => ({
+    id: row.id,
+    userAgent: row.user_agent ?? undefined,
+    ipAddress: row.ip_address ?? undefined,
+    createdAt: row.created_at,
+    lastActivityAt: row.last_activity_at,
+  }));
+}
+
+/**
+ * AUTH-CONCURRENT-001: Revoke a specific session by its ID.
+ * Only revokes if it belongs to the given user (security check).
+ */
+export async function revokeSessionById(sessionId: string, userId: UUID): Promise<boolean> {
+  const sql = `
+    UPDATE auth.refresh_tokens
+    SET revoked_at = NOW()
+    WHERE id = $1
+      AND user_id = $2
+      AND revoked_at IS NULL
+    RETURNING id
+  `;
+  const rows = await query<{ id: string }>(sql, [sessionId, userId]);
+  return rows.length > 0;
+}
+
+/**
+ * AUTH-CONCURRENT-001: Enforce session limit by revoking oldest sessions.
+ * Called on login when a new session is created.
+ */
+export async function enforceSessionLimit(userId: UUID, maxSessions: number): Promise<number> {
+  if (maxSessions <= 0) return 0;
+
+  // Revoke oldest sessions beyond the limit
+  const sql = `
+    UPDATE auth.refresh_tokens
+    SET revoked_at = NOW()
+    WHERE id IN (
+      SELECT id FROM auth.refresh_tokens
+      WHERE user_id = $1
+        AND revoked_at IS NULL
+        AND expires_at > NOW()
+      ORDER BY created_at DESC
+      OFFSET $2
+    )
+    RETURNING id
+  `;
+  const rows = await query<{ id: string }>(sql, [userId, maxSessions]);
+  return rows.length;
+}

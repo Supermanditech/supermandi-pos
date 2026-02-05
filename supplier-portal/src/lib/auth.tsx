@@ -2,14 +2,13 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuthToken, clearAuthToken, logoutApi, getSupplierProfile, refreshAccessToken, Supplier } from './api';
+import { clearAuthToken, logoutApi, getSupplierProfile, refreshAccessToken, Supplier, hasAuthCookie } from './api';
 
 // GO-LIVE-111: Idle timeout configuration (30 minutes)
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const LAST_ACTIVITY_KEY = 'supplier_last_activity';
 
 // AUTH-EXPIRY-002: Token refresh configuration
-const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 const TOKEN_CHECK_INTERVAL_MS = 60 * 1000; // Check every 60 seconds
 
 interface AuthContextType {
@@ -36,8 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const idleCheckRef = useRef<NodeJS.Timeout | null>(null);
 
   const refreshProfile = useCallback(async () => {
-    const token = getAuthToken();
-    if (!token) {
+    // AUTH-STORAGE-001: Check for auth cookie instead of localStorage token
+    if (!hasAuthCookie()) {
       setSupplier(null);
       setIsLoading(false);
       return;
@@ -58,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // AUTH-STORAGE-001: cookies sent automatically via credentials: 'include' in apiFetch
       const profile = await getSupplierProfile();
       setSupplier(profile);
       // GO-LIVE-111: Update activity on successful auth
@@ -77,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfile]);
 
   const logout = useCallback(() => {
-    // AUTH-LOGOUT-002: Revoke session on backend (fire-and-forget)
+    // AUTH-LOGOUT-002 + AUTH-STORAGE-001: Revoke session on backend via cookies
     logoutApi();
     clearAuthToken();
     localStorage.removeItem(LAST_ACTIVITY_KEY);
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supplier, logout]);
 
-  // AUTH-EXPIRY-002: Periodic token refresh before expiry
+  // AUTH-EXPIRY-002 + AUTH-STORAGE-001: Periodic token refresh via cookies
   const tokenRefreshRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -150,45 +150,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const getTokenExpiry = (token: string): number | null => {
-      try {
-        const parts = token.split('.');
-        if (parts.length !== 3) return null;
-        const payload = JSON.parse(atob(parts[1]));
-        return payload.exp ? payload.exp * 1000 : null;
-      } catch {
-        return null;
-      }
-    };
-
+    // AUTH-STORAGE-001: Simplified refresh - just call refresh periodically
+    // Cookies handle auth, no need to parse JWT for expiry
     const checkAndRefresh = async () => {
-      const token = getAuthToken();
-      if (!token) return;
-
-      const expiry = getTokenExpiry(token);
-      if (!expiry) return;
-
-      const timeUntilExpiry = expiry - Date.now();
-
-      if (timeUntilExpiry > 0 && timeUntilExpiry <= TOKEN_EXPIRY_BUFFER_MS) {
-        console.log('[Auth] Token expires soon, refreshing...');
-        const success = await refreshAccessToken();
-        if (!success) {
-          console.warn('[Auth] Token refresh failed, user may need to re-login');
-        }
-      } else if (timeUntilExpiry <= 0) {
-        console.log('[Auth] Token expired, attempting refresh...');
-        const success = await refreshAccessToken();
-        if (!success) {
-          logout();
-        }
+      if (!hasAuthCookie()) {
+        logout();
+        return;
       }
+      // Proactively refresh to keep access token fresh
+      // The server will check idle timeout and refuse if inactive
+      await refreshAccessToken();
     };
 
-    checkAndRefresh();
-    tokenRefreshRef.current = setInterval(checkAndRefresh, TOKEN_CHECK_INTERVAL_MS);
+    // First refresh after 10 minutes, then every check interval
+    const initialDelay = setTimeout(() => {
+      checkAndRefresh();
+      tokenRefreshRef.current = setInterval(checkAndRefresh, TOKEN_CHECK_INTERVAL_MS);
+    }, 10 * 60 * 1000); // Wait 10 minutes before first proactive refresh
 
     return () => {
+      clearTimeout(initialDelay);
       if (tokenRefreshRef.current) {
         clearInterval(tokenRefreshRef.current);
         tokenRefreshRef.current = null;

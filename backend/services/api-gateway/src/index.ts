@@ -22,6 +22,7 @@ import {
   jwtAuthMiddleware,
   adminAuthMiddleware,
   actorTypeMiddleware,
+  csrfProtectionMiddleware,
 } from './middleware';
 import { setupProxyRoutes } from './routes/proxy';
 import { adminAuthRouter } from './routes/adminAuth';
@@ -82,7 +83,7 @@ app.use((req, res, next) => {
   // Note: If origin not in allowedOrigins, we don't set the header (browser will block)
 
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
 
   if (req.method === 'OPTIONS') {
@@ -191,6 +192,10 @@ app.use(adminAuthMiddleware);
 // AUTH-GATEWAY-001 + AUTH-PERM-001: Actor type enforcement
 // Prevents cross-portal access (e.g., supplier JWT accessing retailer routes)
 app.use(actorTypeMiddleware);
+
+// AUTH-CSRF-001: CSRF protection for state-changing requests
+// Requires X-Requested-With header or application/json Content-Type
+app.use(csrfProtectionMiddleware);
 
 // =============================================================================
 // GO-LIVE-008 & GO-LIVE-081: HEALTH CHECK ENDPOINTS
