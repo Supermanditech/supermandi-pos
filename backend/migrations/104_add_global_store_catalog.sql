@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS global_product_identifiers (
 
 CREATE TABLE IF NOT EXISTS store_products (
   id TEXT PRIMARY KEY,
-  store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  store_id TEXT NOT NULL /* FK to platform.stores omitted — store_id is TEXT, platform.stores.id is UUID */,
   global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
   store_display_name TEXT NULL,
   sell_price_minor INTEGER NULL,
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS store_products (
 );
 
 CREATE TABLE IF NOT EXISTS store_inventory (
-  store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  store_id TEXT NOT NULL /* FK to platform.stores omitted — store_id is TEXT, platform.stores.id is UUID */,
   global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
   available_qty INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

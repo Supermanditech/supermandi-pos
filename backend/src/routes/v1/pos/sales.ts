@@ -1013,7 +1013,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
 
     const variantRes = await client.query(
       `
-      SELECT v.id, v.name, b.barcode AS supermandi_barcode
+      SELECT v.id, v.name, v.product_id, b.barcode AS supermandi_barcode
       FROM variants v
       LEFT JOIN barcodes b
         ON b.variant_id = v.id AND b.barcode_type = 'supermandi'
@@ -1022,11 +1022,12 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       [resolvedItems.map((item) => item.variantId)]
     );
 
-    const variantMap = new Map<string, { name: string; barcode: string | null }>();
+    const variantMap = new Map<string, { name: string; barcode: string | null; productId: string | null }>();
     for (const row of variantRes.rows) {
       variantMap.set(String(row.id), {
         name: String(row.name ?? ""),
-        barcode: row.supermandi_barcode ? String(row.supermandi_barcode) : null
+        barcode: row.supermandi_barcode ? String(row.supermandi_barcode) : null,
+        productId: row.product_id ? String(row.product_id) : null
       });
     }
 
@@ -1088,14 +1089,16 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
           ? item.barcode.trim()
           : fallback?.barcode ?? null;
       const lineTotal = item.priceMinor * item.quantity;
+      const itemProductId = fallback?.productId ?? item.globalProductId ?? item.variantId;
       await client.query(
         `
-        INSERT INTO sale_items (id, sale_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
+        VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9)
         `,
         [
           randomUUID(),
           saleId,
+          itemProductId,
           item.variantId,
           item.quantity,
           item.priceMinor,
@@ -1149,6 +1152,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     if (error instanceof Error && error.message === "sale_id_conflict") {
       return res.status(409).json({ error: "sale_id_conflict" });
     }
+    console.error("[POS/sales] Unhandled sale creation error:", error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "");
     return res.status(500).json({ error: "failed to create sale" });
   } finally {
     client.release();

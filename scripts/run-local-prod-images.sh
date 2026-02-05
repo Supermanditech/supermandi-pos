@@ -87,7 +87,7 @@ services:
       ADMIN_SERVICE_URL: http://main-backend:3010
       PAYMENT_SERVICE_URL: http://payment-service:3011
       ADMIN_TOKEN: local-test-token
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
       # LOCAL-PROD-URL-001: CORS origins for local frontend containers
       CORS_ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
     depends_on:
@@ -102,12 +102,12 @@ services:
       start_period: 10s
 
   main-backend:
-    image: ${REGISTRY}/api-gateway:${SHA}
-    command: ["node", "dist/index.js"]
+    image: ${REGISTRY}/main-backend:${SHA}
     ports: ["3010:3010"]
     environment:
       PORT: "3010"
       NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/supermandi
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: supermandi
@@ -115,28 +115,20 @@ services:
       DB_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       ADMIN_TOKEN: local-test-token
-      JWT_SECRET: local-test-jwt-secret
-      # LOCAL-PROD-URL-001: Self-reference is intentional — api-gateway code requires
-      # ADMIN_SERVICE_URL in production. The internal health check to this URL is
-      # non-critical (critical: false) and times out after 5s. Compose timeout is set
-      # to 30s to allow the /health endpoint to respond after the internal check resolves.
-      ADMIN_SERVICE_URL: http://127.0.0.1:3010
-      PAYMENT_SERVICE_URL: http://payment-service:3011
-      # LOCAL-PROD-URL-001: CORS origins for local frontend containers
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
       CORS_ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
+      ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # LOCAL-PROD-URL-001: Use 127.0.0.1 (not localhost) to avoid IPv6 [::1] resolution.
-    # Timeout 30s to survive the 5s internal non-critical self-referencing health check.
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3010/health"]
       interval: 10s
-      timeout: 30s
+      timeout: 10s
       retries: 5
-      start_period: 15s
+      start_period: 30s
 
   auth-service:
     image: ${REGISTRY}/auth-service:${SHA}
@@ -147,7 +139,7 @@ services:
       DB_NAME: supermandi
       DB_USER: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
     depends_on:
       postgres:
         condition: service_healthy
@@ -163,7 +155,7 @@ services:
       DB_PASSWORD: postgres
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
     depends_on:
       postgres:
         condition: service_healthy
@@ -179,7 +171,7 @@ services:
       DB_NAME: supermandi
       DB_USER: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
     depends_on:
       postgres:
         condition: service_healthy
@@ -194,7 +186,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       INVENTORY_SERVICE_URL: http://inventory-service:3005
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
     depends_on:
       postgres:
         condition: service_healthy
@@ -237,7 +229,7 @@ services:
       DB_PASSWORD: postgres
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
     depends_on:
       postgres:
         condition: service_healthy
@@ -253,7 +245,7 @@ services:
       DB_NAME: supermandi
       DB_USER: postgres
       DB_PASSWORD: postgres
-      JWT_SECRET: local-test-jwt-secret
+      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
     depends_on:
       postgres:
         condition: service_healthy

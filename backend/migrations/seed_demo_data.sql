@@ -8,7 +8,7 @@
 -- =============================================================================
 -- 1. DEMO SUPPLIER (using actual schema)
 -- =============================================================================
-INSERT INTO supplier.suppliers (id, gstin, business_name, trade_name, primary_phone, primary_email, status, created_at)
+INSERT INTO supplier.suppliers (id, gstin, business_name, trade_name, primary_phone, primary_email, status, verification_status, created_at)
 VALUES (
   'b0000000-0000-0000-0000-000000000001',
   '29AABCT1234D1Z5',
@@ -17,6 +17,7 @@ VALUES (
   '+91-9876543211',
   'wholesale@supermandi.in',
   'active',
+  'ACTIVE',
   NOW()
 ) ON CONFLICT (id) DO NOTHING;
 
@@ -99,28 +100,26 @@ SELECT
   gen_random_uuid(),
   'a0000000-0000-0000-0000-000000000001',
   id,
-  CASE category
-    WHEN 'Grocery' THEN 2500 + (RANDOM() * 5000)::INTEGER
-    WHEN 'Beverages' THEN 3500 + (RANDOM() * 1000)::INTEGER
-    WHEN 'Snacks' THEN 2000 + (RANDOM() * 3000)::INTEGER
-    WHEN 'Dairy' THEN 5000 + (RANDOM() * 10000)::INTEGER
-    WHEN 'Personal Care' THEN 8000 + (RANDOM() * 15000)::INTEGER
-    WHEN 'Household' THEN 5000 + (RANDOM() * 10000)::INTEGER
-    ELSE 9900
-  END,
-  CASE category
-    WHEN 'Grocery' THEN 3000 + (RANDOM() * 6000)::INTEGER
-    WHEN 'Beverages' THEN 4000 + (RANDOM() * 1500)::INTEGER
-    WHEN 'Snacks' THEN 2500 + (RANDOM() * 4000)::INTEGER
-    WHEN 'Dairy' THEN 6000 + (RANDOM() * 12000)::INTEGER
-    WHEN 'Personal Care' THEN 10000 + (RANDOM() * 20000)::INTEGER
-    WHEN 'Household' THEN 6000 + (RANDOM() * 12000)::INTEGER
-    ELSE 12000
-  END,
+  -- sell_price = mrp * (0.7 to 0.95) — always <= mrp
+  (base_mrp * (70 + (RANDOM() * 25)::INTEGER) / 100)::INTEGER,
+  base_mrp,
   50 + (RANDOM() * 100)::INTEGER,
   true,
   NOW()
-FROM catalog.products
+FROM (
+  SELECT id, category,
+    CASE category
+      WHEN 'Grocery' THEN 3000 + (RANDOM() * 6000)::INTEGER
+      WHEN 'Beverages' THEN 4000 + (RANDOM() * 1500)::INTEGER
+      WHEN 'Snacks' THEN 2500 + (RANDOM() * 4000)::INTEGER
+      WHEN 'Dairy' THEN 6000 + (RANDOM() * 12000)::INTEGER
+      WHEN 'Personal Care' THEN 10000 + (RANDOM() * 20000)::INTEGER
+      WHEN 'Household' THEN 6000 + (RANDOM() * 12000)::INTEGER
+      ELSE 12000
+    END AS base_mrp
+  FROM catalog.products
+  WHERE id::text LIKE 'c0000000%'
+) priced
 WHERE id::text LIKE 'c0000000%'
 ON CONFLICT (store_id, product_id) DO UPDATE SET
   current_stock = EXCLUDED.current_stock,

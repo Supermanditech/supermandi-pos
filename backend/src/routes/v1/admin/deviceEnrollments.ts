@@ -66,7 +66,7 @@ adminDeviceEnrollmentRouter.get("/device-enrollments", requireAdminToken, async 
     // Get paginated data
     const dataQuery = `
       SELECT
-        e.id,
+        e.code as id,
         e.code,
         e.store_id,
         s.name as store_name,

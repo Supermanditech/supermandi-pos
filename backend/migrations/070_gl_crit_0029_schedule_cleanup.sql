@@ -14,7 +14,8 @@ EXCEPTION
 END;
 $$;
 
--- GL-CRIT-0029: Create the cleanup function (idempotent - recreate if exists)
+-- GL-CRIT-0029: Drop then recreate the cleanup function (return type may differ)
+DROP FUNCTION IF EXISTS public.cleanup_expired_idempotency_keys();
 CREATE OR REPLACE FUNCTION public.cleanup_expired_idempotency_keys()
 RETURNS TABLE(
   inventory_deleted INTEGER,
@@ -91,7 +92,7 @@ BEGIN
     PERFORM cron.schedule(
       'cleanup_idempotency_keys',
       '0 3 * * *',  -- Every day at 3:00 AM UTC
-      $$SELECT * FROM public.cleanup_expired_idempotency_keys()$$
+      $cron$SELECT * FROM public.cleanup_expired_idempotency_keys()$cron$
     );
     RAISE NOTICE 'GL-CRIT-0029: Scheduled daily cleanup job via pg_cron at 3 AM UTC';
   ELSE

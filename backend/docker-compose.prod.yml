@@ -11,7 +11,7 @@ services:
   # INFRASTRUCTURE
   # ---------------------------------------------------------------------------
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: supermandi-postgres
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -671,7 +671,7 @@ services:
   # Automated daily backups with retention policy
   # ---------------------------------------------------------------------------
   backup:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: supermandi-backup
     restart: "no"
     entrypoint: /bin/sh

@@ -94,8 +94,9 @@ router.post("/phone/exists", authCheckRateLimiter, async (req: Request, res: Res
       // Check for active store user (can login directly)
       const storeUserResult = await pool.query(
         `SELECT 1 FROM auth.store_users su
+         JOIN auth.users u ON u.id = su.user_id
          JOIN platform.stores s ON s.id = su.store_id
-         WHERE su.phone = $1 AND su.status = 'active'
+         WHERE u.phone = $1 AND su.is_active = true
          LIMIT 1`,
         [phoneNormalized]
       );

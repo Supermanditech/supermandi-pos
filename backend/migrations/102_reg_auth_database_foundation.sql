@@ -198,12 +198,15 @@ ALTER TABLE supplier.suppliers
 
 -- =============================================================================
 -- UPDATE: public.stores VIEW - Include new columns
+-- FIX: Must DROP + CREATE (not REPLACE) because REPLACE cannot drop existing columns
 -- =============================================================================
-CREATE OR REPLACE VIEW public.stores AS
+DROP VIEW IF EXISTS public.stores;
+CREATE VIEW public.stores AS
   SELECT
     id::TEXT as id,
     name,
     code,
+    store_code,
     phone,
     email,
     address_line1,
@@ -214,10 +217,22 @@ CREATE OR REPLACE VIEW public.stores AS
     timezone,
     currency,
     status,
+    store_type,
+    active,
+    upi_vpa,
+    scan_lookup_v2_enabled,
+    address,
+    contact_name,
+    contact_phone,
+    contact_email,
+    location,
+    pos_device_id,
+    kyc_status,
+    upi_vpa_updated_at,
+    upi_vpa_updated_by,
     gstin,
     owner_name,
     document_urls,
-    upi_vpa,
     application_id,
     created_at,
     updated_at

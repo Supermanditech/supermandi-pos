@@ -37,16 +37,14 @@ END $$;
 -- Suppliers: pan_card, gstin_certificate, address_proof, cancelled_cheque
 
 COMMENT ON COLUMN platform.documents.document_type IS
-  'Document types: ' ||
-  'RETAILERS: pan, gstin_certificate, address_proof, owner_photo, store_photo, cancelled_cheque, fssai, shop_license, aadhaar; ' ||
-  'SUPPLIERS: pan_card, gstin_certificate, address_proof, cancelled_cheque, business_license; ' ||
-  'APPLICATIONS: Same as respective entity type';
+  'Document types: RETAILERS: pan, gstin_certificate, address_proof, owner_photo, store_photo, cancelled_cheque, fssai, shop_license, aadhaar; SUPPLIERS: pan_card, gstin_certificate, address_proof, cancelled_cheque, business_license; APPLICATIONS: Same as respective entity type';
 
 -- =============================================================================
 -- Step 3: Update pending_documents view to include applications
 -- =============================================================================
 
-CREATE OR REPLACE VIEW platform.pending_documents AS
+DROP VIEW IF EXISTS platform.pending_documents;
+CREATE VIEW platform.pending_documents AS
 SELECT
   d.id,
   d.entity_type,

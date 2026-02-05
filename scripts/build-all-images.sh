@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CR-DOCKER-002: Build-verify all 14 Docker images
+# CR-DOCKER-002: Build-verify all 15 Docker images
 # Usage: ./scripts/build-all-images.sh [--sha <git-sha>]
 # If --sha not provided, uses current git HEAD short SHA
 
@@ -65,9 +65,16 @@ build_image() {
 }
 
 # =============================================================================
-# BACKEND SERVICES (10 images) — context is backend/
+# MONOLITH MAIN-BACKEND (1 image) — built from backend/Dockerfile.main
+# Serves all POS, admin, retailer-admin, supplier API routes
 # =============================================================================
 BACKEND_DIR="$REPO_ROOT/backend"
+
+build_image "main-backend"      "$BACKEND_DIR" "$BACKEND_DIR/Dockerfile.main"
+
+# =============================================================================
+# BACKEND SERVICES (10 images) — context is backend/
+# =============================================================================
 
 build_image "api-gateway"       "$BACKEND_DIR" "$BACKEND_DIR/services/api-gateway/Dockerfile"
 build_image "auth-service"      "$BACKEND_DIR" "$BACKEND_DIR/services/auth-service/Dockerfile"
@@ -104,7 +111,7 @@ if [ $FAILED -gt 0 ]; then
   exit 1
 else
   echo ""
-  echo "  ALL 14 IMAGES BUILT SUCCESSFULLY"
+  echo "  ALL 15 IMAGES BUILT SUCCESSFULLY"
   echo ""
   echo "  Images:"
   docker images --format "  {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep "${REGISTRY}/" | grep ":${SHA}" | sort

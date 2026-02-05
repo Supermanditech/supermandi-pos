@@ -125,8 +125,9 @@ router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next:
     const storeUserResult = await pool.query(
       `SELECT su.id, s.id as store_id, s.name as store_name, s.status as store_status
        FROM auth.store_users su
+       JOIN auth.users u ON u.id = su.user_id
        JOIN platform.stores s ON s.id = su.store_id
-       WHERE su.phone = $1 AND su.status = 'active'
+       WHERE u.phone = $1 AND su.is_active = true
        LIMIT 1`,
       [phoneNormalized]
     );

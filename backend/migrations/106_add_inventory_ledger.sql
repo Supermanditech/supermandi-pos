@@ -2,7 +2,7 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS inventory_ledger (
   id TEXT PRIMARY KEY,
-  store_id TEXT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  store_id TEXT NOT NULL /* FK to stores omitted — stores is a view */,
   global_product_id TEXT NOT NULL REFERENCES global_products(id) ON DELETE CASCADE,
   movement_type TEXT NOT NULL,
   quantity INTEGER NOT NULL,

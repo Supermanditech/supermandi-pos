@@ -247,8 +247,27 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
   }
 
   try {
+    // P1-INV-001: Server-side pagination for 10K store readiness
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 200);
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
+    // P1-INV-001: Get total count + aggregate totals across ALL products (not just page)
+    const countResult = await pool.query(
+      `SELECT
+        COUNT(*)::int as "totalProducts",
+        COALESCE(SUM(COALESCE(sb.current_qty, sp.current_stock, 0)), 0)::bigint as "totalStockQty"
+      FROM catalog.store_products sp
+      LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+      WHERE sp.store_id = $1
+        AND (sp.is_active = true OR sp.is_active IS NULL)`,
+      [storeId]
+    );
+    const totalProducts = Number(countResult.rows[0]?.totalProducts) || 0;
+    const totalStockQty = Number(countResult.rows[0]?.totalStockQty) || 0;
+
     // CA-1.4-004: Query store_products with canonical stock from stock_balances
     // Prioritize inventory.stock_balances as the source of truth, fallback to sp.current_stock
+    // P1-INV-001: Added LIMIT/OFFSET for pagination
     const result = await pool.query(
       `SELECT
         sp.product_id as "productId",
@@ -276,8 +295,9 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
       LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
       WHERE sp.store_id = $1
         AND (sp.is_active = true OR sp.is_active IS NULL)
-      ORDER BY COALESCE(sp.display_name, p.name) ASC`,
-      [storeId]
+      ORDER BY COALESCE(sp.display_name, p.name) ASC
+      LIMIT $2 OFFSET $3`,
+      [storeId, limit, offset]
     );
 
     // RCAT-METRICS-001: Ensure numeric types (bigint comes as string from pg)
@@ -289,9 +309,10 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
     }));
 
     // RCAT-METRICS-001: Compute totals server-side for accuracy
+    // P1-INV-001: totalProducts and totalStockQty from COUNT query (all products)
     const totals = {
-      totalProducts: data.length,
-      totalStockQty: data.reduce((sum, r) => sum + r.totalStockQty, 0),
+      totalProducts,
+      totalStockQty,
       totalPurchaseValue: data.reduce((sum, r) => sum + r.totalPurchaseValue, 0),
       totalSellRevenue: data.reduce((sum, r) => sum + r.totalSellRevenue, 0),
     };
@@ -301,6 +322,12 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
       success: true,
       data,
       totals,
+      pagination: {
+        total: totalProducts,
+        limit,
+        offset,
+        hasMore: offset + limit < totalProducts,
+      },
       lastUpdated: new Date().toISOString(),
     });
   } catch (error: any) {

@@ -65,8 +65,12 @@ BEGIN
 END $$;
 
 -- =============================================================================
--- PAYMENTS: Ensure payments table has proper indexes for SuperAdmin dashboard
+-- PAYMENTS: Ensure store_id column exists (ensureSchema.ts adds it at runtime,
+-- but migration 040 does not include it)
 -- =============================================================================
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS store_id TEXT NULL;
+
+-- PAYMENTS: Ensure payments table has proper indexes for SuperAdmin dashboard
 CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at);
 CREATE INDEX IF NOT EXISTS idx_payments_store_id_created ON payments(store_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_payments_mode ON payments(mode);
