@@ -1,4 +1,6 @@
 # Docker Compose Production - V3.0.9 compliant
+# COMPOSE-IMAGE-001: Uses pre-built SHA-tagged images (no inline builds)
+# SECRET-CLEANUP-001: All secrets via environment variables (Cloud Run compatible)
 # Full production stack with all microservices
 
 # =============================================================================
@@ -152,12 +154,10 @@ services:
 
   # ---------------------------------------------------------------------------
   # API GATEWAY
-  # GO-LIVE-103: Uses Docker secrets for ADMIN_TOKEN (not exposed in docker inspect)
+  # SECRET-CLEANUP-001: ADMIN_TOKEN via env var (Cloud Run compatible)
   # ---------------------------------------------------------------------------
   api-gateway:
-    build:
-      context: .
-      dockerfile: services/api-gateway/Dockerfile
+    image: ${AR_REPO:-supermandi}/api-gateway:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-api-gateway
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -179,16 +179,11 @@ services:
       REORDER_SERVICE_URL: http://reorder-service:3007
       POS_SERVICE_URL: http://main-backend:3010
       VOICE_SERVICE_URL: http://voice-service:3008
-      # GO-LIVE-103: ADMIN_TOKEN read from Docker secret file (not env var)
-      ADMIN_TOKEN_FILE: /run/secrets/admin_token
-      # Fallback to env var for backwards compatibility during migration
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-supermandi-auth}
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
-    secrets:
-      - admin_token
     ports:
       - "${API_GATEWAY_PORT:-3000}:3000"
     depends_on:
@@ -220,9 +215,7 @@ services:
   # AUTH SERVICE
   # ---------------------------------------------------------------------------
   auth-service:
-    build:
-      context: .
-      dockerfile: services/auth-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/auth-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-auth-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -274,9 +267,7 @@ services:
   # PLATFORM SERVICE
   # ---------------------------------------------------------------------------
   platform-service:
-    build:
-      context: .
-      dockerfile: services/platform-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/platform-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-platform-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -317,12 +308,10 @@ services:
 
   # ---------------------------------------------------------------------------
   # MAIN BACKEND (MONOLITH)
-  # GO-LIVE-103: Uses Docker secrets for ADMIN_TOKEN (not exposed in docker inspect)
+  # SECRET-CLEANUP-001: All secrets via env vars (Cloud Run compatible)
   # ---------------------------------------------------------------------------
   main-backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.main
+    image: ${AR_REPO:-supermandi}/main-backend:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-main-backend
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -338,13 +327,7 @@ services:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_ISSUER: ${JWT_ISSUER:-supermandi}
-      # GO-LIVE-103: ADMIN_TOKEN read from Docker secret file (not env var)
-      ADMIN_TOKEN_FILE: /run/secrets/admin_token
-      # Fallback to env var for backwards compatibility during migration
-      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
-      # GO-LIVE-107: OpenAI API key read from Docker secret file (not env var)
-      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
-      # Fallback to env var for backwards compatibility during migration
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL_CHAT: ${OPENAI_MODEL_CHAT:-gpt-4o-mini}
       OPENAI_MODEL_STT: ${OPENAI_MODEL_STT:-whisper-1}
@@ -374,9 +357,6 @@ services:
       - /etc/supermandi/firebase-service-account.json:/etc/supermandi/firebase-service-account.json:ro
       # DOCS-001: Document storage volume for KYC documents (persistent)
       - document-storage:/var/supermandi/documents
-    secrets:
-      - admin_token
-      - openai_api_key
     depends_on:
       postgres:
         condition: service_healthy
@@ -406,9 +386,7 @@ services:
   # SUPPLIER SERVICE
   # ---------------------------------------------------------------------------
   supplier-service:
-    build:
-      context: .
-      dockerfile: services/supplier-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/supplier-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-supplier-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -457,9 +435,7 @@ services:
   # CATALOG SERVICE
   # ---------------------------------------------------------------------------
   catalog-service:
-    build:
-      context: .
-      dockerfile: services/catalog-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/catalog-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-catalog-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -508,9 +484,7 @@ services:
   # INVENTORY SERVICE
   # ---------------------------------------------------------------------------
   inventory-service:
-    build:
-      context: .
-      dockerfile: services/inventory-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/inventory-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-inventory-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -559,9 +533,7 @@ services:
   # ORDER SERVICE
   # ---------------------------------------------------------------------------
   order-service:
-    build:
-      context: .
-      dockerfile: services/order-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/order-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-order-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -610,9 +582,7 @@ services:
   # REORDER SERVICE
   # ---------------------------------------------------------------------------
   reorder-service:
-    build:
-      context: .
-      dockerfile: services/reorder-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/reorder-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-reorder-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -659,13 +629,10 @@ services:
 
   # ---------------------------------------------------------------------------
   # VOICE SERVICE
-  # GL-CRIT-0051: OpenAI API key uses Docker secrets for enhanced security
-  # Secrets are mounted as files, not exposed in environment or docker inspect
+  # SECRET-CLEANUP-001: OPENAI_API_KEY via env var (Cloud Run compatible)
   # ---------------------------------------------------------------------------
   voice-service:
-    build:
-      context: .
-      dockerfile: services/voice-service/Dockerfile
+    image: ${AR_REPO:-supermandi}/voice-service:${IMAGE_SHA:?IMAGE_SHA is required}
     container_name: supermandi-voice-service
     restart: unless-stopped
     # RET-AUD-049: Log rotation to prevent disk exhaustion
@@ -677,15 +644,10 @@ services:
     environment:
       NODE_ENV: production
       VOICE_SERVICE_PORT: 3008
-      # GL-CRIT-0051: API key path (read from Docker secret file)
-      OPENAI_API_KEY_FILE: /run/secrets/openai_api_key
-      # Fallback to env var for backwards compatibility during migration
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-whisper-1}
       OPENAI_STT_LANGUAGE: ${OPENAI_STT_LANGUAGE:-hi}
       VOICE_MAX_FILE_SIZE_MB: ${VOICE_MAX_FILE_SIZE_MB:-10}
-    secrets:
-      - openai_api_key
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3008/health"]
       interval: 30s
@@ -784,18 +746,3 @@ networks:
       driver: default
       config:
         - subnet: 172.30.0.0/24
-
-# =============================================================================
-# SECRETS (GL-CRIT-0051: Secure secret management)
-# For Docker Compose (non-Swarm): uses file-based secrets
-# Files must exist on VM at /etc/supermandi/secrets/ with chmod 600
-# =============================================================================
-secrets:
-  openai_api_key:
-    # GL-CRIT-0051: OpenAI API key stored as Docker secret
-    # Create: echo "sk-your-key" > /etc/supermandi/secrets/openai_api_key && chmod 600 /etc/supermandi/secrets/openai_api_key
-    file: /etc/supermandi/secrets/openai_api_key
-  admin_token:
-    # GO-LIVE-103: Admin token stored as Docker secret (not visible in docker inspect)
-    # Create: echo "your-admin-token" > /etc/supermandi/secrets/admin_token && chmod 600 /etc/supermandi/secrets/admin_token
-    file: /etc/supermandi/secrets/admin_token

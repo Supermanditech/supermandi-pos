@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getPayouts, getPayoutSummary, getKycStatus, getPayoutOrders, Payout, PayoutSummary, PayoutOrderItem } from '@/lib/api';
+import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 export default function EarningsPage() {
   const [page, setPage] = useState(1);
@@ -37,25 +38,6 @@ export default function EarningsPage() {
     queryFn: () => selectedPayoutId ? getPayoutOrders(selectedPayoutId) : Promise.resolve([]),
     enabled: !!selectedPayoutId,
   });
-
-  const formatCurrency = (paise: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(paise / 100);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   const getStatusBadge = (status: Payout['status']) => {
     const colors: Record<string, string> = {
@@ -194,7 +176,7 @@ export default function EarningsPage() {
                       onClick={() => setSelectedPayoutId(payout.id)}
                     >
                       <td className="py-3 px-4 text-sm text-slate-700">
-                        {formatDate(payout.initiatedAt)}
+                        {formatDateTime(payout.initiatedAt)}
                       </td>
                       <td className="py-3 px-4">
                         <p className="text-sm font-mono text-slate-700">{payout.referenceId}</p>
@@ -238,7 +220,7 @@ export default function EarningsPage() {
                       <p className="font-semibold text-slate-800">
                         {formatCurrency(payout.amountPaise)}
                       </p>
-                      <p className="text-xs text-slate-500">{formatDate(payout.initiatedAt)}</p>
+                      <p className="text-xs text-slate-500">{formatDateTime(payout.initiatedAt)}</p>
                     </div>
                     {getStatusBadge(payout.status)}
                   </div>
@@ -331,7 +313,7 @@ export default function EarningsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Date</p>
-                  <p className="font-medium">{formatDate(selectedPayout.initiatedAt)}</p>
+                  <p className="font-medium">{formatDateTime(selectedPayout.initiatedAt)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Status</p>

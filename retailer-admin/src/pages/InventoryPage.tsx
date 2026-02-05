@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// TZ-FORMAT-001: Use shared date/time formatters
+import { formatDateTime } from '../lib/formatters';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -259,7 +261,7 @@ export default function InventoryPage() {
                   return (
                     <tr key={entry.id}>
                       <td style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                        {new Date(entry.createdAt).toLocaleString()}
+                        {formatDateTime(entry.createdAt)}
                       </td>
                       <td>{entry.productName || entry.productId}</td>
                       <td>

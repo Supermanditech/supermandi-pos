@@ -1,4 +1,5 @@
 import { formatMoney } from "../../utils/money";
+import { formatDateTime } from "../../i18n/formatters";
 import type { BillSnapshot } from "./billTypes";
 
 function escapeHtml(input: string): string {
@@ -17,7 +18,7 @@ export function buildBillLines(snapshot: BillSnapshot): string[] {
     "       SuperMandi POS",
     "=================================",
     `Bill #: ${snapshot.billRef}`,
-    `Date: ${new Date(snapshot.createdAt).toLocaleString()}`,
+    `Date: ${formatDateTime(new Date(snapshot.createdAt))}`,
     `Payment: ${snapshot.paymentMode}`,
     "=================================",
     "ITEMS:"

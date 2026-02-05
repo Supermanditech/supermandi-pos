@@ -6,6 +6,8 @@ import { useEscapeKey } from '../lib/hooks';
 import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
 // GL-CRIT-0066: Use centralized category icons configuration
 import { getCategoryIcon as getCategoryIconFromConfig } from '../config/categoryIcons';
+// TZ-FORMAT-001 + CURRENCY-FORMAT-001: Use shared formatters
+import { formatCurrencyWhole, formatCurrency, formatDateShort, formatRupees } from '../lib/formatters';
 
 export default function DashboardPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
@@ -388,7 +390,7 @@ export default function DashboardPage() {
                             </div>
                             <div style={{ textAlign: 'right' }}>
                               <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.85rem' }}>
-                                {'\u20B9'}{(p.sellPrice / 100).toFixed(2)}
+                                {formatCurrency(p.sellPrice)}
                               </div>
                               <div style={{ fontSize: '0.7rem', color: p.stock > 0 ? '#059669' : '#dc2626' }}>
                                 Stock: {p.stock}
@@ -563,7 +565,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Purchase Value</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : `₹${(inventoryTotals.totalPurchaseValue / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+            {inventoryLoading ? '...' : formatCurrencyWhole(inventoryTotals.totalPurchaseValue)}
           </div>
         </div>
 
@@ -589,7 +591,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Sell Revenue</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#059669' }}>
-            {inventoryLoading ? '...' : `₹${(inventoryTotals.totalSellRevenue / 100).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`}
+            {inventoryLoading ? '...' : formatCurrencyWhole(inventoryTotals.totalSellRevenue)}
           </div>
         </div>
       </div>
@@ -618,7 +620,7 @@ export default function DashboardPage() {
           </h2>
           {dailySummary && (
             <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-              {new Date(dailySummary.date).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })}
+              {formatDateShort(dailySummary.date)}
             </span>
           )}
         </div>
@@ -647,7 +649,7 @@ export default function DashboardPage() {
                 textAlign: 'center',
               }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669' }}>
-                  ₹{dailySummary.totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  {formatRupees(dailySummary.totalSales)}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Total Sales</div>
               </div>
@@ -673,7 +675,7 @@ export default function DashboardPage() {
                 textAlign: 'center',
               }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706' }}>
-                  ₹{dailySummary.averageBillValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                  {formatRupees(dailySummary.averageBillValue)}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Avg Bill</div>
               </div>
@@ -705,17 +707,17 @@ export default function DashboardPage() {
                 <span style={{ color: '#64748b', fontWeight: '500' }}>Payment Modes:</span>
                 {dailySummary.paymentBreakdown.cash > 0 && (
                   <span style={{ color: '#059669' }}>
-                    💵 Cash: ₹{dailySummary.paymentBreakdown.cash.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    💵 Cash: {formatRupees(dailySummary.paymentBreakdown.cash)}
                   </span>
                 )}
                 {dailySummary.paymentBreakdown.upi > 0 && (
                   <span style={{ color: '#2563eb' }}>
-                    📱 UPI: ₹{dailySummary.paymentBreakdown.upi.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    📱 UPI: {formatRupees(dailySummary.paymentBreakdown.upi)}
                   </span>
                 )}
                 {dailySummary.paymentBreakdown.card > 0 && (
                   <span style={{ color: '#7c3aed' }}>
-                    💳 Card: ₹{dailySummary.paymentBreakdown.card.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    💳 Card: {formatRupees(dailySummary.paymentBreakdown.card)}
                   </span>
                 )}
               </div>
@@ -1108,7 +1110,7 @@ export default function DashboardPage() {
                     </span>
                     <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
                       {Number(category.stockValue || 0) > 0
-                        ? `₹${(Number(category.stockValue) / 100).toLocaleString('en-IN')}`
+                        ? formatCurrency(Number(category.stockValue))
                         : '—'}
                     </span>
                   </div>
@@ -1362,7 +1364,7 @@ export default function DashboardPage() {
                       textAlign: 'right',
                       color: '#475569',
                     }}>
-                      ₹{(Number(item.totalPurchaseValue || 0) / 100).toFixed(2)}
+                      {formatCurrency(Number(item.totalPurchaseValue || 0))}
                     </td>
                     <td style={{
                       padding: '1rem 1.5rem',
@@ -1370,7 +1372,7 @@ export default function DashboardPage() {
                       color: '#059669',
                       fontWeight: '600',
                     }}>
-                      ₹{(Number(item.totalSellRevenue || 0) / 100).toFixed(2)}
+                      {formatCurrency(Number(item.totalSellRevenue || 0))}
                     </td>
                   </tr>
                 ))

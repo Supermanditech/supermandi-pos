@@ -58,6 +58,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
+import { formatDateTime, formatCurrency } from "./lib/formatters";
 import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
@@ -100,11 +101,6 @@ function toIsoSafe(v: string): string {
 
 function includesInsensitive(haystack: string, needle: string): boolean {
   return haystack.toLowerCase().includes(needle.trim().toLowerCase());
-}
-
-function formatMoneyMinor(minor: number): string {
-  const safe = Number.isFinite(minor) ? minor : 0;
-  return `INR ${(safe / 100).toFixed(2)}`;
 }
 
 function toIsoStart(dateStr: string): string | undefined {
@@ -755,7 +751,7 @@ export default function App() {
     devicesInFlightRef.current = true;
     try {
       const data = await fetchDevices();
-      setDeviceRecords(data);
+      setDeviceRecords(data.items);
       setDevicesError("");
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch devices";
@@ -771,7 +767,7 @@ export default function App() {
     setStoreDirectoryLoading(true);
     try {
       const data = await fetchStores();
-      setStoreDirectory(data);
+      setStoreDirectory(data.items);
       setStoreDirectoryError("");
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch stores";
@@ -788,13 +784,13 @@ export default function App() {
     setSuppliersLoading(true);
     setSuppliersError("");
     try {
-      const [pending, verified, products] = await Promise.all([
+      const [pendingRes, verifiedRes, products] = await Promise.all([
         fetchPendingSuppliers(),
-        fetchVerifiedSuppliers(supplierSearch || undefined),
+        fetchVerifiedSuppliers({ search: supplierSearch || undefined }),
         fetchPendingProducts()
       ]);
-      setPendingSuppliers(pending);
-      setVerifiedSuppliers(verified);
+      setPendingSuppliers(pendingRes.items);
+      setVerifiedSuppliers(verifiedRes.items);
       setPendingProducts(products);
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch suppliers";
@@ -812,8 +808,8 @@ export default function App() {
     setUsersLoading(true);
     setUsersError("");
     try {
-      const users = await fetchUsers();
-      setUserRecords(users);
+      const usersRes = await fetchUsers();
+      setUserRecords(usersRes.items);
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch users";
       setUsersError(message);
@@ -1095,7 +1091,7 @@ export default function App() {
       }
 
       const result = await editProduct(editingProduct.id, input);
-      setEditProductSuccess(`Saved! Retailer Price: INR ${(result.retailerPrice / 100).toFixed(2)}`);
+      setEditProductSuccess(`Saved! Retailer Price: ${formatCurrency(result.retailerPrice)}`);
 
       // Update local state
       setPendingProducts((prev) =>
@@ -2062,7 +2058,7 @@ export default function App() {
                     <tr key={g.key}>
                       <td className="mono">{g.key}</td>
                       <td className="mono">{g.count}</td>
-                      <td className="mono">{new Date(g.lastSeen).toLocaleString()}</td>
+                      <td className="mono">{formatDateTime(g.lastSeen)}</td>
                       <td className="mono">{g.lastEventType}</td>
                     </tr>
                   ))}
@@ -2109,7 +2105,7 @@ export default function App() {
                 <tbody>
                   {pageEvents.map((e) => (
                     <tr key={e.id}>
-                      <td className="mono">{new Date(e.createdAt).toLocaleString()}</td>
+                      <td className="mono">{formatDateTime(e.createdAt)}</td>
                       <td className="mono">{e.deviceId}</td>
                       <td className="mono">{e.storeId}</td>
                       <td className="mono">{e.eventType}</td>
@@ -2279,10 +2275,10 @@ export default function App() {
                         </div>
                         <div>
                           <strong>Last seen:</strong>{" "}
-                          {d.last_seen_online ? new Date(d.last_seen_online).toLocaleString() : "-"}
+                          {d.last_seen_online ? formatDateTime(d.last_seen_online) : "-"}
                         </div>
                         <div>
-                          <strong>Last sync:</strong> {d.last_sync_at ? new Date(d.last_sync_at).toLocaleString() : "-"}
+                          <strong>Last sync:</strong> {d.last_sync_at ? formatDateTime(d.last_sync_at) : "-"}
                         </div>
                         <div>
                           <strong>Model:</strong> {[d.manufacturer, d.model].filter(Boolean).join(" ") || "-"}
@@ -2378,7 +2374,7 @@ export default function App() {
                     <tr key={d.deviceId}>
                       <td className="mono">{d.deviceId}</td>
                       <td className="mono">{d.storeId}</td>
-                      <td className="mono">{new Date(d.lastSeen).toLocaleString()}</td>
+                      <td className="mono">{formatDateTime(d.lastSeen)}</td>
                       <td className="mono">{d.lastEventType}</td>
                       <td className="mono">{d.eventCount}</td>
                     </tr>
@@ -2492,7 +2488,7 @@ export default function App() {
                       <td className="mono">{storeRecord.upi_vpa ?? "-"}</td>
                       <td className="mono">
                         {storeRecord.upi_vpa_updated_at
-                          ? new Date(storeRecord.upi_vpa_updated_at).toLocaleString()
+                          ? formatDateTime(storeRecord.upi_vpa_updated_at)
                           : "-"}
                       </td>
                     </tr>
@@ -2677,7 +2673,7 @@ export default function App() {
                     <tr key={s.storeId}>
                       <td className="mono">{s.storeId}</td>
                       <td className="mono">{s.eventCount}</td>
-                      <td className="mono">{new Date(s.lastSeen).toLocaleString()}</td>
+                      <td className="mono">{formatDateTime(s.lastSeen)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2734,7 +2730,7 @@ export default function App() {
                         <strong>Email:</strong> <span className="mono">{request.requestedEmail || "-"}</span>
                       </div>
                       <div>
-                        <strong>Requested:</strong> <span className="mono">{new Date(request.createdAt).toLocaleString()}</span>
+                        <strong>Requested:</strong> <span className="mono">{formatDateTime(request.createdAt)}</span>
                       </div>
                     </div>
 
@@ -2919,7 +2915,7 @@ export default function App() {
                         <strong>MOQ:</strong> <span className="mono">{product.moq || 1}</span>
                       </div>
                       <div>
-                        <strong>Submitted:</strong> <span className="mono">{new Date(product.createdAt).toLocaleString()}</span>
+                        <strong>Submitted:</strong> <span className="mono">{formatDateTime(product.createdAt)}</span>
                       </div>
                     </div>
 
@@ -3117,7 +3113,7 @@ export default function App() {
                         </span>
                       </td>
                       <td className="mono">
-                        {request.reviewedAt ? new Date(request.reviewedAt).toLocaleString() : "-"}
+                        {request.reviewedAt ? formatDateTime(request.reviewedAt) : "-"}
                       </td>
                       <td>{request.reviewNotes || "-"}</td>
                     </tr>
@@ -3183,19 +3179,19 @@ export default function App() {
                 <div className="analyticsGrid">
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Sales Total (POS)</div>
-                    <div className="analyticsValue">{formatMoneyMinor(overviewData.sales_total.pos_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(overviewData.sales_total.pos_minor)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Sales Total (Consumer)</div>
-                    <div className="analyticsValue">{formatMoneyMinor(overviewData.sales_total.consumer_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(overviewData.sales_total.consumer_minor)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Sales Total (All)</div>
-                    <div className="analyticsValue">{formatMoneyMinor(overviewData.sales_total.total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(overviewData.sales_total.total_minor)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Collections Total</div>
-                    <div className="analyticsValue">{formatMoneyMinor(overviewData.collections_total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(overviewData.collections_total_minor)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">New Products (Retailer)</div>
@@ -3214,21 +3210,21 @@ export default function App() {
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
                     <div className="analyticsValue">
-                      {formatMoneyMinor(overviewData.payment_split_minor.cash)} / {formatMoneyMinor(overviewData.payment_split_minor.upi)} / {formatMoneyMinor(overviewData.payment_split_minor.due)}
+                      {formatCurrency(overviewData.payment_split_minor.cash)} / {formatCurrency(overviewData.payment_split_minor.upi)} / {formatCurrency(overviewData.payment_split_minor.due)}
                     </div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Due Outstanding</div>
-                    <div className="analyticsValue">{formatMoneyMinor(overviewData.due_outstanding.total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(overviewData.due_outstanding.total_minor)}</div>
                     <div className="muted">
-                      {overviewData.due_outstanding.buckets.map((b: any) => `${b.label}: ${formatMoneyMinor(b.total_minor)}`).join(" | ")}
+                      {overviewData.due_outstanding.buckets.map((b: any) => `${b.label}: ${formatCurrency(b.total_minor)}`).join(" | ")}
                     </div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Profit (Gross)</div>
                     {overviewData.profit ? (
                       <>
-                        <div className="analyticsValue">{formatMoneyMinor(overviewData.profit.gross_profit_minor)}</div>
+                        <div className="analyticsValue">{formatCurrency(overviewData.profit.gross_profit_minor)}</div>
                         <div className="muted">
                           Margin: {overviewData.profit.margin_percent ?? 0}% | Confidence: {overviewData.profit.profit_confidence}
                         </div>
@@ -3252,12 +3248,12 @@ export default function App() {
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
                     <div className="analyticsValue">
-                      {formatMoneyMinor(overviewData.payment_split_minor.cash)} / {formatMoneyMinor(overviewData.payment_split_minor.upi)} / {formatMoneyMinor(overviewData.payment_split_minor.due)}
+                      {formatCurrency(overviewData.payment_split_minor.cash)} / {formatCurrency(overviewData.payment_split_minor.upi)} / {formatCurrency(overviewData.payment_split_minor.due)}
                     </div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Due Outstanding</div>
-                    <div className="analyticsValue">{formatMoneyMinor(overviewData.due_outstanding.total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(overviewData.due_outstanding.total_minor)}</div>
                   </div>
                 </div>
                 <div className="cardHeader" style={{ paddingTop: 0 }}>
@@ -3276,7 +3272,7 @@ export default function App() {
                       {overviewData.due_outstanding.buckets.map((b: any) => (
                         <tr key={b.label}>
                           <td>{b.label}</td>
-                          <td className="mono">{formatMoneyMinor(b.total_minor)}</td>
+                          <td className="mono">{formatCurrency(b.total_minor)}</td>
                           <td className="mono">{b.count}</td>
                         </tr>
                       ))}
@@ -3312,11 +3308,11 @@ export default function App() {
                             <td>{d.device_type ?? "Unknown"}</td>
                             <td>{online ? "Online" : "Offline"} / {d.active ? "Active" : "Inactive"}</td>
                             <td className="mono">{d.pending_outbox_count}</td>
-                            <td className="mono">{d.sales_count} / {formatMoneyMinor(d.sales_total_minor)}</td>
-                            <td className="mono">{d.collections_count} / {formatMoneyMinor(d.collections_total_minor)}</td>
+                            <td className="mono">{d.sales_count} / {formatCurrency(d.sales_total_minor)}</td>
+                            <td className="mono">{d.collections_count} / {formatCurrency(d.collections_total_minor)}</td>
                             <td className="mono">{d.offline_sales_count}</td>
-                            <td className="mono">{d.last_seen_online ? new Date(d.last_seen_online).toLocaleString() : "-"}</td>
-                            <td className="mono">{d.last_sync_at ? new Date(d.last_sync_at).toLocaleString() : "-"}</td>
+                            <td className="mono">{d.last_seen_online ? formatDateTime(d.last_seen_online) : "-"}</td>
+                            <td className="mono">{d.last_sync_at ? formatDateTime(d.last_sync_at) : "-"}</td>
                           </tr>
                         );
                       })}
@@ -3360,7 +3356,7 @@ export default function App() {
                           <td className="mono">{p.barcode}</td>
                           <td>{p.source}</td>
                           <td className="mono">{p.quantity}</td>
-                          <td className="mono">{formatMoneyMinor(p.total_minor)}</td>
+                          <td className="mono">{formatCurrency(p.total_minor)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3385,7 +3381,7 @@ export default function App() {
                         <tr key={p.id}>
                           <td>{p.name}</td>
                           <td className="mono">{p.barcode}</td>
-                          <td className="mono">{p.created_at ? new Date(p.created_at).toLocaleString() : "-"}</td>
+                          <td className="mono">{p.created_at ? formatDateTime(p.created_at) : "-"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3399,7 +3395,7 @@ export default function App() {
                 <div className="analyticsGrid">
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Purchases Total</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsPurchases.total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsPurchases.total_minor)}</div>
                   </div>
                 </div>
 
@@ -3418,7 +3414,7 @@ export default function App() {
                       {analyticsPurchases.vendor_breakdown.map((v) => (
                         <tr key={v.supplier}>
                           <td>{v.supplier}</td>
-                          <td className="mono">{formatMoneyMinor(v.total_minor)}</td>
+                          <td className="mono">{formatCurrency(v.total_minor)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3443,8 +3439,8 @@ export default function App() {
                         <tr key={`${s.product_id ?? s.sku ?? "sku"}-${idx}`}>
                           <td className="mono">{s.sku ?? s.product_id ?? "unknown"}</td>
                           <td className="mono">{s.quantity}</td>
-                          <td className="mono">{formatMoneyMinor(s.avg_cost_minor)}</td>
-                          <td className="mono">{s.last_cost_minor ? formatMoneyMinor(s.last_cost_minor) : "-"}</td>
+                          <td className="mono">{formatCurrency(s.avg_cost_minor)}</td>
+                          <td className="mono">{s.last_cost_minor ? formatCurrency(s.last_cost_minor) : "-"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -3458,12 +3454,12 @@ export default function App() {
                 <div className="analyticsGrid">
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Consumer Sales Total</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsConsumerSales.total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsConsumerSales.total_minor)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
                     <div className="analyticsValue">
-                      {formatMoneyMinor(analyticsConsumerSales.payment_split_minor.cash)} / {formatMoneyMinor(analyticsConsumerSales.payment_split_minor.upi)} / {formatMoneyMinor(analyticsConsumerSales.payment_split_minor.due)}
+                      {formatCurrency(analyticsConsumerSales.payment_split_minor.cash)} / {formatCurrency(analyticsConsumerSales.payment_split_minor.upi)} / {formatCurrency(analyticsConsumerSales.payment_split_minor.due)}
                     </div>
                   </div>
                 </div>
@@ -3518,7 +3514,7 @@ export default function App() {
                       ) : (
                         analyticsActivity.buckets.map((b) => (
                           <tr key={b.bucket}>
-                            <td className="mono">{new Date(b.bucket).toLocaleString()}</td>
+                            <td className="mono">{formatDateTime(b.bucket)}</td>
                             <td className="mono">{b.scans}</td>
                             <td className="mono">{b.sales}</td>
                             <td className="mono">{b.collections}</td>
@@ -3539,23 +3535,23 @@ export default function App() {
                 <div className="analyticsGrid">
                   <div className="analyticsCard">
                     <div className="analyticsLabel">Outstanding Total</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.outstanding_total_minor)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsDues.outstanding_total_minor)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">0-1 Days</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d0_1)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d0_1)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">2-7 Days</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d2_7)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d2_7)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">8-30 Days</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d8_30)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d8_30)}</div>
                   </div>
                   <div className="analyticsCard">
                     <div className="analyticsLabel">30+ Days</div>
-                    <div className="analyticsValue">{formatMoneyMinor(analyticsDues.aging.d30_plus)}</div>
+                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d30_plus)}</div>
                   </div>
                 </div>
                 <div className="cardHeader" style={{ paddingTop: 0 }}>
@@ -3580,7 +3576,7 @@ export default function App() {
                           <tr key={d.sale_id}>
                             <td className="mono">{d.sale_id.slice(0, 8)}</td>
                             <td>{d.customer_name ?? "-"}</td>
-                            <td className="mono">{formatMoneyMinor(d.amount_minor)}</td>
+                            <td className="mono">{formatCurrency(d.amount_minor)}</td>
                             <td className="mono">{new Date(d.created_at).toLocaleDateString()}</td>
                             <td className="mono">{d.age_days}</td>
                           </tr>
@@ -3619,7 +3615,7 @@ export default function App() {
                 <tbody>
                   {paymentEvents.map((e) => (
                     <tr key={e.id}>
-                      <td className="mono">{new Date(e.createdAt).toLocaleString()}</td>
+                      <td className="mono">{formatDateTime(e.createdAt)}</td>
                       <td className="mono">{e.deviceId}</td>
                       <td className="mono">{e.storeId}</td>
                       <td className="mono">{e.eventType}</td>
@@ -3963,7 +3959,7 @@ export default function App() {
                         <div>{doc.file_name}</div>
                         <div className="muted" style={{ fontSize: 11 }}>{(doc.file_size / 1024).toFixed(1)} KB • {doc.content_type}</div>
                       </td>
-                      <td className="mono" style={{ fontSize: 11 }}>{new Date(doc.uploaded_at).toLocaleString()}</td>
+                      <td className="mono" style={{ fontSize: 11 }}>{formatDateTime(doc.uploaded_at)}</td>
                       <td>
                         <span className={`badge ${doc.status === "pending" ? "badgeWarn" : doc.status === "approved" ? "badgeGood" : "badgeBad"}`}>
                           {doc.status}
@@ -4029,7 +4025,7 @@ export default function App() {
                     <strong>File:</strong> {selectedDocument.file_name} ({(selectedDocument.file_size / 1024).toFixed(1)} KB)
                   </div>
                   <div style={{ marginBottom: 8 }}>
-                    <strong>Uploaded:</strong> {new Date(selectedDocument.uploaded_at).toLocaleString()}
+                    <strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}
                   </div>
                 </div>
 
@@ -4186,7 +4182,7 @@ export default function App() {
                 {auditLogs.map((log) => (
                   <tr key={log.id}>
                     <td className="mono" style={{ fontSize: 12 }}>
-                      {new Date(log.created_at).toLocaleString()}
+                      {formatDateTime(log.created_at)}
                     </td>
                     <td>
                       <span style={{

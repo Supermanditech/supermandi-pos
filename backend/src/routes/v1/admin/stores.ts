@@ -160,13 +160,19 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
 
 // GET /api/v1/admin/stores
 // GO-LIVE-128: Requires 'stores:read' permission
-adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (_req, res) => {
+adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
+  // ADMIN-PAGINATION-001: Support limit/offset pagination
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+
   try {
-    const result = await pool.query(
-      `
+    const [countResult, result] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int as total FROM platform.stores`),
+      pool.query(
+        `
         SELECT id::TEXT as id,
           name,
           code,
@@ -189,30 +195,39 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (_re
           updated_at
         FROM platform.stores
         ORDER BY created_at DESC
-      `
-    );
+        LIMIT $1 OFFSET $2
+        `,
+        [limit, offset]
+      ),
+    ]);
 
+    const total = countResult.rows[0]?.total ?? 0;
     const stores = result.rows.map((row) => ({
       ...row,
       storeName: row.name,
       storeCode: row.store_code ?? row.code
     }));
 
-    return res.json({ stores });
+    return res.json({ stores, total, limit, offset });
   } catch (error: any) {
     // Fallback: query only base columns if extended columns don't exist
     console.error("[admin/stores] Full query failed, trying base columns:", error?.message);
     try {
-      const result = await pool.query(
-        `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores ORDER BY created_at DESC`
-      );
+      const [countResult, result] = await Promise.all([
+        pool.query(`SELECT COUNT(*)::int as total FROM platform.stores`),
+        pool.query(
+          `SELECT id::TEXT as id, name, code, status, created_at, updated_at FROM platform.stores ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+          [limit, offset]
+        ),
+      ]);
+      const total = countResult.rows[0]?.total ?? 0;
       const stores = result.rows.map((row) => ({
         ...row,
         storeName: row.name,
         storeCode: row.code,
         active: row.status === "active"
       }));
-      return res.json({ stores });
+      return res.json({ stores, total, limit, offset });
     } catch (fallbackErr: any) {
       console.error("[admin/stores] Fallback query also failed:", fallbackErr?.message);
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch stores" });

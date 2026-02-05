@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
+import { formatDate } from "../../i18n/formatters";
 import type { PurchaseOrder, OrderStatus } from "../../services/api/orderApi";
 import {
   getStatusLabel,
@@ -146,19 +147,6 @@ export function OrderCard({ order, onPress }: OrderCardProps) {
       </View>
     </Pressable>
   );
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function formatDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 // =============================================================================

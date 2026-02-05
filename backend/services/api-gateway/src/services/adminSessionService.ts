@@ -5,7 +5,6 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import fs from 'fs';
 
 // =============================================================================
 // TYPES
@@ -40,26 +39,17 @@ const MAX_ACTIVE_SESSIONS = 10; // Per admin
 const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-admin';
 
-// CR-SECRET-001: Read ADMIN_TOKEN from env var (Cloud Run) or file fallback (Docker Compose)
+// SECRET-CLEANUP-001: ADMIN_TOKEN from env var only (Cloud Run compatible)
+// File-based secrets removed — Cloud Run uses Secret Manager → env vars
 function loadAdminToken(): string | undefined {
-  // Primary: environment variable (Cloud Run / Secret Manager)
   const envToken = process.env['ADMIN_TOKEN']?.trim();
   if (envToken) {
     console.log('[AdminSession] ADMIN_TOKEN loaded from environment variable');
     return envToken;
   }
-  // Fallback: Docker secret file (legacy Docker Compose)
-  const tokenFilePath = process.env['ADMIN_TOKEN_FILE'];
-  if (tokenFilePath) {
-    try {
-      const token = fs.readFileSync(tokenFilePath, 'utf8').trim();
-      if (token) {
-        console.log('[AdminSession] ADMIN_TOKEN loaded from secret file');
-        return token;
-      }
-    } catch {
-      console.warn('[AdminSession] Could not read ADMIN_TOKEN_FILE');
-    }
+  if (process.env['NODE_ENV'] === 'production') {
+    console.error('[AdminSession] FATAL: ADMIN_TOKEN is required in production but not set');
+    process.exit(1);
   }
   return undefined;
 }

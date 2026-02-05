@@ -1,6 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import crypto from "crypto";
-import fs from "fs";
 import jwt from "jsonwebtoken";
 import { getPool } from "../db/client";
 
@@ -36,26 +35,17 @@ function timingSafeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
-// CR-SECRET-001: Read ADMIN_TOKEN from env var (Cloud Run) or file fallback (Docker Compose)
+// SECRET-CLEANUP-001: ADMIN_TOKEN from env var only (Cloud Run compatible)
+// File-based secrets removed — Cloud Run uses Secret Manager → env vars
 function loadAdminToken(): string | undefined {
-  // Primary: environment variable (Cloud Run / Secret Manager)
   const envToken = process.env.ADMIN_TOKEN?.trim();
   if (envToken) {
     console.log('[AdminToken] ADMIN_TOKEN loaded from environment variable');
     return envToken;
   }
-  // Fallback: Docker secret file (legacy Docker Compose)
-  const tokenFilePath = process.env.ADMIN_TOKEN_FILE;
-  if (tokenFilePath) {
-    try {
-      const token = fs.readFileSync(tokenFilePath, 'utf8').trim();
-      if (token) {
-        console.log('[AdminToken] ADMIN_TOKEN loaded from secret file');
-        return token;
-      }
-    } catch {
-      console.warn('[AdminToken] Could not read ADMIN_TOKEN_FILE');
-    }
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[AdminToken] FATAL: ADMIN_TOKEN is required in production but not set');
+    process.exit(1);
   }
   return undefined;
 }

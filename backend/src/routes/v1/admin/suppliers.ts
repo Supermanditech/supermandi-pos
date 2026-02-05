@@ -26,44 +26,51 @@ export const adminSuppliersRouter = Router();
  * ITER2-004: Fixed schema namespace (supplier.supplier_requests)
  */
 // GO-LIVE-128: Requires 'suppliers:read' permission
-adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, requirePermission("suppliers", "read"), async (_req, res) => {
+adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, requirePermission("suppliers", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
   }
 
-  try {
-    // ITER2-004: Query supplier.supplier_requests for pending requests
-    const result = await pool.query(
-      `SELECT
-        sr.id,
-        sr.store_id as "storeId",
-        st.name as "storeName",
-        sr.requested_gstin as "requestedGstin",
-        sr.requested_name as "requestedName",
-        sr.requested_phone as "requestedPhone",
-        sr.requested_email as "requestedEmail",
-        sr.status,
-        sr.review_notes as "reviewNotes",
-        sr.created_at as "createdAt",
-        sr.reviewed_at as "reviewedAt"
-      FROM supplier.supplier_requests sr
-      LEFT JOIN platform.stores st ON st.id = sr.store_id
-      WHERE sr.status = 'pending'
-      ORDER BY sr.created_at DESC
-      LIMIT 100`
-    );
+  // ADMIN-PAGINATION-001: Support limit/offset pagination
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
-    // ITER2-002: Return { data: [...] } to match frontend expectations
+  try {
+    const [countResult, result] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int as total FROM supplier.supplier_requests WHERE status = 'pending'`),
+      pool.query(
+        `SELECT
+          sr.id,
+          sr.store_id as "storeId",
+          st.name as "storeName",
+          sr.requested_gstin as "requestedGstin",
+          sr.requested_name as "requestedName",
+          sr.requested_phone as "requestedPhone",
+          sr.requested_email as "requestedEmail",
+          sr.status,
+          sr.review_notes as "reviewNotes",
+          sr.created_at as "createdAt",
+          sr.reviewed_at as "reviewedAt"
+        FROM supplier.supplier_requests sr
+        LEFT JOIN platform.stores st ON st.id = sr.store_id
+        WHERE sr.status = 'pending'
+        ORDER BY sr.created_at DESC
+        LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+    ]);
+
+    const total = countResult.rows[0]?.total ?? 0;
     return res.json({
       data: result.rows,
-      count: result.rowCount
+      count: result.rowCount,
+      total, limit, offset
     });
   } catch (err: any) {
     console.error("[admin/pending-suppliers] Error:", err);
-    // If table doesn't exist, return empty array
     if (err.code === "42P01") {
-      return res.json({ data: [], count: 0 });
+      return res.json({ data: [], count: 0, total: 0, limit, offset });
     }
     return res.status(500).json({ error: "Failed to fetch pending suppliers" });
   }
@@ -84,46 +91,60 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
 
   const { search } = req.query;
 
+  // ADMIN-PAGINATION-001: Support limit/offset pagination
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
+
   try {
-    // ITER2-004: Query supplier.suppliers with correct column names
     let whereClause = "WHERE (s.verification_status = 'verified' OR s.status = 'active')";
     const params: any[] = [];
+    let paramIdx = 1;
 
     if (search && typeof search === 'string' && search.trim()) {
-      whereClause += ` AND (s.business_name ILIKE $1 OR s.gstin ILIKE $1 OR s.trade_name ILIKE $1)`;
+      whereClause += ` AND (s.business_name ILIKE $${paramIdx} OR s.gstin ILIKE $${paramIdx} OR s.trade_name ILIKE $${paramIdx})`;
       params.push(`%${search.trim()}%`);
+      paramIdx++;
     }
 
-    const result = await pool.query(
-      `SELECT
-        s.id,
-        s.gstin,
-        s.business_name as "businessName",
-        s.trade_name as "tradeName",
-        s.primary_phone as "primaryPhone",
-        s.primary_email as "primaryEmail",
-        s.city,
-        s.state,
-        s.verification_status as "verificationStatus",
-        s.status,
-        s.rating
-      FROM supplier.suppliers s
-      ${whereClause}
-      ORDER BY s.verified_at DESC NULLS LAST, s.created_at DESC
-      LIMIT 100`,
-      params
-    );
+    const countParams = [...params];
+    params.push(limit, offset);
 
-    // ITER2-002: Return { data: [...] } to match frontend expectations
+    const [countResult, result] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::int as total FROM supplier.suppliers s ${whereClause}`,
+        countParams
+      ),
+      pool.query(
+        `SELECT
+          s.id,
+          s.gstin,
+          s.business_name as "businessName",
+          s.trade_name as "tradeName",
+          s.primary_phone as "primaryPhone",
+          s.primary_email as "primaryEmail",
+          s.city,
+          s.state,
+          s.verification_status as "verificationStatus",
+          s.status,
+          s.rating
+        FROM supplier.suppliers s
+        ${whereClause}
+        ORDER BY s.verified_at DESC NULLS LAST, s.created_at DESC
+        LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+        params
+      ),
+    ]);
+
+    const total = countResult.rows[0]?.total ?? 0;
     return res.json({
       data: result.rows,
-      count: result.rowCount
+      count: result.rowCount,
+      total, limit, offset
     });
   } catch (err: any) {
     console.error("[admin/verified-suppliers] Error:", err);
-    // If table doesn't exist, return empty array
     if (err.code === "42P01") {
-      return res.json({ data: [], count: 0 });
+      return res.json({ data: [], count: 0, total: 0, limit, offset });
     }
     return res.status(500).json({ error: "Failed to fetch verified suppliers" });
   }

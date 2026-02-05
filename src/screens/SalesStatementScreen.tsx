@@ -49,6 +49,7 @@ function formatDateLabel(dateStr: string): string {
     weekday: "short",
     day: "2-digit",
     month: "short",
+    timeZone: "Asia/Kolkata",
   });
 }
 

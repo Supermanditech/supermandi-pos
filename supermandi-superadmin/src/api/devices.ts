@@ -36,14 +36,20 @@ async function parseError(res: Response): Promise<string> {
   return sanitizeErrorMessage(data.error, fallback);
 }
 
-export async function fetchDevices(params?: { storeId?: string }): Promise<DeviceRecord[]> {
+// ADMIN-PAGINATION-001: Paginated response type
+export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
+
+export async function fetchDevices(params?: { storeId?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<DeviceRecord>> {
   if (!API_BASE) {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-  const storeId = params?.storeId?.trim();
-  const qs = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
-  const res = await fetch(`${API_BASE}/api/v1/admin/devices${qs}`, {
+  const url = new URL(`${API_BASE}/api/v1/admin/devices`);
+  if (params?.storeId?.trim()) url.searchParams.set("storeId", params.storeId.trim());
+  if (params?.limit) url.searchParams.set("limit", String(params.limit));
+  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+
+  const res = await fetch(url.toString(), {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -55,8 +61,13 @@ export async function fetchDevices(params?: { storeId?: string }): Promise<Devic
     throw new Error(await parseError(res));
   }
 
-  const data = (await res.json().catch(() => ({}))) as { devices?: DeviceRecord[] };
-  return Array.isArray(data.devices) ? data.devices : [];
+  const data = (await res.json().catch(() => ({}))) as { devices?: DeviceRecord[]; total?: number; limit?: number; offset?: number };
+  return {
+    items: Array.isArray(data.devices) ? data.devices : [],
+    total: data.total ?? 0,
+    limit: data.limit ?? 50,
+    offset: data.offset ?? 0,
+  };
 }
 
 export type DevicePatchInput = {

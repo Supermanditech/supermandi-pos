@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getDashboardStats, getOrders, getProducts } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { formatCurrency } from '@/lib/formatters';
 
 function StatCard({
   title,
@@ -43,13 +44,6 @@ function StatCard({
   }
 
   return content;
-}
-
-function formatCurrency(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 export default function DashboardPage() {

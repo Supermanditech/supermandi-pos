@@ -2,7 +2,7 @@
  * OpenAI Provider - GO-LIVE Production-Grade Implementation
  *
  * Security Controls:
- * - GO-LIVE-107: API key from Docker secrets (preferred) or env var (fallback)
+ * - SECRET-CLEANUP-001: API key from env var only (Cloud Run compatible)
  * - Startup validation (503 if missing)
  * - Log redaction (no headers, keys, or PII)
  * - Rate limiting per device/store and IP
@@ -12,33 +12,23 @@
  */
 
 import OpenAI from "openai";
-import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
-// CR-SECRET-001: Read OpenAI API key — env var first (Cloud Run), file fallback (Docker Compose)
+// SECRET-CLEANUP-001: OPENAI_API_KEY from env var only (Cloud Run compatible)
+// File-based secrets removed — Cloud Run uses Secret Manager → env vars
 function loadOpenAIApiKey(): string {
-  // Primary: environment variable (Cloud Run / Secret Manager)
   const envKey = process.env.OPENAI_API_KEY?.trim();
   if (envKey) {
     console.log('[OpenAI] API key loaded from environment variable');
     return envKey;
   }
-  // Fallback: Docker secret file (legacy Docker Compose)
-  const keyFilePath = process.env.OPENAI_API_KEY_FILE;
-  if (keyFilePath) {
-    try {
-      const key = fs.readFileSync(keyFilePath, 'utf8').trim();
-      if (key) {
-        console.log('[OpenAI] API key loaded from secret file');
-        return key;
-      }
-    } catch {
-      console.warn('[OpenAI] Could not read OPENAI_API_KEY_FILE');
-    }
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[OpenAI] FATAL: OPENAI_API_KEY is required in production but not set');
+    process.exit(1);
   }
   return '';
 }

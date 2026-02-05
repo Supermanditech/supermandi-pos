@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
+import { formatDateTime } from "../i18n/formatters";
 import { listBills } from "../services/api/billingApi";
 import type { BillSummary } from "../services/billing/billTypes";
 // GL-CRIT-0085: Import skeleton loader component
@@ -56,7 +57,7 @@ export default function SalesHistoryScreen() {
     >
       <View style={styles.billMain}>
         <Text style={styles.billRef}>Bill #{item.billRef}</Text>
-        <Text style={styles.billMeta}>{new Date(item.createdAt).toLocaleString()}</Text>
+        <Text style={styles.billMeta}>{formatDateTime(new Date(item.createdAt))}</Text>
         <View style={styles.badgeRow}>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{item.paymentMode}</Text>

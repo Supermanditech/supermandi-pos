@@ -10,6 +10,7 @@ import { eventLogger } from "../services/eventLogger";
 import { logPaymentEvent, logPosEvent } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
+import { formatDateTime } from "../i18n/formatters";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -51,7 +52,7 @@ export default function SuccessPrintScreenV2() {
       "       SuperMandi POS",
       "=================================",
       `Bill #: ${billNumber}`,
-      `Date: ${new Date().toLocaleString()}`,
+      `Date: ${formatDateTime(new Date())}`,
       `Payment: ${paymentMode}`,
       "=================================",
       "",

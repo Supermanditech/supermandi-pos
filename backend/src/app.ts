@@ -63,13 +63,18 @@ if (process.env.NODE_ENV === "production" || process.env.TRUST_PROXY === "true")
 }
 
 // ITER3-P0-001: Configure CORS with explicit allowed origins
-// In production, ALLOWED_ORIGINS should be set to comma-separated list of domains
+// ENV-FAILFAST-001: ALLOWED_ORIGINS required in production — no hardcoded domains
 const corsOptions: cors.CorsOptions = {
-  origin: process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-    : (process.env.NODE_ENV === 'production'
-      ? ['https://supermandi.in', 'https://www.supermandi.in', 'https://admin.supermandi.in', 'https://supplier.supermandi.in']
-      : true), // Allow all in development
+  origin: (() => {
+    if (process.env.ALLOWED_ORIGINS) {
+      return process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+    }
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[config] FATAL: ALLOWED_ORIGINS is required in production but not set');
+      process.exit(1);
+    }
+    return true; // Allow all in development
+  })(),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token', 'X-Admin-Token', 'X-Request-ID'],

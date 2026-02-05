@@ -25,12 +25,19 @@ async function parseError(res: Response): Promise<string> {
   return sanitizeErrorMessage(data.error, fallback);
 }
 
-export async function fetchUsers(): Promise<UserRecord[]> {
+// ADMIN-PAGINATION-001: Paginated response type
+export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
+
+export async function fetchUsers(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<UserRecord>> {
   if (!API_BASE) {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-    const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+  const url = new URL(`${API_BASE}/api/v1/admin/users`);
+  if (params?.limit) url.searchParams.set("limit", String(params.limit));
+  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+
+  const res = await fetch(url.toString(), {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -42,8 +49,13 @@ export async function fetchUsers(): Promise<UserRecord[]> {
     throw new Error(await parseError(res));
   }
 
-  const data = (await res.json().catch(() => ({}))) as { users?: UserRecord[] };
-  return Array.isArray(data.users) ? data.users : [];
+  const data = (await res.json().catch(() => ({}))) as { users?: UserRecord[]; total?: number; limit?: number; offset?: number };
+  return {
+    items: Array.isArray(data.users) ? data.users : [],
+    total: data.total ?? 0,
+    limit: data.limit ?? 50,
+    offset: data.offset ?? 0,
+  };
 }
 
 export type UserPatchInput = {

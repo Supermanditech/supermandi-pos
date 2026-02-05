@@ -1,5 +1,8 @@
 // Voice Service Configuration - VOICE-003
 // AUD-076-D: Migrated from OpenAI to Claude/Anthropic API
+// ENV-FAILFAST-001: Crash in production if required env vars are missing
+
+const IS_PROD = process.env['NODE_ENV'] === 'production';
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
   return process.env[key] || defaultValue;
@@ -12,6 +15,17 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
   return isNaN(parsed) ? defaultValue : parsed;
 }
 
+/** ENV-FAILFAST-001: Require env var in production; use dev default otherwise */
+function requireEnv(key: string, devDefault: string): string {
+  const value = process.env[key];
+  if (value) return value;
+  if (IS_PROD) {
+    console.error(`[config] FATAL: ${key} is required in production but not set`);
+    process.exit(1);
+  }
+  return devDefault;
+}
+
 export const config = {
   // Service configuration
   // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
@@ -19,8 +33,9 @@ export const config = {
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // AUD-076-D: Claude/Anthropic API configuration (replaces OpenAI)
+  // ENV-FAILFAST-001: ANTHROPIC_API_KEY required in production
   anthropic: {
-    apiKey: getEnvOrDefault('ANTHROPIC_API_KEY', ''),
+    apiKey: requireEnv('ANTHROPIC_API_KEY', ''),
     model: getEnvOrDefault('ANTHROPIC_MODEL', 'claude-sonnet-4-20250514'),
     language: getEnvOrDefault('VOICE_LANGUAGE', 'hi'), // Hindi primary
   },
@@ -33,12 +48,13 @@ export const config = {
   },
 
   // Database configuration (uses shared pool from @supermandi/common)
+  // ENV-FAILFAST-001: DB credentials required in production
   database: {
-    host: getEnvOrDefault('DB_HOST', 'localhost'),
+    host: requireEnv('DB_HOST', 'localhost'),
     port: getEnvIntOrDefault('DB_PORT', 5432),
-    database: getEnvOrDefault('DB_NAME', 'supermandi'),
-    user: getEnvOrDefault('DB_USER', 'postgres'),
-    password: getEnvOrDefault('DB_PASSWORD', 'postgres'),
+    database: requireEnv('DB_NAME', 'supermandi'),
+    user: requireEnv('DB_USER', 'postgres'),
+    password: requireEnv('DB_PASSWORD', 'postgres'),
   },
 
   // Audio settings

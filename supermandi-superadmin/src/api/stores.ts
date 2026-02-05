@@ -58,10 +58,17 @@ export async function fetchStore(storeId: string): Promise<StoreRecord> {
   return (data?.store ?? {}) as StoreRecord;
 }
 
-export async function fetchStores(): Promise<StoreRecord[]> {
+// ADMIN-PAGINATION-001: Paginated response type
+export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
+
+export async function fetchStores(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<StoreRecord>> {
   const base = requireApiBase();
 
-  const res = await fetch(`${base}/api/v1/admin/stores`, {
+  const url = new URL(`${base}/api/v1/admin/stores`);
+  if (params?.limit) url.searchParams.set("limit", String(params.limit));
+  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+
+  const res = await fetch(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -75,7 +82,12 @@ export async function fetchStores(): Promise<StoreRecord[]> {
   }
 
   const data = await res.json();
-  return Array.isArray(data?.stores) ? (data.stores as StoreRecord[]) : [];
+  return {
+    items: Array.isArray(data?.stores) ? (data.stores as StoreRecord[]) : [],
+    total: data?.total ?? 0,
+    limit: data?.limit ?? 50,
+    offset: data?.offset ?? 0,
+  };
 }
 
 export async function createStore(input: { storeName: string; storeId?: string }): Promise<StoreRecord> {

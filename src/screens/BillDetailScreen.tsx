@@ -10,6 +10,7 @@ import { buildBillText } from "../services/billing/billFormatter";
 import { shareBillPdf, shareBillWhatsApp } from "../services/billing/billShare";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
+import { formatDateTime } from "../i18n/formatters";
 import { theme } from "../theme";
 
 type RootStackParamList = {
@@ -141,7 +142,7 @@ export default function BillDetailScreen() {
         <Text style={styles.summaryLabel}>Payment</Text>
         <Text style={styles.summaryValue}>{snapshot.paymentMode}</Text>
       </View>
-      <Text style={styles.summaryMeta}>{new Date(snapshot.createdAt).toLocaleString()}</Text>
+      <Text style={styles.summaryMeta}>{formatDateTime(new Date(snapshot.createdAt))}</Text>
     </View>
   ) : null;
 

@@ -23,37 +23,56 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
     return res.status(503).json({ error: "database unavailable" });
   }
 
-  const params: string[] = [];
-  const where = storeId ? "WHERE store_id = $1::uuid" : "";
-  if (storeId) params.push(storeId);
+  // ADMIN-PAGINATION-001: Support limit/offset pagination
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
-  const result = await pool.query(
-    `
-    SELECT d.id,
-           d.store_id,
-           s.name AS store_name,
-           d.active,
-           d.label,
-           d.device_type,
-           d.manufacturer,
-           d.model,
-           d.android_version,
-           d.app_version,
-           d.printing_mode,
-           d.scan_lookup_v2_enabled,
-           d.last_seen_online,
-           d.last_sync_at,
-           d.pending_outbox_count,
-           d.created_at,
-           d.updated_at
-    FROM pos_devices d
-    LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
-    ${where ? where.replace("store_id", "d.store_id") : ""}
-    ORDER BY d.last_seen_online DESC NULLS LAST
-    `,
-    params
-  );
+  const params: (string | number)[] = [];
+  let paramIdx = 1;
+  let where = "";
+  if (storeId) {
+    where = `WHERE d.store_id = $${paramIdx}::uuid`;
+    params.push(storeId);
+    paramIdx++;
+  }
 
+  params.push(limit, offset);
+
+  const [countResult, result] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int as total FROM pos_devices d ${where}`,
+      storeId ? [storeId] : []
+    ),
+    pool.query(
+      `
+      SELECT d.id,
+             d.store_id,
+             s.name AS store_name,
+             d.active,
+             d.label,
+             d.device_type,
+             d.manufacturer,
+             d.model,
+             d.android_version,
+             d.app_version,
+             d.printing_mode,
+             d.scan_lookup_v2_enabled,
+             d.last_seen_online,
+             d.last_sync_at,
+             d.pending_outbox_count,
+             d.created_at,
+             d.updated_at
+      FROM pos_devices d
+      LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
+      ${where}
+      ORDER BY d.last_seen_online DESC NULLS LAST
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+      `,
+      params
+    ),
+  ]);
+
+  const total = countResult.rows[0]?.total ?? 0;
   const devices = result.rows.map((row) => ({
     id: row.id,
     store_id: row.store_id,
@@ -74,7 +93,7 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
     updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null
   }));
 
-  return res.json({ devices });
+  return res.json({ devices, total, limit, offset });
 });
 
 // PATCH /api/v1/admin/devices/:deviceId

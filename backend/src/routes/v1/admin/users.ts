@@ -22,28 +22,35 @@ export interface AdminUserRecord {
 
 // GET /api/v1/admin/users - List all users
 // GO-LIVE-128: Requires 'users:read' permission
-adminUsersRouter.get("/users", requirePermission("users", "read"), async (_req, res) => {
+adminUsersRouter.get("/users", requirePermission("users", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
-  try {
-    const result = await pool.query<AdminUserRecord>(`
-      SELECT
-        id::TEXT as id,
-        email,
-        phone,
-        name,
-        actor_type,
-        actor_id::TEXT as actor_id,
-        status,
-        created_at,
-        updated_at
-      FROM auth.users
-      ORDER BY created_at DESC
-      LIMIT 500
-    `);
+  // ADMIN-PAGINATION-001: Support limit/offset pagination
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
+  const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
-    return res.json({ users: result.rows });
+  try {
+    const [countResult, result] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::int as total FROM auth.users`),
+      pool.query<AdminUserRecord>(`
+        SELECT
+          id::TEXT as id,
+          email,
+          phone,
+          name,
+          actor_type,
+          actor_id::TEXT as actor_id,
+          status,
+          created_at,
+          updated_at
+        FROM auth.users
+        ORDER BY created_at DESC
+        LIMIT $1 OFFSET $2
+      `, [limit, offset]),
+    ]);
+
+    return res.json({ users: result.rows, total: countResult.rows[0]?.total ?? 0, limit, offset });
   } catch (error: any) {
     console.error("[admin/users] Failed to fetch users:", error);
     return res.status(500).json({ error: "fetch_users_failed" });

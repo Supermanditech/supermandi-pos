@@ -1,4 +1,7 @@
 // Catalog Service Configuration - V3.0.9 compliant
+// ENV-FAILFAST-001: Crash in production if required env vars are missing
+
+const IS_PROD = process.env['NODE_ENV'] === 'production';
 
 function getEnvOrDefault(key: string, defaultValue: string): string {
   return process.env[key] || defaultValue;
@@ -11,6 +14,17 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
   return isNaN(parsed) ? defaultValue : parsed;
 }
 
+/** ENV-FAILFAST-001: Require env var in production; use dev default otherwise */
+function requireEnv(key: string, devDefault: string): string {
+  const value = process.env[key];
+  if (value) return value;
+  if (IS_PROD) {
+    console.error(`[config] FATAL: ${key} is required in production but not set`);
+    process.exit(1);
+  }
+  return devDefault;
+}
+
 export const config = {
   // Service configuration
   // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
@@ -18,17 +32,19 @@ export const config = {
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // Database configuration (uses shared pool from @supermandi/common)
+  // ENV-FAILFAST-001: DB credentials required in production
   database: {
-    host: getEnvOrDefault('DB_HOST', 'localhost'),
+    host: requireEnv('DB_HOST', 'localhost'),
     port: getEnvIntOrDefault('DB_PORT', 5432),
-    database: getEnvOrDefault('DB_NAME', 'supermandi'),
-    user: getEnvOrDefault('DB_USER', 'postgres'),
-    password: getEnvOrDefault('DB_PASSWORD', 'postgres'),
+    database: requireEnv('DB_NAME', 'supermandi'),
+    user: requireEnv('DB_USER', 'postgres'),
+    password: requireEnv('DB_PASSWORD', 'postgres'),
   },
 
   // Redis configuration
+  // ENV-FAILFAST-001: Redis host required in production
   redis: {
-    host: getEnvOrDefault('REDIS_HOST', 'localhost'),
+    host: requireEnv('REDIS_HOST', 'localhost'),
     port: getEnvIntOrDefault('REDIS_PORT', 6379),
     password: getEnvOrDefault('REDIS_PASSWORD', ''),
     db: getEnvIntOrDefault('REDIS_DB', 0),

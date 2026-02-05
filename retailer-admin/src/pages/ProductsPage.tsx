@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, API_GATEWAY_BASE } from '../lib/api';
 import { fetchCategories, FmcgCategory } from '../api/store';
+// CURRENCY-FORMAT-001: Use shared currency formatters
+import { formatCurrency } from '../lib/formatters';
 
 interface Supplier {
   id: string;
@@ -1392,8 +1394,8 @@ Loose Rice,, , 45, 40, , KG, 25`}
                         <td>{p.name}</td>
                         <td style={{ fontFamily: 'monospace' }}>{p.barcode || <em style={{ color: 'var(--text-muted)' }}>auto</em>}</td>
                         <td>{p.brand || '-'}</td>
-                        <td>₹{((p.sellPrice || 0) / 100).toFixed(2)}</td>
-                        <td>₹{((p.purchasePrice || 0) / 100).toFixed(2)}</td>
+                        <td>{formatCurrency(p.sellPrice || 0)}</td>
+                        <td>{formatCurrency(p.purchasePrice || 0)}</td>
                         <td><span className={`badge ${p.mode === 'PACKAGED' ? 'badge-info' : 'badge-secondary'}`}>{p.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}</span></td>
                       </tr>
                     ))}
@@ -1529,7 +1531,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                         {product.mode === 'PACKAGED' ? 'Packaged' : 'Loose'}
                       </span>
                     </td>
-                    <td>₹{(product.sellPrice / 100).toFixed(2)}</td>
+                    <td>{formatCurrency(product.sellPrice)}</td>
                     <td>
                       <span className={`badge ${
                         product.lowStockAlertQty && product.stock <= product.lowStockAlertQty

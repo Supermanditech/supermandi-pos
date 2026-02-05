@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
+import { formatDate } from "../i18n/formatters";
 import * as creditApi from "../services/api/creditApi";
 import type {
   CreditOffer,
@@ -419,10 +420,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
                 {t("credit.nextEmi", "Next EMI")}
               </Text>
               <Text style={styles.loanDetailValue}>
-                {nextEmiDate.toLocaleDateString("en-IN", {
-                  month: "short",
-                  day: "numeric",
-                })}
+                {formatDate(nextEmiDate, "short")}
               </Text>
             </View>
             <View style={styles.loanDetailItem}>
@@ -480,11 +478,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
               {formatMoney(app.requestedAmountMinor)}
             </Text>
             <Text style={styles.historyDate}>
-              {new Date(app.createdAt).toLocaleDateString("en-IN", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {formatDate(new Date(app.createdAt))}
             </Text>
           </View>
         </View>

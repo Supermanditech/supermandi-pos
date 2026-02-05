@@ -50,9 +50,16 @@ async function parseError(res: Response): Promise<string> {
   return fallback;
 }
 
-export async function fetchPendingSuppliers(): Promise<PendingSupplierRequest[]> {
+// ADMIN-PAGINATION-001: Paginated response type
+export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
+
+export async function fetchPendingSuppliers(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<PendingSupplierRequest>> {
   const base = requireApiBase();
-  const res = await fetch(`${base}/api/v1/admin/pending-suppliers`, {
+  const url = new URL(`${base}/api/v1/admin/pending-suppliers`);
+  if (params?.limit) url.searchParams.set("limit", String(params.limit));
+  if (params?.offset) url.searchParams.set("offset", String(params.offset));
+
+  const res = await fetch(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -66,15 +73,21 @@ export async function fetchPendingSuppliers(): Promise<PendingSupplierRequest[]>
   }
 
   const data = await res.json();
-  // Backend returns data directly (not wrapped in .requests)
-  return Array.isArray(data?.data) ? (data.data as PendingSupplierRequest[]) : [];
+  return {
+    items: Array.isArray(data?.data) ? (data.data as PendingSupplierRequest[]) : [],
+    total: data?.total ?? 0,
+    limit: data?.limit ?? 50,
+    offset: data?.offset ?? 0,
+  };
 }
 
-export async function fetchVerifiedSuppliers(search?: string): Promise<VerifiedSupplier[]> {
+export async function fetchVerifiedSuppliers(params?: { search?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<VerifiedSupplier>> {
   const base = requireApiBase();
-  
+
   const url = new URL(`${base}/api/v1/admin/verified-suppliers`);
-  if (search) url.searchParams.set("search", search);
+  if (params?.search) url.searchParams.set("search", params.search);
+  if (params?.limit) url.searchParams.set("limit", String(params.limit));
+  if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -90,8 +103,12 @@ export async function fetchVerifiedSuppliers(search?: string): Promise<VerifiedS
   }
 
   const data = await res.json();
-  // Backend returns data directly (not wrapped in .suppliers)
-  return Array.isArray(data?.data) ? (data.data as VerifiedSupplier[]) : [];
+  return {
+    items: Array.isArray(data?.data) ? (data.data as VerifiedSupplier[]) : [],
+    total: data?.total ?? 0,
+    limit: data?.limit ?? 50,
+    offset: data?.offset ?? 0,
+  };
 }
 
 /**
