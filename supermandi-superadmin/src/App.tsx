@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { hasValidSession, logout, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout } from "./api/authToken";
+import { hasValidSession, logout, refreshSession, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -566,6 +566,20 @@ export default function App() {
       setIsAuthenticated(false);
     });
     return () => stopIdleTimeout();
+  }, [isAuthenticated]);
+
+  // AUTH-EXPIRY-003: Periodic token refresh (every 10 minutes)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(async () => {
+      const success = await refreshSession();
+      if (!success) {
+        console.warn('[AUTH-EXPIRY-003] Token refresh failed, logging out');
+        await logout();
+        setIsAuthenticated(false);
+      }
+    }, 10 * 60 * 1000); // Refresh every 10 minutes
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
 
   const [health, setHealth] = useState<{ ok: boolean; statusText: string; lastCheckedAt?: string }>(

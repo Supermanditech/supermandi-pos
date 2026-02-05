@@ -1721,7 +1721,7 @@ Attacker can craft JWT with any phone number → backend accepts.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1752,7 +1752,7 @@ Retailer tokens could call supplier endpoints if individual service lacks permis
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1784,7 +1784,7 @@ Each backend service must implement own checks. Missing check = silent bypass.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1815,7 +1815,7 @@ refresh. Supplier could be logged out DURING order fulfillment.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1850,7 +1850,7 @@ attacker steals JWT + refresh token. No Content Security Policy headers detected
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 3 - 18d3112)
 
 ---
 
@@ -1882,7 +1882,7 @@ Stolen refresh token on Device B can still get new access tokens after logout on
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1911,7 +1911,7 @@ NO API call to backend `/logout` endpoint. Stale token on Device A still valid.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1943,7 +1943,7 @@ NO API call to backend `/logout` endpoint. Stale token on Device A still valid.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 1 - afd3815)
 
 ---
 
@@ -1979,7 +1979,7 @@ parse check, not actual request timing. If refresh fails: abrupt logout mid-oper
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 2 - feabf44)
 
 ---
 
@@ -2011,7 +2011,7 @@ Admin can leave dashboard open for 8 hours → stale data + invisible logout.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 4 - periodic refreshSession + idle timeout already in authToken.ts)
 
 ---
 
@@ -2042,7 +2042,7 @@ User enters OTP after 6 min → cryptic "Invalid OTP" error instead of "OTP Expi
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 2 - e76aa00)
 
 ---
 
@@ -2075,7 +2075,7 @@ If localStorage cleared → idle check lost. Compromised device has valid token 
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 2 - e76aa00)
 
 ---
 
@@ -2107,7 +2107,7 @@ No evidence of token expiry in response. No timeout check on frontend.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Pre-existing: 1h expiry, SHA-256 hash, timing-safe comparison)
 
 ---
 
@@ -2138,7 +2138,7 @@ Same refresh token valid indefinitely (until expiry). Stolen token = 30-day wind
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 2 - feabf44)
 
 ---
 
@@ -2174,7 +2174,7 @@ Attacker can bypass via DevTools. Firebase rate limit triggers after 10-15 reque
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 2 - e76aa00)
 
 ---
 
@@ -2206,7 +2206,7 @@ Attacker can bypass via DevTools. Firebase rate limit triggers after 10-15 reque
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 2 - e76aa00)
 
 ---
 
@@ -2238,7 +2238,7 @@ User can login from 3+ devices simultaneously. No way to revoke one device.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 3 - 18d3112)
 
 ---
 
@@ -2270,31 +2270,31 @@ CORS origin checks exist but may not cover all scenarios.
 
 **Rollback Note**: `git revert COMMIT_SHA`
 
-**Status**: PENDING
+**Status**: DONE (Phase 3 - 18d3112)
 
 ---
 
 #### Progress
 | # | Ticket | Risk | Severity | Phase | Status | Evidence |
 |---|--------|------|----------|-------|--------|----------|
-| 1 | AUTH-OTP-004 | C | CRITICAL | IMMEDIATE | PENDING | |
-| 2 | AUTH-PERM-001 | C | CRITICAL | IMMEDIATE | PENDING | |
-| 3 | AUTH-GATEWAY-001 | C | CRITICAL | IMMEDIATE | PENDING | |
-| 4 | AUTH-EXPIRY-002 | C | CRITICAL | IMMEDIATE | PENDING | |
-| 5 | AUTH-STORAGE-001 | C | CRITICAL | IMMEDIATE | PENDING | |
-| 6 | AUTH-LOGOUT-001 | C | HIGH | IMMEDIATE | PENDING | |
-| 7 | AUTH-LOGOUT-002 | C | HIGH | IMMEDIATE | PENDING | |
-| 8 | AUTH-CONCURRENT-002 | C | HIGH | IMMEDIATE | PENDING | |
-| 9 | AUTH-EXPIRY-001 | C | HIGH | SHORT-TERM | PENDING | |
-| 10 | AUTH-EXPIRY-003 | C | HIGH | SHORT-TERM | PENDING | |
-| 11 | AUTH-OTP-001 | C | HIGH | SHORT-TERM | PENDING | |
-| 12 | AUTH-IDLE-001 | C | HIGH | SHORT-TERM | PENDING | |
-| 13 | AUTH-RESET-001 | C | HIGH | SHORT-TERM | PENDING | |
-| 14 | AUTH-REFRESH-001 | C | MEDIUM | SHORT-TERM | PENDING | |
-| 15 | AUTH-OTP-002 | C | MEDIUM | MEDIUM-TERM | PENDING | |
-| 16 | AUTH-OTP-003 | C | MEDIUM | MEDIUM-TERM | PENDING | |
-| 17 | AUTH-CONCURRENT-001 | C | MEDIUM | MEDIUM-TERM | PENDING | |
-| 18 | AUTH-CSRF-001 | C | MEDIUM | MEDIUM-TERM | PENDING | |
+| 1 | AUTH-OTP-004 | C | CRITICAL | IMMEDIATE | DONE | Phase 1 commit |
+| 2 | AUTH-PERM-001 | C | CRITICAL | IMMEDIATE | DONE | Phase 1 commit |
+| 3 | AUTH-GATEWAY-001 | C | CRITICAL | IMMEDIATE | DONE | Phase 1 commit |
+| 4 | AUTH-EXPIRY-002 | C | CRITICAL | IMMEDIATE | DONE | Phase 1 commit |
+| 5 | AUTH-STORAGE-001 | C | CRITICAL | IMMEDIATE | DONE | Phase 3 commit |
+| 6 | AUTH-LOGOUT-001 | C | HIGH | IMMEDIATE | DONE | Phase 1 commit |
+| 7 | AUTH-LOGOUT-002 | C | HIGH | IMMEDIATE | DONE | Phase 1 commit |
+| 8 | AUTH-CONCURRENT-002 | C | HIGH | IMMEDIATE | DONE | Phase 1 commit |
+| 9 | AUTH-EXPIRY-001 | C | HIGH | SHORT-TERM | DONE | Phase 2 commit |
+| 10 | AUTH-EXPIRY-003 | C | HIGH | SHORT-TERM | DONE | Phase 4 commit |
+| 11 | AUTH-OTP-001 | C | HIGH | SHORT-TERM | DONE | Phase 2 commit |
+| 12 | AUTH-IDLE-001 | C | HIGH | SHORT-TERM | DONE | Phase 2 commit |
+| 13 | AUTH-RESET-001 | C | HIGH | SHORT-TERM | DONE | Pre-existing impl |
+| 14 | AUTH-REFRESH-001 | C | MEDIUM | SHORT-TERM | DONE | Phase 2 commit |
+| 15 | AUTH-OTP-002 | C | MEDIUM | MEDIUM-TERM | DONE | Phase 2 commit |
+| 16 | AUTH-OTP-003 | C | MEDIUM | MEDIUM-TERM | DONE | Phase 2 commit |
+| 17 | AUTH-CONCURRENT-001 | C | MEDIUM | MEDIUM-TERM | DONE | Phase 3 commit |
+| 18 | AUTH-CSRF-001 | C | MEDIUM | MEDIUM-TERM | DONE | Phase 3 commit |
 
 #### Browser Tests (Operator)
 - [ ] Retailer login + OTP flow works
