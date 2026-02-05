@@ -58,30 +58,15 @@ const app = express();
 // =============================================================================
 // GO-LIVE-073: CORS - Restrict to allowed origins (no wildcard in production)
 // =============================================================================
-const CORS_ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
-// Default allowed origins for production
-const DEFAULT_CORS_ORIGINS = [
-  'https://supermandi.tech',
-  'https://www.supermandi.tech',
-  // LOCAL-PROD-001-H: VM IP removed - use CORS_ALLOWED_ORIGINS env var for custom origins
-];
-
-// In development, allow localhost
-if (config.env === 'development') {
-  DEFAULT_CORS_ORIGINS.push(
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:8081',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:5173',
-  );
-}
-
-const allowedOrigins = CORS_ALLOWED_ORIGINS.length > 0 ? CORS_ALLOWED_ORIGINS : DEFAULT_CORS_ORIGINS;
+// ZR-URL-001: All CORS origins from environment (zero hardcoded URLs)
+// Production: CORS_ALLOWED_ORIGINS="https://supermandi.tech,https://www.supermandi.tech"
+// Development: falls back to CORS_DEV_ORIGINS or standard local dev origins
+const corsEnvOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const allowedOrigins: string[] = corsEnvOrigins.length > 0
+  ? corsEnvOrigins
+  : config.env !== 'development'
+    ? [] // Production without CORS_ALLOWED_ORIGINS: no cross-origin requests allowed
+    : (process.env.CORS_DEV_ORIGINS || 'http://localhost:3000,http://localhost:5173,http://localhost:8081,http://127.0.0.1:3000,http://127.0.0.1:5173').split(',').map(s => s.trim()).filter(Boolean);
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;

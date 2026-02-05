@@ -21,27 +21,28 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS for local development (SuperAdmin/Retailer-Admin frontends)
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const origin = req.headers.origin;
-  // Allow localhost and LAN origins for development
-  const isAllowedOrigin = origin && (
-    origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:') ||
-    origin.startsWith('http://192.168.')
-  );
-  if (isAllowedOrigin) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, x-admin-token, x-store-id, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-  }
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  next();
-});
+// ZR-URL-001: CORS for local development only (production CORS handled by api-gateway)
+if (config.env === 'development') {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const origin = req.headers.origin;
+    // Allow localhost and LAN origins for development
+    const isAllowedOrigin = origin && (
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://192.168.')
+    );
+    if (isAllowedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, x-admin-token, x-store-id, Authorization');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
+  });
+}
 
 // Parse JSON bodies
 app.use(express.json());

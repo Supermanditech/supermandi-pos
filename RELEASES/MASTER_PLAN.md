@@ -444,7 +444,7 @@ Link: https://github.com/ORG/REPO/actions/runs/XXXXX
 
 ```
 BATCH-004 Retailer ──┐
-BATCH-005 Supplier ──┼──► BATCH-008 Cloud Run Prep ──► BATCH-009 CI/CD ──► BATCH-010 Staging ──► BATCH-011 Go-Live
+BATCH-005 Supplier ──┼──► BATCH-008 Cloud Run Prep ──► BATCH-009 CI/CD ──► BATCH-012 Auth Security ──► BATCH-010 Staging ──► BATCH-011 Go-Live
 BATCH-006 Admin ─────┤                                       │
 BATCH-007 POS ───────┘                                       │
                                               Operator: GCP infra (Cloud SQL, Memorystore, AR, VPC, Secret Manager)
@@ -464,6 +464,7 @@ BATCH-007 POS ───────┘                                       │
 | BATCH-009 | GCP CI/CD | `CODE_COMPLETE` | 9/9 DONE | Claude+Operator | 59d7ebb | — | 2026-02-05 |
 | BATCH-010 | Staging Deploy | `CODE_COMPLETE` | 1/6 DONE (E2E config) | Claude+Operator | — | — | 2026-02-05 |
 | BATCH-011 | Go-Live | `DRAFT` | 0/4 | Operator | — | — | 2026-02-05 |
+| BATCH-012 | Auth & Session Security | `DRAFT` | 0/18 | Claude | — | — | 2026-02-05 |
 
 ### Scaling Note
 
@@ -1676,6 +1677,646 @@ gcloud run services update-traffic api-gateway \
 - [ ] Operator sign-off recorded
 - [ ] BATCH_LEDGER.md updated
 
+### BATCH-012: Auth & Session Security
+
+**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+
+> **Goal**: Fix all 18 auth/session vulnerabilities identified in the Security Audit Report
+> (Agent af78518, SHA 7ff2bd1). This batch MUST complete before staging deployment.
+> Organized into 3 phases: IMMEDIATE (5 CRITICAL), SHORT-TERM (8 HIGH), MEDIUM-TERM (5 MEDIUM).
+
+> **Source**: `SuperMandi_Auth_Session_Audit_Report.docx` — Production-Grade Audit, 2026-02-05
+
+#### Phase 1: IMMEDIATE (Before Staging — 5 CRITICAL + 3 HIGH)
+
+---
+
+**AUTH-OTP-004: Firebase ID token not validated on backend**
+
+**Risk Class**: C (Auth) | **Severity**: CRITICAL | **Priority**: P0
+
+**Scope**:
+- Files: `backend/services/auth-service/src/` (firebase-otp-login endpoint)
+- Services: auth-service, api-gateway
+
+**Issue**: Frontend gets Firebase ID token after OTP verification and sends to backend.
+Backend does NOT validate Firebase ID token signature with Firebase public keys.
+Attacker can craft JWT with any phone number → backend accepts.
+
+**Fix**:
+1. Add Firebase Admin SDK (`firebase-admin`) to auth-service
+2. In `/firebase-otp-login` endpoint: call `admin.auth().verifyIdToken(idToken)` to validate
+3. Extract `phone_number` from verified token (not from client request body)
+4. Reject if token invalid/expired
+
+**Steps to Verify**:
+1. Local: Send crafted JWT (not from Firebase) → must get 401
+2. Local: Send valid Firebase token → must get 200 with correct phone
+3. Staging: Real OTP flow works end-to-end
+
+**Evidence Required**:
+- [ ] curl proof: crafted JWT → 401 response
+- [ ] curl proof: valid Firebase token → 200 response
+- [ ] Console logs showing Firebase Admin SDK verification
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-PERM-001: No cross-portal role validation**
+
+**Risk Class**: C (Auth) | **Severity**: CRITICAL | **Priority**: P0
+
+**Scope**:
+- Files: `backend/services/api-gateway/src/index.ts`, `backend/services/api-gateway/src/middleware/`
+- Services: api-gateway
+
+**Issue**: JWT contains `actorType` but no per-endpoint permission matrix.
+Retailer tokens could call supplier endpoints if individual service lacks permission check.
+
+**Fix**:
+1. Create permission matrix at gateway level mapping route prefixes → allowed roles
+2. After JWT validation, check `actorType` against route's allowed roles
+3. Return 403 if role not authorized for the endpoint
+
+**Steps to Verify**:
+1. Local: Retailer JWT → supplier endpoint → 403
+2. Local: Supplier JWT → retailer endpoint → 403
+3. Local: Admin JWT → admin endpoint → 200
+
+**Evidence Required**:
+- [ ] curl proof: cross-portal access blocked (403)
+- [ ] Permission matrix documented
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-GATEWAY-001: Centralized authorization gap in API gateway**
+
+**Risk Class**: C (Auth) | **Severity**: CRITICAL | **Priority**: P0
+
+**Scope**:
+- Files: `backend/services/api-gateway/src/index.ts` (lines 199-204)
+- Services: api-gateway
+
+**Issue**: JWT auth middleware validates token but doesn't enforce permissions.
+Each backend service must implement own checks. Missing check = silent bypass.
+
+**Fix**:
+1. Add route-level authorization middleware after JWT verification
+2. Map every route prefix to required role(s)
+3. Log unauthorized access attempts
+4. Default-deny: unknown routes require admin role
+
+**Steps to Verify**:
+1. Local: Unauthenticated request to protected route → 401
+2. Local: Wrong-role request → 403
+3. Local: Correct-role request → passes through
+
+**Evidence Required**:
+- [ ] Gateway permission matrix code
+- [ ] curl proof: 401 + 403 + 200 responses
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-EXPIRY-002: Supplier Portal lacks token refresh mechanism**
+
+**Risk Class**: C (Auth/OTP) | **Severity**: CRITICAL | **Priority**: P0
+
+**Scope**:
+- Files: `supplier-portal/src/lib/auth.tsx` (lines 27-148)
+- Services: supplier-portal
+
+**Issue**: NO token refresh endpoint called. Idle timeout (30 min) forces logout with NO way to
+refresh. Supplier could be logged out DURING order fulfillment.
+
+**Fix**:
+1. Add token refresh logic matching retailer portal pattern
+2. Call `/api/v1/supplier/auth/refresh` before token expires
+3. Add pre-expiry warning (5 min before)
+4. Handle refresh failure gracefully (redirect to login)
+
+**Steps to Verify**:
+1. Local: Login → wait for near-expiry → token refreshed automatically
+2. Local: Verify refresh endpoint returns new access token
+
+**Evidence Required**:
+- [ ] Console logs showing token refresh cycle
+- [ ] Screenshot: supplier stays logged in past initial token expiry
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-STORAGE-001: Tokens stored in localStorage (XSS vulnerable)**
+
+**Risk Class**: C (Auth/Session) | **Severity**: CRITICAL | **Priority**: P1
+
+**Scope**:
+- Files: `retailer-admin/src/lib/AuthContext.tsx` (lines 44-64),
+  `retailer-admin/src/lib/api.ts` (lines 17-18),
+  `supplier-portal/src/lib/api.ts` (line 44, 54)
+- Services: retailer-admin, supplier-portal
+
+**Issue**: JWTs stored unencrypted in localStorage. Any XSS in bundled dependencies =
+attacker steals JWT + refresh token. No Content Security Policy headers detected.
+
+**Fix**:
+1. Migrate token storage to HttpOnly cookies (set by backend on login/refresh)
+2. Add `Set-Cookie` with `HttpOnly; Secure; SameSite=Strict` flags
+3. Frontend reads auth state from cookie presence, not cookie value
+4. Add CSP headers via api-gateway/nginx
+
+**Steps to Verify**:
+1. Local: Login → no JWT in localStorage
+2. Local: Cookie has HttpOnly + Secure flags
+3. Local: API calls include cookie automatically
+
+**Evidence Required**:
+- [ ] DevTools showing no tokens in localStorage
+- [ ] DevTools Application > Cookies showing HttpOnly flag
+- [ ] CSP header in response
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-LOGOUT-001: Retailer logout doesn't revoke refresh token**
+
+**Risk Class**: C (Auth) | **Severity**: HIGH | **Priority**: P0
+
+**Scope**:
+- Files: `retailer-admin/src/lib/AuthContext.tsx` (lines 220-242),
+  `backend/services/auth-service/src/` (logout + refresh endpoints)
+- Services: retailer-admin, auth-service
+
+**Issue**: Logout clears localStorage but backend may not check token revocation.
+Stolen refresh token on Device B can still get new access tokens after logout on Device A.
+
+**Fix**:
+1. Backend: maintain revoked token list (Redis or DB)
+2. On logout: add refresh token to revocation list
+3. On `/refresh`: check if token is revoked before issuing new access token
+4. Revocation list entries expire with token TTL
+
+**Steps to Verify**:
+1. Local: Login → get refresh token → logout → try refresh → 401
+2. Local: Verify revocation entry created in Redis/DB
+
+**Evidence Required**:
+- [ ] curl proof: refresh after logout → 401
+- [ ] Redis/DB entry showing revoked token
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-LOGOUT-002: Supplier logout has no backend revocation call**
+
+**Risk Class**: C (Auth) | **Severity**: HIGH | **Priority**: P0
+
+**Scope**:
+- Files: `supplier-portal/src/lib/auth.tsx` (lines 75-84)
+- Services: supplier-portal, auth-service
+
+**Issue**: Supplier logout calls `clearAuthToken()` + `router.push('/login')`.
+NO API call to backend `/logout` endpoint. Stale token on Device A still valid.
+
+**Fix**:
+1. Add API call to `/api/v1/supplier/auth/logout` in supplier logout flow
+2. Backend revokes refresh token (same mechanism as AUTH-LOGOUT-001)
+
+**Steps to Verify**:
+1. Local: Supplier logout → verify backend API called
+2. Local: Old token cannot refresh after logout
+
+**Evidence Required**:
+- [ ] Network tab showing /logout API call
+- [ ] curl proof: refresh after logout → 401
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-CONCURRENT-002: Retailer store access not validated**
+
+**Risk Class**: C (Auth) | **Severity**: HIGH | **Priority**: P0
+
+**Scope**:
+- Files: `retailer-admin/src/lib/AuthContext.tsx` (lines 100-195),
+  `backend/services/platform-service/src/routes/retailerPortal.ts`
+- Services: retailer-admin, platform-service
+
+**Issue**: Retailer can have multiple stores. User manually changes URL to `/s/{storeB_code}`
+(store they DON'T own). JWT has userId but no storeId. No store ownership check in routes.
+
+**Fix**:
+1. Add middleware: validate user has access to requested store_id
+2. Query user_stores table to verify ownership
+3. Return 403 if user doesn't own the store
+4. Include storeId in JWT claims for fast validation
+
+**Steps to Verify**:
+1. Local: Access own store → 200
+2. Local: Access other user's store → 403
+
+**Evidence Required**:
+- [ ] curl proof: own store → 200, other store → 403
+- [ ] Middleware code showing ownership check
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+#### Phase 2: SHORT-TERM (1-2 Weeks — 5 HIGH + 1 MEDIUM)
+
+---
+
+**AUTH-EXPIRY-001: Retailer token refresh buffer timing**
+
+**Risk Class**: C (Auth/OTP) | **Severity**: HIGH | **Priority**: P1
+
+**Scope**:
+- Files: `retailer-admin/src/lib/AuthContext.tsx` (lines 254-310),
+  `retailer-admin/src/lib/api.ts` (lines 49-103)
+- Services: retailer-admin
+
+**Issue**: Access tokens expire in 24h (hardcoded). 5-min refresh buffer only applies to
+parse check, not actual request timing. If refresh fails: abrupt logout mid-operation.
+
+**Fix**:
+1. Add sliding window refresh: refresh token 10 min before expiry
+2. Show pre-expiry warning UI (5 min before)
+3. Queue failed requests and retry after refresh
+4. Make token expiry configurable via env var
+
+**Steps to Verify**:
+1. Local: Token refreshes automatically before expiry
+2. Local: Pre-expiry warning shows
+
+**Evidence Required**:
+- [ ] Console logs showing pre-emptive refresh
+- [ ] Screenshot: pre-expiry warning UI
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-EXPIRY-003: SuperAdmin Portal has NO session management**
+
+**Risk Class**: C (Auth/OTP) | **Severity**: HIGH | **Priority**: P1
+
+**Scope**:
+- Files: `supermandi-superadmin/src/` (no AuthContext found)
+- Services: supermandi-superadmin
+
+**Issue**: No AuthContext. No idle timeout. Tokens in localStorage with no refresh.
+Admin can leave dashboard open for 8 hours → stale data + invisible logout.
+
+**Fix**:
+1. Create AuthContext for SuperAdmin portal
+2. Add idle timeout tracking (30 min default)
+3. Add token refresh mechanism
+4. Add session expiry warning
+
+**Steps to Verify**:
+1. Local: Admin portal has functional auth context
+2. Local: Idle timeout triggers after 30 min
+3. Local: Token refreshes before expiry
+
+**Evidence Required**:
+- [ ] Screenshot: auth context working
+- [ ] Console logs: idle timeout + refresh cycle
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-OTP-001: OTP expiry not warned to user**
+
+**Risk Class**: C (Auth/OTP) | **Severity**: HIGH | **Priority**: P1
+
+**Scope**:
+- Files: `retailer-admin/src/pages/LoginPage.tsx` (lines 129-143)
+- Services: retailer-admin
+
+**Issue**: Firebase OTP expires server-side (~5 min). Client has no countdown.
+User enters OTP after 6 min → cryptic "Invalid OTP" error instead of "OTP Expired".
+
+**Fix**:
+1. Add 5-minute countdown timer starting from OTP request
+2. Show "OTP Expired - Request New OTP" when timer hits 0
+3. Disable OTP input after expiry
+4. Auto-focus resend button after expiry
+
+**Steps to Verify**:
+1. Local: OTP screen shows countdown timer
+2. Local: After 5 min, "OTP Expired" message shown
+
+**Evidence Required**:
+- [ ] Screenshot: countdown timer on OTP screen
+- [ ] Screenshot: expiry message after timeout
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-IDLE-001: Retailer idle timeout not server-enforced**
+
+**Risk Class**: C (Auth) | **Severity**: HIGH | **Priority**: P1
+
+**Scope**:
+- Files: `retailer-admin/src/lib/AuthContext.tsx` (lines 370-424),
+  `backend/services/auth-service/src/`
+- Services: retailer-admin, auth-service
+
+**Issue**: Idle timeout (30 min) tracked in localStorage only. Backend JWT expires in 24h.
+If localStorage cleared → idle check lost. Compromised device has valid token for 24h.
+
+**Fix**:
+1. Reduce JWT expiry to match idle timeout (30 min)
+2. Add `last_active` tracking on backend (update on each API call)
+3. Reject tokens where `last_active` > 30 min ago
+4. Use sliding session: each API call extends session
+
+**Steps to Verify**:
+1. Local: JWT expiry matches idle timeout
+2. Local: API call updates last_active timestamp
+3. Local: Token rejected after idle period
+
+**Evidence Required**:
+- [ ] JWT decoded showing short expiry
+- [ ] Server logs showing last_active updates
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-RESET-001: Supplier password reset token not time-limited**
+
+**Risk Class**: C (Auth) | **Severity**: HIGH | **Priority**: P1
+
+**Scope**:
+- Files: `supplier-portal/src/lib/api.ts` (lines 233-245),
+  `backend/services/auth-service/src/` (password reset endpoints)
+- Services: supplier-portal, auth-service
+
+**Issue**: `requestPasswordReset(email)` returns devToken in dev mode.
+No evidence of token expiry in response. No timeout check on frontend.
+
+**Fix**:
+1. Backend: enforce 15-minute expiry on password reset tokens
+2. Store reset token with `expires_at` in DB
+3. Reject expired reset tokens with clear error message
+4. Frontend: show countdown timer on reset page
+
+**Steps to Verify**:
+1. Local: Request reset → token has expiry
+2. Local: Use expired token → get 400 "Token expired"
+
+**Evidence Required**:
+- [ ] curl proof: expired reset token → 400
+- [ ] DB query showing expires_at column
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-REFRESH-001: No refresh token rotation**
+
+**Risk Class**: C (Auth) | **Severity**: MEDIUM | **Priority**: P1
+
+**Scope**:
+- Files: `backend/services/auth-service/src/` (refresh endpoint)
+- Services: auth-service
+
+**Issue**: Old refresh token stays valid after used to get new access token.
+Same refresh token valid indefinitely (until expiry). Stolen token = 30-day window.
+
+**Fix**:
+1. On refresh: invalidate old refresh token, issue new one
+2. Return new refresh token alongside new access token
+3. If old refresh token reused after rotation → revoke entire family (compromise detection)
+4. Frontend: store new refresh token on each refresh
+
+**Steps to Verify**:
+1. Local: Refresh → old refresh token invalid, new one works
+2. Local: Reuse old refresh token → all tokens revoked
+
+**Evidence Required**:
+- [ ] curl proof: old refresh token → 401 after rotation
+- [ ] curl proof: token family revocation on reuse
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+#### Phase 3: MEDIUM-TERM (Pre Go-Live — 4 MEDIUM)
+
+---
+
+**AUTH-OTP-002: OTP resend cooldown is client-side only**
+
+**Risk Class**: C (Auth) | **Severity**: MEDIUM | **Priority**: P2
+
+**Scope**:
+- Files: `retailer-admin/src/pages/LoginPage.tsx` (lines 457-476),
+  `backend/services/auth-service/src/`
+- Services: retailer-admin, auth-service
+
+**Issue**: 60-second resend cooldown is CLIENT-SIDE state variable.
+Attacker can bypass via DevTools. Firebase rate limit triggers after 10-15 requests.
+
+**Fix**:
+1. Backend: add per-phone-number rate limiter (Redis)
+2. Limit: 3 OTP requests per phone per 5 minutes
+3. Return 429 Too Many Requests with retry-after header
+4. Frontend: display server-side cooldown from response
+
+**Steps to Verify**:
+1. Local: Send 4 OTP requests → 4th returns 429
+2. Local: Wait cooldown → request succeeds
+
+**Evidence Required**:
+- [ ] curl proof: rate limit 429 response
+- [ ] Redis showing rate limit key
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-OTP-003: Wrong OTP attempt tracking missing**
+
+**Risk Class**: C (Auth) | **Severity**: MEDIUM | **Priority**: P2
+
+**Scope**:
+- Files: `retailer-admin/src/pages/LoginPage.tsx` (lines 398-449),
+  `backend/services/auth-service/src/`
+- Services: retailer-admin, auth-service
+
+**Issue**: Unlimited wrong OTP attempts allowed. Firebase eventually blocks but delay unclear.
+6-digit OTP = 1 million combinations, vulnerable to brute force.
+
+**Fix**:
+1. Backend: track failed OTP attempts per phone (Redis counter)
+2. After 3 failures → lock for 5 minutes
+3. After 10 failures → lock for 1 hour
+4. Frontend: show remaining attempts + lockout message
+
+**Steps to Verify**:
+1. Local: 3 wrong OTPs → lockout message
+2. Local: Wait 5 min → can try again
+
+**Evidence Required**:
+- [ ] curl proof: lockout after 3 failures
+- [ ] Screenshot: lockout message on frontend
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-CONCURRENT-001: Multiple device tokens unsupervised**
+
+**Risk Class**: C (Auth) | **Severity**: MEDIUM | **Priority**: P2
+
+**Scope**:
+- Files: `retailer-admin/src/lib/AuthContext.tsx` (lines 197-218),
+  `backend/services/auth-service/src/`
+- Services: retailer-admin, auth-service
+
+**Issue**: Each login generates new JWT + refresh token. No session limit.
+User can login from 3+ devices simultaneously. No way to revoke one device.
+
+**Fix**:
+1. Backend: track active sessions per user (device_id + session_id)
+2. Limit concurrent sessions (default: 3)
+3. Add "logout all devices" endpoint
+4. Frontend: show active sessions in settings page
+
+**Steps to Verify**:
+1. Local: Login from 4th device → oldest session revoked
+2. Local: "Logout all" revokes all sessions
+
+**Evidence Required**:
+- [ ] API response showing session list
+- [ ] curl proof: logout-all endpoint works
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+**AUTH-CSRF-001: No CSRF protection detected**
+
+**Risk Class**: C (Auth) | **Severity**: MEDIUM | **Priority**: P2
+
+**Scope**:
+- Files: `retailer-admin/src/lib/api.ts`,
+  `backend/services/api-gateway/src/index.ts`
+- Services: retailer-admin, supplier-portal, api-gateway
+
+**Issue**: No CSRF tokens in forms. With localStorage tokens + CORS, CSRF is possible.
+CORS origin checks exist but may not cover all scenarios.
+
+**Fix**:
+1. Add CSRF token middleware (e.g., `csurf` or double-submit cookie)
+2. Generate CSRF token on session init, validate on state-changing requests
+3. Add `SameSite=Strict` cookie attribute (if using cookies from AUTH-STORAGE-001)
+4. Tighten CORS to exact origin list only
+
+**Steps to Verify**:
+1. Local: POST without CSRF token → 403
+2. Local: POST with valid CSRF token → passes
+
+**Evidence Required**:
+- [ ] curl proof: missing CSRF → 403
+- [ ] curl proof: valid CSRF → 200
+
+**Rollback Note**: `git revert COMMIT_SHA`
+
+**Status**: PENDING
+
+---
+
+#### Progress
+| # | Ticket | Risk | Severity | Phase | Status | Evidence |
+|---|--------|------|----------|-------|--------|----------|
+| 1 | AUTH-OTP-004 | C | CRITICAL | IMMEDIATE | PENDING | |
+| 2 | AUTH-PERM-001 | C | CRITICAL | IMMEDIATE | PENDING | |
+| 3 | AUTH-GATEWAY-001 | C | CRITICAL | IMMEDIATE | PENDING | |
+| 4 | AUTH-EXPIRY-002 | C | CRITICAL | IMMEDIATE | PENDING | |
+| 5 | AUTH-STORAGE-001 | C | CRITICAL | IMMEDIATE | PENDING | |
+| 6 | AUTH-LOGOUT-001 | C | HIGH | IMMEDIATE | PENDING | |
+| 7 | AUTH-LOGOUT-002 | C | HIGH | IMMEDIATE | PENDING | |
+| 8 | AUTH-CONCURRENT-002 | C | HIGH | IMMEDIATE | PENDING | |
+| 9 | AUTH-EXPIRY-001 | C | HIGH | SHORT-TERM | PENDING | |
+| 10 | AUTH-EXPIRY-003 | C | HIGH | SHORT-TERM | PENDING | |
+| 11 | AUTH-OTP-001 | C | HIGH | SHORT-TERM | PENDING | |
+| 12 | AUTH-IDLE-001 | C | HIGH | SHORT-TERM | PENDING | |
+| 13 | AUTH-RESET-001 | C | HIGH | SHORT-TERM | PENDING | |
+| 14 | AUTH-REFRESH-001 | C | MEDIUM | SHORT-TERM | PENDING | |
+| 15 | AUTH-OTP-002 | C | MEDIUM | MEDIUM-TERM | PENDING | |
+| 16 | AUTH-OTP-003 | C | MEDIUM | MEDIUM-TERM | PENDING | |
+| 17 | AUTH-CONCURRENT-001 | C | MEDIUM | MEDIUM-TERM | PENDING | |
+| 18 | AUTH-CSRF-001 | C | MEDIUM | MEDIUM-TERM | PENDING | |
+
+#### Browser Tests (Operator)
+- [ ] Retailer login + OTP flow works
+- [ ] Supplier login + session persists
+- [ ] Admin login + session management
+- [ ] Cross-portal: retailer token cannot access supplier API
+- [ ] Logout: refresh token rejected post-logout
+- [ ] No console errors in Incognito
+
+#### Gates
+- [ ] `pnpm -r typecheck` = 0 errors
+- [ ] `@prod` E2E = 0 failures
+- [ ] CI green for RC_SHA
+- [ ] All 18 tickets have evidence
+
+#### Non-Functional
+- [ ] No tokens in localStorage (after AUTH-STORAGE-001)
+- [ ] CSP headers present
+- [ ] CORS restricted to allowed origins only
+
+---
+
 ## PART 6: EVIDENCE
 
 Evidence stored in: `RELEASES/EVIDENCE/BATCH-XXX/`
@@ -1818,3 +2459,8 @@ Cloud Logging: https://console.cloud.google.com/logs?project=supermandi-pos
 | 2026-02-05 | **STAGE-E2E-001**: playwright.config.ts supports STAGING=true → staging.supermandi.tech | BATCH-010 |
 | 2026-02-05 | **BATCH-004/005/006**: Deep audit confirmed all code complete, updated to CODE_COMPLETE | ALL |
 | 2026-02-05 | **Typecheck**: 22/22 projects pass with 0 errors | GATE |
+| 2026-02-05 | **BATCH-012**: Auth & Session Security — 18 tickets from Security Audit Report (5 CRITICAL, 8 HIGH, 5 MEDIUM) | DOC-017 |
+| 2026-02-05 | BATCH-012 inserted before BATCH-010 in progression (IMMEDIATE fixes required before staging) | DOC-017 |
+| 2026-02-05 | Phase 1 IMMEDIATE: AUTH-OTP-004, AUTH-PERM-001, AUTH-GATEWAY-001, AUTH-EXPIRY-002, AUTH-STORAGE-001, AUTH-LOGOUT-001/002, AUTH-CONCURRENT-002 | DOC-017 |
+| 2026-02-05 | Phase 2 SHORT-TERM: AUTH-EXPIRY-001/003, AUTH-OTP-001, AUTH-IDLE-001, AUTH-RESET-001, AUTH-REFRESH-001 | DOC-017 |
+| 2026-02-05 | Phase 3 MEDIUM-TERM: AUTH-OTP-002/003, AUTH-CONCURRENT-001, AUTH-CSRF-001 | DOC-017 |

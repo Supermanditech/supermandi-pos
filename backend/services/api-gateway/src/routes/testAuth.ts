@@ -8,7 +8,7 @@
  * - GET /api/test/verify-token - Verify a token and return payload
  *
  * Usage:
- *   curl -X POST http://localhost:3000/api/test/mint-token \
+ *   curl -X POST $GATEWAY_URL/api/test/mint-token \
  *     -H "Content-Type: application/json" \
  *     -d '{"ttl": 30, "userId": "test-user", "storeId": "test-store"}'
  */

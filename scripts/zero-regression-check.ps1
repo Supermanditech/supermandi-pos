@@ -53,9 +53,24 @@ $ExcludeFilePatterns = @(
     "*.config.*"
 )
 
+# ZR-URL-001: Directories excluded from hardcoded URL scan (non-runtime code)
+$ExcludeDirPatterns = @(
+    "docs\",
+    "scripts\",
+    "e2e-tests\"
+)
+
 $HardcodedFound = @()
 
 foreach ($filePath in $SourceFiles) {
+    $relPath = $filePath.Replace("$RepoRoot\", "")
+    # Skip non-runtime directories (docs, scripts, e2e-tests)
+    $skipDir = $false
+    foreach ($dir in $ExcludeDirPatterns) {
+        if ($relPath.StartsWith($dir)) { $skipDir = $true; break }
+    }
+    if ($skipDir) { continue }
+
     $fileName = Split-Path $filePath -Leaf
     # Skip config/test files where localhost references are expected
     $skip = $false

@@ -301,7 +301,7 @@ export default function ProtectedLayout() {
           <div style={{ display: 'flex', gap: '2rem' }}>
             <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
             <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
-            <span>API: <strong style={{ color: '#38bdf8' }}>{window.location.hostname === 'localhost' ? 'http://localhost:3000' : window.location.origin}</strong></span>
+            <span>API: <strong style={{ color: '#38bdf8' }}>{import.meta.env.VITE_API_BASE_URL || window.location.origin}</strong></span>
           </div>
           {/* RET-AUD-005: Build fingerprint for deployment verification */}
           <BuildStamp />
