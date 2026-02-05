@@ -13,7 +13,7 @@ import {
   deleteStore,
   type CreateStoreInput,
   type UpdateStoreInput,
-} from '../db/queries.js';
+} from '../db/queries';
 import {
   getDevicesForStore,
   getDeviceById,
@@ -23,7 +23,7 @@ import {
   getEnrollmentById,
   revokeEnrollment,
   countRecentEnrollments,
-} from '../db/deviceQueries.js';
+} from '../db/deviceQueries';
 
 const router: Router = Router();
 

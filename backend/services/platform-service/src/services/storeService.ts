@@ -12,7 +12,7 @@ import {
   createStore,
   updateStore,
   deleteStore,
-} from '../db/queries.js';
+} from '../db/queries';
 
 // =============================================================================
 // STORE OPERATIONS

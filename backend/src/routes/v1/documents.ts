@@ -8,9 +8,10 @@ import path from "path";
 import fs from "fs";
 import crypto from "crypto";
 
-// DOCS-001: Import admin token validation
-// Load admin token from secret file or env (same as adminToken middleware)
+// CR-SECRET-001: Load admin token — env var first (Cloud Run), file fallback (Docker Compose)
 function loadAdminTokenForValidation(): string | undefined {
+  const envToken = process.env.ADMIN_TOKEN?.trim();
+  if (envToken) return envToken;
   const tokenFilePath = process.env.ADMIN_TOKEN_FILE;
   if (tokenFilePath) {
     try {
@@ -18,7 +19,7 @@ function loadAdminTokenForValidation(): string | undefined {
       if (token) return token;
     } catch { /* fall through */ }
   }
-  return process.env.ADMIN_TOKEN?.trim();
+  return undefined;
 }
 const ADMIN_TOKEN_CACHED = loadAdminTokenForValidation();
 

@@ -5,7 +5,7 @@
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiError, query } from '@supermandi/common';
-import { config } from '../config.js';
+import { config } from '../config';
 import {
   generateSignedUploadUrl,
   generateSignedDownloadUrl,
@@ -31,7 +31,7 @@ import {
   completeCsvCommit,
   failCsvImport,
   type ValidationError,
-} from '../db/retailerAdminQueries.js';
+} from '../db/retailerAdminQueries';
 
 // Retailer Catalog Service - shared module for catalog operations (API-RCAT-001)
 import {
@@ -47,7 +47,7 @@ import {
   verifySupplierLink,
   createSupplierProductLink,
   type ProductMode,
-} from '../services/retailerCatalogService.js';
+} from '../services/retailerCatalogService';
 
 const router: Router = Router();
 

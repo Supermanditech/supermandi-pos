@@ -3,7 +3,7 @@
 
 import { getClient, ApiError, ERROR_CODES } from '@supermandi/common';
 import { v4 as uuidv4 } from 'uuid';
-import { config } from '../config.js';
+import { config } from '../config';
 import {
   getPurchaseOrderByIdAndStore,
   getPurchaseOrderItems,
@@ -18,8 +18,8 @@ import {
   PurchaseOrderItem,
   ReceiveRecord,
   OrderStatus,
-} from '../db/queries.js';
-import { canReceive } from '../utils/stateMachine.js';
+} from '../db/queries';
+import { canReceive } from '../utils/stateMachine';
 
 // =============================================================================
 // TYPES
@@ -378,4 +378,4 @@ export async function receiveGoods(
 // GET RECEIVE HISTORY
 // =============================================================================
 
-export { getReceiveRecords, getReceiveRecordItems } from '../db/queries.js';
+export { getReceiveRecords, getReceiveRecordItems } from '../db/queries';

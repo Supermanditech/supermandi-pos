@@ -25,6 +25,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const DeviceActivationPage = lazy(() => import('./pages/DeviceActivationPage'));
 // RET-WEB-003: Payments Setup page
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+// RET-CLEANUP-001: Forgot password page
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 // SM-024: Admin approval queue pages
 const SupplierQueuePage = lazy(() => import('./pages/admin/SupplierQueuePage'));
 const ProductQueuePage = lazy(() => import('./pages/admin/ProductQueuePage'));
@@ -165,6 +167,8 @@ function AppRoutes() {
         <Route path="/retailer/register" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
         {/* REG-AUTH-301: Alias for onboarding page */}
         <Route path="/retailer/onboard" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
+        {/* RET-CLEANUP-001: Forgot password page - accessible without auth */}
+        <Route path="/retailer/forgot-password" element={<Suspense fallback={<PageLoadingFallback />}><ForgotPasswordPage /></Suspense>} />
 
         {/* Legacy routes - redirect to new paths */}
         <Route path="/s/:storeCode/login" element={<Navigate to="/retailer/login" replace />} />

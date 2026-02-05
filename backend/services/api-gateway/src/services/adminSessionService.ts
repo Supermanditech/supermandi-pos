@@ -40,9 +40,15 @@ const MAX_ACTIVE_SESSIONS = 10; // Per admin
 const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-admin';
 
-// GO-LIVE-103: Read ADMIN_TOKEN from Docker secret file (preferred) or env var (fallback)
+// CR-SECRET-001: Read ADMIN_TOKEN from env var (Cloud Run) or file fallback (Docker Compose)
 function loadAdminToken(): string | undefined {
-  // Try reading from Docker secret file first (more secure - not exposed in docker inspect)
+  // Primary: environment variable (Cloud Run / Secret Manager)
+  const envToken = process.env['ADMIN_TOKEN']?.trim();
+  if (envToken) {
+    console.log('[AdminSession] ADMIN_TOKEN loaded from environment variable');
+    return envToken;
+  }
+  // Fallback: Docker secret file (legacy Docker Compose)
   const tokenFilePath = process.env['ADMIN_TOKEN_FILE'];
   if (tokenFilePath) {
     try {
@@ -51,17 +57,11 @@ function loadAdminToken(): string | undefined {
         console.log('[AdminSession] ADMIN_TOKEN loaded from secret file');
         return token;
       }
-    } catch (err) {
-      // File doesn't exist or can't be read - fall through to env var
-      console.warn('[AdminSession] Could not read ADMIN_TOKEN_FILE, falling back to env var');
+    } catch {
+      console.warn('[AdminSession] Could not read ADMIN_TOKEN_FILE');
     }
   }
-  // Fallback to environment variable (for backwards compatibility)
-  const envToken = process.env['ADMIN_TOKEN']?.trim();
-  if (envToken) {
-    console.log('[AdminSession] ADMIN_TOKEN loaded from environment variable');
-  }
-  return envToken;
+  return undefined;
 }
 
 // Master admin token (for initial login only)

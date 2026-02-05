@@ -16,14 +16,14 @@ import {
   getSupplierRequests,
   writeToOutbox,
   getClient,
-} from '../db/queries.js';
+} from '../db/queries';
 import type {
   Supplier,
   SupplierStoreLink,
   SupplierRequest,
   SupplierWithLink,
-} from '../db/queries.js';
-import { validateGstin, isValidGstin } from '../utils/gstin.js';
+} from '../db/queries';
+import { validateGstin, isValidGstin } from '../utils/gstin';
 
 // =============================================================================
 // TYPES

@@ -4,10 +4,10 @@
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
-import { config } from './config.js';
-import inventoryRoutes from './routes/inventory.js';
-import transactionRoutes from './routes/transactions.js';
-import internalRoutes from './routes/internal.js';
+import { config } from './config';
+import inventoryRoutes from './routes/inventory';
+import transactionRoutes from './routes/transactions';
+import internalRoutes from './routes/internal';
 
 const app = express();
 
@@ -46,6 +46,15 @@ app.get('/healthz', (_req: Request, res: Response) => {
     status: 'ok',
     service: 'inventory-service',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+app.get('/version', (_req: Request, res: Response) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'inventory-service',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
   });
 });
 

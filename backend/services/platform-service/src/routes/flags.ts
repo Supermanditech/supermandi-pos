@@ -10,7 +10,7 @@ import {
   removeFlag,
   CreateFlagInput,
   UpdateFlagInput,
-} from '../services/flagService.js';
+} from '../services/flagService';
 
 const router: Router = Router();
 

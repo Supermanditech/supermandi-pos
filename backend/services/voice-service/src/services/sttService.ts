@@ -3,7 +3,7 @@
 // Uses Claude's multimodal capabilities for audio transcription
 
 import { readFile } from 'fs/promises';
-import { config } from '../config.js';
+import { config } from '../config';
 
 // =============================================================================
 // TYPES
@@ -34,7 +34,8 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
 
   try {
     // Dynamic import for Anthropic SDK (ESM)
-    const Anthropic = (await import('@anthropic-ai/sdk')).default;
+    const AnthropicModule = await import('@anthropic-ai/sdk');
+    const Anthropic = AnthropicModule.default as any;
     const client = new Anthropic({
       apiKey: config.anthropic.apiKey,
     });
@@ -85,7 +86,7 @@ export async function transcribeAudio(audioFilePath: string): Promise<Transcript
     });
 
     // Extract text from response
-    const textContent = response.content.find(c => c.type === 'text');
+    const textContent = response.content.find((c: any) => c.type === 'text');
     const transcribedText = textContent && 'text' in textContent ? textContent.text.trim() : '';
 
     console.log('[STT] Claude transcription successful:', transcribedText.slice(0, 50));

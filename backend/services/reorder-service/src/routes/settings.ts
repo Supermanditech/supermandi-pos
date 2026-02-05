@@ -8,7 +8,7 @@ import {
   getSettings,
   getOrCreateSettings,
   updateSettings,
-} from '../services/settingsService.js';
+} from '../services/settingsService';
 
 const router: RouterType = Router();
 

@@ -40,7 +40,8 @@ function getEnvRequired(key: string): string {
 }
 
 export const config: AuthServiceConfig = {
-  port: getEnvIntOrDefault('AUTH_SERVICE_PORT', 3001),
+  // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
+  port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('AUTH_SERVICE_PORT', 3001),
   env: getEnvOrDefault('NODE_ENV', 'development'),
   bcryptRounds: getEnvIntOrDefault('BCRYPT_ROUNDS', 12),
   passwordMinLength: getEnvIntOrDefault('PASSWORD_MIN_LENGTH', 8),

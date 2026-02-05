@@ -6,7 +6,7 @@ import {
   getStoreSettings,
   upsertStoreSettings,
   type StoreReorderSettings,
-} from '../db/queries.js';
+} from '../db/queries';
 
 // =============================================================================
 // TYPES

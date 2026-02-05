@@ -8,7 +8,7 @@ import {
   listLowStockProducts,
   getProductLedgerHistory,
   getStoreRecentActivity,
-} from '../services/ledgerService.js';
+} from '../services/ledgerService';
 import { authenticate, requireStoreAccess } from '@supermandi/auth-service/exports';
 
 const router: Router = Router();

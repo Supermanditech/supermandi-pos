@@ -11,7 +11,7 @@
 
 import express, { Express } from 'express';
 import request from 'supertest';
-import catalogRoutes from '../routes/catalog.js';
+import catalogRoutes from '../routes/catalog';
 
 // Mock the dependencies that require database
 jest.mock('@supermandi/common', () => ({

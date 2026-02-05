@@ -10,8 +10,8 @@ import {
   updatePolicy,
   deletePolicy,
   type ReorderPolicy,
-} from '../db/queries.js';
-import { config } from '../config.js';
+} from '../db/queries';
+import { config } from '../config';
 
 // =============================================================================
 // TYPES

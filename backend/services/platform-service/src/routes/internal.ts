@@ -2,8 +2,8 @@
 // Service-to-service endpoints (no auth required - trusted network)
 
 import { Router, Request, Response, NextFunction } from 'express';
-import { getStore, findStoreByCode } from '../services/storeService.js';
-import { isFlagEnabled, getFlagsForStore, getFlagsForSupplier } from '../services/flagService.js';
+import { getStore, findStoreByCode } from '../services/storeService';
+import { isFlagEnabled, getFlagsForStore, getFlagsForSupplier } from '../services/flagService';
 
 const router: Router = Router();
 

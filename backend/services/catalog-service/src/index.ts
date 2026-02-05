@@ -4,19 +4,19 @@
 import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import { ApiError, ERROR_CODES, healthCheck } from '@supermandi/common';
-import { config } from './config.js';
-import { redisHealthCheck, closeRedis } from './cache/redis.js';
+import { config } from './config';
+import { redisHealthCheck, closeRedis } from './cache/redis';
 import {
   searchProductsService,
   getProductByIdService,
   getProductByBarcodeService,
   searchSupplierProductsService,
   getSupplierProductByIdService,
-} from './services/searchService.js';
-import catalogRoutes from './routes/catalog.js';
-import mappingRoutes from './routes/mapping.js';
-import internalRoutes from './routes/internal.js';
-import { startInventoryConsumer, stopInventoryConsumer } from './consumers/inventoryConsumer.js';
+} from './services/searchService';
+import catalogRoutes from './routes/catalog';
+import mappingRoutes from './routes/mapping';
+import internalRoutes from './routes/internal';
+import { startInventoryConsumer, stopInventoryConsumer } from './consumers/inventoryConsumer';
 
 const app = express();
 
@@ -60,6 +60,15 @@ app.get('/healthz', (_req: Request, res: Response) => {
     status: 'ok',
     service: 'catalog-service',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+app.get('/version', (_req: Request, res: Response) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'catalog-service',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
   });
 });
 

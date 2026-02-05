@@ -14,7 +14,8 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
 
 export const config = {
   // Service configuration
-  port: getEnvIntOrDefault('VOICE_SERVICE_PORT', 3008),
+  // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
+  port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('VOICE_SERVICE_PORT', 3009),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // AUD-076-D: Claude/Anthropic API configuration (replaces OpenAI)

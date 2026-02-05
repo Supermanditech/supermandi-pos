@@ -8,8 +8,8 @@ import {
   listStoreInventory,
   getReferenceLedgerHistory,
   ReferenceType,
-} from '../services/ledgerService.js';
-import { getCurrentStock } from '../db/queries.js';
+} from '../services/ledgerService';
+import { getCurrentStock } from '../db/queries';
 
 const router: Router = Router();
 

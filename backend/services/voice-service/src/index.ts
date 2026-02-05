@@ -5,8 +5,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 
-import { config } from './config.js';
-import voiceRoutes from './routes/voice.js';
+import { config } from './config';
+import voiceRoutes from './routes/voice';
 
 const app = express();
 
@@ -50,6 +50,15 @@ app.get('/healthz', (_req: Request, res: Response) => {
     status: 'ok',
     service: 'voice-service',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+app.get('/version', (_req: Request, res: Response) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'voice-service',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
   });
 });
 

@@ -11,8 +11,8 @@ import {
   insertEventOutbox,
   type PendingReorder,
   type PendingReorderStatus,
-} from '../db/queries.js';
-import { config } from '../config.js';
+} from '../db/queries';
+import { config } from '../config';
 
 // =============================================================================
 // TYPES

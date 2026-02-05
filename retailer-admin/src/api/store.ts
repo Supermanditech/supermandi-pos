@@ -1,6 +1,6 @@
 import { authFetch, safeJson } from '../lib/api';
 
-// DEPLOY-003: Use VITE_API_BASE_URL when set (points to gateway e.g. http://34.14.220.171:3000)
+// DEPLOY-003: Use VITE_API_BASE_URL when set (points to gateway e.g. http://localhost:3000)
 // Falls back to relative path (requires Nginx proxy for /api/* in production)
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1/retailer-admin';
 

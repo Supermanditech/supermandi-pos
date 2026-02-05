@@ -9,7 +9,7 @@ import {
   TransactionType,
   ReferenceType,
   CreateLedgerEntryInput,
-} from '../db/queries.js';
+} from '../db/queries';
 
 // =============================================================================
 // TRANSACTION INPUT TYPES

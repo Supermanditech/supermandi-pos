@@ -6,8 +6,8 @@ import type { Router as RouterType } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
-import { validateGstin } from '../utils/gstin.js';
-import { config } from '../config.js';
+import { validateGstin } from '../utils/gstin';
+import { config } from '../config';
 
 const router: RouterType = Router();
 

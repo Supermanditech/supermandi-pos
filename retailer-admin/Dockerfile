@@ -7,8 +7,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # ENV-001: Build-time environment variables
-# OPS-DOMAIN-001: Base URL only - API client appends /api/v1/retailer-admin internally
-ARG VITE_API_BASE_URL=https://supermandi.tech
+# FRONTEND-CR-201: No hardcoded domain — set at build time via --build-arg
+ARG VITE_API_BASE_URL=""
 ARG VITE_GIT_SHA=dev
 ARG VITE_BUILD_TIME
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL

@@ -31,33 +31,50 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
 }
 
 /**
+ * CR-SVCURL-001: Fail-fast in production if required service URLs are missing.
+ * In development, falls back to localhost defaults for convenience.
+ */
+function requireServiceUrl(envKey: string, localDefault: string): string {
+  const url = process.env[envKey];
+  if (url) return url;
+  if (process.env['NODE_ENV'] === 'production') {
+    console.error(`[config] FATAL: ${envKey} is required in production but not set`);
+    process.exit(1);
+  }
+  return localDefault;
+}
+
+/**
  * RCAT-DEPLOY-001: Get main backend URL with proper fallback chain
- * Production uses ADMIN_SERVICE_URL, but we support multiple env vars for compatibility:
- * 1. ADMIN_SERVICE_URL (production - http://supermandi-main-backend:3010)
+ * 1. ADMIN_SERVICE_URL (primary)
  * 2. POS_SERVICE_URL (alias)
  * 3. BACKEND_SERVICE_URL (legacy)
- * 4. Default: http://localhost:3010 (main-backend port)
- * GO-LIVE-FIX: Changed default from 3001 to 3010 to match main-backend port
+ * 4. Default: http://localhost:3010 (main-backend port, dev only)
  */
 function getMainBackendUrl(): string {
-  return process.env['ADMIN_SERVICE_URL']
+  const url = process.env['ADMIN_SERVICE_URL']
     || process.env['POS_SERVICE_URL']
-    || process.env['BACKEND_SERVICE_URL']
-    || 'http://localhost:3010';
+    || process.env['BACKEND_SERVICE_URL'];
+  if (url) return url;
+  if (process.env['NODE_ENV'] === 'production') {
+    console.error('[config] FATAL: ADMIN_SERVICE_URL is required in production but not set');
+    process.exit(1);
+  }
+  return 'http://localhost:3010';
 }
 
 /**
  * SM-004: Get payment service URL
- * Production: http://supermandi-payment-service:3011
- * Local dev: http://localhost:3011
+ * CR-SVCURL-001: Fail-fast in production
  */
 function getPaymentServiceUrl(): string {
-  return process.env['PAYMENT_SERVICE_URL'] || 'http://localhost:3011';
+  return requireServiceUrl('PAYMENT_SERVICE_URL', 'http://localhost:3011');
 }
 
 
 export const config: GatewayConfig = {
-  port: getEnvIntOrDefault('API_GATEWAY_PORT', 3000),
+  // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
+  port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('API_GATEWAY_PORT', 3000),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // Rate limiting - GL-CRIT-0027: Reduced from 100 to 30/min for public APIs

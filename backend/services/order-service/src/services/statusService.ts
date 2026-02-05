@@ -11,13 +11,13 @@ import {
   PurchaseOrder,
   OrderStatus,
   ActorType,
-} from '../db/queries.js';
+} from '../db/queries';
 import {
   isValidTransition,
   getTransitionErrorMessage,
   canSubmit,
   canCancel,
-} from '../utils/stateMachine.js';
+} from '../utils/stateMachine';
 
 // =============================================================================
 // TYPES

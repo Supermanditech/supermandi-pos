@@ -1,7 +1,7 @@
 // Order Number Service - V3.0.9 compliant
 // Generates unique order numbers in format: PO-{storeCode}-{YY}-{NNNNNN}
 
-import { getNextOrderSequence } from '../db/queries.js';
+import { getNextOrderSequence } from '../db/queries';
 
 // =============================================================================
 // ORDER NUMBER FORMAT

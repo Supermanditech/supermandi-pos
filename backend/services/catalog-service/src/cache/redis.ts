@@ -2,7 +2,7 @@
 // Provides caching with configurable TTL
 
 import Redis from 'ioredis';
-import { config } from '../config.js';
+import { config } from '../config';
 
 // =============================================================================
 // REDIS CLIENT

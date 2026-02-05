@@ -21,8 +21,8 @@ import {
   ListPurchaseOrdersFilters,
   ListPurchaseOrdersResult,
   OrderStatus,
-} from '../db/queries.js';
-import { generateOrderNumber } from './orderNumberService.js';
+} from '../db/queries';
+import { generateOrderNumber } from './orderNumberService';
 
 // =============================================================================
 // TYPES

@@ -2,21 +2,21 @@
 // Provides product search with trigram similarity and caching
 
 import { ApiError, ERROR_CODES } from '@supermandi/common';
-import { config } from '../config.js';
+import { config } from '../config';
 import {
   searchProducts,
   searchSupplierProducts,
   getProductById,
   getProductByBarcode,
   getSupplierProductById,
-} from '../db/queries.js';
-import type { Product, SupplierProduct } from '../db/queries.js';
+} from '../db/queries';
+import type { Product, SupplierProduct } from '../db/queries';
 import {
   cacheGetOrSet,
   cacheDelete,
   searchCacheKey,
   productCacheKey,
-} from '../cache/redis.js';
+} from '../cache/redis';
 
 // =============================================================================
 // TYPES

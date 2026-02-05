@@ -13,7 +13,7 @@ import {
   autoMapByBarcode,
   getMappingById,
   verifyMapping,
-} from '../services/mappingService.js';
+} from '../services/mappingService';
 
 const router: RouterType = Router();
 

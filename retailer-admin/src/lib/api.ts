@@ -3,7 +3,7 @@
 
 /**
  * DEPLOY-003: API base URL for production gateway.
- * When VITE_API_BASE_URL is set (e.g. http://34.14.220.171:3000), all relative
+ * When VITE_API_BASE_URL is set (e.g. http://localhost:3000), all relative
  * API paths are prefixed with it. When empty, relative paths are used (requires Nginx proxy).
  */
 export const API_GATEWAY_BASE = import.meta.env.VITE_API_BASE_URL || '';

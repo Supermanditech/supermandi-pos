@@ -46,10 +46,16 @@ async function runMigrations() {
 
   const pool = new Pool({ connectionString: databaseUrl });
 
+  const MIGRATION_LOCK_ID = 839271;
+
   try {
     console.log('[migrate] Connecting to database...');
     await pool.query('SELECT 1');
     console.log('[migrate] Connected successfully');
+
+    console.log('[migrate] Acquiring advisory lock...');
+    await pool.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_ID]);
+    console.log('[migrate] Lock acquired');
 
     await ensureMigrationsTable(pool);
 
@@ -105,6 +111,12 @@ async function runMigrations() {
 
     console.log(`[migrate] All ${pending.length} migration(s) applied successfully`);
   } finally {
+    try {
+      await pool.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_ID]);
+      console.log('[migrate] Lock released');
+    } catch (_) {
+      // Lock auto-releases on disconnect
+    }
     await pool.end();
   }
 }

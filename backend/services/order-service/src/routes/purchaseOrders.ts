@@ -13,7 +13,7 @@ import {
   listStoreOrders,
   parseStatusFilter,
   CartItem,
-} from '../services/purchaseOrderService.js';
+} from '../services/purchaseOrderService';
 
 const router: RouterType = Router();
 

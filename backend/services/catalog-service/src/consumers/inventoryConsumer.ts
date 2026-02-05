@@ -13,8 +13,8 @@ import {
   type EventContext,
 } from '@supermandi/common';
 import { getClient } from '@supermandi/common';
-import { config } from '../config.js';
-import { updateStoreProductStock } from '../db/queries.js';
+import { config } from '../config';
+import { updateStoreProductStock } from '../db/queries';
 
 // =============================================================================
 // TYPES

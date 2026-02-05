@@ -16,7 +16,7 @@ import {
   requestNewSupplier,
   getStoreSupplierRequests,
   validateGstinService,
-} from '../services/supplierService.js';
+} from '../services/supplierService';
 
 const router: RouterType = Router();
 

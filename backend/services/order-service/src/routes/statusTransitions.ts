@@ -10,8 +10,8 @@ import {
   confirmOrder,
   shipOrder,
   TransitionActor,
-} from '../services/statusService.js';
-import { getOrderEvents } from '../db/queries.js';
+} from '../services/statusService';
+import { getOrderEvents } from '../db/queries';
 
 const router: RouterType = Router();
 

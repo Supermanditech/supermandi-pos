@@ -9,7 +9,7 @@ import {
   getReceiveRecords,
   getReceiveRecordItems,
   ReceiveItemInput,
-} from '../services/grnService.js';
+} from '../services/grnService';
 
 const router: RouterType = Router();
 

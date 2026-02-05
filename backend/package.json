@@ -4,7 +4,7 @@
   "private": true,
   "description": "SuperMandi Backend Microservices Monorepo",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "concurrently --kill-others-on-fail \"pnpm -r --parallel run dev\" \"nodemon --watch src --ext ts --exec ts-node --project tsconfig.main.json src/server.ts\"",
     "build": "pnpm -r run build",
     "test": "jest",
     "test:golden": "jest --testPathPattern=goldenPath",
@@ -41,6 +41,7 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
+    "@supermandi/common": "workspace:*",
     "@anthropic-ai/sdk": "^0.39.0",
     "@google-cloud/storage": "^7.7.0",
     "@google-cloud/translate": "^9.3.0",

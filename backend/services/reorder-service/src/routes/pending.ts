@@ -11,8 +11,8 @@ import {
   listPending,
   approvePendingReorders,
   dismissPendingReorder,
-} from '../services/pendingReorderService.js';
-import { config } from '../config.js';
+} from '../services/pendingReorderService';
+import { config } from '../config';
 
 const router: RouterType = Router();
 

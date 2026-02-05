@@ -11,8 +11,8 @@ import {
   createPolicyService,
   updatePolicyService,
   deletePolicyService,
-} from '../services/policyService.js';
-import { config } from '../config.js';
+} from '../services/policyService';
+import { config } from '../config';
 
 const router: RouterType = Router();
 

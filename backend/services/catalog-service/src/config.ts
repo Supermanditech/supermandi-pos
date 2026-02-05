@@ -13,7 +13,8 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
 
 export const config = {
   // Service configuration
-  port: getEnvIntOrDefault('CATALOG_SERVICE_PORT', 3003),
+  // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
+  port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('CATALOG_SERVICE_PORT', 3003),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // Database configuration (uses shared pool from @supermandi/common)

@@ -79,8 +79,14 @@ USER nodejs
 
 WORKDIR /app/services/order-service
 
+# CR-VERSION-001: Build args for version endpoint
+ARG GIT_SHA=unknown
+ARG BUILD_TIME=unknown
+
 # Environment
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    GIT_SHA=$GIT_SHA \
+    BUILD_TIME=$BUILD_TIME
 ENV PORT=3006
 
 EXPOSE 3006

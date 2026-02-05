@@ -23,6 +23,7 @@ export type PosEventType =
   | "PAYMENT_SUCCESS"
   | "PAYMENT_FAILED"
   | "PRINTER_ERROR"
+  | "PRINT_RECEIPT"
   | "NETWORK_OFFLINE"
   | "STORE_SWITCH"
   // Payment lifecycle (UPI/QR)

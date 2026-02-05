@@ -4,7 +4,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiError, ERROR_CODES } from '@supermandi/common';
-import { config } from '../config.js';
+import { config } from '../config';
 
 // JWT issuer must match main-backend for cross-service token validation
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';

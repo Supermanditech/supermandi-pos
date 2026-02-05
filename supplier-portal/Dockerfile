@@ -20,8 +20,8 @@ COPY . .
 
 # Build the Next.js application
 # Note: NEXT_PUBLIC_API_BASE_URL must be set at build time for client-side usage
-# OPS-DOMAIN-001: Base URL only - API client appends /api/v1/supplier internally
-ARG NEXT_PUBLIC_API_BASE_URL=https://supermandi.tech
+# FRONTEND-CR-201: No hardcoded domain — set at build time via --build-arg
+ARG NEXT_PUBLIC_API_BASE_URL=""
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
 RUN npm run build

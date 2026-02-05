@@ -67,7 +67,7 @@ const CORS_ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '')
 const DEFAULT_CORS_ORIGINS = [
   'https://supermandi.tech',
   'https://www.supermandi.tech',
-  'https://34.14.220.171.nip.io',
+  // LOCAL-PROD-001-H: VM IP removed - use CORS_ALLOWED_ORIGINS env var for custom origins
 ];
 
 // In development, allow localhost
@@ -210,6 +210,15 @@ app.use(createHealthRouter(healthChecker));
 
 // RET-AUD-025: Also mount health endpoints under /api/v1/ for nginx proxy compatibility
 app.use('/api/v1', createHealthRouter(healthChecker));
+
+// CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+app.get('/version', (_req, res) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'api-gateway',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
+  });
+});
 
 // =============================================================================
 // GO-LIVE-002: ADMIN AUTH ROUTES

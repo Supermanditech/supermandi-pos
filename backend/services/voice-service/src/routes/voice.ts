@@ -8,9 +8,9 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 
-import { config } from '../config.js';
-import { transcribeAudio } from '../services/sttService.js';
-import { parseIntent, type ParsedIntent } from '../services/intentParser.js';
+import { config } from '../config';
+import { transcribeAudio } from '../services/sttService';
+import { parseIntent, type ParsedIntent } from '../services/intentParser';
 
 const router: ReturnType<typeof Router> = Router();
 
@@ -92,24 +92,26 @@ setInterval(() => {
 router.post(
   '/interpret',
   upload.single('audio'),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const audioFile = req.file;
 
     try {
       // Validate request
       if (!audioFile) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'No audio file provided',
         });
+        return;
       }
 
       const storeId = req.body.storeId as string;
       if (!storeId) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'storeId is required',
         });
+        return;
       }
 
       console.log(`[VOICE] Processing audio: ${audioFile.path}, size: ${audioFile.size}`);
@@ -178,41 +180,45 @@ router.post(
  */
 router.post(
   '/execute',
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { requestId, storeId, confirmed } = req.body;
+      const { requestId, storeId } = req.body;
 
       // Validate request
       if (!requestId || !storeId) {
-        return res.status(400).json({
+        res.status(400).json({
           success: false,
           error: 'requestId and storeId are required',
         });
+        return;
       }
 
       // Get stored request
       const voiceRequest = requestStore.get(requestId);
       if (!voiceRequest) {
-        return res.status(404).json({
+        res.status(404).json({
           success: false,
           error: 'Request not found or expired',
         });
+        return;
       }
 
       // Validate store matches
       if (voiceRequest.storeId !== storeId) {
-        return res.status(403).json({
+        res.status(403).json({
           success: false,
           error: 'Store mismatch',
         });
+        return;
       }
 
       // Check if already executed
       if (voiceRequest.executed) {
-        return res.status(409).json({
+        res.status(409).json({
           success: false,
           error: 'Request already executed',
         });
+        return;
       }
 
       // Mark as executed
@@ -278,15 +284,16 @@ router.post(
  */
 router.get(
   '/status/:requestId',
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     const { requestId } = req.params;
 
-    const voiceRequest = requestStore.get(requestId);
+    const voiceRequest = requestStore.get(requestId as string);
     if (!voiceRequest) {
-      return res.status(404).json({
+      res.status(404).json({
         success: false,
         error: 'Request not found or expired',
       });
+      return;
     }
 
     res.json({

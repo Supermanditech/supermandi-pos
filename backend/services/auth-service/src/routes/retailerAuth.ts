@@ -7,7 +7,7 @@ import {
   verifyFirebaseIdToken,
   normalizePhoneNumber,
 } from '@supermandi/common';
-import { generateTokenPair } from '../services/jwtService.js';
+import { generateTokenPair } from '../services/jwtService';
 
 const router: Router = Router();
 

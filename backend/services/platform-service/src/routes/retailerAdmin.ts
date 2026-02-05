@@ -4,7 +4,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiError } from '@supermandi/common';
-import { getStoreById } from '../db/queries.js';
+import { getStoreById } from '../db/queries';
 import {
   getRetailerPortalInfo,
   enableRetailerPortal,
@@ -18,7 +18,7 @@ import {
   updateComplianceDocumentStatus,
   createImpersonationLog,
   getImpersonationLogs,
-} from '../db/retailerAdminQueries.js';
+} from '../db/retailerAdminQueries';
 import {
   normalizePhoneNumber,
   isValidPhoneNumber,

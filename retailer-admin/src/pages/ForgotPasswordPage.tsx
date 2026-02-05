@@ -254,7 +254,7 @@ export default function ForgotPasswordPage() {
 
             <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
               Remember your password?{' '}
-              <Link to={`/s/${storeCode}/login`} style={{ color: '#2563eb' }}>
+              <Link to={storeCode ? `/s/${storeCode}/login` : '/retailer/login'} style={{ color: '#2563eb' }}>
                 Login
               </Link>
             </p>
@@ -397,7 +397,7 @@ export default function ForgotPasswordPage() {
             <button
               className="btn btn-primary"
               style={{ width: '100%' }}
-              onClick={() => navigate(`/s/${storeCode}/login`)}
+              onClick={() => navigate(storeCode ? `/s/${storeCode}/login` : '/retailer/login')}
             >
               Go to Login
             </button>

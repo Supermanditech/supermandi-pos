@@ -3,7 +3,6 @@
 # Production reverse proxy with SSL certificate management
 #
 # Production Domain: https://supermandi.tech
-# Debug Mirror (optional): https://34.14.220.171.nip.io
 #
 # Environment variables:
 #   SSL_DOMAIN        - Domain for SSL certificates (e.g., supermandi.tech)

@@ -17,7 +17,7 @@ import {
   getRecentLedgerEntriesForStore,
   createLedgerEntryWithBalanceUpdate,
   createBatchLedgerEntries,
-} from '../db/queries.js';
+} from '../db/queries';
 
 // =============================================================================
 // STOCK LOOKUP OPERATIONS

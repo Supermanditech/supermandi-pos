@@ -19,9 +19,15 @@ import { v4 as uuidv4 } from "uuid";
 // CONFIGURATION
 // =============================================================================
 
-// GO-LIVE-107: Read OpenAI API key from Docker secret file (preferred) or env var (fallback)
+// CR-SECRET-001: Read OpenAI API key — env var first (Cloud Run), file fallback (Docker Compose)
 function loadOpenAIApiKey(): string {
-  // Try reading from Docker secret file first (more secure - not exposed in docker inspect)
+  // Primary: environment variable (Cloud Run / Secret Manager)
+  const envKey = process.env.OPENAI_API_KEY?.trim();
+  if (envKey) {
+    console.log('[OpenAI] API key loaded from environment variable');
+    return envKey;
+  }
+  // Fallback: Docker secret file (legacy Docker Compose)
   const keyFilePath = process.env.OPENAI_API_KEY_FILE;
   if (keyFilePath) {
     try {
@@ -31,16 +37,10 @@ function loadOpenAIApiKey(): string {
         return key;
       }
     } catch {
-      // File doesn't exist or can't be read - fall through to env var
-      console.warn('[OpenAI] Could not read OPENAI_API_KEY_FILE, falling back to env var');
+      console.warn('[OpenAI] Could not read OPENAI_API_KEY_FILE');
     }
   }
-  // Fallback to environment variable (for backwards compatibility)
-  const envKey = process.env.OPENAI_API_KEY?.trim();
-  if (envKey) {
-    console.log('[OpenAI] API key loaded from environment variable');
-  }
-  return envKey || '';
+  return '';
 }
 
 // Cache the loaded key (loaded once at startup)

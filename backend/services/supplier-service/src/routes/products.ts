@@ -7,7 +7,7 @@ import type { Router as RouterType } from 'express';
 import multer from 'multer';
 import { parse } from 'csv-parse/sync';
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
-import { supplierAuth, AuthenticatedRequest } from '../middleware/supplierAuth.js';
+import { supplierAuth, AuthenticatedRequest } from '../middleware/supplierAuth';
 
 // =============================================================================
 // MULTER CONFIGURATION (SM-007)

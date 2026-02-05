@@ -80,7 +80,6 @@ const STOCK_KEYWORDS = [
  */
 export function parseIntent(text: string): ParsedIntent {
   const normalizedText = normalizeText(text);
-  const words = normalizedText.split(/\s+/);
 
   // Try to extract quantity and unit first
   const { quantity, unit, remainingText } = extractQuantityAndUnit(normalizedText);
@@ -208,7 +207,7 @@ function determineAction(text: string): IntentAction {
 /**
  * Extract product name from remaining text.
  */
-function extractProductName(text: string, action: IntentAction): string | null {
+function extractProductName(text: string, _action: IntentAction): string | null {
   let cleanText = text;
 
   // Remove action keywords

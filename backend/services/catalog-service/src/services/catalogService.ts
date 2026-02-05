@@ -3,8 +3,8 @@
 // and from suppliers linked to the store
 
 import { ApiError, ERROR_CODES, query, queryOne } from '@supermandi/common';
-import { config } from '../config.js';
-import { cacheGetOrSet, catalogCacheKey } from '../cache/redis.js';
+import { config } from '../config';
+import { cacheGetOrSet, catalogCacheKey } from '../cache/redis';
 
 // =============================================================================
 // TYPES

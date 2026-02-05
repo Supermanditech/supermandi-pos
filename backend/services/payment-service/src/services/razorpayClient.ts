@@ -2,7 +2,7 @@
 // SM-004: Razorpay SDK integration for payments and payouts
 
 import Razorpay from 'razorpay';
-import { config } from '../config.js';
+import { config } from '../config';
 
 // Initialize Razorpay instance
 let razorpayInstance: Razorpay | null = null;

@@ -16,7 +16,7 @@ import {
   updateFlag,
   upsertFlag,
   deleteFlag,
-} from '../db/queries.js';
+} from '../db/queries';
 
 // =============================================================================
 // RESOLVED FLAG (with scope resolution applied)

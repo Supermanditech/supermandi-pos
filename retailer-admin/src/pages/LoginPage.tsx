@@ -566,6 +566,12 @@ export default function LoginPage() {
                       Register
                     </Link>
                   </p>
+                  {/* RET-CLEANUP-001: Forgot password link */}
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
+                    <Link to="/retailer/forgot-password" style={styles.textLink}>
+                      Forgot Password?
+                    </Link>
+                  </p>
                 </div>
               </form>
             )}

@@ -14,7 +14,8 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
 export const config = {
   // Service configuration
   // GO-LIVE-FIX: Changed default from 3005 to 3004 to match .env
-  port: getEnvIntOrDefault('INVENTORY_SERVICE_PORT', 3004),
+  // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
+  port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('INVENTORY_SERVICE_PORT', 3004),
   env: getEnvOrDefault('NODE_ENV', 'development'),
 
   // Database configuration (uses shared pool from @supermandi/common)

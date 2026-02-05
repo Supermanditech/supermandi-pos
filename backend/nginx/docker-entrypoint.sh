@@ -7,7 +7,7 @@ set -e
 
 # Default values - GO-LIVE-B9: supermandi.tech as primary domain
 SSL_DOMAIN="${SSL_DOMAIN:-supermandi.tech}"
-SERVER_NAMES="${SERVER_NAMES:-${SSL_DOMAIN} 34.14.220.171.nip.io api.supermandi.com _}"
+SERVER_NAMES="${SERVER_NAMES:-${SSL_DOMAIN} api.supermandi.com _}"
 API_RATE_LIMIT="${API_RATE_LIMIT:-30}"
 AUTH_RATE_LIMIT="${AUTH_RATE_LIMIT:-5}"
 

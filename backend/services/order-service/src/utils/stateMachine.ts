@@ -1,7 +1,7 @@
 // Order Status State Machine - V3.0.9 compliant
 // Defines valid status transitions for purchase orders
 
-import { OrderStatus } from '../db/queries.js';
+import { OrderStatus } from '../db/queries';
 
 // =============================================================================
 // STATUS TRANSITION RULES

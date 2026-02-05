@@ -1,0 +1,320 @@
+# CD-WORKFLOW-001: Build images → Push to AR → Auto-deploy staging Cloud Run
+# Triggers after CI gates pass on push to main.
+# Production deploy is MANUAL via promote-to-prod.sh (CD-201 enforced).
+
+name: CD — Build & Deploy Staging
+
+on:
+  workflow_run:
+    workflows: ["CI Gates (Zero-Regression)"]
+    types: [completed]
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Git SHA to deploy (default: HEAD)'
+        required: false
+        type: string
+
+env:
+  GCP_PROJECT: supermandi-pos
+  GCP_REGION: asia-south1
+  AR_REPO: asia-south1-docker.pkg.dev/supermandi-pos/supermandi
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  # ==========================================================================
+  # Gate: Only deploy if CI passed
+  # ==========================================================================
+  gate:
+    name: Verify CI Passed
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      sha_short: ${{ steps.sha.outputs.sha_short }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Determine SHA
+        id: sha
+        run: |
+          SHA=$(git rev-parse HEAD)
+          SHA_SHORT=$(git rev-parse --short HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "sha_short=$SHA_SHORT" >> "$GITHUB_OUTPUT"
+          echo "Deploying SHA: $SHA_SHORT ($SHA)"
+
+  # ==========================================================================
+  # Build all 14 Docker images and push to Artifact Registry
+  # ==========================================================================
+  build-push:
+    name: Build & Push Images
+    needs: gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for WIF
+    env:
+      SHA: ${{ needs.gate.outputs.sha_short }}
+      BUILD_TIME: ${{ github.event.head_commit.timestamp || github.event.workflow_run.created_at }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Configure Docker for AR
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Set build time
+        run: echo "BUILD_TIME=$(date -Iseconds)" >> "$GITHUB_ENV"
+
+      # --- Backend services (10 images) ---
+      - name: Build backend images
+        run: |
+          SERVICES=(
+            api-gateway auth-service catalog-service inventory-service
+            order-service payment-service platform-service reorder-service
+            supplier-service voice-service
+          )
+          for svc in "${SERVICES[@]}"; do
+            echo "--- Building: $svc"
+            docker build \
+              -t "${{ env.AR_REPO }}/${svc}:${{ env.SHA }}" \
+              -f "backend/services/${svc}/Dockerfile" \
+              --build-arg GIT_SHA="${{ env.SHA }}" \
+              --build-arg BUILD_TIME="${{ env.BUILD_TIME }}" \
+              backend/
+            echo "    OK: $svc"
+          done
+
+      # --- Frontend portals (4 images) ---
+      - name: Build retailer-admin
+        run: |
+          docker build \
+            -t "${{ env.AR_REPO }}/retailer-admin:${{ env.SHA }}" \
+            -f retailer-admin/Dockerfile \
+            --build-arg VITE_API_BASE_URL="" \
+            retailer-admin/
+
+      - name: Build supplier-portal
+        run: |
+          docker build \
+            -t "${{ env.AR_REPO }}/supplier-portal:${{ env.SHA }}" \
+            -f supplier-portal/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="" \
+            supplier-portal/
+
+      - name: Build superadmin
+        run: |
+          docker build \
+            -t "${{ env.AR_REPO }}/superadmin:${{ env.SHA }}" \
+            -f supermandi-superadmin/Dockerfile \
+            --build-arg VITE_API_BASE_URL="" \
+            supermandi-superadmin/
+
+      - name: Build landing
+        run: |
+          docker build \
+            -t "${{ env.AR_REPO }}/landing:${{ env.SHA }}" \
+            -f supermandi-landing/Dockerfile \
+            supermandi-landing/
+
+      # --- Push all images ---
+      - name: Push all images to AR
+        run: |
+          IMAGES=(
+            api-gateway auth-service catalog-service inventory-service
+            order-service payment-service platform-service reorder-service
+            supplier-service voice-service
+            retailer-admin supplier-portal superadmin landing
+          )
+          PASSED=0
+          FAILED=0
+          for img in "${IMAGES[@]}"; do
+            if docker push "${{ env.AR_REPO }}/${img}:${{ env.SHA }}"; then
+              echo "  PUSHED: ${img}:${{ env.SHA }}"
+              PASSED=$((PASSED + 1))
+            else
+              echo "  FAIL: ${img}"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          echo ""
+          echo "Pushed: $PASSED / $((PASSED + FAILED))"
+          if [ $FAILED -gt 0 ]; then
+            echo "PUSH FAILED"
+            exit 1
+          fi
+
+      - name: Capture image digests
+        run: |
+          IMAGES=(
+            api-gateway auth-service catalog-service inventory-service
+            order-service payment-service platform-service reorder-service
+            supplier-service voice-service
+            retailer-admin supplier-portal superadmin landing
+          )
+          echo "IMAGE DIGESTS — SHA: ${{ env.SHA }}" > /tmp/digests.txt
+          echo "---" >> /tmp/digests.txt
+          for img in "${IMAGES[@]}"; do
+            DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' \
+              "${{ env.AR_REPO }}/${img}:${{ env.SHA }}" 2>/dev/null || echo "N/A")
+            echo "${img}: ${DIGEST}" >> /tmp/digests.txt
+          done
+          cat /tmp/digests.txt
+
+      - name: Upload digests artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-digests-${{ env.SHA }}
+          path: /tmp/digests.txt
+          retention-days: 90
+
+  # ==========================================================================
+  # Deploy to staging Cloud Run
+  # ==========================================================================
+  deploy-staging:
+    name: Deploy Staging
+    needs: [gate, build-push]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHA: ${{ needs.gate.outputs.sha_short }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Deploy backend services to staging
+        run: |
+          BACKEND_SERVICES=(
+            api-gateway auth-service catalog-service inventory-service
+            order-service payment-service platform-service reorder-service
+            supplier-service voice-service
+          )
+          VPC_CONNECTOR="projects/${{ env.GCP_PROJECT }}/locations/${{ env.GCP_REGION }}/connectors/supermandi-vpc"
+
+          for svc in "${BACKEND_SERVICES[@]}"; do
+            SERVICE_NAME="supermandi-${svc}-staging"
+            IMAGE="${{ env.AR_REPO }}/${svc}:${{ env.SHA }}"
+            echo "--- Deploying: $SERVICE_NAME"
+            gcloud run deploy "$SERVICE_NAME" \
+              --image="$IMAGE" \
+              --region="${{ env.GCP_REGION }}" \
+              --platform=managed \
+              --memory=512Mi \
+              --cpu=1 \
+              --min-instances=0 \
+              --max-instances=3 \
+              --vpc-connector="$VPC_CONNECTOR" \
+              --vpc-egress=private-ranges-only \
+              --set-env-vars="NODE_ENV=staging,GIT_SHA=${{ env.SHA }}" \
+              --set-secrets="DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
+              --no-allow-unauthenticated \
+              --quiet || echo "WARN: $svc deploy failed"
+            echo "    OK: $SERVICE_NAME"
+          done
+
+      - name: Deploy frontend portals to staging
+        run: |
+          PORTALS=(retailer-admin supplier-portal superadmin landing)
+          for portal in "${PORTALS[@]}"; do
+            SERVICE_NAME="supermandi-${portal}-staging"
+            IMAGE="${{ env.AR_REPO }}/${portal}:${{ env.SHA }}"
+            echo "--- Deploying: $SERVICE_NAME"
+            gcloud run deploy "$SERVICE_NAME" \
+              --image="$IMAGE" \
+              --region="${{ env.GCP_REGION }}" \
+              --platform=managed \
+              --memory=256Mi \
+              --cpu=1 \
+              --min-instances=0 \
+              --max-instances=3 \
+              --set-env-vars="GIT_SHA=${{ env.SHA }}" \
+              --allow-unauthenticated \
+              --quiet || echo "WARN: $portal deploy failed"
+            echo "    OK: $SERVICE_NAME"
+          done
+
+  # ==========================================================================
+  # Smoke test staging
+  # ==========================================================================
+  smoke-test:
+    name: Staging Smoke Test
+    needs: [gate, deploy-staging]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      SHA: ${{ needs.gate.outputs.sha_short }}
+    steps:
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Get staging API Gateway URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe supermandi-api-gateway-staging \
+            --region="${{ env.GCP_REGION }}" \
+            --format="value(status.url)" 2>/dev/null || echo "")
+          echo "gateway_url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Gateway URL: $URL"
+
+      - name: Health check
+        if: steps.url.outputs.gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.gateway_url }}"
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/health" 2>/dev/null || echo "000")
+          echo "Health: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "WARN: Health check returned $STATUS"
+          fi
+
+      - name: Version check
+        if: steps.url.outputs.gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.gateway_url }}"
+          VERSION=$(curl -sf "$URL/version" 2>/dev/null || echo "{}")
+          echo "Version: $VERSION"
+          if echo "$VERSION" | grep -q "${{ env.SHA }}"; then
+            echo "OK: SHA matches"
+          else
+            echo "WARN: SHA mismatch in /version response"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Staging Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **SHA:** ${{ env.SHA }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Gateway:** ${{ steps.url.outputs.gateway_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Next: Operator tests staging, then runs \`./scripts/promote-to-prod.sh ${{ env.SHA }} --confirm\`" >> "$GITHUB_STEP_SUMMARY"

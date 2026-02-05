@@ -34,7 +34,8 @@ function getRequiredEnv(key: string): string {
 }
 
 export const config: PaymentConfig = {
-  port: getEnvIntOrDefault('PAYMENT_SERVICE_PORT', 3011),
+  // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
+  port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('PAYMENT_SERVICE_PORT', 3011),
   env: getEnvOrDefault('NODE_ENV', 'development'),
   razorpay: {
     keyId: getRequiredEnv('RAZORPAY_KEY_ID'),

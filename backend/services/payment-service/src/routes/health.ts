@@ -4,8 +4,8 @@
 import { Router, Request, Response } from 'express';
 import type { Router as RouterType } from 'express';
 import { healthCheck } from '@supermandi/common';
-import { checkRazorpayConnection } from '../services/razorpayClient.js';
-import { config } from '../config.js';
+import { checkRazorpayConnection } from '../services/razorpayClient';
+import { config } from '../config';
 
 const router: RouterType = Router();
 
@@ -38,6 +38,18 @@ router.get('/healthz', (_req: Request, res: Response) => {
     status: 'ok',
     service: 'payment-service',
     timestamp: new Date().toISOString(),
+  });
+});
+
+/**
+ * GET /version
+ * CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+ */
+router.get('/version', (_req: Request, res: Response) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'payment-service',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
   });
 });
 

@@ -10,8 +10,8 @@ import {
   removeStore,
   CreateStoreInput,
   UpdateStoreInput,
-} from '../services/storeService.js';
-import { getFlagsForStore } from '../services/flagService.js';
+} from '../services/storeService';
+import { getFlagsForStore } from '../services/flagService';
 
 const router: Router = Router();
 

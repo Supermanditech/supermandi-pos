@@ -93,6 +93,15 @@ app.get("/health", (_req, res) => {
   });
 });
 
+// CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+app.get("/version", (_req, res) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'main-backend',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
+  });
+});
+
 // TR-PEND-003: Translation service health check
 app.get("/health/translation", (_req, res) => {
   const health = getTranslationHealth();

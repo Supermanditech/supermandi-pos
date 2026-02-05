@@ -2,13 +2,13 @@
   "name": "@supermandi/voice-service",
   "version": "1.0.0",
   "description": "SuperMandi Voice Assistant Service - Speech-to-text and voice command processing",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node-esm src/index.ts",
-    "watch": "nodemon --watch src --ext ts --exec npm run dev"
+    "dev": "nodemon --watch src --ext ts --exec \"ts-node -r ../../scripts/preload-env.js src/index.ts\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

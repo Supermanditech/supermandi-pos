@@ -217,8 +217,8 @@ if ($TestStore) {
 
     # API URL for test store (same backend, just flagged)
     if (-not $env:EXPO_PUBLIC_API_URL) {
-        # Use production backend by default for test store
-        $env:EXPO_PUBLIC_API_URL = "http://34.14.220.171:3000"
+        # LOCAL-PROD-001-E: Use local backend by default for test store
+        $env:EXPO_PUBLIC_API_URL = "http://localhost:3000"
     }
     Write-Green "  [OK] API: $($env:EXPO_PUBLIC_API_URL)"
 } else {

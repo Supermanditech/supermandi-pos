@@ -69,6 +69,15 @@ app.get('/healthz', (_req: Request, res: Response) => {
   });
 });
 
+// CR-VERSION-001: Version endpoint for Cloud Run deploy verification
+app.get('/version', (_req: Request, res: Response) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'auth-service',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
+  });
+});
+
 // =============================================================================
 // API ROUTES
 // =============================================================================

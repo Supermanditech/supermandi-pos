@@ -22,7 +22,11 @@ import { defineConfig, devices } from '@playwright/test';
  *   npx playwright test                       # All tests
  */
 
-const BASE_URL = process.env.BASE_URL || 'https://supermandi.tech';
+// STAGE-E2E-001: Support STAGING=true for running E2E against staging
+// Usage: STAGING=true npx playwright test --grep "@prod"
+const BASE_URL = process.env.STAGING === 'true'
+  ? 'https://staging.supermandi.tech'
+  : (process.env.BASE_URL || 'https://supermandi.tech');
 
 // Environment flag for test-only endpoints
 export const TEST_ENDPOINTS_ENABLED = process.env.TEST_ENDPOINTS_ENABLED === 'true';

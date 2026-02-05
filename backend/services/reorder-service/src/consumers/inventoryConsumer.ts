@@ -13,13 +13,13 @@ import {
   type EventContext,
 } from '@supermandi/common';
 import { getClient, query, queryOne } from '@supermandi/common';
-import { config } from '../config.js';
+import { config } from '../config';
 import {
   getReorderPolicy,
   hasPendingReorder,
   createPendingReorder,
   getStoreSettings,
-} from '../db/queries.js';
+} from '../db/queries';
 
 // =============================================================================
 // TYPES

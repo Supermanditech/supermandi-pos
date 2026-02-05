@@ -9,7 +9,7 @@ import {
   AdjustmentInput,
   TransactionType,
   ReferenceType,
-} from '../services/transactionService.js';
+} from '../services/transactionService';
 
 const router: Router = Router();
 

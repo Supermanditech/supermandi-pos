@@ -4,8 +4,8 @@
 import express from 'express';
 import helmet from 'helmet';
 import { getPool, closePool } from '@supermandi/common';
-import { config } from './config.js';
-import healthRoutes from './routes/health.js';
+import { config } from './config';
+import healthRoutes from './routes/health';
 
 const app = express();
 
