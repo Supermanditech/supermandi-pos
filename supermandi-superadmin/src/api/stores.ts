@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type StoreRecord = {
@@ -41,7 +41,7 @@ async function parseError(res: Response): Promise<string> {
 export async function fetchStore(storeId: string): Promise<StoreRecord> {
   const base = requireApiBase();
 
-  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -68,7 +68,7 @@ export async function fetchStores(params?: { limit?: number; offset?: number }):
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -96,7 +96,7 @@ export async function createStore(input: { storeName: string; storeId?: string }
   const payload: Record<string, unknown> = { storeName: input.storeName };
   if (input.storeId) payload.storeId = input.storeId;
 
-  const res = await fetch(`${base}/api/v1/admin/stores`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -130,7 +130,7 @@ export async function updateStore(
 ): Promise<StoreRecord> {
   const base = requireApiBase();
 
-  const res = await fetch(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",

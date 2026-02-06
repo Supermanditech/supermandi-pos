@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 
 export type PosEvent = {
   id: string;
@@ -39,7 +39,7 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
   if (params.deviceId?.trim()) url.searchParams.set("deviceId", params.deviceId.trim());
   if (params.eventType?.trim()) url.searchParams.set("eventType", params.eventType.trim());
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {

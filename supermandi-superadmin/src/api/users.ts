@@ -1,5 +1,5 @@
 // ADM-SCR-002: Users API Module
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -37,7 +37,7 @@ export async function fetchUsers(params?: { limit?: number; offset?: number }): 
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -67,7 +67,7 @@ export async function patchUser(userId: string, input: UserPatchInput): Promise<
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-    const res = await fetch(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",
@@ -107,7 +107,7 @@ export async function createUser(input: UserCreateInput): Promise<UserRecord> {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-    const res = await fetch(`${API_BASE}/api/v1/admin/users`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/users`, {
     method: "POST",
     headers: {
       Accept: "application/json",

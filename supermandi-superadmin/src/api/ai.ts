@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 
 function requireApiBase(): string {
   if (!API_BASE) {
@@ -13,7 +13,7 @@ export async function askAi(question: string): Promise<{ answer: string }> {
   const q = question.trim();
   if (!q) throw new Error("Question is required");
   
-  const res = await fetch(`${base}/api/v1/admin/ai`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/ai`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -38,7 +38,7 @@ export async function askAi(question: string): Promise<{ answer: string }> {
 
 export async function fetchAiHealth(): Promise<{ configured: boolean }> {
   const base = requireApiBase();
-    const res = await fetch(`${base}/api/v1/admin/ai/health`, {
+    const res = await fetchWithTimeout(`${base}/api/v1/admin/ai/health`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",

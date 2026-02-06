@@ -2,6 +2,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import ProtectedLayout from './components/ProtectedLayout';
+// ISSUE-MICRO-105: Global error boundary
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // RET-AUD-048: Lazy load pages for code splitting and better performance at scale
 // Critical auth pages loaded eagerly for fast initial load
@@ -31,18 +33,17 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const SupplierQueuePage = lazy(() => import('./pages/admin/SupplierQueuePage'));
 const ProductQueuePage = lazy(() => import('./pages/admin/ProductQueuePage'));
 
-// RET-AUD-048: Loading fallback component for Suspense boundaries
+// RET-AUD-048 + ISSUE-MICRO-106: Skeleton loading fallback for Suspense boundaries
 const PageLoadingFallback = () => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100%',
-    minHeight: '200px',
-    color: '#64748b',
-    fontSize: '0.9rem',
-  }}>
-    Loading...
+  <div style={{ padding: '1.5rem' }}>
+    <div style={{ height: 24, width: '40%', background: '#e2e8f0', borderRadius: 6, marginBottom: 16, animation: 'pulse 1.5s ease-in-out infinite' }} />
+    <div style={{ height: 16, width: '60%', background: '#e2e8f0', borderRadius: 6, marginBottom: 24, animation: 'pulse 1.5s ease-in-out infinite' }} />
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      {[1, 2, 3].map(i => (
+        <div key={i} style={{ height: 100, background: '#f1f5f9', borderRadius: 12, animation: 'pulse 1.5s ease-in-out infinite' }} />
+      ))}
+    </div>
+    <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
   </div>
 );
 
@@ -214,8 +215,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

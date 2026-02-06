@@ -1,5 +1,5 @@
 // GL-CRIT-0049: Audit Log API
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -65,7 +65,7 @@ export async function fetchAuditLogs(params?: {
   if (params?.from_date) qs.set("from_date", params.from_date);
   if (params?.to_date) qs.set("to_date", params.to_date);
 
-  const res = await fetch(`${API_BASE}/api/v1/admin/audit?${qs.toString()}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/audit?${qs.toString()}`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -85,7 +85,7 @@ export async function fetchAuditStats(): Promise<AuditStatsResponse> {
     throw new Error("VITE_API_BASE_URL is missing");
   }
 
-  const res = await fetch(`${API_BASE}/api/v1/admin/audit/stats`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/audit/stats`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -128,7 +128,7 @@ export async function createAuditLog(input: AuditLogInput): Promise<void> {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/v1/admin/audit`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/audit`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

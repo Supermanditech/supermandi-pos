@@ -1,6 +1,6 @@
 // DOCS-001: Document management API client for SuperAdmin
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type DocumentStatus = "pending" | "approved" | "rejected";
@@ -82,7 +82,7 @@ export async function fetchPendingDocuments(
   params.set("limit", String(limit));
   params.set("offset", String(offset));
 
-  const res = await fetch(`${base}/api/v1/admin/documents/pending?${params.toString()}`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/documents/pending?${params.toString()}`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -104,7 +104,7 @@ export async function fetchPendingDocuments(
 export async function fetchDocument(documentId: string): Promise<DocumentRecord> {
   const base = requireApiBase();
 
-  const res = await fetch(`${base}/api/v1/admin/documents/${encodeURIComponent(documentId)}`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/documents/${encodeURIComponent(documentId)}`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -129,7 +129,7 @@ export async function fetchEntityDocuments(
 ): Promise<EntityDocumentsResponse> {
   const base = requireApiBase();
 
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     `${base}/api/v1/admin/documents/entity/${entityType}/${encodeURIComponent(entityId)}`,
     {
       method: "GET",
@@ -154,7 +154,7 @@ export async function fetchEntityDocuments(
 export async function approveDocument(documentId: string): Promise<{ success: boolean; message: string }> {
   const base = requireApiBase();
 
-  const res = await fetch(`${base}/api/v1/admin/documents/${encodeURIComponent(documentId)}/verify`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/documents/${encodeURIComponent(documentId)}/verify`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",
@@ -179,7 +179,7 @@ export async function rejectDocument(
 ): Promise<{ success: boolean; message: string }> {
   const base = requireApiBase();
 
-  const res = await fetch(`${base}/api/v1/admin/documents/${encodeURIComponent(documentId)}/reject`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/documents/${encodeURIComponent(documentId)}/reject`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",

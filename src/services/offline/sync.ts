@@ -41,7 +41,8 @@ export async function syncOutboxBatch(): Promise<number> {
   const state = await NetInfo.fetch();
   if (!state.isConnected) return 0;
 
-  const events = await getPendingEvents(50);
+  // ISSUE-MICRO-103: Reduced batch size from 50 to 20 for low-memory POS devices
+  const events = await getPendingEvents(20);
   if (events.length === 0) return 0;
 
   // ISSUE-MICRO-066/076: Track event IDs for attempt counting on failure

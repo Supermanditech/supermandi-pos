@@ -1,4 +1,4 @@
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -12,7 +12,7 @@ function requireApiBase(): string {
 
 async function getJson<T>(path: string): Promise<T> {
   const base = requireApiBase();
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetchWithTimeout(`${base}${path}`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",

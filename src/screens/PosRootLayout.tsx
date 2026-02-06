@@ -47,6 +47,8 @@ import {
   setHidScanHandler,
   submitHidBuffer,
 } from "../services/hidScannerService";
+// ISSUE-MICRO-087: Import local outbox count for accurate pending display
+import { pendingOutboxCount as getLocalOutboxCount } from "../services/offline/outbox";
 import {
   addStoreProductToCart,
   onBarcodeScanned,
@@ -415,7 +417,9 @@ export default function PosRootLayout() {
         setStoreActive(status.storeActive ?? null);
         setDeviceActive(status.deviceActive ?? null);
         setDeviceStoreId(status.storeId ?? null);
-        setPendingOutboxCount(status.pendingOutboxCount ?? 0);
+        // ISSUE-MICRO-087: Use local SQLite outbox count (server always returns 0)
+        const localOutbox = await getLocalOutboxCount();
+        setPendingOutboxCount(localOutbox);
         setPrinterOk(status.printerOk ?? null);
         setScanLookupV2Enabled(Boolean(status.features?.scan_lookup_v2));
         // GO-LIVE: Update local storeName/storeCode state and persist to settingsStore

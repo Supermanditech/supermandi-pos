@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 
 export type HealthResponse = { status: string };
 
@@ -13,7 +13,7 @@ function requireApiBase(): string {
 export async function fetchHealth(): Promise<HealthResponse> {
   const base = requireApiBase();
   // GO-LIVE-SESSION: Use correct admin health endpoint path
-  const res = await fetch(`${base}/api/v1/admin/health`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/health`, {
     method: "GET",
     cache: "no-store",
     headers: {

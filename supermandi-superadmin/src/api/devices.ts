@@ -1,4 +1,4 @@
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -49,7 +49,7 @@ export async function fetchDevices(params?: { storeId?: string; deviceId?: strin
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -84,7 +84,7 @@ export async function patchDevice(deviceId: string, input: DevicePatchInput): Pr
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-  const res = await fetch(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/devices/${encodeURIComponent(deviceId)}`, {
     method: "PATCH",
     headers: {
       Accept: "application/json",

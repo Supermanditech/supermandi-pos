@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 export type PendingSupplierRequest = {
@@ -59,7 +59,7 @@ export async function fetchPendingSuppliers(params?: { limit?: number; offset?: 
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -89,7 +89,7 @@ export async function fetchVerifiedSuppliers(params?: { search?: string; limit?:
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
-  const res = await fetch(url.toString(), {
+  const res = await fetchWithTimeout(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -123,7 +123,7 @@ export async function verifySupplierRequest(
 ): Promise<{ success: boolean }> {
   const base = requireApiBase();
   
-  const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/verify`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/verify`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -147,7 +147,7 @@ export async function rejectSupplierRequest(
   const base = requireApiBase();
   
   // Backend expects 'notes', not 'reason'
-  const res = await fetch(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/reject`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/pending-suppliers/${encodeURIComponent(requestId)}/reject`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -208,7 +208,7 @@ export type ProductEditResponse = {
 export async function fetchPendingProducts(): Promise<PendingProduct[]> {
   const base = requireApiBase();
   
-  const res = await fetch(`${base}/api/v1/admin/products/pending`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/pending`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -231,7 +231,7 @@ export async function fetchPendingProducts(): Promise<PendingProduct[]> {
 export async function approveProduct(productId: string): Promise<{ productId: string; approvalStatus: string; approvedAt: string }> {
   const base = requireApiBase();
   
-  const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/approve`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/approve`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -253,7 +253,7 @@ export async function approveProduct(productId: string): Promise<{ productId: st
 export async function rejectProduct(productId: string, reason: string): Promise<{ productId: string; approvalStatus: string }> {
   const base = requireApiBase();
   
-  const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/reject`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/reject`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -276,7 +276,7 @@ export async function rejectProduct(productId: string, reason: string): Promise<
 export async function editProduct(productId: string, input: ProductEditInput): Promise<ProductEditResponse> {
   const base = requireApiBase();
   
-  const res = await fetch(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/edit`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/edit`, {
     method: "PUT",
     headers: {
       Accept: "application/json",

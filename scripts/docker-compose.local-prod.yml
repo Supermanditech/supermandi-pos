@@ -332,7 +332,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      # ISSUE-MICRO-104: Increased from 5s to 10s — static builds need extra startup time
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -384,7 +385,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      # ISSUE-MICRO-104: Increased from 5s to 10s — static builds need extra startup time
+      start_period: 10s
     deploy:
       resources:
         limits:
@@ -405,7 +407,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 5s
+      # ISSUE-MICRO-104: Increased from 5s to 10s — static builds need extra startup time
+      start_period: 10s
     deploy:
       resources:
         limits:

@@ -194,6 +194,24 @@ export function clearAdminToken(): void {
 }
 
 /**
+ * ISSUE-MICRO-107: Fetch wrapper with 30s timeout to prevent hanging requests.
+ * Drop-in replacement for global fetch() — adds AbortController with 30s default.
+ */
+export async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit & { timeoutMs?: number },
+): Promise<Response> {
+  const { timeoutMs = 30000, ...fetchInit } = init ?? {};
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...fetchInit, signal: fetchInit.signal ?? controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
  * POST-BATCH-018-FIX-002: Handle 401 — clear tokens only (no hard redirect).
  * Callers (polling, UI) decide whether to show inline error or redirect.
  * Kept as export for backward compatibility but no longer does window.location.replace.

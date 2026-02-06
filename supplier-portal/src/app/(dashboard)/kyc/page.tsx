@@ -424,8 +424,13 @@ export default function KycPage() {
                       onChange={(e) => setBankForm({ ...bankForm, accountNumber: e.target.value.replace(/\D/g, '') })}
                       className="input font-mono"
                       placeholder="9-18 digit account number"
+                      minLength={9}
                       maxLength={18}
                     />
+                    {/* ISSUE-MICRO-051: Inline minimum length validation hint */}
+                    {bankForm.accountNumber && bankForm.accountNumber.length < 9 && (
+                      <p className="text-sm text-amber-600 mt-1">Account number must be at least 9 digits</p>
+                    )}
                   </div>
 
                   <div>

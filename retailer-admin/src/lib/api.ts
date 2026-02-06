@@ -76,14 +76,24 @@ export async function authFetch(
     headers['Content-Type'] = 'application/json';
   }
 
+  // ISSUE-MICRO-107: 30s timeout to prevent hanging requests
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+
   // AUTH-STORAGE-001: credentials: 'include' sends HttpOnly cookies automatically
   // CACHE-000: Prevent browser from caching API responses
-  const response = await fetch(resolvedUrl, {
-    ...options,
-    headers,
-    credentials: 'include',
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(resolvedUrl, {
+      ...options,
+      headers,
+      credentials: 'include',
+      cache: "no-store",
+      signal: options.signal ?? controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // Handle 401 Unauthorized - trigger logout for non-auth retailer requests
   if (response.status === 401 && !isAuthRequest && isRetailerAdminRequest(url)) {

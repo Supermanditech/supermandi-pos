@@ -1,4 +1,4 @@
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -19,7 +19,7 @@ export async function fetchBarcodeSheetPdf(params: {
   qs.set("storeId", params.storeId);
   qs.set("tier", params.tier);
 
-  const res = await fetch(`${base}/api/v1/admin/barcode-sheets?${qs.toString()}`, {
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/barcode-sheets?${qs.toString()}`, {
     cache: "no-store",
     headers: {
       Accept: "application/pdf",

@@ -1,5 +1,5 @@
 // ADM-SCR-003: Settings API Module
-import { getAuthHeaders } from "./authToken";
+import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -36,7 +36,7 @@ export async function fetchSettings(): Promise<SystemSettings> {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-    const res = await fetch(`${API_BASE}/api/v1/admin/settings`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/settings`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",
@@ -60,7 +60,7 @@ export async function fetchSystemStats(): Promise<SystemStats> {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
-    const res = await fetch(`${API_BASE}/api/v1/admin/settings/stats`, {
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/settings/stats`, {
     cache: "no-store",
     headers: {
       Accept: "application/json",

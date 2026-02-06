@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+// ISSUE-MICRO-105: Global error boundary
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
@@ -1992,6 +1994,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="page">
       <header className="header">
         <div>
@@ -4621,5 +4624,6 @@ export default function App() {
         <BuildStamp />
       </footer>
     </div>
+    </ErrorBoundary>
   );
 }
