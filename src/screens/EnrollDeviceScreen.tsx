@@ -404,6 +404,13 @@ export default function EnrollDeviceScreen() {
           reason: "enroll"
         });
       }
+      // ISSUE-MICRO-030: Warn operator if multiple POS devices are active for this store
+      if (typeof res.activeDeviceCount === "number" && res.activeDeviceCount > 1) {
+        Alert.alert(
+          "Multiple Devices",
+          `This store has ${res.activeDeviceCount} active POS devices. Multiple devices on the same store may cause duplicate sales. Contact your SuperAdmin if this is unexpected.`
+        );
+      }
       if (!res.storeActive) {
         Alert.alert("Store Inactive", POS_MESSAGES.storeInactive);
       }

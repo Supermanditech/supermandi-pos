@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../../config/api";
 import NetInfo from "@react-native-community/netinfo";
 import { getDeviceToken } from "../deviceSession";
-import { getPendingEvents, markEventsSynced, markEventsRejected, pendingOutboxCount, cleanupExpiredDeadLetters } from "./outbox";
+import { getPendingEvents, markEventsSynced, markEventsRejected, pendingOutboxCount, cleanupExpiredDeadLetters, incrementAttempts, getExceededRetryEvents } from "./outbox";
 import { offlineDb } from "./localDb";
 
 type SyncResult = {
@@ -44,6 +44,10 @@ export async function syncOutboxBatch(): Promise<number> {
   const events = await getPendingEvents(50);
   if (events.length === 0) return 0;
 
+  // ISSUE-MICRO-066/076: Track event IDs for attempt counting on failure
+  const MAX_SYNC_ATTEMPTS = 10;
+  const batchEventIds = events.map(e => e.eventId);
+
   const count = await pendingOutboxCount();
 
   const deviceToken = await getDeviceToken();
@@ -66,6 +70,13 @@ export async function syncOutboxBatch(): Promise<number> {
       })
     });
   } catch (networkError) {
+    // ISSUE-MICRO-076: Increment attempt counter on network error
+    await incrementAttempts(batchEventIds);
+    const exhaustedNet = await getExceededRetryEvents(MAX_SYNC_ATTEMPTS);
+    if (exhaustedNet.length > 0) {
+      await markEventsRejected(exhaustedNet, "max_attempts_exceeded");
+      console.warn(`[Sync] ISSUE-MICRO-066: ${exhaustedNet.length} event(s) exceeded ${MAX_SYNC_ATTEMPTS} attempts, marked as rejected`);
+    }
     // GO-LIVE-167: Log network errors instead of silent failure
     const errorMsg = networkError instanceof Error ? networkError.message : String(networkError);
     console.error(`[GO-LIVE-167] Sync network error: ${errorMsg}`);
@@ -76,12 +87,26 @@ export async function syncOutboxBatch(): Promise<number> {
   try {
     data = await res.json() as SyncResult | { error?: string };
   } catch (parseError) {
+    // ISSUE-MICRO-076: Increment attempt counter on parse error
+    await incrementAttempts(batchEventIds);
+    const exhaustedParse = await getExceededRetryEvents(MAX_SYNC_ATTEMPTS);
+    if (exhaustedParse.length > 0) {
+      await markEventsRejected(exhaustedParse, "max_attempts_exceeded");
+      console.warn(`[Sync] ISSUE-MICRO-066: ${exhaustedParse.length} event(s) exceeded ${MAX_SYNC_ATTEMPTS} attempts, marked as rejected`);
+    }
     // GO-LIVE-167: Log JSON parse errors
     console.error(`[GO-LIVE-167] Sync response parse error: status=${res.status}`);
     throw new Error(`Sync response parse error: ${res.status}`);
   }
 
   if (!res.ok) {
+    // ISSUE-MICRO-076: Increment attempt counter on server error
+    await incrementAttempts(batchEventIds);
+    const exhaustedSrv = await getExceededRetryEvents(MAX_SYNC_ATTEMPTS);
+    if (exhaustedSrv.length > 0) {
+      await markEventsRejected(exhaustedSrv, "max_attempts_exceeded");
+      console.warn(`[Sync] ISSUE-MICRO-066: ${exhaustedSrv.length} event(s) exceeded ${MAX_SYNC_ATTEMPTS} attempts, marked as rejected`);
+    }
     // GO-LIVE-167: Log server errors with details instead of returning 0
     const errorDetails = (data as { error?: string }).error ?? `HTTP ${res.status}`;
     console.error(`[GO-LIVE-167] Sync API error: ${errorDetails}, events=${events.length}`);

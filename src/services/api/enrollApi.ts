@@ -13,6 +13,8 @@ export type DeviceEnrollResponse = {
   deviceToken: string;
   storeActive: boolean;
   reEnrolled?: boolean;
+  // ISSUE-MICRO-030: Number of active POS devices for this store (server may add this field)
+  activeDeviceCount?: number;
 };
 
 export type DeviceMeta = {

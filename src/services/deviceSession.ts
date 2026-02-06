@@ -58,9 +58,34 @@ async function loadFromStorage(): Promise<DeviceSession | null> {
         }
       }
     } catch {
-      // Fall through to AsyncStorage
+      // SecureStore read failed — check AsyncStorage for migration
     }
+
+    // ISSUE-MICRO-031: SecureStore available but empty/failed — check AsyncStorage for migration
+    try {
+      const asyncRaw = await AsyncStorage.getItem(SESSION_KEY);
+      if (asyncRaw) {
+        const parsed = normalizeSession(JSON.parse(asyncRaw));
+        if (parsed) {
+          try {
+            await SecureStore.setItemAsync(SESSION_KEY, asyncRaw);
+            await AsyncStorage.removeItem(SESSION_KEY);
+            console.log(`[deviceSession] ISSUE-MICRO-031: Migrated session from AsyncStorage to SecureStore`);
+          } catch {
+            console.warn(`[deviceSession] ISSUE-MICRO-031: Migration to SecureStore failed, session remains in AsyncStorage`);
+          }
+          return parsed;
+        }
+      }
+    } catch {
+      // No data in AsyncStorage either
+    }
+
+    return null;
   }
+
+  // ISSUE-MICRO-031: SecureStore NOT available — log security warning
+  console.warn(`[deviceSession] ISSUE-MICRO-031: SecureStore not available — token stored in plaintext AsyncStorage`);
   try {
     const raw = await AsyncStorage.getItem(SESSION_KEY);
     if (!raw) return null;
@@ -130,8 +155,9 @@ export async function saveDeviceSession(session: DeviceSession): Promise<void> {
       console.warn(`[deviceSession] SecureStore save failed, falling back to AsyncStorage:`, e);
     }
   }
+  // ISSUE-MICRO-031: Plaintext fallback — SecureStore unavailable or failed
+  console.warn(`[deviceSession] ISSUE-MICRO-031: Saving to AsyncStorage (PLAINTEXT) — SecureStore unavailable or failed`);
   await AsyncStorage.setItem(SESSION_KEY, payload);
-  console.log(`[deviceSession] Saved to AsyncStorage`);
   // Update cache immediately after successful save
   cachedSession = session;
   cacheLoaded = true;

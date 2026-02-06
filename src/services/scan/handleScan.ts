@@ -51,10 +51,10 @@ export type ScanRuntime = {
 };
 
 // GL-CRIT-0045: Unified duplicate detection window (consolidated from two overlapping windows)
-// Single 1000ms window provides clear, predictable behavior for duplicate barcode detection.
-// Previously had DUPLICATE_WINDOW_MS=1200ms and duplicateGuard=500ms which caused confusion
-// when time was between 500-1200ms (one would pass, one would block).
-const DUPLICATE_WINDOW_MS = 1000;
+// ISSUE-MICRO-073: Increased from 1000ms to 2000ms for low-end phones with slow processing.
+// On budget Android devices (Redmi etc.), barcode scanner callbacks can fire twice within 1000ms
+// due to slow JS thread processing, causing duplicate cart additions.
+const DUPLICATE_WINDOW_MS = 2000;
 // GL-CRIT-0024: Per-barcode storm detection to allow rapid scanning of different items
 // Only triggers when the SAME barcode is scanned 5+ times in 2 seconds
 const STORM_WINDOW_MS = 2000;

@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "../../config/api";
 import { getAuthToken } from "./storage";
-import { clearDeviceSession, getDeviceToken } from "../deviceSession";
+import { clearDeviceSession, getDeviceToken, getDeviceSession, saveDeviceSession } from "../deviceSession";
 import i18n from "../../i18n";
 
 export class ApiError extends Error {
@@ -209,6 +209,34 @@ type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 // ISSUE-MICRO-032: Increased from 30s to 60s for 2G/slow networks
 const API_TIMEOUT_MS = 60000;
 
+// ISSUE-MICRO-077: Token refresh — try to get a new token before forcing re-enrollment
+// Uses raw fetch (not requestJson) to avoid triggering the same 401 handler
+let tokenRefreshInProgress = false;
+let lastRefreshAttemptTs = 0;
+const REFRESH_COOLDOWN_MS = 30000; // Only attempt refresh once per 30 seconds
+
+async function attemptTokenRefresh(currentToken: string): Promise<string | null> {
+  if (tokenRefreshInProgress) return null;
+  tokenRefreshInProgress = true;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/pos/token/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-device-token": currentToken,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data?.deviceToken === "string" && data.deviceToken ? data.deviceToken : null;
+  } catch {
+    // Refresh endpoint may not exist yet (404) — fall back to current behavior
+    return null;
+  } finally {
+    tokenRefreshInProgress = false;
+  }
+}
+
 async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken();
   const deviceToken = await getDeviceToken();
@@ -294,6 +322,22 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
         }
       }
       if (message === "device_unauthorized") {
+        // ISSUE-MICRO-077: Try token refresh before forcing re-enrollment
+        // Cooldown prevents infinite retry if refreshed token is also invalid
+        const now = Date.now();
+        if (deviceToken && now - lastRefreshAttemptTs > REFRESH_COOLDOWN_MS) {
+          lastRefreshAttemptTs = now;
+          const newToken = await attemptTokenRefresh(deviceToken);
+          if (newToken) {
+            const session = await getDeviceSession();
+            if (session) {
+              await saveDeviceSession({ ...session, deviceToken: newToken });
+              console.log("[apiClient] ISSUE-MICRO-077: Token refreshed, retrying request");
+              return requestJson<T>(method, path, body);
+            }
+          }
+        }
+        // Refresh failed or unavailable — clear session (forces re-enrollment)
         await clearDeviceSession();
       }
       throw new ApiError(res.status, message, parsed);
