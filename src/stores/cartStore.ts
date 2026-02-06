@@ -20,6 +20,8 @@ export interface CartItem {
   // GL-RJ-007: Track price resolution status
   priceResolutionError?: boolean;
   priceResolutionMessage?: string;
+  // ISSUE-MICRO-068: Track when price was last fetched for freshness validation
+  priceFetchedAt?: number;
 }
 
 export interface ItemDiscount {
@@ -331,7 +333,8 @@ export const useCartStore = create<CartState>()(
             quantity: nextQty,
             flags: mergeFlags(existingItem.flags, item.flags),
             itemDiscount: item.itemDiscount ?? existingItem.itemDiscount,
-            metadata: mergedMetadata
+            metadata: mergedMetadata,
+            priceFetchedAt: Date.now() // ISSUE-MICRO-068
           };
           newItems = state.items.map(i => (i.id === item.id ? nextItem : i));
         } else {
@@ -340,7 +343,8 @@ export const useCartStore = create<CartState>()(
             quantity: nextQty,
             flags: item.flags,
             itemDiscount: item.itemDiscount,
-            metadata: mergedMetadata
+            metadata: mergedMetadata,
+            priceFetchedAt: Date.now() // ISSUE-MICRO-068
           };
           newItems = [...state.items, nextItem];
         }
@@ -488,7 +492,7 @@ export const useCartStore = create<CartState>()(
     const existingItem = existingIndex >= 0 ? state.items[existingIndex] : null;
     if (!existingItem) return;
 
-    const nextItem = { ...existingItem, priceMinor: Math.round(priceMinor) };
+    const nextItem = { ...existingItem, priceMinor: Math.round(priceMinor), priceFetchedAt: Date.now() };
     const newItems = state.items.map(i => (i.id === itemId ? nextItem : i));
 
     const mutation: CartMutation = {

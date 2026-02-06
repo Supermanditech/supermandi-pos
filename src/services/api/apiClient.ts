@@ -205,8 +205,9 @@ if (__DEV__) {
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
-// GL-CRIT-0043: Default timeout for API requests (30 seconds)
-const API_TIMEOUT_MS = 30000;
+// GL-CRIT-0043: Default timeout for API requests
+// ISSUE-MICRO-032: Increased from 30s to 60s for 2G/slow networks
+const API_TIMEOUT_MS = 60000;
 
 async function requestJson<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
   const token = await getAuthToken();

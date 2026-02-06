@@ -160,6 +160,26 @@ export async function markEventsRejected(eventIds: string[], reason: string): Pr
   );
 }
 
+// ISSUE-MICRO-026: Delete dead letter events older than TTL (30 days)
+const DEAD_LETTER_TTL_DAYS = 30;
+
+export async function cleanupExpiredDeadLetters(): Promise<number> {
+  const cutoff = new Date(Date.now() - DEAD_LETTER_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const rows = await offlineDb.all<{ count: number }>(
+    `SELECT COUNT(*) as count FROM offline_outbox WHERE error_flag IS NOT NULL AND created_at < ?`,
+    [cutoff]
+  );
+  const count = rows[0]?.count ?? 0;
+  if (count > 0) {
+    await offlineDb.run(
+      `DELETE FROM offline_outbox WHERE error_flag IS NOT NULL AND created_at < ?`,
+      [cutoff]
+    );
+    console.log(`[Outbox] ISSUE-MICRO-026: Cleaned up ${count} dead letter events older than ${DEAD_LETTER_TTL_DAYS} days`);
+  }
+  return count;
+}
+
 // AUD-081-D FIX: Increment attempt count for retryable failures
 export async function incrementAttempts(eventIds: string[]): Promise<void> {
   if (eventIds.length === 0) return;

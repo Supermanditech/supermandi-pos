@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 // GL-CRIT-0086: Minimum loading display time to prevent flash
 const MIN_LOADING_DISPLAY_MS = 300;
+// ISSUE-MICRO-068: Warn if cart prices are older than 4 hours
+const PRICE_FRESHNESS_THRESHOLD_MS = 4 * 60 * 60 * 1000;
 import {
   View,
   Text,
@@ -171,6 +173,8 @@ const PaymentScreen = () => {
   // AUD-055-A FIX / GO-LIVE-113: Use ref for immediate synchronous double-submit protection
   // React setState is async, ref check is synchronous - prevents payment fraud from rapid taps
   const submittingRef = useRef(false);
+  // ISSUE-MICRO-068: Track if user dismissed stale price warning
+  const priceWarningDismissedRef = useRef(false);
 
   const handleDeviceAuthError = useCallback(async (error: ApiError): Promise<boolean> => {
     if (error.message === "device_inactive") {
@@ -633,6 +637,30 @@ const PaymentScreen = () => {
       return;
     }
 
+    // ISSUE-MICRO-068: Warn if cart item prices are stale (fetched over 4 hours ago)
+    if (!priceWarningDismissedRef.current) {
+      const staleItems = saleItems.filter(
+        (item) => item.priceFetchedAt && Date.now() - item.priceFetchedAt > PRICE_FRESHNESS_THRESHOLD_MS
+      );
+      if (staleItems.length > 0) {
+        Alert.alert(
+          "Price Freshness Warning",
+          `${staleItems.length} item(s) have prices loaded over 4 hours ago. Prices may have changed.\n\nProceed with current prices?`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Proceed",
+              onPress: () => {
+                priceWarningDismissedRef.current = true;
+                handleCompletePayment();
+              },
+            },
+          ]
+        );
+        return;
+      }
+    }
+
     // AUD-055-A FIX: Use ref for IMMEDIATE synchronous check (React state is async)
     // This prevents the race window where a second tap could pass the guard
     if (finalized.current || submittingRef.current) return;
@@ -704,6 +732,9 @@ const PaymentScreen = () => {
         partialSale: isPartialSale ? true : undefined
       });
     } catch (error) {
+      // ISSUE-MICRO-071: Reset cart lock timer so user gets full 5-min timeout for retry
+      lockCart();
+
       void logPaymentEvent("PAYMENT_FAILED", {
         transactionId,
         billId: billRef,

@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../../config/api";
 import NetInfo from "@react-native-community/netinfo";
 import { getDeviceToken } from "../deviceSession";
-import { getPendingEvents, markEventsSynced, markEventsRejected, pendingOutboxCount } from "./outbox";
+import { getPendingEvents, markEventsSynced, markEventsRejected, pendingOutboxCount, cleanupExpiredDeadLetters } from "./outbox";
 import { offlineDb } from "./localDb";
 
 type SyncResult = {
@@ -126,6 +126,9 @@ export async function syncOutbox(): Promise<void> {
   if (syncing) return;
   syncing = true;
   try {
+    // ISSUE-MICRO-026: Clean up dead letter events older than 30 days
+    await cleanupExpiredDeadLetters();
+
     let batchCount = 0;
     let totalSynced = 0;
     const maxBatches = 100; // GO-LIVE-167: Prevent infinite loops

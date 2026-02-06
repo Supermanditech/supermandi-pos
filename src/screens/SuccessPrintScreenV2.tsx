@@ -9,6 +9,7 @@ import type { CartItem } from "../stores/cartStore";
 import { eventLogger } from "../services/eventLogger";
 import { logPaymentEvent, logPosEvent } from "../services/cloudEventLogger";
 import { printerService } from "../services/printerService";
+import { syncOutbox } from "../services/offline/sync";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 
@@ -47,6 +48,8 @@ export default function SuccessPrintScreenV2() {
   const [printStatus, setPrintStatus] = useState<"idle" | "printing" | "success" | "failed">("idle");
 
   const generateReceiptContent = (): string => {
+    // ISSUE-MICRO-029: Detect offline sales (bill refs from offline start with "OFF-")
+    const isOfflineSale = billNumber.startsWith("OFF-");
     return [
       "=================================",
       "       SuperMandi POS",
@@ -54,6 +57,8 @@ export default function SuccessPrintScreenV2() {
       `Bill #: ${billNumber}`,
       `Date: ${formatDateTime(new Date())}`,
       `Payment: ${paymentMode}`,
+      // ISSUE-MICRO-029: Mark offline receipts so customers know sync is pending
+      ...(isOfflineSale ? ["* OFFLINE SALE - PENDING SYNC *"] : []),
       "=================================",
       "",
       "ITEMS:",
@@ -87,6 +92,10 @@ export default function SuccessPrintScreenV2() {
       amountMinor: saleTotalMinor,
       currency
     });
+
+    // ISSUE-MICRO-027: Trigger immediate sync so the sale reaches the server ASAP
+    // Fire-and-forget — doesn't block the user; regular background sync retries on failure
+    void syncOutbox();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
