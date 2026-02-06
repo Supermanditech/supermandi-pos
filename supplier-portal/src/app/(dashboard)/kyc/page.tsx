@@ -109,8 +109,9 @@ export default function KycPage() {
       setBankForm({ accountNumber: '', confirmAccountNumber: '', ifscCode: '', accountName: '' });
       setIfscData(null);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Bank verification failed');
+    onError: () => {
+      // ISSUE-MICRO-095: Generic message — server error may contain bank details
+      toast.error('Bank verification failed. Please check your details and try again.');
     },
   });
 

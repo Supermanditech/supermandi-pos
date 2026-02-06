@@ -55,7 +55,8 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  // ISSUE-MICRO-096: Sync status filter to URL for refresh/back-button persistence
+  const statusFilter = searchParams.get('status') || 'all';
   // GL-WF-062: Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
@@ -502,7 +503,13 @@ export default function ProductsPage() {
             {['all', 'pending', 'approved', 'rejected'].map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  // ISSUE-MICRO-096: Sync status filter to URL params + reset to page 1
+                  const params = new URLSearchParams(searchParams.toString());
+                  if (status === 'all') { params.delete('status'); } else { params.set('status', status); }
+                  params.delete('page');
+                  router.push(`${pathname}?${params.toString()}`);
+                }}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   statusFilter === status
                     ? 'bg-primary-600 text-white'

@@ -90,6 +90,7 @@ export async function refreshSession(): Promise<boolean> {
   try {
     const res = await fetch(`${API_BASE}/api/v1/admin/auth/refresh`, {
       method: "POST",
+      credentials: 'include',
       headers: {
         Authorization: `Bearer ${currentToken}`,
       },
@@ -135,8 +136,10 @@ export async function logout(): Promise<void> {
   // Try to revoke session on server
   if (sessionToken && API_BASE) {
     try {
+      // ISSUE-MICRO-025: credentials: 'include' to clear HttpOnly cookie
       await fetch(`${API_BASE}/api/v1/admin/auth/logout`, {
         method: "POST",
+        credentials: 'include',
         headers: {
           Authorization: `Bearer ${sessionToken}`,
         },
@@ -193,8 +196,22 @@ export function clearAdminToken(): void {
   clearSessionToken();
 }
 
+// ISSUE-MICRO-063: Global AbortController for tab-change cancellation
+let tabController = new AbortController();
+
+/**
+ * ISSUE-MICRO-063: Abort all in-flight requests (call on tab change).
+ * Creates a fresh controller so new requests on the next tab work normally.
+ */
+export function abortActiveRequests(): void {
+  tabController.abort();
+  tabController = new AbortController();
+}
+
 /**
  * ISSUE-MICRO-107: Fetch wrapper with 30s timeout to prevent hanging requests.
+ * ISSUE-MICRO-025: Includes credentials for HttpOnly cookie auth.
+ * ISSUE-MICRO-063: Cascades tab-change abort to in-flight requests.
  * Drop-in replacement for global fetch() — adds AbortController with 30s default.
  */
 export async function fetchWithTimeout(
@@ -202,12 +219,28 @@ export async function fetchWithTimeout(
   init?: RequestInit & { timeoutMs?: number },
 ): Promise<Response> {
   const { timeoutMs = 30000, ...fetchInit } = init ?? {};
+
+  // If caller provided their own signal, use it directly (skip tab/timeout logic)
+  if (fetchInit.signal) {
+    return await fetch(input, { ...fetchInit, credentials: fetchInit.credentials ?? 'include' });
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  // ISSUE-MICRO-063: Cascade tab-change abort to this request's controller
+  const onTabAbort = () => controller.abort();
+  tabController.signal.addEventListener('abort', onTabAbort, { once: true });
+
   try {
-    return await fetch(input, { ...fetchInit, signal: fetchInit.signal ?? controller.signal });
+    return await fetch(input, {
+      ...fetchInit,
+      credentials: fetchInit.credentials ?? 'include',
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timeoutId);
+    tabController.signal.removeEventListener('abort', onTabAbort);
   }
 }
 
@@ -237,6 +270,7 @@ export async function sendAdminOtp(email: string): Promise<{ success: boolean; e
   try {
     const res = await fetch(`${API_BASE}/api/v1/admin/auth/send-email-otp`, {
       method: "POST",
+      credentials: 'include',
       headers: {
         "Content-Type": "application/json",
       },
@@ -280,8 +314,10 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
   }
 
   try {
+    // ISSUE-MICRO-025: credentials: 'include' to accept Set-Cookie from server
     const res = await fetch(`${API_BASE}/api/v1/admin/auth/verify-email-otp`, {
       method: "POST",
+      credentials: 'include',
       headers: {
         "Content-Type": "application/json",
       },

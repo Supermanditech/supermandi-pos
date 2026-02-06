@@ -16,6 +16,14 @@ import { getRedis } from "../../../db/redis";
 
 export const adminAuthRouter = Router();
 
+// ISSUE-MICRO-025: Extract cookie value without cookie-parser dependency
+function extractCookie(req: Request, name: string): string | undefined {
+  const header = req.headers.cookie;
+  if (!header) return undefined;
+  const match = header.split(';').find(c => c.trim().startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.trim().slice(name.length + 1)) : undefined;
+}
+
 // Admin email allowlist from environment variable (comma-separated)
 const ADMIN_EMAIL_ALLOWLIST = (process.env.ADMIN_EMAIL_ALLOWLIST || '')
   .split(',')
@@ -283,6 +291,15 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
 
   console.log(`[GO-LIVE-LOGIN-004] Admin login successful: ${normalizedEmail}`);
 
+  // ISSUE-MICRO-025: Set HttpOnly cookie (XSS-safe) alongside JSON response
+  res.cookie('admin_session', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 24 * 60 * 60 * 1000, // 24h
+    path: '/api',
+  });
+
   return res.json({
     success: true,
     token,
@@ -296,10 +313,14 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
 /**
  * GET /api/v1/admin/auth/check
  * Check if current admin token is valid
+ * ISSUE-MICRO-025: Also checks HttpOnly cookie
  */
 adminAuthRouter.get("/auth/check", (req: Request, res: Response) => {
+  // ISSUE-MICRO-025: Try cookie first, then Authorization header
+  const cookieToken = extractCookie(req, 'admin_session');
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  const token = cookieToken || bearerToken;
 
   if (!token) {
     return res.status(401).json({
@@ -321,4 +342,13 @@ adminAuthRouter.get("/auth/check", (req: Request, res: Response) => {
       error: { code: "INVALID_TOKEN", message: "Invalid or expired token" }
     });
   }
+});
+
+/**
+ * POST /api/v1/admin/auth/logout
+ * ISSUE-MICRO-025: Clear HttpOnly session cookie
+ */
+adminAuthRouter.post("/auth/logout", (_req: Request, res: Response) => {
+  res.clearCookie('admin_session', { path: '/api' });
+  return res.json({ success: true });
 });

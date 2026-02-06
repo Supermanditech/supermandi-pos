@@ -261,8 +261,12 @@ export default function DashboardLayout({
               <h3 className="text-lg font-semibold text-slate-800 mb-2">
                 Verify Your Email
               </h3>
-              <p className="text-slate-600 mb-4">
+              <p className="text-slate-600 mb-2">
                 Enter the 6-digit verification code sent to your email address.
+              </p>
+              {/* ISSUE-MICRO-099: Note about email delivery */}
+              <p className="text-slate-500 text-xs mb-4">
+                If you don&apos;t see the email, please check your spam or junk folder.
               </p>
 
               {verificationMessage && (

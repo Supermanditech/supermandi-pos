@@ -4,7 +4,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
-import { hasValidSession, logout, refreshSession, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout } from "./api/authToken";
+import { hasValidSession, logout, refreshSession, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -563,7 +563,12 @@ function EnrollmentCountdown({ expiresAt }: { expiresAt: string }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<TabKey>("events");
+  const [tab, setTabRaw] = useState<TabKey>("events");
+  // ISSUE-MICRO-063: Abort in-flight requests when switching tabs
+  const setTab = (newTab: TabKey) => {
+    if (newTab !== tab) abortActiveRequests();
+    setTabRaw(newTab);
+  };
 
   // ITER4-CRIT-001: Track authentication state
   // GO-LIVE-UI-001: Use hasValidSession() to ensure valid JWT, not just any stale token

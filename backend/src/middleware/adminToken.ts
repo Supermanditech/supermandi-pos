@@ -3,6 +3,14 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { getPool } from "../db/client";
 
+// ISSUE-MICRO-025: Extract cookie value without cookie-parser dependency
+function extractCookie(req: Request, name: string): string | undefined {
+  const header = req.headers.cookie;
+  if (!header) return undefined;
+  const match = header.split(';').find(c => c.trim().startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.trim().slice(name.length + 1)) : undefined;
+}
+
 // GO-LIVE-128: Admin type definitions for RBAC
 export type AdminRole = "super_admin" | "admin" | "moderator" | "viewer";
 
@@ -132,6 +140,22 @@ const JWT_SECRET = process.env.JWT_SECRET || process.env.ADMIN_TOKEN || 'dev-jwt
  * - adminInfo: Full admin details (for RBAC auth only)
  */
 export async function requireAdminToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+  // Method 0: ISSUE-MICRO-025 — Check HttpOnly cookie (XSS-safe, preferred)
+  const cookieToken = extractCookie(req, 'admin_session');
+  if (cookieToken) {
+    try {
+      const decoded = jwt.verify(cookieToken, JWT_SECRET) as { email?: string; role?: string; type?: string };
+      if (decoded.type === 'admin' || decoded.role === 'super_admin') {
+        req.adminId = decoded.email || 'jwt-session';
+        req.adminRole = (decoded.role as AdminRole) || 'super_admin';
+        return next();
+      }
+    } catch (err) {
+      // Cookie JWT invalid or expired - fall through to other methods
+      console.warn('[AdminToken] Cookie JWT verification failed:', err instanceof Error ? err.message : 'unknown error');
+    }
+  }
+
   // Method 1: Check for JWT Bearer token (GO-LIVE-SESSION - from email OTP login)
   const authHeader = req.header("authorization")?.trim();
   if (authHeader?.startsWith("Bearer ")) {
