@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, API_GATEWAY_BASE } from '../lib/api';
@@ -149,6 +149,8 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // ISSUE-MICRO-003: Synchronous guard prevents double-click race (useState is async)
+  const submittingRef = useRef(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [createdProduct, setCreatedProduct] = useState<ProductCreateResponse['data'] | null>(null);
@@ -389,6 +391,9 @@ export default function ProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // ISSUE-MICRO-003: Synchronous guard — useRef is instant, useState has 0-300ms lag
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError('');
     setSuccess('');
     setCreatedProduct(null);
@@ -534,6 +539,7 @@ export default function ProductsPage() {
       setError(err instanceof Error ? err.message : 'Failed to save product. Please try again.');
     } finally {
       setIsSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -1501,8 +1507,13 @@ Loose Rice,, , 45, 40, , KG, 25`}
               Loading products...
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-              {searchTerm ? 'No products match your search.' : 'No products yet. Add your first product above!'}
+            <div style={{ padding: '2rem', textAlign: 'center', color: error ? '#dc2626' : 'var(--text-muted)' }}>
+              {/* ISSUE-MICRO-048: Distinguish error state from empty state */}
+              {error
+                ? 'Could not load products. Please try again.'
+                : searchTerm
+                  ? 'No products match your search.'
+                  : 'No products yet. Add your first product above!'}
             </div>
           ) : (
             <table className="table">

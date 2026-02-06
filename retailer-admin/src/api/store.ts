@@ -253,7 +253,10 @@ export async function fetchSuppliers(accessToken: string): Promise<ApiResponse<S
     throw new Error('Failed to fetch suppliers');
   }
 
-  return response.json();
+  // ISSUE-MICRO-015: Use safe JSON parsing (was bare response.json())
+  const data = await safeJson<ApiResponse<Supplier[]>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 export async function createSupplier(accessToken: string, data: SupplierFormData): Promise<ApiResponse<{ id: string }>> {

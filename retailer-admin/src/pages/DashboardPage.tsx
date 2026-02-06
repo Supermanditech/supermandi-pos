@@ -49,12 +49,13 @@ export default function DashboardPage() {
   const [catToggleError, setCatToggleError] = useState<string | null>(null);
 
   // GL-CRIT-0078: Close modals with Escape key
+  // ISSUE-MICRO-014: Disable escape close during in-flight save
   useEscapeKey(
     useCallback(() => {
       setEditingCategory(null);
       setCatEditError(null);
     }, []),
-    !!editingCategory
+    !!editingCategory && !catEditSaving
   );
 
   // RCAT-CAT-002: Rename category (store override)
@@ -1126,7 +1127,7 @@ export default function DashboardPage() {
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        }} onClick={() => setEditingCategory(null)}>
+        }} onClick={() => { if (!catEditSaving) { setEditingCategory(null); setCatEditError(null); } }}>
           <div style={{
             background: 'white', borderRadius: '12px', padding: '1.5rem',
             width: '100%', maxWidth: '380px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
