@@ -170,7 +170,7 @@ export default function OrdersPage() {
 
   // GL-CRIT-0060: Use API-provided total counts if available, fallback to page counts
   // Note: For accurate totals, backend should return statusCounts in pagination response
-  const statusCounts = (ordersResponse as any)?.statusCounts || orders?.reduce(
+  const statusCounts = ordersResponse?.statusCounts || orders?.reduce(
     (acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1;
       acc.all = (acc.all || 0) + 1;

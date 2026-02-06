@@ -128,7 +128,7 @@ export default function DashboardPage() {
       setInventoryLoading(true);
       setInventoryError(null);
       try {
-        const result = await fetchInventory(accessToken) as any;
+        const result = await fetchInventory(accessToken);
         setInventory(result.data || []);
         // RCAT-METRICS-001: Use server-provided totals (NaN-safe)
         if (result.totals) {

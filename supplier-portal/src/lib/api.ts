@@ -497,6 +497,7 @@ export interface Pagination {
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: Pagination;
+  statusCounts?: Record<string, number>;
 }
 
 export interface PaginationParams {

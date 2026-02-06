@@ -31,6 +31,14 @@ use direct Cloud Run URLs set via environment variables.
 | `ADMIN_SERVICE_URL` | PROD: YES | `http://localhost:3010` | Main backend URL |
 | `PAYMENT_SERVICE_URL` | PROD: YES | `http://localhost:3011` | Payment service URL |
 | `API_GATEWAY_PORT` | No | `3000` | Service port (Cloud Run sets `PORT`) |
+| `CORS_ALLOWED_ORIGINS` | PROD: YES | dev origins | Comma-separated allowed CORS origins |
+
+### Main Backend
+| Variable | Required | Default (dev) | Description |
+|----------|----------|---------------|-------------|
+| `ALLOWED_ORIGINS` | PROD: YES | allow all (dev) | Comma-separated allowed CORS origins. **process.exit(1) if missing in production** |
+| `TRUST_PROXY` | No | — | Set `true` behind load balancer |
+| `TRUST_PROXY_HOPS` | No | `1` | Number of proxy hops for X-Forwarded-For |
 
 ### Order Service
 | Variable | Required | Default (dev) | Description |
@@ -102,3 +110,83 @@ use direct Cloud Run URLs set via environment variables.
 | voice-service | 3009 | `VOICE_SERVICE_PORT` | `PORT` (auto) |
 | main-backend | 3010 | `PORT` | `PORT` (auto) |
 | payment-service | 3011 | `PAYMENT_SERVICE_PORT` | `PORT` (auto) |
+
+---
+
+## CORS Configuration
+
+### Main Backend (`backend/src/app.ts`)
+
+| Env Var | Required | Behavior |
+|---------|----------|----------|
+| `ALLOWED_ORIGINS` | **PROD: YES** | Comma-separated origins. If missing in `NODE_ENV=production`, backend crashes (fail-fast). |
+
+Example:
+```
+ALLOWED_ORIGINS=https://supermandi.tech,https://www.supermandi.tech,https://staging.supermandi.tech
+```
+
+In development: if `ALLOWED_ORIGINS` is not set, all origins are allowed.
+
+### API Gateway (`backend/services/api-gateway/src/index.ts`)
+
+| Env Var | Required | Behavior |
+|---------|----------|----------|
+| `CORS_ALLOWED_ORIGINS` | **PROD: YES** | Comma-separated origins. If missing in non-dev, no cross-origin requests allowed. |
+| `CORS_DEV_ORIGINS` | No | Override dev origins (default: localhost:3000,5173,8081) |
+
+Example:
+```
+CORS_ALLOWED_ORIGINS=https://supermandi.tech,https://www.supermandi.tech,https://staging.supermandi.tech
+```
+
+**Staging values** (operator must set):
+```
+ALLOWED_ORIGINS=https://staging.supermandi.tech
+CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech
+```
+
+---
+
+## Database Backup Strategy (Cloud SQL)
+
+### Automated Backups (Cloud SQL built-in)
+
+```bash
+# Enable automated backups (daily, 7-day retention)
+gcloud sql instances patch supermandi-db \
+  --backup-start-time=02:00 \
+  --retained-backups-count=7 \
+  --region=asia-south1
+
+# Enable point-in-time recovery (WAL-based, up to 7 days)
+gcloud sql instances patch supermandi-db \
+  --enable-point-in-time-recovery
+```
+
+### Manual Backup Before Deploy
+
+```bash
+# Create on-demand backup before every production deploy
+gcloud sql backups create --instance=supermandi-db \
+  --description="Pre-deploy backup BATCH-XXX $(date -Iseconds)"
+```
+
+### Restore Procedure
+
+```bash
+# List available backups
+gcloud sql backups list --instance=supermandi-db
+
+# Restore from backup (creates new instance to avoid overwriting)
+gcloud sql instances clone supermandi-db supermandi-db-restore \
+  --bin-log-file-name=<file> --bin-log-position=<pos>
+```
+
+### Backup Checklist (Per Deploy)
+
+- [ ] Automated daily backups enabled
+- [ ] Point-in-time recovery enabled
+- [ ] Pre-deploy manual backup created
+- [ ] Backup ID recorded in BATCH_LEDGER.md
+- [ ] Restore procedure tested (at least once before go-live)

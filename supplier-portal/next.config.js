@@ -15,6 +15,12 @@ function getBuildInfo() {
 const buildInfo = getBuildInfo();
 
 const nextConfig = {
+  // CONSOLE-STRIP-001: Strip console.log/debug from production builds (keep error+warn)
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+      ? { exclude: ['error', 'warn'] }
+      : false,
+  },
   // SM-023: Supplier Portal config
   // Production deployment with /supplier base path
   // GO-LIVE-B9: Server mode for nginx reverse proxy (basePath handles asset prefix)

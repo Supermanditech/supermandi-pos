@@ -1,7 +1,7 @@
 # SuperMandi Master Plan
 
 > **Single Source of Truth** — All rules, batches, and workflows in one file.
-> **Last Updated**: 2026-02-04
+> **Last Updated**: 2026-02-06
 
 ---
 
@@ -444,7 +444,7 @@ Link: https://github.com/ORG/REPO/actions/runs/XXXXX
 
 ```
 BATCH-004 Retailer ──┐
-BATCH-005 Supplier ──┼──► BATCH-008 Cloud Run Prep ──► BATCH-009 CI/CD ──► BATCH-012 Auth Security ──► BATCH-010 Staging ──► BATCH-011 Go-Live
+BATCH-005 Supplier ──┼──► BATCH-008 Cloud Run ──► BATCH-009 CI/CD ──► BATCH-012 Auth ──► BATCH-013 Infra ──► BATCH-014 Polish ──► BATCH-010 Staging ──► BATCH-011 Go-Live
 BATCH-006 Admin ─────┤                                       │
 BATCH-007 POS ───────┘                                       │
                                               Operator: GCP infra (Cloud SQL, Memorystore, AR, VPC, Secret Manager)
@@ -464,7 +464,9 @@ BATCH-007 POS ───────┘                                       │
 | BATCH-009 | GCP CI/CD | `CODE_COMPLETE` | 9/9 DONE | Claude+Operator | 59d7ebb | — | 2026-02-05 |
 | BATCH-010 | Staging Deploy | `CODE_COMPLETE` | 1/6 DONE (E2E config) | Claude+Operator | — | — | 2026-02-05 |
 | BATCH-011 | Go-Live | `DRAFT` | 0/4 | Operator | — | — | 2026-02-05 |
-| BATCH-012 | Auth & Session Security | `DRAFT` | 0/18 | Claude | — | — | 2026-02-05 |
+| BATCH-012 | Auth & Session Security | `CODE_COMPLETE` | 18/18 DONE | Claude | 9bb03f7 | — | 2026-02-06 |
+| BATCH-013 | Prod Testing + Infra Hardening | `CODE_COMPLETE` | FULL PASS | Claude | f7cb90d | — | 2026-02-06 |
+| BATCH-014 | Production Grade Polish | `IN_PROGRESS` | 0/10 | Claude | — | — | 2026-02-06 |
 
 ### Scaling Note
 
@@ -1383,6 +1385,209 @@ Grants AR push + Cloud Run deploy permissions.
 
 ---
 
+### BATCH-013: Production Testing Fixes + Infra Hardening
+
+**Status**: `CODE_COMPLETE` | **RC_SHA**: f7cb90d | **CI Run**: —
+
+> **Goal**: Fix production testing issues and harden infrastructure based on local prod stack validation.
+> Committed as single batch in f7cb90d.
+
+#### Progress
+| # | Ticket | Risk | Status | Evidence |
+|---|--------|------|--------|----------|
+| 1 | BATCH-013 (combined) | F | DONE | Commit f7cb90d |
+
+#### Gates
+- [x] Typecheck passes
+- [x] Local prod stack 17/17 healthy
+- [ ] CI green for RC_SHA
+
+---
+
+### BATCH-014: Production Grade Polish
+
+**Status**: `IN_PROGRESS` | **RC_SHA**: — | **CI Run**: —
+
+> **Goal**: Final production-grade polish before staging deployment.
+> Fix CI Node version mismatch, add lightweight logger, graceful shutdown,
+> type safety cleanup, and documentation sync.
+
+#### Tickets (10 tickets)
+
+---
+
+**CI-NODE-001: Fix CI Node 18→20**
+
+**Risk Class**: F | **Priority**: P0
+
+**Scope**:
+- Files: `.github/workflows/ci-gates.yml`
+
+**Issue**: CI uses Node 18 but Docker images use Node 20. Parity violation.
+
+**Fix**: Change `NODE_VERSION: '18'` to `'20'` in ci-gates.yml.
+
+**Status**: DONE
+
+---
+
+**DOC-SYNC-001: Sync MASTER_PLAN with actual state**
+
+**Risk Class**: N/A | **Priority**: P0
+
+**Scope**:
+- Files: `RELEASES/MASTER_PLAN.md`
+
+**Issue**: BATCH-012 shows DRAFT 0/18 but all 18 done in git. BATCH-013 missing.
+
+**Fix**: Update status table, add BATCH-013+014 sections.
+
+**Status**: DONE
+
+---
+
+**ALLOWED-ORIGINS-001: Document ALLOWED_ORIGINS**
+
+**Risk Class**: D | **Priority**: P0
+
+**Scope**:
+- Files: `docs/deploy/CONFIG_CONTRACT.md`
+
+**Issue**: ALLOWED_ORIGINS is required in production but not documented.
+
+**Fix**: Add to CONFIG_CONTRACT.md env var table.
+
+**Status**: DONE
+
+---
+
+**LOG-001: Lightweight console wrapper**
+
+**Risk Class**: B | **Priority**: P1
+
+**Scope**:
+- Files: `backend/src/lib/logger.ts` (NEW)
+
+**Issue**: 636 console.logs in backend, no structured logging for main-backend.
+
+**Fix**: ~50 line wrapper, JSON format when LOG_FORMAT=json, no new deps.
+
+**Status**: DONE
+
+---
+
+**SHUTDOWN-001: Graceful shutdown handler**
+
+**Risk Class**: F | **Priority**: P1
+
+**Scope**:
+- Files: `backend/src/server.ts`
+
+**Issue**: Main backend has no SIGTERM handler (api-gateway already has one).
+
+**Fix**: Add SIGTERM/SIGINT handlers with connection draining.
+
+**Status**: DONE
+
+---
+
+**TYPE-CLEAN-001: Fix as any casts**
+
+**Risk Class**: A | **Priority**: P1
+
+**Scope**:
+- Files: `retailer-admin/src/pages/DashboardPage.tsx`, `supplier-portal/src/app/(dashboard)/orders/page.tsx`
+
+**Issue**: 2x `as any` casts bypass type safety.
+
+**Fix**: Add proper type definitions.
+
+**Status**: DONE
+
+---
+
+**CONSOLE-STRIP-001: Strip console.logs from supplier portal**
+
+**Risk Class**: A | **Priority**: P1
+
+**Scope**:
+- Files: `supplier-portal/next.config.js`
+
+**Issue**: Supplier portal doesn't strip console.logs in production builds.
+
+**Fix**: Add `compiler: { removeConsole: { exclude: ['error', 'warn'] } }`.
+
+**Status**: DONE
+
+---
+
+**TODO-AUDIT-001: Triage TODO/FIXME comments**
+
+**Risk Class**: B | **Priority**: P1
+
+**Scope**:
+- Files: Multiple (backend + frontends)
+
+**Issue**: ~37 TODO/FIXME in codebase, some may be critical.
+
+**Fix**: Triage, fix critical, convert rest to tracked tickets.
+
+**Status**: DONE
+
+---
+
+**BACKUP-001: Document DB backup strategy**
+
+**Risk Class**: F | **Priority**: P1
+
+**Scope**:
+- Files: `docs/deploy/CONFIG_CONTRACT.md`
+
+**Issue**: No documented backup strategy for Cloud SQL.
+
+**Fix**: Add backup section to CONFIG_CONTRACT.md.
+
+**Status**: DONE
+
+---
+
+**CORS-MAXAGE-001: Add CORS preflight cache**
+
+**Risk Class**: D | **Priority**: P1
+
+**Scope**:
+- Files: `backend/src/app.ts`
+
+**Issue**: No maxAge on CORS, every request triggers preflight.
+
+**Fix**: Add `maxAge: 86400` to corsOptions.
+
+**Status**: DONE
+
+---
+
+#### Progress
+| # | Ticket | Risk | Priority | Status | Evidence |
+|---|--------|------|----------|--------|----------|
+| 1 | CI-NODE-001 | F | P0 | DONE | ci-gates.yml updated |
+| 2 | DOC-SYNC-001 | N/A | P0 | DONE | MASTER_PLAN.md synced |
+| 3 | ALLOWED-ORIGINS-001 | D | P0 | DONE | CONFIG_CONTRACT.md updated |
+| 4 | LOG-001 | B | P1 | DONE | backend/src/lib/logger.ts |
+| 5 | SHUTDOWN-001 | F | P1 | DONE | server.ts SIGTERM handler |
+| 6 | TYPE-CLEAN-001 | A | P1 | DONE | 0 `as any` casts |
+| 7 | CONSOLE-STRIP-001 | A | P1 | DONE | next.config.js compiler |
+| 8 | TODO-AUDIT-001 | B | P1 | DONE | Triaged, critical fixed |
+| 9 | BACKUP-001 | F | P1 | DONE | CONFIG_CONTRACT.md backup section |
+| 10 | CORS-MAXAGE-001 | D | P1 | DONE | app.ts maxAge: 86400 |
+
+#### Gates
+- [ ] `pnpm -r typecheck` = 0 errors
+- [ ] CI green for RC_SHA (Node 20)
+- [ ] Local prod stack 17/17 healthy
+- [ ] All 14 Docker images build
+
+---
+
 ### BATCH-010: Staging Deploy + Pre-Live Testing
 
 **Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
@@ -1679,7 +1884,7 @@ gcloud run services update-traffic api-gateway \
 
 ### BATCH-012: Auth & Session Security
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `CODE_COMPLETE` | **RC_SHA**: 9bb03f7 | **CI Run**: —
 
 > **Goal**: Fix all 18 auth/session vulnerabilities identified in the Security Audit Report
 > (Agent af78518, SHA 7ff2bd1). This batch MUST complete before staging deployment.
@@ -2404,6 +2609,22 @@ Cloud Logging: https://console.cloud.google.com/logs?project=supermandi-pos
 
 ---
 
+## DEFERRED TICKETS (from TODO-AUDIT-001)
+
+> Triaged 2026-02-06. None block staging. Assigned to post-launch batches.
+
+| # | Ticket ID | File | Priority | Description | Batch |
+|---|-----------|------|----------|-------------|-------|
+| 1 | PAY-GATEWAY-001 | `backend/src/routes/v1/pos/payments.ts:890` | P1 | Integrate real payment gateway (Razorpay/PayU) for UTR verification | Post-launch |
+| 2 | ADMIN-EMAIL-001 | `backend/src/routes/v1/admin/adminOtp.ts:102` | P2 | Integrate email service for admin OTP (dead code path — superadmin uses token auth) | Post-launch |
+| 3 | VOICE-SEARCH-001 | `backend/src/routes/v1/pos/voice.ts:71` | P2 | Server-side product search for voice orders | Post-launch |
+| 4 | MT6-MIGRATE-001 | `backend/src/routes/v1/pos/sync.ts:64,418` | P2 | Migrate SALE_CREATED to catalog schema (MT-6) | Post-launch |
+| 5 | POS-LIVESUP-001 | `pos-app/src/screens/PurchaseScreen.tsx:235` | P2 | Live Suppliers API integration | Post-launch |
+| 6 | POS-CREDIT-001 | `pos-app/src/screens/CreditScreen.tsx:139` | P2 | Credit utilization tracking backend integration | Post-launch |
+| 7 | DEP-SEC-001 | `package.json` (multiple) | P1 | 31 Dependabot vulnerabilities — lockfile changes need full regression | DEP-015 |
+
+---
+
 ## CHANGELOG
 
 | Date | Change | Ticket |
@@ -2464,3 +2685,7 @@ Cloud Logging: https://console.cloud.google.com/logs?project=supermandi-pos
 | 2026-02-05 | Phase 1 IMMEDIATE: AUTH-OTP-004, AUTH-PERM-001, AUTH-GATEWAY-001, AUTH-EXPIRY-002, AUTH-STORAGE-001, AUTH-LOGOUT-001/002, AUTH-CONCURRENT-002 | DOC-017 |
 | 2026-02-05 | Phase 2 SHORT-TERM: AUTH-EXPIRY-001/003, AUTH-OTP-001, AUTH-IDLE-001, AUTH-RESET-001, AUTH-REFRESH-001 | DOC-017 |
 | 2026-02-05 | Phase 3 MEDIUM-TERM: AUTH-OTP-002/003, AUTH-CONCURRENT-001, AUTH-CSRF-001 | DOC-017 |
+| 2026-02-06 | **BATCH-012**: Status updated DRAFT→CODE_COMPLETE 18/18 DONE (RC_SHA: 9bb03f7) | DOC-SYNC-001 |
+| 2026-02-06 | **BATCH-013**: Added to plan (prod testing + infra hardening, RC_SHA: f7cb90d) | DOC-SYNC-001 |
+| 2026-02-06 | **BATCH-014**: Production Grade Polish — 10 tickets (3 P0, 7 P1) | BATCH-014 |
+| 2026-02-06 | CI-NODE-001: CI Node 18→20 (parity with Docker images) | BATCH-014 |

@@ -78,6 +78,7 @@ const corsOptions: cors.CorsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Token', 'X-Admin-Token', 'X-Request-ID'],
+  maxAge: 86400, // CORS-MAXAGE-001: Cache preflight for 24h (reduces OPTIONS requests)
 };
 app.use(cors(corsOptions));
 // GO-LIVE-194: Per-endpoint body size limits (replaces global 1MB limit)

@@ -84,7 +84,12 @@ export interface InventoryItem {
   totalSellRevenue: number;    // paise
 }
 
-export async function fetchInventory(accessToken: string): Promise<ApiResponse<InventoryItem[]>> {
+// TYPE-CLEAN-001: Typed inventory response (removes `as any` in DashboardPage)
+export interface InventoryResponse extends ApiResponse<InventoryItem[]> {
+  totals?: { totalProducts: number; totalStockQty: number; totalPurchaseValue: number; totalSellRevenue: number };
+}
+
+export async function fetchInventory(accessToken: string): Promise<InventoryResponse> {
   const response = await authFetch(`${API_BASE}/inventory`, accessToken);
 
   // 401 handled by authFetch (triggers logout)
@@ -97,7 +102,7 @@ export async function fetchInventory(accessToken: string): Promise<ApiResponse<I
   }
 
   // GO-LIVE-020: Use safe JSON parsing
-  const data = await safeJson<ApiResponse<InventoryItem[]>>(response);
+  const data = await safeJson<InventoryResponse>(response);
   if (!data) throw new Error('Invalid response from server');
   return data;
 }
