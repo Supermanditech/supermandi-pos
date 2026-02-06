@@ -242,8 +242,14 @@ services:
       postgres:
         condition: service_healthy
 
+  # POST-BATCH-018: Build from source (was: stale image :9bb03f7)
   retailer-admin:
-    image: supermandi/retailer-admin:9bb03f7
+    build:
+      context: ../retailer-admin
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:8080"
+    image: supermandi/retailer-admin:local
     restart: unless-stopped
     ports: ["8081:80"]
     # POST-BATCH-017: Mount subpath-aware nginx config (serves /retailer/ prefix)
@@ -277,8 +283,14 @@ services:
       retries: 5
       start_period: 15s
 
+  # POST-BATCH-018: Build from source (was: stale image :9bb03f7)
   superadmin:
-    image: supermandi/superadmin:9bb03f7
+    build:
+      context: ../supermandi-superadmin
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:8080"
+    image: supermandi/superadmin:local
     restart: unless-stopped
     ports: ["8083:80"]
     # POST-BATCH-017: Mount subpath-aware nginx config (serves /admin/ prefix)
@@ -292,8 +304,12 @@ services:
       retries: 3
       start_period: 5s
 
+  # POST-BATCH-018: Build from source (was: stale image :9bb03f7)
   landing:
-    image: supermandi/landing:9bb03f7
+    build:
+      context: ../supermandi-landing
+      dockerfile: Dockerfile
+    image: supermandi/landing:local
     restart: unless-stopped
     ports: ["8084:80"]
     # LOCAL-PROD-URL-001: Override Dockerfile healthcheck — use 127.0.0.1 (IPv6 fix)

@@ -446,5 +446,29 @@
             </div>
         </footer>
     </div>
+
+    <!-- POST-BATCH-018-FIX-001: Rewrite portal links for local-prod Docker ports.
+         In production all portals share one domain (relative paths work).
+         In local-prod each portal runs on a different port. -->
+    <script>
+    (function () {
+      var host = location.hostname;
+      if (host !== 'localhost' && host !== '127.0.0.1') return;
+      var portMap = {
+        '/retailer/': 'http://localhost:8081/retailer/',
+        '/supplier/': 'http://localhost:8082/supplier/',
+        '/admin/':    'http://localhost:8083/admin/'
+      };
+      document.querySelectorAll('a[href]').forEach(function (a) {
+        var href = a.getAttribute('href');
+        for (var prefix in portMap) {
+          if (href === prefix || href.indexOf(prefix) === 0) {
+            a.setAttribute('href', portMap[prefix] + href.slice(prefix.length));
+            break;
+          }
+        }
+      });
+    })();
+    </script>
 </body>
 </html>

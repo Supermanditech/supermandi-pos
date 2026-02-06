@@ -43,6 +43,8 @@ if (isFirebaseConfigured()) {
 // Store recaptcha verifier and confirmation result
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 let confirmationResult: ConfirmationResult | null = null;
+// POST-BATCH-018-FIX-004: Track last button ID for auto-re-init
+let lastRecaptchaButtonId: string | null = null;
 
 /**
  * Setup invisible reCAPTCHA verifier
@@ -55,9 +57,11 @@ export function setupRecaptcha(buttonId: string): void {
 
   // Clean up existing verifier
   if (recaptchaVerifier) {
-    recaptchaVerifier.clear();
+    try { recaptchaVerifier.clear(); } catch { /* ignore cleanup errors */ }
     recaptchaVerifier = null;
   }
+
+  lastRecaptchaButtonId = buttonId;
 
   recaptchaVerifier = new RecaptchaVerifier(auth, buttonId, {
     size: 'invisible',
@@ -65,34 +69,60 @@ export function setupRecaptcha(buttonId: string): void {
       // reCAPTCHA verified
     },
     'expired-callback': () => {
+      // POST-BATCH-018-FIX-004: Auto-re-init on expiry instead of going null
+      try { recaptchaVerifier?.clear(); } catch { /* ignore */ }
       recaptchaVerifier = null;
+      if (auth && lastRecaptchaButtonId && document.getElementById(lastRecaptchaButtonId)) {
+        try {
+          recaptchaVerifier = new RecaptchaVerifier(auth, lastRecaptchaButtonId, {
+            size: 'invisible',
+          });
+        } catch { /* will be re-created in sendOtp if needed */ }
+      }
     },
   });
+}
+
+/**
+ * POST-BATCH-018-FIX-004: Ensure reCAPTCHA is ready, re-creating if needed
+ */
+function ensureRecaptcha(buttonId: string): RecaptchaVerifier {
+  if (!auth) throw new Error('Firebase not configured');
+
+  if (recaptchaVerifier) return recaptchaVerifier;
+
+  // Auto-re-init: verifier was cleared (error/expiry) — recreate it
+  const targetId = buttonId || lastRecaptchaButtonId;
+  if (!targetId || !document.getElementById(targetId)) {
+    throw new Error('reCAPTCHA button not found. Please reload the page.');
+  }
+
+  recaptchaVerifier = new RecaptchaVerifier(auth, targetId, { size: 'invisible' });
+  return recaptchaVerifier;
 }
 
 /**
  * Send OTP to phone number
  * Returns true if OTP was sent successfully
  */
-export async function sendOtp(phoneNumber: string): Promise<boolean> {
+export async function sendOtp(phoneNumber: string, buttonId?: string): Promise<boolean> {
   if (!auth) {
     throw new Error('Firebase not configured. Check VITE_FIREBASE_* environment variables.');
   }
 
-  if (!recaptchaVerifier) {
-    throw new Error('reCAPTCHA not initialized. Call setupRecaptcha first.');
-  }
+  // POST-BATCH-018-FIX-004: Auto-ensure reCAPTCHA (handles expiry/cleared states)
+  const verifier = ensureRecaptcha(buttonId || lastRecaptchaButtonId || 'send-otp-button');
 
   // Normalize phone number (ensure +91 prefix for Indian numbers)
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
 
   try {
-    confirmationResult = await signInWithPhoneNumber(auth, normalizedPhone, recaptchaVerifier);
+    confirmationResult = await signInWithPhoneNumber(auth, normalizedPhone, verifier);
     return true;
   } catch (error: unknown) {
-    // Reset recaptcha on error
+    // Reset recaptcha on error (will be auto-recreated on next send attempt)
     if (recaptchaVerifier) {
-      recaptchaVerifier.clear();
+      try { recaptchaVerifier.clear(); } catch { /* ignore */ }
       recaptchaVerifier = null;
     }
 
@@ -107,7 +137,7 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
     let userMessage = 'Unable to send OTP. Please try again.';
 
     if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/captcha-check-failed') {
-      userMessage = 'Unable to send OTP. Please try again or contact support.';
+      userMessage = 'Unable to send OTP. Please reload and try again, or contact support.';
     } else if (errorCode === 'auth/too-many-requests') {
       userMessage = 'Too many attempts. Please wait a few minutes and try again.';
     } else if (errorCode === 'auth/invalid-phone-number') {
@@ -116,6 +146,8 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
       userMessage = 'Service temporarily unavailable. Please try again later.';
     } else if (errorCode === 'auth/network-request-failed') {
       userMessage = 'Network error. Please check your connection and try again.';
+    } else if (errorCode === 'auth/internal-error') {
+      userMessage = 'Authentication service error. Please reload and try again.';
     }
 
     throw new Error(userMessage);

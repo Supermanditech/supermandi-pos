@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
-import { getAuthHeaders, handle401Response } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 
 function requireApiBase(): string {
   if (!API_BASE) {
@@ -25,10 +25,9 @@ export async function askAi(question: string): Promise<{ answer: string }> {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // GO-LIVE-171: Handle 401 by redirecting to login
+    // POST-BATCH-018-FIX-002: No hard redirect — let caller handle auth errors
     if (res.status === 401) {
-      handle401Response();
-      throw new Error("Session expired. Redirecting to login...");
+      throw new Error("Unauthorized — session may have expired");
     }
     const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI failed (${res.status})`);
     throw new Error(msg);
@@ -48,10 +47,9 @@ export async function fetchAiHealth(): Promise<{ configured: boolean }> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    // GO-LIVE-171: Handle 401 by redirecting to login
+    // POST-BATCH-018-FIX-002: No hard redirect — let caller handle auth errors
     if (res.status === 401) {
-      handle401Response();
-      throw new Error("Session expired. Redirecting to login...");
+      throw new Error("Unauthorized — session may have expired");
     }
     const msg = (data && typeof data === "object" && "error" in data ? String((data as any).error) : `AI health failed (${res.status})`);
     throw new Error(msg);

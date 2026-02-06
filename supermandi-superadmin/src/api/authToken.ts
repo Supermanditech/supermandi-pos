@@ -6,10 +6,11 @@
  * 1. User enters admin email address
  * 2. Backend sends OTP to email
  * 3. User verifies OTP, backend issues JWT session token
- * 4. JWT is stored in sessionStorage and used for API calls (Authorization: Bearer)
+ * 4. JWT is stored in localStorage and used for API calls (Authorization: Bearer)
  * 5. JWT expires after 24 hours
  *
- * No static tokens required - all authentication is session-based.
+ * POST-BATCH-018-FIX-003: localStorage for cross-tab persistence
+ * POST-BATCH-018-FIX-002: No hard redirects from API modules — callers decide
  */
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -28,18 +29,18 @@ const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 /**
  * Get the current session token if valid
+ * POST-BATCH-018-FIX-003: Uses localStorage (cross-tab), no premature buffer
  */
 export function getSessionToken(): string | undefined {
   try {
-    const token = sessionStorage.getItem(SESSION_TOKEN_KEY);
-    const expiry = sessionStorage.getItem(SESSION_EXPIRY_KEY);
+    const token = localStorage.getItem(SESSION_TOKEN_KEY);
+    const expiry = localStorage.getItem(SESSION_EXPIRY_KEY);
 
     if (!token || !expiry) return undefined;
 
-    // Check if expired (with 5 minute buffer for refresh)
+    // POST-BATCH-018-FIX-003: Only reject if actually expired (no 5-min buffer)
     const expiryTime = parseInt(expiry, 10);
-    if (Date.now() > expiryTime - 5 * 60 * 1000) {
-      // Token is expired or about to expire
+    if (Date.now() > expiryTime) {
       return undefined;
     }
 
@@ -51,11 +52,12 @@ export function getSessionToken(): string | undefined {
 
 /**
  * Store session token
+ * POST-BATCH-018-FIX-003: Uses localStorage for cross-tab persistence
  */
 function setSessionToken(token: string, expiresAt: number): void {
   try {
-    sessionStorage.setItem(SESSION_TOKEN_KEY, token);
-    sessionStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+    localStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
   } catch {
     // ignore
   }
@@ -66,9 +68,9 @@ function setSessionToken(token: string, expiresAt: number): void {
  */
 function clearSessionToken(): void {
   try {
-    sessionStorage.removeItem(SESSION_TOKEN_KEY);
-    sessionStorage.removeItem(SESSION_EXPIRY_KEY);
-    sessionStorage.removeItem(LAST_ACTIVITY_KEY);
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem(SESSION_EXPIRY_KEY);
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
   } catch {
     // ignore
   }
@@ -77,6 +79,7 @@ function clearSessionToken(): void {
 /**
  * Refresh the current session token
  * GO-LIVE-175: Enhanced error handling to log refresh failures
+ * POST-BATCH-018-FIX-002: Only clears token on confirmed 401, not transient errors
  */
 export async function refreshSession(): Promise<boolean> {
   const currentToken = getSessionToken();
@@ -93,12 +96,10 @@ export async function refreshSession(): Promise<boolean> {
     });
 
     if (!res.ok) {
-      // GO-LIVE-175: Log the specific error status for debugging
       console.warn(`[GO-LIVE-175] Session refresh failed with status ${res.status}`);
       if (res.status === 401) {
-        // Token is invalid/expired, clear and redirect
+        // Token is truly invalid/expired — clear it
         clearSessionToken();
-        clearAdminToken();
       }
       return false;
     }
@@ -107,7 +108,6 @@ export async function refreshSession(): Promise<boolean> {
     try {
       data = await res.json();
     } catch (parseError) {
-      // GO-LIVE-175: Log JSON parse errors
       console.error('[GO-LIVE-175] Failed to parse refresh response:', parseError);
       return false;
     }
@@ -117,11 +117,9 @@ export async function refreshSession(): Promise<boolean> {
       return true;
     }
 
-    // GO-LIVE-175: Log unexpected response format
     console.warn('[GO-LIVE-175] Refresh response missing required fields:', Object.keys(data));
     return false;
   } catch (error) {
-    // GO-LIVE-175: Log network/fetch errors instead of silently failing
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[GO-LIVE-175] Session refresh error: ${errorMessage}`);
     return false;
@@ -192,17 +190,13 @@ export function clearAdminToken(): void {
 }
 
 /**
- * GO-LIVE-171: Handle 401 responses by clearing session and redirecting to login
- * Call this when any API returns 401
+ * POST-BATCH-018-FIX-002: Handle 401 — clear tokens only (no hard redirect).
+ * Callers (polling, UI) decide whether to show inline error or redirect.
+ * Kept as export for backward compatibility but no longer does window.location.replace.
  */
 export function handle401Response(): void {
-  console.warn("[GO-LIVE-171] 401 response - clearing session and redirecting to login");
+  console.warn("[FIX-002] 401 response — clearing session tokens");
   clearSessionToken();
-  clearAdminToken();
-  // Redirect to root (login page) using replace to prevent back navigation
-  if (typeof window !== "undefined") {
-    window.location.replace("/");
-  }
 }
 
 // =============================================================================
@@ -251,6 +245,7 @@ export async function sendAdminOtp(email: string): Promise<{ success: boolean; e
 /**
  * Verify OTP and login
  * GO-LIVE-LOGIN-004: Email-based admin authentication
+ * POST-BATCH-018-FIX-003: Uses localStorage for cross-tab persistence
  */
 export async function verifyAdminOtp(email: string, otp: string): Promise<{
   success: boolean;
@@ -282,13 +277,11 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
 
     // Store the JWT token
     if (data.token) {
-      // Store as session token with 24h expiry
       const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
       try {
-        sessionStorage.setItem(SESSION_TOKEN_KEY, data.token);
-        sessionStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
-        // AUTH-EXPIRY-003: Set initial activity on login
-        sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+        localStorage.setItem(SESSION_TOKEN_KEY, data.token);
+        localStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
+        localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
       } catch {
         // ignore storage errors
       }
@@ -317,9 +310,9 @@ let lastWrite = 0;
 
 function updateActivity(): void {
   const now = Date.now();
-  if (now - lastWrite > 60000) { // Write at most once per minute
+  if (now - lastWrite > 60000) {
     try {
-      sessionStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
+      localStorage.setItem(LAST_ACTIVITY_KEY, now.toString());
     } catch {
       // ignore
     }
@@ -334,16 +327,14 @@ function updateActivity(): void {
 export function startIdleTimeout(onTimeout: () => void): void {
   stopIdleTimeout();
 
-  // Set initial activity
   try {
-    if (!sessionStorage.getItem(LAST_ACTIVITY_KEY)) {
-      sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+    if (!localStorage.getItem(LAST_ACTIVITY_KEY)) {
+      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
     }
   } catch {
     // ignore
   }
 
-  // Listen for user activity
   if (typeof window !== "undefined") {
     window.addEventListener("mousemove", updateActivity);
     window.addEventListener("keydown", updateActivity);
@@ -352,14 +343,12 @@ export function startIdleTimeout(onTimeout: () => void): void {
     activityListenersAttached = true;
   }
 
-  // Check for idle timeout every 30 seconds
   idleCheckInterval = setInterval(() => {
     try {
-      const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+      const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
       if (!lastActivity) return;
       const elapsed = Date.now() - parseInt(lastActivity, 10);
       if (elapsed > IDLE_TIMEOUT_MS) {
-        console.log("[AUTH-EXPIRY-003] Logging out due to inactivity");
         onTimeout();
       }
     } catch {
@@ -384,4 +373,3 @@ export function stopIdleTimeout(): void {
     activityListenersAttached = false;
   }
 }
-

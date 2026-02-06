@@ -20,15 +20,6 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Debug: Log Firebase config (masked)
-if (typeof window !== 'undefined') {
-  console.log('[Firebase] Config:', {
-    apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 10)}...` : 'MISSING',
-    authDomain: firebaseConfig.authDomain || 'MISSING',
-    projectId: firebaseConfig.projectId || 'MISSING',
-  });
-}
-
 // Check if Firebase is configured
 const isFirebaseConfigured = (): boolean => {
   return !!(
@@ -55,37 +46,62 @@ if (typeof window !== 'undefined' && isFirebaseConfigured()) {
 // Store recaptcha verifier and confirmation result
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 let confirmationResult: ConfirmationResult | null = null;
+// POST-BATCH-018-FIX-005: Track last button ID for auto-re-init
+let lastRecaptchaButtonId: string | null = null;
 
 /**
  * Setup invisible reCAPTCHA verifier
  * Must be called before sendOtp
  */
 export function setupRecaptcha(buttonId: string): void {
-  console.log('[Firebase] setupRecaptcha called for button:', buttonId);
-
   if (!auth) {
-    console.error('[Firebase] Cannot setup reCAPTCHA - auth not initialized');
     throw new Error('Firebase not configured');
   }
 
   // Clean up existing verifier
   if (recaptchaVerifier) {
-    console.log('[Firebase] Cleaning up existing reCAPTCHA verifier');
-    recaptchaVerifier.clear();
+    try { recaptchaVerifier.clear(); } catch { /* ignore cleanup errors */ }
     recaptchaVerifier = null;
   }
+
+  lastRecaptchaButtonId = buttonId;
 
   recaptchaVerifier = new RecaptchaVerifier(auth, buttonId, {
     size: 'invisible',
     callback: () => {
-      console.log('[Firebase] reCAPTCHA verified successfully');
+      // reCAPTCHA verified
     },
     'expired-callback': () => {
-      console.log('[Firebase] reCAPTCHA expired');
+      // POST-BATCH-018-FIX-005: Auto-re-init on expiry instead of going null
+      try { recaptchaVerifier?.clear(); } catch { /* ignore */ }
       recaptchaVerifier = null;
+      if (auth && lastRecaptchaButtonId && document.getElementById(lastRecaptchaButtonId)) {
+        try {
+          recaptchaVerifier = new RecaptchaVerifier(auth, lastRecaptchaButtonId, {
+            size: 'invisible',
+          });
+        } catch { /* will be re-created in sendOtp if needed */ }
+      }
     },
   });
-  console.log('[Firebase] reCAPTCHA verifier created');
+}
+
+/**
+ * POST-BATCH-018-FIX-005: Ensure reCAPTCHA is ready, re-creating if needed
+ */
+function ensureRecaptcha(buttonId: string): RecaptchaVerifier {
+  if (!auth) throw new Error('Firebase not configured');
+
+  if (recaptchaVerifier) return recaptchaVerifier;
+
+  // Auto-re-init: verifier was cleared (error/expiry) — recreate it
+  const targetId = buttonId || lastRecaptchaButtonId;
+  if (!targetId || !document.getElementById(targetId)) {
+    throw new Error('reCAPTCHA button not found. Please reload the page.');
+  }
+
+  recaptchaVerifier = new RecaptchaVerifier(auth, targetId, { size: 'invisible' });
+  return recaptchaVerifier;
 }
 
 /**
@@ -124,32 +140,24 @@ function normalizePhoneNumber(phone: string): string {
  * Send OTP to phone number
  * Returns true if OTP was sent successfully
  */
-export async function sendOtp(phoneNumber: string): Promise<boolean> {
-  console.log('[Firebase] sendOtp called with:', phoneNumber);
-
+export async function sendOtp(phoneNumber: string, buttonId?: string): Promise<boolean> {
   if (!auth) {
-    console.error('[Firebase] Auth not initialized');
     throw new Error('Firebase not configured. Check NEXT_PUBLIC_FIREBASE_* environment variables.');
   }
 
-  if (!recaptchaVerifier) {
-    console.error('[Firebase] reCAPTCHA not initialized');
-    throw new Error('reCAPTCHA not initialized. Call setupRecaptcha first.');
-  }
+  // POST-BATCH-018-FIX-005: Auto-ensure reCAPTCHA (handles expiry/cleared states)
+  const verifier = ensureRecaptcha(buttonId || lastRecaptchaButtonId || 'send-otp-button');
 
   // Normalize phone number (ensure +91 prefix for Indian numbers)
   const normalizedPhone = normalizePhoneNumber(phoneNumber);
-  console.log('[Firebase] Normalized phone:', normalizedPhone);
 
   try {
-    console.log('[Firebase] Calling signInWithPhoneNumber...');
-    confirmationResult = await signInWithPhoneNumber(auth, normalizedPhone, recaptchaVerifier);
-    console.log('[Firebase] signInWithPhoneNumber SUCCESS - confirmationResult:', !!confirmationResult);
+    confirmationResult = await signInWithPhoneNumber(auth, normalizedPhone, verifier);
     return true;
   } catch (error: unknown) {
-    // Reset recaptcha on error
+    // Reset recaptcha on error (will be auto-recreated on next send attempt)
     if (recaptchaVerifier) {
-      recaptchaVerifier.clear();
+      try { recaptchaVerifier.clear(); } catch { /* ignore */ }
       recaptchaVerifier = null;
     }
 
@@ -164,7 +172,7 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
     let userMessage = 'Unable to send OTP. Please try again.';
 
     if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/captcha-check-failed') {
-      userMessage = 'Unable to send OTP. Please try again or contact support.';
+      userMessage = 'Unable to send OTP. Please reload and try again, or contact support.';
     } else if (errorCode === 'auth/too-many-requests') {
       userMessage = 'Too many attempts. Please wait a few minutes and try again.';
     } else if (errorCode === 'auth/invalid-phone-number') {
@@ -173,6 +181,8 @@ export async function sendOtp(phoneNumber: string): Promise<boolean> {
       userMessage = 'Service temporarily unavailable. Please try again later.';
     } else if (errorCode === 'auth/network-request-failed') {
       userMessage = 'Network error. Please check your connection and try again.';
+    } else if (errorCode === 'auth/internal-error') {
+      userMessage = 'Authentication service error. Please reload and try again.';
     }
 
     throw new Error(userMessage);

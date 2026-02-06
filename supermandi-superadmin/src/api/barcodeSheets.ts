@@ -1,4 +1,4 @@
-import { getAuthHeaders, handle401Response } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -29,10 +29,9 @@ export async function fetchBarcodeSheetPdf(params: {
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    // GO-LIVE-171: Handle 401 by redirecting to login
+    // POST-BATCH-018-FIX-002: No hard redirect — let caller handle auth errors
     if (res.status === 401) {
-      handle401Response();
-      throw new Error("Session expired. Redirecting to login...");
+      throw new Error("Unauthorized — session may have expired");
     }
     const fallback = `Request failed (${res.status})`;
     // GL-CRIT-0055: Sanitize error messages

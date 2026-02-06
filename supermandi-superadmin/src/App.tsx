@@ -569,14 +569,21 @@ export default function App() {
   }, [isAuthenticated]);
 
   // AUTH-EXPIRY-003: Periodic token refresh (every 10 minutes)
+  // POST-BATCH-018-FIX-002: Retry once before logging out (transient failure resilience)
   useEffect(() => {
     if (!isAuthenticated) return;
+    let consecutiveFailures = 0;
     const interval = setInterval(async () => {
       const success = await refreshSession();
-      if (!success) {
-        console.warn('[AUTH-EXPIRY-003] Token refresh failed, logging out');
-        await logout();
-        setIsAuthenticated(false);
+      if (success) {
+        consecutiveFailures = 0;
+      } else {
+        consecutiveFailures++;
+        if (consecutiveFailures >= 2) {
+          console.warn('[FIX-002] Token refresh failed twice consecutively, logging out');
+          await logout();
+          setIsAuthenticated(false);
+        }
       }
     }, 10 * 60 * 1000); // Refresh every 10 minutes
     return () => clearInterval(interval);

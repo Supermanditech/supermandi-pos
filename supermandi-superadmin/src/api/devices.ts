@@ -1,4 +1,4 @@
-import { getAuthHeaders, handle401Response } from "./authToken";
+import { getAuthHeaders } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
@@ -27,10 +27,9 @@ async function parseError(res: Response): Promise<string> {
   const fallback = `Request failed (${res.status})`;
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (res.status === 503 && data.error === "admin_disabled") return "Admin disabled (ADMIN_TOKEN missing)";
-  // GO-LIVE-171: Handle 401 by redirecting to login
+  // POST-BATCH-018-FIX-002: No hard redirect — let caller handle auth errors
   if (res.status === 401) {
-    handle401Response();
-    return "Session expired. Redirecting to login...";
+    return "Unauthorized — session may have expired";
   }
   // GL-CRIT-0055: Sanitize error messages
   return sanitizeErrorMessage(data.error, fallback);
