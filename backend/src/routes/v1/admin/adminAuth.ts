@@ -12,47 +12,99 @@ import {
   checkEmailRateLimit,
   recordEmailSend,
 } from "../../../services/emailService";
+import { getRedis } from "../../../db/redis";
 
 export const adminAuthRouter = Router();
 
-// Hardcoded admin email allowlist
-// In production, this should be stored securely (environment variable or database)
-const ADMIN_EMAIL_ALLOWLIST = [
-  'supermanditech@gmail.com',
-];
+// Admin email allowlist from environment variable (comma-separated)
+const ADMIN_EMAIL_ALLOWLIST = (process.env.ADMIN_EMAIL_ALLOWLIST || '')
+  .split(',')
+  .map(e => e.trim().toLowerCase())
+  .filter(Boolean);
 
 // OTP configuration
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 const JWT_SECRET = process.env.JWT_SECRET || process.env.ADMIN_TOKEN || 'dev-jwt-secret';
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  console.error('[GO-LIVE-LOGIN-004] FATAL: JWT_SECRET must be set in production');
+  process.exit(1);
+}
 const JWT_EXPIRY = '24h';
 
-// In-memory OTP store (in production, use Redis)
+// OTP data shape
 interface StoredOTP {
   hash: string;
   expiresAt: number;
   attempts: number;
 }
-const otpStore = new Map<string, StoredOTP>();
 
 // Rate limiting for OTP verification attempts
 const MAX_VERIFY_ATTEMPTS = 5;
 const LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
-const verifyLockouts = new Map<string, number>();
 
-// Cleanup expired OTPs periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [email, data] of otpStore.entries()) {
-    if (now > data.expiresAt) {
-      otpStore.delete(email);
-    }
+// Redis key prefixes for admin OTP
+const REDIS_OTP_PREFIX = 'admin:otp:';
+const REDIS_LOCKOUT_PREFIX = 'admin:lockout:';
+
+// Fallback in-memory stores (only when Redis unavailable)
+const otpStoreFallback = new Map<string, StoredOTP>();
+const lockoutFallback = new Map<string, number>();
+
+async function setOtp(email: string, data: StoredOTP): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    const ttl = Math.max(Math.ceil((data.expiresAt - Date.now()) / 1000), 1);
+    await redis.setex(REDIS_OTP_PREFIX + email, ttl, JSON.stringify(data));
+  } else {
+    otpStoreFallback.set(email, data);
   }
-  for (const [email, lockedUntil] of verifyLockouts.entries()) {
-    if (now > lockedUntil) {
-      verifyLockouts.delete(email);
-    }
+}
+
+async function getOtp(email: string): Promise<StoredOTP | null> {
+  const redis = getRedis();
+  if (redis) {
+    const raw = await redis.get(REDIS_OTP_PREFIX + email);
+    return raw ? JSON.parse(raw) as StoredOTP : null;
   }
-}, 60000); // Every minute
+  return otpStoreFallback.get(email) ?? null;
+}
+
+async function deleteOtp(email: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    await redis.del(REDIS_OTP_PREFIX + email);
+  } else {
+    otpStoreFallback.delete(email);
+  }
+}
+
+async function setLockout(email: string, lockedUntil: number): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    const ttl = Math.max(Math.ceil((lockedUntil - Date.now()) / 1000), 1);
+    await redis.setex(REDIS_LOCKOUT_PREFIX + email, ttl, lockedUntil.toString());
+  } else {
+    lockoutFallback.set(email, lockedUntil);
+  }
+}
+
+async function getLockout(email: string): Promise<number | null> {
+  const redis = getRedis();
+  if (redis) {
+    const raw = await redis.get(REDIS_LOCKOUT_PREFIX + email);
+    return raw ? parseInt(raw, 10) : null;
+  }
+  return lockoutFallback.get(email) ?? null;
+}
+
+async function deleteLockout(email: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) {
+    await redis.del(REDIS_LOCKOUT_PREFIX + email);
+  } else {
+    lockoutFallback.delete(email);
+  }
+}
 
 /**
  * Check if email is in admin allowlist
@@ -105,8 +157,8 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
   const otpHash = hashOTP(otp);
   const expiresAt = Date.now() + OTP_EXPIRY_MS;
 
-  // Store hashed OTP
-  otpStore.set(normalizedEmail, {
+  // Store hashed OTP in Redis
+  await setOtp(normalizedEmail, {
     hash: otpHash,
     expiresAt,
     attempts: 0,
@@ -124,7 +176,7 @@ adminAuthRouter.post("/auth/send-email-otp", async (req: Request, res: Response)
 
   if (!emailResult.sent) {
     console.error(`[GO-LIVE-LOGIN-004] Failed to send OTP email to ${normalizedEmail}:`, emailResult.errorMessage);
-    otpStore.delete(normalizedEmail); // Clean up on failure
+    await deleteOtp(normalizedEmail); // Clean up on failure
     return res.status(500).json({
       error: {
         code: "EMAIL_SEND_FAILED",
@@ -163,7 +215,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
   const normalizedEmail = email.toLowerCase().trim();
 
   // Check if locked out
-  const lockedUntil = verifyLockouts.get(normalizedEmail);
+  const lockedUntil = await getLockout(normalizedEmail);
   if (lockedUntil && Date.now() < lockedUntil) {
     const waitMinutes = Math.ceil((lockedUntil - Date.now()) / 60000);
     return res.status(429).json({
@@ -175,7 +227,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
   }
 
   // Get stored OTP
-  const stored = otpStore.get(normalizedEmail);
+  const stored = await getOtp(normalizedEmail);
 
   if (!stored) {
     return res.status(400).json({
@@ -185,7 +237,7 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
 
   // Check expiry
   if (Date.now() > stored.expiresAt) {
-    otpStore.delete(normalizedEmail);
+    await deleteOtp(normalizedEmail);
     return res.status(400).json({
       error: { code: "OTP_EXPIRED", message: "Verification code has expired. Please request a new one." }
     });
@@ -194,11 +246,12 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
   // Verify OTP using timing-safe comparison
   if (!verifyOTPHash(otp, stored.hash)) {
     stored.attempts += 1;
+    await setOtp(normalizedEmail, stored); // Persist updated attempt count
 
     // Check if max attempts reached
     if (stored.attempts >= MAX_VERIFY_ATTEMPTS) {
-      otpStore.delete(normalizedEmail);
-      verifyLockouts.set(normalizedEmail, Date.now() + LOCKOUT_MS);
+      await deleteOtp(normalizedEmail);
+      await setLockout(normalizedEmail, Date.now() + LOCKOUT_MS);
       console.warn(`[GO-LIVE-LOGIN-004] Admin OTP lockout for ${normalizedEmail} after ${stored.attempts} failed attempts`);
       return res.status(429).json({
         error: {
@@ -214,8 +267,8 @@ adminAuthRouter.post("/auth/verify-email-otp", async (req: Request, res: Respons
   }
 
   // OTP verified - clean up
-  otpStore.delete(normalizedEmail);
-  verifyLockouts.delete(normalizedEmail);
+  await deleteOtp(normalizedEmail);
+  await deleteLockout(normalizedEmail);
 
   // Generate JWT token
   const token = jwt.sign(

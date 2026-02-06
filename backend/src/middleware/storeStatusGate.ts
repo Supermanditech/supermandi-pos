@@ -44,12 +44,7 @@ interface StatusGateError {
 export function requireStoreStatus(allowedStatuses: StoreStatusType | StoreStatusType[]) {
   const statusArray = Array.isArray(allowedStatuses) ? allowedStatuses : [allowedStatuses];
 
-  // DEBUG: Log middleware creation
-  console.log('[SEC-001] Status gate middleware created with allowed:', statusArray);
-
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // DEBUG: Log middleware invocation
-    console.log('[SEC-001] Status gate middleware invoked for:', req.method, req.path);
 
     const pool = getPool();
     if (!pool) {
@@ -59,9 +54,6 @@ export function requireStoreStatus(allowedStatuses: StoreStatusType | StoreStatu
 
     // Get store_id from various sources (deviceToken sets this, or retailerStoreContext)
     const storeId = (req as any).storeId || (req as any).posDevice?.storeId;
-
-    // DEBUG: Log store context
-    console.log('[SEC-001] Store context:', { storeId, hasReqStoreId: !!(req as any).storeId, hasPosDevice: !!(req as any).posDevice });
 
     if (!storeId) {
       res.status(401).json({
@@ -84,13 +76,6 @@ export function requireStoreStatus(allowedStatuses: StoreStatusType | StoreStatu
       }
 
       const currentStatus = result.rows[0].status as StoreStatusType;
-
-      // DEBUG: Log status check
-      console.log('[SEC-001] Status check:', {
-        currentStatus,
-        statusArray,
-        isAllowed: statusArray.includes(currentStatus),
-      });
 
       // Store status in request for downstream use
       req.storeStatus = currentStatus;
