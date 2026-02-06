@@ -17,6 +17,7 @@ function normalizeEnum(value: string | null): string | null {
 
 adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
   const storeId = typeof req.query?.storeId === "string" ? req.query.storeId.trim() : "";
+  const deviceId = typeof req.query?.deviceId === "string" ? req.query.deviceId.trim() : "";
 
   const pool = getPool();
   if (!pool) {
@@ -27,21 +28,34 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
   const limit = Math.min(Math.max(parseInt(String(req.query.limit)) || 50, 1), 200);
   const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
-  const params: (string | number)[] = [];
-  let paramIdx = 1;
-  let where = "";
+  const conditions: string[] = [];
+  const countParams: string[] = [];
+  const queryParams: (string | number)[] = [];
+  let countIdx = 1;
+  let queryIdx = 1;
+
   if (storeId) {
-    where = `WHERE d.store_id = $${paramIdx}::uuid`;
-    params.push(storeId);
-    paramIdx++;
+    conditions.push(`d.store_id = $${countIdx}::uuid`);
+    countParams.push(storeId);
+    queryParams.push(storeId);
+    countIdx++;
+    queryIdx++;
+  }
+  if (deviceId) {
+    conditions.push(`d.id ILIKE $${countIdx}`);
+    countParams.push(`%${deviceId}%`);
+    queryParams.push(`%${deviceId}%`);
+    countIdx++;
+    queryIdx++;
   }
 
-  params.push(limit, offset);
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  queryParams.push(limit, offset);
 
   const [countResult, result] = await Promise.all([
     pool.query(
       `SELECT COUNT(*)::int as total FROM pos_devices d ${where}`,
-      storeId ? [storeId] : []
+      countParams
     ),
     pool.query(
       `
@@ -66,9 +80,9 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
       LEFT JOIN platform.stores s ON s.id = d.store_id::uuid
       ${where}
       ORDER BY d.last_seen_online DESC NULLS LAST
-      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+      LIMIT $${queryIdx} OFFSET $${queryIdx + 1}
       `,
-      params
+      queryParams
     ),
   ]);
 

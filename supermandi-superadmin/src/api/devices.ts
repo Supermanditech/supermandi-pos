@@ -38,13 +38,14 @@ async function parseError(res: Response): Promise<string> {
 // ADMIN-PAGINATION-001: Paginated response type
 export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
 
-export async function fetchDevices(params?: { storeId?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<DeviceRecord>> {
+export async function fetchDevices(params?: { storeId?: string; deviceId?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<DeviceRecord>> {
   if (!API_BASE) {
     throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
   }
 
   const url = new URL(`${API_BASE}/api/v1/admin/devices`);
   if (params?.storeId?.trim()) url.searchParams.set("storeId", params.storeId.trim());
+  if (params?.deviceId?.trim()) url.searchParams.set("deviceId", params.deviceId.trim());
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 

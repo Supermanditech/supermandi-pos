@@ -646,6 +646,9 @@ export default function App() {
   const [barcodeSheetSuccess, setBarcodeSheetSuccess] = useState<string>("");
 
   const [deviceRecords, setDeviceRecords] = useState<DeviceRecord[]>([]);
+  const [deviceTotal, setDeviceTotal] = useState<number>(0);
+  const [devicePage, setDevicePage] = useState<number>(0);
+  const DEVICE_PAGE_SIZE = 50;
   const [devicesError, setDevicesError] = useState<string>("");
   const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; printingMode: string; scanLookupV2Enabled: boolean; active: boolean }>>({});
   const [deviceSaving, setDeviceSaving] = useState<Record<string, boolean>>({});
@@ -799,8 +802,13 @@ export default function App() {
     if (eventsInFlightRef.current) return;
     eventsInFlightRef.current = true;
     try {
-      // Fetch raw stream (filters are applied client-side in the UI).
-      const data = await fetchPosEvents({ limit: clamp(limit, 50, 1000) });
+      // Filters are applied server-side via query parameters.
+      const data = await fetchPosEvents({
+        limit: clamp(limit, 50, 1000),
+        deviceId: deviceIdFilter || undefined,
+        storeId: storeIdFilter || undefined,
+        eventType: eventTypeFilter || undefined,
+      });
       // Always newest first.
       data.sort((a, b) => (toIsoSafe(b.createdAt) > toIsoSafe(a.createdAt) ? 1 : -1));
       setEvents(data);
@@ -815,12 +823,19 @@ export default function App() {
     }
   }
 
-  async function refreshDevices() {
+  async function refreshDevices(pageOverride?: number) {
     if (devicesInFlightRef.current) return;
     devicesInFlightRef.current = true;
     try {
-      const data = await fetchDevices();
+      const p = pageOverride ?? devicePage;
+      const data = await fetchDevices({
+        limit: DEVICE_PAGE_SIZE,
+        offset: p * DEVICE_PAGE_SIZE,
+        storeId: storeIdFilter || undefined,
+        deviceId: deviceIdFilter || undefined,
+      });
       setDeviceRecords(data.items);
+      setDeviceTotal(data.total);
       setDevicesError("");
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch devices";
@@ -1473,15 +1488,8 @@ export default function App() {
     });
   }, [events, deviceIdFilter, storeIdFilter, eventTypeFilter]);
 
-  const filteredDeviceRecords = useMemo(() => {
-    const d = deviceIdFilter.trim();
-    const s = storeIdFilter.trim();
-    return deviceRecords.filter((device) => {
-      if (d && !includesInsensitive(device.id, d)) return false;
-      if (s && !includesInsensitive(device.store_id ?? "", s)) return false;
-      return true;
-    });
-  }, [deviceRecords, deviceIdFilter, storeIdFilter]);
+  // Device filtering is now server-side; deviceRecords is already filtered
+  const filteredDeviceRecords = deviceRecords;
 
   const devices = useMemo(() => {
     const byDevice = new Map<
@@ -2415,6 +2423,19 @@ export default function App() {
                     </div>
                   );
                 })}
+              </div>
+              <div className="tableWrap" style={{ paddingTop: 8 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <button className="tab" disabled={devicePage === 0} onClick={() => { const p = devicePage - 1; setDevicePage(p); refreshDevices(p); }}>
+                    Prev
+                  </button>
+                  <button className="tab" disabled={(devicePage + 1) * DEVICE_PAGE_SIZE >= deviceTotal} onClick={() => { const p = devicePage + 1; setDevicePage(p); refreshDevices(p); }}>
+                    Next
+                  </button>
+                  <span className="muted">
+                    Page {devicePage + 1} / {Math.max(1, Math.ceil(deviceTotal / DEVICE_PAGE_SIZE))} ({deviceTotal} devices)
+                  </span>
+                </div>
               </div>
             </div>
           )}

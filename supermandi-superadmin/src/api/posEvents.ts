@@ -24,19 +24,22 @@ function requireApiBase(): string {
   return API_BASE;
 }
 
-function normalizeFilter(v: string | undefined): string {
-  return (v ?? "").trim().toLowerCase();
-}
 
 /**
  * Fetch latest POS events from the cloud backend.
- * Backend currently supports `limit` only; other filters are applied client-side.
+ * Filters are applied server-side via query parameters.
  */
 export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosEvent[]> {
   const base = requireApiBase();
   const limit = Math.min(1000, Math.max(1, Number(params.limit || 100)));
-  
-  const res = await fetch(`${base}/api/v1/admin/pos/events?limit=${limit}`, {
+
+  const url = new URL(`${base}/api/v1/admin/pos/events`);
+  url.searchParams.set("limit", String(limit));
+  if (params.storeId?.trim()) url.searchParams.set("storeId", params.storeId.trim());
+  if (params.deviceId?.trim()) url.searchParams.set("deviceId", params.deviceId.trim());
+  if (params.eventType?.trim()) url.searchParams.set("eventType", params.eventType.trim());
+
+  const res = await fetch(url.toString(), {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -67,11 +70,7 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
     throw new Error("Invalid POS events response (expected array)");
   }
 
-  const deviceFilter = normalizeFilter(params.deviceId);
-  const storeFilter = normalizeFilter(params.storeId);
-  const eventTypeFilter = normalizeFilter(params.eventType);
-
-  const events = raw
+  return raw
     .map((e: any): PosEvent => ({
       id: String(e?.id ?? ""),
       deviceId: String(e?.deviceId ?? ""),
@@ -81,11 +80,4 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
       createdAt: String(e?.createdAt ?? "")
     }))
     .filter((e) => e.id && e.createdAt);
-
-  return events.filter((e) => {
-    if (deviceFilter && !e.deviceId.toLowerCase().includes(deviceFilter)) return false;
-    if (storeFilter && !e.storeId.toLowerCase().includes(storeFilter)) return false;
-    if (eventTypeFilter && !e.eventType.toLowerCase().includes(eventTypeFilter)) return false;
-    return true;
-  });
 }

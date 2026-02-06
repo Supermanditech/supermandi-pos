@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { desc } from "drizzle-orm";
+import { desc, eq, ilike, gte, lte, and, type SQL } from "drizzle-orm";
 import { getDb, getPool } from "../db/client";
 import { ensurePosEventsTable } from "../db/ensureSchema";
 import { posEvents } from "../db/schema/posEvents";
@@ -81,14 +81,29 @@ export async function logPosEventSafe(body: unknown): Promise<void> {
   }
 }
 
-export async function fetchLatestPosEvents(opts: { limit: number }) {
+export async function fetchLatestPosEvents(opts: {
+  limit: number;
+  deviceId?: string;
+  storeId?: string;
+  eventType?: string;
+  from?: string;
+  to?: string;
+}) {
   const db = getDb();
   if (!db) return [];
 
   try {
     await ensurePosEventsTable();
 
-    const rows = await db
+    // Build WHERE conditions
+    const conditions: SQL[] = [];
+    if (opts.deviceId) conditions.push(eq(posEvents.deviceId, opts.deviceId));
+    if (opts.storeId) conditions.push(eq(posEvents.storeId, opts.storeId));
+    if (opts.eventType) conditions.push(ilike(posEvents.eventType, `%${opts.eventType}%`));
+    if (opts.from) conditions.push(gte(posEvents.createdAt, new Date(opts.from)));
+    if (opts.to) conditions.push(lte(posEvents.createdAt, new Date(opts.to)));
+
+    const query = db
       .select({
         id: posEvents.id,
         deviceId: posEvents.deviceId,
@@ -97,7 +112,9 @@ export async function fetchLatestPosEvents(opts: { limit: number }) {
         payload: posEvents.payload,
         createdAt: posEvents.createdAt
       })
-      .from(posEvents)
+      .from(posEvents);
+
+    const rows = await (conditions.length > 0 ? query.where(and(...conditions)) : query)
       .orderBy(desc(posEvents.createdAt))
       .limit(opts.limit);
 
