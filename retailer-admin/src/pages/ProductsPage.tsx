@@ -171,13 +171,9 @@ export default function ProductsPage() {
       searchParams.delete('action');
       setSearchParams(searchParams, { replace: true });
     }
-    // RCAT-CAT-001: Handle ?category=... from dashboard category card click
+    // RCAT-CAT-001 + ISSUE-MICRO-092: Sync category from URL (persisted for back-button support)
     const catParam = searchParams.get('category');
-    if (catParam) {
-      setSelectedCategory(catParam);
-      searchParams.delete('category');
-      setSearchParams(searchParams, { replace: true });
-    }
+    setSelectedCategory(catParam || 'all');
     // RCAT-SEARCH-001: Handle ?search=... from global search
     const searchParam = searchParams.get('search');
     if (searchParam) {
@@ -188,20 +184,26 @@ export default function ProductsPage() {
   }, [searchParams, setSearchParams]);
 
   // RCAT-CAT-001: Fetch products from API with optional category filter
-  const fetchProducts = async (categoryFilter?: string) => {
-    setIsLoading(true);
+  // ISSUE-MICRO-044: silent=true skips loading state to preserve scroll after mutations
+  // ISSUE-MICRO-079: signal allows cancellation on unmount
+  const fetchProducts = async (categoryFilter?: string, options?: { signal?: AbortSignal; silent?: boolean }) => {
+    if (!options?.silent) {
+      setIsLoading(true);
+    }
     setError('');
     try {
       const cat = categoryFilter || selectedCategory;
       const params = new URLSearchParams();
       if (cat && cat !== 'all') params.set('categoryId', cat);
       const url = `/api/v1/retailer-admin/products${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await authFetch(url, accessToken);
+      const response = await authFetch(url, accessToken, { signal: options?.signal });
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch products');
       const data = await response.json();
       setProducts(data.data || []);
     } catch (err) {
+      // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Error fetching products:', err);
       setError('Failed to load products. Please try again.');
     } finally {
@@ -211,10 +213,11 @@ export default function ProductsPage() {
 
   // Fetch suppliers for dropdown
   // RET-AUD-040: Updated to show errors to user instead of silent failure
-  const fetchSuppliers = async () => {
+  // ISSUE-MICRO-079: Accept AbortSignal to cancel on unmount
+  const fetchSuppliers = async (signal?: AbortSignal) => {
     setSupplierFetchError(false);
     try {
-      const response = await authFetch('/api/v1/retailer-admin/suppliers', accessToken);
+      const response = await authFetch('/api/v1/retailer-admin/suppliers', accessToken, { signal });
       if (response.status === 401) return;
       if (!response.ok) {
         // RET-AUD-040: Show feedback that supplier list couldn't be loaded
@@ -224,40 +227,49 @@ export default function ProductsPage() {
       const data = await response.json();
       setSuppliers(data.data || []);
     } catch (err) {
+      // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       console.error('Error fetching suppliers:', err);
       // RET-AUD-040: Show feedback that supplier list couldn't be loaded
       setSupplierFetchError(true);
     }
   };
 
+  // ISSUE-MICRO-079: AbortController cancels in-flight requests on unmount/re-render
   useEffect(() => {
-    if (accessToken) {
-      fetchProducts();
-      fetchSuppliers();
+    if (!accessToken) return;
+    const controller = new AbortController();
 
-      // FE-RETAILER-CAT-001: Load categories from POS taxonomy
-      const loadCategories = async () => {
-        setCategoriesLoading(true);
-        try {
-          const result = await fetchCategories(accessToken);
-          // Filter out "Sab" (All) category - we'll add our own "All" option
-          setCategories((result.data || []).filter(c => c.sortOrder > 0));
-        } catch (err) {
-          console.error('Failed to load categories:', err);
-          setCategories([]);
-        } finally {
-          setCategoriesLoading(false);
-        }
-      };
-      loadCategories();
-    }
+    fetchProducts(undefined, { signal: controller.signal });
+    fetchSuppliers(controller.signal);
+
+    // FE-RETAILER-CAT-001: Load categories from POS taxonomy
+    const loadCategories = async () => {
+      setCategoriesLoading(true);
+      try {
+        const result = await fetchCategories(accessToken);
+        // Filter out "Sab" (All) category - we'll add our own "All" option
+        setCategories((result.data || []).filter(c => c.sortOrder > 0));
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.error('Failed to load categories:', err);
+        setCategories([]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+    loadCategories();
+
+    return () => controller.abort();
   }, [accessToken]);
 
   // RCAT-CAT-001: Re-fetch products when category changes
+  // ISSUE-MICRO-079: AbortController cancels stale category fetches
   useEffect(() => {
-    if (accessToken) {
-      fetchProducts(selectedCategory);
-    }
+    if (!accessToken) return;
+    const controller = new AbortController();
+    fetchProducts(selectedCategory, { signal: controller.signal });
+    return () => controller.abort();
   }, [selectedCategory, accessToken]);
 
   // RCAT-SYNC-001: Auto-refresh products when tab regains focus (detect POS edits)
@@ -270,6 +282,18 @@ export default function ProductsPage() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [accessToken, selectedCategory]);
+
+  // ISSUE-MICRO-092: Category select handler — syncs state + URL for back-button support
+  const handleCategorySelect = (catId: string) => {
+    setSelectedCategory(catId);
+    const newParams = new URLSearchParams(searchParams);
+    if (catId === 'all') {
+      newParams.delete('category');
+    } else {
+      newParams.set('category', catId);
+    }
+    setSearchParams(newParams);
+  };
 
   // Open edit form
   const openEditForm = (product: Product) => {
@@ -333,7 +357,8 @@ export default function ProductsPage() {
       }
       setSuccess('Product deleted successfully!');
       setDeleteConfirm(null);
-      await fetchProducts();
+      // ISSUE-MICRO-044: Silent refresh preserves scroll position after mutation
+      await fetchProducts(undefined, { silent: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete product.');
       setDeleteConfirm(null);
@@ -534,7 +559,8 @@ export default function ProductsPage() {
         // Don't close form yet - let user see barcode info and download PDF
       }
 
-      await fetchProducts();
+      // ISSUE-MICRO-044: Silent refresh preserves scroll position after mutation
+      await fetchProducts(undefined, { silent: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save product. Please try again.');
     } finally {
@@ -640,7 +666,8 @@ export default function ProductsPage() {
       setBulkData('');
       setBulkPreview([]);
       setShowBulkUpload(false);
-      await fetchProducts();
+      // ISSUE-MICRO-044: Silent refresh preserves scroll position after mutation
+      await fetchProducts(undefined, { silent: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to import products.');
     } finally {
@@ -1421,7 +1448,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
             <button
               className={`btn ${selectedCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
               style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
-              onClick={() => setSelectedCategory('all')}
+              onClick={() => handleCategorySelect('all')}
             >
               All ({products.length})
             </button>
@@ -1433,7 +1460,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
                   key={cat.id}
                   className={`btn ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
                   style={{ padding: '0.4rem 0.75rem', fontSize: '0.85rem' }}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() => handleCategorySelect(cat.id)}
                   title={cat.labelHi || cat.labelEn}
                 >
                   {cat.labelEn} ({cat.productCount})

@@ -81,6 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showSessionWarning, setShowSessionWarning] = useState(false);
   // AUTH-STORAGE-001: Track token expiry for refresh scheduling (in-memory)
   const tokenExpiresAtRef = useRef<number>(0);
+  // ISSUE-MICRO-049: Mutex to prevent concurrent token refresh requests
+  const isRefreshingRef = useRef(false);
+  // ISSUE-MICRO-047: AbortController to cancel in-flight auth requests on logout
+  const authAbortRef = useRef<AbortController>(new AbortController());
 
   // RCAT-AUTH-001: Track whether session has been expired by idle timeout
   const idleCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -195,6 +199,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = useCallback(() => {
+    // ISSUE-MICRO-047: Cancel in-flight auth requests (e.g., token refresh)
+    authAbortRef.current.abort();
+    authAbortRef.current = new AbortController();
+
     // GO-LIVE-133: Get current store ID before clearing state
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
 
@@ -234,15 +242,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // AUTH-STORAGE-001: Refresh access token using HttpOnly cookie (no token in body needed)
   const refreshAccessToken = useCallback(async (): Promise<boolean> => {
+    // ISSUE-MICRO-049: Prevent concurrent refresh (timer + mount can overlap on slow networks)
+    if (isRefreshingRef.current) return true;
+    isRefreshingRef.current = true;
+
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
     if (!activeStoreId) {
       console.log('[Auth] No active store for token refresh');
+      isRefreshingRef.current = false;
       return false;
     }
 
     // AUTH-STORAGE-001: Check for auth cookie (refresh token is in HttpOnly cookie)
     if (!hasAuthCookie()) {
       console.log('[Auth] No auth cookie, cannot refresh');
+      isRefreshingRef.current = false;
       return false;
     }
 
@@ -253,6 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: authAbortRef.current.signal, // ISSUE-MICRO-047: Abort on logout
       });
 
       if (!response.ok) {
@@ -279,8 +294,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return false;
     } catch (error) {
+      // ISSUE-MICRO-047: Silently handle abort (logout cancelled the request)
+      if (error instanceof DOMException && error.name === 'AbortError') return false;
       console.error('[Auth] Token refresh error:', error);
       return false;
+    } finally {
+      isRefreshingRef.current = false;
     }
   }, []);
 
