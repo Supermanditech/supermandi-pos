@@ -227,7 +227,7 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
         ...row,
         storeName: row.name,
         storeCode: row.code,
-        active: row.status === "active"
+        active: row.status === "ACTIVE" // FIX-019-007: Match UPPERCASE DB status
       }));
       return res.json({ stores, total, limit, offset });
     } catch (fallbackErr: any) {
@@ -296,7 +296,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       );
       const store = result.rows[0];
       if (!store) return res.status(404).json({ error: "store not found" });
-      return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "active" } });
+      return res.json({ store: { ...store, storeName: store.name, storeCode: store.code, active: store.status === "ACTIVE" } }); // FIX-019-008
     } catch (fallbackErr: any) {
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch store" });
     }
@@ -358,8 +358,8 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     if (normalized && !UPI_VPA_PATTERN.test(normalized)) {
       return res.status(400).json({ error: "upi_vpa_invalid" });
     }
-    // Activate/deactivate store based on UPI VPA presence
-    addUpdate("status", normalized ? "active" : "inactive");
+    // FIX-019-005: Use UPPERCASE status values (migration 094 CHECK constraint)
+    addUpdate("status", normalized ? "ACTIVE" : "DRAFT");
   }
 
   // Contact and address fields
@@ -413,7 +413,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       ...store,
       storeName: store.name,
       storeCode: store.code,
-      active: store.status === "active",
+      active: store.status === "ACTIVE", // FIX-019-006: Match UPPERCASE DB status
       contactName: store.contact_name,
       contactPhone: store.contact_phone,
       contactEmail: store.contact_email

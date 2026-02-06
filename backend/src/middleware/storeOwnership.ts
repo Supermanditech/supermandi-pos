@@ -440,7 +440,8 @@ export function requireActiveStore(
     return;
   }
 
-  if (storeInfo.status !== 'active') {
+  // FIX-019-009: Match UPPERCASE status from migration 094
+  if (storeInfo.status !== 'ACTIVE') {
     res.status(403).json({
       error: {
         code: 'STORE_INACTIVE',
