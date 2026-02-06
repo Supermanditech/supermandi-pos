@@ -292,6 +292,14 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
       return;
     }
 
+    // SUP-REG-001: GSTIN is required (DB column is NOT NULL)
+    if (!gstin) {
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: 'GSTIN is required for supplier registration' }
+      });
+      return;
+    }
+
     if (password.length < 8) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 8 characters' }
@@ -299,8 +307,8 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    // GSTIN format validation (if provided)
-    if (gstin && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
+    // GSTIN format validation
+    if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstin)) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: 'Invalid GSTIN format' }
       });
@@ -392,13 +400,13 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
         upi_vpa,
         verification_status,
         status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', 'active')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'KYC_SUBMITTED', 'active')
       RETURNING id, primary_email, business_name, gstin, verification_status`,
       [
         email.toLowerCase(),
         passwordHash,
         businessName,
-        gstin?.toUpperCase() || null,
+        gstin.toUpperCase(),
         phone || null,
         address || null,
         city || null,

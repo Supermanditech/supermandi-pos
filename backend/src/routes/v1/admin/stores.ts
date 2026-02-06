@@ -151,7 +151,9 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
       }
       return res.status(409).json({ error: "store_exists" });
     }
-    throw err;
+    // BACKEND-CRASH-001: Handle all DB errors gracefully (was: throw err → process crash)
+    console.error("[admin/stores] Store creation DB error:", err?.message, err?.code);
+    return res.status(500).json({ error: "store_creation_failed" });
   }
 
   const store = result.rows[0];

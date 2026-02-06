@@ -1,12 +1,13 @@
 # LOCAL-PROD-201: SuperMandi local production stack
-# SHA: 2d7189d
 # Run: docker compose -f scripts/docker-compose.local-prod.yml up -d
 # Stop: docker compose -f scripts/docker-compose.local-prod.yml stop
 # Resume: docker compose -f scripts/docker-compose.local-prod.yml start
+# Rebuild: docker compose -f scripts/docker-compose.local-prod.yml up -d --build
 
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: supermandi
       POSTGRES_USER: postgres
@@ -22,6 +23,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -31,6 +33,7 @@ services:
 
   api-gateway:
     image: supermandi/api-gateway:9bb03f7
+    restart: unless-stopped
     ports: ["8080:3000"]
     environment:
       PORT: "3000"
@@ -52,8 +55,13 @@ services:
       retries: 3
       start_period: 10s
 
+  # DOCKER-BUILD-001: Build from source (was: stale image :2d7189d)
   main-backend:
-    image: supermandi/main-backend:2d7189d
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.main
+    image: supermandi/main-backend:local
+    restart: unless-stopped
     ports: ["3010:3010"]
     environment:
       PORT: "3010"
@@ -69,6 +77,15 @@ services:
       JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
       CORS_ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
       ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
+      # DOCKER-ENV-001: Email service (Resend) — key from scripts/.env
+      EMAIL_PROVIDER: resend
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: "SuperMandi <noreply@supermandi.tech>"
+      # DOCKER-ENV-001: Firebase Admin SDK
+      FIREBASE_ENABLED: "true"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-supermandi-pos}
+      # DOCKER-ENV-001: Firebase SA JSON — set FIREBASE_SA_PATH in scripts/.env to enable
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -83,6 +100,7 @@ services:
 
   auth-service:
     image: supermandi/auth-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3001"
       NODE_ENV: production
@@ -97,6 +115,7 @@ services:
 
   catalog-service:
     image: supermandi/catalog-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3004"
       NODE_ENV: production
@@ -115,6 +134,7 @@ services:
 
   inventory-service:
     image: supermandi/inventory-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3005"
       NODE_ENV: production
@@ -129,6 +149,7 @@ services:
 
   order-service:
     image: supermandi/order-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3006"
       NODE_ENV: production
@@ -144,6 +165,7 @@ services:
 
   payment-service:
     image: supermandi/payment-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3011"
       NODE_ENV: production
@@ -157,6 +179,7 @@ services:
 
   platform-service:
     image: supermandi/platform-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3002"
       NODE_ENV: production
@@ -171,6 +194,7 @@ services:
 
   reorder-service:
     image: supermandi/reorder-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3007"
       NODE_ENV: production
@@ -189,6 +213,7 @@ services:
 
   supplier-service:
     image: supermandi/supplier-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3003"
       NODE_ENV: production
@@ -203,6 +228,7 @@ services:
 
   voice-service:
     image: supermandi/voice-service:9bb03f7
+    restart: unless-stopped
     environment:
       PORT: "3008"
       NODE_ENV: production
@@ -218,6 +244,7 @@ services:
 
   retailer-admin:
     image: supermandi/retailer-admin:9bb03f7
+    restart: unless-stopped
     ports: ["8081:80"]
     # LOCAL-PROD-URL-001: Override Dockerfile healthcheck — use 127.0.0.1 to avoid
     # Alpine IPv6 resolution (localhost → [::1] → connection refused on IPv4-only nginx)
@@ -233,6 +260,7 @@ services:
       context: ../supplier-portal
       dockerfile: Dockerfile
     image: supermandi/supplier-portal:local
+    restart: unless-stopped
     # SUP-PORT-001: next start respects PORT env var (3001 from Dockerfile)
     ports: ["8082:3001"]
     # SUP-ROOT-001: basePath: '/supplier' — all routes require /supplier prefix
@@ -245,6 +273,7 @@ services:
 
   superadmin:
     image: supermandi/superadmin:9bb03f7
+    restart: unless-stopped
     ports: ["8083:80"]
     # LOCAL-PROD-URL-001: Override Dockerfile healthcheck — use 127.0.0.1 (IPv6 fix)
     healthcheck:
@@ -256,6 +285,7 @@ services:
 
   landing:
     image: supermandi/landing:9bb03f7
+    restart: unless-stopped
     ports: ["8084:80"]
     # LOCAL-PROD-URL-001: Override Dockerfile healthcheck — use 127.0.0.1 (IPv6 fix)
     healthcheck:
