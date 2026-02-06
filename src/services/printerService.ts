@@ -30,6 +30,8 @@ class PrinterService {
     connected: true,
     paperAvailable: true,
   };
+  // ISSUE-MICRO-102: Print lock to prevent concurrent print jobs
+  private printInProgress = false;
 
   /**
    * Initialize printer service.
@@ -108,6 +110,20 @@ class PrinterService {
       throw new Error('Empty receipt content');
     }
 
+    // ISSUE-MICRO-072: Check printer availability before attempting print
+    if (!this.status.connected) {
+      const errMsg = this.status.error || 'Printer not connected';
+      void logPosEvent("PRINTER_ERROR", { reason: errMsg });
+      throw new Error(errMsg);
+    }
+
+    // ISSUE-MICRO-102: Prevent concurrent print jobs
+    if (this.printInProgress) {
+      console.warn('[PrinterService] ISSUE-MICRO-102: Print already in progress, skipping');
+      return false;
+    }
+
+    this.printInProgress = true;
     try {
       const html = this.textToReceiptHtml(content);
       await Print.printAsync({ html });
@@ -133,11 +149,16 @@ class PrinterService {
         return false;
       }
 
+      // ISSUE-MICRO-072: Update status on print failure
+      this.status.error = e?.message || 'Print failed';
+
       await eventLogger.log('PRINT_FAILED', {
         reason: e?.message || 'unknown',
       });
       void logPosEvent("PRINTER_ERROR", { reason: e?.message || "print_failed" });
       throw new Error(e?.message || 'Print failed');
+    } finally {
+      this.printInProgress = false;
     }
   }
 

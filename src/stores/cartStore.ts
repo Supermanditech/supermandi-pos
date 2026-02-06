@@ -807,15 +807,19 @@ export const useCartStore = create<CartState>()(
           return;
         }
 
-        try {
-          const changed = state?.normalizeItemsToStock?.() ?? false;
-          if (!changed) {
-            state?.recalculate();
+        // ISSUE-MICRO-070: Defer stock normalization to next tick to avoid blocking UI
+        // on large carts (500+ items). Items are already loaded; normalization just adjusts quantities.
+        setTimeout(() => {
+          try {
+            const changed = state?.normalizeItemsToStock?.() ?? false;
+            if (!changed) {
+              state?.recalculate();
+            }
+          } catch (rehydrateError) {
+            console.error("[CartStore] Error during cart normalization:", rehydrateError);
+            // State is partially loaded but may be inconsistent - log for debugging
           }
-        } catch (rehydrateError) {
-          console.error("[CartStore] Error during cart normalization:", rehydrateError);
-          // State is partially loaded but may be inconsistent - log for debugging
-        }
+        }, 0);
       }
     }
   )

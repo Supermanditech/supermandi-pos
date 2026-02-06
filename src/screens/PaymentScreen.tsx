@@ -722,7 +722,9 @@ const PaymentScreen = () => {
         void clearPartialSaleState();
       }
 
-      navigation.navigate("SuccessPrint", {
+      // ISSUE-MICRO-101: Use replace instead of navigate to remove Payment from the stack.
+      // This prevents the user from navigating back to a stale Payment screen via hardware back button.
+      navigation.replace("SuccessPrint", {
         paymentMode: selectedMode,
         transactionId,
         billId: billRef,

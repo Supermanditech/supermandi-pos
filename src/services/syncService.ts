@@ -3,6 +3,7 @@ import { ApiError } from "./api/apiClient";
 import { createTransaction, type CreateTransactionInput } from "./api/transactionsApi";
 import { syncOutbox } from "./offline/sync";
 import { storeScopedStorage } from "./storeScope";
+import { uuidv4 } from "../utils/uuid";
 
 const PENDING_TX_KEY = "supermandi.pendingTransactions";
 
@@ -32,7 +33,8 @@ async function saveQueue(queue: PendingTx[]): Promise<void> {
 
 export async function enqueueTransaction(payload: CreateTransactionInput): Promise<void> {
   const queue = await loadQueue();
-  queue.push({ id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, createdAt: new Date().toISOString(), payload });
+  // ISSUE-MICRO-100: Use cryptographically secure UUID instead of Date.now+Math.random
+  queue.push({ id: uuidv4(), createdAt: new Date().toISOString(), payload });
   await saveQueue(queue);
 }
 

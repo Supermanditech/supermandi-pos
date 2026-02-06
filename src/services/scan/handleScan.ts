@@ -56,10 +56,12 @@ export type ScanRuntime = {
 // due to slow JS thread processing, causing duplicate cart additions.
 const DUPLICATE_WINDOW_MS = 2000;
 // GL-CRIT-0024: Per-barcode storm detection to allow rapid scanning of different items
-// Only triggers when the SAME barcode is scanned 5+ times in 2 seconds
+// ISSUE-MICRO-074: Tuned thresholds — raised max from 5→8 to reduce false positives on
+// budget phones where scanner callbacks fire multiple times per physical scan.
+// Reduced cooldown from 1500→1000ms for faster recovery.
 const STORM_WINDOW_MS = 2000;
-const STORM_MAX_SCANS_PER_BARCODE = 5;
-const STORM_COOLDOWN_MS = 1500;
+const STORM_MAX_SCANS_PER_BARCODE = 8;
+const STORM_COOLDOWN_MS = 1000;
 let runtime: ScanRuntime = { intent: "SELL", mode: "SELL" };
 let lastScan: { key: string; ts: number } | null = null;
 // GL-CRIT-0024: Track scans per barcode instead of globally
@@ -215,6 +217,14 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
       flags,
       metadata: product.metadata
     });
+
+    // ISSUE-MICRO-075: Soft stock warning at scan time
+    // Show a toast when available stock is low (≤5 units) so the cashier knows
+    const availableQty = typeof product.metadata?.availableQty === "number" ? product.metadata.availableQty : null;
+    if (availableQty !== null && availableQty <= 5 && availableQty > 0 && Platform.OS === "android") {
+      ToastAndroid.show(`Low stock: only ${availableQty} left`, ToastAndroid.SHORT);
+    }
+
     return true;
   } catch (err) {
     console.error("addToSellCart error:", err);
