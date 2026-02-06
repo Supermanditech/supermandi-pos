@@ -115,3 +115,5 @@ GET /api/v1/admin/pos/events?limit=3 → 200
 | **New dependencies** | None |
 | **Typecheck** | 0 errors / 22 projects |
 | **Docker** | 17/17 healthy |
+
+> **Tag time note:** Tag label `1739` was created from a shell time source that did not resolve IST correctly. Actual IST at creation was ~23:10. Tag points to commit `4b0ac9f`; the commit is authoritative.
