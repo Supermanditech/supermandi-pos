@@ -601,6 +601,8 @@ export default function App() {
   const eventsInFlightRef = useRef(false);
   const devicesInFlightRef = useRef(false);
   const storesInFlightRef = useRef(false);
+  // ISSUE-MICRO-024: Ref to hold latest refresh functions (avoids stale closure in polling)
+  const refreshRef = useRef<Record<string, (...args: any[]) => void>>({});
 
   // AI panel
   const [aiQuestion, setAiQuestion] = useState<string>("");
@@ -648,6 +650,8 @@ export default function App() {
   const [deviceRecords, setDeviceRecords] = useState<DeviceRecord[]>([]);
   const [deviceTotal, setDeviceTotal] = useState<number>(0);
   const [devicePage, setDevicePage] = useState<number>(0);
+  // ISSUE-MICRO-056: Loading state for device fetch (disables pagination buttons)
+  const [devicesLoading, setDevicesLoading] = useState(false);
   const DEVICE_PAGE_SIZE = 50;
   const [devicesError, setDevicesError] = useState<string>("");
   const [deviceEdits, setDeviceEdits] = useState<Record<string, { label: string; deviceType: DeviceType; printingMode: string; scanLookupV2Enabled: boolean; active: boolean }>>({});
@@ -826,6 +830,7 @@ export default function App() {
   async function refreshDevices(pageOverride?: number) {
     if (devicesInFlightRef.current) return;
     devicesInFlightRef.current = true;
+    setDevicesLoading(true); // ISSUE-MICRO-056
     try {
       const p = pageOverride ?? devicePage;
       const data = await fetchDevices({
@@ -842,6 +847,7 @@ export default function App() {
       setDevicesError(message);
     } finally {
       devicesInFlightRef.current = false;
+      setDevicesLoading(false); // ISSUE-MICRO-056
     }
   }
 
@@ -1316,6 +1322,9 @@ export default function App() {
     }
   }
 
+  // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
+  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments };
+
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
 
@@ -1344,21 +1353,23 @@ export default function App() {
     if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
     if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
 
+    // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
     const id = setInterval(() => {
-      refreshHealth();
-      if (shouldRefreshEvents) refreshEvents();
-      if (shouldRefreshDevices) refreshDevices();
-      if (shouldRefreshStores) refreshStores();
-      if (shouldRefreshSuppliers) refreshSuppliers();
-      if (shouldRefreshUsers) refreshUsers();
-      if (shouldRefreshSettings) refreshSettings();
+      const r = refreshRef.current;
+      r.refreshHealth?.();
+      if (shouldRefreshEvents) r.refreshEvents?.();
+      if (shouldRefreshDevices) r.refreshDevices?.();
+      if (shouldRefreshStores) r.refreshStores?.();
+      if (shouldRefreshSuppliers) r.refreshSuppliers?.();
+      if (shouldRefreshUsers) r.refreshUsers?.();
+      if (shouldRefreshSettings) r.refreshSettings?.();
       if (shouldRefreshAi) {
         fetchAiHealth()
           .then((res) => setAiConfigured(res.configured))
           .catch(() => setAiConfigured(null));
       }
-      if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
-      if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
+      if (shouldRefreshAudit) r.refreshAuditLogs?.();
+      if (shouldRefreshDocuments) r.refreshDocuments?.();
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
   }, [tab]);
@@ -1383,6 +1394,16 @@ export default function App() {
     }
   }, [documentsPage, documentsEntityFilter]);
 
+  // ISSUE-MICRO-059: Reset audit page to 0 when filter changes
+  useEffect(() => {
+    setAuditLogsPage(0);
+  }, [auditLogsFilter]);
+
+  // ISSUE-MICRO-059: Reset documents page to 0 when filter changes
+  useEffect(() => {
+    setDocumentsPage(0);
+  }, [documentsEntityFilter]);
+
   useEffect(() => {
     if (!enrollment) return;
     setEnrollNow(Date.now());
@@ -1392,7 +1413,17 @@ export default function App() {
 
   useEffect(() => {
     setPage(0);
+    setDevicePage(0); // ISSUE-MICRO-023: Reset device page on filter change
   }, [deviceIdFilter, storeIdFilter, eventTypeFilter]);
+
+  // ISSUE-MICRO-023 + ISSUE-MICRO-058: Debounce device refresh on filter change (300ms)
+  useEffect(() => {
+    if (tab !== "devices") return;
+    const timer = setTimeout(() => {
+      refreshDevices(0);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [deviceIdFilter, storeIdFilter]);
 
   useEffect(() => {
     if (tab !== "analytics") return;
@@ -1413,11 +1444,8 @@ export default function App() {
           };
         }
       }
-      for (const id of Object.keys(next)) {
-        if (!deviceRecords.some((d) => d.id === id)) {
-          delete next[id];
-        }
-      }
+      // ISSUE-MICRO-057: Don't delete edits for devices not in current page
+      // (preserves unsaved edits across filter/pagination changes)
       return next;
     });
   }, [deviceRecords]);
@@ -1786,6 +1814,20 @@ export default function App() {
       setDeviceActionError(errorMsg);
       // GL-CRIT-0049: Log failed device update
       logAdminActionError('device_update', 'device', deviceId, errorMsg);
+      // ISSUE-MICRO-062: Rollback draft to server state on save failure
+      const original = deviceRecords.find((d) => d.id === deviceId);
+      if (original) {
+        setDeviceEdits((prev) => ({
+          ...prev,
+          [deviceId]: {
+            label: original.label ?? "",
+            deviceType: (original.device_type as DeviceType) ?? "RETAILER_PHONE",
+            printingMode: original.printing_mode ?? "NONE",
+            scanLookupV2Enabled: original.scan_lookup_v2_enabled ?? false,
+            active: Boolean(original.active)
+          }
+        }));
+      }
     } finally {
       setDeviceSaving((prev) => ({ ...prev, [deviceId]: false }));
     }
@@ -2426,11 +2468,11 @@ export default function App() {
               </div>
               <div className="tableWrap" style={{ paddingTop: 8 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <button className="tab" disabled={devicePage === 0} onClick={() => { const p = devicePage - 1; setDevicePage(p); refreshDevices(p); }}>
-                    Prev
+                  <button className="tab" disabled={devicePage === 0 || devicesLoading} onClick={() => { const p = devicePage - 1; setDevicePage(p); refreshDevices(p); }}>
+                    {devicesLoading ? "Loading…" : "Prev"}
                   </button>
-                  <button className="tab" disabled={(devicePage + 1) * DEVICE_PAGE_SIZE >= deviceTotal} onClick={() => { const p = devicePage + 1; setDevicePage(p); refreshDevices(p); }}>
-                    Next
+                  <button className="tab" disabled={(devicePage + 1) * DEVICE_PAGE_SIZE >= deviceTotal || devicesLoading} onClick={() => { const p = devicePage + 1; setDevicePage(p); refreshDevices(p); }}>
+                    {devicesLoading ? "Loading…" : "Next"}
                   </button>
                   <span className="muted">
                     Page {devicePage + 1} / {Math.max(1, Math.ceil(deviceTotal / DEVICE_PAGE_SIZE))} ({deviceTotal} devices)
