@@ -139,3 +139,7 @@ e2e-tests/test-results/
 RELEASES/*.html
 RELEASES/**/*.html
 
+# Local session manager state
+scripts/.session-state.json
+# Local-only operator helper
+scripts/laptop-speedup.ps1
