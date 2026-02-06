@@ -183,6 +183,9 @@ export default function OrdersPage() {
     statusCounts.all = pagination.total;
   }
 
+  // ISSUE-MICRO-004: Track any pending mutation to prevent modal close during operations
+  const isAnyMutationPending = updateStatusMutation.isPending || shipmentMutation.isPending || itemStatusMutation.isPending || addNoteMutation.isPending;
+
   return (
     <div>
       {/* Header */}
@@ -336,6 +339,8 @@ export default function OrdersPage() {
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={() => {
+            // ISSUE-MICRO-004: Prevent modal close during in-flight mutations
+            if (isAnyMutationPending) return;
             setSelectedOrder(null);
             setShowNotesSection(false);
             setNewNoteText('');
@@ -349,6 +354,8 @@ export default function OrdersPage() {
               <h2 className="text-xl font-semibold">Order Details</h2>
               <button
                 onClick={() => {
+                  // ISSUE-MICRO-004: Prevent modal close during in-flight mutations
+                  if (isAnyMutationPending) return;
                   setSelectedOrder(null);
                   setShowNotesSection(false);
                   setNewNoteText('');
@@ -687,6 +694,16 @@ export default function OrdersPage() {
                           // GL-WF-039: Show shipment form instead of directly updating
                           setShowShipmentForm(true);
                         } else {
+                          // ISSUE-MICRO-020: Validate receipt quantities before marking delivered
+                          if (newStatus === 'delivered') {
+                            const unreceived = selectedOrder.items.filter(item => !item.receivedQuantity || item.status === 'pending');
+                            if (unreceived.length > 0) {
+                              const proceed = window.confirm(
+                                `${unreceived.length} item(s) have not been marked as received. Mark as delivered anyway?`
+                              );
+                              if (!proceed) return;
+                            }
+                          }
                           updateStatusMutation.mutate({
                             id: selectedOrder.id,
                             status: newStatus as Order['status'],

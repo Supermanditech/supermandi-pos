@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
   getProducts,
@@ -47,6 +47,8 @@ const PRODUCT_CATEGORIES = [
 export default function ProductsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const showAddForm = searchParams.get('action') === 'add';
 
   const [showForm, setShowForm] = useState(showAddForm);
@@ -57,8 +59,8 @@ export default function ProductsPage() {
   // GL-WF-062: Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  // GL-WF-063: Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  // ISSUE-MICRO-005: Pagination synced to URL for refresh/back-button persistence
+  const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
   const pageSize = 20;
 
   const [formData, setFormData] = useState<ProductInput>({
@@ -274,6 +276,18 @@ export default function ProductsPage() {
   });
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+
+  // ISSUE-MICRO-005: Update pagination via URL for back-button/refresh persistence
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newPage <= 1) {
+      params.delete('page');
+    } else {
+      params.set('page', newPage.toString());
+    }
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}`);
+  };
 
   return (
     <div>
@@ -630,7 +644,7 @@ export default function ProductsPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
               className="px-3 py-1 text-sm border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
             >
@@ -640,7 +654,7 @@ export default function ProductsPage() {
               Page {currentPage} of {pagination.totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
+              onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === pagination.totalPages}
               className="px-3 py-1 text-sm border border-slate-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
             >
@@ -654,7 +668,7 @@ export default function ProductsPage() {
       {deleteConfirm && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setDeleteConfirm(null)}
+          onClick={() => { if (!deleteMutation.isPending) setDeleteConfirm(null); }}
         >
           <div
             className="card max-w-md w-full mx-4"

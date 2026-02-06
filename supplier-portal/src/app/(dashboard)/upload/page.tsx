@@ -12,7 +12,7 @@ export default function UploadPage() {
   const [result, setResult] = useState<CsvUploadResult | null>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: uploadProductsCsv,
+    mutationFn: (file: File) => uploadProductsCsv(file),
     onSuccess: (data) => {
       setResult(data);
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -120,7 +120,7 @@ export default function UploadPage() {
                 <td className="px-3 py-1">520</td>
                 <td className="px-3 py-1">8901234567890</td>
                 <td className="px-3 py-1">RICE-BAS-5KG</td>
-                <td className="px-3 py-1">Grocery</td>
+                <td className="px-3 py-1">Chawal</td>
                 <td className="px-3 py-1">10</td>
                 <td className="px-3 py-1">PCS</td>
               </tr>
@@ -134,7 +134,7 @@ export default function UploadPage() {
           onClick={() => {
             // Generate and download template client-side
             const template =
-              'name,purchase_price,mrp,barcode,sku,category,moq,unit\nBasmati Rice 5kg,450,520,8901234567890,RICE-BAS-5KG,Grocery,10,PCS\n';
+              'name,purchase_price,mrp,barcode,sku,category,moq,unit\nBasmati Rice 5kg,450,520,8901234567890,RICE-BAS-5KG,Chawal,10,PCS\n';
             const blob = new Blob([template], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');

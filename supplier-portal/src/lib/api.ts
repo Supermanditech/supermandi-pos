@@ -608,7 +608,8 @@ export interface CsvUploadResult {
 // ITER3-P0-011: Maximum file size for CSV upload (5MB - aligned with backend)
 const MAX_CSV_FILE_SIZE = 5 * 1024 * 1024;
 
-export async function uploadProductsCsv(file: File): Promise<CsvUploadResult> {
+// ISSUE-MICRO-006: Added optional AbortSignal for cancellation support
+export async function uploadProductsCsv(file: File, options?: { signal?: AbortSignal }): Promise<CsvUploadResult> {
   // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
 
   // GL-WF-059: Enforce file size limit
@@ -626,6 +627,7 @@ export async function uploadProductsCsv(file: File): Promise<CsvUploadResult> {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
     credentials: 'include',
+    signal: options?.signal, // ISSUE-MICRO-006: Allow caller to cancel upload
   });
 
   // GL-WF-046: Handle 401 responses
@@ -717,9 +719,11 @@ export async function getKycDocuments(): Promise<KycDocument[]> {
 }
 
 // GL-WF-018: Upload KYC document
+// ISSUE-MICRO-006: Added optional AbortSignal for cancellation support
 export async function uploadKycDocument(
   type: KycDocument['documentType'],
-  file: File
+  file: File,
+  options?: { signal?: AbortSignal }
 ): Promise<KycDocument & { message: string }> {
   // SUP-LOGIN-001: No hard fail - relative paths work through nginx proxy
 
@@ -738,6 +742,7 @@ export async function uploadKycDocument(
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
     credentials: 'include',
+    signal: options?.signal, // ISSUE-MICRO-006: Allow caller to cancel upload
   });
 
   if (response.status === 401) {
