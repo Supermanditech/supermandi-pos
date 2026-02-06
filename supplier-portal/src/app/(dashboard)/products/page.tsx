@@ -191,6 +191,22 @@ export default function ProductsPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges, showForm]);
 
+  // ISSUE-MICRO-019: Warn on SPA (client-side) navigation with unsaved form changes
+  useEffect(() => {
+    if (!hasUnsavedChanges || !showForm) return;
+
+    const origPushState = history.pushState.bind(history);
+    history.pushState = function (data: unknown, unused: string, url?: string | URL | null) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        origPushState(data, unused, url);
+      }
+    };
+
+    return () => {
+      history.pushState = origPushState;
+    };
+  }, [hasUnsavedChanges, showForm]);
+
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setHasUnsavedChanges(false); // GL-WF-062: Reset on edit start

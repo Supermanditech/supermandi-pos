@@ -328,8 +328,9 @@ export default function EarningsPage() {
                 </h3>
 
                 {ordersLoading ? (
-                  <div className="flex justify-center py-4">
+                  <div className="flex flex-col items-center justify-center py-4 gap-2">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600" />
+                    <p className="text-sm text-slate-400">Loading order details...</p>
                   </div>
                 ) : payoutOrders && payoutOrders.length > 0 ? (
                   <div className="border border-slate-200 rounded-lg overflow-hidden">

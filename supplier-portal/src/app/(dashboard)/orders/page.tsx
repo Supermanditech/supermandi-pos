@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, Order, OrderItem, OrderNote, PaginatedResponse } from '@/lib/api';
@@ -185,6 +185,14 @@ export default function OrdersPage() {
 
   // ISSUE-MICRO-004: Track any pending mutation to prevent modal close during operations
   const isAnyMutationPending = updateStatusMutation.isPending || shipmentMutation.isPending || itemStatusMutation.isPending || addNoteMutation.isPending;
+
+  // ISSUE-MICRO-022: Lock body scroll when order details modal is open
+  useEffect(() => {
+    if (selectedOrder) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [selectedOrder]);
 
   return (
     <div>

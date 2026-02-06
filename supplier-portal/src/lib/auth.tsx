@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { clearAuthToken, logoutApi, getSupplierProfile, refreshAccessToken, Supplier, hasAuthCookie } from './api';
 
 // GO-LIVE-111: Idle timeout configuration (30 minutes)
@@ -115,14 +116,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener('click', updateActivity);
     window.addEventListener('scroll', updateActivity);
 
+    // ISSUE-MICRO-055: Warning threshold (5 minutes before timeout)
+    const IDLE_WARNING_MS = IDLE_TIMEOUT_MS - 5 * 60 * 1000;
+    let hasWarnedIdle = false;
+
     // Check for idle timeout periodically
     idleCheckRef.current = setInterval(() => {
       const lastActivity = localStorage.getItem(LAST_ACTIVITY_KEY);
       if (!lastActivity) return;
       const elapsed = Date.now() - parseInt(lastActivity, 10);
+
+      // ISSUE-MICRO-055: Warn 5 minutes before idle logout
+      if (elapsed > IDLE_WARNING_MS && elapsed <= IDLE_TIMEOUT_MS && !hasWarnedIdle) {
+        hasWarnedIdle = true;
+        toast('Your session will expire in 5 minutes due to inactivity. Click anywhere to stay logged in.', {
+          icon: '\u23F0',
+          duration: 10000,
+        });
+      }
+
       if (elapsed > IDLE_TIMEOUT_MS) {
         console.log('[Auth] Logging out due to inactivity');
         logout();
+      }
+
+      // Reset warning flag if user became active again
+      if (elapsed <= IDLE_WARNING_MS) {
+        hasWarnedIdle = false;
       }
     }, 30000); // Check every 30 seconds
 
@@ -152,6 +172,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // AUTH-STORAGE-001: Simplified refresh - just call refresh periodically
     // Cookies handle auth, no need to parse JWT for expiry
+    // ISSUE-MICRO-050: Track refresh failures to avoid repeated warnings
+    let hasWarnedRefresh = false;
     const checkAndRefresh = async () => {
       if (!hasAuthCookie()) {
         logout();
@@ -159,7 +181,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       // Proactively refresh to keep access token fresh
       // The server will check idle timeout and refuse if inactive
-      await refreshAccessToken();
+      const success = await refreshAccessToken();
+      // ISSUE-MICRO-050: Warn on refresh failure (once, until next success)
+      if (!success && hasAuthCookie() && !hasWarnedRefresh) {
+        hasWarnedRefresh = true;
+        toast('Session refresh failed. Please save your work.', { icon: '\u26A0\uFE0F', duration: 5000 });
+      } else if (success) {
+        hasWarnedRefresh = false;
+      }
     };
 
     // First refresh after 10 minutes, then every check interval

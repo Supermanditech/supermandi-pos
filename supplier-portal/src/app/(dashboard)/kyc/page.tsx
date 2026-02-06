@@ -40,6 +40,8 @@ export default function KycPage() {
   });
   const [ifscData, setIfscData] = useState<IFSCLookupResult | null>(null);
   const [ifscError, setIfscError] = useState('');
+  // ISSUE-MICRO-054: Track latest IFSC request to ignore stale results
+  const latestIfscRef = useRef('');
 
   // Fetch KYC documents
   const { data: documents = [], isLoading: docsLoading } = useQuery({
@@ -83,12 +85,15 @@ export default function KycPage() {
   // IFSC lookup mutation
   const ifscMutation = useMutation({
     mutationFn: verifyIFSC,
-    onSuccess: (data) => {
+    onSuccess: (data, ifscCode) => {
+      // ISSUE-MICRO-054: Ignore stale results from superseded lookups
+      if (ifscCode !== latestIfscRef.current) return;
       setIfscData(data);
       setIfscError('');
-      // GL-CRIT-0098: Removed dead code that did nothing
     },
-    onError: (error: Error) => {
+    onError: (error: Error, ifscCode) => {
+      // ISSUE-MICRO-054: Ignore stale errors from superseded lookups
+      if (ifscCode !== latestIfscRef.current) return;
       setIfscData(null);
       setIfscError(error.message || 'Invalid IFSC code');
     },
@@ -136,6 +141,8 @@ export default function KycPage() {
       setIfscError('Invalid IFSC format. Must be 11 characters (e.g., HDFC0001234)');
       return;
     }
+    // ISSUE-MICRO-054: Track latest request to ignore stale results
+    latestIfscRef.current = ifsc;
     ifscMutation.mutate(ifsc);
   };
 

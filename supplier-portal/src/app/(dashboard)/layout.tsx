@@ -34,6 +34,14 @@ export default function DashboardLayout({
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // ISSUE-MICRO-089: Lock body scroll when any modal is open
+  useEffect(() => {
+    if (showLogoutConfirm || showVerificationModal) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [showLogoutConfirm, showVerificationModal]);
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
