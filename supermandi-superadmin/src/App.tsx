@@ -543,6 +543,23 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
   );
 }
 
+// ISSUE-MICRO-086: Extracted countdown to prevent QR code re-rendering every 1s
+function EnrollmentCountdown({ expiresAt }: { expiresAt: string }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const expiresAtMs = new Date(expiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs)) return <>unknown</>;
+  const delta = expiresAtMs - now;
+  if (delta <= 0) return <>expired</>;
+  const totalSeconds = Math.floor(delta / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return <>{minutes}m {String(seconds).padStart(2, "0")}s</>;
+}
+
 export default function App() {
   const [tab, setTab] = useState<TabKey>("events");
 
@@ -595,6 +612,8 @@ export default function App() {
 
   const [events, setEvents] = useState<PosEvent[]>([]);
   const [eventsError, setEventsError] = useState<string>("");
+  // ISSUE-MICRO-060: Loading state for events fetch (visible in nav bar)
+  const [eventsLoading, setEventsLoading] = useState(false);
   const [healthError, setHealthError] = useState<string>("");
   const [lastRefreshAt, setLastRefreshAt] = useState<string>("");
   const healthInFlightRef = useRef(false);
@@ -667,7 +686,7 @@ export default function App() {
   const [enrollment, setEnrollment] = useState<DeviceEnrollmentResponse | null>(null);
   const [enrollError, setEnrollError] = useState<string>("");
   const [enrollLoading, setEnrollLoading] = useState<boolean>(false);
-  const [enrollNow, setEnrollNow] = useState<number>(Date.now());
+  // ISSUE-MICRO-086: enrollNow state removed — timer moved to EnrollmentCountdown component
 
   // Analytics state
   const [analyticsTab, setAnalyticsTab] = useState<AnalyticsTabKey>("overview");
@@ -805,6 +824,7 @@ export default function App() {
   async function refreshEvents() {
     if (eventsInFlightRef.current) return;
     eventsInFlightRef.current = true;
+    setEventsLoading(true); // ISSUE-MICRO-060
     try {
       // Filters are applied server-side via query parameters.
       const data = await fetchPosEvents({
@@ -824,6 +844,7 @@ export default function App() {
       setLastRefreshAt(new Date().toISOString());
     } finally {
       eventsInFlightRef.current = false;
+      setEventsLoading(false); // ISSUE-MICRO-060
     }
   }
 
@@ -1404,12 +1425,7 @@ export default function App() {
     setDocumentsPage(0);
   }, [documentsEntityFilter]);
 
-  useEffect(() => {
-    if (!enrollment) return;
-    setEnrollNow(Date.now());
-    const id = setInterval(() => setEnrollNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [enrollment]);
+  // ISSUE-MICRO-086: Timer effect removed — countdown managed by EnrollmentCountdown component
 
   useEffect(() => {
     setPage(0);
@@ -1809,6 +1825,8 @@ export default function App() {
         active: draft.active,
         deviceType: draft.deviceType
       });
+      // ISSUE-MICRO-064: Re-fetch devices to update total (may change if filter excludes updated device)
+      void refreshDevices();
     } catch (e: any) {
       const errorMsg = e?.message ? String(e.message) : "Failed to update device.";
       setDeviceActionError(errorMsg);
@@ -1852,6 +1870,8 @@ export default function App() {
       setDeviceRecords((prev) => prev.map((d) => (d.id === deviceId ? updated : d)));
       // GL-CRIT-0049: Log successful device token reset
       logAdminAction('device_token_reset', 'device', deviceId, { label: updated.label });
+      // ISSUE-MICRO-064: Re-fetch devices to update total
+      void refreshDevices();
     } catch (e: any) {
       const errorMsg = e?.message ? String(e.message) : "Failed to reset device token.";
       setDeviceActionError(errorMsg);
@@ -1964,17 +1984,7 @@ export default function App() {
     }
   }
 
-  const enrollmentCountdown = useMemo(() => {
-    if (!enrollment?.expiresAt) return "";
-    const expiresAt = new Date(enrollment.expiresAt).getTime();
-    if (!Number.isFinite(expiresAt)) return "unknown";
-    const delta = expiresAt - enrollNow;
-    if (delta <= 0) return "expired";
-    const totalSeconds = Math.floor(delta / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-  }, [enrollment, enrollNow]);
+  // ISSUE-MICRO-086: enrollmentCountdown useMemo removed — rendered by EnrollmentCountdown component
 
   // ITER4-CRIT-001: Show login gate if not authenticated
   if (!isAuthenticated) {
@@ -2087,6 +2097,7 @@ export default function App() {
         </button>
 
         <div className="tabsRight muted">
+          {eventsLoading && <span style={{ marginRight: 8 }}>Refreshing…</span>}
           {lastRefreshAt ? `Last refresh: ${new Date(lastRefreshAt).toLocaleTimeString()}` : ""}
         </div>
       </nav>
@@ -2273,7 +2284,7 @@ export default function App() {
               <div className="qrCard" style={{ marginTop: 16 }}>
                 <div className="badgeRow">
                   <span className="badge badgeInfo">Code: {enrollment.code}</span>
-                  <span className="badge">Expires in: {enrollmentCountdown}</span>
+                  <span className="badge">Expires in: {enrollment.expiresAt ? <EnrollmentCountdown expiresAt={enrollment.expiresAt} /> : "unknown"}</span>
                 </div>
                 <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
                   <QRCodeSVG value={enrollment.qrPayload} size={160} />
@@ -2482,9 +2493,11 @@ export default function App() {
             </div>
           )}
 
+          {/* ISSUE-MICRO-061: Visual separator between device registry and events-derived summary */}
+          <hr style={{ margin: "16px 0", borderColor: "#e2e8f0" }} />
           <div className="cardHeader" style={{ paddingTop: 0 }}>
-            <div className="cardTitle">Devices (events window)</div>
-            <div className="muted">Unique devices in last {limit} events: {devices.length}</div>
+            <div className="cardTitle">Device Activity (from events)</div>
+            <div className="muted">Unique devices in last {limit} events: {devices.length} — derived from event log, independent of device registry above</div>
           </div>
 
           {devices.length === 0 ? (

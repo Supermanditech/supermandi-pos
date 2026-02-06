@@ -175,11 +175,15 @@ export function hasValidSession(): boolean {
  * GO-LIVE-SESSION: Uses Authorization Bearer header with session JWT
  */
 export function getAuthHeaders(): Record<string, string> {
+  // ISSUE-MICRO-081: Add correlation ID for cross-service request tracing
+  const headers: Record<string, string> = {
+    'X-Request-ID': crypto.randomUUID(),
+  };
   const sessionToken = getSessionToken();
   if (sessionToken) {
-    return { Authorization: `Bearer ${sessionToken}` };
+    headers.Authorization = `Bearer ${sessionToken}`;
   }
-  return {};
+  return headers;
 }
 
 /**
