@@ -138,7 +138,7 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
     result = await pool.query(
       `
         INSERT INTO platform.stores (id, name, code, status, created_at, updated_at)
-        VALUES ($1::uuid, $2, $3, 'inactive', NOW(), NOW())
+        VALUES ($1::uuid, $2, $3, 'DRAFT', NOW(), NOW())
         RETURNING id::TEXT as id, name, code, status, created_at, updated_at
       `,
       [storeId, storeNameInput.value, storeCode]
@@ -157,7 +157,7 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
   }
 
   const store = result.rows[0];
-  return res.status(201).json({ store: { ...store, storeName: store?.name, storeCode: store?.code, active: store?.status === "active" } });
+  return res.status(201).json({ store: { ...store, storeName: store?.name, storeCode: store?.code, active: store?.status === "ACTIVE" } });
 });
 
 // GET /api/v1/admin/stores

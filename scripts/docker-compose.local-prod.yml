@@ -65,6 +65,8 @@ services:
     ports: ["3010:3010"]
     environment:
       PORT: "3010"
+      # FIX-019-003: Pass GIT_SHA so /version reports correct commit
+      GIT_SHA: "local"
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/supermandi
       DB_HOST: postgres
@@ -249,6 +251,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: "http://localhost:8080"
+        VITE_GIT_SHA: "local"
     image: supermandi/retailer-admin:local
     restart: unless-stopped
     ports: ["8081:80"]
@@ -271,6 +274,7 @@ services:
       # POST-BATCH-017: Bake API gateway URL into Next.js build
       args:
         NEXT_PUBLIC_API_BASE_URL: "http://localhost:8080"
+        NEXT_PUBLIC_GIT_SHA: "local"
     image: supermandi/supplier-portal:local
     restart: unless-stopped
     # SUP-PORT-001: next start respects PORT env var (3001 from Dockerfile)
@@ -290,6 +294,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE_URL: "http://localhost:8080"
+        VITE_GIT_SHA: "local"
     image: supermandi/superadmin:local
     restart: unless-stopped
     ports: ["8083:80"]

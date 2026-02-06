@@ -22,7 +22,9 @@ COPY . .
 # Note: NEXT_PUBLIC_API_BASE_URL must be set at build time for client-side usage
 # FRONTEND-CR-201: No hardcoded domain — set at build time via --build-arg
 ARG NEXT_PUBLIC_API_BASE_URL=""
+ARG NEXT_PUBLIC_GIT_SHA="unknown"
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+ENV NEXT_PUBLIC_GIT_SHA=${NEXT_PUBLIC_GIT_SHA}
 
 RUN npm run build
 

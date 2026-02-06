@@ -5,16 +5,24 @@ FROM nginx:alpine
 
 # Copy static files
 COPY index.html /usr/share/nginx/html/index.html
+COPY privacy.html /usr/share/nginx/html/privacy.html
+COPY terms.html /usr/share/nginx/html/terms.html
 
 # Add health check file
 RUN echo "OK" > /usr/share/nginx/html/health.txt
 
-# Simple nginx config for static site
+# Nginx config: serve static files, fallback to index.html for unknown routes
 RUN printf 'server {\n\
     listen 80;\n\
     server_name _;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
+    location = /privacy {\n\
+        try_files /privacy.html =404;\n\
+    }\n\
+    location = /terms {\n\
+        try_files /terms.html =404;\n\
+    }\n\
     location / {\n\
         try_files $uri $uri/ /index.html;\n\
     }\n\

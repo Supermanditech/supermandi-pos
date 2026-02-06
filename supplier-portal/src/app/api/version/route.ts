@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
  */
 export async function GET() {
   return NextResponse.json({
-    commit: process.env.NEXT_PUBLIC_BUILD_SHA || 'unknown',
+    commit: process.env.NEXT_PUBLIC_GIT_SHA || process.env.NEXT_PUBLIC_BUILD_SHA || 'unknown',
     buildTime: process.env.NEXT_PUBLIC_BUILD_TIME || new Date().toISOString(),
     portal: 'supplier',
   });
