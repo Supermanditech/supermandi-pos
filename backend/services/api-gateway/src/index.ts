@@ -93,8 +93,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Security headers
-app.use(helmet());
+// ISSUE-MICRO-033: Explicit security headers — HSTS, X-Frame-Options, etc.
+app.use(helmet({
+  hsts: {
+    maxAge: 31536000, // 1 year (default is 180 days)
+    includeSubDomains: true,
+  },
+  frameguard: { action: 'deny' },
+  contentSecurityPolicy: false, // Requires per-portal tuning — deferred
+  crossOriginEmbedderPolicy: false, // Cross-origin assets (fonts, images)
+}));
 
 // =============================================================================
 // GO-LIVE-194: Per-endpoint body size limits

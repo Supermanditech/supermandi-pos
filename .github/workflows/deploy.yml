@@ -209,6 +209,34 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
+      # ISSUE-MICRO-038: Verify all images exist in AR before deploying
+      - name: Verify image digests in Artifact Registry
+        run: |
+          echo "Verifying all 14 images exist in AR before deploy..."
+          IMAGES=(
+            api-gateway auth-service catalog-service inventory-service
+            order-service payment-service platform-service reorder-service
+            supplier-service voice-service
+            retailer-admin supplier-portal superadmin landing
+          )
+          FAILED=0
+          for img in "${IMAGES[@]}"; do
+            FULL_IMAGE="${{ env.AR_REPO }}/${img}:${{ env.SHA }}"
+            DIGEST=$(gcloud artifacts docker images describe "$FULL_IMAGE" \
+              --format="value(image_summary.digest)" 2>/dev/null || echo "")
+            if [ -z "$DIGEST" ]; then
+              echo "FAIL: $FULL_IMAGE not found in Artifact Registry"
+              FAILED=$((FAILED + 1))
+            else
+              echo "OK: ${img}:${{ env.SHA }} → ${DIGEST}"
+            fi
+          done
+          if [ $FAILED -gt 0 ]; then
+            echo "BLOCKED: $FAILED images missing from AR. Cannot deploy."
+            exit 1
+          fi
+          echo "All 14 images verified in Artifact Registry."
+
       - name: Deploy backend services to staging
         run: |
           BACKEND_SERVICES=(

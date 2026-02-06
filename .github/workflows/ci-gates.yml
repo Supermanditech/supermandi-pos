@@ -56,6 +56,19 @@ jobs:
         with:
           version: 8
 
+      # ISSUE-MICRO-078: Cache pnpm store for faster CI
+      - name: Get pnpm store path
+        id: pnpm-cache
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
       - name: Install & Typecheck backend
         working-directory: backend
         run: |
@@ -99,6 +112,19 @@ jobs:
         uses: pnpm/action-setup@v2
         with:
           version: 8
+
+      # ISSUE-MICRO-078: Cache pnpm store for faster CI
+      - name: Get pnpm store path (lint)
+        id: pnpm-cache-lint
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store (lint)
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache-lint.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
 
       - name: Lint backend
         working-directory: backend
@@ -210,6 +236,19 @@ jobs:
         uses: pnpm/action-setup@v2
         with:
           version: 8
+
+      # ISSUE-MICRO-078: Cache pnpm store for faster CI
+      - name: Get pnpm store path (test)
+        id: pnpm-cache-test
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Cache pnpm store (test)
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache-test.outputs.STORE_PATH }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
 
       - name: Install backend dependencies
         working-directory: backend

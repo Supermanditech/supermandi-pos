@@ -3,6 +3,8 @@
 # Stop: docker compose -f scripts/docker-compose.local-prod.yml stop
 # Resume: docker compose -f scripts/docker-compose.local-prod.yml start
 # Rebuild: docker compose -f scripts/docker-compose.local-prod.yml up -d --build
+# ISSUE-MICRO-034: Secrets parameterized — override via scripts/.env or environment
+# ISSUE-MICRO-035: Resource limits added to all services
 
 services:
   postgres:
@@ -11,7 +13,7 @@ services:
     environment:
       POSTGRES_DB: supermandi
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports: ["5432:5432"]
     volumes:
       - supermandi-pgdata:/var/lib/postgresql/data
@@ -20,6 +22,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
 
   redis:
     image: redis:7-alpine
@@ -30,6 +37,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   api-gateway:
     image: supermandi/api-gateway:9bb03f7
@@ -40,8 +52,8 @@ services:
       NODE_ENV: production
       ADMIN_SERVICE_URL: http://main-backend:3010
       PAYMENT_SERVICE_URL: http://payment-service:3011
-      ADMIN_TOKEN: local-test-token
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-local-test-token}
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
       # LOCAL-PROD-URL-001: CORS origins for local frontend containers
       CORS_ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
     depends_on:
@@ -54,6 +66,11 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   # DOCKER-BUILD-001: Build from source (was: stale image :2d7189d)
   main-backend:
@@ -68,15 +85,15 @@ services:
       # FIX-019-003: Pass GIT_SHA so /version reports correct commit
       GIT_SHA: "local"
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/supermandi
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/supermandi}
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_URL: redis://redis:6379
-      ADMIN_TOKEN: local-test-token
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-local-test-token}
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
       CORS_ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
       ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
       # DOCKER-ENV-001: Email service (Resend) — key from scripts/.env
@@ -99,6 +116,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   auth-service:
     image: supermandi/auth-service:9bb03f7
@@ -109,11 +131,16 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   catalog-service:
     image: supermandi/catalog-service:9bb03f7
@@ -124,15 +151,20 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   inventory-service:
     image: supermandi/inventory-service:9bb03f7
@@ -143,11 +175,16 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   order-service:
     image: supermandi/order-service:9bb03f7
@@ -158,12 +195,17 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       INVENTORY_SERVICE_URL: http://inventory-service:3005
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   payment-service:
     image: supermandi/payment-service:9bb03f7
@@ -171,13 +213,18 @@ services:
     environment:
       PORT: "3011"
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/supermandi
-      RAZORPAY_KEY_ID: rzp_test_local_prod
-      RAZORPAY_KEY_SECRET: local_test_secret
-      RAZORPAY_ACCOUNT_NUMBER: local_test_account
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/supermandi}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_local_prod}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-local_test_secret}
+      RAZORPAY_ACCOUNT_NUMBER: ${RAZORPAY_ACCOUNT_NUMBER:-local_test_account}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   platform-service:
     image: supermandi/platform-service:9bb03f7
@@ -188,11 +235,16 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       INVENTORY_SERVICE_URL: http://inventory-service:3005
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   reorder-service:
     image: supermandi/reorder-service:9bb03f7
@@ -203,15 +255,20 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   supplier-service:
     image: supermandi/supplier-service:9bb03f7
@@ -222,11 +279,16 @@ services:
       DB_HOST: postgres
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
-      JWT_SECRET: local-test-jwt-secret-32chars-minimum-ok
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   voice-service:
     image: supermandi/voice-service:9bb03f7
@@ -239,10 +301,15 @@ services:
       DB_PORT: "5432"
       DB_NAME: supermandi
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   # POST-BATCH-018: Build from source (was: stale image :9bb03f7)
   retailer-admin:
@@ -266,6 +333,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
 
   supplier-portal:
     build:
@@ -286,6 +358,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   # POST-BATCH-018: Build from source (was: stale image :9bb03f7)
   superadmin:
@@ -308,6 +385,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
 
   # POST-BATCH-018: Build from source (was: stale image :9bb03f7)
   landing:
@@ -324,6 +406,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
 
 volumes:
   supermandi-pgdata:

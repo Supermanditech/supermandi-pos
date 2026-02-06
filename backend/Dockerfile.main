@@ -58,6 +58,11 @@ COPY scripts/migrate-prod.js ./scripts/migrate-prod.js
 COPY scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 RUN chmod +x ./scripts/docker-entrypoint.sh
 
+# ISSUE-MICRO-037: Run as non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
 WORKDIR /app
 
 ENV NODE_ENV=production
