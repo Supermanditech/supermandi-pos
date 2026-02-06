@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { posEventsRouter } from "./pos/events";
 import { posScanRouter } from "./pos/scan";
 import { posSalesRouter } from "./pos/sales";
@@ -85,6 +86,15 @@ v1Router.use("/orders", ordersRouter);
 v1Router.use("/catalog", catalogRouter);  // AUD-GOLIVE-003: Store catalog endpoints
 v1Router.use("/admin", adminHealthRouter);  // MED-011: Public health check (no auth)
 v1Router.use("/admin", adminAuthRouter);  // GO-LIVE-LOGIN-004: Admin email OTP auth (no auth required)
+// ISSUE-MICRO-082: General rate limiter for admin API endpoints
+// 200 requests per 15 minutes per IP — high enough for normal use, catches abuse
+v1Router.use("/admin", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "ADMIN_RATE_LIMITED", message: "Too many admin requests. Please slow down." } },
+}));
 // GL-CRIT-0049: Apply audit middleware to all admin mutation routes
 v1Router.use("/admin", adminAuditMiddleware());
 v1Router.use("/admin", adminPosEventsRouter);

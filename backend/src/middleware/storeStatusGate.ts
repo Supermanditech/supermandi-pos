@@ -18,6 +18,31 @@ declare global {
   }
 }
 
+// ISSUE-MICRO-011: TTL cache for store status to eliminate N+1 queries
+// 30-second TTL is short enough for status changes to propagate quickly
+const STATUS_CACHE_TTL_MS = 30_000;
+const STATUS_CACHE_MAX_SIZE = 5000;
+const statusCache = new Map<string, { status: StoreStatusType; expiresAt: number }>();
+
+function getCachedStatus(storeId: string): StoreStatusType | null {
+  const entry = statusCache.get(storeId);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    statusCache.delete(storeId);
+    return null;
+  }
+  return entry.status;
+}
+
+function setCachedStatus(storeId: string, status: StoreStatusType): void {
+  // Evict oldest entries if cache is full
+  if (statusCache.size >= STATUS_CACHE_MAX_SIZE) {
+    const firstKey = statusCache.keys().next().value;
+    if (firstKey) statusCache.delete(firstKey);
+  }
+  statusCache.set(storeId, { status, expiresAt: Date.now() + STATUS_CACHE_TTL_MS });
+}
+
 /**
  * SEC-001: Standard error response for status gating
  */
@@ -64,18 +89,24 @@ export function requireStoreStatus(allowedStatuses: StoreStatusType | StoreStatu
     }
 
     try {
-      // Fetch current store status
-      const result = await pool.query(
-        'SELECT status FROM platform.stores WHERE id = $1::uuid AND deleted_at IS NULL',
-        [storeId]
-      );
+      // ISSUE-MICRO-011: Check TTL cache before hitting DB
+      let currentStatus = getCachedStatus(storeId);
 
-      if (result.rows.length === 0) {
-        res.status(404).json({ error: 'STORE_NOT_FOUND', message: 'Store not found' });
-        return;
+      if (!currentStatus) {
+        // Fetch current store status from DB
+        const result = await pool.query(
+          'SELECT status FROM platform.stores WHERE id = $1::uuid AND deleted_at IS NULL',
+          [storeId]
+        );
+
+        if (result.rows.length === 0) {
+          res.status(404).json({ error: 'STORE_NOT_FOUND', message: 'Store not found' });
+          return;
+        }
+
+        currentStatus = result.rows[0].status as StoreStatusType;
+        setCachedStatus(storeId, currentStatus);
       }
-
-      const currentStatus = result.rows[0].status as StoreStatusType;
 
       // Store status in request for downstream use
       req.storeStatus = currentStatus;

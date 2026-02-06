@@ -30,7 +30,10 @@ const LOCKOUT_MAX_MS = 5 * 60 * 1000; // Max 5 minutes
 
 // Cleanup interval
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-const MAX_ENTRIES = 50000; // Maximum entries before forced cleanup
+// ISSUE-MICRO-041: Reduced from 50K to 10K to bound memory usage (~1MB per map)
+const MAX_ENTRIES = 10000;
+// ISSUE-MICRO-041: Cap globalAttempts array to prevent unbounded growth during DDoS
+const MAX_GLOBAL_ATTEMPTS = 1000;
 
 // =============================================================================
 // STATE
@@ -54,6 +57,9 @@ let globalAttempts: number[] = [];
 
 // Cleanup tracking
 let lastCleanup = Date.now();
+
+// ISSUE-MICRO-041: Periodic cleanup so stale entries are reclaimed even without traffic
+setInterval(() => { lastCleanup = 0; cleanup(); }, CLEANUP_INTERVAL_MS).unref();
 
 // =============================================================================
 // HELPERS
@@ -235,6 +241,10 @@ export function enhancedAuthProtection() {
     }
 
     globalAttempts.push(now);
+    // ISSUE-MICRO-041: Hard cap on array length to prevent memory growth during DDoS
+    if (globalAttempts.length > MAX_GLOBAL_ATTEMPTS) {
+      globalAttempts = globalAttempts.slice(-MAX_GLOBAL_ATTEMPTS);
+    }
 
     // =======================================================================
     // Hook into response to track failures

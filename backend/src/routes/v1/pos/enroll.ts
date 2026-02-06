@@ -62,6 +62,9 @@ const PRINTING_MODES = new Set(["DIRECT_ESC_POS", "SHARE_TO_PRINTER_APP", "NONE"
 // FINDING-027: Default max devices per store (can be overridden per store in platform.stores.max_devices)
 const DEFAULT_MAX_DEVICES_PER_STORE = 10;
 
+// ISSUE-MICRO-091: Max enrollment attempts per store per day (prevents distributed brute-force)
+const MAX_DAILY_ENROLLMENTS_PER_STORE = 20;
+
 // FINDING-026: Token expiry duration (90 days - user-friendly with auto-refresh)
 const TOKEN_EXPIRY_DAYS = 90;
 
@@ -311,6 +314,28 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
       console.log(`[Enroll] Demo bypass: code=${code} store=${storeCode} uses=${usesCount}/${maxUses} expired=${isExpired}`);
     }
 
+    // ISSUE-MICRO-091: Check daily enrollment attempt count per store
+    // Prevents distributed brute-force from multiple IPs targeting one store
+    // Skip for re-enrollment (device recovery) and demo stores
+    if (!existingDevice && !isDemo) {
+      const dailyCountRes = await client.query(
+        `SELECT COUNT(*)::int as count FROM device_enrollment_events
+         WHERE store_id = $1 AND event_type = 'enrolled' AND created_at >= NOW() - INTERVAL '1 day'`,
+        [enrollment.store_id]
+      );
+      const dailyCount = dailyCountRes.rows[0]?.count ?? 0;
+      if (dailyCount >= MAX_DAILY_ENROLLMENTS_PER_STORE) {
+        await client.query("ROLLBACK");
+        console.warn(`[Enroll] REJECT 429: Store ${store.id} daily enrollment limit reached (${dailyCount}/${MAX_DAILY_ENROLLMENTS_PER_STORE})`);
+        return res.status(429).json({
+          error: {
+            code: "DAILY_ENROLLMENT_LIMIT",
+            message: "Too many device enrollments today. Please try again tomorrow or contact support."
+          }
+        });
+      }
+    }
+
     // FINDING-027: Check device count per store using configurable max_devices
     // Skip for re-enrollment and demo stores
     const storeMaxDevices = store.max_devices ?? DEFAULT_MAX_DEVICES_PER_STORE;
@@ -524,15 +549,16 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
   const label = asTrimmedString(req.body?.label);
 
   if (!code) {
-    return res.status(400).json({ error: "Code is required" });
+    // ISSUE-MICRO-090: Standardized error format (was flat string)
+    return res.status(400).json({ error: { code: "CODE_REQUIRED", message: "Code is required" } });
   }
   if (!label) {
-    return res.status(400).json({ error: "Label is required" });
+    return res.status(400).json({ error: { code: "LABEL_REQUIRED", message: "Label is required" } });
   }
 
   const pool = getPool();
   if (!pool) {
-    return res.status(503).json({ error: "Database unavailable" });
+    return res.status(503).json({ error: { code: "DATABASE_UNAVAILABLE", message: "Database unavailable" } });
   }
 
   try {
@@ -614,7 +640,8 @@ posEnrollRouter.post("/enroll/check-label", labelCheckLimiter, async (req, res) 
     return res.json({ isDuplicate: false });
   } catch (error) {
     console.error("[checkDuplicateLabel] Error:", error);
-    return res.status(500).json({ error: "Failed to check label" });
+    // ISSUE-MICRO-090: Standardized error format (was flat string)
+    return res.status(500).json({ error: { code: "LABEL_CHECK_FAILED", message: "Failed to check label" } });
   }
 });
 
