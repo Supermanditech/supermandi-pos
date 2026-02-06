@@ -163,13 +163,16 @@ async function autoRefreshTokenIfNeeded(deviceId: string, tokenExpiresAt: Date |
   const thirtyDaysFromNow = Date.now() + 30 * 24 * 60 * 60 * 1000;
   if (tokenExpiresAt.getTime() < thirtyDaysFromNow) {
     try {
+      // ISSUE-MICRO-001: Parameterized interval to eliminate SQL injection vector
+      // ISSUE-MICRO-042: WHERE guard prevents redundant concurrent updates
       await pool.query(
         `UPDATE pos_devices
-         SET token_expires_at = NOW() + INTERVAL '${TOKEN_EXPIRY_DAYS} days',
+         SET token_expires_at = NOW() + INTERVAL '1 day' * $2,
              token_refreshed_at = NOW(),
              last_active_at = NOW()
-         WHERE id = $1`,
-        [deviceId]
+         WHERE id = $1
+           AND token_expires_at < NOW() + INTERVAL '30 days'`,
+        [deviceId, TOKEN_EXPIRY_DAYS]
       );
       console.log(`[DeviceToken] Auto-refreshed token expiry for device ${deviceId}`);
     } catch (err) {
@@ -184,7 +187,8 @@ async function autoRefreshTokenIfNeeded(deviceId: string, tokenExpiresAt: Date |
         [deviceId]
       );
     } catch (err) {
-      // Non-critical
+      // ISSUE-MICRO-012: Log instead of silently swallowing
+      console.warn("[DeviceToken] Failed to update last_active_at:", err);
     }
   }
 }
@@ -251,7 +255,10 @@ export async function requireDeviceToken(req: Request, res: Response, next: Next
   }
 
   // FINDING-026: Auto-refresh token if about to expire (non-blocking)
-  autoRefreshTokenIfNeeded(status.deviceId, status.tokenExpiresAt).catch(() => {});
+  // ISSUE-MICRO-012: Log errors instead of silently swallowing
+  autoRefreshTokenIfNeeded(status.deviceId, status.tokenExpiresAt).catch((err) => {
+    console.warn("[DeviceToken] Auto-refresh background error:", err);
+  });
 
   (req as any).posDevice = {
     deviceId: status.deviceId,

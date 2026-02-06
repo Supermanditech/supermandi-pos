@@ -140,7 +140,8 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
     }
 
     const limitNum = Math.min(parseInt(limit as string, 10) || 50, 200);
-    const offsetNum = parseInt(offset as string, 10) || 0;
+    // ISSUE-MICRO-040: Cap offset to prevent slow sequential scans on large tables
+    const offsetNum = Math.min(Math.max(parseInt(offset as string, 10) || 0, 0), 100000);
 
     // Get total count
     const countResult = await pool.query(

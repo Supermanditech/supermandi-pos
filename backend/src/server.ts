@@ -29,7 +29,12 @@ async function start(): Promise<void> {
 
     // GO-LIVE Batch 7: Start sync cleanup scheduler for production scale
     // Cleans stale sync_locks, old processed_events, and old failed_events
-    startSyncCleanupScheduler();
+    // ISSUE-MICRO-043: Catch scheduler startup errors to prevent unhandled rejection
+    try {
+      startSyncCleanupScheduler();
+    } catch (err) {
+      logger.error("Sync cleanup scheduler failed to start", { error: String(err) });
+    }
   });
 
   // SHUTDOWN-001: Graceful shutdown on SIGTERM/SIGINT (Cloud Run sends SIGTERM)
@@ -48,6 +53,16 @@ async function start(): Promise<void> {
 
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
+
+  // ISSUE-MICRO-010: Catch uncaught exceptions / unhandled rejections to log before exit
+  process.on("uncaughtException", (err) => {
+    logger.error("Uncaught exception — shutting down", { error: String(err), stack: err.stack });
+    shutdown("uncaughtException");
+  });
+  process.on("unhandledRejection", (reason) => {
+    logger.error("Unhandled rejection", { reason: String(reason) });
+    // Do NOT exit on unhandled rejection — log and continue (Node 16+ default)
+  });
 }
 
 void start();

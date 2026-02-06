@@ -135,7 +135,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // SERVER STARTUP
 // =============================================================================
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`
 ====================================================
   SuperMandi Auth Service v3.0.9
@@ -144,3 +144,20 @@ app.listen(config.port, () => {
 ====================================================
   `);
 });
+
+// ISSUE-MICRO-008: Graceful shutdown on SIGTERM/SIGINT (Cloud Run sends SIGTERM)
+const shutdown = (signal: string) => {
+  console.log(`[Auth Service] ${signal} received, shutting down gracefully`);
+  server.close(() => {
+    console.log('[Auth Service] Server closed');
+    process.exit(0);
+  });
+  // Force exit after 10s if connections don't drain
+  setTimeout(() => {
+    console.warn('[Auth Service] Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

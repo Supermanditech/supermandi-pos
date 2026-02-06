@@ -2,13 +2,25 @@ import { getPool } from "./client";
 
 let ensured = false;
 
+// ISSUE-MICRO-002: Advisory lock key for serializing schema initialization
+const SCHEMA_ADVISORY_LOCK_KEY = 839201;
+
 export async function ensureCoreSchema(): Promise<void> {
   if (ensured) return;
 
   const pool = getPool();
   if (!pool) return;
 
-  await pool.query(`
+  // ISSUE-MICRO-002: Use PostgreSQL advisory lock to prevent concurrent initialization
+  // This serializes cold-start requests so only one executes schema migration
+  const client = await pool.connect();
+  try {
+    await client.query(`SELECT pg_advisory_lock($1)`, [SCHEMA_ADVISORY_LOCK_KEY]);
+
+    // Double-check after acquiring lock (another caller may have finished)
+    if (ensured) return;
+
+  await client.query(`
     DO $$
     BEGIN
       IF to_regclass('public.variants') IS NULL AND to_regclass('public.products') IS NOT NULL THEN
@@ -98,7 +110,7 @@ export async function ensureCoreSchema(): Promise<void> {
     END $$;
   `);
 
-  await pool.query(`
+  await client.query(`
     CREATE TABLE IF NOT EXISTS stores (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -423,7 +435,7 @@ export async function ensureCoreSchema(): Promise<void> {
     CREATE INDEX IF NOT EXISTS consumer_order_items_product_id_idx ON consumer_order_items (variant_id);
   `);
 
-  await pool.query(`
+  await client.query(`
     -- Compatibility view for legacy queries that expect a devices table.
     DO $$
     BEGIN
@@ -436,7 +448,7 @@ export async function ensureCoreSchema(): Promise<void> {
   // Keep purchase_items rename idempotent to avoid 42701 in prod when variant_id already exists.
   // NOTE: ALTER TABLE stores skipped — public.stores is a VIEW backed by platform.stores
   // Columns are managed via platform migrations (001_platform_schema.sql et al.)
-  await pool.query(`
+  await client.query(`
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS retailer_status TEXT NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS enrichment_status TEXT NULL;
@@ -478,7 +490,7 @@ export async function ensureCoreSchema(): Promise<void> {
     ALTER TABLE pos_devices ALTER COLUMN store_id DROP NOT NULL;
   `);
 
-  await pool.query(`
+  await client.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -493,7 +505,7 @@ export async function ensureCoreSchema(): Promise<void> {
     END $$;
   `);
 
-  await pool.query(`
+  await client.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -507,7 +519,7 @@ export async function ensureCoreSchema(): Promise<void> {
     END $$;
   `);
 
-  await pool.query(`
+  await client.query(`
     DO $$
     BEGIN
       IF EXISTS (
@@ -521,7 +533,7 @@ export async function ensureCoreSchema(): Promise<void> {
     END $$;
   `);
 
-  await pool.query(`
+  await client.query(`
     UPDATE variants
     SET product_id = id
     WHERE product_id IS NULL;
@@ -578,12 +590,12 @@ export async function ensureCoreSchema(): Promise<void> {
     END $$;
   `);
 
-  const storeCount = await pool.query("SELECT COUNT(*)::int AS count FROM stores");
+  const storeCount = await client.query("SELECT COUNT(*)::int AS count FROM stores");
   if (storeCount.rows[0]?.count === 0) {
     try {
       // V1 fallback: seed a pilot store if none exist. In V2 (platform schema),
       // stores are created via migrations or admin API, and this is a no-op.
-      await pool.query(
+      await client.query(
         `INSERT INTO stores (id, name, upi_vpa, active) VALUES ($1, $2, $3, $4)`,
         ["store-1", "Supermandi Pilot Store", null, false]
       );
@@ -593,7 +605,7 @@ export async function ensureCoreSchema(): Promise<void> {
   }
 
   try {
-    await pool.query(`
+    await client.query(`
       UPDATE platform.stores
       SET upi_vpa = NULL
       WHERE upi_vpa IS NOT NULL
@@ -604,6 +616,11 @@ export async function ensureCoreSchema(): Promise<void> {
   }
 
   ensured = true;
+  } finally {
+    // ISSUE-MICRO-002: Always release advisory lock and client
+    await client.query(`SELECT pg_advisory_unlock($1)`, [SCHEMA_ADVISORY_LOCK_KEY]).catch(() => {});
+    client.release();
+  }
 }
 
 export async function ensurePosEventsTable(): Promise<void> {
