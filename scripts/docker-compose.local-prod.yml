@@ -246,6 +246,9 @@ services:
     image: supermandi/retailer-admin:9bb03f7
     restart: unless-stopped
     ports: ["8081:80"]
+    # POST-BATCH-017: Mount subpath-aware nginx config (serves /retailer/ prefix)
+    volumes:
+      - ../retailer-admin/nginx-local-prod.conf:/etc/nginx/conf.d/default.conf:ro
     # LOCAL-PROD-URL-001: Override Dockerfile healthcheck — use 127.0.0.1 to avoid
     # Alpine IPv6 resolution (localhost → [::1] → connection refused on IPv4-only nginx)
     healthcheck:
@@ -259,6 +262,9 @@ services:
     build:
       context: ../supplier-portal
       dockerfile: Dockerfile
+      # POST-BATCH-017: Bake API gateway URL into Next.js build
+      args:
+        NEXT_PUBLIC_API_BASE_URL: "http://localhost:8080"
     image: supermandi/supplier-portal:local
     restart: unless-stopped
     # SUP-PORT-001: next start respects PORT env var (3001 from Dockerfile)
@@ -275,6 +281,9 @@ services:
     image: supermandi/superadmin:9bb03f7
     restart: unless-stopped
     ports: ["8083:80"]
+    # POST-BATCH-017: Mount subpath-aware nginx config (serves /admin/ prefix)
+    volumes:
+      - ../supermandi-superadmin/nginx-local-prod.conf:/etc/nginx/conf.d/default.conf:ro
     # LOCAL-PROD-URL-001: Override Dockerfile healthcheck — use 127.0.0.1 (IPv6 fix)
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/health.txt || exit 1"]
