@@ -61,9 +61,10 @@ ENV PORT=3001
 
 EXPOSE 3001
 
-# Health check - Next.js serves on configured port
+# SUP-ROOT-001: Health check must use /supplier/ path (basePath in next.config.js)
+# SUP-PORT-001: PORT env var (line 60) controls the listen port
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/supplier/ || exit 1
 
 # Start Next.js production server
 CMD ["npm", "start"]

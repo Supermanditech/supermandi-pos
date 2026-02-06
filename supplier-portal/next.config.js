@@ -27,6 +27,17 @@ const nextConfig = {
   basePath: '/supplier',
   // GO-LIVE-B9: Match nginx trailing slash behavior to avoid redirect loops
   trailingSlash: true,
+  // SUP-ROOT-001: Redirect bare root to /supplier/ so http://host:port/ doesn't 404
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/supplier/',
+        basePath: false,
+        permanent: false,
+      },
+    ];
+  },
   // SUP-LOGIN-001: Empty string fallback allows relative paths through nginx proxy
   env: {
     API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || '',

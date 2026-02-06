@@ -229,13 +229,15 @@ services:
       start_period: 5s
 
   supplier-portal:
-    image: supermandi/supplier-portal:9bb03f7
-    # LOCAL-PROD-URL-001: package.json uses "next start -p 4001" (overrides Dockerfile PORT=3001)
-    ports: ["8082:4001"]
-    # LOCAL-PROD-URL-001: Override Dockerfile healthcheck (probes port 3001 but app runs on 4001)
-    # LOCAL-PROD-URL-002: next.config.js has basePath: '/supplier' — all routes require /supplier prefix
+    build:
+      context: ../supplier-portal
+      dockerfile: Dockerfile
+    image: supermandi/supplier-portal:local
+    # SUP-PORT-001: next start respects PORT env var (3001 from Dockerfile)
+    ports: ["8082:3001"]
+    # SUP-ROOT-001: basePath: '/supplier' — all routes require /supplier prefix
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:4001/supplier/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3001/supplier/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
