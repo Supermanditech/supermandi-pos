@@ -162,6 +162,139 @@ router.post("/orders/mark-read", requireSupplierAuth, requireRegisteredSupplier,
 });
 
 /**
+ * GET /api/v1/supplier/orders/stream
+ * SUP-POS-012: SSE endpoint for real-time order updates
+ * Polls order_events table and pushes new events to connected supplier
+ * Auth via ?token= query param (EventSource can't set Authorization headers)
+ * IMPORTANT: Must be defined BEFORE /orders/:id to avoid Express param matching
+ */
+router.get("/orders/stream", async (req: Request, res: Response) => {
+  // SUP-POS-012: Manual JWT auth from query param (EventSource limitation)
+  const token = req.query.token as string | undefined;
+  if (!token) {
+    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
+    return;
+  }
+
+  let supplierId: string;
+  try {
+    const decoded = jwt.verify(token, SSE_JWT_SECRET, { issuer: SSE_JWT_ISSUER }) as {
+      actorType: string;
+      actorId: string;
+    };
+    if (decoded.actorType !== 'SUPPLIER') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Invalid token type' } });
+      return;
+    }
+    supplierId = decoded.actorId;
+  } catch {
+    res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' } });
+    return;
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+    return;
+  }
+
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+
+  res.write(`event: connected\ndata: ${JSON.stringify({ supplierId })}\n\n`);
+
+  let lastEventTime = new Date();
+  let closed = false;
+
+  // Initialize: get latest event timestamp for this supplier
+  try {
+    const latest = await pool.query(
+      `SELECT MAX(oe.created_at) as latest
+       FROM orders.order_events oe
+       JOIN orders.purchase_orders po ON po.id = oe.purchase_order_id
+       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+       WHERE sp.supplier_id = $1`,
+      [supplierId]
+    );
+    if (latest.rows[0]?.latest) {
+      lastEventTime = new Date(latest.rows[0].latest);
+    }
+  } catch {
+    // Start from now
+  }
+
+  // Poll for new events every 5 seconds
+  const pollInterval = setInterval(async () => {
+    if (closed) return;
+
+    try {
+      const result = await pool.query(
+        `SELECT oe.id, oe.event_type, oe.actor_type, oe.metadata, oe.created_at,
+                po.id as order_id, po.status as order_status, po.order_number
+         FROM orders.order_events oe
+         JOIN orders.purchase_orders po ON po.id = oe.purchase_order_id
+         JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+         JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+         WHERE sp.supplier_id = $1
+           AND oe.created_at > $2
+         GROUP BY oe.id, oe.event_type, oe.actor_type, oe.metadata, oe.created_at,
+                  po.id, po.status, po.order_number
+         ORDER BY oe.created_at ASC
+         LIMIT 50`,
+        [supplierId, lastEventTime.toISOString()]
+      );
+
+      for (const row of result.rows) {
+        if (closed) break;
+
+        const eventType = row.event_type.includes('status_changed') ? 'order.status_changed'
+          : row.event_type === 'order_created' ? 'order.created'
+          : row.event_type.includes('payment') ? 'order.payment_received'
+          : 'order.event';
+
+        const data = {
+          eventId: row.id,
+          type: eventType,
+          orderId: row.order_id,
+          orderNumber: row.order_number,
+          orderStatus: row.order_status,
+          metadata: row.metadata,
+          timestamp: row.created_at,
+        };
+
+        res.write(`id: ${row.id}\nevent: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+        lastEventTime = new Date(row.created_at);
+      }
+    } catch {
+      // Silently continue on poll errors
+    }
+  }, 5000);
+
+  // Send keepalive every 30 seconds
+  const keepaliveInterval = setInterval(() => {
+    if (closed) return;
+    try {
+      res.write(`:keepalive\n\n`);
+    } catch {
+      // Connection closed
+    }
+  }, 30000);
+
+  // Clean up on disconnect
+  req.on('close', () => {
+    closed = true;
+    clearInterval(pollInterval);
+    clearInterval(keepaliveInterval);
+  });
+});
+
+/**
  * GET /api/v1/supplier/orders/:id
  * SUP-POS-008: Get single order detail with full info (barcode, SKU, store contact, timeline)
  */
@@ -319,7 +452,7 @@ router.patch("/orders/:id/status", requireSupplierAuth, requireActiveSupplier, a
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['submitted', 'confirmed', 'shipped', 'delivered', 'cancelled'];
     if (!status || !validStatuses.includes(status)) {
       res.status(400).json({
         error: { code: 'VALIDATION_ERROR', message: `Status must be one of: ${validStatuses.join(', ')}` }
@@ -354,7 +487,8 @@ router.patch("/orders/:id/status", requireSupplierAuth, requireActiveSupplier, a
 
     // Validate status transition
     const validTransitions: Record<string, string[]> = {
-      pending: ['confirmed', 'cancelled'],
+      draft: ['submitted', 'cancelled'],
+      submitted: ['confirmed', 'cancelled'],
       confirmed: ['shipped', 'cancelled'],
       shipped: ['delivered'],
       delivered: [],
@@ -760,138 +894,6 @@ router.post("/orders/:id/notes", requireSupplierAuth, requireActiveSupplier, asy
   } catch (error) {
     next(error);
   }
-});
-
-/**
- * GET /api/v1/supplier/orders/stream
- * SUP-POS-012: SSE endpoint for real-time order updates
- * Polls order_events table and pushes new events to connected supplier
- * Auth via ?token= query param (EventSource can't set Authorization headers)
- */
-router.get("/orders/stream", async (req: Request, res: Response) => {
-  // SUP-POS-012: Manual JWT auth from query param (EventSource limitation)
-  const token = req.query.token as string | undefined;
-  if (!token) {
-    res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
-    return;
-  }
-
-  let supplierId: string;
-  try {
-    const decoded = jwt.verify(token, SSE_JWT_SECRET, { issuer: SSE_JWT_ISSUER }) as {
-      actorType: string;
-      actorId: string;
-    };
-    if (decoded.actorType !== 'SUPPLIER') {
-      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Invalid token type' } });
-      return;
-    }
-    supplierId = decoded.actorId;
-  } catch {
-    res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid or expired token' } });
-    return;
-  }
-
-  const pool = getPool();
-  if (!pool) {
-    res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
-    return;
-  }
-
-  // Set SSE headers
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-
-  res.write(`event: connected\ndata: ${JSON.stringify({ supplierId })}\n\n`);
-
-  let lastEventTime = new Date();
-  let closed = false;
-
-  // Initialize: get latest event timestamp for this supplier
-  try {
-    const latest = await pool.query(
-      `SELECT MAX(oe.created_at) as latest
-       FROM orders.order_events oe
-       JOIN orders.purchase_orders po ON po.id = oe.purchase_order_id
-       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
-       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
-       WHERE sp.supplier_id = $1`,
-      [supplierId]
-    );
-    if (latest.rows[0]?.latest) {
-      lastEventTime = new Date(latest.rows[0].latest);
-    }
-  } catch {
-    // Start from now
-  }
-
-  // Poll for new events every 5 seconds
-  const pollInterval = setInterval(async () => {
-    if (closed) return;
-
-    try {
-      const result = await pool.query(
-        `SELECT oe.id, oe.event_type, oe.actor_type, oe.metadata, oe.created_at,
-                po.id as order_id, po.status as order_status, po.order_number
-         FROM orders.order_events oe
-         JOIN orders.purchase_orders po ON po.id = oe.purchase_order_id
-         JOIN orders.purchase_order_items poi ON poi.order_id = po.id
-         JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
-         WHERE sp.supplier_id = $1
-           AND oe.created_at > $2
-         GROUP BY oe.id, oe.event_type, oe.actor_type, oe.metadata, oe.created_at,
-                  po.id, po.status, po.order_number
-         ORDER BY oe.created_at ASC
-         LIMIT 50`,
-        [supplierId, lastEventTime.toISOString()]
-      );
-
-      for (const row of result.rows) {
-        if (closed) break;
-
-        const eventType = row.event_type.includes('status_changed') ? 'order.status_changed'
-          : row.event_type === 'order_created' ? 'order.created'
-          : row.event_type.includes('payment') ? 'order.payment_received'
-          : 'order.event';
-
-        const data = {
-          eventId: row.id,
-          type: eventType,
-          orderId: row.order_id,
-          orderNumber: row.order_number,
-          orderStatus: row.order_status,
-          metadata: row.metadata,
-          timestamp: row.created_at,
-        };
-
-        res.write(`id: ${row.id}\nevent: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
-        lastEventTime = new Date(row.created_at);
-      }
-    } catch {
-      // Silently continue on poll errors
-    }
-  }, 5000);
-
-  // Send keepalive every 30 seconds
-  const keepaliveInterval = setInterval(() => {
-    if (closed) return;
-    try {
-      res.write(`:keepalive\n\n`);
-    } catch {
-      // Connection closed
-    }
-  }, 30000);
-
-  // Clean up on disconnect
-  req.on('close', () => {
-    closed = true;
-    clearInterval(pollInterval);
-    clearInterval(keepaliveInterval);
-  });
 });
 
 export const supplierOrdersRouter = router;

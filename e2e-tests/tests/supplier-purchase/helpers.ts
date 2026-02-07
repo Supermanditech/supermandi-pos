@@ -173,14 +173,16 @@ export async function setupTestSupplier(
 }
 
 /**
- * Admin verifies a supplier (KYC_SUBMITTED → verified).
+ * Admin approves a self-registered supplier (registered → verified).
+ * Uses /admin/suppliers/:id/approve for self-registered suppliers
+ * (not /admin/pending-suppliers/:id/verify which is for store-submitted requests).
  */
 export async function adminVerifySupplier(
   request: APIRequestContext,
   supplierId: string
 ): Promise<void> {
   const res = await request.post(
-    `${API_BASE}/api/v1/admin/pending-suppliers/${supplierId}/verify`,
+    `${API_BASE}/api/v1/admin/suppliers/${supplierId}/approve`,
     { headers: adminHeaders() }
   );
   // Accept 200 or 400 (already verified)

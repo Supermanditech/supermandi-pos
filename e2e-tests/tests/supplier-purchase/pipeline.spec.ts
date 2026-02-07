@@ -64,7 +64,7 @@ test.describe.serial("@supplier_purchase Supplier → POS Purchase Pipeline", ()
       headers: supplierHeaders(supplier.token),
       data: {
         name: `E2E Test Product ${testBarcode}`,
-        category: "Beverages",
+        category: "Cold Drink",
         brand: "TestBrand",
         barcode: testBarcode,
         purchasePrice: 5000, // ₹50.00 in paise
@@ -102,7 +102,7 @@ test.describe.serial("@supplier_purchase Supplier → POS Purchase Pipeline", ()
       {
         headers: adminHeaders(),
         data: {
-          supermandiMarginMinor: 500, // ₹5.00 fixed margin
+          superMandiMarginMinor: 500, // ₹5.00 fixed margin
         },
       }
     );
@@ -181,7 +181,7 @@ test.describe.serial("@supplier_purchase Supplier → POS Purchase Pipeline", ()
     const orders = body.data || [];
     const found = orders.find((o: any) => o.id === orderId);
     expect(found, "Order must appear in store order list").toBeTruthy();
-    expect(found.status).toBe("pending");
+    expect(found.status).toBe("submitted");
   });
 
   test("2c. Order visible to supplier", async ({ request }) => {
@@ -255,7 +255,7 @@ test.describe.serial("@supplier_purchase Supplier → POS Purchase Pipeline", ()
         data: {
           items: items.map((item: any) => ({
             orderItemId: item.id,
-            receivedQuantity: item.orderedQuantity || item.ordered_quantity || 5,
+            quantityReceived: item.orderedQuantity || item.ordered_quantity || 5,
           })),
           notes: "E2E receive test",
         },
