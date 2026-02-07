@@ -1974,9 +1974,14 @@ export default function SellScanScreen({
       }
       closeDetail();
       if (Platform.OS === "android") ToastAndroid.show("Product updated", ToastAndroid.SHORT);
-    } catch (e) {
+    } catch (e: any) {
       console.error("[SellScanScreen] Product edit failed:", e);
-      setEditProductError("Update failed. Try again.");
+      // RET-POS-SYNC-009: Handle 409 conflict (server has newer data from Dashboard)
+      if (e?.status === 409) {
+        setEditProductError("Product was updated elsewhere. Close and reopen to see latest values.");
+      } else {
+        setEditProductError("Update failed. Try again.");
+      }
     } finally {
       setEditProductBusy(false);
     }
@@ -2051,7 +2056,10 @@ export default function SellScanScreen({
             if (barcode && result.sellPrice) setLocalPrice(barcode, result.sellPrice);
             if (result.updatedAt) lastSyncedAtRef.current = result.updatedAt;
           }
-        }).catch(() => { /* sync failure is non-critical for cart UX */ });
+        }).catch((err: any) => {
+          // RET-POS-SYNC-009: Log sync failures for debugging (non-blocking for cart UX)
+          console.warn("[SellScanScreen] Cart editor sync failed:", err?.status, err?.message || err);
+        });
       }
     }
 
