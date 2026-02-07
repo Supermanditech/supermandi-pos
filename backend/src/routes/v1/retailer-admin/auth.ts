@@ -825,13 +825,12 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       return;
     }
 
-    // Check password
+    // Check password — DR-004: Clear messaging for OTP-only registrations
     if (!user.password_hash) {
-      // User registered via old OTP-only flow, no password set
       res.status(401).json({
         error: {
           code: "PASSWORD_NOT_SET",
-          message: "Password not set. Please use 'Forgot Password' to set a password."
+          message: "Your account uses phone OTP login. Go back and log in with your phone number and OTP instead, or use 'Forgot Password' to set a password."
         }
       });
       return;
