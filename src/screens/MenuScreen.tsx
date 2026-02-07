@@ -21,6 +21,7 @@ import { pendingOutboxCount } from "../services/offline/outbox";
 import { syncOutbox } from "../services/offline/sync";
 import { subscribeNetworkStatus } from "../services/networkStatus";
 import { formatMoney } from "../utils/money";
+import { printerService, type PrinterStatus } from "../services/printerService";
 
 type RootStackParamList = {
   EnrollDevice: undefined;
@@ -115,6 +116,9 @@ export default function MenuScreen() {
   // GO-LIVE-237: Sync state
   const [syncing, setSyncing] = useState(false);
 
+  // POS-PRINT-002: Printer connectivity status
+  const [printerStatus, setPrinterStatus] = useState<PrinterStatus>({ connected: false, paperAvailable: true });
+
   const loadDailySummary = async () => {
     setSummaryLoading(true);
     setSummaryError(null);
@@ -196,7 +200,21 @@ export default function MenuScreen() {
 
   useEffect(() => {
     void loadDailySummary();
+    // POS-PRINT-002: Check printer connectivity on menu mount
+    printerService.checkConnectivity().then(setPrinterStatus);
   }, []);
+
+  // POS-PRINT-002: Test printer handler
+  const handleTestPrint = useCallback(async () => {
+    try {
+      await printerService.testPrint();
+      setPrinterStatus(printerService.getStatus());
+      Alert.alert(t('menu.printerOk', 'Printer OK'), t('menu.testPrintSuccess', 'Test page sent successfully.'));
+    } catch {
+      setPrinterStatus(printerService.getStatus());
+      Alert.alert(t('menu.printerError', 'Printer Error'), t('menu.testPrintFailed', 'Could not print test page.'));
+    }
+  }, [t]);
 
   // GO-LIVE-250: Calculate trend percentage and direction
   const getTrend = (today: number, yesterday: number | undefined): { percent: number; isUp: boolean } | null => {
@@ -530,6 +548,19 @@ export default function MenuScreen() {
           <Text style={styles.billActionText}>{t('menu.share')}</Text>
         </Pressable>
       </View>
+
+      {/* POS-PRINT-002: Printer status indicator */}
+      <Pressable style={styles.printerStatusRow} onPress={handleTestPrint}>
+        <MaterialCommunityIcons
+          name={printerStatus.connected ? "printer-check" : "printer-alert"}
+          size={16}
+          color={printerStatus.connected ? theme.colors.success : theme.colors.error}
+        />
+        <Text style={[styles.printerStatusText, { color: printerStatus.connected ? theme.colors.success : theme.colors.error }]}>
+          {printerStatus.connected ? t('menu.printerReady', 'Printer Ready') : t('menu.printerUnavailable', 'Printer Unavailable')}
+        </Text>
+        <Text style={styles.printerTestLink}>{t('menu.testPrint', 'Test')}</Text>
+      </Pressable>
 
       <Pressable style={styles.menuItem} onPress={() => navigation.navigate("BarcodeSheet")}>
         <View style={styles.menuIcon}>
@@ -938,6 +969,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: theme.colors.textSecondary
+  },
+  // POS-PRINT-002: Printer status row styles
+  printerStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  printerStatusText: {
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
+  },
+  printerTestLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.primary,
   },
   sectionHeader: {
     marginTop: 24,

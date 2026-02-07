@@ -43,18 +43,49 @@ class PrinterService {
       this.status.connected = Platform.OS !== 'web';
       this.status.error = undefined;
 
+      // POS-PRINT-002: Verify print pipeline on init
+      if (this.status.connected) {
+        await this.checkConnectivity();
+      }
+
       await eventLogger.log('USER_ACTION', {
         action: 'printer_initialize',
-        success: true,
+        success: this.status.connected,
         method: 'expo-print',
       });
 
-      return true;
+      return this.status.connected;
     } catch (e: any) {
       this.status.connected = false;
       this.status.error = e?.message || 'Initialization failed';
       return false;
     }
+  }
+
+  /**
+   * POS-PRINT-002: Check printer pipeline connectivity.
+   * Uses printToFileAsync (generates PDF without dialog) as a lightweight probe.
+   * Updates status.connected and status.error accordingly.
+   */
+  async checkConnectivity(): Promise<PrinterStatus> {
+    try {
+      if (Platform.OS === 'web') {
+        this.status.connected = false;
+        this.status.error = 'Printing not available on web';
+        return this.getStatus();
+      }
+
+      await Print.printToFileAsync({
+        html: '<html><body><p>connectivity-check</p></body></html>',
+      });
+      this.status.connected = true;
+      this.status.error = undefined;
+    } catch (e: any) {
+      this.status.connected = false;
+      this.status.error = e?.message || 'Print pipeline unavailable';
+      void logPosEvent("PRINTER_ERROR", { reason: 'connectivity_check_failed', error: e?.message });
+    }
+    return this.getStatus();
   }
 
   /**
