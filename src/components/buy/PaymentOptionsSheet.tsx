@@ -88,8 +88,10 @@ export function PaymentOptionsSheet({
     return date.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
   })();
 
-  // Check if credit can cover the amount
-  const canUseCredit = creditEligible && availableCredit >= amount * 100;
+  // POS-CREDIT-002: Credit feature is disabled for MVP (mock KYC only).
+  // Override creditEligible to false regardless of what the caller passes.
+  const creditFeatureEnabled = false; // Hardcoded off until real KYC integration
+  const canUseCredit = creditFeatureEnabled && creditEligible && availableCredit >= amount * 100;
 
   // Handle payment selection
   const handleSelectPayment = useCallback(
