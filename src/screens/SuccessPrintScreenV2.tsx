@@ -12,6 +12,7 @@ import { printerService } from "../services/printerService";
 import { syncOutbox } from "../services/offline/sync";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
+import { getDeviceStoreId } from "../services/deviceSession";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -34,7 +35,7 @@ type Rt = RouteProp<RootStackParamList, "SuccessPrint">;
 export default function SuccessPrintScreenV2() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Rt>();
-  const { items, total, clearCart, unlockCart } = useCartStore();
+  const { items, total, subtotal, discountAmount, discount, clearCart, unlockCart } = useCartStore();
 
   const saleItems = route.params?.saleItems ?? items;
   const saleTotalMinor = route.params?.saleTotalMinor ?? total;
@@ -46,6 +47,20 @@ export default function SuccessPrintScreenV2() {
   const transactionId = route.params?.transactionId ?? useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
 
   const [printStatus, setPrintStatus] = useState<"idle" | "printing" | "success" | "failed">("idle");
+  const [operatorStoreId, setOperatorStoreId] = useState<string | null>(null);
+
+  useEffect(() => {
+    getDeviceStoreId().then(setOperatorStoreId);
+  }, []);
+
+  // POS-PRINT-001: Snapshot discount from cart (fallback to route params)
+  const saleSubtotal = subtotal || saleTotalMinor;
+  const saleDiscountAmount = discountAmount || 0;
+  const saleDiscountLabel = discount
+    ? discount.type === "percentage"
+      ? `${discount.value}%`
+      : formatMoney(discount.value, currency)
+    : null;
 
   const generateReceiptContent = (): string => {
     // ISSUE-MICRO-029: Detect offline sales (bill refs from offline start with "OFF-")
@@ -57,6 +72,8 @@ export default function SuccessPrintScreenV2() {
       `Bill #: ${billNumber}`,
       `Date: ${formatDateTime(new Date())}`,
       `Payment: ${paymentMode}`,
+      // POS-PRINT-001: Operator (store) ID on receipt
+      ...(operatorStoreId ? [`Operator: ${operatorStoreId.slice(0, 8)}`] : []),
       // ISSUE-MICRO-029: Mark offline receipts so customers know sync is pending
       ...(isOfflineSale ? ["* OFFLINE SALE - PENDING SYNC *"] : []),
       "=================================",
@@ -67,6 +84,12 @@ export default function SuccessPrintScreenV2() {
           `${i.name}\n  ${i.quantity} x ${formatMoney(i.priceMinor, currency)} = ${formatMoney(i.quantity * i.priceMinor, currency)}`
       ),
       "",
+      "---------------------------------",
+      `SUBTOTAL: ${formatMoney(saleSubtotal, currency)}`,
+      // POS-PRINT-001: Show discount line if applied
+      ...(saleDiscountAmount > 0
+        ? [`DISCOUNT${saleDiscountLabel ? ` (${saleDiscountLabel})` : ""}: -${formatMoney(saleDiscountAmount, currency)}`]
+        : []),
       "=================================",
       `TOTAL: ${formatMoney(saleTotalMinor, currency)}`,
       "=================================",
