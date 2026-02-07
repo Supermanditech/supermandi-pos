@@ -362,6 +362,17 @@ export async function applyBulkDeductions(params: {
 
       // Also update inventory.stock_balances for ledger consistency
       const invLedgerId = randomUUID();
+
+      // POS-INV-002: Get stock_before for ledger entry
+      const balanceResult = await client.query(
+        `SELECT COALESCE(current_qty, 0) AS stock_before
+         FROM inventory.stock_balances
+         WHERE store_id = $1 AND product_id = $2`,
+        [storeId, productId]
+      );
+      const stockBefore = balanceResult.rows.length > 0 ? Number(balanceResult.rows[0].stock_before) : 0;
+      const stockAfter = Math.max(0, stockBefore + unitDelta);
+
       await client.query(
         `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
          VALUES ($1, $2, GREATEST(0, $3), $4, NOW())
@@ -370,6 +381,14 @@ export async function applyBulkDeductions(params: {
            last_ledger_id = $4,
            updated_at = NOW()`,
         [storeId, productId, unitDelta, invLedgerId]
+      );
+
+      // POS-INV-002: Insert ledger entry for bulk deduction
+      await client.query(
+        `INSERT INTO inventory.inventory_ledger
+           (id, store_id, product_id, delta_qty, transaction_type, reference_type, stock_before, stock_after, notes, created_at)
+         VALUES ($1, $2, $3, $4, 'bulk_sale', 'sale', $5, $6, $7, NOW())`,
+        [invLedgerId, storeId, productId, unitDelta, stockBefore, stockAfter, '[source=bulk_deduction] bulk sale deduction']
       );
     }
   }
