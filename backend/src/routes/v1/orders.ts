@@ -3,6 +3,7 @@
 // GO-LIVE: Uses requireDeviceToken middleware for POS device authentication
 
 import { Router, Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
 
@@ -20,6 +21,253 @@ function getStoreIdFromDevice(req: Request): string {
 // =============================================================================
 // PURCHASE ORDER ENDPOINTS
 // =============================================================================
+
+/**
+ * POST /api/v1/orders/stores/:storeId/orders
+ * SUP-POS-001: Create a new purchase order.
+ * GO-LIVE: Requires device token authentication
+ */
+ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreIdFromDevice(req);
+  const { supplierId, orderType, items, storeNotes, deliveryAddress, expectedDeliveryDate } = req.body || {};
+
+  // --- Input validation ---
+  if (!supplierId || typeof supplierId !== "string") {
+    return res.status(400).json({ success: false, error: "invalid_supplier", message: "supplierId is required" });
+  }
+  if (!orderType || !["manual", "reorder"].includes(orderType)) {
+    return res.status(400).json({ success: false, error: "invalid_order_type", message: "orderType must be 'manual' or 'reorder'" });
+  }
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, error: "invalid_items", message: "items array is required and must not be empty" });
+  }
+  for (const item of items) {
+    if (!item.supplierProductId || typeof item.supplierProductId !== "string") {
+      return res.status(400).json({ success: false, error: "invalid_item", message: "Each item must have supplierProductId" });
+    }
+    if (typeof item.quantity !== "number" || item.quantity <= 0) {
+      return res.status(400).json({ success: false, error: "invalid_item", message: "Each item must have quantity > 0" });
+    }
+    if (typeof item.unitPrice !== "number" || item.unitPrice <= 0) {
+      return res.status(400).json({ success: false, error: "invalid_item", message: "Each item must have unitPrice > 0" });
+    }
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // 1. Verify supplier exists and is verified
+    const supplierResult = await client.query(
+      `SELECT id, name, business_name, trade_name, status FROM supplier.suppliers WHERE id = $1`,
+      [supplierId]
+    );
+    if (supplierResult.rows.length === 0 || supplierResult.rows[0].status !== "verified") {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ success: false, error: "invalid_supplier", message: "Supplier not found or not verified" });
+    }
+    const supplier = supplierResult.rows[0];
+    const supplierName = supplier.business_name || supplier.trade_name || supplier.name || "Unknown Supplier";
+
+    // 2. Verify supplier is linked to this store
+    const linkResult = await client.query(
+      `SELECT id FROM supplier.supplier_store_links WHERE supplier_id = $1 AND store_id = $2 AND status = 'active'`,
+      [supplierId, storeId]
+    );
+    if (linkResult.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ success: false, error: "supplier_not_linked", message: "Supplier is not linked to this store" });
+    }
+
+    // 3. Validate each item against catalog
+    let totalAmount = 0;
+    const validatedItems: Array<{
+      supplierProductId: string;
+      productId: string | null;
+      quantity: number;
+      unitPrice: number;
+      totalPrice: number;
+      productName: string;
+      barcode: string | null;
+    }> = [];
+
+    for (const item of items) {
+      const productResult = await client.query(
+        `SELECT sp.id, sp.supplier_id, sp.name, sp.barcode, sp.moq, sp.approval_status,
+                spm.product_id
+         FROM catalog.supplier_products sp
+         LEFT JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
+         WHERE sp.id = $1`,
+        [item.supplierProductId]
+      );
+
+      if (productResult.rows.length === 0) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false, error: "invalid_product",
+          message: `Supplier product not found: ${item.supplierProductId}`,
+        });
+      }
+
+      const product = productResult.rows[0];
+
+      if (product.supplier_id !== supplierId) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false, error: "invalid_product",
+          message: `Product ${item.supplierProductId} does not belong to supplier ${supplierId}`,
+        });
+      }
+
+      if (product.approval_status !== "approved") {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false, error: "product_not_approved",
+          message: `Product ${item.supplierProductId} is not approved`,
+        });
+      }
+
+      const moq = product.moq || 1;
+      if (item.quantity < moq) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false, error: "below_moq",
+          message: `Quantity ${item.quantity} is below MOQ ${moq}`,
+          details: { supplierProductId: item.supplierProductId, moq, requested: item.quantity },
+        });
+      }
+
+      const lineTotal = item.quantity * item.unitPrice;
+      totalAmount += lineTotal;
+
+      validatedItems.push({
+        supplierProductId: item.supplierProductId,
+        productId: product.product_id || null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: lineTotal,
+        productName: product.name,
+        barcode: product.barcode || null,
+      });
+    }
+
+    // 4. Generate order number
+    const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+    const shortId = randomUUID().slice(0, 6).toUpperCase();
+    const orderNumber = `PO-${dateStr}-${shortId}`;
+
+    // 5. Insert purchase order
+    const orderId = randomUUID();
+    const orderResult = await client.query(
+      `INSERT INTO orders.purchase_orders (
+        id, order_number, store_id, supplier_id, order_type, status,
+        total_amount, item_count, store_notes, delivery_address,
+        expected_delivery_date, created_by_user_id
+      ) VALUES ($1, $2, $3, $4, $5, 'draft', $6, $7, $8, $9, $10, NULL)
+      RETURNING
+        id,
+        order_number as "orderNumber",
+        store_id as "storeId",
+        supplier_id as "supplierId",
+        order_type as "orderType",
+        status,
+        total_amount as "totalAmount",
+        item_count as "itemCount",
+        store_notes as "storeNotes",
+        delivery_address as "deliveryAddress",
+        expected_delivery_date as "expectedDeliveryDate",
+        created_at as "createdAt",
+        updated_at as "updatedAt"`,
+      [
+        orderId, orderNumber, storeId, supplierId, orderType,
+        totalAmount, validatedItems.length,
+        storeNotes || null, deliveryAddress || null,
+        expectedDeliveryDate || null,
+      ]
+    );
+
+    const order = orderResult.rows[0];
+
+    // 6. Insert order items
+    const insertedItems: Array<Record<string, unknown>> = [];
+    for (const item of validatedItems) {
+      const itemId = randomUUID();
+      const itemResult = await client.query(
+        `INSERT INTO orders.purchase_order_items (
+          id, purchase_order_id, supplier_product_id, product_id,
+          ordered_quantity, received_quantity, unit_price, total_price, status
+        ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'pending')
+        RETURNING
+          id,
+          purchase_order_id as "orderId",
+          supplier_product_id as "supplierProductId",
+          product_id as "productId",
+          ordered_quantity as "orderedQuantity",
+          received_quantity as "receivedQuantity",
+          unit_price as "unitPrice",
+          total_price as "totalPrice",
+          status,
+          notes`,
+        [itemId, orderId, item.supplierProductId, item.productId, item.quantity, item.unitPrice, item.totalPrice]
+      );
+
+      insertedItems.push({
+        ...itemResult.rows[0],
+        productName: item.productName,
+        barcode: item.barcode,
+      });
+    }
+
+    // 7. Log creation event
+    try {
+      await client.query(
+        `INSERT INTO orders.order_events (purchase_order_id, event_type, from_status, to_status, actor_type, metadata)
+         VALUES ($1, 'created', NULL, 'draft', 'system', $2)`,
+        [orderId, JSON.stringify({ orderType, itemCount: validatedItems.length })]
+      );
+    } catch (eventErr: any) {
+      console.warn("[Orders] Failed to log creation event:", eventErr.message);
+    }
+
+    await client.query("COMMIT");
+
+    console.log(`[SUP-POS-001] Order created: ${orderNumber}, storeId=${storeId}, supplierId=${supplierId}, items=${validatedItems.length}, total=${totalAmount}`);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        ...order,
+        supplierName,
+        supplierNotes: null,
+        actualDeliveryDate: null,
+        trackingNumber: null,
+        carrier: null,
+        createdByUserId: null,
+        items: insertedItems,
+      },
+    });
+  } catch (error: any) {
+    await client.query("ROLLBACK");
+    console.error("[SUP-POS-001] Create order error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.status(400).json({
+        success: false,
+        error: "Order system not initialized",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: "Failed to create order",
+    });
+  } finally {
+    client.release();
+  }
+});
 
 /**
  * GET /api/v1/orders/stores/:storeId/orders
@@ -657,8 +905,6 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/payment-options", requireDevi
 // =============================================================================
 // SM-017: BUY UPI Payment API
 // =============================================================================
-
-import { randomUUID } from "crypto";
 
 /**
  * Generate UPI deep link for supplier payment

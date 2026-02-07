@@ -375,8 +375,20 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
         sp.barcode,
         sp.supplier_sku AS "supplierSku",
         sp.purchase_price AS "supplierPrice",
-        sp.purchase_price + COALESCE(sp.supermandi_margin_minor, 0) AS "retailerPrice",
-        COALESCE(sp.supermandi_margin_minor, 0) AS margin,
+        sp.purchase_price + CASE
+          WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
+            THEN sp.supermandi_margin_minor
+          WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
+            THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
+          ELSE 0
+        END AS "retailerPrice",
+        CASE
+          WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
+            THEN sp.supermandi_margin_minor
+          WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
+            THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
+          ELSE 0
+        END AS margin,
         COALESCE(sp.margin_percent, 0) AS "marginPercent",
         s.business_name AS "supplierName",
         s.id AS "supplierId",
