@@ -58,6 +58,8 @@ import {
   type DocumentRecord
 } from "./api/documents";
 import { QRCodeSVG } from "qrcode.react";
+// RO-007: Registration events visibility
+import { fetchRegistrationEvents, type RegistrationEvent, type RegistrationEventsResponse } from "./api/registrationEvents";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -65,7 +67,7 @@ import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
 // DOCS-001: Added "documents" tab for document management
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -787,6 +789,15 @@ export default function App() {
   }>({});
   const auditLogsInFlightRef = useRef(false);
 
+  // RO-007: Registration events state
+  const [regEvents, setRegEvents] = useState<RegistrationEvent[]>([]);
+  const [regEventsTotal, setRegEventsTotal] = useState<number>(0);
+  const [regEventsLoading, setRegEventsLoading] = useState<boolean>(false);
+  const [regEventsError, setRegEventsError] = useState<string>("");
+  const [regEventsPage, setRegEventsPage] = useState<number>(0);
+  const [regEventsSourceFilter, setRegEventsSourceFilter] = useState<string>("");
+  const [regEventsOutcomeFilter, setRegEventsOutcomeFilter] = useState<string>("");
+
   // DOCS-001: Document management state
   const [pendingDocuments, setPendingDocuments] = useState<DocumentRecord[]>([]);
   const [pendingDocsTotal, setPendingDocsTotal] = useState<number>(0);
@@ -1293,6 +1304,26 @@ export default function App() {
     }
   }
 
+  // RO-007: Fetch registration events
+  async function refreshRegEvents() {
+    setRegEventsLoading(true);
+    setRegEventsError("");
+    try {
+      const res = await fetchRegistrationEvents({
+        limit: 50,
+        offset: regEventsPage * 50,
+        source: regEventsSourceFilter || undefined,
+        outcome: regEventsOutcomeFilter || undefined,
+      });
+      setRegEvents(res.events);
+      setRegEventsTotal(res.pagination.total);
+    } catch (e: any) {
+      setRegEventsError(e?.message ? String(e.message) : "Failed to fetch registration events");
+    } finally {
+      setRegEventsLoading(false);
+    }
+  }
+
   // DOCS-001: Fetch pending documents
   async function refreshDocuments() {
     if (documentsInFlightRef.current) return;
@@ -1365,6 +1396,7 @@ export default function App() {
     const shouldRefreshAi = tab === "ai";
     const shouldRefreshAudit = tab === "audit"; // GO-LIVE-011
     const shouldRefreshDocuments = tab === "documents"; // DOCS-001
+    const shouldRefreshRegEvents = tab === "registrations"; // RO-007
 
     refreshHealth();
     if (shouldRefreshEvents) refreshEvents();
@@ -1380,6 +1412,7 @@ export default function App() {
     }
     if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
     if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
+    if (shouldRefreshRegEvents) refreshRegEvents(); // RO-007
 
     // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
     const id = setInterval(() => {
@@ -1421,6 +1454,13 @@ export default function App() {
       refreshDocuments();
     }
   }, [documentsPage, documentsEntityFilter]);
+
+  // RO-007: Refresh registration events when page or filter changes
+  useEffect(() => {
+    if (tab === "registrations") {
+      refreshRegEvents();
+    }
+  }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter]);
 
   // ISSUE-MICRO-059: Reset audit page to 0 when filter changes
   useEffect(() => {
@@ -2102,6 +2142,10 @@ export default function App() {
         {/* GO-LIVE-011: Audit logs tab */}
         <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>
           Audit Logs
+        </button>
+        {/* RO-007: Registration events tab */}
+        <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>
+          Registrations
         </button>
 
         <div className="tabsRight muted">
@@ -4385,6 +4429,137 @@ export default function App() {
                   <tr>
                     <td colSpan={7} style={{ textAlign: "center", color: "#888", padding: 24 }}>
                       No audit logs found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* RO-007: Registration Events Tab */}
+      {tab === "registrations" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">Registration Events</div>
+            <div className="muted">Store registrations across all surfaces ({regEventsTotal} total)</div>
+          </div>
+
+          <div className="tableWrap">
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
+              <button onClick={() => refreshRegEvents()} disabled={regEventsLoading}>
+                {regEventsLoading ? "Loading..." : "Refresh"}
+              </button>
+
+              <select
+                value={regEventsSourceFilter}
+                onChange={(e) => { setRegEventsSourceFilter(e.target.value); setRegEventsPage(0); }}
+                style={{ padding: "6px 10px" }}
+              >
+                <option value="">All Sources</option>
+                <option value="PORTAL">Portal</option>
+                <option value="POS_DEVICE">POS Device</option>
+                <option value="POS_MOBILE">POS Mobile</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+
+              <select
+                value={regEventsOutcomeFilter}
+                onChange={(e) => { setRegEventsOutcomeFilter(e.target.value); setRegEventsPage(0); }}
+                style={{ padding: "6px 10px" }}
+              >
+                <option value="">All Outcomes</option>
+                <option value="SUCCESS">Success</option>
+                <option value="IDEMPOTENT">Idempotent</option>
+                <option value="BLOCKED">Blocked</option>
+                <option value="ERROR">Error</option>
+              </select>
+
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  disabled={regEventsPage === 0}
+                  onClick={() => setRegEventsPage(prev => Math.max(0, prev - 1))}
+                >
+                  &larr; Prev
+                </button>
+                <span className="muted">Page {regEventsPage + 1} of {Math.max(1, Math.ceil(regEventsTotal / 50))}</span>
+                <button
+                  disabled={(regEventsPage + 1) * 50 >= regEventsTotal}
+                  onClick={() => setRegEventsPage(prev => prev + 1)}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+
+            {regEventsError && <div className="errorText" style={{ marginBottom: 8 }}>{regEventsError}</div>}
+
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Source</th>
+                  <th>Outcome</th>
+                  <th>Phone</th>
+                  <th>Business Name</th>
+                  <th>Store</th>
+                  <th>GSTIN</th>
+                  <th>IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                {regEvents.map((evt) => (
+                  <tr key={evt.id}>
+                    <td className="mono" style={{ fontSize: 11, whiteSpace: "nowrap" }}>
+                      {new Date(evt.createdAt).toLocaleString()}
+                    </td>
+                    <td>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: evt.source === "PORTAL" ? "#eff6ff" : evt.source === "POS_MOBILE" ? "#ecfdf5" : "#f5f3ff",
+                        color: evt.source === "PORTAL" ? "#1d4ed8" : evt.source === "POS_MOBILE" ? "#16a34a" : "#7c3aed",
+                      }}>
+                        {evt.source}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 600,
+                        background: evt.outcome === "SUCCESS" ? "#dcfce7" : evt.outcome === "IDEMPOTENT" ? "#fef9c3" : evt.outcome === "ERROR" ? "#fecaca" : "#fee2e2",
+                        color: evt.outcome === "SUCCESS" ? "#166534" : evt.outcome === "IDEMPOTENT" ? "#854d0e" : "#991b1b",
+                      }}>
+                        {evt.outcome}
+                      </span>
+                    </td>
+                    <td className="mono" style={{ fontSize: 12 }}>{evt.phone}</td>
+                    <td>{evt.businessName}</td>
+                    <td>
+                      {evt.storeName ? (
+                        <span>
+                          {evt.storeName}
+                          {evt.storeCode && <span className="muted" style={{ fontSize: 11, marginLeft: 4 }}>({evt.storeCode})</span>}
+                        </span>
+                      ) : (
+                        <span className="muted">-</span>
+                      )}
+                    </td>
+                    <td className="mono" style={{ fontSize: 11 }}>{evt.gstin || "-"}</td>
+                    <td className="mono" style={{ fontSize: 11 }}>{evt.ipAddress || "-"}</td>
+                  </tr>
+                ))}
+                {regEvents.length === 0 && !regEventsLoading && (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: "center", color: "#888", padding: 24 }}>
+                      No registration events found
                     </td>
                   </tr>
                 )}

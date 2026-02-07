@@ -56,6 +56,7 @@ import { supplierRouter } from "./supplier";  // SM-005, SM-006, SM-007: Supplie
 import { voiceRouter } from "./pos/voice";  // GO-LIVE: Voice order with OpenAI
 import { documentsRouter } from "./documents";  // DOCS-001: Unified document storage
 import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin document management
+import { adminRegistrationEventsRouter } from "./admin/registrationEvents";  // RO-007: Registration events
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
 import { retailerMeRouter } from "./retailer/me";  // RO-005: Cross-surface login linking
@@ -117,6 +118,7 @@ v1Router.use("/admin", adminSettingsRouter);
 v1Router.use("/admin", adminAuditRouter);  // GL-CRIT-0049: Audit log fetch endpoint
 v1Router.use("/admin", adminGstCreditsRouter);  // GO-LIVE-097: GST input credits
 v1Router.use("/admin/documents", adminDocumentsRouter);  // DOCS-001: Admin document management
+v1Router.use("/admin", adminRegistrationEventsRouter);  // RO-007: Registration events visibility
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
