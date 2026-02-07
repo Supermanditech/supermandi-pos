@@ -41,6 +41,18 @@ import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
 import { submitStockIn, submitStockInDemo, type StockInPayload } from "../services/api/stockInApi";
 
+// POS-BUY-001: Live supplier catalog imports
+import {
+  getBuyCatalog,
+  buyBarcodeSearch,
+  getPreferredOrBestSupplier,
+  type CatalogProduct,
+  type CatalogSupplier,
+} from "../services/api/catalogApi";
+import { getDeviceStoreId } from "../services/deviceSession";
+import { usePurchaseCartStore } from "../stores/purchaseCartStore";
+import { CatalogProductCard } from "../components/buy/CatalogProductCard";
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -57,18 +69,8 @@ interface QuickPurchaseItem {
   isNew: boolean;
 }
 
-interface SKUItem {
-  id: string;
-  sku: string;
-  productName: string;
-  packSize: string;
-  price: number;
-  moq: number;
-  supplierName: string;
-  photoUrl?: string;
-  inStock: boolean;
-}
-
+// POS-BUY-001: SKUItem and CartItem types replaced by CatalogProduct + PurchaseCartItem
+// Kept CartItem for Quick Purchase local cart only
 interface CartItem {
   skuId: string;
   sku: string;
@@ -130,8 +132,16 @@ export default function PurchaseScreen({
   const [quickItems, setQuickItems] = useState<QuickPurchaseItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Live Suppliers state
+  // POS-BUY-001: Live Suppliers catalog state
   const [searchQuery, setSearchQuery] = useState("");
+  const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [catalogHasMore, setCatalogHasMore] = useState(false);
+  const purchaseCart = usePurchaseCartStore();
+
+  // Legacy local cart state (kept for backward compat with Quick Purchase cart actions)
   const [cart, setCart] = useState<CartItem[]>([]);
 
   // Segment state: null = 50/50 view, "quick" or "suppliers" = expanded
@@ -230,9 +240,113 @@ export default function PurchaseScreen({
     }
   }, [scannedBarcode, markUserActive, onBarcodeProcessed]);
 
-  // UI-005: Live Suppliers - only show real data, never mock
-  // GATE-000: When liveSuppliersReady is false, filteredSKUs will be empty array
-  const filteredSKUs: SKUItem[] = liveSuppliersReady ? [] : []; // TODO: Fetch from real API when enabled
+  // POS-BUY-001: Fetch live supplier catalog
+  const fetchCatalog = useCallback(async (query?: string, page = 1) => {
+    if (!liveSuppliersReady) return;
+    try {
+      setCatalogLoading(true);
+      setCatalogError(null);
+      const storeId = await getDeviceStoreId();
+      if (!storeId) {
+        setCatalogError("Store not configured");
+        return;
+      }
+      const res = await getBuyCatalog(storeId, {
+        q: query || undefined,
+        page,
+        limit: 20,
+      });
+      if (page === 1) {
+        setCatalogProducts(res.data);
+      } else {
+        setCatalogProducts((prev) => [...prev, ...res.data]);
+      }
+      setCatalogPage(page);
+      setCatalogHasMore(res.pagination.hasMore);
+    } catch (err) {
+      console.error("fetchCatalog error:", err);
+      setCatalogError("Failed to load catalog");
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, [liveSuppliersReady]);
+
+  // POS-BUY-001: Debounced search effect
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!liveSuppliersReady) return;
+    if (expandedSegment !== "suppliers") return;
+
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      fetchCatalog(searchQuery, 1);
+    }, 300);
+
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [searchQuery, liveSuppliersReady, expandedSegment, fetchCatalog]);
+
+  // POS-BUY-001: Initial catalog load when switching to suppliers mode
+  useEffect(() => {
+    if (liveSuppliersReady && expandedSegment === "suppliers" && catalogProducts.length === 0 && !catalogLoading) {
+      fetchCatalog("", 1);
+    }
+  }, [liveSuppliersReady, expandedSegment, catalogProducts.length, catalogLoading, fetchCatalog]);
+
+  // POS-BUY-001: Barcode scan → supplier product resolution
+  const handleBuyBarcodeScan = useCallback(async (barcode: string) => {
+    if (!liveSuppliersReady) return;
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) return;
+      const product = await buyBarcodeSearch(storeId, barcode);
+      if (product && product.suppliers.length > 0) {
+        const supplier = getPreferredOrBestSupplier(product);
+        if (supplier) {
+          purchaseCart.addItem({
+            supplierProductId: supplier.supplierProductId,
+            productId: product.id,
+            supplierId: supplier.supplierId,
+            supplierName: supplier.supplierName,
+            productName: product.name,
+            barcode: product.primaryBarcode || barcode,
+            unitPrice: supplier.purchasePrice,
+            mrp: supplier.mrp,
+            moq: supplier.moq,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("buyBarcodeSearch error:", err);
+    }
+  }, [liveSuppliersReady, purchaseCart]);
+
+  // POS-BUY-001: Handle catalog product tap → add best supplier to purchase cart
+  const handleCatalogProductPress = useCallback((product: CatalogProduct) => {
+    const supplier = getPreferredOrBestSupplier(product);
+    if (!supplier) return;
+
+    purchaseCart.addItem({
+      supplierProductId: supplier.supplierProductId,
+      productId: product.id,
+      supplierId: supplier.supplierId,
+      supplierName: supplier.supplierName,
+      productName: product.name,
+      barcode: product.primaryBarcode,
+      unitPrice: supplier.purchasePrice,
+      mrp: supplier.mrp,
+      moq: supplier.moq,
+    });
+  }, [purchaseCart]);
+
+  // POS-BUY-001: Load more pages
+  const handleCatalogLoadMore = useCallback(() => {
+    if (catalogLoading || !catalogHasMore) return;
+    fetchCatalog(searchQuery, catalogPage + 1);
+  }, [catalogLoading, catalogHasMore, searchQuery, catalogPage, fetchCatalog]);
+
+  const purchaseCartTotals = purchaseCart.getTotals();
 
   // =============================================================================
   // QUICK PURCHASE HANDLERS
@@ -313,32 +427,7 @@ export default function PurchaseScreen({
 
   const quickTotal = quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0);
 
-  // =============================================================================
-  // LIVE SUPPLIERS HANDLERS
-  // =============================================================================
-
-  const addToCart = useCallback((sku: SKUItem) => {
-    markUserActive();
-    setCart((prev) => {
-      const existing = prev.find((c) => c.skuId === sku.id);
-      if (existing) {
-        return prev.map((c) =>
-          c.skuId === sku.id ? { ...c, quantity: c.quantity + 1 } : c
-        );
-      }
-      return [...prev, {
-        skuId: sku.id,
-        sku: sku.sku,
-        productName: sku.productName,
-        quantity: 1,
-        price: sku.price,
-        supplierName: sku.supplierName,
-      }];
-    });
-  }, [markUserActive]);
-
-  const cartTotal = cart.reduce((sum, c) => sum + c.quantity * c.price, 0);
-  const cartQty = cart.reduce((sum, c) => sum + c.quantity, 0);
+  // POS-BUY-001: Legacy addToCart/cartTotal/cartQty removed — replaced by purchaseCartStore
 
   // =============================================================================
   // RENDER QUICK PURCHASE
@@ -398,46 +487,7 @@ export default function PurchaseScreen({
     </View>
   ), [removeQuickItem, updateQuickItem]);
 
-  // =============================================================================
-  // RENDER SKU GRID
-  // =============================================================================
-
-  const renderSKU = useCallback(({ item }: { item: SKUItem }) => {
-    const inCart = cart.find((c) => c.skuId === item.id);
-    return (
-      <Pressable
-        style={[styles.skuCard, !item.inStock && styles.skuCardDisabled]}
-        onPress={() => item.inStock && addToCart(item)}
-        disabled={!item.inStock}
-      >
-        {/* Photo placeholder */}
-        <View style={styles.skuPhoto}>
-          <MaterialCommunityIcons
-            name="camera-plus"
-            size={20}
-            color={theme.colors.textTertiary}
-          />
-        </View>
-        {/* Details */}
-        <Text style={styles.skuName} numberOfLines={2}>{item.productName}</Text>
-        <Text style={styles.skuMeta}>{item.packSize}</Text>
-        <Text style={styles.skuPrice}>{formatMoney(item.price)}</Text>
-        <Text style={styles.skuMoq}>MOQ {item.moq}</Text>
-        {/* Cart badge */}
-        {inCart && (
-          <View style={styles.cartBadge}>
-            <Text style={styles.cartBadgeText}>{inCart.quantity}</Text>
-          </View>
-        )}
-        {/* Out of stock overlay */}
-        {!item.inStock && (
-          <View style={styles.outOfStockOverlay}>
-            <Text style={styles.outOfStockText}>Out</Text>
-          </View>
-        )}
-      </Pressable>
-    );
-  }, [addToCart, cart]);
+  // POS-BUY-001: renderSKU removed — replaced by CatalogProductCard in FlatList
 
   // =============================================================================
   // RENDER
@@ -607,9 +657,8 @@ export default function PurchaseScreen({
           </View>
         </View>
       ) : (
-        // Live Suppliers Content - SKU Grid directly (no separate search bar)
+        // POS-BUY-001: Live Suppliers Content — real catalog
         <View style={styles.suppliersContent}>
-          {/* GATE-000: Empty state when Live Suppliers API not available */}
           {!liveSuppliersReady ? (
             <View style={styles.emptyStateContainer}>
               {isCheckingLiveSuppliers ? (
@@ -644,7 +693,16 @@ export default function PurchaseScreen({
                 </>
               )}
             </View>
-          ) : filteredSKUs.length === 0 ? (
+          ) : catalogError ? (
+            <View style={styles.emptyStateContainer}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={48} color={theme.colors.error} />
+              <Text style={styles.emptyStateTitle}>{catalogError}</Text>
+              <Pressable style={styles.retryButton} onPress={() => fetchCatalog(searchQuery, 1)}>
+                <MaterialCommunityIcons name="refresh" size={16} color={theme.colors.primary} />
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </Pressable>
+            </View>
+          ) : catalogProducts.length === 0 && !catalogLoading ? (
             <View style={styles.emptyStateContainer}>
               <MaterialCommunityIcons
                 name="magnify"
@@ -658,27 +716,47 @@ export default function PurchaseScreen({
             </View>
           ) : (
             <>
-              {/* SKU Grid */}
+              {/* POS-BUY-001: Catalog product grid */}
               <FlatList
-                key={`suppliers-grid-${NUM_COLUMNS}`}
-                data={filteredSKUs}
-                renderItem={renderSKU}
+                key="catalog-grid-2col"
+                data={catalogProducts}
+                renderItem={({ item }) => (
+                  <CatalogProductCard
+                    product={item}
+                    onPress={handleCatalogProductPress}
+                    cartQuantity={
+                      purchaseCart.items.filter((ci) => ci.productId === item.id)
+                        .reduce((sum, ci) => sum + ci.quantity, 0)
+                    }
+                  />
+                )}
                 keyExtractor={(item) => item.id}
-                numColumns={NUM_COLUMNS}
-                columnWrapperStyle={styles.skuRow}
-                contentContainerStyle={[styles.skuGrid, { paddingBottom: insets.bottom + (cartQty > 0 ? 90 : 20) }]}
+                numColumns={2}
+                contentContainerStyle={[
+                  styles.skuGrid,
+                  { paddingBottom: insets.bottom + (purchaseCartTotals.itemCount > 0 ? 90 : 20) },
+                ]}
                 showsVerticalScrollIndicator={false}
+                onEndReached={handleCatalogLoadMore}
+                onEndReachedThreshold={0.3}
+                ListFooterComponent={
+                  catalogLoading ? (
+                    <ActivityIndicator style={{ padding: 16 }} color={theme.colors.primary} />
+                  ) : null
+                }
               />
 
-              {/* Cart Action Bar */}
-              {cartQty > 0 && (
+              {/* POS-BUY-001: Purchase cart action bar */}
+              {purchaseCartTotals.itemCount > 0 && (
                 <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
                   <View style={styles.actionSummary}>
-                    <Text style={styles.actionText}>{cartQty} items</Text>
-                    <Text style={styles.actionTotal}>{formatMoney(cartTotal)}</Text>
+                    <Text style={styles.actionText}>
+                      {purchaseCartTotals.itemCount} items · {purchaseCartTotals.supplierCount} suppliers
+                    </Text>
+                    <Text style={styles.actionTotal}>{formatMoney(purchaseCartTotals.grandTotal)}</Text>
                   </View>
                   <Pressable style={styles.actionBtn}>
-                    <Text style={styles.actionBtnText}>Place Order</Text>
+                    <Text style={styles.actionBtnText}>Review Order</Text>
                   </Pressable>
                 </View>
               )}
