@@ -135,6 +135,8 @@ export interface CreateOrderParams {
   storeNotes?: string;
   deliveryAddress?: string;
   expectedDeliveryDate?: string;
+  // POS-BUY-004: Allow creating orders as draft
+  status?: "draft" | "submitted";
 }
 
 export interface CreateOrderResponse {

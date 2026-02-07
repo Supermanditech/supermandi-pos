@@ -33,7 +33,10 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
   const storeId = getStoreIdFromDevice(req);
-  const { supplierId, orderType, items, storeNotes, deliveryAddress, expectedDeliveryDate } = req.body || {};
+  const { supplierId, orderType, items, storeNotes, deliveryAddress, expectedDeliveryDate, status: requestedStatus } = req.body || {};
+
+  // POS-BUY-004: Allow "draft" or "submitted" status (default: submitted)
+  const orderStatus = requestedStatus === "draft" ? "draft" : "submitted";
 
   // --- Input validation ---
   if (!supplierId || typeof supplierId !== "string") {
@@ -167,7 +170,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
         expected_delivery_date, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, 'submitted', $6, $7, $8, $9, $10, NULL)
+      ) VALUES ($1, $2, $3, $4, $5, $11, $6, $7, $8, $9, $10, NULL)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -187,6 +190,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         totalAmount, validatedItems.length,
         storeNotes || null, deliveryAddress || null,
         expectedDeliveryDate || null,
+        orderStatus,
       ]
     );
 

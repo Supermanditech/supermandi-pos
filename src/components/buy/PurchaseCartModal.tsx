@@ -478,6 +478,45 @@ export function PurchaseCartModal({
     );
   }, [allOrdersValid, supplierGroups, totals, clear, onAllOrdersPlaced, onClose]);
 
+  // POS-BUY-004: Save all orders as drafts
+  const [savingDraft, setSavingDraft] = useState(false);
+  const handleSaveDraft = useCallback(async () => {
+    if (supplierGroups.length === 0) return;
+
+    setSavingDraft(true);
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) {
+        throw new Error("Store not found");
+      }
+
+      for (const group of supplierGroups) {
+        await orderApi.createOrder(storeId, {
+          supplierId: group.supplierId,
+          orderType: "manual",
+          status: "draft",
+          items: group.items.map((item) => ({
+            supplierProductId: item.supplierProductId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+        });
+      }
+
+      clear();
+      Alert.alert(
+        "Draft Saved",
+        `${supplierGroups.length} draft order(s) saved. You can edit and submit them from Order History.`,
+        [{ text: "OK", onPress: onClose }]
+      );
+    } catch (error) {
+      console.error("[PurchaseCartModal] Failed to save draft:", error);
+      Alert.alert("Save Failed", "Could not save draft. Please try again.", [{ text: "OK" }]);
+    } finally {
+      setSavingDraft(false);
+    }
+  }, [supplierGroups, clear, onClose]);
+
   // Handle clear cart
   const handleClearCart = useCallback(() => {
     Alert.alert(
@@ -596,29 +635,51 @@ export function PurchaseCartModal({
                 </Text>
               </View>
 
-              <Pressable
-                style={[
-                  styles.placeAllButton,
-                  (!allOrdersValid || placingAllOrders) && styles.placeAllButtonDisabled,
-                ]}
-                onPress={handlePlaceAllOrders}
-                disabled={!allOrdersValid || placingAllOrders}
-              >
-                {placingAllOrders ? (
-                  <ActivityIndicator size="small" color={theme.colors.textInverse} />
-                ) : (
-                  <>
-                    <MaterialCommunityIcons
-                      name="send-check"
-                      size={20}
-                      color={theme.colors.textInverse}
-                    />
-                    <Text style={styles.placeAllText}>
-                      Place All Orders ({totals.supplierCount})
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+              <View style={styles.footerButtons}>
+                {/* POS-BUY-004: Save Draft button */}
+                <Pressable
+                  style={[styles.saveDraftButton, savingDraft && styles.placeAllButtonDisabled]}
+                  onPress={handleSaveDraft}
+                  disabled={supplierGroups.length === 0 || savingDraft}
+                >
+                  {savingDraft ? (
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons
+                        name="content-save-outline"
+                        size={18}
+                        color={theme.colors.primary}
+                      />
+                      <Text style={styles.saveDraftText}>Save Draft</Text>
+                    </>
+                  )}
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.placeAllButton,
+                    (!allOrdersValid || placingAllOrders) && styles.placeAllButtonDisabled,
+                  ]}
+                  onPress={handlePlaceAllOrders}
+                  disabled={!allOrdersValid || placingAllOrders}
+                >
+                  {placingAllOrders ? (
+                    <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons
+                        name="send-check"
+                        size={20}
+                        color={theme.colors.textInverse}
+                      />
+                      <Text style={styles.placeAllText}>
+                        Place All ({totals.supplierCount})
+                      </Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
             </View>
           </>
         )}
@@ -793,6 +854,26 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: theme.colors.textInverse,
+  },
+  footerButtons: {
+    flexDirection: "row" as const,
+    gap: theme.spacing.sm,
+  },
+  saveDraftButton: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.surface,
+    gap: theme.spacing.xs,
+  },
+  saveDraftText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: theme.colors.primary,
   },
 });
 
