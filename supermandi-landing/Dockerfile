@@ -7,6 +7,7 @@ FROM nginx:alpine
 COPY index.html /usr/share/nginx/html/index.html
 COPY privacy.html /usr/share/nginx/html/privacy.html
 COPY terms.html /usr/share/nginx/html/terms.html
+COPY pos.html /usr/share/nginx/html/pos.html
 
 # Add health check file
 RUN echo "OK" > /usr/share/nginx/html/health.txt
@@ -22,6 +23,9 @@ RUN printf 'server {\n\
     }\n\
     location = /terms {\n\
         try_files /terms.html =404;\n\
+    }\n\
+    location = /pos {\n\
+        try_files /pos.html =404;\n\
     }\n\
     location / {\n\
         try_files $uri $uri/ /index.html;\n\
