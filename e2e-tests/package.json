@@ -5,6 +5,7 @@
   "scripts": {
     "test": "playwright test",
     "test:onboarding": "playwright test --grep \"@onboarding|@config\"",
+    "test:sync": "playwright test --grep \"@retailer-pos-sync\"",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
