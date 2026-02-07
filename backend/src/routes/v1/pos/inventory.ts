@@ -313,17 +313,13 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
                                  transactionType;
 
       // Insert single ledger entry
-      // AUD-074-A FIX: Removed non-existent 'source' column from INSERT
-      // Source info (POS_INVENTORY) is embedded in notes field for traceability
+      // POS-INV-003: Use proper source column instead of [source=X] notes pattern
       const invLedgerId = randomUUID();
-      const sourceTrackedNotes = enrichedNotes
-        ? `[source=POS_INVENTORY] ${enrichedNotes}`
-        : '[source=POS_INVENTORY]';
       const ledgerResult = await client.query(
         `INSERT INTO inventory.inventory_ledger
          (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
-          stock_before, stock_after, unit_cost, notes)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          stock_before, stock_after, unit_cost, source, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'POS_INVENTORY', $11)
          RETURNING
            id,
            store_id as "storeId",
@@ -346,7 +342,7 @@ posInventoryRouter.post("/inventory/transactions", requireDeviceToken, async (re
           stockBalancesBefore,
           stockBalancesAfter,
           unitCost || null,
-          sourceTrackedNotes,  // ITER2-001 + AUD-074-A: Notes with supplier info and source tracking
+          enrichedNotes || null,  // POS-INV-003: Source tracked via column, notes for extra info
         ]
       );
 

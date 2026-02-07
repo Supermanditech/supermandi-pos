@@ -383,12 +383,12 @@ export async function applyBulkDeductions(params: {
         [storeId, productId, unitDelta, invLedgerId]
       );
 
-      // POS-INV-002: Insert ledger entry for bulk deduction
+      // POS-INV-002 + POS-INV-003: Insert ledger entry with proper source column
       await client.query(
         `INSERT INTO inventory.inventory_ledger
-           (id, store_id, product_id, delta_qty, transaction_type, reference_type, stock_before, stock_after, notes, created_at)
-         VALUES ($1, $2, $3, $4, 'bulk_sale', 'sale', $5, $6, $7, NOW())`,
-        [invLedgerId, storeId, productId, unitDelta, stockBefore, stockAfter, '[source=bulk_deduction] bulk sale deduction']
+           (id, store_id, product_id, delta_qty, transaction_type, reference_type, stock_before, stock_after, source, notes, created_at)
+         VALUES ($1, $2, $3, $4, 'bulk_sale', 'sale', $5, $6, 'BULK_DEDUCTION', 'bulk sale deduction', NOW())`,
+        [invLedgerId, storeId, productId, unitDelta, stockBefore, stockAfter]
       );
     }
   }
