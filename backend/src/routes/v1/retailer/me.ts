@@ -73,21 +73,27 @@ retailerMeRouter.get("/me", async (req, res) => {
       [user.id]
     );
 
+    const stores = storesResult.rows.map((row: any) => ({
+      storeId: row.store_id,
+      storeCode: row.store_code,
+      storeName: row.store_name,
+      storeStatus: row.store_status,
+      createdVia: row.created_via,
+      role: row.role,
+      isOwner: row.is_owner,
+      linkedAt: row.linked_at,
+    }));
+
+    // DR-011: Primary store = first owner store, or first linked store
+    const primaryStore = stores.find((s: any) => s.isOwner) || stores[0] || null;
+
     return res.json({
       ownerUserId: user.id,
       name: user.name,
       phone: user.phone,
       email: user.email,
-      stores: storesResult.rows.map((row: any) => ({
-        storeId: row.store_id,
-        storeCode: row.store_code,
-        storeName: row.store_name,
-        storeStatus: row.store_status,
-        createdVia: row.created_via,
-        role: row.role,
-        isOwner: row.is_owner,
-        linkedAt: row.linked_at,
-      })),
+      store: primaryStore,   // DR-011: single-store resolution
+      stores,                // Backward compatibility
     });
   } catch (err: any) {
     console.error("[retailer/me] Query failed:", err?.message);
