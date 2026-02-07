@@ -989,6 +989,7 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
 
   const client = await pool.connect();
   let created = 0;
+  let updated = 0;
   // GO-LIVE-178: Use categorized warnings for better error reporting
   const categorizedWarnings: CategorizedWarning[] = [];
 
@@ -1002,63 +1003,121 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
         const purchasePrice = safeNumber(row.purchasePrice);
         const stock = safeNumber(row.stock);
 
-        const prodResult = await client.query(
-          `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
-           VALUES ($1, $2, $3, $4, true) RETURNING id`,
-          [row.name, row.brand || null, row.unit || 'PCS', mode === 'PACKAGED' && row.barcode ? row.barcode : null]
-        );
-        const productId = prodResult.rows[0].id;
-
-        const spResult = await client.query(
-          `INSERT INTO catalog.store_products (
-            store_id, product_id, sell_price, purchase_price, product_mode, current_stock, is_active
-          ) VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
-          [storeId, productId, sellPrice, purchasePrice, mode, stock]
-        );
-        const storeProductId = spResult.rows[0].id;
+        // RET-POS-SYNC-011: Dedup — check if product already exists in store
+        let existingProductId: string | null = null;
+        let existingStoreProductId: string | null = null;
 
         if (mode === 'PACKAGED' && row.barcode) {
-          await client.query(
-            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-             VALUES ($1, $2, $3, 'retailer_digitisation')
-             ON CONFLICT (store_id, barcode) DO NOTHING`,
-            [storeId, storeProductId, row.barcode]
+          const existing = await client.query(
+            `SELECT sp.id AS store_product_id, sp.product_id
+             FROM catalog.store_product_barcodes spb
+             JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+             WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true`,
+            [storeId, row.barcode]
           );
+          if (existing.rows.length > 0) {
+            existingProductId = existing.rows[0].product_id;
+            existingStoreProductId = existing.rows[0].store_product_id;
+          }
+        } else if (mode === 'LOOSE_BULK') {
+          const existing = await client.query(
+            `SELECT sp.id AS store_product_id, sp.product_id
+             FROM catalog.store_products sp
+             JOIN catalog.products p ON p.id = sp.product_id
+             WHERE sp.store_id = $1 AND sp.is_active = true
+               AND LOWER(TRIM(p.name)) = LOWER(TRIM($2))
+               AND sp.product_mode = 'LOOSE_BULK'`,
+            [storeId, row.name]
+          );
+          if (existing.rows.length > 0) {
+            existingProductId = existing.rows[0].product_id;
+            existingStoreProductId = existing.rows[0].store_product_id;
+          }
+        }
+
+        if (existingStoreProductId && existingProductId) {
+          // RET-POS-SYNC-011: UPDATE existing product instead of creating duplicate
+          await client.query(
+            `UPDATE catalog.store_products SET
+              sell_price = $2, purchase_price = $3,
+              current_stock = $4, updated_at = NOW()
+             WHERE id = $1`,
+            [existingStoreProductId, sellPrice, purchasePrice, stock]
+          );
+          await client.query(
+            `UPDATE catalog.products SET
+              name = $2, brand = $3, unit = $4, updated_at = NOW()
+             WHERE id = $1`,
+            [existingProductId, row.name, row.brand || null, row.unit || 'PCS']
+          );
+          await client.query(
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (store_id, product_id) DO UPDATE SET
+               current_qty = EXCLUDED.current_qty, updated_at = NOW()`,
+            [storeId, existingProductId, stock]
+          );
+          updated++;
         } else {
-          const genBarcode = generateStoreBarcode(storeId);
+          // Create new product
+          const prodResult = await client.query(
+            `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
+             VALUES ($1, $2, $3, $4, true) RETURNING id`,
+            [row.name, row.brand || null, row.unit || 'PCS', mode === 'PACKAGED' && row.barcode ? row.barcode : null]
+          );
+          const productId = prodResult.rows[0].id;
+
+          const spResult = await client.query(
+            `INSERT INTO catalog.store_products (
+              store_id, product_id, sell_price, purchase_price, product_mode, current_stock, is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
+            [storeId, productId, sellPrice, purchasePrice, mode, stock]
+          );
+          const storeProductId = spResult.rows[0].id;
+
+          if (mode === 'PACKAGED' && row.barcode) {
+            await client.query(
+              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+               VALUES ($1, $2, $3, 'retailer_digitisation')
+               ON CONFLICT (store_id, barcode) DO NOTHING`,
+              [storeId, storeProductId, row.barcode]
+            );
+          } else {
+            const genBarcode = generateStoreBarcode(storeId);
+            await client.query(
+              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+               VALUES ($1, $2, $3, 'supermandi_generated')`,
+              [storeId, storeProductId, genBarcode]
+            );
+          }
+
+          // MT-7: Opening stock ledger entry + stock_balances
+          let ledgerId: string | null = null;
+          if (stock > 0) {
+            const ledgerResult = await client.query(
+              `INSERT INTO inventory.inventory_ledger (
+                store_id, product_id, delta_qty, transaction_type,
+                reference_type, stock_before, stock_after, unit_cost, source
+              ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_PASTE')
+              RETURNING id`,
+              [storeId, productId, stock, purchasePrice]
+            );
+            ledgerId = ledgerResult.rows[0]?.id ?? null;
+          }
+
+          // MT-7: Always create stock_balances for consistent POS search JOIN
           await client.query(
-            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-             VALUES ($1, $2, $3, 'supermandi_generated')`,
-            [storeId, storeProductId, genBarcode]
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (store_id, product_id) DO UPDATE SET
+               current_qty = EXCLUDED.current_qty,
+               last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+               updated_at = NOW()`,
+            [storeId, productId, stock, ledgerId]
           );
+
+          created++;
         }
-
-        // MT-7: Opening stock ledger entry + stock_balances
-        let ledgerId: string | null = null;
-        if (stock > 0) {
-          const ledgerResult = await client.query(
-            `INSERT INTO inventory.inventory_ledger (
-              store_id, product_id, delta_qty, transaction_type,
-              reference_type, stock_before, stock_after, unit_cost, source
-            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'BULK_PASTE')
-            RETURNING id`,
-            [storeId, productId, stock, purchasePrice]
-          );
-          ledgerId = ledgerResult.rows[0]?.id ?? null;
-        }
-
-        // MT-7: Always create stock_balances for consistent POS search JOIN
-        await client.query(
-          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (store_id, product_id) DO UPDATE SET
-             current_qty = EXCLUDED.current_qty,
-             last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
-             updated_at = NOW()`,
-          [storeId, productId, stock, ledgerId]
-        );
-
-        created++;
       } catch (err: any) {
         // GO-LIVE-178: Categorize errors for better diagnosis
         categorizedWarnings.push(categorizeDbError(err, row));
@@ -1068,7 +1127,7 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
     await client.query("COMMIT");
 
     // GO-LIVE-178: Enhanced response with categorized warnings
-    const skipped = validRows.length - created;
+    const skipped = validRows.length - created - updated;
     const totalWarnings = categorizedWarnings.length;
     const displayedWarnings = categorizedWarnings.slice(0, 20);
     const warningSummary = summarizeWarnings(categorizedWarnings);
@@ -1095,6 +1154,7 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
       success: true,
       data: {
         created,
+        updated,
         skipped,
         warnings: warningStrings,
         // GO-LIVE-178: Detailed failure information
@@ -1109,9 +1169,11 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
           details: displayedWarnings,
         } : undefined,
       },
-      message: skipped > 0
-        ? `Imported ${created} products. ${skipped} row(s) failed (see failureSummary for details).`
-        : `Imported ${created} products`,
+      message: updated > 0
+        ? `Imported ${created} products, updated ${updated} existing. ${skipped > 0 ? `${skipped} row(s) failed.` : ''}`
+        : skipped > 0
+          ? `Imported ${created} products. ${skipped} row(s) failed (see failureSummary for details).`
+          : `Imported ${created} products`,
     });
   } catch (error: any) {
     await client.query("ROLLBACK");
