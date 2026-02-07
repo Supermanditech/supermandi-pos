@@ -150,24 +150,12 @@ retailerRegisterRouter.post(
         gstin: data.gstin,
       });
 
-      // Handle known PG errors
+      // DR-009: Handle PG unique violations with generic message (no field leakage)
       if (err?.code === "23505") {
-        const constraint = err?.constraint ?? "";
-        if (constraint.includes("phone")) {
-          return res.status(409).json({
-            error: "PHONE_EXISTS",
-            message: "A store with this phone number already exists",
-          });
-        }
-        if (constraint.includes("gstin") || constraint.includes("gst")) {
-          return res.status(409).json({
-            error: "GSTIN_EXISTS",
-            message: "A store with this GSTIN already exists",
-          });
-        }
+        console.warn("[DR-009] Registration duplicate constraint hit:", err?.constraint);
         return res.status(409).json({
           error: "DUPLICATE_ENTRY",
-          message: "Registration conflicts with existing data",
+          message: "Registration could not be completed. An account with these details may already exist. Please try logging in instead.",
         });
       }
 

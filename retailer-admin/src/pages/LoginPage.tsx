@@ -29,15 +29,10 @@ interface OtpLoginResponse {
 }
 
 // GO-LIVE-UI-REG-004: Lookup response from backend
+// DR-009: action-only envelope (no exists boolean)
 interface LookupResponse {
-  exists: boolean;
-  type?: string;
-  application_id?: string;
-  status?: string;
-  nextStep?: string;
-  businessName?: string;
-  message?: string;
   action?: string;
+  message?: string;
 }
 
 // UI-SPEC: Stripe-level infrastructure design system
@@ -354,27 +349,21 @@ export default function LoginPage() {
         throw new Error(data.message || 'Failed to check registration status');
       }
 
-      // Handle lookup result
-      if (!data.exists) {
-        // PORTAL-AUTH-001: Show "not onboarded" state with Register CTA
+      // DR-009: Handle lookup result via action field (enumeration-safe)
+      const action = data.action;
+      if (action === 'REGISTER_REQUIRED') {
         setStep('not_onboarded');
         return;
       }
-
-      // Registration exists - check if login is allowed
-      if (data.nextStep === 'LOGIN_ALLOWED') {
-        // Can proceed with OTP
+      if (action === 'LOGIN_ALLOWED') {
         setLookupComplete(true);
-        // reCAPTCHA will be setup by useEffect
-      } else if (data.nextStep === 'PENDING_APPROVAL') {
+      } else if (action === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
-      } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
-        // BATCH-003: Stay on page, no auto-redirect - user requested explicit navigation
+      } else if (action === 'VERIFY_PHONE' || action === 'UPLOAD_DOCUMENTS' || action === 'FIX_REQUIRED') {
         setError('Your registration is incomplete. Please complete registration first, then return to login.');
-      } else if (data.nextStep === 'CONTACT_SUPPORT') {
+      } else if (action === 'CONTACT_SUPPORT') {
         setError('Your application was not approved. Please contact support for assistance.');
       } else {
-        // Unknown status - show message
         setError(data.message || 'Unable to proceed. Please contact support.');
       }
     } catch (err) {

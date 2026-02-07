@@ -134,13 +134,10 @@ router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next:
 
     if (storeUserResult.rows.length > 0) {
       // Phone has an active store user - can login directly
-      const storeUser = storeUserResult.rows[0];
+      // DR-009: No existence boolean — action-only response
       res.json({
-        exists: true,
-        type: 'store_user',
-        status: storeUser.store_status?.toUpperCase() || 'ACTIVE',
-        nextStep: 'LOGIN_ALLOWED',
-        message: 'Account found. You can proceed with OTP login.',
+        action: 'LOGIN_ALLOWED',
+        message: 'You can proceed with OTP login.',
       });
       return;
     }
@@ -156,11 +153,10 @@ router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next:
     );
 
     if (appResult.rows.length === 0) {
-      // No registration found
+      // DR-009: No existence boolean — uniform envelope
       res.json({
-        exists: false,
         action: 'REGISTER_REQUIRED',
-        message: 'No registration found for this phone number. Please register first.',
+        message: 'Please register to continue.',
       });
       return;
     }
@@ -191,37 +187,28 @@ router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next:
         nextStep = application.phone_verified ? 'UPLOAD_DOCUMENTS' : 'VERIFY_PHONE';
     }
 
-    // For expired applications, tell user to register again
+    // DR-009: Enumeration-safe — no exists boolean, no internal IDs for unauthenticated callers
     if (application.status === 'EXPIRED') {
       res.json({
-        exists: false,
         action: 'REGISTER_REQUIRED',
-        message: 'Your previous application has expired. Please register again.',
+        message: 'Please register to continue.',
       });
       return;
     }
 
-    // For active applications, allow login
     if (application.status === 'ACTIVE') {
       res.json({
-        exists: true,
-        application_id: application.id,
-        status: application.status,
-        nextStep: 'LOGIN_ALLOWED',
-        message: 'Your registration is approved. You can proceed with OTP login.',
+        action: 'LOGIN_ALLOWED',
+        message: 'You can proceed with OTP login.',
       });
       return;
     }
 
     // For pending/in-progress applications
     res.json({
-      exists: true,
-      application_id: application.id,
-      status: application.status,
-      nextStep,
-      businessName: application.business_name,
+      action: nextStep,
       message: nextStep === 'PENDING_APPROVAL'
-        ? 'Your application is under review. OTP login is not yet available.'
+        ? 'Your application is under review.'
         : 'Please complete your registration before logging in.',
     });
   } catch (error) {
@@ -270,58 +257,45 @@ router.post("/check-gstin", authRateLimiter, async (req: Request, res: Response,
       [gstinNormalized]
     );
 
+    // DR-009: Enumeration-safe — no exists boolean, no internal IDs
     if (result.rows.length === 0) {
-      // GSTIN not found - can create new application
       res.json({
-        exists: false,
         action: 'CREATE',
-        message: 'GSTIN is available for registration'
+        message: 'You can proceed with registration.',
       });
       return;
     }
 
-    const { exists_in, entity_id, entity_status, can_resume } = result.rows[0];
+    const { exists_in, entity_status, can_resume } = result.rows[0];
 
     if (exists_in === 'store') {
-      // Already an approved store
       res.json({
-        exists: true,
         action: 'LOGIN',
-        message: 'This GSTIN is already registered. Please login instead.',
-        storeId: entity_id,
+        message: 'An account with this GSTIN exists. Please login instead.',
       });
       return;
     }
 
     if (exists_in === 'application') {
       if (can_resume) {
-        // Can resume existing application
         res.json({
-          exists: true,
           action: 'RESUME',
-          message: 'An application with this GSTIN already exists. You can resume it.',
-          applicationId: entity_id,
-          applicationStatus: entity_status,
+          message: 'A registration is in progress. Please resume or login.',
         });
       } else {
-        // Application exists but can't resume (ACTIVE or EXPIRED)
         res.json({
-          exists: true,
-          action: 'LOGIN',
+          action: entity_status === 'ACTIVE' ? 'LOGIN' : 'CREATE',
           message: entity_status === 'ACTIVE'
-            ? 'This GSTIN is already approved. Please login.'
-            : 'The application for this GSTIN has expired. Please contact support.',
-          applicationId: entity_id,
-          applicationStatus: entity_status,
+            ? 'An account with this GSTIN exists. Please login instead.'
+            : 'You can proceed with registration.',
         });
       }
       return;
     }
 
-    // Fallback
     res.json({
-      exists: false,
       action: 'CREATE',
+      message: 'You can proceed with registration.',
     });
   } catch (error) {
     next(error);
