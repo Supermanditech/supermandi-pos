@@ -58,6 +58,7 @@ import { documentsRouter } from "./documents";  // DOCS-001: Unified document st
 import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin document management
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
+import { retailerMeRouter } from "./retailer/me";  // RO-005: Cross-surface login linking
 import { configStatusRouter } from "./configStatus";  // RO-009: Config status endpoint
 
 export const v1Router = Router();
@@ -124,8 +125,10 @@ v1Router.use("/documents", documentsRouter);
 v1Router.use("/auth", authRouter);
 
 // RO-001: Canonical retailer registration (public, no auth required)
+// RO-005: Cross-surface login linking (/retailer/me)
 // Must be BEFORE validateGatewayHeaders middleware
 v1Router.use("/retailer", retailerRegisterRouter);
+v1Router.use("/retailer", retailerMeRouter);
 
 // REG-AUTH-201: Retailer registration routes (legacy, public, no auth required)
 // Must be BEFORE validateGatewayHeaders middleware
