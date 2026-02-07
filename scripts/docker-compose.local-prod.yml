@@ -92,6 +92,8 @@ services:
       DB_USER: postgres
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
       REDIS_URL: redis://redis:6379
+      # BB-ADMIN-002: getRedisConfig() reads REDIS_HOST (not REDIS_URL), defaults to localhost
+      REDIS_HOST: redis
       ADMIN_TOKEN: ${ADMIN_TOKEN:-local-test-token}
       JWT_SECRET: ${JWT_SECRET:-local-test-jwt-secret-32chars-minimum-ok}
       CORS_ALLOWED_ORIGINS: "http://localhost:8081,http://localhost:8082,http://localhost:8083,http://localhost:8084"
@@ -105,6 +107,8 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-supermandi-pos}
       # DOCKER-ENV-001: Firebase SA JSON — set FIREBASE_SA_PATH in scripts/.env to enable
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      # BB-ADMIN-001: SuperAdmin email allowlist (was hardcoded, moved to env in ISSUE-MICRO-009)
+      ADMIN_EMAIL_ALLOWLIST: ${ADMIN_EMAIL_ALLOWLIST:-supermanditech@gmail.com}
     depends_on:
       postgres:
         condition: service_healthy
