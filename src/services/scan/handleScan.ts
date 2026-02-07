@@ -173,28 +173,34 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
       return false;
     }
 
-    // Single scan mode: Check if item already in cart (by barcode or id)
-    // Only check by barcode if it's a non-empty string
+    // GL-CRIT-0046: Block items with invalid or zero price
+    const safePriceMinor = typeof priceMinor === "number" && Number.isFinite(priceMinor) ? priceMinor : 0;
+
+    // POS-SELL-001: Check by productId first (stable identifier), then barcode as fallback.
+    // This ensures the same product with multiple barcodes (EAN + internal) merges
+    // into a single cart line instead of creating duplicates.
     let existingItem = null;
-    if (productBarcode && typeof productBarcode === "string" && productBarcode.trim()) {
-      existingItem = cartItems.find((item) => item.barcode === productBarcode);
-    }
-    // Fallback to id check if no barcode match and we have a valid id
-    if (!existingItem && productId) {
+    if (productId) {
       existingItem = cartItems.find((item) => item.id === productId);
+    }
+    if (!existingItem && productBarcode && typeof productBarcode === "string" && productBarcode.trim()) {
+      existingItem = cartItems.find((item) => item.barcode === productBarcode);
     }
 
     if (existingItem) {
-      // Item already in cart - don't add more quantity
-      console.log(`scan_duplicate_in_cart:${productBarcode || productId}`);
-      if (Platform.OS === "android") {
-        ToastAndroid.show(`${existingItem.name} already in cart`, ToastAndroid.SHORT);
-      }
-      return false;
+      // POS-SELL-001: Item already in cart — increment quantity via addItem (respects stock caps)
+      console.log(`scan_increment_in_cart:${productBarcode || productId}`);
+      cartState.addItem({
+        id: existingItem.id,
+        name: product.name || existingItem.name,
+        priceMinor: safePriceMinor > 0 ? safePriceMinor : existingItem.priceMinor,
+        currency: product.currency || existingItem.currency || "INR",
+        barcode: existingItem.barcode || productBarcode,
+        flags,
+        metadata: product.metadata,
+      });
+      return true;
     }
-
-    // GL-CRIT-0046: Block items with invalid or zero price
-    const safePriceMinor = typeof priceMinor === "number" && Number.isFinite(priceMinor) ? priceMinor : 0;
 
     if (safePriceMinor <= 0) {
       console.warn(`scan_invalid_price:${productBarcode || productId},price=${priceMinor}`);
