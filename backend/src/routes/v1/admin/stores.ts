@@ -123,14 +123,14 @@ adminStoresRouter.post("/stores", requirePermission("stores", "create"), adminSt
     return res.status(500).json({ error: "store_id_unavailable" });
   }
 
-  // STORECODE-002: Generate human-readable store code from store name
+  // DRX-002: Generate human-readable store code from store name
+  // No silent fallback — if generate_store_code() fails, the error is surfaced
   let storeCode: string;
   try {
     storeCode = await generateStoreCode(storeNameInput.value);
   } catch (error: any) {
-    console.error("[stores] Failed to generate store code:", error);
-    // Fallback to simple code if generator fails
-    storeCode = `ST${Date.now().toString(36).toUpperCase()}`;
+    console.error("[stores] CRITICAL: generate_store_code() failed:", error?.message);
+    return res.status(500).json({ error: "STORE_CODE_GENERATION_FAILED", message: "Could not generate store code. Database function may be missing." });
   }
 
   let result;
