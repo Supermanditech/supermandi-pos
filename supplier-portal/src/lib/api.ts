@@ -588,6 +588,7 @@ export interface DashboardStats {
   totalOrders: number;
   pendingOrders: number;
   totalRevenue: number; // in paise
+  newOrdersCount: number; // SUP-POS-007: unread orders badge count
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -903,6 +904,65 @@ export async function addOrderNote(orderId: string, input: OrderNoteInput): Prom
     method: 'POST',
     body: JSON.stringify(input),
   });
+}
+
+// SUP-POS-007: Mark orders as read (clears notification badge)
+export async function markOrdersRead(): Promise<{ success: boolean }> {
+  return apiFetch<{ success: boolean }>('/api/v1/supplier/orders/mark-read', {
+    method: 'POST',
+  });
+}
+
+// SUP-POS-008: Get single order detail with barcode, SKU, store contact
+export interface OrderDetail {
+  id: string;
+  orderNumber: string;
+  storeId: string;
+  storeName: string;
+  storeCity: string | null;
+  storePhone: string | null;
+  status: Order['status'];
+  totalAmount: number;
+  trackingNumber: string | null;
+  carrier: string | null;
+  shippedAt: string | null;
+  shipmentDate: string | null;
+  expectedDeliveryDate: string | null;
+  storeNotes: string | null;
+  items: OrderDetailItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderDetailItem {
+  id: string;
+  productId: string;
+  productName: string;
+  barcode: string | null;
+  supplierSku: string | null;
+  unit: string;
+  orderedQuantity: number;
+  receivedQuantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  status: string;
+}
+
+export async function getOrderDetail(orderId: string): Promise<OrderDetail> {
+  return apiFetch<OrderDetail>(`/api/v1/supplier/orders/${orderId}`);
+}
+
+// SUP-POS-008: Get order timeline events
+export interface OrderEvent {
+  id: string;
+  eventType: string;
+  actorType: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export async function getOrderEvents(orderId: string): Promise<OrderEvent[]> {
+  return apiFetch<OrderEvent[]>(`/api/v1/supplier/orders/${orderId}/events`);
 }
 
 // ============================================================================

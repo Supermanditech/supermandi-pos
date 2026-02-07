@@ -52,6 +52,27 @@ router.get("/dashboard/stats", requireSupplierAuth, async (req: SupplierAuthRequ
       [req.supplierId]
     );
 
+    // SUP-POS-007: Count new (unread) orders since supplier last viewed orders
+    let newOrdersCount = 0;
+    try {
+      const unreadResult = await pool.query(
+        `SELECT COUNT(DISTINCT po.id) as unread
+         FROM orders.purchase_orders po
+         JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+         JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+         WHERE sp.supplier_id = $1
+           AND po.status IN ('pending', 'confirmed')
+           AND po.created_at > COALESCE(
+             (SELECT last_viewed_at FROM supplier.supplier_order_views WHERE supplier_id = $1),
+             '1970-01-01'::timestamptz
+           )`,
+        [req.supplierId]
+      );
+      newOrdersCount = parseInt(unreadResult.rows[0]?.unread || '0');
+    } catch {
+      // Table may not exist yet — gracefully default to 0
+    }
+
     const ps = productStats.rows[0];
     const os = orderStats.rows[0];
 
@@ -67,6 +88,7 @@ router.get("/dashboard/stats", requireSupplierAuth, async (req: SupplierAuthRequ
         shippedOrders: parseInt(os.shipped_orders) || 0,
         deliveredOrders: parseInt(os.delivered_orders) || 0,
         totalRevenue: parseInt(os.total_revenue) || 0,
+        newOrdersCount,
       },
     });
   } catch (error) {

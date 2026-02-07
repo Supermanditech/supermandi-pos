@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
-import { sendVerificationEmail, verifyEmail } from '@/lib/api';
+import { sendVerificationEmail, verifyEmail, getDashboardStats, markOrdersRead } from '@/lib/api';
 // REG-AUTH-302: LIMITED MODE Banner
 import LimitedModeBanner from '@/components/LimitedModeBanner';
 
@@ -28,6 +28,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   // GL-WF-061: Logout confirmation state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // SUP-POS-007: New orders badge count
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
   // GL-WF-034: Email verification state
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -47,6 +49,23 @@ export default function DashboardLayout({
       router.push('/login');
     }
   }, [isLoading, isAuthenticated, router]);
+
+  // SUP-POS-007: Fetch new orders count for badge
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    getDashboardStats()
+      .then((stats) => setNewOrdersCount(stats.newOrdersCount || 0))
+      .catch(() => {});
+  }, [isAuthenticated]);
+
+  // SUP-POS-007: Mark orders read when visiting /orders + clear badge
+  useEffect(() => {
+    if (pathname === '/orders' && newOrdersCount > 0) {
+      markOrdersRead()
+        .then(() => setNewOrdersCount(0))
+        .catch(() => {});
+    }
+  }, [pathname, newOrdersCount]);
 
   if (isLoading) {
     return (
@@ -106,7 +125,13 @@ export default function DashboardLayout({
                 }`}
               >
                 <span className="text-lg">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {/* SUP-POS-007: New orders badge */}
+                {item.href === '/orders' && newOrdersCount > 0 && (
+                  <span className="min-w-[20px] h-5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full px-1.5">
+                    {newOrdersCount > 99 ? '99+' : newOrdersCount}
+                  </span>
+                )}
               </Link>
             );
           })}

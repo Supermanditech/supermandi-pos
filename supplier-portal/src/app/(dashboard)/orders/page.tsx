@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, Order, OrderItem, OrderNote, PaginatedResponse } from '@/lib/api';
+import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, markOrdersRead, getOrderDetail, getOrderEvents, Order, OrderItem, OrderNote, OrderDetail, OrderDetailItem, OrderEvent, PaginatedResponse } from '@/lib/api';
 
 function formatPrice(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', {
@@ -89,6 +89,11 @@ export default function OrdersPage() {
   const orders = ordersResponse?.data;
   const pagination = ordersResponse?.pagination;
 
+  // SUP-POS-007: Mark orders as read on mount (clears badge in layout)
+  useEffect(() => {
+    markOrdersRead().catch(() => {});
+  }, []);
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Order['status'] }) =>
       updateOrderStatus(id, status),
@@ -148,6 +153,20 @@ export default function OrdersPage() {
     queryKey: ['orderNotes', selectedOrder?.id],
     queryFn: () => selectedOrder ? getOrderNotes(selectedOrder.id) : Promise.resolve([]),
     enabled: !!selectedOrder && showNotesSection,
+  });
+
+  // SUP-POS-008: Fetch full order detail with barcode, SKU, store contact
+  const { data: orderDetail } = useQuery({
+    queryKey: ['orderDetail', selectedOrder?.id],
+    queryFn: () => selectedOrder ? getOrderDetail(selectedOrder.id) : Promise.resolve(null),
+    enabled: !!selectedOrder,
+  });
+
+  // SUP-POS-008: Fetch order timeline events
+  const { data: orderEvents } = useQuery({
+    queryKey: ['orderEvents', selectedOrder?.id],
+    queryFn: () => selectedOrder ? getOrderEvents(selectedOrder.id) : Promise.resolve([]),
+    enabled: !!selectedOrder,
   });
 
   // GO-LIVE-030: Add note mutation
@@ -374,15 +393,21 @@ export default function OrdersPage() {
               </button>
             </div>
 
-            {/* Order Info */}
+            {/* Order Info — SUP-POS-008: Enhanced with store contact + order number */}
             <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
               <div>
                 <p className="text-slate-500">Order ID</p>
-                <p className="font-mono font-medium">{selectedOrder.id}</p>
+                <p className="font-mono font-medium">{orderDetail?.orderNumber || selectedOrder.id.slice(0, 8)}</p>
               </div>
               <div>
                 <p className="text-slate-500">Store</p>
                 <p className="font-medium">{selectedOrder.storeName}</p>
+                {orderDetail?.storeCity && (
+                  <p className="text-slate-400 text-xs">{orderDetail.storeCity}</p>
+                )}
+                {orderDetail?.storePhone && (
+                  <p className="text-slate-400 text-xs">{orderDetail.storePhone}</p>
+                )}
               </div>
               <div>
                 <p className="text-slate-500">Date</p>
@@ -398,6 +423,18 @@ export default function OrdersPage() {
                   {selectedOrder.status}
                 </span>
               </div>
+              {orderDetail?.expectedDeliveryDate && (
+                <div>
+                  <p className="text-slate-500">Expected Delivery</p>
+                  <p className="font-medium">{formatDate(orderDetail.expectedDeliveryDate)}</p>
+                </div>
+              )}
+              {orderDetail?.storeNotes && (
+                <div>
+                  <p className="text-slate-500">Store Notes</p>
+                  <p className="font-medium text-slate-600">{orderDetail.storeNotes}</p>
+                </div>
+              )}
             </div>
 
             {/* Order Items - GL-WF-038: With per-item status tracking */}
@@ -426,9 +463,20 @@ export default function OrdersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedOrder.items.map((item) => (
+                  {selectedOrder.items.map((item) => {
+                    // SUP-POS-008: Get barcode + SKU from detail data
+                    const detailItem = orderDetail?.items?.find((di: OrderDetailItem) => di.id === item.id);
+                    return (
                     <tr key={item.id} className="border-t border-slate-100">
-                      <td className="py-2 px-4">{item.productName}</td>
+                      <td className="py-2 px-4">
+                        <div>{item.productName}</div>
+                        {detailItem?.barcode && (
+                          <span className="text-xs text-slate-400 font-mono">{detailItem.barcode}</span>
+                        )}
+                        {detailItem?.supplierSku && (
+                          <span className="text-xs text-slate-400 ml-2">SKU: {detailItem.supplierSku}</span>
+                        )}
+                      </td>
                       <td className="py-2 px-4 text-center">{item.quantity}</td>
                       <td className="py-2 px-4 text-center">
                         {/* GL-WF-038: Editable received quantity */}
@@ -492,7 +540,7 @@ export default function OrdersPage() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                  ); })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 bg-slate-50">
@@ -507,6 +555,26 @@ export default function OrdersPage() {
                 </tfoot>
               </table>
             </div>
+
+            {/* SUP-POS-008: Order Timeline */}
+            {orderEvents && orderEvents.length > 0 && (
+              <div className="border border-slate-200 rounded-lg p-4 mb-6">
+                <h3 className="font-medium text-slate-800 mb-3">Order Timeline</h3>
+                <div className="space-y-3">
+                  {orderEvents.map((event: OrderEvent) => (
+                    <div key={event.id} className="flex items-start gap-3 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-primary-500 mt-1.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-slate-700 font-medium">
+                          {event.eventType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                        </p>
+                        <p className="text-slate-400 text-xs">{formatDate(event.createdAt)} &middot; {event.actorType}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* GL-WF-039: Shipment Form - GL-CRIT-0062: Allow from pending or confirmed */}
             {/* GO-LIVE-029: Added shipment date fields */}

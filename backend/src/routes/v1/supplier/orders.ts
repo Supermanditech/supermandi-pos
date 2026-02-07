@@ -122,6 +122,189 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
 });
 
 /**
+ * POST /api/v1/supplier/orders/mark-read
+ * SUP-POS-007: Mark orders as read (updates last_viewed_at for badge clearing)
+ */
+router.post("/orders/mark-read", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Create table if not exists (idempotent)
+    await pool.query(
+      `CREATE TABLE IF NOT EXISTS supplier.supplier_order_views (
+        supplier_id UUID PRIMARY KEY,
+        last_viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`
+    );
+
+    // Upsert last_viewed_at
+    await pool.query(
+      `INSERT INTO supplier.supplier_order_views (supplier_id, last_viewed_at)
+       VALUES ($1, NOW())
+       ON CONFLICT (supplier_id)
+       DO UPDATE SET last_viewed_at = NOW()`,
+      [req.supplierId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/supplier/orders/:id
+ * SUP-POS-008: Get single order detail with full info (barcode, SKU, store contact, timeline)
+ */
+router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Get order with store contact info
+    const orderResult = await pool.query(
+      `SELECT
+        po.id,
+        po.order_number,
+        po.store_id,
+        s.name as store_name,
+        s.city as store_city,
+        s.phone as store_phone,
+        po.status,
+        po.total_amount,
+        po.tracking_number,
+        po.carrier,
+        po.shipped_at,
+        po.shipment_date,
+        po.expected_delivery_date,
+        po.store_notes,
+        po.created_at,
+        po.updated_at,
+        json_agg(
+          json_build_object(
+            'id', poi.id,
+            'productId', poi.supplier_product_id,
+            'productName', COALESCE(sp.edited_name, sp.name),
+            'barcode', sp.barcode,
+            'supplierSku', sp.supplier_sku,
+            'unit', COALESCE(sp.unit, 'PCS'),
+            'orderedQuantity', poi.ordered_quantity,
+            'receivedQuantity', poi.received_quantity,
+            'unitPrice', poi.unit_price,
+            'lineTotal', poi.line_total,
+            'status', poi.status
+          )
+        ) FILTER (WHERE sp.supplier_id = $2) as items
+      FROM orders.purchase_orders po
+      JOIN platform.stores s ON s.id = po.store_id
+      JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+      JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+      WHERE po.id = $1 AND sp.supplier_id = $2
+      GROUP BY po.id, po.order_number, po.store_id, s.name, s.city, s.phone,
+               po.status, po.total_amount, po.tracking_number, po.carrier,
+               po.shipped_at, po.shipment_date, po.expected_delivery_date,
+               po.store_notes, po.created_at, po.updated_at`,
+      [id, req.supplierId]
+    );
+
+    if (orderResult.rows.length === 0) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Order not found' }
+      });
+      return;
+    }
+
+    const o = orderResult.rows[0];
+
+    res.json({
+      data: {
+        id: o.id,
+        orderNumber: o.order_number,
+        storeId: o.store_id,
+        storeName: o.store_name,
+        storeCity: o.store_city,
+        storePhone: o.store_phone,
+        status: o.status,
+        totalAmount: o.total_amount,
+        trackingNumber: o.tracking_number,
+        carrier: o.carrier,
+        shippedAt: o.shipped_at,
+        shipmentDate: o.shipment_date,
+        expectedDeliveryDate: o.expected_delivery_date,
+        storeNotes: o.store_notes,
+        items: o.items || [],
+        createdAt: o.created_at,
+        updatedAt: o.updated_at,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/supplier/orders/:id/events
+ * SUP-POS-008: Get order timeline (status history)
+ */
+router.get("/orders/:id/events", requireSupplierAuth, requireRegisteredSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Verify supplier owns items in this order
+    const checkResult = await pool.query(
+      `SELECT DISTINCT po.id
+       FROM orders.purchase_orders po
+       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+       WHERE po.id = $1 AND sp.supplier_id = $2`,
+      [id, req.supplierId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Order not found' }
+      });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT id, event_type, actor_type, metadata, created_at
+       FROM orders.order_events
+       WHERE purchase_order_id = $1
+       ORDER BY created_at ASC`,
+      [id]
+    );
+
+    res.json({
+      data: result.rows.map(e => ({
+        id: e.id,
+        eventType: e.event_type,
+        actorType: e.actor_type,
+        metadata: e.metadata,
+        createdAt: e.created_at,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * PATCH /api/v1/supplier/orders/:id/status
  * Update order status
  * SEC-001: Requires ACTIVE supplier status
