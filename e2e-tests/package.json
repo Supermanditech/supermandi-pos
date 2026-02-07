@@ -4,6 +4,7 @@
   "description": "E2E tests for SuperMandi platform using Playwright",
   "scripts": {
     "test": "playwright test",
+    "test:onboarding": "playwright test --grep \"@onboarding|@config\"",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",

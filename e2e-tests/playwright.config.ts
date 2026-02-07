@@ -12,6 +12,7 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Test Suites (use --grep flag):
  * - @prod     : Production smoke tests - MUST pass 100% for go-live
+ * - @config   : Config contract tests - catches env var wiring mismatches
  * - @testonly : Tests requiring test-only endpoints (skipped in production)
  * - @admin    : Admin portal tests (separate from retailer/supplier scope)
  *
