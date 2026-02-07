@@ -10,6 +10,7 @@ import { useSettingsStore } from "../stores/settingsStore";
 export type FeatureKey =
   | "buy"               // BUY tab, Purchase Orders, GRN
   | "reorder"           // REORDER tab, Reorder Settings/Policies
+  | "credit"            // POS-CREDIT-001: Credit/loans feature (disabled until real KYC)
   | "category_browsing" // CAT-005: Category rail in SELL screen
   | "voice"             // VOICE-009: Voice assistant feature
   | "qa_menu";          // UI Showcase (QA/dev only)
@@ -34,6 +35,9 @@ export function isFeatureEnabled(key: FeatureKey): boolean {
       return state.buyEnabled;
     case "reorder":
       return state.reorderEnabled;
+    case "credit":
+      // POS-CREDIT-001: Always disabled until real KYC integration is ready
+      return false;
     case "category_browsing":
       return state.categoryBrowsingEnabled;
     case "voice":
@@ -68,6 +72,9 @@ export function useFeatureEnabled(key: FeatureKey): boolean {
       return buyEnabled;
     case "reorder":
       return reorderEnabled;
+    case "credit":
+      // POS-CREDIT-001: Always disabled until real KYC integration
+      return false;
     case "category_browsing":
       return categoryBrowsingEnabled;
     case "voice":
@@ -93,6 +100,7 @@ export const FEATURE_GATED_SCREENS: Record<FeatureKey, string[]> = {
     "ReorderSettings",
     "ReorderPolicies",
   ],
+  credit: [], // POS-CREDIT-001: No screens — feature is globally disabled
   category_browsing: [], // CAT-005: UI feature toggle, not route-gated
   voice: [], // VOICE-009: UI feature toggle (mic button), not route-gated
   qa_menu: [

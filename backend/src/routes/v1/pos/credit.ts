@@ -8,6 +8,22 @@ import { randomUUID } from "crypto";
 
 export const posCreditRouter = Router();
 
+// POS-CREDIT-001: Gate all credit routes behind feature flag.
+// Credit feature has mock KYC (format-only validation, no real UIDAI/MCA/GST API).
+// Must remain disabled until real KYC integration is ready.
+const CREDIT_ENABLED = process.env.CREDIT_ENABLED === "true";
+
+posCreditRouter.use((_req: Request, res: Response, next) => {
+  if (!CREDIT_ENABLED) {
+    return res.status(403).json({
+      success: false,
+      error: "credit_feature_disabled",
+      message: "Credit feature is not available. Contact support for more information.",
+    });
+  }
+  next();
+});
+
 interface PosRequest extends Request {
   posDevice: PosDeviceContext;
 }

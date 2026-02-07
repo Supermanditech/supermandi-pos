@@ -54,6 +54,10 @@ const FEATURE_DISPLAY_NAMES: Record<FeatureKey, { title: string; description: st
     title: "Auto-Reorder",
     description: "Automatic reorder suggestions are not enabled for this store.",
   },
+  credit: {
+    title: "Credit / Loans",
+    description: "Credit and loan features are not available yet.",
+  },
   category_browsing: {
     title: "Category Browsing",
     description: "Category browsing in the SELL screen is not enabled for this store.",
