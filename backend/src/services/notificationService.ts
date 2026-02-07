@@ -1,0 +1,336 @@
+/**
+ * RO-008: Notification Service — Onboarding SMS + Email
+ *
+ * Orchestrates sending SMS and Email after successful registration.
+ * Failures are logged as warnings — never blocks registration.
+ */
+
+import { sendSms, isSmsServiceEnabled } from "./smsService";
+import {
+  isEmailServiceEnabled,
+  type SendEmailResult,
+} from "./emailService";
+import { getOnboardingConfig } from "../config/onboardingConfig";
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+export interface OnboardingNotificationInput {
+  phone: string;
+  email?: string;
+  storeCode: string;
+  ownerName: string;
+}
+
+export interface OnboardingNotificationResult {
+  smsSent: boolean;
+  smsError?: string;
+  emailSent: boolean;
+  emailError?: string;
+}
+
+// =============================================================================
+// INTERNAL: Email sending via Resend/SMTP
+// =============================================================================
+
+/**
+ * Send a generic email using the existing email infrastructure.
+ * Re-uses the Resend/SMTP providers from emailService.
+ */
+async function sendGenericEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string
+): Promise<SendEmailResult> {
+  const provider = (process.env.EMAIL_PROVIDER || "disabled").toLowerCase();
+
+  if (provider === "disabled") {
+    return { sent: false, errorCode: "EMAIL_DISABLED", errorMessage: "Email is disabled" };
+  }
+
+  if (provider === "resend") {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return { sent: false, errorCode: "MISSING_API_KEY", errorMessage: "Resend API key not configured" };
+    }
+
+    const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.com>";
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to: [to], subject, html, text }),
+    });
+
+    const data = (await response.json()) as { id?: string; name?: string; message?: string };
+    if (!response.ok) {
+      console.error("[NotificationService] Resend API error:", data);
+      return { sent: false, errorCode: data.name || "RESEND_ERROR", errorMessage: data.message || "Resend error" };
+    }
+
+    return { sent: true, messageId: data.id || "unknown" };
+  }
+
+  // SMTP fallback uses nodemailer — same pattern as emailService
+  if (provider === "smtp") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const nodemailer = require("nodemailer") as typeof import("nodemailer");
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "",
+        port: parseInt(process.env.SMTP_PORT || "587", 10),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: { user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "" },
+      });
+
+      const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.com>";
+      const info = await transporter.sendMail({ from, to, subject, text, html });
+      return { sent: true, messageId: info.messageId as string };
+    } catch (err) {
+      return {
+        sent: false,
+        errorCode: "SMTP_ERROR",
+        errorMessage: err instanceof Error ? err.message : "SMTP send failed",
+      };
+    }
+  }
+
+  return { sent: false, errorCode: "UNKNOWN_PROVIDER", errorMessage: `Unknown provider: ${provider}` };
+}
+
+// =============================================================================
+// SMS TEMPLATE
+// =============================================================================
+
+function buildOnboardingSms(storeCode: string, portalUrl: string, posAppUrl: string): string {
+  // RO-008: No PII beyond phone itself — no GSTIN in SMS
+  return `Welcome to SuperMandi! Your store code: ${storeCode}. Manage: ${portalUrl} | POS: ${posAppUrl}`;
+}
+
+// =============================================================================
+// EMAIL TEMPLATE
+// =============================================================================
+
+function buildOnboardingEmailHtml(
+  ownerName: string,
+  storeCode: string,
+  portalUrl: string,
+  posAppUrl: string
+): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to SuperMandi</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">SuperMandi</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Welcome aboard!</p>
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 32px;">
+              <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">
+                Hello ${ownerName},
+              </h2>
+              <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">
+                Your store has been successfully registered on SuperMandi. Here's everything you need to get started.
+              </p>
+
+              <!-- Store Code Box -->
+              <div style="background-color: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; padding: 24px; text-align: center; margin-bottom: 24px;">
+                <p style="color: #166534; margin: 0 0 8px 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Store Code</p>
+                <span style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 4px; color: #15803d;">
+                  ${storeCode}
+                </span>
+              </div>
+
+              <!-- Setup Steps -->
+              <h3 style="color: #1f2937; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">Next Steps</h3>
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 12px 16px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 8px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="32" style="vertical-align: top;">
+                          <span style="display: inline-block; width: 24px; height: 24px; background-color: #10b981; color: white; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700;">1</span>
+                        </td>
+                        <td style="padding-left: 12px;">
+                          <p style="color: #1f2937; margin: 0; font-size: 14px; font-weight: 600;">Manage Your Store Online</p>
+                          <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 13px;">
+                            Visit the Retailer Portal to manage inventory, view orders, and more.
+                          </p>
+                          <a href="${portalUrl}" style="display: inline-block; margin-top: 8px; color: #10b981; font-size: 13px; font-weight: 600; text-decoration: none;">
+                            Open Retailer Portal &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 12px 16px; background-color: #f9fafb; border-radius: 8px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="32" style="vertical-align: top;">
+                          <span style="display: inline-block; width: 24px; height: 24px; background-color: #10b981; color: white; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; font-weight: 700;">2</span>
+                        </td>
+                        <td style="padding-left: 12px;">
+                          <p style="color: #1f2937; margin: 0; font-size: 14px; font-weight: 600;">Download the POS App</p>
+                          <p style="color: #6b7280; margin: 4px 0 0 0; font-size: 13px;">
+                            Install the SuperMandi POS app on your billing device to start selling.
+                          </p>
+                          <a href="${posAppUrl}" style="display: inline-block; margin-top: 8px; color: #10b981; font-size: 13px; font-weight: 600; text-decoration: none;">
+                            Download POS App &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Info Note -->
+              <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 0 8px 8px 0;">
+                <p style="color: #1e40af; margin: 0; font-size: 13px; line-height: 1.5;">
+                  <strong>Tip:</strong> Save your store code <strong>${storeCode}</strong> — you'll need it to enroll POS devices to your store.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f9fafb; padding: 24px 32px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; margin: 0; font-size: 12px; text-align: center; line-height: 1.5;">
+                This email was sent by SuperMandi because you registered a store.<br>
+                If you did not register, please ignore this email.<br>
+                &copy; ${new Date().getFullYear()} SuperMandi. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildOnboardingEmailText(
+  ownerName: string,
+  storeCode: string,
+  portalUrl: string,
+  posAppUrl: string
+): string {
+  return `SUPERMANDI - Welcome aboard!
+
+Hello ${ownerName},
+
+Your store has been successfully registered on SuperMandi.
+
+YOUR STORE CODE: ${storeCode}
+
+NEXT STEPS:
+
+1. Manage Your Store Online
+   Visit the Retailer Portal: ${portalUrl}
+
+2. Download the POS App
+   Install on your billing device: ${posAppUrl}
+
+TIP: Save your store code ${storeCode} — you'll need it to enroll POS devices.
+
+---
+This email was sent by SuperMandi because you registered a store.
+If you did not register, please ignore this email.
+© ${new Date().getFullYear()} SuperMandi. All rights reserved.
+`;
+}
+
+// =============================================================================
+// PUBLIC API
+// =============================================================================
+
+/**
+ * Send onboarding links (SMS + Email) after successful registration.
+ *
+ * Non-blocking: failures are logged as warnings, never thrown.
+ * Call this AFTER registration completes — do not await in the main flow
+ * if you want fire-and-forget behavior.
+ */
+export async function sendOnboardingLinks(
+  input: OnboardingNotificationInput
+): Promise<OnboardingNotificationResult> {
+  const config = getOnboardingConfig();
+  const portalUrl = config.portalBaseUrl || "https://supermandi.tech";
+  const posAppUrl = config.posAppDownloadUrl || "https://supermandi.tech/pos";
+
+  const result: OnboardingNotificationResult = {
+    smsSent: false,
+    emailSent: false,
+  };
+
+  // --- SMS ---
+  if (isSmsServiceEnabled()) {
+    try {
+      const smsText = buildOnboardingSms(input.storeCode, portalUrl, posAppUrl);
+      const smsResult = await sendSms(input.phone, smsText);
+      result.smsSent = smsResult.sent;
+      if (!smsResult.sent) {
+        result.smsError = smsResult.errorMessage;
+        console.warn(`[NotificationService] SMS not sent to ${input.phone}: ${smsResult.errorMessage}`);
+      } else {
+        console.log(`[NotificationService] Onboarding SMS sent to ${input.phone}`);
+      }
+    } catch (err) {
+      result.smsError = err instanceof Error ? err.message : "SMS send failed";
+      console.warn(`[NotificationService] SMS exception for ${input.phone}:`, result.smsError);
+    }
+  } else {
+    console.log(`[NotificationService] SMS disabled — skipping onboarding SMS to ${input.phone}`);
+  }
+
+  // --- Email ---
+  if (input.email && isEmailServiceEnabled()) {
+    try {
+      const subject = "Welcome to SuperMandi — Your Store is Ready!";
+      const html = buildOnboardingEmailHtml(input.ownerName, input.storeCode, portalUrl, posAppUrl);
+      const text = buildOnboardingEmailText(input.ownerName, input.storeCode, portalUrl, posAppUrl);
+
+      const emailResult = await sendGenericEmail(input.email, subject, html, text);
+      result.emailSent = emailResult.sent;
+      if (!emailResult.sent) {
+        result.emailError = emailResult.errorMessage;
+        console.warn(`[NotificationService] Email not sent to ${input.email}: ${emailResult.errorMessage}`);
+      } else {
+        console.log(`[NotificationService] Onboarding email sent to ${input.email}`);
+      }
+    } catch (err) {
+      result.emailError = err instanceof Error ? err.message : "Email send failed";
+      console.warn(`[NotificationService] Email exception for ${input.email}:`, result.emailError);
+    }
+  } else if (input.email && !isEmailServiceEnabled()) {
+    console.log(`[NotificationService] Email disabled — skipping onboarding email to ${input.email}`);
+  }
+
+  return result;
+}

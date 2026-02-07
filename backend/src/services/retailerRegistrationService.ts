@@ -11,6 +11,7 @@
 import type { Pool, PoolClient } from "pg";
 import { randomUUID } from "crypto";
 import { generateStoreCode } from "./storeCodeService";
+import { sendOnboardingLinks } from "./notificationService";  // RO-008
 import type {
   RetailerRegistrationData,
   RegistrationSource,
@@ -162,6 +163,16 @@ export async function registerRetailer(
       gstin: data.gstin,
     }).catch((err) => {
       console.error("[registration] Failed to record event:", err?.message);
+    });
+
+    // Step 7: RO-008 — Send onboarding notifications (fire-and-forget)
+    sendOnboardingLinks({
+      phone: data.phone,
+      email: data.email && data.email !== "" ? data.email : undefined,
+      storeCode,
+      ownerName: data.ownerName,
+    }).catch((err) => {
+      console.warn("[registration] Onboarding notification failed:", err?.message);
     });
 
     return {
