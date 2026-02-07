@@ -20,6 +20,7 @@ export interface CatalogSupplier {
   isPreferred: boolean;
   bnplEligible?: boolean;
   bnplMaxDays?: number;
+  minOrderValue?: number; // POS-BUY-003: from supplier_store_links.min_order_value (minor units)
 }
 
 /**

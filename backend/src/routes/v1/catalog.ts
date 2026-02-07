@@ -397,6 +397,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           s.id AS supplier_id,
           COALESCE(s.business_name, s.trade_name, s.name, 'Unknown') AS supplier_name,
           COALESCE(ssl.is_preferred, false) AS is_preferred,
+          COALESCE(ssl.min_order_value, 0) AS min_order_value,
           COALESCE(spm.product_id, sp.id) AS group_id,
           mp.name AS mp_name,
           mp.category AS mp_category,
@@ -440,7 +441,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           'stockStatus', COALESCE(stock_status, 'available'),
           'bnplEligible', COALESCE(bnpl_eligible, false),
           'bnplMaxDays', COALESCE(bnpl_max_days, 0),
-          'isPreferred', is_preferred
+          'isPreferred', is_preferred,
+          'minOrderValue', min_order_value
         ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
       FROM priced
       GROUP BY group_id
@@ -672,6 +674,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           s.id AS supplier_id,
           COALESCE(s.business_name, s.trade_name, s.name, 'Unknown') AS supplier_name,
           COALESCE(ssl.is_preferred, false) AS is_preferred,
+          COALESCE(ssl.min_order_value, 0) AS min_order_value,
           COALESCE(spm.product_id, sp.id) AS group_id,
           mp.name AS mp_name,
           mp.category AS mp_category,
@@ -719,7 +722,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog/barcode/:barcode", requireDevice
           'stockStatus', COALESCE(stock_status, 'available'),
           'bnplEligible', COALESCE(bnpl_eligible, false),
           'bnplMaxDays', COALESCE(bnpl_max_days, 0),
-          'isPreferred', is_preferred
+          'isPreferred', is_preferred,
+          'minOrderValue', min_order_value
         ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
       FROM priced
       GROUP BY group_id`,

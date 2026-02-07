@@ -85,6 +85,7 @@ export function ProductDetailModal({
         unitPrice: params.supplier.purchasePrice,
         mrp: params.supplier.mrp,
         moq: params.supplier.moq,
+        minOrderValue: params.supplier.minOrderValue, // POS-BUY-003
       });
 
       // Collapse the row after adding
