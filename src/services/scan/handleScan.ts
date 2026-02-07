@@ -325,7 +325,8 @@ export type ScanSource = "scanner" | "keyboard";
 
 export async function onBarcodeScanned(rawText: string, format?: string, source: ScanSource = "scanner"): Promise<void> {
   try {
-    const trimmed = rawText?.trim?.() ?? "";
+    // POS-SCAN-001: Normalize barcode case at entry point
+    const trimmed = (rawText?.trim?.() ?? "").toUpperCase();
     if (!trimmed) return;
 
     console.log(`scan_barcode_received:${trimmed}`);
@@ -362,7 +363,8 @@ async function handleScan(
   intentOverride?: ScanIntent,
   source: ScanSource = "scanner"
 ): Promise<void> {
-  const trimmed = barcode.trim();
+  // POS-SCAN-001: Normalize barcode case so "abc123" and "ABC123" resolve to same product
+  const trimmed = barcode.trim().toUpperCase();
   if (!trimmed) return;
   if (runtime.sellFirstOnboardingActive) return;
 
