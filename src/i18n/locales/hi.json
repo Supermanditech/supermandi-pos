@@ -254,7 +254,15 @@
     "reasonDiscontinued": "उत्पाद बंद",
     "reasonPriceTooHigh": "कीमत बहुत अधिक",
     "reasonStockReceived": "स्टॉक पहले से प्राप्त",
-    "reasonSeasonal": "मौसमी उत्पाद - मौसम के बाहर"
+    "reasonSeasonal": "मौसमी उत्पाद - मौसम के बाहर",
+    "critical": "गंभीर",
+    "current": "वर्तमान",
+    "min": "न्यूनतम",
+    "target": "लक्ष्य",
+    "suggestedQty": "सुझावित मात्रा",
+    "supplier": "आपूर्तिकर्ता",
+    "unitPrice": "इकाई मूल्य",
+    "estTotal": "अनुमानित कुल"
   },
   "inward": {
     "title": "स्टॉक इनवार्ड",

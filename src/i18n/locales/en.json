@@ -254,7 +254,15 @@
     "reasonDiscontinued": "Product discontinued",
     "reasonPriceTooHigh": "Price too high",
     "reasonStockReceived": "Stock already received",
-    "reasonSeasonal": "Seasonal item - out of season"
+    "reasonSeasonal": "Seasonal item - out of season",
+    "critical": "Critical",
+    "current": "Current",
+    "min": "Min",
+    "target": "Target",
+    "suggestedQty": "Suggested Qty",
+    "supplier": "Supplier",
+    "unitPrice": "Unit Price",
+    "estTotal": "Est. Total"
   },
   "inward": {
     "title": "Stock Inward",

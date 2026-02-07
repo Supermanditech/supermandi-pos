@@ -4,6 +4,7 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
@@ -33,6 +34,7 @@ export function PendingReorderCard({
   onDismiss,
   onEdit,
 }: PendingReorderCardProps) {
+  const { t } = useTranslation();
   const isCritical = isCriticallyLow(item);
   const estimatedTotal = getEstimatedTotal(item);
 
@@ -76,7 +78,7 @@ export function PendingReorderCard({
                 size={12}
                 color={theme.colors.error}
               />
-              <Text style={styles.criticalText}>Critical</Text>
+              <Text style={styles.criticalText}>{t("reorder.critical")}</Text>
             </View>
           )}
         </View>
@@ -89,7 +91,7 @@ export function PendingReorderCard({
         {/* Stock Info */}
         <View style={styles.stockRow}>
           <View style={styles.stockItem}>
-            <Text style={styles.stockLabel}>Current</Text>
+            <Text style={styles.stockLabel}>{t("reorder.current")}</Text>
             <Text style={[styles.stockValue, isCritical && styles.stockValueCritical]}>
               {item.currentStock}
             </Text>
@@ -102,7 +104,7 @@ export function PendingReorderCard({
             />
           </View>
           <View style={styles.stockItem}>
-            <Text style={styles.stockLabel}>Min</Text>
+            <Text style={styles.stockLabel}>{t("reorder.min")}</Text>
             <Text style={styles.stockValue}>{item.minThreshold}</Text>
           </View>
           <View style={styles.stockArrow}>
@@ -113,7 +115,7 @@ export function PendingReorderCard({
             />
           </View>
           <View style={styles.stockItem}>
-            <Text style={styles.stockLabel}>Target</Text>
+            <Text style={styles.stockLabel}>{t("reorder.target")}</Text>
             <Text style={styles.stockValue}>{item.targetStock}</Text>
           </View>
         </View>
@@ -121,13 +123,13 @@ export function PendingReorderCard({
         {/* Suggestion Row */}
         <View style={styles.suggestionRow}>
           <View style={styles.suggestionItem}>
-            <Text style={styles.suggestionLabel}>Suggested Qty</Text>
+            <Text style={styles.suggestionLabel}>{t("reorder.suggestedQty")}</Text>
             <Text style={styles.suggestionValue}>{item.suggestedQuantity}</Text>
           </View>
 
           {item.suggestedSupplierName && (
             <View style={styles.suggestionItem}>
-              <Text style={styles.suggestionLabel}>Supplier</Text>
+              <Text style={styles.suggestionLabel}>{t("reorder.supplier")}</Text>
               <Text style={styles.supplierName} numberOfLines={1}>
                 {item.suggestedSupplierName}
               </Text>
@@ -136,7 +138,7 @@ export function PendingReorderCard({
 
           {item.suggestedUnitPrice !== null && (
             <View style={styles.suggestionItem}>
-              <Text style={styles.suggestionLabel}>Unit Price</Text>
+              <Text style={styles.suggestionLabel}>{t("reorder.unitPrice")}</Text>
               <Text style={styles.suggestionValue}>
                 {formatMoney(item.suggestedUnitPrice * 100)}
               </Text>
@@ -149,7 +151,7 @@ export function PendingReorderCard({
           <View style={styles.totalSection}>
             {estimatedTotal > 0 && (
               <>
-                <Text style={styles.totalLabel}>Est. Total</Text>
+                <Text style={styles.totalLabel}>{t("reorder.estTotal")}</Text>
                 <Text style={styles.totalValue}>
                   {formatMoney(estimatedTotal * 100)}
                 </Text>
