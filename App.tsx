@@ -17,6 +17,8 @@ import i18n, { initI18n } from "./src/i18n";
 
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
+// RO-004: POS store registration screen
+import RegisterStoreScreen from "./src/screens/RegisterStoreScreen";
 import PosRootLayout from "./src/screens/PosRootLayout";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import SuccessPrintScreen from "./src/screens/SuccessPrintScreenV2";
@@ -244,6 +246,8 @@ export default function App() {
         >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="EnrollDevice" component={EnrollDeviceScreen} />
+          {/* RO-004: POS store registration */}
+          <Stack.Screen name="RegisterStore" component={RegisterStoreScreen} />
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
           <Stack.Screen name="SellScan" component={PosRootLayout} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
