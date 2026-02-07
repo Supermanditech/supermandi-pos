@@ -559,9 +559,11 @@ export const useCartStore = create<CartState>()(
     const existingItem = existingIndex >= 0 ? state.items[existingIndex] : null;
     if (!existingItem) return;
 
+    // POS-CART-003: Block negative discount values at entry point
+    const safeDiscount: ItemDiscount = { ...discount, value: Math.max(0, discount.value) };
     const nextItem: CartItem = {
       ...existingItem,
-      itemDiscount: { ...discount }
+      itemDiscount: safeDiscount,
     };
 
     set({
@@ -670,7 +672,9 @@ export const useCartStore = create<CartState>()(
   
   applyDiscount: (discount) => {
     if (get().locked) return;
-    set({ discount });
+    // POS-CART-003: Block negative discount values at entry point
+    const safeDiscount: CartDiscount = { ...discount, value: Math.max(0, discount.value) };
+    set({ discount: safeDiscount });
     get().recalculate();
     
     eventLogger.log('CART_APPLY_DISCOUNT', {
