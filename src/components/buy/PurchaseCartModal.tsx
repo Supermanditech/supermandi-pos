@@ -1,7 +1,7 @@
 // PurchaseCartModal - V3.0.9 compliant
 // Full cart modal with items grouped by supplier
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -77,6 +77,9 @@ export function PurchaseCartModal({
     visible: boolean;
     group: SupplierGroup | null;
   }>({ visible: false, group: null });
+
+  // POS-BUY-009: Track pending UPI orders for timeout cleanup
+  const pendingUpiOrders = useRef<Map<string, { orderId: string; supplierId: string; createdAt: number }>>(new Map());
 
   // SM-025: Credit summary state
   const [creditSummary, setCreditSummary] = useState<{
@@ -255,10 +258,19 @@ export function PurchaseCartModal({
           // Return deep link and order ID for verification
           // Cart items remain intact until payment is confirmed
           const upiDeepLink = `upi://pay?pa=supplier@upi&pn=${encodeURIComponent(group.supplierName)}&am=${group.totalAmount}&cu=INR`;
+          const orderId = orderResult?.id || group.supplierId;
+
+          // POS-BUY-009: Track for timeout cleanup
+          pendingUpiOrders.current.set(orderId, {
+            orderId,
+            supplierId: group.supplierId,
+            createdAt: Date.now(),
+          });
+
           return {
             success: true,
             upiDeepLink,
-            orderId: orderResult?.id || group.supplierId,
+            orderId,
           };
         }
 
@@ -325,6 +337,10 @@ export function PurchaseCartModal({
   // GL-RJ-003: Handle UPI payment confirmation - call this after UPI payment is verified
   const handleUpiPaymentConfirmed = useCallback(
     (supplierId: string) => {
+      // POS-BUY-009: Clear from pending tracking
+      for (const [key, val] of pendingUpiOrders.current.entries()) {
+        if (val.supplierId === supplierId) pendingUpiOrders.current.delete(key);
+      }
       // Now safe to remove items from cart
       removeSupplierItems(supplierId);
 
@@ -348,6 +364,8 @@ export function PurchaseCartModal({
   // GL-RJ-003: Handle UPI payment failure - items remain in cart
   const handleUpiPaymentFailed = useCallback(
     (supplierId: string, orderId: string) => {
+      // POS-BUY-009: Clear from pending tracking
+      pendingUpiOrders.current.delete(orderId);
       // Cancel the order since payment failed
       // Items remain in cart so user can retry
       Alert.alert(
@@ -359,6 +377,32 @@ export function PurchaseCartModal({
     },
     []
   );
+
+  // POS-BUY-009: Check for expired UPI orders every 60 seconds
+  const UPI_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const now = Date.now();
+      for (const [orderId, entry] of pendingUpiOrders.current.entries()) {
+        if (now - entry.createdAt >= UPI_TIMEOUT_MS) {
+          pendingUpiOrders.current.delete(orderId);
+          // Remove orphaned cart items for this supplier
+          removeSupplierItems(entry.supplierId);
+          // Attempt to cancel the order
+          try {
+            const storeId = await getDeviceStoreId();
+            if (storeId) {
+              await orderApi.cancelOrder(storeId, orderId, "UPI payment timeout (15 min)");
+            }
+          } catch {
+            // Best-effort cancel — backend also enforces timeout
+          }
+          console.log(`[PurchaseCartModal] POS-BUY-009: UPI timeout cleanup for order ${orderId}`);
+        }
+      }
+    }, 60_000);
+    return () => clearInterval(interval);
+  }, [removeSupplierItems]);
 
   // Handle place order for supplier (legacy - now shows payment sheet)
   const handlePlaceOrder = useCallback(
