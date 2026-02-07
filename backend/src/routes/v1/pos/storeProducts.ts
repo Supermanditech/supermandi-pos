@@ -795,11 +795,13 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
 posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   // ITER3-001: Accept storeProductId in addition to productId/barcode
-  const { productId, barcode, storeProductId, stock } = req.body as {
+  // RET-POS-SYNC-012: Accept stockUpdatedAt for LWW conflict detection
+  const { productId, barcode, storeProductId, stock, stockUpdatedAt } = req.body as {
     productId?: string;
     barcode?: string;
     storeProductId?: string;
     stock: number;
+    stockUpdatedAt?: string;
   };
 
   if (typeof stock !== "number" || !Number.isFinite(stock) || stock < 0) {
@@ -852,12 +854,29 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
 
     await client.query("BEGIN");
 
-    // Get current stock
+    // Get current stock + updated_at for LWW check
     const stockResult = await client.query(
-      `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+      `SELECT current_qty, updated_at FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
       [storeId, resolvedProductId]
     );
     const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
+    const serverStockUpdatedAt = stockResult.rows[0]?.updated_at;
+
+    // RET-POS-SYNC-012: LWW guard — reject stale writes if client provides timestamp
+    if (stockUpdatedAt && serverStockUpdatedAt) {
+      const incoming = new Date(stockUpdatedAt);
+      const server = new Date(serverStockUpdatedAt);
+      if (!isNaN(incoming.getTime()) && server > incoming) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          error: "stale_write",
+          message: "Stale stock update rejected - server has newer data",
+          incomingStockUpdatedAt: stockUpdatedAt,
+          currentStockUpdatedAt: serverStockUpdatedAt,
+        });
+      }
+    }
+
     const delta = newStock - stockBefore;
 
     if (delta !== 0) {
@@ -887,7 +906,8 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
 
     await client.query("COMMIT");
 
-    return res.json({ success: true, data: { productId: resolvedProductId, stock: newStock } });
+    // RET-POS-SYNC-012: Return stockUpdatedAt so clients can use it for future LWW
+    return res.json({ success: true, data: { productId: resolvedProductId, stock: newStock, stockUpdatedAt: new Date().toISOString() } });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("[storeProducts] Stock update error:", error);

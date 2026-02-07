@@ -452,6 +452,7 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     mode, // PACKAGED or LOOSE_BULK
     alias, // Store-level display name
     metadataUpdatedAt, // AUD-025-B: ISO timestamp for last-write-wins comparison
+    stockUpdatedAt, // RET-POS-SYNC-012: ISO timestamp for stock LWW comparison
   } = req.body;
 
   // AUD-025-B: Parse incoming timestamp for LWW comparison
@@ -597,10 +598,27 @@ retailerAdminProductsRouter.patch("/products/:id", async (req: Request, res: Res
     // Stock update: openingStockQty sets absolute stock level via ledger-first pattern
     if (openingStockQty !== undefined && typeof openingStockQty === 'number' && openingStockQty >= 0) {
       const stockResult = await client.query(
-        `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+        `SELECT current_qty, updated_at FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
         [storeId, productId]
       );
       const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
+      const serverStockUpdatedAt = stockResult.rows[0]?.updated_at;
+
+      // RET-POS-SYNC-012: LWW guard — reject stale stock writes if client provides timestamp
+      if (stockUpdatedAt && serverStockUpdatedAt) {
+        const incoming = new Date(stockUpdatedAt);
+        const server = new Date(serverStockUpdatedAt);
+        if (!isNaN(incoming.getTime()) && server > incoming) {
+          await client.query("ROLLBACK");
+          return res.status(409).json({
+            error: "stale_write",
+            message: "Stale stock update rejected - server has newer data",
+            incomingStockUpdatedAt: stockUpdatedAt,
+            currentStockUpdatedAt: serverStockUpdatedAt,
+          });
+        }
+      }
+
       const delta = openingStockQty - stockBefore;
 
       if (delta !== 0) {
