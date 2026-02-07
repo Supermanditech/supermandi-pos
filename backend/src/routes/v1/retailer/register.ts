@@ -18,6 +18,7 @@ import {
   registerRetailer,
   recordFailedRegistration,
 } from "../../../services/retailerRegistrationService";
+import { registrationAbuseGuard } from "../../../middleware/registrationRateLimiter";
 
 export const retailerRegisterRouter = Router();
 
@@ -63,6 +64,7 @@ try {
 retailerRegisterRouter.post(
   "/register",
   registrationRateLimiter,
+  registrationAbuseGuard,  // DR-006: Phone + GSTIN rate limiting
   async (req, res) => {
     const pool = getPool();
     if (!pool) {
