@@ -314,6 +314,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
   const q = req.query.q as string | undefined;
   const category = req.query.category as string | undefined;
   const supplierId = req.query.supplierId as string | undefined;
+  const sort = req.query.sort as string | undefined; // SUP-POS-010: name|cheapest|recent
   const page = parseInt(req.query.page as string) || 1;
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
   const offset = (page - 1) * limit;
@@ -401,7 +402,8 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
           mp.category AS mp_category,
           mp.brand AS mp_brand,
           mp.primary_barcode AS mp_barcode,
-          mp.unit AS mp_unit
+          mp.unit AS mp_unit,
+          sp.created_at AS sp_created_at
         FROM catalog.supplier_products sp
         JOIN supplier.suppliers s ON s.id = sp.supplier_id
         JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
@@ -442,7 +444,7 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
         ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
       FROM priced
       GROUP BY group_id
-      ORDER BY MIN(COALESCE(mp_name, product_name)) ASC
+      ORDER BY ${sort === 'cheapest' ? 'MIN(retailer_price) ASC' : sort === 'recent' ? 'MAX(sp_created_at) DESC' : 'MIN(COALESCE(mp_name, product_name)) ASC'}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, limit, offset]
     );

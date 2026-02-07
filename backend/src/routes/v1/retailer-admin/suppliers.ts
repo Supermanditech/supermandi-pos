@@ -131,6 +131,166 @@ retailerAdminSuppliersRouter.get("/suppliers", async (req: Request, res: Respons
 });
 
 // =============================================================================
+// GET /api/v1/retailer-admin/suppliers/available
+// SUP-POS-009: List verified suppliers NOT yet linked to this store
+// Enables discovery and linking of new suppliers
+// =============================================================================
+
+retailerAdminSuppliersRouter.get("/suppliers/available", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { query } = req.query;
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+  const offset = (page - 1) * limit;
+
+  try {
+    let whereClause = `
+      WHERE s.verification_status = 'verified'
+        AND s.status = 'active'
+        AND s.id NOT IN (
+          SELECT supplier_id FROM supplier.supplier_store_links
+          WHERE store_id = $1 AND status = 'active'
+        )
+    `;
+    const params: any[] = [storeId];
+    let paramIndex = 2;
+
+    if (query && typeof query === "string" && query.trim()) {
+      const searchTerm = `%${query.trim()}%`;
+      whereClause += ` AND (
+        s.business_name ILIKE $${paramIndex}
+        OR s.trade_name ILIKE $${paramIndex}
+        OR s.city ILIKE $${paramIndex}
+      )`;
+      params.push(searchTerm);
+      paramIndex++;
+    }
+
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total FROM supplier.suppliers s ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.total || "0", 10);
+
+    const result = await pool.query(
+      `SELECT
+        s.id,
+        s.business_name as "businessName",
+        s.trade_name as "tradeName",
+        s.city,
+        s.rating,
+        (SELECT COUNT(*) FROM catalog.supplier_products sp
+         WHERE sp.supplier_id = s.id AND sp.approval_status = 'approved' AND sp.is_active = true
+        )::int as "productCount"
+      FROM supplier.suppliers s
+      ${whereClause}
+      ORDER BY s.business_name ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+      [...params, limit, offset]
+    );
+
+    return res.json({
+      success: true,
+      data: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error: any) {
+    console.error("[RetailerSuppliers] GET available error:", error.message);
+
+    if (error.code === "42P01") {
+      return res.json({ success: true, data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } });
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to load available suppliers" },
+    });
+  }
+});
+
+// =============================================================================
+// POST /api/v1/retailer-admin/suppliers/:supplierId/link
+// SUP-POS-009: Link an existing verified supplier to this store
+// =============================================================================
+
+retailerAdminSuppliersRouter.post("/suppliers/:supplierId/link", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { supplierId } = req.params;
+  const { isPreferred, creditDays, minOrderValue } = req.body;
+
+  try {
+    // Verify supplier exists and is verified
+    const supplierCheck = await pool.query(
+      `SELECT id FROM supplier.suppliers WHERE id = $1 AND verification_status = 'verified' AND status = 'active'`,
+      [supplierId]
+    );
+
+    if (supplierCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: { code: "NOT_FOUND", message: "Supplier not found or not verified" },
+      });
+    }
+
+    // Check existing link
+    const existingLink = await pool.query(
+      `SELECT id, status FROM supplier.supplier_store_links WHERE supplier_id = $1 AND store_id = $2`,
+      [supplierId, storeId]
+    );
+
+    if (existingLink.rows.length > 0) {
+      if (existingLink.rows[0].status === 'active') {
+        return res.status(409).json({
+          error: { code: "CONFLICT", message: "Supplier is already linked to your store" },
+        });
+      }
+      // Reactivate inactive link
+      await pool.query(
+        `UPDATE supplier.supplier_store_links
+         SET status = 'active', is_preferred = $3, credit_days = $4, min_order_value = $5, updated_at = NOW()
+         WHERE supplier_id = $1 AND store_id = $2`,
+        [supplierId, storeId, isPreferred || false, creditDays || 0, minOrderValue || 0]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO supplier.supplier_store_links (supplier_id, store_id, is_preferred, credit_days, min_order_value, status)
+         VALUES ($1, $2, $3, $4, $5, 'active')`,
+        [supplierId, storeId, isPreferred || false, creditDays || 0, minOrderValue || 0]
+      );
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Supplier linked successfully",
+    });
+  } catch (error: any) {
+    console.error("[RetailerSuppliers] POST link error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to link supplier" },
+    });
+  }
+});
+
+// =============================================================================
 // POST /api/v1/retailer-admin/suppliers
 // RCAT-SUP-002: Create a new local supplier or submit for verification
 // Local suppliers get 'unverified' status and are store-editable
