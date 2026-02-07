@@ -1,6 +1,16 @@
 import type { NextFunction, Request, Response } from "express";
 import { HttpError } from "../lib/httpError";
 
+// RO-006: Map PostgreSQL unique violation constraint names to user-facing error codes
+const CONSTRAINT_ERROR_MAP: Record<string, { code: string; message: string }> = {
+  uk_stores_phone: { code: "PHONE_EXISTS", message: "A store with this phone number already exists" },
+  ux_stores_gstin: { code: "GSTIN_EXISTS", message: "A store with this GSTIN already exists" },
+  ux_stores_gst_number: { code: "GSTIN_EXISTS", message: "A store with this GST number already exists" },
+  ux_users_phone: { code: "PHONE_EXISTS", message: "A user with this phone number already exists" },
+  ux_users_email: { code: "EMAIL_EXISTS", message: "A user with this email already exists" },
+  store_users_store_user_unique: { code: "ALREADY_LINKED", message: "User is already linked to this store" },
+};
+
 export function errorHandler(
   err: unknown,
   _req: Request,
@@ -13,6 +23,18 @@ export function errorHandler(
       details: err.details ?? undefined
     });
     return;
+  }
+
+  // RO-006: Handle PostgreSQL unique_violation (23505) as 409 Conflict
+  const pgCode = (err as any)?.code;
+  if (pgCode === "23505") {
+    const constraint = (err as any)?.constraint ?? "";
+    const mapped = CONSTRAINT_ERROR_MAP[constraint];
+    if (mapped) {
+      return void res.status(409).json({ error: mapped.code, message: mapped.message });
+    }
+    // Unknown constraint — still 409 but generic message
+    return void res.status(409).json({ error: "DUPLICATE_ENTRY", message: "A record with this value already exists" });
   }
 
   // ITER4-P1-007: Don't expose internal error messages/stack traces in production
