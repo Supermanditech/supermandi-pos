@@ -57,6 +57,7 @@ import { voiceRouter } from "./pos/voice";  // GO-LIVE: Voice order with OpenAI
 import { documentsRouter } from "./documents";  // DOCS-001: Unified document storage
 import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin document management
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
+import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
 
 export const v1Router = Router();
 
@@ -118,7 +119,11 @@ v1Router.use("/documents", documentsRouter);
 // PORTAL-AUTH-001: Unified auth routes (public, no auth required)
 v1Router.use("/auth", authRouter);
 
-// REG-AUTH-201: Retailer registration routes (public, no auth required)
+// RO-001: Canonical retailer registration (public, no auth required)
+// Must be BEFORE validateGatewayHeaders middleware
+v1Router.use("/retailer", retailerRegisterRouter);
+
+// REG-AUTH-201: Retailer registration routes (legacy, public, no auth required)
 // Must be BEFORE validateGatewayHeaders middleware
 v1Router.use("/retailer-admin/registration", retailerRegistrationRouter);
 
