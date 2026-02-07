@@ -884,16 +884,22 @@ posPaymentsRouter.post(
         // (fall through to gateway check)
       }
 
-      // In production, this would call the payment gateway API (Razorpay, PayU, etc.)
-      // to verify the UTR. For now, we do a basic validation and record it.
-      //
-      // TODO: Integrate with actual payment gateway verification API
-      // Example with Razorpay:
-      // const verification = await razorpay.payments.fetchByUtr(normalizedUtr);
-
-      // For now, simulate successful verification for UTRs that look valid
-      // In production, replace this with actual gateway verification
+      // POS-UPI-001: UTR verification is format-only for MVP.
+      // All UTR confirmations are logged with full details for manual audit.
+      // Gateway integration (Razorpay/PayU) will replace format-only check when ready.
       const isValidFormat = /^[A-Z0-9]{12,22}$/.test(normalizedUtr);
+
+      // POS-UPI-001: Structured audit log for every UTR verification attempt
+      console.log(JSON.stringify({
+        event: "UTR_VERIFICATION_ATTEMPT",
+        storeId,
+        utr: normalizedUtr,
+        amountMinor,
+        paymentId: paymentId || null,
+        formatValid: isValidFormat,
+        verificationMethod: "format_only",
+        timestamp: new Date().toISOString(),
+      }));
 
       if (!isValidFormat) {
         await client.query("COMMIT");
@@ -931,7 +937,17 @@ posPaymentsRouter.post(
 
       await client.query("COMMIT");
 
-      console.log(`[GL-RJ-004] UTR verified: utr=${normalizedUtr}, amount=${amountMinor}, store=${storeId}`);
+      // POS-UPI-001: Structured audit log for successful UTR verification
+      console.log(JSON.stringify({
+        event: "UTR_VERIFICATION_SUCCESS",
+        storeId,
+        utr: normalizedUtr,
+        amountMinor,
+        paymentId: paymentId || null,
+        verificationId,
+        verificationMethod: "format_only",
+        timestamp: verifiedAt,
+      }));
 
       return res.json({
         verified: true,
