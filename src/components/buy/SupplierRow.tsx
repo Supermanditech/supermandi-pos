@@ -106,11 +106,11 @@ export function SupplierRow({
 
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              {formatMoney(supplier.purchasePrice * 100)}
+              {formatMoney(supplier.purchasePrice)}
             </Text>
             {supplier.mrp && supplier.mrp > supplier.purchasePrice && (
               <Text style={styles.mrp}>
-                MRP {formatMoney(supplier.mrp * 100)}
+                MRP {formatMoney(supplier.mrp)}
               </Text>
             )}
           </View>
@@ -185,7 +185,7 @@ export function SupplierRow({
               <View style={styles.totalSection}>
                 <Text style={styles.totalLabel}>Total</Text>
                 <Text style={styles.totalValue}>
-                  {formatMoney(totalPrice * 100)}
+                  {formatMoney(totalPrice)}
                 </Text>
               </View>
 

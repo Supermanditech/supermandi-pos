@@ -207,7 +207,7 @@ export function ProductDetailModal({
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>Best Price</Text>
                 <Text style={styles.statValue}>
-                  {formatMoney(product.bestPrice * 100)}
+                  {formatMoney(product.bestPrice)}
                 </Text>
               </View>
 
@@ -240,19 +240,31 @@ export function ProductDetailModal({
             </View>
 
             <View style={styles.suppliersList}>
-              {product.suppliers.map((supplier) => (
-                <SupplierRow
-                  key={supplier.supplierProductId}
-                  supplier={supplier}
-                  productId={product.id}
-                  productName={product.name}
-                  barcode={product.primaryBarcode}
-                  cartQuantity={getCartQuantityForSupplier(supplier.supplierProductId)}
-                  onAddToCart={handleAddToCart}
-                  expanded={expandedSupplierId === supplier.supplierId}
-                  onToggleExpand={() => handleToggleExpand(supplier.supplierId)}
-                />
-              ))}
+              {product.suppliers.length === 0 ? (
+                <View style={styles.noSuppliersContainer}>
+                  <MaterialCommunityIcons
+                    name="truck-remove-outline"
+                    size={32}
+                    color={theme.colors.textTertiary}
+                  />
+                  <Text style={styles.noSuppliersText}>No suppliers available</Text>
+                </View>
+              ) : (
+                product.suppliers.map((supplier) => (
+                  <SupplierRow
+                    key={supplier.supplierProductId}
+                    supplier={supplier}
+                    productId={product.id}
+                    productName={product.name}
+                    barcode={product.primaryBarcode}
+                    cartQuantity={getCartQuantityForSupplier(supplier.supplierProductId)}
+                    onAddToCart={handleAddToCart}
+                    expanded={expandedSupplierId === supplier.supplierId}
+                    onToggleExpand={() => handleToggleExpand(supplier.supplierId)}
+                    bnplEligible={supplier.bnplEligible}
+                  />
+                ))
+              )}
             </View>
           </View>
         </ScrollView>
@@ -443,6 +455,15 @@ const styles = StyleSheet.create({
   },
   suppliersList: {
     gap: theme.spacing.sm,
+  },
+  noSuppliersContainer: {
+    alignItems: "center",
+    paddingVertical: theme.spacing.xl,
+    gap: theme.spacing.sm,
+  },
+  noSuppliersText: {
+    fontSize: 14,
+    color: theme.colors.textTertiary,
   },
   footer: {
     backgroundColor: theme.colors.surface,

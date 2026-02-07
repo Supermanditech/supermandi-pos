@@ -721,6 +721,88 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
       [productId, adminId]
     );
 
+    // SUP-POS-005: Auto-map approved product to master catalog
+    try {
+      const spDetails = await client.query(
+        `SELECT name, edited_name, category, edited_category, brand, unit, barcode
+         FROM catalog.supplier_products WHERE id = $1`,
+        [productId]
+      );
+
+      if (spDetails.rows.length > 0) {
+        const sp = spDetails.rows[0];
+        const spName = sp.edited_name || sp.name;
+        const spCategory = sp.edited_category || sp.category;
+
+        // Check if mapping already exists
+        const existingMap = await client.query(
+          `SELECT supplier_product_id FROM catalog.supplier_product_map WHERE supplier_product_id = $1::uuid`,
+          [productId]
+        );
+
+        if (existingMap.rows.length === 0) {
+          let mappedProductId: string | null = null;
+          let mappingConfidence = 0;
+
+          // Step 1: Try barcode match (highest confidence)
+          if (sp.barcode) {
+            const barcodeMatch = await client.query(
+              `SELECT id FROM catalog.products WHERE primary_barcode = $1 LIMIT 1`,
+              [sp.barcode]
+            );
+            if (barcodeMatch.rows.length > 0) {
+              mappedProductId = barcodeMatch.rows[0].id;
+              mappingConfidence = 1.0;
+            }
+          }
+
+          // Step 2: Try name similarity (requires pg_trgm extension)
+          if (!mappedProductId) {
+            try {
+              const nameMatch = await client.query(
+                `SELECT id, similarity(name, $1) as sim
+                 FROM catalog.products
+                 WHERE similarity(name, $1) > 0.6
+                 ORDER BY sim DESC LIMIT 1`,
+                [spName]
+              );
+              if (nameMatch.rows.length > 0) {
+                mappedProductId = nameMatch.rows[0].id;
+                mappingConfidence = parseFloat(nameMatch.rows[0].sim);
+              }
+            } catch {
+              // pg_trgm not available, skip name matching
+            }
+          }
+
+          // Step 3: No match — create new master product
+          if (!mappedProductId) {
+            const newProduct = await client.query(
+              `INSERT INTO catalog.products (name, category, brand, unit, primary_barcode)
+               VALUES ($1, $2, $3, $4, $5)
+               RETURNING id`,
+              [spName, spCategory, sp.brand, sp.unit, sp.barcode]
+            );
+            mappedProductId = newProduct.rows[0].id;
+            mappingConfidence = 1.0;
+          }
+
+          // Insert mapping
+          if (mappedProductId) {
+            await client.query(
+              `INSERT INTO catalog.supplier_product_map (supplier_product_id, product_id, mapping_type, confidence, is_verified)
+               VALUES ($1::uuid, $2::uuid, 'auto', $3, false)`,
+              [productId, mappedProductId, mappingConfidence]
+            );
+            console.log(`[SUP-POS-005] Auto-mapped product ${productId} → ${mappedProductId} (confidence=${mappingConfidence})`);
+          }
+        }
+      }
+    } catch (mapErr: any) {
+      // Non-critical — mapping failure should not block approval
+      console.warn("[SUP-POS-005] Auto-mapping failed (non-blocking):", mapErr.message);
+    }
+
     await client.query("COMMIT");
 
     return res.json({

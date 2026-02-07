@@ -18,6 +18,8 @@ export interface CatalogSupplier {
   stockQuantity: number;
   stockStatus: string;
   isPreferred: boolean;
+  bnplEligible?: boolean;
+  bnplMaxDays?: number;
 }
 
 /**
