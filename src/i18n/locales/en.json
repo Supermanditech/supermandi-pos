@@ -240,7 +240,21 @@
     "goToCart": "Go to Cart",
     "stayHere": "Stay Here",
     "noCaughtUp": "All caught up! No pending reorders.",
-    "errorTitle": "Error"
+    "errorTitle": "Error",
+    "dismissTitle": "Dismiss Reorder",
+    "dismissSelectReason": "Select a reason",
+    "dismissOther": "Other reason...",
+    "dismissPlaceholder": "Enter your reason...",
+    "dismissFailed": "Failed to dismiss. Please try again.",
+    "dismissButton": "Dismiss",
+    "dismissSuggested": "Suggested: {{qty}} units",
+    "dismissSuggestedFrom": "Suggested: {{qty}} units from {{supplier}}",
+    "reasonNotNeeded": "Not needed at this time",
+    "reasonAltSupplier": "Found alternative supplier",
+    "reasonDiscontinued": "Product discontinued",
+    "reasonPriceTooHigh": "Price too high",
+    "reasonStockReceived": "Stock already received",
+    "reasonSeasonal": "Seasonal item - out of season"
   },
   "inward": {
     "title": "Stock Inward",

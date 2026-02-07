@@ -240,7 +240,21 @@
     "goToCart": "कार्ट पर जाएं",
     "stayHere": "यहीं रहें",
     "noCaughtUp": "सब अपडेट! कोई लंबित रीऑर्डर नहीं।",
-    "errorTitle": "त्रुटि"
+    "errorTitle": "त्रुटि",
+    "dismissTitle": "रीऑर्डर खारिज करें",
+    "dismissSelectReason": "कारण चुनें",
+    "dismissOther": "अन्य कारण...",
+    "dismissPlaceholder": "अपना कारण दर्ज करें...",
+    "dismissFailed": "खारिज करने में विफल। कृपया पुनः प्रयास करें।",
+    "dismissButton": "खारिज करें",
+    "dismissSuggested": "सुझावित: {{qty}} इकाई",
+    "dismissSuggestedFrom": "सुझावित: {{qty}} इकाई {{supplier}} से",
+    "reasonNotNeeded": "अभी जरूरत नहीं",
+    "reasonAltSupplier": "वैकल्पिक आपूर्तिकर्ता मिला",
+    "reasonDiscontinued": "उत्पाद बंद",
+    "reasonPriceTooHigh": "कीमत बहुत अधिक",
+    "reasonStockReceived": "स्टॉक पहले से प्राप्त",
+    "reasonSeasonal": "मौसमी उत्पाद - मौसम के बाहर"
   },
   "inward": {
     "title": "स्टॉक इनवार्ड",

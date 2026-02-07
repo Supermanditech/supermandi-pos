@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { theme } from "../../theme";
 import type { PendingReorder } from "../../services/api/reorderApi";
@@ -30,15 +31,16 @@ export interface DismissReasonModalProps {
 
 // =============================================================================
 // PREDEFINED REASONS
+// POS-I18N-002: Each reason has an i18n key (for display) and a value (sent to backend)
 // =============================================================================
 
 const PREDEFINED_REASONS = [
-  "Not needed at this time",
-  "Found alternative supplier",
-  "Product discontinued",
-  "Price too high",
-  "Stock already received",
-  "Seasonal item - out of season",
+  { key: "reorder.reasonNotNeeded", value: "Not needed at this time" },
+  { key: "reorder.reasonAltSupplier", value: "Found alternative supplier" },
+  { key: "reorder.reasonDiscontinued", value: "Product discontinued" },
+  { key: "reorder.reasonPriceTooHigh", value: "Price too high" },
+  { key: "reorder.reasonStockReceived", value: "Stock already received" },
+  { key: "reorder.reasonSeasonal", value: "Seasonal item - out of season" },
 ];
 
 // =============================================================================
@@ -52,6 +54,7 @@ export function DismissReasonModal({
   onClose,
 }: DismissReasonModalProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -82,7 +85,7 @@ export function DismissReasonModal({
       onClose();
     } catch (err) {
       console.error("[DismissReasonModal] Failed to dismiss:", err);
-      setError("Failed to dismiss. Please try again.");
+      setError(t("reorder.dismissFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -113,7 +116,7 @@ export function DismissReasonModal({
               color={theme.colors.textPrimary}
             />
           </Pressable>
-          <Text style={styles.headerTitle}>Dismiss Reorder</Text>
+          <Text style={styles.headerTitle}>{t("reorder.dismissTitle")}</Text>
           <View style={styles.headerRight} />
         </View>
 
@@ -123,31 +126,32 @@ export function DismissReasonModal({
           <View style={styles.productInfo}>
             <Text style={styles.productName}>{item.productName}</Text>
             <Text style={styles.productMeta}>
-              Suggested: {item.suggestedQuantity} units
-              {item.suggestedSupplierName && ` from ${item.suggestedSupplierName}`}
+              {item.suggestedSupplierName
+                ? t("reorder.dismissSuggestedFrom", { qty: item.suggestedQuantity, supplier: item.suggestedSupplierName })
+                : t("reorder.dismissSuggested", { qty: item.suggestedQuantity })}
             </Text>
           </View>
 
           {/* Reason Selection */}
-          <Text style={styles.sectionTitle}>Select a reason</Text>
+          <Text style={styles.sectionTitle}>{t("reorder.dismissSelectReason")}</Text>
 
           <View style={styles.reasonsContainer}>
-            {PREDEFINED_REASONS.map((predefinedReason) => (
+            {PREDEFINED_REASONS.map((r) => (
               <Pressable
-                key={predefinedReason}
+                key={r.value}
                 style={[
                   styles.reasonChip,
-                  reason === predefinedReason && styles.reasonChipSelected,
+                  reason === r.value && styles.reasonChipSelected,
                 ]}
-                onPress={() => handleReasonSelect(predefinedReason)}
+                onPress={() => handleReasonSelect(r.value)}
               >
                 <Text
                   style={[
                     styles.reasonChipText,
-                    reason === predefinedReason && styles.reasonChipTextSelected,
+                    reason === r.value && styles.reasonChipTextSelected,
                   ]}
                 >
-                  {predefinedReason}
+                  {t(r.key)}
                 </Text>
               </Pressable>
             ))}
@@ -165,7 +169,7 @@ export function DismissReasonModal({
                   reason === "other" && styles.reasonChipTextSelected,
                 ]}
               >
-                Other reason...
+                {t("reorder.dismissOther")}
               </Text>
             </Pressable>
           </View>
@@ -175,7 +179,7 @@ export function DismissReasonModal({
             <View style={styles.customReasonContainer}>
               <TextInput
                 style={styles.customReasonInput}
-                placeholder="Enter your reason..."
+                placeholder={t("reorder.dismissPlaceholder")}
                 placeholderTextColor={theme.colors.textTertiary}
                 value={customReason}
                 onChangeText={setCustomReason}
@@ -209,7 +213,7 @@ export function DismissReasonModal({
             onPress={onClose}
             disabled={submitting}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>{t("common.cancel", "Cancel")}</Text>
           </Pressable>
 
           <Pressable
@@ -229,7 +233,7 @@ export function DismissReasonModal({
                   size={18}
                   color={theme.colors.textInverse}
                 />
-                <Text style={styles.dismissButtonText}>Dismiss</Text>
+                <Text style={styles.dismissButtonText}>{t("reorder.dismissButton")}</Text>
               </>
             )}
           </Pressable>
