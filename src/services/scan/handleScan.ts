@@ -323,10 +323,28 @@ function confirmPurchaseAdd(): Promise<boolean> {
 
 export type ScanSource = "scanner" | "keyboard";
 
+// POS-SCAN-003: Strip common HID scanner prefix/suffix patterns
+// GS1 symbology identifiers: ]C1 (Code 128), ]E0 (EAN-13), ]d2 (DataMatrix), etc.
+const SCANNER_PREFIX_REGEX = /^\][A-Za-z]\d/;
+// Some scanners append check digits or control characters
+const SCANNER_SUFFIX_REGEX = /[\x00-\x1f]+$/;
+
+function stripScannerAffixes(raw: string): string {
+  let result = raw;
+  // Strip GS1 symbology identifier prefix (e.g., ]C1, ]E0, ]d2)
+  if (SCANNER_PREFIX_REGEX.test(result)) {
+    result = result.slice(3);
+  }
+  // Strip trailing control characters
+  result = result.replace(SCANNER_SUFFIX_REGEX, "");
+  return result;
+}
+
 export async function onBarcodeScanned(rawText: string, format?: string, source: ScanSource = "scanner"): Promise<void> {
   try {
+    // POS-SCAN-003: Strip scanner prefix/suffix before normalization
     // POS-SCAN-001: Normalize barcode case at entry point
-    const trimmed = (rawText?.trim?.() ?? "").toUpperCase();
+    const trimmed = stripScannerAffixes(rawText?.trim?.() ?? "").toUpperCase();
     if (!trimmed) return;
 
     console.log(`scan_barcode_received:${trimmed}`);
