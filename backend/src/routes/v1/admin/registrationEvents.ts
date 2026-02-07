@@ -11,6 +11,8 @@
 import { Router } from "express";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { createEnrollmentCode } from "../../../services/enrollmentCodeService";  // DRX-003
+import { sendEnrollmentCode } from "../../../services/notificationService";  // DRX-003
 
 export const adminRegistrationEventsRouter = Router();
 
@@ -204,6 +206,89 @@ adminRegistrationEventsRouter.get(
     } catch (err: any) {
       console.error("[admin/registration-events/summary] Query failed:", err?.message);
       return res.status(500).json({ error: "QUERY_FAILED" });
+    }
+  }
+);
+
+/**
+ * DRX-003: POST /api/v1/admin/stores/:storeId/send-enrollment-code
+ *
+ * Generates an enrollment code for the store and sends it to the owner
+ * via SMS + Email. Used by SuperAdmin to bridge registration → enrollment.
+ */
+adminRegistrationEventsRouter.post(
+  "/stores/:storeId/send-enrollment-code",
+  requirePermission("stores:write"),
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) {
+      return res.status(503).json({ error: "DATABASE_UNAVAILABLE" });
+    }
+
+    const storeId = req.params.storeId;
+    if (!storeId) {
+      return res.status(400).json({ error: "MISSING_STORE_ID" });
+    }
+
+    try {
+      // Look up store + owner
+      const storeResult = await pool.query(
+        `SELECT s.id::TEXT as id, s.name, COALESCE(s.store_code, s.code) as code,
+                s.phone, s.email, s.owner_name
+         FROM platform.stores s
+         WHERE s.id = $1::uuid AND s.status != 'deleted'
+         LIMIT 1`,
+        [storeId]
+      );
+
+      if (storeResult.rows.length === 0) {
+        return res.status(404).json({ error: "STORE_NOT_FOUND" });
+      }
+
+      const store = storeResult.rows[0];
+
+      if (!store.phone) {
+        return res.status(400).json({
+          error: "NO_PHONE",
+          message: "Store has no phone number — cannot send enrollment code",
+        });
+      }
+
+      // Generate enrollment code
+      const enrollment = await createEnrollmentCode(
+        store.id,
+        store.code || "",
+        "superadmin"
+      );
+
+      // Send notification (non-blocking errors)
+      const notification = await sendEnrollmentCode({
+        phone: store.phone,
+        email: store.email || undefined,
+        ownerName: store.owner_name || store.name,
+        storeCode: store.code || "",
+        enrollmentCode: enrollment.code,
+        expiresAt: enrollment.expiresAt,
+      });
+
+      console.log(
+        `[DRX-003] Enrollment code ${enrollment.code} sent for store ${storeId} — SMS: ${notification.smsSent}, Email: ${notification.emailSent}`
+      );
+
+      return res.json({
+        enrollmentCode: enrollment.code,
+        expiresAt: enrollment.expiresAt,
+        qrPayload: enrollment.qrPayload,
+        notification: {
+          smsSent: notification.smsSent,
+          emailSent: notification.emailSent,
+          smsError: notification.smsError || null,
+          emailError: notification.emailError || null,
+        },
+      });
+    } catch (err: any) {
+      console.error("[DRX-003] Send enrollment code failed:", err?.message);
+      return res.status(500).json({ error: "INTERNAL_ERROR" });
     }
   }
 );

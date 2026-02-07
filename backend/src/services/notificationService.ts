@@ -334,3 +334,101 @@ export async function sendOnboardingLinks(
 
   return result;
 }
+
+// =============================================================================
+// DRX-003: ENROLLMENT CODE NOTIFICATION
+// =============================================================================
+
+export interface EnrollmentCodeNotificationInput {
+  phone: string;
+  email?: string;
+  ownerName: string;
+  storeCode: string;
+  enrollmentCode: string;
+  expiresAt: string;
+}
+
+/**
+ * Send enrollment code to retailer via SMS + Email.
+ * Used by SuperAdmin "Send Enrollment Code" action.
+ */
+export async function sendEnrollmentCode(
+  input: EnrollmentCodeNotificationInput
+): Promise<OnboardingNotificationResult> {
+  const result: OnboardingNotificationResult = {
+    smsSent: false,
+    emailSent: false,
+  };
+
+  const expiresIn = Math.round(
+    (new Date(input.expiresAt).getTime() - Date.now()) / 60000
+  );
+  const expiresLabel = expiresIn > 0 ? `Expires in ${expiresIn} min.` : "Expires soon.";
+
+  // --- SMS ---
+  if (isSmsServiceEnabled()) {
+    try {
+      const smsText = `SuperMandi: Your POS enrollment code is ${input.enrollmentCode}. ${expiresLabel} Open your POS app and enter this code to link your device.`;
+      const smsResult = await sendSms(input.phone, smsText);
+      result.smsSent = smsResult.sent;
+      if (!smsResult.sent) {
+        result.smsError = smsResult.errorMessage;
+      }
+    } catch (err) {
+      result.smsError = err instanceof Error ? err.message : "SMS failed";
+    }
+  }
+
+  // --- Email ---
+  if (input.email && isEmailServiceEnabled()) {
+    try {
+      const subject = `SuperMandi — Your POS Enrollment Code: ${input.enrollmentCode}`;
+      const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:600px;background-color:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+        <tr><td style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:32px;text-align:center;">
+          <h1 style="color:#fff;margin:0;font-size:28px;">SuperMandi</h1>
+          <p style="color:rgba(255,255,255,0.9);margin:8px 0 0 0;font-size:14px;">POS Device Enrollment</p>
+        </td></tr>
+        <tr><td style="padding:40px 32px;">
+          <h2 style="color:#1f2937;margin:0 0 16px;font-size:20px;">Hello ${input.ownerName},</h2>
+          <p style="color:#4b5563;margin:0 0 24px;font-size:15px;line-height:1.6;">
+            Use the code below to enroll your POS device for store <strong>${input.storeCode}</strong>.
+          </p>
+          <div style="background-color:#f0fdf4;border:2px dashed #86efac;border-radius:8px;padding:24px;text-align:center;margin-bottom:24px;">
+            <p style="color:#166534;margin:0 0 8px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Enrollment Code</p>
+            <span style="font-family:'Courier New',monospace;font-size:36px;font-weight:700;letter-spacing:4px;color:#15803d;">
+              ${input.enrollmentCode}
+            </span>
+          </div>
+          <div style="background-color:#fef3c7;border-left:4px solid #f59e0b;padding:16px;border-radius:0 8px 8px 0;">
+            <p style="color:#92400e;margin:0;font-size:13px;line-height:1.5;">
+              <strong>${expiresLabel}</strong> Open the SuperMandi POS app on your device and enter this code when prompted.
+            </p>
+          </div>
+        </td></tr>
+        <tr><td style="background-color:#f9fafb;padding:24px 32px;border-top:1px solid #e5e7eb;">
+          <p style="color:#6b7280;margin:0;font-size:12px;text-align:center;">&copy; ${new Date().getFullYear()} SuperMandi. All rights reserved.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+      const text = `SuperMandi POS Enrollment\n\nHello ${input.ownerName},\n\nYour POS enrollment code for store ${input.storeCode}: ${input.enrollmentCode}\n\n${expiresLabel}\n\nOpen the SuperMandi POS app and enter this code to link your device.`;
+      const emailResult = await sendGenericEmail(input.email, subject, html, text);
+      result.emailSent = emailResult.sent;
+      if (!emailResult.sent) {
+        result.emailError = emailResult.errorMessage;
+      }
+    } catch (err) {
+      result.emailError = err instanceof Error ? err.message : "Email failed";
+    }
+  }
+
+  return result;
+}

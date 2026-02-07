@@ -80,6 +80,52 @@ export type RegistrationSummary = {
   bySource: Record<string, Record<string, number>>;
 };
 
+// DRX-003: Send enrollment code to store owner
+export type SendEnrollmentCodeResponse = {
+  enrollmentCode: string;
+  expiresAt: string;
+  qrPayload: string;
+  notification: {
+    smsSent: boolean;
+    emailSent: boolean;
+    smsError: string | null;
+    emailError: string | null;
+  };
+};
+
+export async function sendEnrollmentCodeToStore(
+  storeId: string
+): Promise<SendEnrollmentCodeResponse> {
+  const base = requireApiBase();
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${storeId}/send-enrollment-code`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Session expired. Please log in again.");
+    }
+    if (res.status === 404) {
+      throw new Error("Store not found.");
+    }
+    const body = await res.json().catch(() => ({}));
+    throw new Error(
+      (body as { message?: string }).message ||
+        `Failed to send enrollment code (${res.status})`
+    );
+  }
+
+  return (await res.json()) as SendEnrollmentCodeResponse;
+}
+
 export async function fetchRegistrationSummary(): Promise<RegistrationSummary> {
   const base = requireApiBase();
   const res = await fetchWithTimeout(

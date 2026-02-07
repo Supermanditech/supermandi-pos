@@ -59,7 +59,7 @@ import {
 } from "./api/documents";
 import { QRCodeSVG } from "qrcode.react";
 // RO-007: Registration events visibility
-import { fetchRegistrationEvents, type RegistrationEvent, type RegistrationEventsResponse } from "./api/registrationEvents";
+import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent, type RegistrationEventsResponse } from "./api/registrationEvents";
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -797,6 +797,7 @@ export default function App() {
   const [regEventsPage, setRegEventsPage] = useState<number>(0);
   const [regEventsSourceFilter, setRegEventsSourceFilter] = useState<string>("");
   const [regEventsOutcomeFilter, setRegEventsOutcomeFilter] = useState<string>("");
+  const [sendingEnrollment, setSendingEnrollment] = useState<string>("");  // DRX-003: storeId being sent
 
   // DOCS-001: Document management state
   const [pendingDocuments, setPendingDocuments] = useState<DocumentRecord[]>([]);
@@ -4506,6 +4507,7 @@ export default function App() {
                   <th>Store</th>
                   <th>GSTIN</th>
                   <th>IP</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -4554,11 +4556,43 @@ export default function App() {
                     </td>
                     <td className="mono" style={{ fontSize: 11 }}>{evt.gstin || "-"}</td>
                     <td className="mono" style={{ fontSize: 11 }}>{evt.ipAddress || "-"}</td>
+                    <td>
+                      {evt.storeId && (evt.outcome === "SUCCESS" || evt.outcome === "IDEMPOTENT") ? (
+                        <button
+                          style={{
+                            fontSize: 11,
+                            padding: "3px 10px",
+                            borderRadius: 4,
+                            border: "1px solid #10b981",
+                            background: sendingEnrollment === evt.storeId ? "#d1fae5" : "#ecfdf5",
+                            color: "#059669",
+                            cursor: sendingEnrollment === evt.storeId ? "wait" : "pointer",
+                            fontWeight: 600,
+                          }}
+                          disabled={!!sendingEnrollment}
+                          onClick={async () => {
+                            setSendingEnrollment(evt.storeId!);
+                            try {
+                              const resp = await sendEnrollmentCodeToStore(evt.storeId!);
+                              alert(`Enrollment code: ${resp.enrollmentCode}\nExpires: ${new Date(resp.expiresAt).toLocaleTimeString()}\nSMS: ${resp.notification.smsSent ? "Sent" : "Skipped"}\nEmail: ${resp.notification.emailSent ? "Sent" : "Skipped"}`);
+                            } catch (err: any) {
+                              alert(`Failed: ${err?.message || "Unknown error"}`);
+                            } finally {
+                              setSendingEnrollment("");
+                            }
+                          }}
+                        >
+                          {sendingEnrollment === evt.storeId ? "Sending..." : "Send Code"}
+                        </button>
+                      ) : (
+                        <span className="muted" style={{ fontSize: 11 }}>-</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {regEvents.length === 0 && !regEventsLoading && (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: "center", color: "#888", padding: 24 }}>
+                    <td colSpan={9} style={{ textAlign: "center", color: "#888", padding: 24 }}>
                       No registration events found
                     </td>
                   </tr>

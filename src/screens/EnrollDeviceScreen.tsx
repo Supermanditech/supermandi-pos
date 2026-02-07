@@ -12,7 +12,7 @@ import {
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 // expo-updates disabled for development - channel info not needed
 const Updates = { channel: null as string | null };
@@ -70,11 +70,12 @@ import { useSettingsStore } from "../stores/settingsStore";
  */
 
 type RootStackParamList = {
-  EnrollDevice: undefined;
+  EnrollDevice: { enrollmentCode?: string } | undefined;  // DRX-003: Optional pre-fill from registration
   SellScan: undefined;
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "EnrollDevice">;
+type EnrollRoute = RouteProp<RootStackParamList, "EnrollDevice">;
 
 type DeviceType = "OEM_HANDHELD" | "SUPMANDI_PHONE" | "RETAILER_PHONE";
 type PrintingMode = "DIRECT_ESC_POS" | "SHARE_TO_PRINTER_APP" | "NONE";
@@ -207,8 +208,9 @@ function formatUnknownError(value: unknown): string {
 
 export default function EnrollDeviceScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<EnrollRoute>();  // DRX-003
   const [permission, requestPermission] = useCameraPermissions();
-  const [codeInput, setCodeInput] = useState("");
+  const [codeInput, setCodeInput] = useState(route.params?.enrollmentCode || "");
   const [labelInput, setLabelInput] = useState("");
   const [deviceType, setDeviceType] = useState<DeviceType>("RETAILER_PHONE");
   const [printingMode, setPrintingMode] = useState<PrintingMode>("NONE");

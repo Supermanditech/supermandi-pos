@@ -12,6 +12,7 @@ import type { Pool, PoolClient } from "pg";
 import { randomUUID } from "crypto";
 import { generateStoreCode } from "./storeCodeService";
 import { sendOnboardingLinks } from "./notificationService";  // RO-008
+import { createEnrollmentCode } from "./enrollmentCodeService";  // DRX-003
 import type {
   RetailerRegistrationData,
   RegistrationSource,
@@ -28,6 +29,7 @@ export interface RegistrationResult {
   ownerUserId: string;
   storeName: string;
   isExisting: boolean;
+  enrollmentCode?: string;  // DRX-003: Auto-generated for POS sources
 }
 
 export interface RegistrationEventData {
@@ -175,6 +177,19 @@ export async function registerRetailer(
       console.warn("[registration] Onboarding notification failed:", err?.message);
     });
 
+    // Step 8: DRX-003 — Auto-generate enrollment code for POS sources
+    let enrollmentCode: string | undefined;
+    if (data.source === "POS_MOBILE" || data.source === "POS_DEVICE") {
+      try {
+        const enrollment = await createEnrollmentCode(storeId, storeCode, "registration");
+        enrollmentCode = enrollment.code;
+        console.log(`[registration] DRX-003: Auto-generated enrollment code ${enrollmentCode} for POS registration`);
+      } catch (err: any) {
+        console.warn("[registration] DRX-003: Failed to auto-generate enrollment code:", err?.message);
+        // Non-blocking: registration still succeeds without enrollment code
+      }
+    }
+
     return {
       outcome: "SUCCESS",
       storeId,
@@ -182,6 +197,7 @@ export async function registerRetailer(
       ownerUserId: userId,
       storeName: data.businessName,
       isExisting: false,
+      enrollmentCode,
     };
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});
