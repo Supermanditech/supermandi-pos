@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, markOrdersRead, getOrderDetail, getOrderEvents, Order, OrderItem, OrderNote, OrderDetail, OrderDetailItem, OrderEvent, PaginatedResponse } from '@/lib/api';
+import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, markOrdersRead, getOrderDetail, getOrderEvents, getOrderStreamUrl, Order, OrderItem, OrderNote, OrderDetail, OrderDetailItem, OrderEvent, PaginatedResponse } from '@/lib/api';
 
 function formatPrice(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN', {
@@ -93,6 +93,34 @@ export default function OrdersPage() {
   useEffect(() => {
     markOrdersRead().catch(() => {});
   }, []);
+
+  // SUP-POS-012: SSE real-time order updates
+  const eventSourceRef = useRef<EventSource | null>(null);
+  useEffect(() => {
+    const streamUrl = getOrderStreamUrl();
+    if (!streamUrl) return;
+
+    const es = new EventSource(streamUrl);
+    eventSourceRef.current = es;
+
+    const handleOrderEvent = () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    };
+
+    es.addEventListener('order.created', handleOrderEvent);
+    es.addEventListener('order.status_changed', handleOrderEvent);
+    es.addEventListener('order.payment_received', handleOrderEvent);
+    es.addEventListener('order.event', handleOrderEvent);
+
+    es.onerror = () => {
+      // EventSource auto-reconnects; no action needed
+    };
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [queryClient]);
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Order['status'] }) =>

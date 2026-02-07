@@ -1110,3 +1110,17 @@ export async function uploadSupplierDocument(
   const data = await response.json();
   return data.data ?? data;
 }
+
+// =============================================================================
+// SUP-POS-012: SSE Stream URL for real-time order updates
+// =============================================================================
+
+/**
+ * Get the SSE stream URL for real-time order events.
+ * Includes auth token as query param (EventSource can't set headers).
+ */
+export function getOrderStreamUrl(): string | null {
+  const token = getAuthToken();
+  if (!token) return null;
+  return `${API_BASE_URL}/api/v1/supplier/orders/stream?token=${encodeURIComponent(token)}`;
+}
