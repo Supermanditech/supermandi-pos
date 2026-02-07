@@ -164,14 +164,14 @@ function getEventInfo(event: OrderEvent): EventInfo {
           icon: "truck-delivery",
           color: statusColor,
         };
-      case "partially_received":
+      case "partial_received":
         return {
           title: "Partially Received",
           description: "Some items have been received",
           icon: "package-variant",
           color: statusColor,
         };
-      case "received":
+      case "delivered":
         return {
           title: "Order Complete",
           description: "All items received successfully",

@@ -166,7 +166,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
         id, order_number, store_id, supplier_id, order_type, status,
         total_amount, item_count, store_notes, delivery_address,
         expected_delivery_date, created_by_user_id
-      ) VALUES ($1, $2, $3, $4, $5, 'draft', $6, $7, $8, $9, $10, NULL)
+      ) VALUES ($1, $2, $3, $4, $5, 'submitted', $6, $7, $8, $9, $10, NULL)
       RETURNING
         id,
         order_number as "orderNumber",
@@ -225,7 +225,7 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
     try {
       await client.query(
         `INSERT INTO orders.order_events (purchase_order_id, event_type, from_status, to_status, actor_type, metadata)
-         VALUES ($1, 'created', NULL, 'draft', 'system', $2)`,
+         VALUES ($1, 'created', NULL, 'submitted', 'system', $2)`,
         [orderId, JSON.stringify({ orderType, itemCount: validatedItems.length })]
       );
     } catch (eventErr: any) {
@@ -764,7 +764,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/payment-options", requireDevi
     const order = orderResult.rows[0];
 
     // Only allow payment for orders in specific statuses
-    const payableStatuses = ['confirmed', 'shipped', 'received', 'partially_received'];
+    const payableStatuses = ['confirmed', 'shipped', 'delivered', 'partial_received'];
     if (!payableStatuses.includes(order.status)) {
       return res.status(400).json({
         success: false,
@@ -971,7 +971,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
     const order = orderResult.rows[0];
 
     // Verify order is in payable status
-    const payableStatuses = ['confirmed', 'shipped', 'received', 'partially_received'];
+    const payableStatuses = ['confirmed', 'shipped', 'delivered', 'partial_received'];
     if (!payableStatuses.includes(order.status)) {
       await client.query("ROLLBACK");
       return res.status(400).json({
@@ -1403,7 +1403,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
       const order = orderResult.rows[0];
 
       // Only allow receiving for orders in valid status
-      const receivableStatuses = ["confirmed", "shipped", "partially_received"];
+      const receivableStatuses = ["confirmed", "shipped", "partial_received"];
       if (!receivableStatuses.includes(order.status)) {
         await client.query("ROLLBACK");
         return res.status(400).json({
@@ -1443,7 +1443,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
             COALESCE(p.name, 'Unknown Product') as "productName"
           FROM orders.purchase_order_items poi
           LEFT JOIN catalog.products p ON p.id = poi.product_id
-          WHERE poi.id = $1 AND poi.purchase_order_id = $2`,
+          WHERE poi.id = $1 AND poi.order_id = $2`,
           [item.orderItemId, orderId]
         );
 
@@ -1459,7 +1459,7 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
         const newReceivedQty = (orderItem.received_quantity || 0) + item.quantityReceived;
 
         // Determine item status
-        let itemStatus = "partially_received";
+        let itemStatus = "partial";
         if (newReceivedQty >= orderItem.ordered_quantity) {
           itemStatus = "received";
         }
@@ -1511,12 +1511,12 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
       const remainingResult = await client.query(
         `SELECT COUNT(*) as remaining
          FROM orders.purchase_order_items
-         WHERE purchase_order_id = $1 AND status != 'received'`,
+         WHERE order_id = $1 AND status != 'received'`,
         [orderId]
       );
 
       const remainingItems = parseInt(remainingResult.rows[0].remaining, 10);
-      const newOrderStatus = remainingItems === 0 ? "received" : "partially_received";
+      const newOrderStatus = remainingItems === 0 ? "delivered" : "partial_received";
 
       // Update order status
       await client.query(

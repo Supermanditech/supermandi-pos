@@ -43,7 +43,7 @@ describe("GRN Flow", () => {
       {
         id: "po3",
         orderNumber: "PO-2024-003",
-        status: "received",
+        status: "delivered",
         supplierId: "s2",
         supplierName: "Another Supplier",
         totalAmount: 120000,
@@ -52,7 +52,7 @@ describe("GRN Flow", () => {
     ];
 
     it("should filter orders eligible for GRN", () => {
-      const eligibleStatuses = ["confirmed", "partially_received"];
+      const eligibleStatuses = ["confirmed", "partial_received"];
       const eligible = mockOrders.filter((o) =>
         eligibleStatuses.includes(o.status)
       );
@@ -61,7 +61,7 @@ describe("GRN Flow", () => {
     });
 
     it("should exclude already received orders", () => {
-      const notReceived = mockOrders.filter((o) => o.status !== "received");
+      const notReceived = mockOrders.filter((o) => o.status !== "delivered");
       expect(notReceived).toHaveLength(2);
     });
 
@@ -300,17 +300,17 @@ describe("GRN Flow", () => {
       const totalReceived = 15;
 
       const newStatus =
-        totalReceived >= totalOrdered ? "received" : "partially_received";
-      expect(newStatus).toBe("received");
+        totalReceived >= totalOrdered ? "delivered" : "partial_received";
+      expect(newStatus).toBe("delivered");
     });
 
-    it("should update to partially_received when partial", () => {
+    it("should update to partial_received when partial", () => {
       const totalOrdered = 15;
       const totalReceived = 10;
 
       const newStatus =
-        totalReceived >= totalOrdered ? "received" : "partially_received";
-      expect(newStatus).toBe("partially_received");
+        totalReceived >= totalOrdered ? "delivered" : "partial_received";
+      expect(newStatus).toBe("partial_received");
     });
   });
 

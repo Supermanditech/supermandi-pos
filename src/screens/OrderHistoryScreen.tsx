@@ -65,9 +65,9 @@ export default function OrderHistoryScreen({
   const getStatusFilter = useCallback((filterOption: FilterOption): OrderStatus[] | undefined => {
     switch (filterOption) {
       case "active":
-        return ["draft", "submitted", "confirmed", "shipped", "partially_received"];
+        return ["draft", "submitted", "confirmed", "shipped", "partial_received"];
       case "completed":
-        return ["received"];
+        return ["delivered"];
       case "cancelled":
         return ["cancelled"];
       default:
@@ -143,10 +143,10 @@ export default function OrderHistoryScreen({
   // Stats
   const stats = useMemo(() => {
     const active = orders.filter((o) =>
-      ["draft", "submitted", "confirmed", "shipped", "partially_received"].includes(o.status)
+      ["draft", "submitted", "confirmed", "shipped", "partial_received"].includes(o.status)
     ).length;
     const receivable = orders.filter((o) =>
-      ["shipped", "partially_received", "confirmed"].includes(o.status)
+      ["shipped", "partial_received", "confirmed"].includes(o.status)
     ).length;
     return { total: orders.length, active, receivable };
   }, [orders]);

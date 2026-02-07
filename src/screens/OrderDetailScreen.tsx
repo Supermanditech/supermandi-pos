@@ -114,7 +114,7 @@ export default function OrderDetailScreen({
   useEffect(() => {
     // Only auto-refresh if order is in a non-final status
     if (!order) return;
-    const finalStatuses: OrderStatus[] = ["received", "cancelled"];
+    const finalStatuses: OrderStatus[] = ["delivered", "cancelled"];
     if (finalStatuses.includes(order.status)) {
       return;
     }

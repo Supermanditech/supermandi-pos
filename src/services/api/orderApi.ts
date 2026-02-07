@@ -7,13 +7,15 @@ import { ApiError, apiClient } from "./apiClient";
 // TYPES
 // =============================================================================
 
+// POS-BUY-005: Must match DB CHECK constraint exactly:
+// draft, submitted, confirmed, shipped, partial_received, delivered, cancelled
 export type OrderStatus =
   | "draft"
   | "submitted"
   | "confirmed"
   | "shipped"
-  | "partially_received"
-  | "received"
+  | "partial_received"
+  | "delivered"
   | "cancelled";
 
 export type OrderType = "manual" | "reorder";
@@ -463,8 +465,8 @@ export function getStatusLabel(status: OrderStatus): string {
     submitted: "Submitted",
     confirmed: "Confirmed",
     shipped: "Shipped",
-    partially_received: "Partially Received",
-    received: "Received",
+    partial_received: "Partially Received",
+    delivered: "Delivered",
     cancelled: "Cancelled",
   };
   return labels[status] ?? status;
@@ -479,8 +481,8 @@ export function getStatusColor(status: OrderStatus): string {
     submitted: "#F59E0B", // warning/yellow
     confirmed: "#3B82F6", // blue
     shipped: "#8B5CF6", // purple
-    partially_received: "#14B8A6", // teal
-    received: "#16A34A", // success/green
+    partial_received: "#14B8A6", // teal
+    delivered: "#16A34A", // success/green
     cancelled: "#DC2626", // error/red
   };
   return colors[status] ?? "#64748B";
@@ -497,7 +499,7 @@ export function canCancel(status: OrderStatus): boolean {
  * Check if order can be received (GRN).
  */
 export function canReceive(status: OrderStatus): boolean {
-  return ["shipped", "partially_received", "confirmed"].includes(status);
+  return ["shipped", "partial_received", "confirmed"].includes(status);
 }
 
 /**
@@ -509,8 +511,8 @@ export function getOrderProgress(status: OrderStatus): number {
     submitted: 20,
     confirmed: 40,
     shipped: 60,
-    partially_received: 80,
-    received: 100,
+    partial_received: 80,
+    delivered: 100,
     cancelled: 0,
   };
   return progress[status] ?? 0;
