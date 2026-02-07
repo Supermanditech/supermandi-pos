@@ -798,6 +798,8 @@ export default function App() {
   const [regEventsSourceFilter, setRegEventsSourceFilter] = useState<string>("");
   const [regEventsOutcomeFilter, setRegEventsOutcomeFilter] = useState<string>("");
   const [sendingEnrollment, setSendingEnrollment] = useState<string>("");  // DRX-003: storeId being sent
+  // DR-010: New registration badge
+  const [regEventsLastSeenTotal, setRegEventsLastSeenTotal] = useState<number>(0);
 
   // DOCS-001: Document management state
   const [pendingDocuments, setPendingDocuments] = useState<DocumentRecord[]>([]);
@@ -1383,7 +1385,7 @@ export default function App() {
   }
 
   // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
-  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments };
+  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents };
 
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
@@ -1432,6 +1434,7 @@ export default function App() {
       }
       if (shouldRefreshAudit) r.refreshAuditLogs?.();
       if (shouldRefreshDocuments) r.refreshDocuments?.();
+      r.refreshRegEvents?.(); // DR-010: Always poll for badge count
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
   }, [tab]);
@@ -1462,6 +1465,13 @@ export default function App() {
       refreshRegEvents();
     }
   }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter]);
+
+  // DR-010: Clear badge when admin views the registrations tab
+  useEffect(() => {
+    if (tab === "registrations") {
+      setRegEventsLastSeenTotal(regEventsTotal);
+    }
+  }, [tab]);
 
   // ISSUE-MICRO-059: Reset audit page to 0 when filter changes
   useEffect(() => {
@@ -2144,9 +2154,14 @@ export default function App() {
         <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>
           Audit Logs
         </button>
-        {/* RO-007: Registration events tab */}
+        {/* RO-007: Registration events tab + DR-010: badge */}
         <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>
           Registrations
+          {tab !== "registrations" && regEventsTotal > regEventsLastSeenTotal && (
+            <span style={{ marginLeft: 6, background: "#ef4444", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 600 }}>
+              {regEventsTotal - regEventsLastSeenTotal}
+            </span>
+          )}
         </button>
 
         <div className="tabsRight muted">
