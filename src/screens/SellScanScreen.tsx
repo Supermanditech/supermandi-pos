@@ -1044,6 +1044,8 @@ export default function SellScanScreen({
           if (resp.latestUpdatedAt) {
             lastSyncedAtRef.current = resp.latestUpdatedAt;
           }
+          // RET-POS-SYNC-010: Also refresh productsStore so cached product list stays current
+          useProductsStore.getState().loadProducts().catch(() => {});
           // Refresh stock snapshot after catalog re-sync
           refreshStockSnapshot();
         }

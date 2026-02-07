@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { eventLogger } from '../services/eventLogger';
 import * as productsApi from '../services/api/productsApi';
+import { checkCatalogFreshness } from '../services/api/sellSearchApi';
 import { storeScopedStorage } from "../services/storeScope";
 import { upsertStockFromProducts } from "../services/stockService";
 
@@ -21,7 +22,9 @@ interface ProductsState {
   products: Product[];
   loading: boolean;
   error: string | null;
+  lastSyncedAt: string | null;
   loadProducts: () => Promise<void>;
+  checkAndRefresh: () => Promise<void>;
   getProductByBarcode: (barcode: string) => Product | undefined;
   searchProducts: (query: string) => Product[];
   resetForStore: () => void;
@@ -31,6 +34,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
   loading: false,
   error: null,
+  lastSyncedAt: null,
 
   loadProducts: async () => {
     set({ loading: true, error: null });
@@ -57,7 +61,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       set({
         products: productsData,
         loading: false,
-        error: null
+        error: null,
+        lastSyncedAt: new Date().toISOString(),
       });
 
       await eventLogger.log('PRODUCTS_LOADED', {
@@ -101,6 +106,19 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 
+  // RET-POS-SYNC-010: Check freshness via backend and re-fetch if stale
+  checkAndRefresh: async () => {
+    const { lastSyncedAt, loadProducts } = get();
+    try {
+      const resp = await checkCatalogFreshness(lastSyncedAt);
+      if (resp.stale) {
+        await loadProducts();
+      }
+    } catch {
+      // Freshness check failures are non-critical
+    }
+  },
+
   getProductByBarcode: (barcode: string) => {
     const { products } = get();
     return products.find(product => product.barcode === barcode);
@@ -122,7 +140,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     set({
       products: [],
       loading: false,
-      error: null
+      error: null,
+      lastSyncedAt: null,
     });
   }
 }));
