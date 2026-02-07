@@ -1166,6 +1166,39 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
     if (mode === 'CREDIT') {
       const paymentId = randomUUID();
 
+      // POS-BUY-007: Atomic credit deduction with row-level locking
+      // Lock store row to prevent concurrent credit overspend
+      const storeCreditResult = await client.query(
+        `SELECT credit_limit, credit_enabled FROM platform.stores WHERE id = $1 FOR UPDATE`,
+        [storeId]
+      );
+
+      if (storeCreditResult.rows.length === 0 || !storeCreditResult.rows[0].credit_enabled) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ success: false, error: "Credit is not enabled for this store" });
+      }
+
+      const creditLimit = storeCreditResult.rows[0].credit_limit || 0;
+
+      // Calculate current credit usage (within the same transaction, after lock)
+      const usageResult = await client.query(
+        `SELECT COALESCE(SUM(amount_minor), 0) as used
+         FROM payments.buy_payments
+         WHERE store_id = $1 AND mode = 'CREDIT' AND status IN ('pending', 'approved')`,
+        [storeId]
+      );
+      const creditUsed = parseInt(usageResult.rows[0]?.used || '0', 10);
+      const availableCredit = creditLimit - creditUsed;
+
+      if (availableCredit < order.total_amount) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          success: false,
+          error: "insufficient_credit",
+          message: `Insufficient credit. Available: ${availableCredit}, Required: ${order.total_amount}`,
+        });
+      }
+
       // GO-LIVE-122: Create CREDIT payment with idempotency key
       const idempotencyKey = `buy_credit_${orderId}`;
       await client.query(
@@ -1184,14 +1217,15 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
 
       await client.query("COMMIT");
 
-      console.log(`[SM-017] BUY CREDIT payment created: paymentId=${paymentId}, orderId=${orderId}`);
+      console.log(`[SM-017] BUY CREDIT payment created: paymentId=${paymentId}, orderId=${orderId}, creditRemaining=${availableCredit - order.total_amount}`);
 
       return res.json({
         success: true,
         paymentId,
         mode: 'CREDIT',
         status: 'approved',
-        message: 'Payment charged to credit line.'
+        message: 'Payment charged to credit line.',
+        creditRemaining: availableCredit - order.total_amount,
       });
     }
 
