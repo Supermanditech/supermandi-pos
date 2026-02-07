@@ -6,9 +6,20 @@
 // GO-LIVE-178: Enhanced error reporting for partial failures
 
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 
 export const retailerAdminCsvImportRouter = Router();
+
+// RET-POS-SYNC-004: Per-store CSV upload rate limit (10 imports per hour per store)
+const csvUploadRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  keyGenerator: (req: Request) => getStoreId(req) || req.ip || 'unknown',
+  message: { error: { code: 'RATE_LIMITED', message: 'Max 10 CSV imports per hour. Try again later.' } },
+  standardHeaders: true, // Send RateLimit-* headers
+  legacyHeaders: false,
+});
 
 // GO-LIVE-178: Error categories for better failure diagnosis
 type ImportErrorCategory = 'duplicate_barcode' | 'validation_error' | 'db_constraint' | 'db_error' | 'unknown';
@@ -148,7 +159,7 @@ retailerAdminCsvImportRouter.get("/products/import/template", async (_req: Reque
 // Accepts raw CSV text in body (for simplicity; multipart can be added later)
 // =============================================================================
 
-retailerAdminCsvImportRouter.post("/products/import/upload", async (req: Request, res: Response) => {
+retailerAdminCsvImportRouter.post("/products/import/upload", csvUploadRateLimiter, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
 
