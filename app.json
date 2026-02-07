@@ -16,7 +16,7 @@
     },
     "android": {
       "package": "com.supermanditech.supermandipos",
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": ["RECORD_AUDIO", "CAMERA"]
     },
     "extra": {
       "API_URL": "https://supermandi.tech",
@@ -26,6 +26,12 @@
       "expo-secure-store",
       "expo-sqlite",
       "./plugins/withCleartextTraffic",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SuperMandi POS uses your camera to scan enrollment QR codes"
+        }
+      ],
       [
         "expo-av",
         {
