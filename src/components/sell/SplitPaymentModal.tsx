@@ -60,6 +60,8 @@ export function SplitPaymentModal({
   const [upiVerified, setUpiVerified] = useState(false);
   const [pollingActive, setPollingActive] = useState(false);
   const [pollCount, setPollCount] = useState(0);
+  const [manualUtrVisible, setManualUtrVisible] = useState(false);
+  const [manualUtr, setManualUtr] = useState("");
   const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Reset state when modal opens
@@ -75,6 +77,8 @@ export function SplitPaymentModal({
       setUpiVerified(false);
       setPollingActive(false);
       setPollCount(0);
+      setManualUtrVisible(false);
+      setManualUtr("");
     }
     // Cleanup polling on unmount
     return () => {
@@ -118,10 +122,10 @@ export function SplitPaymentModal({
       // Initial check
       void pollStatus();
 
+      // POS-PAY-001: Increased to 40 attempts (~5+ min with exponential backoff)
       // GO-LIVE-125: Exponential backoff polling (2s, 4s, 8s, 16s, capped at 30s)
-      // Max 20 attempts (~5 minutes total)
       let currentAttempt = 0;
-      const maxAttempts = 20;
+      const maxAttempts = 40;
       const baseDelay = 2000;
       const maxDelay = 30000;
 
@@ -134,6 +138,10 @@ export function SplitPaymentModal({
         const delay = Math.min(Math.pow(2, currentAttempt) * baseDelay, maxDelay);
         currentAttempt++;
         setPollCount(currentAttempt);
+        // POS-PAY-001: Show manual UTR fallback after 10 failed polls
+        if (currentAttempt >= 10) {
+          setManualUtrVisible(true);
+        }
 
         pollIntervalRef.current = setTimeout(() => {
           void pollStatus().then(() => {
@@ -266,6 +274,25 @@ export function SplitPaymentModal({
       setVerifyingUpi(false);
     }
   }, [saleId]);
+
+  // POS-PAY-001: Manual UTR fallback when auto-polling fails
+  const handleManualUtrSubmit = useCallback(() => {
+    const trimmedUtr = manualUtr.trim();
+    if (trimmedUtr.length < 6) {
+      Alert.alert("Invalid UTR", "Please enter a valid UPI Transaction Reference (at least 6 characters).");
+      return;
+    }
+    // Stop polling
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+    setPollingActive(false);
+    setUpiCompleted(true);
+    setUpiVerified(true);
+    setStep("cash-collect");
+    console.log(`[SplitPayment] POS-PAY-001: Manual UTR entered: ${trimmedUtr}`);
+  }, [manualUtr]);
 
   // GL-RJ-001: Confirm cash payment and verify complete sale status
   const handleCashReceived = async () => {
@@ -438,6 +465,30 @@ export function SplitPaymentModal({
           color={theme.colors.primary}
           style={{ marginBottom: 16 }}
         />
+      )}
+
+      {/* POS-PAY-001: Manual UTR fallback after 10 failed polls */}
+      {manualUtrVisible && (
+        <View style={styles.manualUtrContainer}>
+          <Text style={styles.manualUtrLabel}>
+            Auto-check taking too long? Enter UTR manually:
+          </Text>
+          <TextInput
+            style={styles.manualUtrInput}
+            placeholder="Enter UPI Transaction Reference"
+            placeholderTextColor={theme.colors.textTertiary}
+            value={manualUtr}
+            onChangeText={setManualUtr}
+            autoCapitalize="characters"
+          />
+          <TouchableOpacity
+            style={[styles.proceedBtn, manualUtr.trim().length < 6 && styles.btnDisabled]}
+            onPress={handleManualUtrSubmit}
+            disabled={manualUtr.trim().length < 6}
+          >
+            <Text style={styles.proceedBtnText}>Submit UTR & Proceed</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <View style={styles.actions}>
@@ -750,6 +801,31 @@ const styles = StyleSheet.create({
   },
   btnDisabled: {
     backgroundColor: theme.colors.textTertiary,
+  },
+  manualUtrContainer: {
+    width: "100%" as const,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  manualUtrLabel: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  manualUtrInput: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.surface,
+    marginBottom: 8,
   },
   qrContainer: {
     alignItems: "center",
