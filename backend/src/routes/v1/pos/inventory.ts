@@ -623,6 +623,84 @@ posInventoryRouter.get("/inventory/statement", requireDeviceToken, async (req: R
   }
 });
 
+/**
+ * POS-INV-001: GET /api/v1/pos/inventory/statement/export
+ * Export stock statement as CSV
+ *
+ * Query params:
+ *   - format: "csv" (only csv supported for now)
+ *   - includeZeroStock: boolean (default true)
+ */
+posInventoryRouter.get("/inventory/statement/export", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) {
+    return res.status(400).json({ error: "Store not configured" });
+  }
+
+  const includeZeroStock = req.query.includeZeroStock !== "false";
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        sp.id,
+        sp.product_id as "productId",
+        COALESCE(p.name, sp.display_name, 'Unknown') as "displayName",
+        spb.barcode,
+        sp.sell_price as "sellPrice",
+        sp.purchase_price as "purchasePrice",
+        COALESCE(sb.current_qty, sp.current_stock, 0) as "currentStock",
+        sp.mrp,
+        p.unit
+      FROM catalog.store_products sp
+      LEFT JOIN inventory.stock_balances sb
+        ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+      LEFT JOIN catalog.products p
+        ON p.id = sp.product_id
+      LEFT JOIN LATERAL (
+        SELECT barcode FROM catalog.store_product_barcodes
+        WHERE store_id = sp.store_id AND store_product_id = sp.id
+        LIMIT 1
+      ) spb ON true
+      WHERE sp.store_id = $1
+        AND sp.is_active = true
+        ${includeZeroStock ? '' : 'AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0'}
+      ORDER BY p.name, sp.display_name`,
+      [storeId]
+    );
+
+    // Build CSV
+    const header = "Product Name,Barcode,Unit,Current Stock,Sell Price,Purchase Price,MRP,Stock Value\n";
+    const escCsv = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = result.rows.map((r: any) => {
+      const stock = r.currentStock ?? 0;
+      const sellPrice = r.sellPrice ?? 0;
+      return [
+        escCsv(r.displayName),
+        escCsv(r.barcode || r.productId),
+        escCsv(r.unit || 'pcs'),
+        stock,
+        sellPrice,
+        r.purchasePrice ?? 0,
+        r.mrp ?? 0,
+        stock * sellPrice,
+      ].join(',');
+    });
+
+    const csv = header + rows.join('\n');
+    const filename = `stock-statement-${new Date().toISOString().split('T')[0]}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(csv);
+  } catch (error: any) {
+    console.error("[InventoryExport] Error:", error.message);
+    return res.status(500).json({ error: "Failed to export stock statement" });
+  }
+});
+
 // =============================================================================
 // GO-LIVE-100: MANUAL CACHE REFRESH ENDPOINT
 // =============================================================================
