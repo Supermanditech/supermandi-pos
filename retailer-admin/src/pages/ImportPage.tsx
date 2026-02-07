@@ -73,6 +73,27 @@ export default function ImportPage() {
     }
   };
 
+  // RET-POS-SYNC-002: Download error report as CSV
+  const handleDownloadErrors = async () => {
+    if (!jobId) return;
+    try {
+      const response = await authFetch(
+        `/api/v1/retailer-admin/products/import/errors?jobId=${jobId}`,
+        accessToken
+      );
+      if (!response.ok) throw new Error('Failed to download errors');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `import_errors_${jobId}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError('Failed to download error report');
+    }
+  };
+
   // RCAT-CSV-002: Upload + Validate
   const handleUploadAndValidate = async () => {
     if (!file) return;
@@ -326,6 +347,12 @@ export default function ImportPage() {
                     <p style={{ fontStyle: 'italic' }}>...and {validation.errors.length - 20} more</p>
                   )}
                 </div>
+                {/* RET-POS-SYNC-002: Download error report */}
+                {jobId && (
+                  <button className="btn btn-secondary" onClick={handleDownloadErrors} style={{ marginTop: '0.75rem' }}>
+                    Download Error Report (CSV)
+                  </button>
+                )}
               </div>
             )}
 
@@ -399,6 +426,12 @@ export default function ImportPage() {
             {commitResult.warnings.length > 0 && (
               <div style={{ textAlign: 'left', background: '#fef3c7', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
                 {commitResult.warnings.map((w, i) => <p key={i} style={{ margin: '0.25rem 0' }}>{w}</p>)}
+                {/* RET-POS-SYNC-002: Download error report */}
+                {jobId && (
+                  <button className="btn btn-secondary" onClick={handleDownloadErrors} style={{ marginTop: '0.75rem' }}>
+                    Download Error Report (CSV)
+                  </button>
+                )}
               </div>
             )}
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>

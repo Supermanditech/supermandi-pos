@@ -655,6 +655,114 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
 });
 
 // =============================================================================
+// GET /api/v1/retailer-admin/products/import/errors
+// RET-POS-SYNC-002: Download error report as CSV for offline correction
+// =============================================================================
+
+retailerAdminCsvImportRouter.get("/products/import/errors", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { jobId } = req.query;
+  if (!jobId) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "jobId is required" } });
+  }
+
+  try {
+    const jobResult = await pool.query(
+      `SELECT id, validation_errors, status FROM platform.csv_imports WHERE id = $1 AND store_id = $2`,
+      [jobId, storeId]
+    );
+
+    if (jobResult.rows.length === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Import job not found" } });
+    }
+
+    const job = jobResult.rows[0];
+    const validationErrors = job.validation_errors || {};
+
+    // Collect errors from validation phase
+    const validationPhaseErrors: Array<{ row: number; field: string; error: string }> =
+      validationErrors.errors || [];
+
+    // Collect errors from commit phase (categorized warnings)
+    const commitPhaseErrors: CategorizedWarning[] = [];
+    const previewRows = validationErrors.previewRows || [];
+    for (const row of previewRows) {
+      if (!row.valid && row.errors?.length > 0) {
+        for (const errMsg of row.errors) {
+          commitPhaseErrors.push({
+            row: row.row,
+            message: errMsg,
+            category: 'validation_error',
+            field: '',
+            originalValue: row.name || '',
+          });
+        }
+      }
+    }
+
+    const allErrors = [
+      ...validationPhaseErrors.map(e => ({
+        row_number: e.row,
+        name: '',
+        barcode: '',
+        error_phase: 'validation',
+        error_category: 'validation_error',
+        error_message: e.error || e.field,
+      })),
+      ...commitPhaseErrors.map(e => ({
+        row_number: e.row,
+        name: e.originalValue || '',
+        barcode: '',
+        error_phase: 'validation',
+        error_category: e.category,
+        error_message: e.message,
+      })),
+    ];
+
+    if (allErrors.length === 0) {
+      return res.status(404).json({ error: { code: "NO_ERRORS", message: "No errors found for this import job" } });
+    }
+
+    // Build CSV
+    const csvHeader = "row_number,name,barcode,error_phase,error_category,error_message";
+    const csvRows = allErrors.map(e => {
+      const escapeCsv = (val: string | number) => {
+        const s = String(val);
+        return s.includes(',') || s.includes('"') || s.includes('\n')
+          ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      return [
+        e.row_number,
+        escapeCsv(e.name),
+        escapeCsv(e.barcode),
+        e.error_phase,
+        e.error_category,
+        escapeCsv(e.error_message),
+      ].join(',');
+    });
+
+    const csvContent = [csvHeader, ...csvRows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="import_errors_${jobId}.csv"`);
+    return res.send(csvContent);
+  } catch (error: any) {
+    console.error("[CsvImport] Error export error:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "Failed to export errors" },
+    });
+  }
+});
+
+// =============================================================================
 // POST /api/v1/retailer-admin/products/bulk-paste/preview
 // RCAT-BULK-002: Parse pasted lines and return preview
 // =============================================================================
