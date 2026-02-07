@@ -390,7 +390,7 @@ posPaymentsRouter.post(
 
       // 1. Verify sale exists and get total
       const saleResult = await client.query(
-        `SELECT id, store_id, total_minor, status, payment_mode
+        `SELECT id, store_id, total_minor, status, payment_mode, customer_name, customer_phone
          FROM public.sales
          WHERE id = $1 AND store_id = $2::uuid`,
         [saleId, storeId]
@@ -507,6 +507,14 @@ posPaymentsRouter.post(
               status, initiated_at, is_split
             ) VALUES ($1, $2, $3, 'DUE', $4, 'pending', NOW(), true)`,
             [paymentId, saleId, storeId, p.amountMinor]
+          );
+
+          // POS-DUE-002: Auto-create customer_dues record for due tracking
+          await client.query(
+            `INSERT INTO payments.customer_dues (store_id, sale_id, customer_name, customer_phone, amount_minor, status)
+             VALUES ($1, $2::uuid, $3, $4, $5, 'pending')
+             ON CONFLICT DO NOTHING`,
+            [storeId, saleId, sale.customer_name || null, sale.customer_phone || null, p.amountMinor]
           );
 
           duePayment = {

@@ -1198,7 +1198,7 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+confirm race
     const saleRes = await client.query(
       `
-      SELECT id, store_id, status, subtotal_minor, discount_minor, total_minor, created_at
+      SELECT id, store_id, status, subtotal_minor, discount_minor, total_minor, customer_name, customer_phone, created_at
       FROM sales
       WHERE id = $1 AND store_id = $2
       FOR UPDATE
@@ -1284,6 +1284,14 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
            amount_minor = EXCLUDED.amount_minor,
            updated_at = NOW()`,
         [storeId, saleId, sale.total_minor]
+      );
+
+      // POS-DUE-002: Auto-create customer_dues record for due tracking
+      await client.query(
+        `INSERT INTO payments.customer_dues (store_id, sale_id, customer_name, customer_phone, amount_minor, status)
+         VALUES ($1, $2::uuid, $3, $4, $5, 'pending')
+         ON CONFLICT DO NOTHING`,
+        [storeId, saleId, sale.customer_name || null, sale.customer_phone || null, sale.total_minor]
       );
     }
 
@@ -1894,7 +1902,7 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+payment race
     const saleRes = await client.query(
       `
-      SELECT id, store_id, status, total_minor, created_at
+      SELECT id, store_id, status, total_minor, customer_name, customer_phone, created_at
       FROM sales
       WHERE id = $1 AND store_id = $2
       FOR UPDATE
@@ -1986,6 +1994,14 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
          amount_minor = EXCLUDED.amount_minor,
          updated_at = NOW()`,
       [storeId, saleId, paymentId, sale.total_minor]
+    );
+
+    // POS-DUE-002: Auto-create customer_dues record for due tracking
+    await client.query(
+      `INSERT INTO payments.customer_dues (store_id, sale_id, customer_name, customer_phone, amount_minor, status)
+       VALUES ($1, $2::uuid, $3, $4, $5, 'pending')
+       ON CONFLICT DO NOTHING`,
+      [storeId, saleId, sale.customer_name || null, sale.customer_phone || null, sale.total_minor]
     );
 
     await client.query("COMMIT");
