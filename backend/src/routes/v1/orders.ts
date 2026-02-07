@@ -6,6 +6,7 @@ import { Router, Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
+import { isPayoutsEnabled } from "../../services/supplierPayoutService";
 
 export const ordersRouter = Router();
 
@@ -1296,14 +1297,16 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
       // This could indicate a race condition or data corruption
     }
 
-    // Schedule payout to supplier (create payout record)
+    // POS-UPI-002: Schedule payout to supplier — gate behind feature flag
     const payoutId = randomUUID();
+    const payoutsEnabled = isPayoutsEnabled();
+    const payoutStatus = payoutsEnabled ? 'scheduled' : 'pending_manual';
     try {
       await client.query(
         `INSERT INTO payments.supplier_payouts (
           id, supplier_id, purchase_order_id, payment_id, amount_minor, status
-        ) VALUES ($1, $2, $3, $4, $5, 'scheduled')`,
-        [payoutId, payment.supplier_id, orderId, paymentId, payment.amount_minor]
+        ) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [payoutId, payment.supplier_id, orderId, paymentId, payment.amount_minor, payoutStatus]
       );
 
       // GO-LIVE-118: Track order-payout relationship for audit trail
@@ -1317,15 +1320,20 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
       console.log('[SM-017] supplier_payouts table not ready:', e.code);
     }
 
+    if (!payoutsEnabled) {
+      console.warn(`[SM-017] POS-UPI-002: Automated payouts disabled. Payout ${payoutId} created as pending_manual. Operator must process manually.`);
+    }
+
     await client.query("COMMIT");
 
-    console.log(`[SM-017] BUY payment confirmed: paymentId=${paymentId}, utr=${upiTxnRef}`);
+    console.log(`[SM-017] BUY payment confirmed: paymentId=${paymentId}, utr=${upiTxnRef}, payoutStatus=${payoutStatus}`);
 
     return res.json({
       success: true,
       status: 'completed',
       orderStatus: 'paid',
-      payoutScheduled: true
+      payoutScheduled: payoutsEnabled,
+      payoutStatus,
     });
 
   } catch (error: any) {

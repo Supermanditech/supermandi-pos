@@ -10,6 +10,10 @@ const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
 const RAZORPAY_ACCOUNT_NUMBER = process.env.RAZORPAY_ACCOUNT_NUMBER || "";
 const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "";
 
+// POS-UPI-002: Feature gate for supplier payouts
+// Defaults to false — payouts are manual until Razorpay is configured and operator enables
+const SUPPLIER_PAYOUTS_ENABLED = process.env.SUPPLIER_PAYOUTS_ENABLED === "true";
+
 interface ScheduledPayout {
   id: string;
   supplierId: string;
@@ -39,6 +43,14 @@ interface PayoutResult {
  */
 export function isRazorpayConfigured(): boolean {
   return !!(RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET && RAZORPAY_ACCOUNT_NUMBER);
+}
+
+/**
+ * POS-UPI-002: Check if automated supplier payouts are enabled.
+ * Requires both the feature flag AND Razorpay configuration.
+ */
+export function isPayoutsEnabled(): boolean {
+  return SUPPLIER_PAYOUTS_ENABLED && isRazorpayConfigured();
 }
 
 /**
@@ -309,7 +321,18 @@ export async function processAllScheduledPayouts(pool: Pool): Promise<{
   processed: number;
   succeeded: number;
   failed: number;
+  skipped?: boolean;
+  reason?: string;
 }> {
+  // POS-UPI-002: Gate automated payouts behind feature flag
+  if (!isPayoutsEnabled()) {
+    const reason = !SUPPLIER_PAYOUTS_ENABLED
+      ? "SUPPLIER_PAYOUTS_ENABLED is not set to true"
+      : "Razorpay API keys not configured";
+    console.warn(`[SM-018] POS-UPI-002: Automated payouts disabled — ${reason}. Payouts remain in scheduled/pending_manual status for manual processing.`);
+    return { processed: 0, succeeded: 0, failed: 0, skipped: true, reason };
+  }
+
   const payouts = await getScheduledPayouts(pool);
   console.log(`[SM-018] Processing ${payouts.length} scheduled payouts`);
 
@@ -455,6 +478,7 @@ export async function handlePayoutWebhook(
 
 export default {
   isRazorpayConfigured,
+  isPayoutsEnabled,
   processScheduledPayout,
   getScheduledPayouts,
   processAllScheduledPayouts,

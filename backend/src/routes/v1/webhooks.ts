@@ -11,6 +11,7 @@ import {
   processAllScheduledPayouts,
   getScheduledPayouts,
   isRazorpayConfigured,
+  isPayoutsEnabled,
 } from "../../services/supplierPayoutService";
 
 // =============================================================================
@@ -346,6 +347,7 @@ webhooksRouter.post("/payouts/process", async (req: Request, res: Response) => {
     return res.json({
       success: true,
       razorpayConfigured: isRazorpayConfigured(),
+      payoutsEnabled: isPayoutsEnabled(),
       ...result,
     });
   } catch (error: any) {
@@ -382,6 +384,7 @@ webhooksRouter.get("/payouts/pending", async (req: Request, res: Response) => {
       success: true,
       count: payouts.length,
       razorpayConfigured: isRazorpayConfigured(),
+      payoutsEnabled: isPayoutsEnabled(),
       payouts: payouts.map((p) => ({
         id: p.id,
         supplierId: p.supplierId,
@@ -412,6 +415,7 @@ webhooksRouter.get("/health", async (req: Request, res: Response) => {
     service: "webhooks",
     database: pool ? "connected" : "unavailable",
     razorpayConfigured: isRazorpayConfigured(),
+    payoutsEnabled: isPayoutsEnabled(),
     timestamp: new Date().toISOString(),
   });
 });
