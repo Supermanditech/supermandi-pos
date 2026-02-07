@@ -8,7 +8,9 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // RET-AUD-048: Lazy load pages for code splitting and better performance at scale
 // Critical auth pages loaded eagerly for fast initial load
 import LoginPage from './pages/LoginPage';
-// GO-LIVE-AUTH-FIX: Removed old RegisterPage - use RetailerOnboardingPage for full store registration (RET-WEB-001)
+// RO-003: Simplified instant registration (replaces old 4-step onboarding flow)
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+// Legacy: RetailerOnboardingPage kept for /retailer/onboard alias (deprecated)
 const RetailerOnboardingPage = lazy(() => import('./pages/RetailerOnboardingPage'));
 
 // RET-AUD-048: Dashboard pages - lazy loaded for route-level code splitting
@@ -163,9 +165,8 @@ function AppRoutes() {
 
         {/* Auth pages - accessible without authentication */}
         <Route path="/retailer/login" element={<LoginPage />} />
-        {/* GO-LIVE-AUTH-FIX: /retailer/register now routes to full store onboarding (RET-WEB-001) */}
-        {/* RET-AUD-048: Lazy loaded with Suspense */}
-        <Route path="/retailer/register" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
+        {/* RO-003: /retailer/register → instant registration (no application flow) */}
+        <Route path="/retailer/register" element={<Suspense fallback={<PageLoadingFallback />}><RegisterPage /></Suspense>} />
         {/* REG-AUTH-301: Alias for onboarding page */}
         <Route path="/retailer/onboard" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
         {/* RET-CLEANUP-001: Forgot password page - accessible without auth */}
