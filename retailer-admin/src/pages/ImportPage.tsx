@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
 
@@ -39,6 +39,9 @@ export default function ImportPage() {
   const [commitResult, setCommitResult] = useState<CommitResult | null>(null);
   const [error, setError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  // RET-POS-SYNC-003: Async commit progress
+  const [commitProgress, setCommitProgress] = useState<{ created: number; total: number } | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -152,11 +155,52 @@ export default function ImportPage() {
     }
   };
 
-  // RCAT-CSV-002: Commit
+  // RET-POS-SYNC-003: Stop polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  // RET-POS-SYNC-003: Poll commit status
+  const startPolling = (pollJobId: string) => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    pollingRef.current = setInterval(async () => {
+      try {
+        const resp = await authFetch(
+          `/api/v1/retailer-admin/products/import/status?jobId=${pollJobId}`,
+          accessToken
+        );
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const { status, progress, commitResult: result } = data.data;
+        setCommitProgress(progress);
+
+        if (status === 'committed') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setCommitResult(result || { created: progress.created, updated: 0, skipped: 0, warnings: [] });
+          setIsProcessing(false);
+          setStep('done');
+        } else if (status === 'failed') {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          pollingRef.current = null;
+          setError('Commit failed on server. Please retry.');
+          setIsProcessing(false);
+          setStep('review');
+        }
+      } catch {
+        // Polling errors are transient; keep retrying
+      }
+    }, 2000);
+  };
+
+  // RCAT-CSV-002 + RET-POS-SYNC-003: Commit (async with polling)
   const handleCommit = async () => {
     if (!jobId) return;
     setError('');
     setIsProcessing(true);
+    setCommitProgress(null);
     setStep('commit');
 
     try {
@@ -165,27 +209,39 @@ export default function ImportPage() {
         accessToken,
         { method: 'POST' }
       );
+      const data = await resp.json();
+
+      if (resp.status === 202) {
+        // Async commit started — poll for progress
+        setCommitProgress(data.data?.progress || { created: 0, total: 0 });
+        startPolling(jobId);
+        return; // keep isProcessing=true until polling completes
+      }
+
       if (!resp.ok) {
-        const data = await resp.json();
         throw new Error(data.error?.message || 'Commit failed');
       }
-      const data = await resp.json();
+
+      // Synchronous completion (e.g., already committed / idempotent)
       setCommitResult(data.data);
       setStep('done');
+      setIsProcessing(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Commit failed');
       setStep('review');
-    } finally {
       setIsProcessing(false);
     }
   };
 
   const reset = () => {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    pollingRef.current = null;
     setStep('upload');
     setFile(null);
     setJobId(null);
     setValidation(null);
     setCommitResult(null);
+    setCommitProgress(null);
     setError('');
   };
 
@@ -408,7 +464,18 @@ export default function ImportPage() {
           <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📥</div>
             <h3>Importing Products...</h3>
-            <p style={{ color: 'var(--text-muted)' }}>Creating products and updating inventory</p>
+            {commitProgress && commitProgress.total > 0 ? (
+              <>
+                <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                  Creating products... {commitProgress.created}/{commitProgress.total}
+                </p>
+                <div style={{ background: 'var(--border)', borderRadius: '0.5rem', height: '0.75rem', overflow: 'hidden', maxWidth: '400px', margin: '0 auto' }}>
+                  <div style={{ background: 'var(--primary)', height: '100%', width: `${Math.round((commitProgress.created / commitProgress.total) * 100)}%`, transition: 'width 0.3s' }} />
+                </div>
+              </>
+            ) : (
+              <p style={{ color: 'var(--text-muted)' }}>Creating products and updating inventory</p>
+            )}
           </div>
         )}
 
@@ -419,6 +486,9 @@ export default function ImportPage() {
             <h3 style={{ color: 'var(--success)', marginBottom: '0.5rem' }}>Import Complete!</h3>
             <p style={{ marginBottom: '1.5rem' }}>
               <strong>{commitResult.created}</strong> products imported successfully.
+              {commitResult.updated > 0 && (
+                <><br /><strong>{commitResult.updated}</strong> existing products updated.</>
+              )}
               {commitResult.skipped > 0 && (
                 <><br /><strong>{commitResult.skipped}</strong> skipped.</>
               )}

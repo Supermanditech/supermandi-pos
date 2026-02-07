@@ -397,7 +397,247 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
 // =============================================================================
 // POST /api/v1/retailer-admin/products/import/commit
 // RCAT-CSV-002: Commit validated rows (idempotent)
+// RET-POS-SYNC-003: Async chunked commit for scale (returns 202, processes in background)
 // =============================================================================
+
+// RET-POS-SYNC-003: Process a single row (shared by async chunk processor)
+async function commitSingleRow(
+  client: any, storeId: string, row: any, jobId: string
+): Promise<{ action: 'created' | 'updated' | 'skipped'; warning?: CategorizedWarning }> {
+  try {
+    const mode = row.mode || 'PACKAGED';
+    const sellPricePaise = row.sellPrice || 0;
+    const purchasePricePaise = row.purchasePrice || 0;
+    const stock = row.stock || 0;
+
+    // RET-POS-SYNC-001: Dedup — check if product already exists in store
+    let existingProductId: string | null = null;
+    let existingStoreProductId: string | null = null;
+
+    if (mode === 'PACKAGED' && row.barcode) {
+      const existing = await client.query(
+        `SELECT sp.id AS store_product_id, sp.product_id
+         FROM catalog.store_product_barcodes spb
+         JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+         WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true`,
+        [storeId, row.barcode]
+      );
+      if (existing.rows.length > 0) {
+        existingProductId = existing.rows[0].product_id;
+        existingStoreProductId = existing.rows[0].store_product_id;
+      }
+    } else if (mode === 'LOOSE_BULK') {
+      const existing = await client.query(
+        `SELECT sp.id AS store_product_id, sp.product_id
+         FROM catalog.store_products sp
+         JOIN catalog.products p ON p.id = sp.product_id
+         WHERE sp.store_id = $1 AND sp.is_active = true
+           AND LOWER(TRIM(p.name)) = LOWER(TRIM($2))
+           AND sp.product_mode = 'LOOSE_BULK'`,
+        [storeId, row.name]
+      );
+      if (existing.rows.length > 0) {
+        existingProductId = existing.rows[0].product_id;
+        existingStoreProductId = existing.rows[0].store_product_id;
+      }
+    }
+
+    if (existingStoreProductId && existingProductId) {
+      // RET-POS-SYNC-001: UPDATE existing product instead of creating duplicate
+      await client.query(
+        `UPDATE catalog.store_products SET
+          sell_price = $2, mrp = $3, purchase_price = $4,
+          current_stock = $5, updated_at = NOW()
+         WHERE id = $1`,
+        [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock]
+      );
+
+      await client.query(
+        `UPDATE catalog.products SET
+          name = $2, brand = $3, unit = $4, updated_at = NOW()
+         WHERE id = $1`,
+        [existingProductId, row.name, row.brand || null, row.unit || 'PCS']
+      );
+
+      await client.query(
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (store_id, product_id) DO UPDATE SET
+           current_qty = EXCLUDED.current_qty,
+           updated_at = NOW()`,
+        [storeId, existingProductId, stock]
+      );
+
+      return { action: 'updated' };
+    } else {
+      // Create new product
+      const prodResult = await client.query(
+        `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
+         VALUES ($1, $2, $3, $4, true) RETURNING id`,
+        [
+          row.name,
+          row.brand || null,
+          row.unit || 'PCS',
+          mode === 'PACKAGED' && row.barcode ? row.barcode : null,
+        ]
+      );
+      const productId = prodResult.rows[0].id;
+
+      const spResult = await client.query(
+        `INSERT INTO catalog.store_products (
+          store_id, product_id, sell_price, mrp, purchase_price,
+          product_mode, current_stock, is_active
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
+        [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock]
+      );
+      const storeProductId = spResult.rows[0].id;
+
+      if (mode === 'PACKAGED' && row.barcode) {
+        await client.query(
+          `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+           VALUES ($1, $2, $3, 'retailer_digitisation')
+           ON CONFLICT (store_id, barcode) DO NOTHING`,
+          [storeId, storeProductId, row.barcode]
+        );
+      } else if (mode === 'LOOSE_BULK') {
+        const genBarcode = generateStoreBarcode(storeId);
+        await client.query(
+          `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+           VALUES ($1, $2, $3, 'supermandi_generated')`,
+          [storeId, storeProductId, genBarcode]
+        );
+      }
+
+      let ledgerId: string | null = null;
+      if (stock > 0) {
+        const ledgerResult = await client.query(
+          `INSERT INTO inventory.inventory_ledger (
+            store_id, product_id, delta_qty, transaction_type,
+            reference_type, stock_before, stock_after, unit_cost,
+            source, source_id
+          ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'CSV_IMPORT', $5)
+          ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING
+          RETURNING id`,
+          [storeId, productId, stock, purchasePricePaise, jobId]
+        );
+        ledgerId = ledgerResult.rows[0]?.id ?? null;
+      }
+
+      await client.query(
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (store_id, product_id) DO UPDATE SET
+           current_qty = EXCLUDED.current_qty,
+           last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+           updated_at = NOW()`,
+        [storeId, productId, stock, ledgerId]
+      );
+
+      return { action: 'created' };
+    }
+  } catch (err: any) {
+    return { action: 'skipped', warning: categorizeDbError(err, row) };
+  }
+}
+
+// RET-POS-SYNC-003: Process rows in chunks of CHUNK_SIZE, each chunk in its own transaction
+const COMMIT_CHUNK_SIZE = 100;
+
+async function processCommitInBackground(jobId: string, storeId: string, validRows: any[]) {
+  const pool = getPool();
+  if (!pool) return;
+
+  let created = 0;
+  let updated = 0;
+  let skipped = 0;
+  const allWarnings: CategorizedWarning[] = [];
+
+  // Process in chunks
+  for (let i = 0; i < validRows.length; i += COMMIT_CHUNK_SIZE) {
+    const chunk = validRows.slice(i, i + COMMIT_CHUNK_SIZE);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      for (const row of chunk) {
+        const result = await commitSingleRow(client, storeId, row, jobId);
+        if (result.action === 'created') created++;
+        else if (result.action === 'updated') updated++;
+        else { skipped++; if (result.warning) allWarnings.push(result.warning); }
+      }
+
+      await client.query("COMMIT");
+    } catch (chunkErr: any) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error(`[CsvImport] Chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
+      // Count entire chunk as skipped on transaction-level failure
+      for (const row of chunk) {
+        skipped++;
+        allWarnings.push(categorizeDbError(chunkErr, row));
+      }
+    } finally {
+      client.release();
+    }
+
+    // Update progress after each chunk so polling can see it
+    const progressClient = await pool.connect();
+    try {
+      await progressClient.query(
+        `UPDATE platform.csv_imports SET
+          products_created = $2, updated_at = NOW()
+        WHERE id = $1`,
+        [jobId, created]
+      );
+    } catch { /* progress update is non-critical */ }
+    finally { progressClient.release(); }
+  }
+
+  // Final status update
+  const finalClient = await pool.connect();
+  try {
+    // Store warnings in validation_errors for error CSV download (RET-POS-SYNC-002 compat)
+    const warningSummary = summarizeWarnings(allWarnings);
+    const displayedWarnings = allWarnings.slice(0, 20);
+    const warningStrings = displayedWarnings.map(w => `Row ${w.row}: ${w.message}`);
+    const summaryParts: string[] = [];
+    if (warningSummary.duplicate_barcode > 0) summaryParts.push(`${warningSummary.duplicate_barcode} duplicate barcode(s)`);
+    if (warningSummary.db_constraint > 0) summaryParts.push(`${warningSummary.db_constraint} constraint error(s)`);
+    if (warningSummary.db_error > 0) summaryParts.push(`${warningSummary.db_error} database error(s)`);
+    if (warningSummary.unknown > 0) summaryParts.push(`${warningSummary.unknown} other error(s)`);
+
+    await finalClient.query(
+      `UPDATE platform.csv_imports SET
+        status = 'committed', products_created = $2, committed_at = NOW(),
+        validation_errors = validation_errors || $3::jsonb
+      WHERE id = $1`,
+      [jobId, created, JSON.stringify({
+        commitResult: {
+          created, updated, skipped,
+          warnings: warningStrings,
+          failureSummary: allWarnings.length > 0 ? {
+            total: allWarnings.length,
+            displayed: displayedWarnings.length,
+            truncated: allWarnings.length > displayedWarnings.length,
+            byCategory: warningSummary,
+            message: summaryParts.length > 0 ? `${skipped} row(s) failed: ${summaryParts.join(', ')}` : undefined,
+            details: displayedWarnings,
+          } : undefined,
+        },
+      })]
+    );
+  } catch (err: any) {
+    console.error("[CsvImport] Final status update failed:", err.message);
+    // Mark as failed if we can't update status
+    try {
+      await finalClient.query(
+        `UPDATE platform.csv_imports SET status = 'failed' WHERE id = $1`,
+        [jobId]
+      );
+    } catch { /* best effort */ }
+  } finally {
+    finalClient.release();
+  }
+}
 
 retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request, res: Response) => {
   const pool = getPool();
@@ -413,11 +653,9 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "jobId is required" } });
   }
 
-  const client = await pool.connect();
   try {
-    // Get the job
-    const jobResult = await client.query(
-      `SELECT id, status, validation_errors, store_id FROM platform.csv_imports
+    const jobResult = await pool.query(
+      `SELECT id, status, validation_errors, store_id, valid_rows FROM platform.csv_imports
        WHERE id = $1 AND store_id = $2`,
       [jobId, storeId]
     );
@@ -427,12 +665,23 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
     }
 
     const job = jobResult.rows[0];
+
+    // Idempotent: already committed — return final result
     if (job.status === 'committed') {
-      // Idempotent: already committed
+      const commitResult = job.validation_errors?.commitResult;
       return res.json({
         success: true,
-        data: { created: job.products_created || 0, updated: 0, skipped: 0, warnings: [] },
+        data: commitResult || { created: job.products_created || 0, updated: 0, skipped: 0, warnings: [] },
         message: "Already committed",
+      });
+    }
+
+    // Idempotent: already committing — return 202 with current progress
+    if (job.status === 'committing') {
+      return res.status(202).json({
+        success: true,
+        data: { jobId, status: 'committing', progress: { created: job.products_created || 0, total: job.valid_rows || 0 } },
+        message: "Commit already in progress",
       });
     }
 
@@ -445,223 +694,84 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
       });
     }
 
-    await client.query("BEGIN");
-
-    let created = 0;
-    let updated = 0;
-    let skipped = 0;
-    // GO-LIVE-178: Use categorized warnings for better error reporting
-    const categorizedWarnings: CategorizedWarning[] = [];
-
-    for (const row of validRows) {
-      try {
-        const mode = row.mode || 'PACKAGED';
-        const sellPricePaise = row.sellPrice || 0;
-        const purchasePricePaise = row.purchasePrice || 0;
-        const stock = row.stock || 0;
-
-        // RET-POS-SYNC-001: Dedup — check if product already exists in store
-        let existingProductId: string | null = null;
-        let existingStoreProductId: string | null = null;
-
-        if (mode === 'PACKAGED' && row.barcode) {
-          const existing = await client.query(
-            `SELECT sp.id AS store_product_id, sp.product_id
-             FROM catalog.store_product_barcodes spb
-             JOIN catalog.store_products sp ON sp.id = spb.store_product_id
-             WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true`,
-            [storeId, row.barcode]
-          );
-          if (existing.rows.length > 0) {
-            existingProductId = existing.rows[0].product_id;
-            existingStoreProductId = existing.rows[0].store_product_id;
-          }
-        } else if (mode === 'LOOSE_BULK') {
-          const existing = await client.query(
-            `SELECT sp.id AS store_product_id, sp.product_id
-             FROM catalog.store_products sp
-             JOIN catalog.products p ON p.id = sp.product_id
-             WHERE sp.store_id = $1 AND sp.is_active = true
-               AND LOWER(TRIM(p.name)) = LOWER(TRIM($2))
-               AND sp.product_mode = 'LOOSE_BULK'`,
-            [storeId, row.name]
-          );
-          if (existing.rows.length > 0) {
-            existingProductId = existing.rows[0].product_id;
-            existingStoreProductId = existing.rows[0].store_product_id;
-          }
-        }
-
-        if (existingStoreProductId && existingProductId) {
-          // RET-POS-SYNC-001: UPDATE existing product instead of creating duplicate
-          await client.query(
-            `UPDATE catalog.store_products SET
-              sell_price = $2, mrp = $3, purchase_price = $4,
-              current_stock = $5, updated_at = NOW()
-             WHERE id = $1`,
-            [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock]
-          );
-
-          await client.query(
-            `UPDATE catalog.products SET
-              name = $2, brand = $3, unit = $4, updated_at = NOW()
-             WHERE id = $1`,
-            [existingProductId, row.name, row.brand || null, row.unit || 'PCS']
-          );
-
-          // Update stock_balances to match CSV
-          await client.query(
-            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (store_id, product_id) DO UPDATE SET
-               current_qty = EXCLUDED.current_qty,
-               updated_at = NOW()`,
-            [storeId, existingProductId, stock]
-          );
-
-          updated++;
-        } else {
-          // Create new product
-          const prodResult = await client.query(
-            `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
-             VALUES ($1, $2, $3, $4, true) RETURNING id`,
-            [
-              row.name,
-              row.brand || null,
-              row.unit || 'PCS',
-              mode === 'PACKAGED' && row.barcode ? row.barcode : null,
-            ]
-          );
-          const productId = prodResult.rows[0].id;
-
-          // Create store_product
-          const spResult = await client.query(
-            `INSERT INTO catalog.store_products (
-              store_id, product_id, sell_price, mrp, purchase_price,
-              product_mode, current_stock, is_active
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
-            [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock]
-          );
-          const storeProductId = spResult.rows[0].id;
-
-          // Create barcode
-          if (mode === 'PACKAGED' && row.barcode) {
-            await client.query(
-              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-               VALUES ($1, $2, $3, 'retailer_digitisation')
-               ON CONFLICT (store_id, barcode) DO NOTHING`,
-              [storeId, storeProductId, row.barcode]
-            );
-          } else if (mode === 'LOOSE_BULK') {
-            const genBarcode = generateStoreBarcode(storeId);
-            await client.query(
-              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-               VALUES ($1, $2, $3, 'supermandi_generated')`,
-              [storeId, storeProductId, genBarcode]
-            );
-          }
-
-          // Opening stock ledger entry + stock_balances (MT-7: consistency fix)
-          let ledgerId: string | null = null;
-          if (stock > 0) {
-            const ledgerResult = await client.query(
-              `INSERT INTO inventory.inventory_ledger (
-                store_id, product_id, delta_qty, transaction_type,
-                reference_type, stock_before, stock_after, unit_cost,
-                source, source_id
-              ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'CSV_IMPORT', $5)
-              ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING
-              RETURNING id`,
-              [storeId, productId, stock, purchasePricePaise, jobId]
-            );
-            ledgerId = ledgerResult.rows[0]?.id ?? null;
-          }
-
-          // MT-7: Always create stock_balances for consistent POS search JOIN
-          await client.query(
-            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (store_id, product_id) DO UPDATE SET
-               current_qty = EXCLUDED.current_qty,
-               last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
-               updated_at = NOW()`,
-            [storeId, productId, stock, ledgerId]
-          );
-
-          created++;
-        }
-      } catch (err: any) {
-        // GO-LIVE-178: Categorize errors for better diagnosis
-        categorizedWarnings.push(categorizeDbError(err, row));
-        skipped++;
-      }
-    }
-
-    // Update job status
-    await client.query(
-      `UPDATE platform.csv_imports SET
-        status = 'committed', products_created = $2, committed_at = NOW()
-      WHERE id = $1`,
-      [jobId, created]
+    // RET-POS-SYNC-003: Set status to 'committing' and return 202 immediately
+    await pool.query(
+      `UPDATE platform.csv_imports SET status = 'committing', products_created = 0 WHERE id = $1`,
+      [jobId]
     );
 
-    await client.query("COMMIT");
+    // Start background processing
+    setImmediate(() => {
+      processCommitInBackground(jobId as string, storeId, validRows).catch((err) => {
+        console.error("[CsvImport] Background commit failed:", err);
+      });
+    });
 
-    // GO-LIVE-178: Enhanced response with categorized warnings and summary
-    const totalWarnings = categorizedWarnings.length;
-    const displayedWarnings = categorizedWarnings.slice(0, 20);
-    const warningSummary = summarizeWarnings(categorizedWarnings);
-
-    // Convert to simple string format for backwards compatibility
-    const warningStrings = displayedWarnings.map(w => `Row ${w.row}: ${w.message}`);
-
-    // Build user-friendly summary message
-    const summaryParts: string[] = [];
-    if (warningSummary.duplicate_barcode > 0) {
-      summaryParts.push(`${warningSummary.duplicate_barcode} duplicate barcode(s)`);
-    }
-    if (warningSummary.db_constraint > 0) {
-      summaryParts.push(`${warningSummary.db_constraint} constraint error(s)`);
-    }
-    if (warningSummary.db_error > 0) {
-      summaryParts.push(`${warningSummary.db_error} database error(s)`);
-    }
-    if (warningSummary.unknown > 0) {
-      summaryParts.push(`${warningSummary.unknown} other error(s)`);
-    }
-
-    return res.json({
+    return res.status(202).json({
       success: true,
-      data: {
-        created,
-        updated,
-        skipped,
-        warnings: warningStrings,
-        // GO-LIVE-178: Detailed failure information
-        failureSummary: totalWarnings > 0 ? {
-          total: totalWarnings,
-          displayed: displayedWarnings.length,
-          truncated: totalWarnings > displayedWarnings.length,
-          byCategory: warningSummary,
-          message: summaryParts.length > 0
-            ? `${skipped} row(s) failed: ${summaryParts.join(', ')}`
-            : undefined,
-          details: displayedWarnings,
-        } : undefined,
-      },
-      message: skipped > 0
-        ? `Imported ${created} new, ${updated} updated. ${skipped} row(s) failed (see failureSummary for details).`
-        : `Imported ${created} new, ${updated} updated`,
+      data: { jobId, status: 'committing', progress: { created: 0, total: validRows.length } },
+      message: "Commit started. Poll GET /products/import/status for progress.",
     });
   } catch (error: any) {
-    await client.query("ROLLBACK");
     console.error("[CsvImport] Commit error:", error.message);
     return res.status(500).json({
       success: false,
       error: { code: "INTERNAL_ERROR", message: "Commit failed" },
     });
-  } finally {
-    client.release();
+  }
+});
+
+// =============================================================================
+// GET /api/v1/retailer-admin/products/import/status
+// RET-POS-SYNC-003: Poll commit progress
+// =============================================================================
+
+retailerAdminCsvImportRouter.get("/products/import/status", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: { code: "INTERNAL_ERROR", message: "Database unavailable" } });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Store not identified" } });
+  }
+
+  const { jobId } = req.query;
+  if (!jobId) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "jobId is required" } });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT status, products_created, valid_rows, validation_errors FROM platform.csv_imports
+       WHERE id = $1 AND store_id = $2`,
+      [jobId, storeId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Import job not found" } });
+    }
+
+    const job = result.rows[0];
+    const response: any = {
+      success: true,
+      data: {
+        status: job.status,
+        progress: {
+          created: job.products_created || 0,
+          total: job.valid_rows || 0,
+        },
+      },
+    };
+
+    // If committed, include the final commit result
+    if (job.status === 'committed' && job.validation_errors?.commitResult) {
+      response.data.commitResult = job.validation_errors.commitResult;
+    }
+
+    return res.json(response);
+  } catch (error: any) {
+    console.error("[CsvImport] Status check error:", error.message);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Status check failed" } });
   }
 });
 
