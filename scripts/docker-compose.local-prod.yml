@@ -109,6 +109,10 @@ services:
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-}
       # BB-ADMIN-001: SuperAdmin email allowlist (was hardcoded, moved to env in ISSUE-MICRO-009)
       ADMIN_EMAIL_ALLOWLIST: ${ADMIN_EMAIL_ALLOWLIST:-supermanditech@gmail.com}
+      # RO-009: Onboarding config — SMS disabled for local-prod, URLs set
+      SMS_DISABLED: "true"
+      PORTAL_BASE_URL: "http://localhost:8081"
+      POS_APP_DOWNLOAD_URL: "https://supermandi.tech/pos"
     depends_on:
       postgres:
         condition: service_healthy

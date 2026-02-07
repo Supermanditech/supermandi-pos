@@ -2,6 +2,7 @@ import app from "./app";
 import { ensureCoreSchema } from "./db/ensureSchema";
 import { logGcpValidationResults } from "./startup/validateGcp";
 import { startSyncCleanupScheduler } from "./services/syncCleanupScheduler";
+import { loadOnboardingConfig } from "./config/onboardingConfig";
 import { logger } from "./lib/logger";
 
 const PORT = process.env.PORT || 3001;
@@ -17,6 +18,16 @@ async function start(): Promise<void> {
   // GO-LIVE-180: Validate GCP credentials early
   // This catches configuration issues before services start accepting requests
   logGcpValidationResults();
+
+  // RO-009: Validate onboarding config (fail-fast in production)
+  try {
+    loadOnboardingConfig();
+  } catch (err) {
+    logger.error("Onboarding config validation failed", { error: String(err) });
+    if (process.env.NODE_ENV === "production") {
+      process.exit(1);
+    }
+  }
 
   try {
     await ensureCoreSchema();

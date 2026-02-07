@@ -58,11 +58,15 @@ import { documentsRouter } from "./documents";  // DOCS-001: Unified document st
 import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin document management
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
+import { configStatusRouter } from "./configStatus";  // RO-009: Config status endpoint
 
 export const v1Router = Router();
 
 // AUD-076-A: Microservice health endpoints (must be before service-specific routers)
 v1Router.use("/", microserviceHealthRouter);
+
+// RO-009: Config status (public, no auth, returns booleans only)
+v1Router.use("/", configStatusRouter);
 
 v1Router.use("/pos", posEventsRouter);
 v1Router.use("/pos", posScanRouter);
