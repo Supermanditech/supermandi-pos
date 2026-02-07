@@ -272,6 +272,19 @@ export async function getBuyCatalogCategories(storeId: string): Promise<string[]
   return response.data;
 }
 
+/**
+ * SUP-POS-004: Cross-supplier barcode lookup in buy catalog.
+ * Returns a single grouped product with all supplier offers, or null if not found.
+ */
+export async function buyBarcodeSearch(
+  storeId: string,
+  barcode: string
+): Promise<CatalogProduct | null> {
+  const path = `${CATALOG_BASE}/stores/${storeId}/buy-catalog/barcode/${encodeURIComponent(barcode)}`;
+  const response = await apiClient.get<{ success: boolean; data: CatalogProduct | null }>(path);
+  return response.data;
+}
+
 // =============================================================================
 // CAT-003: FMCG Taxonomy Category Endpoints
 // =============================================================================
