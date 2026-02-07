@@ -7,7 +7,7 @@
  * 2. POS creates purchase order → Supplier sees it → Confirms → Ships → POS receives
  * 3. Store isolation: Store A's catalog ≠ Store B's catalog
  *
- * Run: npx playwright test --grep "@supplier_purchase"
+ * Run: npx playwright test --grep "@supplier_purchase" --project=chromium
  */
 
 import { test, expect } from "@playwright/test";
@@ -26,7 +26,10 @@ import {
   TestSupplierContext,
 } from "./helpers";
 
-test.describe("@supplier_purchase Supplier → POS Purchase Pipeline", () => {
+// API-only tests: run sequentially on chromium only
+test.use({ browserName: 'chromium' });
+
+test.describe.serial("@supplier_purchase Supplier → POS Purchase Pipeline", () => {
   let storeA: TestStoreContext;
   let storeB: TestStoreContext;
   let supplier: TestSupplierContext;
