@@ -437,6 +437,7 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
     await client.query("BEGIN");
 
     let created = 0;
+    let updated = 0;
     let skipped = 0;
     // GO-LIVE-178: Use categorized warnings for better error reporting
     const categorizedWarnings: CategorizedWarning[] = [];
@@ -448,74 +449,136 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
         const purchasePricePaise = row.purchasePrice || 0;
         const stock = row.stock || 0;
 
-        // Create product
-        const prodResult = await client.query(
-          `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
-           VALUES ($1, $2, $3, $4, true) RETURNING id`,
-          [
-            row.name,
-            row.brand || null,
-            row.unit || 'PCS',
-            mode === 'PACKAGED' && row.barcode ? row.barcode : null,
-          ]
-        );
-        const productId = prodResult.rows[0].id;
+        // RET-POS-SYNC-001: Dedup — check if product already exists in store
+        let existingProductId: string | null = null;
+        let existingStoreProductId: string | null = null;
 
-        // Create store_product
-        const spResult = await client.query(
-          `INSERT INTO catalog.store_products (
-            store_id, product_id, sell_price, mrp, purchase_price,
-            product_mode, current_stock, is_active
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
-          [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock]
-        );
-        const storeProductId = spResult.rows[0].id;
-
-        // Create barcode
         if (mode === 'PACKAGED' && row.barcode) {
-          await client.query(
-            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-             VALUES ($1, $2, $3, 'retailer_digitisation')
-             ON CONFLICT (store_id, barcode) DO NOTHING`,
-            [storeId, storeProductId, row.barcode]
+          const existing = await client.query(
+            `SELECT sp.id AS store_product_id, sp.product_id
+             FROM catalog.store_product_barcodes spb
+             JOIN catalog.store_products sp ON sp.id = spb.store_product_id
+             WHERE spb.store_id = $1 AND spb.barcode = $2 AND sp.is_active = true`,
+            [storeId, row.barcode]
           );
+          if (existing.rows.length > 0) {
+            existingProductId = existing.rows[0].product_id;
+            existingStoreProductId = existing.rows[0].store_product_id;
+          }
         } else if (mode === 'LOOSE_BULK') {
-          const genBarcode = generateStoreBarcode(storeId);
+          const existing = await client.query(
+            `SELECT sp.id AS store_product_id, sp.product_id
+             FROM catalog.store_products sp
+             JOIN catalog.products p ON p.id = sp.product_id
+             WHERE sp.store_id = $1 AND sp.is_active = true
+               AND LOWER(TRIM(p.name)) = LOWER(TRIM($2))
+               AND sp.product_mode = 'LOOSE_BULK'`,
+            [storeId, row.name]
+          );
+          if (existing.rows.length > 0) {
+            existingProductId = existing.rows[0].product_id;
+            existingStoreProductId = existing.rows[0].store_product_id;
+          }
+        }
+
+        if (existingStoreProductId && existingProductId) {
+          // RET-POS-SYNC-001: UPDATE existing product instead of creating duplicate
           await client.query(
-            `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
-             VALUES ($1, $2, $3, 'supermandi_generated')`,
-            [storeId, storeProductId, genBarcode]
+            `UPDATE catalog.store_products SET
+              sell_price = $2, mrp = $3, purchase_price = $4,
+              current_stock = $5, updated_at = NOW()
+             WHERE id = $1`,
+            [existingStoreProductId, sellPricePaise, row.mrp || null, purchasePricePaise, stock]
           );
-        }
 
-        // Opening stock ledger entry + stock_balances (MT-7: consistency fix)
-        let ledgerId: string | null = null;
-        if (stock > 0) {
-          const ledgerResult = await client.query(
-            `INSERT INTO inventory.inventory_ledger (
-              store_id, product_id, delta_qty, transaction_type,
-              reference_type, stock_before, stock_after, unit_cost,
-              source, source_id
-            ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'CSV_IMPORT', $5)
-            ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING
-            RETURNING id`,
-            [storeId, productId, stock, purchasePricePaise, jobId]
+          await client.query(
+            `UPDATE catalog.products SET
+              name = $2, brand = $3, unit = $4, updated_at = NOW()
+             WHERE id = $1`,
+            [existingProductId, row.name, row.brand || null, row.unit || 'PCS']
           );
-          ledgerId = ledgerResult.rows[0]?.id ?? null;
+
+          // Update stock_balances to match CSV
+          await client.query(
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (store_id, product_id) DO UPDATE SET
+               current_qty = EXCLUDED.current_qty,
+               updated_at = NOW()`,
+            [storeId, existingProductId, stock]
+          );
+
+          updated++;
+        } else {
+          // Create new product
+          const prodResult = await client.query(
+            `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
+             VALUES ($1, $2, $3, $4, true) RETURNING id`,
+            [
+              row.name,
+              row.brand || null,
+              row.unit || 'PCS',
+              mode === 'PACKAGED' && row.barcode ? row.barcode : null,
+            ]
+          );
+          const productId = prodResult.rows[0].id;
+
+          // Create store_product
+          const spResult = await client.query(
+            `INSERT INTO catalog.store_products (
+              store_id, product_id, sell_price, mrp, purchase_price,
+              product_mode, current_stock, is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
+            [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock]
+          );
+          const storeProductId = spResult.rows[0].id;
+
+          // Create barcode
+          if (mode === 'PACKAGED' && row.barcode) {
+            await client.query(
+              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+               VALUES ($1, $2, $3, 'retailer_digitisation')
+               ON CONFLICT (store_id, barcode) DO NOTHING`,
+              [storeId, storeProductId, row.barcode]
+            );
+          } else if (mode === 'LOOSE_BULK') {
+            const genBarcode = generateStoreBarcode(storeId);
+            await client.query(
+              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+               VALUES ($1, $2, $3, 'supermandi_generated')`,
+              [storeId, storeProductId, genBarcode]
+            );
+          }
+
+          // Opening stock ledger entry + stock_balances (MT-7: consistency fix)
+          let ledgerId: string | null = null;
+          if (stock > 0) {
+            const ledgerResult = await client.query(
+              `INSERT INTO inventory.inventory_ledger (
+                store_id, product_id, delta_qty, transaction_type,
+                reference_type, stock_before, stock_after, unit_cost,
+                source, source_id
+              ) VALUES ($1, $2, $3, 'opening_stock', 'manual', 0, $3, $4, 'CSV_IMPORT', $5)
+              ON CONFLICT (store_id, product_id, source, source_id) WHERE source IS NOT NULL AND source_id IS NOT NULL DO NOTHING
+              RETURNING id`,
+              [storeId, productId, stock, purchasePricePaise, jobId]
+            );
+            ledgerId = ledgerResult.rows[0]?.id ?? null;
+          }
+
+          // MT-7: Always create stock_balances for consistent POS search JOIN
+          await client.query(
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (store_id, product_id) DO UPDATE SET
+               current_qty = EXCLUDED.current_qty,
+               last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
+               updated_at = NOW()`,
+            [storeId, productId, stock, ledgerId]
+          );
+
+          created++;
         }
-
-        // MT-7: Always create stock_balances for consistent POS search JOIN
-        await client.query(
-          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (store_id, product_id) DO UPDATE SET
-             current_qty = EXCLUDED.current_qty,
-             last_ledger_id = COALESCE(EXCLUDED.last_ledger_id, inventory.stock_balances.last_ledger_id),
-             updated_at = NOW()`,
-          [storeId, productId, stock, ledgerId]
-        );
-
-        created++;
       } catch (err: any) {
         // GO-LIVE-178: Categorize errors for better diagnosis
         categorizedWarnings.push(categorizeDbError(err, row));
@@ -560,7 +623,7 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
       success: true,
       data: {
         created,
-        updated: 0,
+        updated,
         skipped,
         warnings: warningStrings,
         // GO-LIVE-178: Detailed failure information
@@ -576,8 +639,8 @@ retailerAdminCsvImportRouter.post("/products/import/commit", async (req: Request
         } : undefined,
       },
       message: skipped > 0
-        ? `Imported ${created} products. ${skipped} row(s) failed (see failureSummary for details).`
-        : `Imported ${created} products`,
+        ? `Imported ${created} new, ${updated} updated. ${skipped} row(s) failed (see failureSummary for details).`
+        : `Imported ${created} new, ${updated} updated`,
     });
   } catch (error: any) {
     await client.query("ROLLBACK");
