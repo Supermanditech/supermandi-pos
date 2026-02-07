@@ -231,7 +231,16 @@
     "approve": "Approve",
     "reject": "Reject",
     "approveAll": "Approve All",
-    "rejectAll": "Reject All"
+    "rejectAll": "Reject All",
+    "approveTitle": "Approve Reorders",
+    "approveConfirmation": "Approve {{count}} pending reorder(s)? This will add items to your purchase cart.",
+    "approvedTitle": "Approved",
+    "approvedMessage": "{{approved}} reorder(s) approved. {{drafts}} draft PO(s) added to cart.",
+    "approveFailed": "Failed to approve reorders. Please try again.",
+    "goToCart": "Go to Cart",
+    "stayHere": "Stay Here",
+    "noCaughtUp": "All caught up! No pending reorders.",
+    "errorTitle": "Error"
   },
   "inward": {
     "title": "Stock Inward",

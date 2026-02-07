@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { PendingReorderCard } from "../components/reorder/PendingReorderCard";
@@ -39,6 +40,7 @@ export interface ReorderScreenProps {
 
 export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   // State
   const [storeId, setStoreId] = useState<string | null>(null);
@@ -192,12 +194,12 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
     if (!storeId || selectedIds.size === 0) return;
 
     Alert.alert(
-      "Approve Reorders",
-      `Approve ${selectedIds.size} pending reorder${selectedIds.size > 1 ? "s" : ""}? This will add items to your purchase cart.`,
+      t("reorder.approveTitle"),
+      t("reorder.approveConfirmation", { count: selectedIds.size }),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel", "Cancel"), style: "cancel" },
         {
-          text: "Approve",
+          text: t("reorder.approve"),
           onPress: async () => {
             setApproving(true);
 
@@ -233,19 +235,22 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
 
               // Show success and navigate
               Alert.alert(
-                "Approved",
-                `${response.data.approvedCount} reorder${response.data.approvedCount > 1 ? "s" : ""} approved. ${response.data.draftPurchaseOrders.length} draft PO${response.data.draftPurchaseOrders.length > 1 ? "s" : ""} added to cart.`,
+                t("reorder.approvedTitle"),
+                t("reorder.approvedMessage", {
+                  approved: response.data.approvedCount,
+                  drafts: response.data.draftPurchaseOrders.length,
+                }),
                 [
-                  { text: "Stay Here", style: "cancel" },
+                  { text: t("reorder.stayHere"), style: "cancel" },
                   {
-                    text: "Go to Cart",
+                    text: t("reorder.goToCart"),
                     onPress: () => onNavigateToBuy?.(),
                   },
                 ]
               );
             } catch (err) {
               console.error("[ReorderScreen] Failed to approve:", err);
-              Alert.alert("Error", "Failed to approve reorders. Please try again.");
+              Alert.alert(t("reorder.errorTitle"), t("reorder.approveFailed"));
             } finally {
               setApproving(false);
             }
