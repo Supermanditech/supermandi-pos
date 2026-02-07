@@ -151,6 +151,17 @@ export async function registerRetailer(
 
     await client.query("COMMIT");
 
+    // Step 5b: DR-012 — Link legacy application if exists (non-blocking, outside txn)
+    if (data.gstin) {
+      pool.query(
+        `UPDATE auth.applications SET approved_store_id = $1::uuid, status = 'ACTIVE', updated_at = NOW()
+         WHERE gstin = $2 AND entity_type = 'retailer' AND approved_store_id IS NULL AND status != 'EXPIRED'`,
+        [storeId, data.gstin]
+      ).catch((err) => {
+        console.warn("[registration] DR-012: Failed to link legacy application:", err?.message);
+      });
+    }
+
     // Step 6: Record registration event (outside transaction — non-blocking)
     await recordRegistrationEvent(pool, {
       storeId,
