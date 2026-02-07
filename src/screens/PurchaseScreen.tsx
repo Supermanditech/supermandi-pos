@@ -47,11 +47,12 @@ import {
   buyBarcodeSearch,
   getPreferredOrBestSupplier,
   type CatalogProduct,
-  type CatalogSupplier,
 } from "../services/api/catalogApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import { CatalogProductCard } from "../components/buy/CatalogProductCard";
+// POS-BUY-002: Grouped supplier product view modal
+import { ProductDetailModal } from "../components/buy/ProductDetailModal";
 
 // =============================================================================
 // TYPES
@@ -140,6 +141,9 @@ export default function PurchaseScreen({
   const [catalogPage, setCatalogPage] = useState(1);
   const [catalogHasMore, setCatalogHasMore] = useState(false);
   const purchaseCart = usePurchaseCartStore();
+
+  // POS-BUY-002: Selected product for supplier detail modal
+  const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
 
   // Legacy local cart state (kept for backward compat with Quick Purchase cart actions)
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -322,8 +326,15 @@ export default function PurchaseScreen({
     }
   }, [liveSuppliersReady, purchaseCart]);
 
-  // POS-BUY-001: Handle catalog product tap → add best supplier to purchase cart
+  // POS-BUY-002: Handle catalog product tap — show supplier detail modal if
+  // multiple suppliers, otherwise add best supplier directly to cart
   const handleCatalogProductPress = useCallback((product: CatalogProduct) => {
+    if (product.supplierCount > 1) {
+      // Multiple suppliers — open grouped supplier view
+      setSelectedProduct(product);
+      return;
+    }
+    // Single supplier — add directly
     const supplier = getPreferredOrBestSupplier(product);
     if (!supplier) return;
 
@@ -764,6 +775,12 @@ export default function PurchaseScreen({
           )}
         </View>
       )}
+      {/* POS-BUY-002: Grouped supplier product detail modal */}
+      <ProductDetailModal
+        visible={selectedProduct !== null}
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
     </View>
   );
 }
