@@ -156,10 +156,12 @@ export const requireOperationalStore = requireStoreStatus([
 ]);
 
 /**
- * SEC-001: Middleware that allows any registered store (not DRAFT)
- * Use for basic read operations available after enrollment
+ * SEC-001: Middleware that allows any registered store
+ * DR-005: Includes DRAFT — stores created via instant registration (RO-001)
+ * should be able to access basic read operations before device enrollment
  */
 export const requireEnrolledStore = requireStoreStatus([
+  StoreStatus.DRAFT,     // DR-005: Instant-registered stores before enrollment
   StoreStatus.ENROLLED,
   StoreStatus.KYC_SUBMITTED,
   StoreStatus.PAYMENTS_SUBMITTED,

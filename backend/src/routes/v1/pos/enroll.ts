@@ -4,6 +4,7 @@ import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { isDemoStoreCode } from "../../../services/storeCodeService";
 import { validateDeviceFingerprint } from "@supermandi/common";
+import { enrollStore } from "../../../services/storeStateMachine";  // DR-005
 
 // DEV-071: Enhanced enrollment with multi-use codes, idempotent enrollment, and proper error codes
 // BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
@@ -517,6 +518,15 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
     await client.query("COMMIT");
 
     console.log(`[Enroll] Device ${deviceId} enrolled with code ${code} (uses: ${usesCount + 1}/${maxUses})`);
+
+    // DR-005: Transition store DRAFT → ENROLLED after first device enrollment
+    // Non-blocking: if transition fails (already ENROLLED, etc.), enrollment still succeeds
+    if (!existingDevice) {
+      enrollStore(store.id, "system:enrollment").catch((err) => {
+        // Expected to fail if store is already past DRAFT (e.g., ENROLLED, ACTIVE)
+        console.log(`[Enroll] DR-005: Store status transition skipped for ${store.id}:`, err?.message);
+      });
+    }
 
     return res.json({
       deviceId,
