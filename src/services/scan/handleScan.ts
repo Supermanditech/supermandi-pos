@@ -408,11 +408,11 @@ async function handleScan(
 
         if (needsSellFirstOnboarding(storeProduct)) {
           if (storeProduct.is_first_time_in_store) {
-            // Product not found in catalog — only open modal for genuine barcode scans
-            // (real barcodes contain digits or are 8+ chars; short alpha-only text like "rrtt"
-            // is likely a misdetected HID scan from keyboard typing)
-            const looksLikeBarcode = /\d/.test(trimmed) || trimmed.length >= 8;
-            if (source === "keyboard" || !looksLikeBarcode) {
+            // POS-SCAN-002: Relaxed barcode heuristic — HID scanners report as "keyboard"
+            // so we no longer discriminate by source. Accept any input ≥3 chars or containing
+            // a digit. Duplicate guard and storm detection handle spurious inputs.
+            const looksLikeBarcode = /\d/.test(trimmed) || trimmed.length >= 3;
+            if (!looksLikeBarcode) {
               notify({ tone: "info", message: "Product not found" });
               return;
             }
