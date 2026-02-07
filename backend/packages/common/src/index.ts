@@ -41,3 +41,6 @@ export * from './firebase';
 
 // Validation (input sanitization, format validation) - GO-LIVE Batch 3
 export * from './validation';
+
+// Schemas (Zod validation schemas for registration) - RO-002
+export * from './schemas';
