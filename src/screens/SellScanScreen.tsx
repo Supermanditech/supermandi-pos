@@ -1058,9 +1058,11 @@ export default function SellScanScreen({
     checkFreshness();
 
     // RCAT-SYNC-001: Freshness check when app returns to foreground
+    // POS-CART-002: Also refresh stock snapshot on every foreground return
     const handleAppState = (nextState: string) => {
       if (nextState === "active" && !cancelled) {
         checkFreshness();
+        refreshStockSnapshot();
       }
     };
     const appStateSub = AppState.addEventListener("change", handleAppState);
