@@ -75,9 +75,10 @@ export async function checkStoreGstinDuplicate(
   // Normalize GSTIN (uppercase, trim)
   const normalizedGstin = gstin.trim().toUpperCase();
 
+  // Check both gstin (new registration) and gst_number (legacy) columns
   const query = excludeStoreId
-    ? `SELECT id, name FROM platform.stores WHERE UPPER(gst_number) = $1 AND id != $2 LIMIT 1`
-    : `SELECT id, name FROM platform.stores WHERE UPPER(gst_number) = $1 LIMIT 1`;
+    ? `SELECT id, name FROM platform.stores WHERE (UPPER(gst_number) = $1 OR UPPER(gstin) = $1) AND id != $2 LIMIT 1`
+    : `SELECT id, name FROM platform.stores WHERE (UPPER(gst_number) = $1 OR UPPER(gstin) = $1) LIMIT 1`;
 
   const params = excludeStoreId
     ? [normalizedGstin, excludeStoreId]

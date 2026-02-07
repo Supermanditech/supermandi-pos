@@ -137,8 +137,8 @@ retailerRegisterRouter.post(
     } catch (err: any) {
       console.error("[RetailerRegister] Registration failed:", err?.message);
 
-      // Record failed event
-      await recordFailedRegistration(pool, {
+      // Record failed event (non-blocking — must not mask the actual error response)
+      recordFailedRegistration(pool, {
         source: data.source,
         outcome: "ERROR",
         errorCode: err?.code || "UNKNOWN",
@@ -148,7 +148,7 @@ retailerRegisterRouter.post(
         phone: data.phone,
         businessName: data.businessName,
         gstin: data.gstin,
-      });
+      }).catch(() => {});
 
       // DR-009: Handle PG unique violations with generic message (no field leakage)
       if (err?.code === "23505") {

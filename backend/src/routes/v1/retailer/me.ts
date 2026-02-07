@@ -29,13 +29,20 @@ retailerMeRouter.get("/me", async (req, res) => {
 
   // Resolve user identity from gateway headers or query
   const userId = (req as any).userId || req.headers["x-user-id"];
-  const phone = req.query.phone as string | undefined;
+  let phone = req.query.phone as string | undefined;
 
   if (!userId && !phone) {
     return res.status(400).json({
       error: "IDENTITY_REQUIRED",
       message: "Provide x-user-id header or phone query parameter",
     });
+  }
+
+  // Normalize phone to match stored format (+91XXXXXXXXXX)
+  if (phone) {
+    phone = phone.replace(/[\s\-()]/g, "");
+    if (/^\d{10}$/.test(phone)) phone = `+91${phone}`;
+    else if (/^91\d{10}$/.test(phone)) phone = `+${phone}`;
   }
 
   try {
@@ -78,6 +85,7 @@ retailerMeRouter.get("/me", async (req, res) => {
       storeCode: row.store_code,
       storeName: row.store_name,
       storeStatus: row.store_status,
+      storePhone: row.store_phone || null,
       createdVia: row.created_via,
       role: row.role,
       isOwner: row.is_owner,

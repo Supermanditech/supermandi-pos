@@ -96,11 +96,9 @@ function validateGSTIN(gstin: string): boolean {
  * Query params:
  * - phone: Phone number to lookup (required)
  *
- * Returns:
- * - exists: true/false
- * - application_id: (if exists)
- * - status: Application status
- * - nextStep: What the user should do next
+ * Returns (DR-009: action-only, no existence boolean):
+ * - action: LOGIN_ALLOWED | REGISTER_REQUIRED | PENDING_APPROVAL | ...
+ * - message: Human-readable guidance
  */
 router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -220,10 +218,9 @@ router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next:
  * POST /api/v1/retailer-admin/registration/check-gstin
  * REG-AUTH-201: Check if GSTIN is already registered
  *
- * Returns:
- * - exists: true/false
+ * Returns (DR-009: action-only, no existence boolean):
  * - action: 'CREATE' | 'RESUME' | 'LOGIN'
- * - applicationId: (if exists and can resume)
+ * - message: Human-readable guidance
  */
 router.post("/check-gstin", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {

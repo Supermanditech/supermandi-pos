@@ -310,6 +310,14 @@ async function recordRegistrationEvent(
   pool: Pool,
   event: RegistrationEventData
 ): Promise<void> {
+  // Validate IP for inet cast safety — spoofed x-forwarded-for can contain
+  // arbitrary strings that would make $::inet throw and lose the event row.
+  let safeIp: string | null = event.ipAddress || null;
+  if (safeIp && !/^[\d.:a-fA-F]+$/.test(safeIp)) {
+    console.warn(`[registration] Invalid IP format, storing as null: "${safeIp}"`);
+    safeIp = null;
+  }
+
   await pool.query(
     `INSERT INTO auth.registration_events (
       store_id, user_id, source, outcome, error_code,
@@ -326,7 +334,7 @@ async function recordRegistrationEvent(
       event.source,
       event.outcome,
       event.errorCode || null,
-      event.ipAddress || null,
+      safeIp,
       event.userAgent || null,
       event.deviceMeta ? JSON.stringify(event.deviceMeta) : null,
       event.phone,
