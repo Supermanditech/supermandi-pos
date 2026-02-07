@@ -354,80 +354,113 @@ catalogRouter.get("/stores/:storeId/buy-catalog", requireDeviceToken, async (req
       paramIndex++;
     }
 
-    // Get total count
+    // SUP-POS-003: Count GROUPED products (not flat rows)
     const countResult = await pool.query(
-      `SELECT COUNT(*) as total
-       FROM catalog.supplier_products sp
-       JOIN supplier.suppliers s ON s.id = sp.supplier_id
-       JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
-       ${whereClause}`,
+      `SELECT COUNT(*) as total FROM (
+        SELECT COALESCE(spm.product_id, sp.id) AS group_id
+        FROM catalog.supplier_products sp
+        JOIN supplier.suppliers s ON s.id = sp.supplier_id
+        JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
+        LEFT JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
+        ${whereClause}
+        GROUP BY COALESCE(spm.product_id, sp.id)
+      ) grouped`,
       params
     );
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
-    // Get paginated products with margin applied
+    // SUP-POS-003: Grouped products with supplier offers via json_agg
     const result = await pool.query(
-      `SELECT
-        sp.id,
-        COALESCE(sp.edited_name, sp.name) AS name,
-        COALESCE(sp.edited_category, sp.category) AS category,
-        sp.brand,
-        sp.barcode,
-        sp.supplier_sku AS "supplierSku",
-        sp.purchase_price AS "supplierPrice",
-        sp.purchase_price + CASE
-          WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
-            THEN sp.supermandi_margin_minor
-          WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
-            THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
-          ELSE 0
-        END AS "retailerPrice",
-        CASE
-          WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
-            THEN sp.supermandi_margin_minor
-          WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
-            THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
-          ELSE 0
-        END AS margin,
-        COALESCE(sp.margin_percent, 0) AS "marginPercent",
-        s.business_name AS "supplierName",
-        s.id AS "supplierId",
-        sp.bnpl_eligible AS "bnplEligible",
-        sp.bnpl_max_days AS "bnplMaxDays",
-        sp.stock_quantity AS "stockQty",
-        sp.stock_status AS "stockStatus",
-        sp.moq,
-        sp.unit,
-        sp.mrp
-      FROM catalog.supplier_products sp
-      JOIN supplier.suppliers s ON s.id = sp.supplier_id
-      JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
-      ${whereClause}
-      ORDER BY COALESCE(sp.edited_name, sp.name) ASC
+      `WITH priced AS (
+        SELECT
+          sp.id AS sp_id,
+          COALESCE(sp.edited_name, sp.name) AS product_name,
+          COALESCE(sp.edited_category, sp.category) AS product_category,
+          sp.brand AS product_brand,
+          sp.barcode AS product_barcode,
+          sp.purchase_price,
+          sp.purchase_price + CASE
+            WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
+              THEN sp.supermandi_margin_minor
+            WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
+              THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
+            ELSE 0
+          END AS retailer_price,
+          sp.moq,
+          sp.unit,
+          sp.mrp,
+          sp.stock_quantity,
+          sp.stock_status,
+          sp.bnpl_eligible,
+          sp.bnpl_max_days,
+          s.id AS supplier_id,
+          COALESCE(s.business_name, s.trade_name, s.name, 'Unknown') AS supplier_name,
+          COALESCE(ssl.is_preferred, false) AS is_preferred,
+          COALESCE(spm.product_id, sp.id) AS group_id,
+          mp.name AS mp_name,
+          mp.category AS mp_category,
+          mp.brand AS mp_brand,
+          mp.primary_barcode AS mp_barcode,
+          mp.unit AS mp_unit
+        FROM catalog.supplier_products sp
+        JOIN supplier.suppliers s ON s.id = sp.supplier_id
+        JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = s.id
+        LEFT JOIN catalog.supplier_product_map spm ON spm.supplier_product_id = sp.id
+        LEFT JOIN catalog.products mp ON mp.id = spm.product_id
+        ${whereClause}
+      )
+      SELECT
+        group_id::text AS id,
+        MIN(COALESCE(mp_name, product_name)) AS name,
+        MIN(COALESCE(mp_category, product_category)) AS category,
+        MIN(COALESCE(mp_brand, product_brand)) AS brand,
+        MIN(COALESCE(mp_barcode, product_barcode)) AS "primaryBarcode",
+        MIN(COALESCE(mp_unit, unit, 'PCS')) AS unit,
+        MIN(retailer_price) AS "bestPrice",
+        MIN(COALESCE(moq, 1)) AS "minMoq",
+        COUNT(*)::int AS "supplierCount",
+        CASE MAX(CASE COALESCE(stock_status, 'available')
+          WHEN 'in_stock' THEN 3 WHEN 'available' THEN 3
+          WHEN 'low_stock' THEN 2 ELSE 1
+        END)
+          WHEN 3 THEN 'in_stock'
+          WHEN 2 THEN 'low_stock'
+          ELSE 'out_of_stock'
+        END AS "stockStatus",
+        json_agg(json_build_object(
+          'supplierId', supplier_id,
+          'supplierName', supplier_name,
+          'supplierProductId', sp_id,
+          'purchasePrice', retailer_price,
+          'mrp', mrp,
+          'moq', COALESCE(moq, 1),
+          'stockQuantity', COALESCE(stock_quantity, 0),
+          'stockStatus', COALESCE(stock_status, 'available'),
+          'bnplEligible', COALESCE(bnpl_eligible, false),
+          'bnplMaxDays', COALESCE(bnpl_max_days, 0),
+          'isPreferred', is_preferred
+        ) ORDER BY is_preferred DESC, retailer_price ASC) AS suppliers
+      FROM priced
+      GROUP BY group_id
+      ORDER BY MIN(COALESCE(mp_name, product_name)) ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, limit, offset]
     );
 
+    // Map to CatalogProduct format matching frontend types
     const products = result.rows.map((row) => ({
       id: row.id,
       name: row.name,
       category: row.category,
       brand: row.brand,
-      barcode: row.barcode,
-      supplierSku: row.supplierSku,
-      supplierPrice: row.supplierPrice,
-      retailerPrice: row.retailerPrice,
-      margin: row.margin,
-      marginPercent: parseFloat(row.marginPercent) || 0,
-      supplierName: row.supplierName,
-      supplierId: row.supplierId,
-      bnplEligible: row.bnplEligible || false,
-      bnplMaxDays: row.bnplMaxDays || 0,
-      stockQty: row.stockQty || 0,
-      stockStatus: row.stockStatus || 'available',
-      moq: row.moq || 1,
-      unit: row.unit || 'PCS',
-      mrp: row.mrp,
+      primaryBarcode: row.primaryBarcode,
+      unit: row.unit,
+      isActive: true,
+      bestPrice: row.bestPrice,
+      minMoq: row.minMoq,
+      supplierCount: row.supplierCount,
+      stockStatus: row.stockStatus || 'in_stock',
+      suppliers: row.suppliers || [],
     }));
 
     return res.json({

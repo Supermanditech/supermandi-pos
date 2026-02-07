@@ -227,6 +227,50 @@ export async function getCategories(storeId: string): Promise<string[]> {
 }
 
 // =============================================================================
+// SUP-POS-002: BUY CATALOG (Supplier Products for Purchase)
+// =============================================================================
+
+/**
+ * Get paginated buy catalog for a store.
+ * Returns supplier products grouped by master product with supplier offers.
+ * Uses /buy-catalog endpoint (approved products from linked/verified suppliers).
+ */
+export async function getBuyCatalog(
+  storeId: string,
+  params?: GetCatalogParams
+): Promise<GetCatalogResponse> {
+  const query = new URLSearchParams();
+
+  if (params?.q && params.q.trim().length >= 2) {
+    query.set("q", params.q.trim());
+  }
+  if (params?.category) {
+    query.set("category", params.category);
+  }
+  if (params?.page && params.page > 0) {
+    query.set("page", String(params.page));
+  }
+  if (params?.limit && params.limit > 0) {
+    query.set("limit", String(params.limit));
+  }
+
+  const queryString = query.toString();
+  const path = `${CATALOG_BASE}/stores/${storeId}/buy-catalog${queryString ? `?${queryString}` : ""}`;
+
+  return apiClient.get<GetCatalogResponse>(path);
+}
+
+/**
+ * Get categories available in the buy catalog.
+ * Returns distinct categories from approved supplier products.
+ */
+export async function getBuyCatalogCategories(storeId: string): Promise<string[]> {
+  const path = `${CATALOG_BASE}/stores/${storeId}/buy-catalog/categories`;
+  const response = await apiClient.get<GetCategoriesResponse>(path);
+  return response.data;
+}
+
+// =============================================================================
 // CAT-003: FMCG Taxonomy Category Endpoints
 // =============================================================================
 

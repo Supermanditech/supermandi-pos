@@ -135,10 +135,10 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
 
     setCategoriesLoading(true);
     catalogApi
-      .getCategories(storeId)
+      .getBuyCatalogCategories(storeId)
       .then(setCategories)
       .catch((err) => {
-        console.warn("[BuyScreen] Failed to load categories:", err);
+        console.warn("[BuyScreen] Failed to load buy categories:", err);
       })
       .finally(() => setCategoriesLoading(false));
   }, [storeId]);
@@ -165,7 +165,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
       setError(null);
 
       try {
-        const response = await catalogApi.getCatalog(storeId, {
+        const response = await catalogApi.getBuyCatalog(storeId, {
           q: debouncedQuery || undefined,
           category: selectedCategory || undefined,
           page: pageNum,
@@ -202,8 +202,8 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     try {
       // Reload categories and products
       const [categoriesResult, productsResult] = await Promise.all([
-        catalogApi.getCategories(storeId),
-        catalogApi.getCatalog(storeId, {
+        catalogApi.getBuyCatalogCategories(storeId),
+        catalogApi.getBuyCatalog(storeId, {
           q: debouncedQuery || undefined,
           category: selectedCategory || undefined,
           page: 1,
