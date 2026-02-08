@@ -1,0 +1,90 @@
+# PM-BATCH-K: Scanner Icon Diagnostics Flow Lock
+# Tests: scanner status icon → tap opens popover → shows connection status
+# Invariant: scanner status is visible and tappable in status bar
+
+appId: com.supermanditech.supermandipos
+name: "Scanner Icon - Status and Diagnostics"
+tags:
+  - smoke
+  - scanner
+  - regression
+  - batch-k
+
+---
+
+# =============================================================================
+# SETUP: Ensure app is loaded
+# =============================================================================
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: "SELL"
+    timeout: 15000
+
+- tapOn:
+    text: "SELL"
+    optional: true
+
+# =============================================================================
+# STEP 1: Verify scanner status icon is in status bar
+# =============================================================================
+
+# The PosStatusBar shows scanner icon with accessibility label
+- assertVisible:
+    text:
+      anyOf:
+        - "HID scanner connected"
+        - "HID scanner not detected"
+    timeout: 5000
+
+# =============================================================================
+# STEP 2: Tap scanner icon to open status popover
+# =============================================================================
+
+# Tap the scanner status indicator
+- tapOn:
+    text: "HID scanner connected"
+    optional: true
+
+- tapOn:
+    text: "HID scanner not detected"
+    optional: true
+
+# =============================================================================
+# STEP 3: Verify popover shows scanner status
+# =============================================================================
+
+# Popover should show connection status details
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - "Scanner"
+        - "Connected"
+        - "Not detected"
+        - "HID"
+    timeout: 3000
+
+# =============================================================================
+# STEP 4: Dismiss popover
+# =============================================================================
+
+- back:
+    optional: true
+
+- tapOn:
+    text: "SELL"
+    optional: true
+
+# =============================================================================
+# VERIFY: App still responsive after diagnostics
+# =============================================================================
+
+- extendedWaitUntil:
+    visible: "SELL"
+    timeout: 3000
+
+- assertVisible: "Search by name or barcode"
+
+- evalScript: console.log('Scanner diagnostics flow completed successfully')

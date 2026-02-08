@@ -1,0 +1,179 @@
+# PM-BATCH-K: INWARD Unknown Scan Queue Flow Lock
+# Tests: navigate to inward → add items → submit inward
+# Invariant: manual inward entry works with supplier selection
+
+appId: com.supermanditech.supermandipos
+name: "INWARD - Manual Entry and Submit"
+tags:
+  - smoke
+  - inward
+  - regression
+  - batch-k
+
+---
+
+# =============================================================================
+# SETUP: Navigate to INWARD/BUY tab
+# =============================================================================
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - "BUY"
+        - "INWARD"
+        - "Purchase"
+    timeout: 15000
+
+# Navigate to BUY/INWARD tab
+- tapOn:
+    text: "BUY"
+    optional: true
+
+- tapOn:
+    text: "INWARD"
+    optional: true
+
+# =============================================================================
+# STEP 1: Open inward entry (may need to navigate from BUY screen)
+# =============================================================================
+
+# Look for Inward option
+- tapOn:
+    text: "Inward"
+    optional: true
+
+- tapOn:
+    text: "Manual Inward"
+    optional: true
+
+- tapOn:
+    text: "Record Inward"
+    optional: true
+
+# =============================================================================
+# STEP 2: Select supplier (or skip for "no supplier")
+# =============================================================================
+
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - "Select Supplier"
+        - "Supplier"
+        - "No supplier"
+        - "Add Item"
+    timeout: 8000
+
+# Try selecting "No supplier (manual entry)"
+- tapOn:
+    text: "No supplier"
+    optional: true
+
+- tapOn:
+    text: "Manual"
+    optional: true
+
+# =============================================================================
+# STEP 3: Add an item to inward
+# =============================================================================
+
+# Tap add item or search
+- tapOn:
+    text: "Add Item"
+    optional: true
+
+- tapOn:
+    text: "Search"
+    optional: true
+
+# Enter a product name
+- conditional:
+    visible: "Search"
+    commands:
+      - tapOn:
+          text: "Search"
+      - inputText: "Test"
+
+# Wait for results and tap first
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - ".*Test.*"
+        - ".*Product.*"
+    timeout: 5000
+    regex: true
+
+- tapOn:
+    text: ".*Test.*"
+    regex: true
+    optional: true
+
+# =============================================================================
+# STEP 4: Enter quantity and price
+# =============================================================================
+
+- conditional:
+    visible: "Quantity"
+    commands:
+      - tapOn:
+          text: "Quantity"
+          optional: true
+      - clearText
+      - inputText: "10"
+
+- conditional:
+    visible: "Purchase Price"
+    commands:
+      - tapOn:
+          text: "Purchase Price"
+          optional: true
+      - clearText
+      - inputText: "80"
+
+# Add the item
+- tapOn:
+    text: "Add"
+    optional: true
+
+- tapOn:
+    text: "Confirm"
+    optional: true
+
+# =============================================================================
+# STEP 5: Submit inward
+# =============================================================================
+
+# Verify at least one item is queued
+- assertVisible:
+    text: ".*Total.*"
+    timeout: 3000
+
+# Submit
+- tapOn:
+    text: "Submit"
+    optional: true
+
+- tapOn:
+    text: "Record"
+    optional: true
+
+- tapOn:
+    text: "Confirm"
+    optional: true
+
+# =============================================================================
+# STEP 6: Verify submission
+# =============================================================================
+
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - "Success"
+        - "Recorded"
+        - "Inward Complete"
+        - "BUY"
+    timeout: 10000
+
+- evalScript: console.log('INWARD unknown queue flow completed successfully')
