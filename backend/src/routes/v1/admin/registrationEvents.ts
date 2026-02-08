@@ -32,7 +32,7 @@ adminRegistrationEventsRouter.use(requireAdminToken);
  */
 adminRegistrationEventsRouter.get(
   "/registration-events",
-  requirePermission("stores:read"),
+  requirePermission("stores", "read"),
   async (req, res) => {
     const pool = getPool();
     if (!pool) {
@@ -146,7 +146,7 @@ adminRegistrationEventsRouter.get(
  */
 adminRegistrationEventsRouter.get(
   "/registration-events/summary",
-  requirePermission("stores:read"),
+  requirePermission("stores", "read"),
   async (req, res) => {
     const pool = getPool();
     if (!pool) {
@@ -218,7 +218,7 @@ adminRegistrationEventsRouter.get(
  */
 adminRegistrationEventsRouter.post(
   "/stores/:storeId/send-enrollment-code",
-  requirePermission("stores:write"),
+  requirePermission("stores", "write"),
   async (req, res) => {
     const pool = getPool();
     if (!pool) {
