@@ -909,7 +909,10 @@ catalogRouter.get("/stores/:storeId/categories/:taxonomyId/products", requireDev
     const params: any[] = [storeId];
     let paramIndex = 2;
 
-    if (!isAllCategory) {
+    if (taxonomyId === "__uncategorized__") {
+      // CAT-AUTO-001: POS PM-014 sends __uncategorized__ sentinel
+      whereClause += ` AND sp.taxonomy_id IS NULL`;
+    } else if (!isAllCategory) {
       whereClause += ` AND sp.taxonomy_id = $${paramIndex}`;
       params.push(taxonomyId);
       paramIndex++;

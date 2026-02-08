@@ -113,6 +113,8 @@ services:
       SMS_DISABLED: "true"
       PORTAL_BASE_URL: "http://localhost:8081"
       POS_APP_DOWNLOAD_URL: "https://supermandi.tech/pos"
+      # DOCS-001: Document storage dir — must be writable by nodejs user (non-root)
+      DOCUMENT_STORAGE_DIR: "/app/documents"
     depends_on:
       postgres:
         condition: service_healthy

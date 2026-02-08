@@ -73,7 +73,7 @@ retailerRegisterRouter.post(
 
     // Step 1: Validate input using shared schema (RO-002)
     const validation = validateRegistration(req.body);
-    if (!validation.success) {
+    if (validation.success === false) {
       return res.status(400).json({
         error: "VALIDATION_ERROR",
         fields: validation.errors,
