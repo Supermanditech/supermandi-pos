@@ -356,6 +356,27 @@ export async function ensureCoreSchema(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
 
+    -- SA-P0-006: Refunds table
+    CREATE TABLE IF NOT EXISTS refunds (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      original_sale_id TEXT NOT NULL REFERENCES sales(id),
+      store_id TEXT NOT NULL,
+      refund_type TEXT NOT NULL CHECK (refund_type IN ('FULL', 'PARTIAL')),
+      amount_minor INTEGER NOT NULL CHECK (amount_minor > 0),
+      reason TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+      requested_by_device_id TEXT NULL,
+      approved_by TEXT NULL,
+      approved_at TIMESTAMPTZ NULL,
+      rejection_reason TEXT NULL,
+      items JSONB NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS refunds_store_id_idx ON refunds (store_id);
+    CREATE INDEX IF NOT EXISTS refunds_status_idx ON refunds (status) WHERE status = 'PENDING';
+    CREATE INDEX IF NOT EXISTS refunds_original_sale_id_idx ON refunds (original_sale_id);
+
     CREATE TABLE IF NOT EXISTS consumer_orders (
       id TEXT PRIMARY KEY,
       store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
