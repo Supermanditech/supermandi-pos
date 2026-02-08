@@ -57,6 +57,13 @@ import {
   rejectDocument,
   type DocumentRecord
 } from "./api/documents";
+// SA-P0-006: Import refund approval queue functions
+import {
+  fetchPendingRefunds,
+  approveRefund,
+  rejectRefund,
+  type PendingRefund
+} from "./api/refunds";
 import { QRCodeSVG } from "qrcode.react";
 // RO-007: Registration events visibility
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent, type RegistrationEventsResponse } from "./api/registrationEvents";
@@ -67,7 +74,7 @@ import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
 // DOCS-001: Added "documents" tab for document management
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "refunds";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -726,6 +733,13 @@ export default function App() {
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const suppliersInFlightRef = useRef(false);
 
+  // SA-P0-006: Refund Approval State
+  const [pendingRefunds, setPendingRefunds] = useState<PendingRefund[]>([]);
+  const [refundsLoading, setRefundsLoading] = useState(false);
+  const [refundsError, setRefundsError] = useState("");
+  const [refundActionLoading, setRefundActionLoading] = useState<Record<string, boolean>>({});
+  const [refundRejectReason, setRefundRejectReason] = useState<Record<string, string>>({});
+
   // SA-1.3-001 to SA-1.3-003: Product Approval State
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
   const [productActionLoading, setProductActionLoading] = useState<Record<string, boolean>>({});
@@ -907,6 +921,54 @@ export default function App() {
     } finally {
       storesInFlightRef.current = false;
       setStoreDirectoryLoading(false);
+    }
+  }
+
+  // SA-P0-006: Refund approval handlers
+  async function refreshRefunds() {
+    setRefundsLoading(true);
+    setRefundsError("");
+    try {
+      const res = await fetchPendingRefunds({ limit: 100 });
+      setPendingRefunds(res.data);
+    } catch (e: any) {
+      setRefundsError(e?.message ? String(e.message) : "Failed to fetch refunds");
+    } finally {
+      setRefundsLoading(false);
+    }
+  }
+
+  async function handleApproveRefund(refundId: string) {
+    setRefundActionLoading((prev) => ({ ...prev, [refundId]: true }));
+    try {
+      await approveRefund(refundId);
+      setPendingRefunds((prev) => prev.filter((r) => r.id !== refundId));
+    } catch (e: any) {
+      setRefundsError(e?.message ? String(e.message) : "Failed to approve refund");
+    } finally {
+      setRefundActionLoading((prev) => ({ ...prev, [refundId]: false }));
+    }
+  }
+
+  async function handleRejectRefund(refundId: string) {
+    const reason = refundRejectReason[refundId]?.trim();
+    if (!reason || reason.length < 3) {
+      setRefundsError("Rejection reason is required (min 3 chars)");
+      return;
+    }
+    setRefundActionLoading((prev) => ({ ...prev, [refundId]: true }));
+    try {
+      await rejectRefund(refundId, reason);
+      setPendingRefunds((prev) => prev.filter((r) => r.id !== refundId));
+      setRefundRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[refundId];
+        return next;
+      });
+    } catch (e: any) {
+      setRefundsError(e?.message ? String(e.message) : "Failed to reject refund");
+    } finally {
+      setRefundActionLoading((prev) => ({ ...prev, [refundId]: false }));
     }
   }
 
@@ -1400,6 +1462,7 @@ export default function App() {
     const shouldRefreshAudit = tab === "audit"; // GO-LIVE-011
     const shouldRefreshDocuments = tab === "documents"; // DOCS-001
     const shouldRefreshRegEvents = tab === "registrations"; // RO-007
+    const shouldRefreshRefunds = tab === "refunds"; // SA-P0-006
 
     refreshHealth();
     if (shouldRefreshEvents) refreshEvents();
@@ -1416,6 +1479,7 @@ export default function App() {
     if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
     if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
     if (shouldRefreshRegEvents) refreshRegEvents(); // RO-007
+    if (shouldRefreshRefunds) refreshRefunds(); // SA-P0-006
 
     // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
     const id = setInterval(() => {
@@ -2147,6 +2211,15 @@ export default function App() {
           {pendingDocuments.length > 0 && (
             <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
               {pendingDocsTotal}
+            </span>
+          )}
+        </button>
+        {/* SA-P0-006: Refunds tab */}
+        <button className={tab === "refunds" ? "tab tabActive" : "tab"} onClick={() => setTab("refunds")}>
+          Refunds
+          {pendingRefunds.length > 0 && (
+            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
+              {pendingRefunds.length}
             </span>
           )}
         </button>
@@ -4308,6 +4381,109 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* SA-P0-006: Refunds Approval Queue */}
+      {tab === "refunds" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">Refund Approval Queue</div>
+            <div className="muted">
+              {pendingRefunds.length} pending refund{pendingRefunds.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+
+          {refundsError && (
+            <div className="banner" style={{ background: "#fef2f2", color: "#dc2626", marginBottom: 12 }}>
+              {refundsError}
+              <button className="btnGhost" onClick={() => setRefundsError("")} style={{ marginLeft: 8 }}>
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {refundsLoading ? (
+            <div className="muted" style={{ padding: 24, textAlign: "center" }}>Loading refunds...</div>
+          ) : pendingRefunds.length === 0 ? (
+            <div className="muted" style={{ padding: 24, textAlign: "center" }}>No pending refund requests.</div>
+          ) : (
+            <div className="deviceGrid">
+              {pendingRefunds.map((refund) => (
+                <div className="deviceCard" key={refund.id}>
+                  <div className="deviceHeader">
+                    <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
+                      Bill: {refund.bill_ref}
+                    </div>
+                    <div className="badgeRow">
+                      <span className="badge badgeWarn">Pending</span>
+                      <span className="badge" style={{ background: refund.refund_type === "FULL" ? "#3b82f6" : "#8b5cf6", color: "#fff" }}>
+                        {refund.refund_type}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="deviceMetaGrid">
+                    <div><span className="muted">Refund Amount:</span> {formatCurrency(refund.amount_minor)}</div>
+                    <div><span className="muted">Sale Total:</span> {formatCurrency(refund.sale_total_minor)}</div>
+                    <div><span className="muted">Store:</span> <span className="mono">{refund.store_id.substring(0, 8)}...</span></div>
+                    <div><span className="muted">Sale Status:</span> {refund.sale_status}</div>
+                    <div><span className="muted">Requested:</span> {formatDateTime(refund.created_at)}</div>
+                    {refund.requested_by_device_id && (
+                      <div><span className="muted">Device:</span> <span className="mono">{refund.requested_by_device_id.substring(0, 8)}...</span></div>
+                    )}
+                  </div>
+
+                  <div style={{ padding: "8px 0", fontSize: 13 }}>
+                    <span className="muted">Reason:</span> {refund.reason}
+                  </div>
+
+                  {refund.refund_type === "PARTIAL" && refund.items && (
+                    <div style={{ padding: "4px 0", fontSize: 12 }}>
+                      <span className="muted">Items:</span>
+                      <ul style={{ margin: "4px 0", paddingLeft: 16 }}>
+                        {refund.items.map((item, idx) => (
+                          <li key={idx}>
+                            {item.name ?? item.variantId} - Qty {item.quantity} @ {formatCurrency(item.priceMinor)}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div style={{ padding: "4px 0" }}>
+                    <input
+                      className="tableInput"
+                      placeholder="Rejection reason (min 3 chars)"
+                      value={refundRejectReason[refund.id] ?? ""}
+                      onChange={(e) =>
+                        setRefundRejectReason((prev) => ({ ...prev, [refund.id]: e.target.value }))
+                      }
+                      style={{ width: "100%", marginBottom: 8 }}
+                    />
+                  </div>
+
+                  <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
+                    <button
+                      onClick={() => handleApproveRefund(refund.id)}
+                      disabled={refundActionLoading[refund.id]}
+                      style={{ background: "#22c55e", color: "white", border: "none", padding: "6px 16px", borderRadius: 6, cursor: "pointer", fontWeight: 600 }}
+                    >
+                      {refundActionLoading[refund.id] ? "Approving..." : "Approve"}
+                    </button>
+                    <button
+                      className="btnGhost"
+                      onClick={() => handleRejectRefund(refund.id)}
+                      disabled={refundActionLoading[refund.id] || !refundRejectReason[refund.id]?.trim()}
+                      style={{ color: "#ef4444" }}
+                    >
+                      {refundActionLoading[refund.id] ? "Rejecting..." : "Reject"}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>
