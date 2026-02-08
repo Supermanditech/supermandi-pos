@@ -2321,3 +2321,165 @@ posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req
     return res.status(500).json({ error: "failed to get payment status" });
   }
 });
+
+// =============================================================================
+// SA-P0-006: Refund request from POS
+// =============================================================================
+
+/**
+ * POST /api/v1/pos/sales/:saleId/refund
+ * POS initiates a refund request (pending SA approval)
+ */
+posSalesRouter.post(
+  "/sales/:saleId/refund",
+  requireDeviceToken,
+  requireOperationalStore,
+  financialOperationsRateLimiter,
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { saleId } = req.params;
+    const { storeId } = (req as any).posDevice as { storeId: string };
+    const deviceId = (req as any).posDevice?.deviceId ?? null;
+
+    const { reason, refundType, items } = req.body as {
+      reason?: string;
+      refundType?: string;
+      items?: Array<{ variantId: string; quantity: number; priceMinor: number; name?: string }>;
+    };
+
+    if (!reason || typeof reason !== "string" || reason.trim().length < 3) {
+      return res.status(400).json({ error: "reason is required (min 3 chars)" });
+    }
+
+    const type = refundType === "PARTIAL" ? "PARTIAL" : "FULL";
+
+    if (type === "PARTIAL" && (!Array.isArray(items) || items.length === 0)) {
+      return res.status(400).json({ error: "items required for partial refund" });
+    }
+
+    try {
+      // Verify sale exists and belongs to this store
+      const saleRes = await pool.query(
+        `SELECT id, store_id, total_minor, status FROM sales WHERE id = $1`,
+        [saleId]
+      );
+
+      if (saleRes.rowCount === 0) {
+        return res.status(404).json({ error: "sale not found" });
+      }
+
+      const sale = saleRes.rows[0];
+      if (String(sale.store_id) !== String(storeId)) {
+        return res.status(403).json({ error: "sale does not belong to this store" });
+      }
+
+      if (sale.status === "REFUNDED") {
+        return res.status(409).json({ error: "sale already refunded" });
+      }
+
+      if (sale.status === "CANCELLED" || sale.status === "EXPIRED") {
+        return res.status(409).json({ error: "cannot refund a cancelled/expired sale" });
+      }
+
+      // Check for existing pending refund
+      const existingRefund = await pool.query(
+        `SELECT id FROM refunds WHERE original_sale_id = $1 AND status = 'PENDING'`,
+        [saleId]
+      );
+      if ((existingRefund.rowCount ?? 0) > 0) {
+        return res.status(409).json({ error: "refund request already pending for this sale" });
+      }
+
+      // Calculate refund amount
+      let amountMinor: number;
+      if (type === "FULL") {
+        amountMinor = Number(sale.total_minor);
+      } else {
+        amountMinor = (items ?? []).reduce(
+          (sum, item) => sum + Math.abs(Number(item.quantity)) * Math.abs(Number(item.priceMinor)),
+          0
+        );
+        if (amountMinor <= 0 || amountMinor > Number(sale.total_minor)) {
+          return res.status(400).json({ error: "invalid partial refund amount" });
+        }
+      }
+
+      const result = await pool.query(
+        `INSERT INTO refunds (original_sale_id, store_id, refund_type, amount_minor, reason, requested_by_device_id, items)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, created_at`,
+        [
+          saleId,
+          storeId,
+          type,
+          amountMinor,
+          reason.trim(),
+          deviceId,
+          type === "PARTIAL" ? JSON.stringify(items) : null,
+        ]
+      );
+
+      return res.status(201).json({
+        refundId: result.rows[0].id,
+        status: "PENDING",
+        amountMinor,
+        refundType: type,
+        createdAt: result.rows[0].created_at,
+      });
+    } catch (error) {
+      console.error("[pos/sales] POST /sales/:saleId/refund error:", error);
+      return res.status(500).json({ error: "failed to create refund request" });
+    }
+  }
+);
+
+/**
+ * GET /api/v1/pos/sales/:saleId/refund-status
+ * POS checks refund status for a sale
+ */
+posSalesRouter.get(
+  "/sales/:saleId/refund-status",
+  requireDeviceToken,
+  async (req, res) => {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    const { saleId } = req.params;
+
+    try {
+      const result = await pool.query(
+        `SELECT id, status, refund_type, amount_minor, reason,
+                rejection_reason, approved_by, approved_at, created_at
+         FROM refunds
+         WHERE original_sale_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [saleId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.json({ refund: null });
+      }
+
+      const r = result.rows[0];
+      return res.json({
+        refund: {
+          id: r.id,
+          status: r.status,
+          refundType: r.refund_type,
+          amountMinor: r.amount_minor,
+          reason: r.reason,
+          rejectionReason: r.rejection_reason,
+          approvedBy: r.approved_by,
+          approvedAt: r.approved_at,
+          createdAt: r.created_at,
+        },
+      });
+    } catch (error) {
+      console.error("[pos/sales] GET /sales/:saleId/refund-status error:", error);
+      return res.status(500).json({ error: "failed to fetch refund status" });
+    }
+  }
+);
