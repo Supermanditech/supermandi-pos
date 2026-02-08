@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -8,6 +8,7 @@ import { fetchBillSnapshot } from "../services/api/billingApi";
 import type { BillSnapshot } from "../services/billing/billTypes";
 import { buildBillText } from "../services/billing/billFormatter";
 import { shareBillPdf, shareBillWhatsApp } from "../services/billing/billShare";
+import { requestRefund, getRefundStatus, type RefundStatus } from "../services/api/posApi";
 import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
@@ -32,6 +33,21 @@ export default function BillDetailScreen() {
   const [printing, setPrinting] = useState(false);
   const [whatsapping, setWhatsapping] = useState(false);
 
+  // SA-P0-006: Refund state
+  const [refundStatus, setRefundStatus] = useState<RefundStatus["refund"]>(null);
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [showRefundForm, setShowRefundForm] = useState(false);
+
+  const loadRefundStatus = useCallback(async () => {
+    try {
+      const result = await getRefundStatus(saleId);
+      setRefundStatus(result.refund);
+    } catch (_) {
+      // Non-critical — refund status may not be available
+    }
+  }, [saleId]);
+
   useEffect(() => {
     let active = true;
 
@@ -47,6 +63,8 @@ export default function BillDetailScreen() {
           return;
         }
         setSnapshot(result);
+        // SA-P0-006: Load refund status after bill loads
+        void loadRefundStatus();
       } catch (e: any) {
         if (!active) return;
         setError(e?.message ? String(e.message) : "Failed to load bill.");
@@ -60,6 +78,44 @@ export default function BillDetailScreen() {
       active = false;
     };
   }, [saleId]);
+
+  // SA-P0-006: Request refund
+  const handleRequestRefund = async () => {
+    if (!snapshot || refundLoading) return;
+    if (!refundReason.trim() || refundReason.trim().length < 3) {
+      Alert.alert("Reason required", "Please enter a reason for the refund (min 3 characters).");
+      return;
+    }
+    Alert.alert(
+      "Request Refund",
+      `Request a full refund of ${formatMoney(snapshot.totalMinor, snapshot.currency)} for this sale?\n\nThis will be sent to the admin for approval.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Request Refund",
+          style: "destructive",
+          onPress: async () => {
+            setRefundLoading(true);
+            try {
+              await requestRefund(saleId, {
+                reason: refundReason.trim(),
+                refundType: "FULL",
+              });
+              setShowRefundForm(false);
+              setRefundReason("");
+              Alert.alert("Refund Requested", "Your refund request has been sent for admin approval.");
+              void loadRefundStatus();
+            } catch (e: any) {
+              const msg = e?.message ? String(e.message) : "Failed to request refund.";
+              Alert.alert("Refund Failed", msg);
+            } finally {
+              setRefundLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleShare = async () => {
     if (!snapshot || sharing) return;
@@ -195,6 +251,78 @@ export default function BillDetailScreen() {
           </Text>
         </View>
       </View>
+
+      {/* SA-P0-006: Refund section */}
+      {refundStatus ? (
+        <View style={styles.refundStatusCard}>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Refund Status</Text>
+            <Text style={[
+              styles.summaryValue,
+              refundStatus.status === "APPROVED" && { color: "#22c55e" },
+              refundStatus.status === "REJECTED" && { color: "#ef4444" },
+              refundStatus.status === "PENDING" && { color: "#f59e0b" },
+            ]}>
+              {refundStatus.status}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Amount</Text>
+            <Text style={styles.summaryValue}>
+              {formatMoney(refundStatus.amountMinor, snapshot.currency)}
+            </Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Type</Text>
+            <Text style={styles.summaryValue}>{refundStatus.refundType}</Text>
+          </View>
+          <Text style={styles.summaryMeta}>Reason: {refundStatus.reason}</Text>
+          {refundStatus.rejectionReason && (
+            <Text style={[styles.summaryMeta, { color: "#ef4444" }]}>
+              Rejected: {refundStatus.rejectionReason}
+            </Text>
+          )}
+        </View>
+      ) : snapshot.status !== "REFUNDED" && snapshot.status !== "CANCELLED" && snapshot.status !== "EXPIRED" ? (
+        showRefundForm ? (
+          <View style={styles.refundFormCard}>
+            <Text style={styles.refundFormTitle}>Request Refund</Text>
+            <TextInput
+              style={styles.refundReasonInput}
+              placeholder="Reason for refund (min 3 chars)"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={refundReason}
+              onChangeText={setRefundReason}
+              multiline
+              maxLength={500}
+            />
+            <View style={styles.refundFormActions}>
+              <Pressable
+                style={[styles.actionButton, styles.actionSecondary, { flex: 1 }]}
+                onPress={() => { setShowRefundForm(false); setRefundReason(""); }}
+              >
+                <Text style={styles.actionText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.actionButton, styles.actionRefund, { flex: 1 }, refundLoading && styles.actionButtonDisabled]}
+                onPress={handleRequestRefund}
+                disabled={refundLoading}
+              >
+                <MaterialCommunityIcons name="undo" size={16} color="#fff" />
+                <Text style={styles.actionTextPrimary}>{refundLoading ? "..." : "Submit"}</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Pressable
+            style={[styles.actionButton, styles.actionRefund]}
+            onPress={() => setShowRefundForm(true)}
+          >
+            <MaterialCommunityIcons name="undo" size={18} color="#fff" />
+            <Text style={styles.actionTextPrimary}>Request Refund</Text>
+          </Pressable>
+        )
+      ) : null}
     </View>
   ) : null;
 
@@ -423,5 +551,44 @@ const styles = StyleSheet.create({
   },
   error: {
     color: theme.colors.error,
+  },
+  actionRefund: {
+    backgroundColor: "#ef4444",
+    borderColor: "#ef4444",
+  },
+  refundStatusCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+    gap: 6,
+  },
+  refundFormCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 12,
+    gap: 10,
+  },
+  refundFormTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  refundReasonInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  refundFormActions: {
+    flexDirection: "row",
+    gap: 10,
   },
 });

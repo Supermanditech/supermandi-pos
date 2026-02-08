@@ -290,3 +290,43 @@ export async function getUtrVerificationStatus(input: {
 }): Promise<UtrVerificationResponse> {
   return apiClient.get(`/api/v1/pos/payments/upi/verify-utr/${input.verificationId}/status`);
 }
+
+// =============================================================================
+// SA-P0-006: Refund API
+// =============================================================================
+
+export type RefundRequest = {
+  reason: string;
+  refundType: "FULL" | "PARTIAL";
+  items?: Array<{ variantId: string; quantity: number; priceMinor: number; name?: string }>;
+};
+
+export type RefundResponse = {
+  refundId: string;
+  status: "PENDING";
+  amountMinor: number;
+  refundType: "FULL" | "PARTIAL";
+  createdAt: string;
+};
+
+export type RefundStatus = {
+  refund: {
+    id: string;
+    status: "PENDING" | "APPROVED" | "REJECTED";
+    refundType: "FULL" | "PARTIAL";
+    amountMinor: number;
+    reason: string;
+    rejectionReason: string | null;
+    approvedBy: string | null;
+    approvedAt: string | null;
+    createdAt: string;
+  } | null;
+};
+
+export async function requestRefund(saleId: string, input: RefundRequest): Promise<RefundResponse> {
+  return apiClient.post<RefundResponse>(`/api/v1/pos/sales/${saleId}/refund`, input);
+}
+
+export async function getRefundStatus(saleId: string): Promise<RefundStatus> {
+  return apiClient.get<RefundStatus>(`/api/v1/pos/sales/${saleId}/refund-status`);
+}
