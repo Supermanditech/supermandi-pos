@@ -1,0 +1,144 @@
+# PM-BATCH-K: SELL Known Barcode Flow Lock
+# Tests: scan known barcode → add to cart → checkout success
+# Invariant: known products add instantly without onboarding modal
+
+appId: com.supermanditech.supermandipos
+name: "SELL Known Barcode - Add to Cart and Checkout"
+tags:
+  - smoke
+  - sell
+  - regression
+  - batch-k
+
+---
+
+# =============================================================================
+# SETUP: Ensure logged in and on SELL tab
+# =============================================================================
+
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: "SELL"
+    timeout: 15000
+
+- tapOn:
+    text: "SELL"
+    optional: true
+
+# =============================================================================
+# STEP 1: Search for a known product by barcode
+# =============================================================================
+
+- assertVisible: "Search by name or barcode"
+
+- tapOn:
+    text: "Search by name or barcode"
+
+# Use known test barcode from config
+- inputText: ${TEST_BARCODE}
+
+# Wait for search results (known product should appear)
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - ".*Product.*"
+        - ".*Item.*"
+        - ".*Add.*"
+    timeout: 5000
+    regex: true
+
+# =============================================================================
+# STEP 2: Add product to cart (should NOT trigger onboarding modal)
+# =============================================================================
+
+# Tap first result to add
+- tapOn:
+    text: ".*Product.*"
+    regex: true
+    optional: true
+
+# Verify: onboarding modal did NOT appear (key invariant)
+# If "Create Product" or "Add New" is visible, this is a FAIL
+- assertNotVisible:
+    text: "Create Product"
+    timeout: 2000
+
+# Cart should show at least 1 item
+- assertVisible:
+    text: "Total"
+    timeout: 3000
+
+# =============================================================================
+# STEP 3: Proceed to checkout
+# =============================================================================
+
+- tapOn:
+    text: ".*Pay.*"
+    regex: true
+    optional: true
+
+- tapOn:
+    text: "Checkout"
+    optional: true
+
+# =============================================================================
+# STEP 4: Complete payment (CASH)
+# =============================================================================
+
+- extendedWaitUntil:
+    visible: "Payment"
+    timeout: 5000
+
+- tapOn:
+    text: "CASH"
+    optional: true
+
+- tapOn:
+    text: "Exact"
+    optional: true
+
+- tapOn:
+    text: "Complete Sale"
+    optional: true
+
+- tapOn:
+    text: "Confirm"
+    optional: true
+
+# =============================================================================
+# STEP 5: Verify sale completion
+# =============================================================================
+
+- extendedWaitUntil:
+    visible:
+      anyOf:
+        - "Success"
+        - "Sale Complete"
+        - "Receipt"
+    timeout: 10000
+
+# Return to sell screen
+- tapOn:
+    text: "New Sale"
+    optional: true
+
+- tapOn:
+    text: "Done"
+    optional: true
+
+- back:
+    optional: true
+
+# =============================================================================
+# VERIFY: Back on SELL tab
+# =============================================================================
+
+- extendedWaitUntil:
+    visible: "SELL"
+    timeout: 5000
+
+- assertVisible: "Search by name or barcode"
+
+- evalScript: console.log('SELL known barcode flow completed successfully')
