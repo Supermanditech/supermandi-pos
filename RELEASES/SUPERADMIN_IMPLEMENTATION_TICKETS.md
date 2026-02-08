@@ -3,6 +3,20 @@
 > Date: 2026-02-08
 > Source: SUPERADMIN_GAP_SUMMARY.md (34 gaps → 34 tickets)
 > Rule: One gap = one ticket. No bundling.
+> **Updated: 2026-02-08 — Operator decisions applied (see OPERATOR DECISIONS below)**
+>
+> ## OPERATOR DECISIONS
+>
+> | Ticket | Decision |
+> |--------|----------|
+> | SA-P0-002 | Discounts are store-owned; SA sets limits (keep SA control) |
+> | SA-P0-003 | Price bounds are store-owned; SA sets global defaults (keep SA control) |
+> | SA-P0-004 | Supplier info is OPTIONAL on counter purchase; add editable supplier field on POS (not mandatory) |
+> | SA-P1-002 | Spending limits → **Retailer Dashboard** (retailer-owned) |
+> | SA-P1-003 | Due limits → **Retailer Dashboard** (retailer-owned) |
+> | SA-P1-011 | Stock adjustment logging → **Retailer Dashboard** (retailer-owned) |
+> | SA-P1-015 | Reorder policy supervision → **Retailer Dashboard** (store-owned) |
+> | **ALL** | **ALL 33 tickets (P0 + P1 + P2) are CRITICAL before go-live** — no phasing |
 
 ---
 
@@ -97,30 +111,33 @@ Products must have enforceable price bounds to prevent ₹0 sales or absurdly in
 
 ---
 
-### SA-P0-004: Stock-In Supplier Verification Gate
+### SA-P0-004: Stock-In Supplier Info (Optional + Editable)
 
 **Gap:** G-04
-**Title:** Require verified supplier selection for all stock-in/counter-purchase entries
+**Title:** Add optional, editable supplier fields to POS counter purchase screen
+
+**Operator Decision:** Retailer CAN buy without supplier name or GST. Supplier info is OPTIONAL but should be editable on the POS counter purchase screen.
 
 **Assumed Requirement:**
-Every stock-in entry must reference a verified supplier. Walk-in purchases without supplier identity enable fake inventory inflation and hide theft.
+Counter purchases (walk-in buys) are a normal retail operation. Supplier info (name, GSTIN) should be available as editable fields so retailers can record it when known, but it must NOT be mandatory — many walk-in purchases legitimately have no supplier identity.
 
 **Scope:**
-1. Backend: Modify stock-in API to require `supplier_id` (UUID of verified supplier) OR `supplier_gstin` (validated against supplier registry)
-2. Add "Walk-in / Counter" supplier option: auto-created system supplier per store with SA visibility
-3. POS: Stock-in flow requires supplier selection from verified list (dropdown)
-4. POS: "Walk-in supplier" option available but flagged in analytics
-5. SA analytics: Dashboard shows stock-in by supplier, highlighting walk-in volume
-6. SA API: Filter stock-in events by supplier type (verified vs walk-in)
+1. POS: Add editable `supplier_name` and `supplier_gstin` fields on counter purchase screen (both optional)
+2. POS: Pre-populate from verified supplier list if retailer selects one (dropdown + "None/Walk-in" default)
+3. Backend: Accept stock-in entries with or without supplier reference
+4. Backend: Store supplier_name and supplier_gstin on stock-in records when provided
+5. SA analytics: Dashboard shows stock-in by supplier (known vs walk-in breakdown)
+6. SA API: Filter stock-in events by supplier type (verified vs walk-in vs unknown)
 
 **Acceptance Criteria:**
-- [ ] Stock-in API rejects entries without supplier reference
-- [ ] POS shows supplier dropdown with verified suppliers + "Walk-in" option
-- [ ] Walk-in purchases flagged separately in SA analytics
-- [ ] SA can see stock-in breakdown by supplier
-- [ ] Existing stock-in records without supplier are migrated to "Legacy/Unknown"
+- [ ] POS counter purchase screen has optional supplier_name and supplier_gstin fields
+- [ ] Fields are editable (not just dropdown — can type manually)
+- [ ] Stock-in works without supplier info (no blocking)
+- [ ] When supplier info is provided, it's stored and visible in SA analytics
+- [ ] SA can see stock-in breakdown: verified supplier / walk-in with info / walk-in no info
+- [ ] Existing stock-in records without supplier are labeled "Legacy/Unknown" in analytics
 
-**Systems Affected:** Backend (stock-in API, analytics), POS (stock-in UI), SA UI (analytics filter)
+**Systems Affected:** Backend (stock-in API, analytics), POS (counter purchase UI), SA UI (analytics filter)
 **Priority:** P0
 
 ---
@@ -253,54 +270,63 @@ At scale (10K+ stores, 3+ staff per store), individual accountability is require
 
 ---
 
-### SA-P1-002: Purchase Order Spending Limits
+### SA-P1-002: Purchase Order Spending Limits (Retailer Dashboard)
 
 **Gap:** G-10
 **Title:** Set daily/monthly spending limits per store for purchase orders
 
+**Operator Decision:** This is retailer-owned. Spending limits should be configured from the **Retailer Web Dashboard**, not Superadmin.
+
 **Assumed Requirement:**
-Stores should not be able to place unlimited purchase orders. SA must set spending caps to prevent over-ordering and budget overruns.
+Retailers should be able to set their own spending caps per store to control over-ordering and budget overruns. This is a self-service store management feature.
 
 **Scope:**
 1. DB: Add `daily_order_limit_paise` and `monthly_order_limit_paise` to stores table (default: NULL = unlimited)
 2. Backend: On order submission, check accumulated spend vs limit
 3. POS: Show remaining budget on order screen; block if limit exceeded
-4. SA UI: Spending limit fields on store edit page
-5. SA API: Update store spending limits
+4. **Retailer Dashboard:** Spending limit configuration on store settings page
+5. Retailer API: `PATCH /api/v1/retailer/store/settings` — update spending limits
+6. SA: Read-only visibility into store spending limits (via SA-P1-014 Store Settings Visibility)
 
 **Acceptance Criteria:**
-- [ ] SA can set daily and monthly spending limits per store
+- [ ] Retailer can set daily and monthly spending limits from Retailer Dashboard
 - [ ] Backend rejects orders exceeding limits
 - [ ] POS shows clear "Budget exceeded" message
-- [ ] SA can view spending vs limit per store
+- [ ] Retailer Dashboard shows spending vs limit
+- [ ] SA can view spending limits (read-only) via store settings
 
-**Systems Affected:** Backend (order validation), SA UI (store edit), POS (order screen)
+**Systems Affected:** Backend (order validation), **Retailer Dashboard** (settings), POS (order screen), SA (read-only visibility)
 **Priority:** P1
 
 ---
 
-### SA-P1-003: Customer Due Limits
+### SA-P1-003: Customer Due Limits (Retailer Dashboard)
 
 **Gap:** G-11
 **Title:** Set maximum outstanding due amount per store
 
+**Operator Decision:** This is retailer-owned. Due limits should be configured from the **Retailer Web Dashboard**, not Superadmin.
+
 **Assumed Requirement:**
-Uncontrolled customer dues create bad debt risk. SA must cap total outstanding dues per store and optionally per customer.
+Retailers should control their own credit risk by setting due limits per store and optionally per customer. This is a self-service store management feature.
 
 **Scope:**
 1. DB: Add `max_outstanding_dues_paise` to stores table (default: 5000000 = ₹50,000)
 2. Backend: On DUE payment recording, check store's total outstanding vs limit
 3. POS: Show remaining due capacity; block new dues if limit exceeded
-4. SA UI: Due limit field on store edit page
-5. SA analytics: Due aging report (30/60/90 day buckets)
+4. **Retailer Dashboard:** Due limit configuration on store settings page
+5. **Retailer Dashboard:** Due aging report (30/60/90 day buckets)
+6. Retailer API: `PATCH /api/v1/retailer/store/settings` — update due limits
+7. SA: Read-only visibility into due limits and aging (via SA-P1-014 Store Settings Visibility)
 
 **Acceptance Criteria:**
-- [ ] SA can set max outstanding dues per store
+- [ ] Retailer can set max outstanding dues from Retailer Dashboard
 - [ ] Backend blocks new due sales when limit exceeded
 - [ ] POS shows "Due limit reached" message
-- [ ] SA can view due aging per store
+- [ ] Retailer Dashboard shows due aging per customer (30/60/90 days)
+- [ ] SA can view due limits (read-only) via store settings
 
-**Systems Affected:** Backend (checkout validation), SA UI (store edit, analytics), POS (checkout)
+**Systems Affected:** Backend (checkout validation), **Retailer Dashboard** (settings, analytics), POS (checkout), SA (read-only visibility)
 **Priority:** P1
 
 ---
@@ -488,26 +514,30 @@ At 10K stores, manual monitoring is impossible. SA needs automated alerts for an
 
 ---
 
-### SA-P1-011: Stock Adjustment Audit Logging
+### SA-P1-011: Stock Adjustment Audit Logging (Retailer Dashboard)
 
 **Gap:** G-19
 **Title:** Log all manual stock adjustments as auditable events
 
+**Operator Decision:** This is retailer-owned. Stock adjustment logs should be visible in the **Retailer Web Dashboard**, not just Superadmin.
+
 **Assumed Requirement:**
-Manual inventory adjustments must be logged with reason for audit and shrinkage detection.
+Manual inventory adjustments must be logged with reason. Retailers need visibility into their own store's stock adjustments for shrinkage detection and audit.
 
 **Scope:**
 1. POS: Add `reason` field to stock adjustment (DAMAGE, EXPIRY, COUNT_CORRECTION, OTHER)
 2. Backend: Record stock_adjustment event with old_qty, new_qty, reason, device_id
-3. SA analytics: Stock adjustment report per store
-4. SA API: `GET /api/v1/admin/analytics/stock-adjustments`
+3. **Retailer Dashboard:** Stock adjustment history page (filterable by date, product, reason)
+4. Retailer API: `GET /api/v1/retailer/store/stock-adjustments` — list adjustments
+5. SA: Read-only visibility via existing analytics endpoints
 
 **Acceptance Criteria:**
 - [ ] POS requires reason for stock adjustments
 - [ ] Backend logs adjustment with old/new qty and reason
-- [ ] SA can view adjustment history per store
+- [ ] Retailer Dashboard shows adjustment history (date, product, old qty, new qty, reason)
+- [ ] SA can view adjustment history per store (read-only)
 
-**Systems Affected:** Backend (event logging), POS (adjustment UI), SA UI (analytics)
+**Systems Affected:** Backend (event logging), POS (adjustment UI), **Retailer Dashboard** (stock history), SA (read-only analytics)
 **Priority:** P1
 
 ---
@@ -582,31 +612,36 @@ SA must audit what settings a store has configured (receipt footer, tax rate, op
 
 ---
 
-### SA-P1-015: Reorder Policy Supervision
+### SA-P1-015: Reorder Policy Supervision (Retailer Dashboard)
 
 **Gap:** G-23
-**Title:** Log reorder policy changes and show in SA analytics
+**Title:** Log reorder policy changes and show in Retailer Dashboard
+
+**Operator Decision:** This is store-owned. Reorder policy management and change logs should be in the **Retailer Web Dashboard**, not just Superadmin.
 
 **Assumed Requirement:**
-Reorder policies control automated purchasing. SA must see when policies change and flag unusual configurations.
+Reorder policies control automated purchasing. Retailers need visibility into policy changes for their own store. SA gets read-only oversight.
 
 **Scope:**
 1. Backend: Log reorder policy changes (event: `REORDER_POLICY_CHANGED`, old/new values)
-2. SA API: `GET /api/v1/admin/analytics/reorder-changes` — list recent policy changes
-3. SA UI: Reorder policy change log in analytics
-4. Alert: Flag if auto-approve enabled or if thresholds set to 0
+2. **Retailer Dashboard:** Reorder policy management page (view/edit policies)
+3. **Retailer Dashboard:** Policy change history log
+4. Retailer API: `GET /api/v1/retailer/store/reorder-policies` — list policies with change history
+5. SA: Read-only visibility via analytics; alert on suspicious configurations (auto-approve, zero threshold)
 
 **Acceptance Criteria:**
 - [ ] Policy changes logged with old/new values
-- [ ] SA can view change history
-- [ ] Alert on suspicious configurations
+- [ ] Retailer Dashboard shows reorder policies with change history
+- [ ] Retailer can manage reorder policies from dashboard
+- [ ] SA can view change history (read-only)
+- [ ] SA alerted on suspicious configurations
 
-**Systems Affected:** Backend (event logging), SA UI (analytics)
+**Systems Affected:** Backend (event logging), **Retailer Dashboard** (reorder management), SA (read-only analytics + alerts)
 **Priority:** P1
 
 ---
 
-## P2 TICKETS — EFFICIENCY / LATER
+## P2 TICKETS — EFFICIENCY (CRITICAL BEFORE GO-LIVE)
 
 ---
 
@@ -770,28 +805,45 @@ Reorder policies control automated purchasing. SA must see when policies change 
 
 ---
 
-## RECOMMENDED IMPLEMENTATION ORDER
+## IMPLEMENTATION ORDER — ALL CRITICAL BEFORE GO-LIVE
 
-### Phase 1: Go-Live Blockers (before staging)
+> **Operator Decision:** ALL 33 tickets (P0 + P1 + P2) are required before go-live. No phasing.
+
+### Superadmin Tickets (SA-owned)
 1. SA-P0-005 — Feature kill switch (enables emergency control)
 2. SA-P0-001 — Store suspension (enables rogue store control)
 3. SA-P0-007 — Maintenance mode (enables emergency shutdown)
 4. SA-P0-002 — Discount limits (prevents revenue loss)
 5. SA-P0-003 — Price bounds (prevents pricing abuse)
-6. SA-P0-004 — Stock-in verification (prevents inventory fraud)
+6. SA-P0-004 — Stock-in supplier info (optional + editable on POS)
 7. SA-P0-006 — Refund capability (basic retail operation)
-
-### Phase 2: Scale Readiness (before 100+ stores)
 8. SA-P1-001 — Staff identity/RBAC
-9. SA-P1-002 — Spending limits
-10. SA-P1-003 — Due limits
-11. SA-P1-005 — Supplier suspension
-12. SA-P1-006 — Payment method control
-13. SA-P1-009 — Store health dashboard
-14. SA-P1-010 — Anomaly alerting
+9. SA-P1-004 — GRN quantity validation
+10. SA-P1-005 — Supplier suspension
+11. SA-P1-006 — Payment method control per store
+12. SA-P1-007 — Per-store feature flag overrides
+13. SA-P1-008 — Supplier bank detail re-verification
+14. SA-P1-009 — Store health dashboard
+15. SA-P1-010 — Anomaly detection & alerting
+16. SA-P1-012 — Offline sale re-validation
+17. SA-P1-013 — Device token revocation UI
+18. SA-P1-014 — Store settings visibility (read-only)
 
-### Phase 3: Operational Maturity (before 1000+ stores)
-15-22. Remaining P1 tickets
+### Retailer Dashboard Tickets (Retailer-owned)
+19. SA-P1-002 — Purchase order spending limits (Retailer Dashboard)
+20. SA-P1-003 — Customer due limits (Retailer Dashboard)
+21. SA-P1-011 — Stock adjustment audit logging (Retailer Dashboard)
+22. SA-P1-015 — Reorder policy supervision (Retailer Dashboard)
 
-### Phase 4: Polish (post go-live)
-23-33. P2 tickets
+### Platform Tickets (Backend/Infra)
+23. SA-P2-001 — Force device re-enrollment
+24. SA-P2-002 — Remote config push notification
+25. SA-P2-003 — Minimum app version enforcement
+26. SA-P2-004 — Compliance status aggregation
+27. SA-P2-005 — Force POS sync trigger
+28. SA-P2-006 — Product category manual override
+29. SA-P2-007 — BNPL limit adjustment UI
+30. SA-P2-008 — Retailer bulk import notification
+31. SA-P2-009 — Device hardware whitelist
+32. SA-P2-010 — Retailer user force password reset
+33. SA-P2-011 — Persistent rate limiting
