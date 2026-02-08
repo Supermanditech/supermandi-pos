@@ -354,7 +354,7 @@ async function applyStorePurchaseUpdates(params: {
   items: ResolvedItem[];
 }): Promise<void> {
   const { client, storeId, items } = params;
-  const purchasePriceByGlobal = new Map<string, number>();
+  const purchasePriceByGlobal = new Map<string, { price: number; name: string }>();
 
   for (const item of items) {
     // Use productId for store_inventory to match listInventoryVariants JOIN (si.global_product_id = v.product_id)
@@ -375,12 +375,17 @@ async function applyStorePurchaseUpdates(params: {
       referenceType: "PURCHASE",
       referenceId: params.purchaseId
     });
-    purchasePriceByGlobal.set(inventoryProductId, item.unitCostMinor);
+    purchasePriceByGlobal.set(inventoryProductId, {
+      price: item.unitCostMinor,
+      name: item.productName
+    });
   }
 
-  for (const [globalProductId, priceMinor] of purchasePriceByGlobal.entries()) {
+  for (const [globalProductId, { price: priceMinor, name }] of purchasePriceByGlobal.entries()) {
     const safePrice = Math.round(priceMinor);
     if (!Number.isFinite(safePrice) || safePrice <= 0) continue;
+
+    // 1. Upsert public.store_products (existing behavior)
     await client.query(
       `
       INSERT INTO store_products (id, store_id, global_product_id, purchase_price_minor)
@@ -390,6 +395,36 @@ async function applyStorePurchaseUpdates(params: {
           updated_at = NOW()
       `,
       [randomUUID(), storeId, globalProductId, safePrice]
+    );
+
+    // 2. CAT-AUTO-001: Bridge to catalog schema with auto-assigned taxonomy
+    // Ensure catalog.products entry exists (FK target for catalog.store_products)
+    await client.query(
+      `INSERT INTO catalog.products (id, name, is_active, created_at, updated_at)
+       VALUES ($1::uuid, $2, true, NOW(), NOW())
+       ON CONFLICT (id) DO NOTHING`,
+      [globalProductId, name]
+    );
+
+    // Auto-assign taxonomy from product name keywords
+    const taxRes = await client.query(
+      `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
+      [name]
+    );
+    const taxonomyId = taxRes.rows[0]?.taxonomy_id || null;
+
+    // Upsert catalog.store_products with taxonomy (preserves retailer overrides)
+    await client.query(
+      `INSERT INTO catalog.store_products (
+         id, store_id, product_id, purchase_price, display_name,
+         taxonomy_id, is_active, metadata_updated_by, created_at, updated_at
+       )
+       VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3, $4, $5, true, 'PURCHASE', NOW(), NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         purchase_price = COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price),
+         taxonomy_id = COALESCE(catalog.store_products.taxonomy_id, EXCLUDED.taxonomy_id),
+         updated_at = NOW()`,
+      [storeId, globalProductId, safePrice, name, taxonomyId]
     );
   }
 }
