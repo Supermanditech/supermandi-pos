@@ -23,14 +23,14 @@ afterAll(async () => {
 // HELPERS
 // =============================================================================
 
-const TEST_STORE_ID = "00000000-0000-0000-0000-cat000000001";
+const TEST_STORE_ID = "00000000-0000-0000-0000-ca7000000001";
 const ATTA_DAL_TAXONOMY_ID = "f0000000-0000-0000-0000-000000000002"; // from migration 026
 const BAAKI_TAXONOMY_ID = "f0000000-0000-0000-0000-000000000015"; // fallback
 
 async function ensureTestStore(client: any): Promise<void> {
   await client.query(
     `INSERT INTO platform.stores (id, name, code, address_line1, phone, status)
-     VALUES ($1, 'CAT Test Store', 'CATTEST', '1 Test Rd', '+910000000000', 'active')
+     VALUES ($1, 'CAT Test Store', 'CATTEST', '1 Test Rd', '+910000000000', 'ACTIVE')
      ON CONFLICT (id) DO NOTHING`,
     [TEST_STORE_ID]
   );
@@ -42,7 +42,7 @@ async function cleanupTestData(client: any): Promise<void> {
     [TEST_STORE_ID]
   );
   await client.query(
-    `DELETE FROM catalog.products WHERE id::text LIKE '00000000-0000-0000-0000-cat%'`
+    `DELETE FROM catalog.products WHERE id::text LIKE '00000000-0000-0000-0000-ca70%'`
   );
   await client.query(
     `DELETE FROM platform.stores WHERE id = $1`,
@@ -103,7 +103,7 @@ describe("CAT-AUTO-001: Category Auto-Assignment", () => {
 
   // ─── 4. Purchase bridge: catalog.products entry created ──────────────
   it("creates catalog.products bridge entry during purchase bridge", async () => {
-    const productId = "00000000-0000-0000-0000-cat000000100";
+    const productId = "00000000-0000-0000-0000-ca7000000010";
     const client = await pool.connect();
     try {
       // Simulate purchase bridge: insert into catalog.products
@@ -129,7 +129,7 @@ describe("CAT-AUTO-001: Category Auto-Assignment", () => {
 
   // ─── 5. Purchase bridge: catalog.store_products with taxonomy ────────
   it("creates catalog.store_products with auto-assigned taxonomy", async () => {
-    const productId = "00000000-0000-0000-0000-cat000000200";
+    const productId = "00000000-0000-0000-0000-ca7000000020";
     const client = await pool.connect();
     try {
       // Step 1: Create catalog.products entry
@@ -184,7 +184,7 @@ describe("CAT-AUTO-001: Category Auto-Assignment", () => {
 
   // ─── 6. Conflict: existing taxonomy preserved (retailer override) ────
   it("preserves existing taxonomy on conflict (retailer override)", async () => {
-    const productId = "00000000-0000-0000-0000-cat000000300";
+    const productId = "00000000-0000-0000-0000-ca7000000030";
     const masalaTaxonomyId = "f0000000-0000-0000-0000-000000000004"; // Masala
     const client = await pool.connect();
     try {
@@ -245,7 +245,7 @@ describe("CAT-AUTO-001: Category Auto-Assignment", () => {
 
   // ─── 7. NULL taxonomy filled on conflict ─────────────────────────────
   it("fills NULL taxonomy on conflict when no retailer override", async () => {
-    const productId = "00000000-0000-0000-0000-cat000000400";
+    const productId = "00000000-0000-0000-0000-ca7000000040";
     const client = await pool.connect();
     try {
       // Create catalog.products
