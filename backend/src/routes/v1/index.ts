@@ -18,6 +18,7 @@ import { posBnplRouter } from "./pos/bnpl";  // SM-019: BNPL drawdowns
 import { posCreditRouter } from "./pos/credit";  // SM-021: Credit offers
 import { posDuesRouter } from "./pos/dues";  // POS-DUE-001: Customer dues management
 import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: Token security
+import { posStaffRouter } from "./pos/staff";  // SA-P1-001: POS staff login
 import posTranslationsRouter from "./pos/translations";
 import { reorderRouter } from "./reorder";
 import { ordersRouter } from "./orders";
@@ -89,6 +90,7 @@ v1Router.use("/pos", posBnplRouter);  // SM-019: BNPL drawdowns
 v1Router.use("/pos", posCreditRouter);  // SM-021: Credit offers
 v1Router.use("/pos", posDuesRouter);  // POS-DUE-001: Customer dues management
 v1Router.use("/pos", tokenManagementRouter);  // GL-WF-045-A: Token security endpoints
+v1Router.use("/pos", posStaffRouter);  // SA-P1-001: POS staff login
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
