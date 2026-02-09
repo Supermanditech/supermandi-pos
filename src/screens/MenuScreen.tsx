@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
 import { isQaMenuEnabled } from "./UiShowcaseScreen";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useStaffSessionStore } from "../stores/staffSessionStore";
 import { useCartStore } from "../stores/cartStore";
 import { usePurchaseDraftStore } from "../stores/purchaseDraftStore";
 import { useProductsStore } from "../stores/productsStore";
@@ -242,6 +243,25 @@ export default function MenuScreen() {
 
   // Alias for devInfo used in switch store handler
   const devInfo = opStatus;
+
+  // SA-P1-001: Staff session for Switch Staff
+  const staffSession = useStaffSessionStore((s) => s.session);
+  const clearStaffSession = useStaffSessionStore((s) => s.clearSession);
+
+  const handleSwitchStaff = () => {
+    Alert.alert(
+      "Switch Staff",
+      `Logged in as ${staffSession?.name ?? "Unknown"} (${staffSession?.role ?? ""}). Switch to a different staff member?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Switch",
+          style: "destructive",
+          onPress: () => clearStaffSession(),
+        },
+      ]
+    );
+  };
 
   const toggleLanguage = () => {
     const nextLang: SupportedLanguage = language === 'en' ? 'hi' : 'en';
@@ -728,6 +748,20 @@ export default function MenuScreen() {
             language === 'hi' && styles.langOptionActive
           ]}>हि</Text>
         </View>
+      </Pressable>
+
+      {/* SA-P1-001: Switch Staff */}
+      <Pressable style={styles.menuItem} onPress={handleSwitchStaff}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"account-switch" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Switch Staff</Text>
+          <Text style={styles.menuSubtitle}>
+            {staffSession ? `${staffSession.name} (${staffSession.role})` : "Not logged in"}
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>
 
       <Pressable style={styles.menuItem} onPress={handleSwitchStore}>

@@ -24,6 +24,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { useTranslation } from "react-i18next";
 
+import StaffLoginScreen from "./StaffLoginScreen";
+import { useStaffSessionStore } from "../stores/staffSessionStore";
 import PosStatusBar from "../components/PosStatusBar";
 import ScanNoticeBanner from "../components/ScanNoticeBanner";
 import { TabBadge } from "../components/TabBadge";
@@ -956,6 +958,13 @@ export default function PosRootLayout() {
       setScannerOpen(false);
     }
   }, [hidConnected, isDedicatedPosDevice, scannerOpen]);
+
+  // SA-P1-001: Staff session gate — require staff login before POS operations
+  const staffSession = useStaffSessionStore((s) => s.session);
+
+  if (!staffSession) {
+    return <StaffLoginScreen storeName={storeName} />;
+  }
 
   const indicatorLayout = tabLayouts[effectiveMode];
   const indicatorColor =
