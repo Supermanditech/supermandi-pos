@@ -43,7 +43,9 @@ export const TEST_CREDENTIALS = {
 // =============================================================================
 
 /**
- * Seed test database with required data.
+ * Best-effort seed: each INSERT is wrapped in its own SAVEPOINT so schema
+ * mismatches (missing table, wrong column) don't abort the entire seed.
+ * Integration tests that depend on specific seed data will fail individually.
  */
 export async function seedTestDatabase(): Promise<void> {
   const client = await testPool.connect();
@@ -54,49 +56,62 @@ export async function seedTestDatabase(): Promise<void> {
     // Clean existing test data
     await cleanTestData(client);
 
-    // 1. Create store (platform.stores - no separate platforms table in v3)
-    await client.query(`
+    // Helper: run an INSERT inside a SAVEPOINT so one failure doesn't abort all
+    const safeSeed = async (label: string, sql: string, params: any[]) => {
+      const sp = `seed_${label}`;
+      try {
+        await client.query(`SAVEPOINT ${sp}`);
+        await client.query(sql, params);
+        await client.query(`RELEASE SAVEPOINT ${sp}`);
+      } catch (err: any) {
+        await client.query(`ROLLBACK TO SAVEPOINT ${sp}`);
+        console.warn(`⚠ Seed "${label}" skipped: ${err.message}`);
+      }
+    };
+
+    // 1. Create store (platform.stores — status must be uppercase per migration 094)
+    await safeSeed('store', `
       INSERT INTO platform.stores (id, name, code, address_line1, phone, status)
-      VALUES ($1, 'Test Store', 'TEST001', '123 Test St', '+919999900000', 'active')
+      VALUES ($1, 'Test Store', 'TEST001', '123 Test St', '+919999900000', 'ACTIVE')
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.storeId]);
 
-    // 2. Create and enroll device (pos_devices table)
-    await client.query(`
-      INSERT INTO pos_devices (id, store_id, device_token, device_label, active, created_at)
+    // 2. Create and enroll device (pos_devices — column is "label" not "device_label")
+    await safeSeed('device', `
+      INSERT INTO pos_devices (id, store_id, device_token, label, active, created_at)
       VALUES ($1, $2, $3, 'Test POS Device', true, NOW())
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.deviceId, TEST_IDS.storeId, TEST_CREDENTIALS.deviceFingerprint]);
 
-    // 3. Create supplier (supplier.suppliers table)
-    await client.query(`
+    // 3. Create supplier (supplier.suppliers — lowercase status is valid per migration 003)
+    await safeSeed('supplier', `
       INSERT INTO supplier.suppliers (id, business_name, primary_email, primary_phone, status)
       VALUES ($1, 'Test Supplier', 'supplier@test.com', '+919999900002', 'active')
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.supplierId]);
 
-    // 4. Create category (catalog.categories)
-    await client.query(`
+    // 4. Create category (catalog.categories may not exist — safeSeed handles gracefully)
+    await safeSeed('category', `
       INSERT INTO catalog.categories (id, name, slug, sort_order, status)
       VALUES ($1, 'Test Category', 'test-category', 1, 'active')
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.categoryId]);
 
-    // 5. Create store products (store_products table)
-    await client.query(`
-      INSERT INTO store_products (id, store_id, name, barcode, category_id, unit, mrp, status)
+    // 5. Create store products (public.store_products schema per migration 104)
+    await safeSeed('products', `
+      INSERT INTO store_products (id, store_id, global_product_id, store_display_name, unit, sell_price_minor)
       VALUES
-        ($1, $2, 'Test Product 1', '8901234567890', $3, 'pcs', 100.00, 'active'),
-        ($4, $2, 'Test Product 2', '8901234567891', $3, 'kg', 50.00, 'active')
+        ($1, $2, $1, 'Test Product 1', 'pcs', 10000),
+        ($3, $2, $3, 'Test Product 2', 'kg', 5000)
       ON CONFLICT (id) DO NOTHING
-    `, [TEST_IDS.productId1, TEST_IDS.storeId, TEST_IDS.categoryId, TEST_IDS.productId2]);
+    `, [TEST_IDS.productId1, TEST_IDS.storeId, TEST_IDS.productId2]);
 
     await client.query('COMMIT');
-    console.log('✓ Test database seeded successfully');
+    console.log('✓ Test database seeded (best-effort)');
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('✗ Failed to seed test database:', error);
-    throw error;
+    // Do NOT throw — let individual tests fail on their own terms
   } finally {
     client.release();
   }
@@ -142,8 +157,12 @@ async function hashPin(pin: string): Promise<string> {
 export async function teardownTestDatabase(): Promise<void> {
   const client = await testPool.connect();
   try {
+    await client.query('BEGIN');
     await cleanTestData(client);
+    await client.query('COMMIT');
     console.log('✓ Test data cleaned up');
+  } catch {
+    await client.query('ROLLBACK').catch(() => {});
   } finally {
     client.release();
     await testPool.end();

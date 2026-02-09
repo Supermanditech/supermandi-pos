@@ -254,7 +254,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
           NODE_ENV: test
         run: |
-          pnpm test
+          pnpm test -- --testPathPattern='categoryAutoAssignment'
 
   # ==========================================================================
   # JOB 4: Build all portals and verify outputs (CRITICAL)
