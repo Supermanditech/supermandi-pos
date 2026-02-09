@@ -1,12 +1,15 @@
 # RESUME ANCHOR
 
-Date: 02/09/2026 02:56:00
+Date: 02/09/2026 16:30:00
 
 State:
 - All SA-P0 tickets complete
-- SA-P0-006 PR open: https://github.com/Supermanditech/supermandi-pos/pull/4
-- Next ticket: SA-P1-001
-- Branch to create next: feat/sa-p1-001-<name>
-- Rule: Start SA-P1-001 only after operator instruction (already granted)
+- SA-P1-001 (POS Staff Identity & Basic RBAC) MERGED to main via PR #5
+  - SHA: 9fcf73f (merge commit)
+  - CI: 6/6 green (run 21820635027)
+  - Includes: CI-RECOVERY-001, CI-RECOVERY-002 fixes
+- Next ticket: SA-P1-004 (GRN Quantity Validation)
+- Branch to create next: feat/sa-p1-004-grn-validation
+- Rule: Await operator instruction before starting SA-P1-004
 
 
