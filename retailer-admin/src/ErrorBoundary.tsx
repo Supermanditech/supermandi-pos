@@ -62,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p style={{ color: '#6c757d', marginBottom: '1.5rem' }}>
               An unexpected error occurred. Please try refreshing the page.
             </p>
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details style={{
                 textAlign: 'left',
                 marginBottom: '1.5rem',
