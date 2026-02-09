@@ -151,6 +151,8 @@ const PaymentScreen = () => {
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [upiStatusLoading, setUpiStatusLoading] = useState(true);
   const [showSplitModal, setShowSplitModal] = useState(false);
+  // SA-P1-006: Allowed payment methods from store settings
+  const [allowedMethods, setAllowedMethods] = useState<string[]>(["CASH", "UPI", "DUE"]);
 
   const saleItemIds = route.params?.saleItemIds;
   const { saleItems: computedSaleItems, isPartial: isPartialSale } = useMemo(
@@ -201,7 +203,7 @@ const PaymentScreen = () => {
   const discountMinor = Math.max(0, Math.round(discountTotalMinor));
   const itemCount = saleItems.reduce((sum, item) => sum + item.quantity, 0);
   const upiDisabled =
-    !isOnline || upiStatusLoading || storeActive === false || !upiVpa;
+    !isOnline || upiStatusLoading || storeActive === false || !upiVpa || !allowedMethods.includes("UPI");
   const upiBlocked = storeActive === false || (!upiVpa && !upiStatusLoading);
 
   useEffect(() => {
@@ -222,7 +224,9 @@ const PaymentScreen = () => {
           pendingPaymentRef.current = { paymentId, saleId };
           console.log(`[Payment] GO-LIVE-124: Saved pending payment ${paymentId} for network recovery`);
         }
-        setSelectedMode("CASH");
+        // SA-P1-006: Fall back to first allowed method (not hardcoded CASH)
+        const fallback = allowedMethods.includes("CASH") ? "CASH" : allowedMethods.includes("DUE") ? "DUE" : allowedMethods[0] ?? "CASH";
+        setSelectedMode(fallback as PaymentMode);
         setUpiIntent(null);
         setPaymentId(null);
       }
@@ -256,9 +260,14 @@ const PaymentScreen = () => {
         setStoreActive(status.storeActive ?? null);
         setUpiVpa(status.upiVpa ?? null);
         setUpiStoreName(status.storeName ?? null);
+        // SA-P1-006: Store allowed payment methods
+        const methods = status.allowedPaymentMethods ?? ["CASH", "UPI", "DUE"];
+        setAllowedMethods(methods);
         setUpiStatusLoading(false);
         if (status.storeActive === false || !status.upiVpa) {
-          setSelectedMode("CASH");
+          // SA-P1-006: Fall back to first allowed method (not hardcoded CASH)
+          const fallback = methods.includes("CASH") ? "CASH" : methods.includes("DUE") ? "DUE" : methods[0] ?? "CASH";
+          setSelectedMode(fallback as PaymentMode);
           setUpiIntent(null);
           setPaymentId(null);
         }
@@ -287,7 +296,9 @@ const PaymentScreen = () => {
   useEffect(() => {
     if (selectedMode !== "UPI") return;
     if (storeActive === false || !upiVpa) {
-      setSelectedMode("CASH");
+      // SA-P1-006: Fall back to first allowed method
+      const fallback = allowedMethods.includes("CASH") ? "CASH" : allowedMethods.includes("DUE") ? "DUE" : allowedMethods[0] ?? "CASH";
+      setSelectedMode(fallback as PaymentMode);
       setUpiIntent(null);
       setPaymentId(null);
     }
@@ -855,9 +866,10 @@ const PaymentScreen = () => {
       )}
 
       <View style={styles.modeTabs}>
-        {renderModeTab("UPI", "UPI", "qrcode-scan", upiDisabled)}
-        {renderModeTab("CASH", "Cash", "cash")}
-        {renderModeTab("DUE", "Due", "calendar-clock")}
+        {/* SA-P1-006: Only show payment methods allowed for this store */}
+        {allowedMethods.includes("UPI") && renderModeTab("UPI", "UPI", "qrcode-scan", upiDisabled)}
+        {allowedMethods.includes("CASH") && renderModeTab("CASH", "Cash", "cash")}
+        {allowedMethods.includes("DUE") && renderModeTab("DUE", "Due", "calendar-clock")}
       </View>
 
       {/* SM-015: Split Payment Button */}
