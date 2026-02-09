@@ -5,6 +5,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requirePosStaff, requireRole } from "../../../middleware/posStaff";
+import type { PosStaffContext } from "../../../middleware/posStaff";
 import { randomUUID } from "crypto";
 
 export const posStockInRouter = Router();
@@ -111,7 +113,7 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
 // Submit a stock-in batch (products received from supplier).
 // =============================================================================
 
-posStockInRouter.post("/stock-in", requireDeviceToken, async (req: Request, res: Response) => {
+posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireRole("STOCK_MANAGER", "MANAGER"), async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ success: false, error: "database unavailable" });
 

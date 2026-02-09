@@ -961,6 +961,7 @@ export default function PosRootLayout() {
 
   // SA-P1-001: Staff session gate — require staff login before POS operations
   const staffSession = useStaffSessionStore((s) => s.session);
+  const isCashier = staffSession?.role === "CASHIER";
 
   if (!staffSession) {
     return <StaffLoginScreen storeName={storeName} />;
@@ -1028,9 +1029,11 @@ export default function PosRootLayout() {
           const isCredit = tab.id === "CREDIT";
           // UI-REVEAL: Feature-disabled tabs are shown but disabled (not hidden)
           const isFeatureDisabled = (isPurchase && !buyEnabled) || (isReorder && !reorderEnabled) || (isCredit && !creditEnabled);
+          // SA-P1-001: CASHIER cannot access PURCHASE (stock-in) tab
+          const isRoleRestricted = isPurchase && isCashier;
           // DEV-055: Disable non-MENU tabs when store is inactive
           const isStoreDisabled = storeActive === false && tab.id !== "MENU";
-          const isDisabled = isStoreDisabled || isFeatureDisabled;
+          const isDisabled = isStoreDisabled || isFeatureDisabled || isRoleRestricted;
           const iconColor = isDisabled
             ? theme.colors.textTertiary
             : active
@@ -1058,6 +1061,11 @@ export default function PosRootLayout() {
                 isDisabled && styles.tabButtonDisabled,
               ]}
               onPress={() => {
+                // SA-P1-001: Show toast for role-restricted tabs
+                if (isRoleRestricted) {
+                  ToastAndroid.show("Stock-in is restricted to Stock Manager and Manager roles", ToastAndroid.SHORT);
+                  return;
+                }
                 // UI-REVEAL: Show toast for feature-disabled tabs instead of hiding them
                 if (isFeatureDisabled) {
                   const featureName = isPurchase ? "Purchase Orders" : isReorder ? "Reorder" : "Credit";

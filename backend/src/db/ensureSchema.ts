@@ -615,6 +615,14 @@ export async function ensureCoreSchema(): Promise<void> {
     // V1 fallback: platform schema may not exist yet
   }
 
+  // SA-P1-001: staff_id attribution columns on sales and purchases
+  await client.query(`
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS staff_id uuid NULL;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS staff_id uuid NULL;
+    CREATE INDEX IF NOT EXISTS sales_staff_id_idx ON sales (staff_id) WHERE staff_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS purchases_staff_id_idx ON purchases (staff_id) WHERE staff_id IS NOT NULL;
+  `);
+
   // SA-P1-001: Store staff table for POS PIN login + RBAC
   await client.query(`
     CREATE SCHEMA IF NOT EXISTS platform;
