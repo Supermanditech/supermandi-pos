@@ -1627,7 +1627,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToke
       await pool.query(
         `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, reason, actor_id)
          VALUES ('bank_change', $1::uuid, $2, 'pending', $3, $4, $5)`,
-        [supplierId, action, action === "approve" ? "verified" : "rejected", reason || null, adminId || supplierId]
+        [supplierId, action, action === "approve" ? "verified" : "rejected", reason || (action === "approve" ? "Approved by admin" : "Rejected by admin"), adminId || supplierId]
       );
     } catch (logErr) {
       console.error("[SA-P1-008] Failed to log bank verification:", (logErr as Error).message);
