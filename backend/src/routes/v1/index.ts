@@ -19,6 +19,7 @@ import { posCreditRouter } from "./pos/credit";  // SM-021: Credit offers
 import { posDuesRouter } from "./pos/dues";  // POS-DUE-001: Customer dues management
 import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: Token security
 import { posStaffRouter } from "./pos/staff";  // SA-P1-001: POS staff login
+import { adminStaffRouter } from "./admin/staff";  // SA-P1-001: Admin staff CRUD
 import posTranslationsRouter from "./pos/translations";
 import { reorderRouter } from "./reorder";
 import { ordersRouter } from "./orders";
@@ -123,6 +124,7 @@ v1Router.use("/admin", adminAuditRouter);  // GL-CRIT-0049: Audit log fetch endp
 v1Router.use("/admin", adminGstCreditsRouter);  // GO-LIVE-097: GST input credits
 v1Router.use("/admin/documents", adminDocumentsRouter);  // DOCS-001: Admin document management
 v1Router.use("/admin", adminRegistrationEventsRouter);  // RO-007: Registration events visibility
+v1Router.use("/admin", adminStaffRouter);  // SA-P1-001: Store staff CRUD
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
