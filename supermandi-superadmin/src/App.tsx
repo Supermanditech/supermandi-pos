@@ -63,7 +63,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
-import { fetchGlobalFlags, toggleGlobalFlag, type GlobalFeatureFlag } from "./api/featureFlags"; // SA-P0-005
+import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags"; // SA-P0-005+P1-007
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -858,6 +858,10 @@ export default function App() {
   const [featureFlagSaving, setFeatureFlagSaving] = useState<Record<string, boolean>>({});
   const [featureFlagsError, setFeatureFlagsError] = useState("");
 
+  // SA-P1-007: Per-store feature flags state
+  const [storeFeatureFlags, setStoreFeatureFlags] = useState<Record<string, StoreFeatureFlag[]>>({});
+  const [storeFFLoading, setStoreFFLoading] = useState<Record<string, boolean>>({});
+
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
@@ -1555,6 +1559,36 @@ export default function App() {
       setFeatureFlagsError(e instanceof Error ? e.message : "Failed to toggle flag");
     } finally {
       setFeatureFlagSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  // SA-P1-007: Per-store feature flag handlers
+  async function loadStoreFeatureFlags(storeId: string) {
+    if (storeFeatureFlags[storeId]) return;
+    setStoreFFLoading((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      const flags = await fetchStoreFeatureFlags(storeId);
+      setStoreFeatureFlags((prev) => ({ ...prev, [storeId]: flags }));
+    } catch (e: unknown) {
+      console.error("[SA-P1-007] Load store flags failed:", e instanceof Error ? e.message : "unknown");
+    } finally {
+      setStoreFFLoading((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
+  async function handleStoreFFToggle(storeId: string, flag: StoreFeatureFlag) {
+    if (!flag.global_enabled) return;
+    const newEnabled = !flag.effective;
+    try {
+      if (flag.store_override !== null && newEnabled === flag.global_enabled) {
+        await removeStoreOverride(storeId, flag.flag_key);
+      } else {
+        await setStoreOverride(storeId, flag.flag_key, newEnabled);
+      }
+      const flags = await fetchStoreFeatureFlags(storeId);
+      setStoreFeatureFlags((prev) => ({ ...prev, [storeId]: flags }));
+    } catch (e: unknown) {
+      console.error("[SA-P1-007] Toggle store flag failed:", e instanceof Error ? e.message : "unknown");
     }
   }
 
@@ -2998,8 +3032,8 @@ export default function App() {
                           <td>
                             <button
                               className="btnGhost"
-                              onClick={() => setExpandedStoreId(isExpanded ? null : s.id)}
-                              title={isExpanded ? "Hide contact info" : "Edit contact info"}
+                              onClick={() => { const nextId = isExpanded ? null : s.id; setExpandedStoreId(nextId); if (nextId) loadStoreFeatureFlags(nextId); }}
+                              title={isExpanded ? "Hide details" : "Edit details"}
                             >
                               {s.contact_name || s.contact_phone ? `${s.contact_name ?? ""}` : "(none)"}
                               {isExpanded ? " ▲" : " ▼"}
@@ -3071,6 +3105,29 @@ export default function App() {
                                     );
                                   })}
                                 </div>
+                              </div>
+                              {/* SA-P1-007: Per-store feature flag overrides */}
+                              <div style={{ marginTop: "12px" }}>
+                                <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Feature Flags</label>
+                                {storeFFLoading[s.id] ? (
+                                  <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
+                                ) : storeFeatureFlags[s.id] ? (
+                                  <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                                    {storeFeatureFlags[s.id].map((f) => (
+                                      <label key={f.flag_key} style={{ display: "flex", alignItems: "center", gap: "4px", cursor: f.global_enabled ? "pointer" : "default", fontSize: 13, opacity: f.global_enabled ? 1 : 0.5 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={f.effective}
+                                          disabled={!f.global_enabled}
+                                          onChange={() => handleStoreFFToggle(s.id, f)}
+                                        />
+                                        <span>{f.flag_key}</span>
+                                        {f.store_override !== null && <span style={{ fontSize: 10, color: "#f59e0b" }}>(override)</span>}
+                                        {!f.global_enabled && <span style={{ fontSize: 10, color: "#ef4444" }}>(killed)</span>}
+                                      </label>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
                             </td>
                           </tr>
