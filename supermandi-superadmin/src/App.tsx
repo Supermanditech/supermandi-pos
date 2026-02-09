@@ -36,10 +36,13 @@ import {
   rejectProduct,
   editProduct,
   changeSupplierStatus,
+  fetchBankChanges,
+  verifyBankDetails,
   type PendingSupplierRequest,
   type VerifiedSupplier,
   type PendingProduct,
-  type ProductEditInput
+  type ProductEditInput,
+  type BankChangeEntry
 } from "./api/suppliers";
 import { fetchUsers, patchUser, createUser, type UserRecord, type UserCreateInput } from "./api/users";
 import { fetchSettings, fetchSystemStats, type SystemSettings, type SystemStats } from "./api/settings";
@@ -732,6 +735,12 @@ export default function App() {
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const suppliersInFlightRef = useRef(false);
 
+  // SA-P1-008: Bank detail re-verification state
+  const [bankChanges, setBankChanges] = useState<BankChangeEntry[]>([]);
+  const [bankChangesLoading, setBankChangesLoading] = useState(false);
+  const [bankVerifyLoading, setBankVerifyLoading] = useState<Record<string, boolean>>({});
+  const [bankRejectReason, setBankRejectReason] = useState<Record<string, string>>({});
+
   // SA-P1-005: Supplier suspension modal state
   const [pendingSupplierSuspend, setPendingSupplierSuspend] = useState<{
     supplierId: string;
@@ -971,20 +980,46 @@ export default function App() {
     setSuppliersLoading(true);
     setSuppliersError("");
     try {
-      const [pendingRes, verifiedRes, products] = await Promise.all([
+      const [pendingRes, verifiedRes, products, bankChangesRes] = await Promise.all([
         fetchPendingSuppliers(),
         fetchVerifiedSuppliers({ search: supplierSearch || undefined }),
-        fetchPendingProducts()
+        fetchPendingProducts(),
+        fetchBankChanges()
       ]);
       setPendingSuppliers(pendingRes.items);
       setVerifiedSuppliers(verifiedRes.items);
       setPendingProducts(products);
+      setBankChanges(bankChangesRes);
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "Failed to fetch suppliers";
       setSuppliersError(message);
     } finally {
       suppliersInFlightRef.current = false;
       setSuppliersLoading(false);
+    }
+  }
+
+  // SA-P1-008: Handle bank detail verification
+  async function handleBankVerify(supplierId: string, action: "approve" | "reject") {
+    const reason = action === "reject" ? bankRejectReason[supplierId] : undefined;
+    if (action === "reject" && (!reason || reason.trim().length < 5)) {
+      setSuppliersError("Rejection reason must be at least 5 characters");
+      return;
+    }
+    setBankVerifyLoading((prev) => ({ ...prev, [supplierId]: true }));
+    setSuppliersError("");
+    try {
+      await verifyBankDetails(supplierId, action, reason);
+      setBankChanges((prev) => prev.filter((b) => b.id !== supplierId));
+      setBankRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[supplierId];
+        return next;
+      });
+    } catch (e: any) {
+      setSuppliersError(e?.message ? String(e.message) : "Failed to verify bank details");
+    } finally {
+      setBankVerifyLoading((prev) => ({ ...prev, [supplierId]: false }));
     }
   }
 
@@ -2413,9 +2448,9 @@ export default function App() {
         </button>
         <button className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>
           Suppliers
-          {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length) > 0 && (
+          {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
             <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
-              {pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length}
+              {pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}
             </span>
           )}
         </button>
@@ -3396,6 +3431,70 @@ export default function App() {
                         style={{ color: "#ef4444" }}
                       >
                         {supplierActionLoading[request.id] ? "Rejecting..." : "Reject"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SA-P1-008: Pending Bank Verifications */}
+          {bankChanges.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div className="cardHeader">
+                <div>
+                  <div className="cardTitle">
+                    Pending Bank Verifications
+                    <span className="badge badgeWarn" style={{ marginLeft: 8 }}>{bankChanges.length}</span>
+                  </div>
+                  <div className="muted">Suppliers who changed bank details — approve or reject before payouts resume</div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "0 16px 16px" }}>
+                {bankChanges.map((bc) => (
+                  <div key={bc.id} className="card" style={{ padding: "12px 16px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{bc.businessName}</div>
+                        <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>GSTIN: {bc.gstin}</div>
+                        {bc.phone && <div style={{ fontSize: 12, color: "#666" }}>Phone: {bc.phone}</div>}
+                      </div>
+                      <div style={{ textAlign: "right", fontSize: 11, color: "#888" }}>
+                        Changed: {new Date(bc.updatedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 24, marginTop: 8, fontSize: 13 }}>
+                      <div><span style={{ color: "#666" }}>Account:</span> {bc.bankAccountMasked || "N/A"}</div>
+                      <div><span style={{ color: "#666" }}>IFSC:</span> {bc.bankIfsc || "N/A"}</div>
+                      <div><span style={{ color: "#666" }}>Holder:</span> {bc.bankAccountName || "N/A"}</div>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
+                      <button
+                        className="btnPrimary"
+                        onClick={() => handleBankVerify(bc.id, "approve")}
+                        disabled={bankVerifyLoading[bc.id]}
+                        style={{ fontSize: 12, padding: "4px 12px" }}
+                      >
+                        {bankVerifyLoading[bc.id] ? "..." : "Approve Bank Details"}
+                      </button>
+                      <input
+                        type="text"
+                        placeholder="Rejection reason (min 5 chars)"
+                        value={bankRejectReason[bc.id] || ""}
+                        onChange={(e) => setBankRejectReason((prev) => ({ ...prev, [bc.id]: e.target.value }))}
+                        style={{ flex: 1, fontSize: 12, padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4 }}
+                      />
+                      <button
+                        className="btnGhost"
+                        onClick={() => handleBankVerify(bc.id, "reject")}
+                        disabled={bankVerifyLoading[bc.id]}
+                        style={{ color: "#ef4444", fontSize: 12, padding: "4px 12px" }}
+                      >
+                        {bankVerifyLoading[bc.id] ? "..." : "Reject"}
                       </button>
                     </div>
                   </div>
