@@ -1,0 +1,52 @@
+SA-P0-006: Parity and Scope — Constraint Gaps Blocking Refund Flow
+===================================================================
+
+Date: 2026-02-10
+Branch: feat/sa-p0-006-constraint-gaps
+Base: main (8446cd4)
+
+FILES CHANGED
+=============
+
+1. backend/migrations/125_sa_p0_006_constraint_gaps.sql  [NEW]
+   - Expands chk_sale_payment_status to include 'refunded' and 'due'
+   - Expands chk_ledger_reference_type to include 'digitisation'
+   - Wrapped in BEGIN/COMMIT for atomic application
+   - Idempotent: uses DROP CONSTRAINT IF EXISTS before ADD
+
+2. scripts/test-refund-e2e.ps1  [NEW]
+   - 15-step E2E refund test with 17 assertions
+   - Fail-fast: aborts on seeding failures or stock mismatch
+   - Idempotent: unique barcode per run (timestamp-based RUN_ID)
+   - DB proof: verifies sale row, ledger entries, stock tables
+   - Returns exit code 0 (PASS) or 1 (FAIL)
+
+3. RELEASES/EVIDENCE/SA-P0-006/runtime-proofs.md  [NEW]
+   - Full PASS output from 2 back-to-back runs
+   - Expected vs actual table
+   - Typecheck gate result
+
+4. RELEASES/EVIDENCE/SA-P0-006/parity-and-scope.txt  [NEW]
+   - This file
+
+5. RELEASES/EVIDENCE/SA-P0-006/rollback.md  [NEW]
+   - Rollback procedure for migration 125
+
+LOCKFILE DRIFT
+==============
+
+No lockfile changes. Migration is SQL-only. Test script is PowerShell-only.
+No package.json or pnpm-lock.yaml modifications.
+
+SCOPE NOTES
+===========
+
+This PR fixes CHECK constraint gaps only. It does NOT include the full
+refund approval workflow from the original PR #4 (feat/sa-p0-006-refund-capability),
+which added migration 119, admin refund endpoints, POS refund UI, and SA approval
+queue. That is separate future scope.
+
+The existing return endpoint (POST /pos/sales/:saleId/return) was already on main
+but was blocked by the chk_sale_payment_status constraint. Migration 125 unblocks it.
+
+NO BACKEND CODE CHANGES — only a migration file and a test script.
