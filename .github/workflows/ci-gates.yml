@@ -235,6 +235,10 @@ jobs:
           test -f backend/scripts/migrate.js || { echo "❌ backend/scripts/migrate.js not found"; exit 1; }
           echo "✅ backend/scripts/migrate.js exists"
 
+      - name: Build common package (needed by migrations)
+        working-directory: backend
+        run: pnpm --filter @supermandi/common run build
+
       - name: Run database migrations
         working-directory: backend
         env:

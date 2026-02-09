@@ -59,7 +59,7 @@ import {
 } from "./api/documents";
 import { QRCodeSVG } from "qrcode.react";
 // RO-007: Registration events visibility
-import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent, type RegistrationEventsResponse } from "./api/registrationEvents";
+import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
@@ -550,7 +550,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
 
 // ISSUE-MICRO-086: Extracted countdown to prevent QR code re-rendering every 1s
 function EnrollmentCountdown({ expiresAt }: { expiresAt: string }) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -4723,7 +4723,7 @@ export default function App() {
               style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
             >
               <option value="">Select a store...</option>
-              {stores.map((s: StoreRecord) => (
+              {storeDirectory.map((s) => (
                 <option key={s.id} value={s.id}>{s.name} ({s.id.slice(0, 8)})</option>
               ))}
             </select>

@@ -7,7 +7,7 @@ const {
   rollbackMigration,
   getMigrationStatus,
   createMigration,
-} = require('../packages/common/src/db/migrate');
+} = require('../packages/common/dist/db/migrate');
 
 const migrationsDir = path.resolve(__dirname, '..', 'migrations');
 
