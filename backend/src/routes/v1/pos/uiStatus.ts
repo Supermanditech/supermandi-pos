@@ -34,11 +34,14 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   const upiVpa: string | null = null;
   const storeScanLookupV2Enabled = false;
   // GO-LIVE-REVEAL-001: Feature flags for tab visibility (default enabled for live testing)
-  const buyEnabled = true;
+  let buyEnabled = true;
   let reorderEnabled = true;
   // CONTRACT-LOCK-UI-STATUS-001: Add missing feature flags expected by frontend
   const inventoryEnabled = true;
   const suppliersEnabled = true;
+  // SA-P0-005: Additional kill-switchable feature flags
+  let voiceEnabled = true;
+  let categoryBrowsingEnabled = true;
   // GL-AUD-007: BNPL status for BUY screen badge
   let bnplEnabled = false;
   // CA-1.4-005: Credit enabled status for credit/loans feature
@@ -80,6 +83,33 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       // buyEnabled stays true (no store-level override currently)
     } catch {
       // Table may not exist in all environments - default to enabled
+    }
+
+    // SA-P0-005: Apply feature kill switch from platform.feature_flags
+    // Evaluation order: system defaults → global flags → store overrides
+    try {
+      const ffRes = await pool.query(
+        `SELECT g.flag_key,
+                COALESCE(s.enabled, g.enabled) AS effective
+         FROM platform.feature_flags g
+         LEFT JOIN platform.feature_flags s
+           ON s.flag_key = g.flag_key AND s.scope_type = 'store' AND s.scope_id = $1::uuid
+         WHERE g.scope_type = 'global'`,
+        [status.storeId]
+      );
+      for (const ffRow of ffRes.rows) {
+        switch (ffRow.flag_key) {
+          case "buyEnabled": buyEnabled = ffRow.effective; break;
+          case "reorderEnabled": if (!ffRow.effective) reorderEnabled = false; break;
+          case "bnplEnabled": if (!ffRow.effective) bnplEnabled = false; break;
+          case "creditEnabled": if (!ffRow.effective) creditEnabled = false; break;
+          case "voiceEnabled": voiceEnabled = ffRow.effective; break;
+          case "categoryBrowsingEnabled": categoryBrowsingEnabled = ffRow.effective; break;
+          case "scanLookupV2": /* handled by device-level logic below */ break;
+        }
+      }
+    } catch {
+      // feature_flags seeds may not exist yet — safe fallback (all enabled)
     }
   }
 
@@ -147,6 +177,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       bnplEnabled,
       // CA-1.4-005: Credit/Loans feature flag from store settings
       creditEnabled,
+      // SA-P0-005: Kill-switchable feature flags
+      voiceEnabled,
+      categoryBrowsingEnabled,
       // Legacy alias for buyEnabled
       ordersEnabled: buyEnabled
     }
