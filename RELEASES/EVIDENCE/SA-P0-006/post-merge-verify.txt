@@ -1,0 +1,26 @@
+SA-P0-006 Post-Merge Verification
+===================================
+
+Merge commit: f2bfe258441db16569677f2eb4d6a071bd04a0db
+Merged at:    2026-02-09T20:35:02Z (2026-02-10 02:05:02 IST)
+PR:           #11
+
+Typecheck:    22/22 PASS (2026-02-10 ~02:11 IST, on main after merge)
+
+Constraints verified in DB:
+  chk_sale_payment_status:   pending, paid, failed, refunded, due
+  chk_ledger_reference_type: sale, po, return, manual, digitisation
+
+Refund E2E run #1: 17/17 PASS (RUN_ID=021120, 2026-02-10 ~02:11 IST)
+  Stock: 100 -> 98 (sale) -> 100 (return)
+  Return: REFUNDED, itemsReturned=1
+  Ledger: sale_return delta=2, 98->100
+  Double return: cannot_return
+  DB: REFUNDED, refunded, 9000
+
+Refund E2E run #2: 17/17 PASS (RUN_ID=021128, 2026-02-10 ~02:11 IST)
+  Stock: 100 -> 98 (sale) -> 100 (return)
+  Return: REFUNDED, itemsReturned=1
+  Ledger: sale_return delta=2, 98->100
+  Double return: cannot_return
+  DB: REFUNDED, refunded, 9000
