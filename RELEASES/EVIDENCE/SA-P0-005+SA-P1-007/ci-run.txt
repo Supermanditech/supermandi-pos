@@ -1,0 +1,37 @@
+SA-P0-005 + SA-P1-007: CI Run Report
+=====================================
+
+Date: 2026-02-09
+PR: #9 (https://github.com/Supermanditech/supermandi-pos/pull/9)
+Merge commit: 0b8fac72a2166c707b36d377207f8d71cec7a4c0
+Branch head (pre-merge): 1df7ed41c7dcacf6725466e6a8a175799d30242b
+Merged by: Supermanditech (operator) at 2026-02-09T16:29:03Z
+
+GitHub Actions CI Status
+------------------------
+STATUS: NOT TRIGGERED (GitHub Actions infrastructure issue)
+
+CI Gates workflow (ID: 229950235) did NOT trigger for this PR or merge commit.
+- No check-runs or check-suites created for PR head SHA (1df7ed4)
+- No check-runs or check-suites created for merge commit SHA (0b8fac7)
+- Last successful CI Gates run: 21829997305 (main push, commit 861d009, 2026-02-09T14:56:19Z)
+- GitHub API returned HTTP 500 on PR endpoint during CI wait period
+- Actions permissions verified: enabled=true, allowed_actions=all
+- Token scopes verified: repo, workflow, gist, read:org
+- Empty commit pushed to force synchronize event — still no trigger
+- Previous PRs (e.g., #8 SA-P1-006) triggered CI successfully on same workflow
+
+Root cause: GitHub Actions infrastructure issue (not code issue).
+
+Local Verification (substitute for CI)
+---------------------------------------
+1. TypeScript Check:  PASS (pnpm -r typecheck → 22/22 projects, zero errors)
+2. Docker Build:      PASS (main-backend + superadmin built successfully from branch HEAD)
+3. Runtime Proofs:    PASS (5/5 — see runtime-proofs.md)
+4. Scope Check:       PASS (6 files, no lockfile drift — see parity-and-scope.txt)
+
+Action Required
+---------------
+Monitor CI Gates for merge commit 0b8fac7 when GitHub Actions resumes.
+Expected URL: https://github.com/Supermanditech/supermandi-pos/actions/workflows/ci-gates.yml
+If CI fails post-merge, revert per rollback.md instructions.
