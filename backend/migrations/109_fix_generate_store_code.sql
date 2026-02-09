@@ -47,21 +47,23 @@ RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_prefix VARCHAR(2);
-  v_yymmdd VARCHAR(6);
-  v_seq INTEGER;
-  v_code TEXT;
+  v_letters TEXT;
+  v_prefix  TEXT;
+  v_yymmdd  TEXT;
+  v_seq     INTEGER;
+  v_code    TEXT;
 BEGIN
-  -- Extract prefix: first 2 uppercase letters from store name, fallback 'ST'
-  v_prefix := UPPER(COALESCE(
+  -- Extract only alphabetic characters, uppercase
+  v_letters := UPPER(COALESCE(
     NULLIF(REGEXP_REPLACE(store_name, '[^A-Za-z]', '', 'g'), ''),
     'ST'
   ));
 
-  IF LENGTH(v_prefix) < 2 THEN
-    v_prefix := 'ST';
+  -- Take first 2 letters; pad with X if fewer than 2
+  IF LENGTH(v_letters) < 2 THEN
+    v_prefix := RPAD(v_letters, 2, 'X');
   ELSE
-    v_prefix := SUBSTRING(v_prefix, 1, 2);
+    v_prefix := SUBSTRING(v_letters, 1, 2);
   END IF;
 
   -- Date in YYMMDD format (IST timezone)

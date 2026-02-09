@@ -615,6 +615,36 @@ export async function ensureCoreSchema(): Promise<void> {
     // V1 fallback: platform schema may not exist yet
   }
 
+  // SA-P1-001: staff_id attribution columns on sales and purchases
+  await client.query(`
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS staff_id uuid NULL;
+    ALTER TABLE purchases ADD COLUMN IF NOT EXISTS staff_id uuid NULL;
+    CREATE INDEX IF NOT EXISTS sales_staff_id_idx ON sales (staff_id) WHERE staff_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS purchases_staff_id_idx ON purchases (staff_id) WHERE staff_id IS NOT NULL;
+  `);
+
+  // SA-P1-001: Store staff table for POS PIN login + RBAC
+  await client.query(`
+    CREATE SCHEMA IF NOT EXISTS platform;
+
+    CREATE TABLE IF NOT EXISTS platform.store_staff (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      store_id uuid NOT NULL REFERENCES platform.stores(id) ON DELETE CASCADE,
+      name text NOT NULL,
+      phone text NOT NULL,
+      pin_hash text NOT NULL,
+      role text NOT NULL CHECK (role IN ('CASHIER', 'STOCK_MANAGER', 'MANAGER')),
+      is_active boolean NOT NULL DEFAULT true,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS store_staff_store_phone_uq
+      ON platform.store_staff(store_id, phone);
+
+    CREATE INDEX IF NOT EXISTS store_staff_store_active_idx
+      ON platform.store_staff(store_id, is_active);
+  `);
+
   ensured = true;
   } finally {
     // ISSUE-MICRO-002: Always release advisory lock and client

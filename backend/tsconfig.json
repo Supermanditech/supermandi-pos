@@ -29,6 +29,5 @@
       "path": "services/reorder-service"
     }
   ],
-  "compilerOptions": {},
-  "extends": "expo/tsconfig.base"
+  "compilerOptions": {}
 }

@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../../config/api";
 import { getAuthToken } from "./storage";
 import { clearDeviceSession, getDeviceToken, getDeviceSession, saveDeviceSession } from "../deviceSession";
 import i18n from "../../i18n";
+import { useStaffSessionStore } from "../../stores/staffSessionStore"; // SA-P1-001
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -283,7 +284,11 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
         "Content-Type": "application/json",
         "Accept-Language": locale,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(deviceToken ? { "x-device-token": deviceToken } : {})
+        ...(deviceToken ? { "x-device-token": deviceToken } : {}),
+        // SA-P1-001: Include staff ID in all POS requests
+        ...(useStaffSessionStore.getState().session?.staffId
+          ? { "x-staff-id": useStaffSessionStore.getState().session!.staffId }
+          : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body)
     });

@@ -59,7 +59,8 @@ import {
 } from "./api/documents";
 import { QRCodeSVG } from "qrcode.react";
 // RO-007: Registration events visibility
-import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent, type RegistrationEventsResponse } from "./api/registrationEvents";
+import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
+import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -67,7 +68,7 @@ import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
 // DOCS-001: Added "documents" tab for document management
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -549,7 +550,7 @@ function LoginGate({ onLogin }: { onLogin: () => void }) {
 
 // ISSUE-MICRO-086: Extracted countdown to prevent QR code re-rendering every 1s
 function EnrollmentCountdown({ expiresAt }: { expiresAt: string }) {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -813,6 +814,19 @@ export default function App() {
   const [documentActionLoading, setDocumentActionLoading] = useState<string | null>(null);
   const documentsInFlightRef = useRef(false);
 
+  // SA-P1-001: Staff management state
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffError, setStaffError] = useState("");
+  const [staffStoreId, setStaffStoreId] = useState("");
+  const [staffActionLoading, setStaffActionLoading] = useState<string | null>(null);
+  const [showAddStaff, setShowAddStaff] = useState(false);
+  const [newStaffName, setNewStaffName] = useState("");
+  const [newStaffPhone, setNewStaffPhone] = useState("");
+  const [newStaffPin, setNewStaffPin] = useState("");
+  const [newStaffRole, setNewStaffRole] = useState<"CASHIER" | "STOCK_MANAGER" | "MANAGER">("CASHIER");
+  const [resetPinStaffId, setResetPinStaffId] = useState<string | null>(null);
+  const [resetPinValue, setResetPinValue] = useState("");
 
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
@@ -1384,6 +1398,75 @@ export default function App() {
     }
   }
 
+  // SA-P1-001: Staff management handlers
+  async function refreshStaff() {
+    if (!staffStoreId) { setStaffList([]); return; }
+    setStaffLoading(true);
+    setStaffError("");
+    try {
+      const data = await fetchStoreStaff(staffStoreId);
+      setStaffList(data.staff || []);
+    } catch (e: any) {
+      setStaffError(e?.message || "Failed to load staff");
+    } finally {
+      setStaffLoading(false);
+    }
+  }
+
+  async function handleAddStaff() {
+    if (!staffStoreId) return;
+    setStaffActionLoading("add");
+    try {
+      await createStaff(staffStoreId, {
+        name: newStaffName.trim(),
+        phone: newStaffPhone.trim(),
+        pin: newStaffPin,
+        role: newStaffRole,
+      });
+      setShowAddStaff(false);
+      setNewStaffName("");
+      setNewStaffPhone("");
+      setNewStaffPin("");
+      setNewStaffRole("CASHIER");
+      refreshStaff();
+    } catch (e: any) {
+      alert(e?.message || "Failed to add staff");
+    } finally {
+      setStaffActionLoading(null);
+    }
+  }
+
+  async function handleToggleStaffActive(staffId: string, currentlyActive: boolean) {
+    if (!staffStoreId) return;
+    setStaffActionLoading(staffId);
+    try {
+      await updateStaff(staffStoreId, staffId, { is_active: !currentlyActive });
+      refreshStaff();
+    } catch (e: any) {
+      alert(e?.message || "Failed to update staff");
+    } finally {
+      setStaffActionLoading(null);
+    }
+  }
+
+  async function handleResetPin() {
+    if (!staffStoreId || !resetPinStaffId || !/^\d{4,6}$/.test(resetPinValue)) {
+      alert("PIN must be 4-6 digits");
+      return;
+    }
+    setStaffActionLoading(resetPinStaffId);
+    try {
+      await resetStaffPin(staffStoreId, resetPinStaffId, resetPinValue);
+      setResetPinStaffId(null);
+      setResetPinValue("");
+      alert("PIN reset successfully");
+    } catch (e: any) {
+      alert(e?.message || "Failed to reset PIN");
+    } finally {
+      setStaffActionLoading(null);
+    }
+  }
+
   // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
   refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents };
 
@@ -1416,6 +1499,7 @@ export default function App() {
     if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
     if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
     if (shouldRefreshRegEvents) refreshRegEvents(); // RO-007
+    if (tab === "staff" && staffStoreId) refreshStaff(); // SA-P1-001
 
     // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
     const id = setInterval(() => {
@@ -2162,6 +2246,11 @@ export default function App() {
               {regEventsTotal - regEventsLastSeenTotal}
             </span>
           )}
+        </button>
+
+        {/* SA-P1-001: Staff management tab */}
+        <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>
+          Staff
         </button>
 
         <div className="tabsRight muted">
@@ -4615,6 +4704,198 @@ export default function App() {
               </tbody>
             </table>
           </div>
+        </section>
+      )}
+
+      {/* SA-P1-001: Staff Management Tab */}
+      {tab === "staff" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">Store Staff Management</div>
+            <div className="muted">Add, edit, and manage POS staff per store</div>
+          </div>
+
+          {/* Store selector */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+            <select
+              value={staffStoreId}
+              onChange={(e) => { setStaffStoreId(e.target.value); setStaffList([]); }}
+              style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+            >
+              <option value="">Select a store...</option>
+              {storeDirectory.map((s) => (
+                <option key={s.id} value={s.id}>{s.name} ({s.id.slice(0, 8)})</option>
+              ))}
+            </select>
+            <button className="btn" onClick={() => refreshStaff()} disabled={!staffStoreId || staffLoading}>
+              {staffLoading ? "Loading..." : "Load Staff"}
+            </button>
+            {staffStoreId && (
+              <button className="btnSuccess" onClick={() => setShowAddStaff(true)}>
+                + Add Staff
+              </button>
+            )}
+          </div>
+
+          {staffError && <div className="alertDanger" style={{ marginBottom: 12 }}>{staffError}</div>}
+
+          {/* Add Staff Form */}
+          {showAddStaff && (
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+              <div style={{ fontWeight: 600, marginBottom: 12 }}>Add New Staff Member</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Name</label>
+                  <input
+                    type="text"
+                    value={newStaffName}
+                    onChange={(e) => setNewStaffName(e.target.value)}
+                    placeholder="Staff name"
+                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Phone (10 digits)</label>
+                  <input
+                    type="text"
+                    value={newStaffPhone}
+                    onChange={(e) => setNewStaffPhone(e.target.value)}
+                    placeholder="9876543210"
+                    maxLength={10}
+                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>PIN (4-6 digits)</label>
+                  <input
+                    type="password"
+                    value={newStaffPin}
+                    onChange={(e) => setNewStaffPin(e.target.value)}
+                    placeholder="1234"
+                    maxLength={6}
+                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Role</label>
+                  <select
+                    value={newStaffRole}
+                    onChange={(e) => setNewStaffRole(e.target.value as any)}
+                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+                  >
+                    <option value="CASHIER">CASHIER (sell only)</option>
+                    <option value="STOCK_MANAGER">STOCK_MANAGER (sell + stock-in)</option>
+                    <option value="MANAGER">MANAGER (all operations)</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button className="btnSuccess" onClick={handleAddStaff} disabled={staffActionLoading === "add"}>
+                  {staffActionLoading === "add" ? "Adding..." : "Add Staff"}
+                </button>
+                <button className="btnGhost" onClick={() => setShowAddStaff(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {/* Staff List */}
+          {staffList.length > 0 && (
+            <div className="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Sales</th>
+                    <th>Stock-Ins</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffList.map((s) => (
+                    <tr key={s.id}>
+                      <td style={{ fontWeight: 600 }}>{s.name}</td>
+                      <td>{s.phone}</td>
+                      <td>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "#f1f5f9",
+                          color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "#475569",
+                        }}>
+                          {s.role}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: s.is_active ? "#dcfce7" : "#fee2e2",
+                          color: s.is_active ? "#166534" : "#991b1b",
+                        }}>
+                          {s.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td>{s.sales_count}</td>
+                      <td>{s.stock_in_count}</td>
+                      <td style={{ fontSize: 12 }}>{formatDateTime(s.created_at)}</td>
+                      <td>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button
+                            className={s.is_active ? "btnDanger btnSm" : "btnSuccess btnSm"}
+                            onClick={() => handleToggleStaffActive(s.id, s.is_active)}
+                            disabled={staffActionLoading === s.id}
+                            style={{ fontSize: 11, padding: "2px 8px" }}
+                          >
+                            {s.is_active ? "Deactivate" : "Activate"}
+                          </button>
+                          <button
+                            className="btn btnSm"
+                            onClick={() => { setResetPinStaffId(s.id); setResetPinValue(""); }}
+                            disabled={staffActionLoading === s.id}
+                            style={{ fontSize: 11, padding: "2px 8px" }}
+                          >
+                            Reset PIN
+                          </button>
+                        </div>
+                        {resetPinStaffId === s.id && (
+                          <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                            <input
+                              type="password"
+                              value={resetPinValue}
+                              onChange={(e) => setResetPinValue(e.target.value)}
+                              placeholder="New PIN"
+                              maxLength={6}
+                              style={{ width: 80, padding: "2px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 12 }}
+                            />
+                            <button className="btnSuccess btnSm" onClick={handleResetPin} style={{ fontSize: 11, padding: "2px 6px" }}>
+                              Save
+                            </button>
+                            <button className="btnGhost btnSm" onClick={() => setResetPinStaffId(null)} style={{ fontSize: 11, padding: "2px 6px" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {staffStoreId && !staffLoading && staffList.length === 0 && !staffError && (
+            <div className="muted" style={{ textAlign: "center", padding: 32 }}>
+              No staff members found for this store. Click "Add Staff" to create one.
+            </div>
+          )}
         </section>
       )}
 

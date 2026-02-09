@@ -1035,12 +1035,12 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       try {
         const inserted = await client.query(
           `
-          INSERT INTO sales (id, store_id, device_id, bill_ref, subtotal_minor, discount_minor, total_minor, status, currency)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          INSERT INTO sales (id, store_id, device_id, bill_ref, subtotal_minor, discount_minor, total_minor, status, currency, staff_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           ON CONFLICT (id) DO NOTHING
           RETURNING id
           `,
-          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "PENDING", saleCurrency]
+          [saleId, storeId, deviceId, billRef, subtotal, discount, total, "PENDING", saleCurrency, req.header("x-staff-id")?.trim() || null]
         );
         if ((inserted.rowCount ?? 0) > 0) {
           break;
