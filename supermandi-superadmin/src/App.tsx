@@ -737,7 +737,6 @@ export default function App() {
 
   // SA-P1-008: Bank detail re-verification state
   const [bankChanges, setBankChanges] = useState<BankChangeEntry[]>([]);
-  const [bankChangesLoading, setBankChangesLoading] = useState(false);
   const [bankVerifyLoading, setBankVerifyLoading] = useState<Record<string, boolean>>({});
   const [bankRejectReason, setBankRejectReason] = useState<Record<string, string>>({});
 
