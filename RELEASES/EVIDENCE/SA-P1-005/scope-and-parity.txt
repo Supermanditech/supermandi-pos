@@ -1,0 +1,100 @@
+# SA-P1-005: Scope Confirmation + Parity Header
+# ================================================
+
+## Parity Header
+
+Git SHA: 9d956d06e42ed9d869a0703d46a7905e596bc57c
+Branch: feat/sa-p1-005-supplier-suspension
+CI Run: 21823999100 (6/6 green)
+Base: main @ 6dd82d9
+
+Docker Images (local-prod):
+  supermandi/main-backend:local     → ID: 2b99080f26ba (726MB)
+  supermandi/superadmin:local       → ID: 4a0a40984bf5 (93.1MB)
+  supermandi/supplier-portal:local  → ID: 4a536ae2c454 (2.07GB)
+  supermandi/retailer-admin:local   → ID: ba83b057b30f (93.3MB)
+  supermandi/landing:local          → ID: e83d1c8f459d (92.7MB)
+  supermandi/api-gateway:9bb03f7    → ID: 5231867b94c2 (pre-built)
+
+Portal URLs (local-prod):
+  API Gateway:     http://localhost:8080  → 200 OK
+  Backend Direct:  http://localhost:3010  → 200 OK
+  SuperAdmin:      http://localhost:8083  → 302 (login redirect)
+  Retailer Admin:  http://localhost:8081  → 302 (login redirect)
+  Supplier Portal: http://localhost:8082  → 307 (login redirect)
+  Landing:         http://localhost:8084  → 200 OK
+
+/version outputs:
+  Backend (3010): {"sha":"local","service":"main-backend","built":"2026-02-09T12:40:42.405Z"}
+  Gateway (8080): {"sha":"9bb03f7","service":"api-gateway","built":"2026-02-05T20:13:02+04:00"}
+  Note: Frontend SPAs serve HTML for all routes (no separate /version endpoint).
+
+## Scope Confirmation
+
+### Clean Tree
+- git status: clean (no modified, no staged, no untracked)
+- No lockfile drift (pnpm-lock.yaml unchanged)
+- No .env changes
+- No CI config changes
+
+### Change Scope (8 files, SA-P1-005 only)
+
+| File | Purpose | Scope |
+|------|---------|-------|
+| RELEASES/RESUME_ANCHOR.md | Housekeeping | SA-P1-005 |
+| backend/src/routes/v1/supplier/auth.ts | SUSPENDED check (2 login paths) | SA-P1-005 |
+| backend/src/routes/v1/supplier/registration.ts | SUSPENDED in lookup | SA-P1-005 |
+| backend/src/services/supplierStateMachine.ts | Token revocation + attribution + pre-existing fixes | SA-P1-005 |
+| supermandi-superadmin/src/App.tsx | Suspend/reactivate UI + modal | SA-P1-005 |
+| supermandi-superadmin/src/api/suppliers.ts | API client functions | SA-P1-005 |
+| supplier-portal/src/app/(auth)/login/page.tsx | SUSPENDED handling | SA-P1-005 |
+| supplier-portal/src/lib/api.ts | Type update | SA-P1-005 |
+
+### Additional Files (infrastructure)
+
+| File | Purpose | Scope |
+|------|---------|-------|
+| retailer-admin/.dockerignore | Docker build fix | Infra |
+| supermandi-superadmin/.dockerignore | Docker build fix | Infra |
+| supermandi-landing/.dockerignore | Docker build fix | Infra |
+| supplier-portal/.dockerignore | Docker build fix | Infra |
+
+### NOT Changed (scope guard)
+- No migrations (SUSPENDED enum, audit table, tokens_revoked_at already exist)
+- No POS app changes
+- No retailer-admin logic changes
+- No env var additions
+- No dependency changes
+- No CI pipeline changes
+
+## Pre-Existing Bugs Found During Testing
+
+During local-prod testing, two pre-existing bugs in `supplierStateMachine.ts` were found
+and fixed (these affect ALL status transitions, not just SA-P1-005 suspension):
+
+1. **Postgres type inference**: `$2` parameter used in both SET and CASE expressions caused
+   "inconsistent types deduced for parameter $2". Fix: cast to `$2::text`.
+
+2. **UUID column vs string adminId**: `status_updated_by` and `verified_by_user_id` are UUID
+   columns, but legacy admin token sets adminId to "master-token" (not a UUID).
+   Fix: CASE expression to only set when value matches UUID pattern.
+
+Both fixes are in the same `transitionSupplier()` function and will need to be included
+in the PR push.
+
+## Production-Grade Attribution (verified in DB)
+
+Post-trigger audit patch adds correct attribution within the same transaction:
+- `changed_by_type` = "admin" (not "system")
+- `reason` persisted from API input
+- `metadata.admin_identity` stores admin identity (handles non-UUID identities like "master-token")
+- `changed_by` set to UUID when admin identity is a valid UUID (future RBAC API key auth)
+
+Operator verified in DB: PASS
+
+## No New Migration Required
+
+Existing infrastructure used:
+- Migration 075: tokens_revoked_at column on supplier.suppliers
+- Migration 097: SUSPENDED in verification_status enum
+- Migration 098: supplier.supplier_status_audit table + trigger

@@ -203,12 +203,12 @@ export async function transitionSupplier(
     const updateResult = await client.query<SupplierWithStatus>(
       `UPDATE supplier.suppliers
       SET
-        verification_status = $2,
-        rejection_reason = CASE WHEN $2 = 'NEEDS_FIX' THEN $3 ELSE rejection_reason END,
+        verification_status = $2::text,
+        rejection_reason = CASE WHEN $2::text IN ('NEEDS_FIX', 'SUSPENDED') THEN $3 ELSE rejection_reason END,
         status_updated_at = NOW(),
-        status_updated_by = $4,
-        verified_at = CASE WHEN $2 = 'ACTIVE' THEN NOW() ELSE verified_at END,
-        verified_by_user_id = CASE WHEN $2 = 'ACTIVE' THEN $4 ELSE verified_by_user_id END,
+        status_updated_by = CASE WHEN $4::text ~ '^[0-9a-f]{8}-' THEN $4::uuid ELSE status_updated_by END,
+        verified_at = CASE WHEN $2::text = 'ACTIVE' THEN NOW() ELSE verified_at END,
+        verified_by_user_id = CASE WHEN $2::text = 'ACTIVE' AND $4::text ~ '^[0-9a-f]{8}-' THEN $4::uuid ELSE verified_by_user_id END,
         updated_at = NOW()
       WHERE id = $1
       RETURNING
@@ -230,6 +230,31 @@ export async function transitionSupplier(
         [supplierId]
       );
     }
+
+    // SA-P1-005: Patch audit entry with correct attribution.
+    // The trigger (migration 098) auto-creates an audit row but can't access
+    // application context. We fix changed_by_type, reason, and store the admin
+    // identity in metadata.admin_identity (since changed_by is UUID-typed and
+    // admin identity may be an email or token name).
+    await client.query(
+      `UPDATE supplier.supplier_status_audit
+       SET
+         changed_by_type = COALESCE($2, changed_by_type),
+         reason = COALESCE($3, reason),
+         changed_by = CASE WHEN $4::text ~ '^[0-9a-f]{8}-[0-9a-f]{4}-' THEN $4::uuid ELSE changed_by END,
+         metadata = COALESCE(metadata, '{}') ||
+           CASE WHEN $4::text IS NOT NULL
+             THEN jsonb_build_object('admin_identity', $4::text)
+             ELSE '{}'::jsonb
+           END
+       WHERE id = (
+         SELECT id FROM supplier.supplier_status_audit
+         WHERE supplier_id = $1
+         ORDER BY changed_at DESC
+         LIMIT 1
+       )`,
+      [supplierId, options.changedByType || null, options.reason || null, options.changedBy || null]
+    );
 
     await client.query("COMMIT");
 

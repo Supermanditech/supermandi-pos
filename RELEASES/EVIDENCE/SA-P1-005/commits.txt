@@ -1,0 +1,46 @@
+# SA-P1-005: Commit Log
+# =====================
+
+Branch: feat/sa-p1-005-supplier-suspension
+Base: main (6dd82d9)
+4 commits, 8 files changed, 249 insertions(+), 11 deletions(-)
+
+## Commits (newest first)
+
+SHA: 9d956d06e42ed9d869a0703d46a7905e596bc57c
+Date: 2026-02-09 17:21:48 +0530
+Message: SA-P1-005: supplier portal suspension handling at login
+Files:
+  - supplier-portal/src/app/(auth)/login/page.tsx (+6)
+  - supplier-portal/src/lib/api.ts (+1/-1)
+
+SHA: 9928a30c498d51a53cd5b0bc8ed20664b0224c94
+Date: 2026-02-09 17:20:31 +0530
+Message: SA-P1-005: SuperAdmin suspend/reactivate UI + confirmation modal
+Files:
+  - supermandi-superadmin/src/App.tsx (+119/-2)
+  - supermandi-superadmin/src/api/suppliers.ts (+72)
+
+SHA: 150b508de18d3106c0f891fbe8219cec047139c0
+Date: 2026-02-09 17:16:51 +0530
+Message: SA-P1-005: block suspended supplier login + revoke tokens
+Files:
+  - backend/src/routes/v1/supplier/auth.ts (+16)
+  - backend/src/routes/v1/supplier/registration.ts (+18/-2)
+  - backend/src/services/supplierStateMachine.ts (+8)
+
+SHA: a2199cfb63e5c750dd230544994184aef6cf593b
+Date: 2026-02-09 17:13:10 +0530
+Message: chore: update RESUME_ANCHOR after SA-P1-004 merge
+Files:
+  - RELEASES/RESUME_ANCHOR.md (+19/-11)
+
+## Scope Verification
+
+All changes are SA-P1-005 scope:
+  - Backend: supplier auth blocking + token revocation + registration lookup
+  - SuperAdmin: suspend/reactivate UI + API client
+  - Supplier Portal: SUSPENDED handling in login flow
+  - RESUME_ANCHOR: housekeeping (non-functional)
+
+No changes to: POS app, retailer-admin, migrations, infrastructure, env vars, CI config

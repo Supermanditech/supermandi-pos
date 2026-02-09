@@ -1,0 +1,164 @@
+# SA-P1-005: Curl Proofs — Supplier Suspension Flow
+# ==================================================
+# Stack: docker-compose.local-prod.yml (17 containers)
+# Backend: supermandi/main-backend:local (image ID: 2b99080f26ba)
+# Date: 2026-02-09
+
+## PROOF 1: Suspend supplier via admin PATCH
+# Endpoint: PATCH /api/v1/admin/suppliers/:id/verification-status
+# Auth: x-admin-token (legacy master token)
+
+REQUEST:
+  curl -s -X PATCH http://localhost:3010/api/v1/admin/suppliers/b0000000-0000-0000-0000-000000000001/verification-status \
+    -H "Content-Type: application/json" \
+    -H "x-admin-token: local-test-token" \
+    -d '{"status": "SUSPENDED", "reason": "SA-P1-005 test: compliance violation"}'
+
+RESPONSE (200):
+  {
+    "supplier": {
+      "id": "b0000000-0000-0000-0000-000000000001",
+      "business_name": "Demo Wholesale Supplier Pvt Ltd",
+      "gstin": "29AABCU9603R1ZM",
+      "verification_status": "SUSPENDED",
+      "rejection_reason": null,
+      "status_updated_at": "2026-02-09T12:46:13.676Z"
+    },
+    "previous_status": "ACTIVE",
+    "status_history": [
+      {"old_status": "ACTIVE", "new_status": "SUSPENDED", "changed_at": "2026-02-09T12:46:13.676Z"},
+      {"old_status": null, "new_status": "ACTIVE", "reason": "Initial status (migration)", "changed_at": "2026-02-08T12:31:01.115Z"}
+    ]
+  }
+
+VERDICT: PASS — Status changed ACTIVE → SUSPENDED, audit trail recorded.
+
+---
+
+## PROOF 2: Suspended supplier email login BLOCKED
+# Endpoint: POST /api/v1/supplier/auth/login
+
+REQUEST:
+  curl -s -X POST http://localhost:3010/api/v1/supplier/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email": "supplier@demo.in", "password": "Test1234!"}'
+
+RESPONSE (403):
+  {"error":{"code":"ACCOUNT_SUSPENDED","message":"Your account has been suspended. Please contact support."}}
+
+VERDICT: PASS — Suspended supplier gets 403 ACCOUNT_SUSPENDED (not credentials error).
+
+---
+
+## PROOF 3: Registration lookup returns ACCOUNT_SUSPENDED
+# Endpoint: GET /api/v1/supplier/registration/lookup
+
+REQUEST:
+  curl -s "http://localhost:3010/api/v1/supplier/registration/lookup?phone=9876543211"
+
+RESPONSE (200):
+  {
+    "exists": true,
+    "type": "supplier",
+    "status": "SUSPENDED",
+    "nextStep": "ACCOUNT_SUSPENDED",
+    "businessName": "Demo Wholesale Supplier Pvt Ltd",
+    "message": "Your account has been suspended. Please contact support."
+  }
+
+VERDICT: PASS — Lookup returns nextStep=ACCOUNT_SUSPENDED for suspended supplier.
+
+---
+
+## PROOF 4: Token revocation on suspension (DB check)
+# Query: SELECT tokens_revoked_at FROM supplier.suppliers WHERE id = '...'
+
+RESULT:
+  tokens_revoked_at = 2026-02-09 12:46:13.676616+00
+
+VERDICT: PASS — tokens_revoked_at set atomically with status change in same transaction.
+
+---
+
+## PROOF 5a: Reactivate supplier
+# Endpoint: PATCH /api/v1/admin/suppliers/:id/verification-status
+
+REQUEST:
+  curl -s -X PATCH http://localhost:3010/api/v1/admin/suppliers/b0000000-0000-0000-0000-000000000001/verification-status \
+    -H "Content-Type: application/json" \
+    -H "x-admin-token: local-test-token" \
+    -d '{"status": "ACTIVE", "reason": "SA-P1-005 test: reactivation after review"}'
+
+RESPONSE (200):
+  {
+    "supplier": {
+      "id": "b0000000-0000-0000-0000-000000000001",
+      "business_name": "Demo Wholesale Supplier Pvt Ltd",
+      "verification_status": "ACTIVE",
+      "status_updated_at": "2026-02-09T12:47:58.709Z"
+    },
+    "previous_status": "SUSPENDED",
+    "status_history": [
+      {"old_status": "SUSPENDED", "new_status": "ACTIVE", "changed_at": "2026-02-09T12:47:58.709Z"},
+      {"old_status": "ACTIVE", "new_status": "SUSPENDED", "changed_at": "2026-02-09T12:46:13.676Z"},
+      {"old_status": null, "new_status": "ACTIVE", "reason": "Initial status (migration)", "changed_at": "2026-02-08T12:31:01.115Z"}
+    ]
+  }
+
+VERDICT: PASS — Reactivation SUSPENDED → ACTIVE with full audit trail (3 entries).
+
+---
+
+## PROOF 5b: Reactivated supplier can login again
+
+REQUEST:
+  curl -s -X POST http://localhost:3010/api/v1/supplier/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email": "supplier@demo.in", "password": "Test1234!"}'
+
+RESPONSE (200):
+  {
+    "data": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "supplier": {
+        "id": "b0000000-0000-0000-0000-000000000001",
+        "email": "supplier@demo.in",
+        "businessName": "Demo Wholesale Supplier Pvt Ltd",
+        "verificationStatus": "ACTIVE"
+      }
+    }
+  }
+
+VERDICT: PASS — Reactivated supplier receives JWT token, can login.
+
+---
+
+## PROOF 5c: Lookup returns LOGIN_ALLOWED after reactivation
+
+REQUEST:
+  curl -s "http://localhost:3010/api/v1/supplier/registration/lookup?phone=9876543211"
+
+RESPONSE (200):
+  {
+    "exists": true,
+    "type": "supplier",
+    "status": "ACTIVE",
+    "nextStep": "LOGIN_ALLOWED",
+    "businessName": "Demo Wholesale Supplier Pvt Ltd",
+    "message": "Account found. You can proceed with OTP login."
+  }
+
+VERDICT: PASS — After reactivation, lookup returns LOGIN_ALLOWED again.
+
+---
+
+## SUMMARY: ALL 7 CURL PROOFS PASS
+| # | Test | Result |
+|---|------|--------|
+| 1 | Suspend via admin PATCH | PASS |
+| 2 | Suspended email login blocked (403) | PASS |
+| 3 | Lookup returns ACCOUNT_SUSPENDED | PASS |
+| 4 | Token revocation (tokens_revoked_at) | PASS |
+| 5a | Reactivate via admin PATCH | PASS |
+| 5b | Reactivated supplier can login | PASS |
+| 5c | Lookup returns LOGIN_ALLOWED after reactivation | PASS |

@@ -1,0 +1,47 @@
+# SA-P1-005: CI Evidence
+# ======================
+
+CI Run ID: 21823999100
+CI URL: https://github.com/Supermanditech/supermandi-pos/actions/runs/21823999100
+PR: #7 — https://github.com/Supermanditech/supermandi-pos/pull/7
+Branch: feat/sa-p1-005-supplier-suspension
+HEAD SHA: 9d956d06e42ed9d869a0703d46a7905e596bc57c (tip)
+Base: main (6dd82d9)
+
+## Gate Results (6/6 GREEN)
+
+| Gate                    | Status | Duration |
+|-------------------------|--------|----------|
+| TypeScript Check        | PASS   | 45s      |
+| ESLint Check            | PASS   | 45s      |
+| Build & Verify Portals  | PASS   | 38s      |
+| Unit & Integration Tests| PASS   | 1m2s     |
+| Local Smoke Test        | PASS   | 40s      |
+| All Gates Passed        | PASS   | 4s       |
+
+## Lint Budgets
+
+| Package          | Warnings | Budget | Status |
+|------------------|----------|--------|--------|
+| superadmin       | 59       | 67     | PASS   |
+| backend          | 577      | 642    | PASS   |
+
+## Local Verification (pre-push)
+
+- pnpm -r typecheck: 22/22 projects PASS
+- Superadmin ESLint: 59 warnings (budget 67)
+- Backend ESLint: 577 warnings (budget 642)
+- No lockfile drift
+- No untracked files
+
+## Post-CI Fixes (need re-push + CI re-run)
+
+During local-prod testing, two pre-existing bugs were found in supplierStateMachine.ts:
+1. Postgres $2 type inference error → fixed with ::text cast
+2. UUID column vs "master-token" string → fixed with CASE/regex guard
+
+Additional files:
+- .dockerignore files for 4 frontend projects (build infrastructure)
+- Evidence pack at RELEASES/EVIDENCE/SA-P1-005/
+
+These need to be committed, pushed, and CI must pass again before merge.
