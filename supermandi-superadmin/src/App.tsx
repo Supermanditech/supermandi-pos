@@ -61,6 +61,7 @@ import { QRCodeSVG } from "qrcode.react";
 // RO-007: Registration events visibility
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
+import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -68,7 +69,7 @@ import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
 // DOCS-001: Added "documents" tab for document management
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff" | "grn-alerts";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -828,6 +829,16 @@ export default function App() {
   const [resetPinStaffId, setResetPinStaffId] = useState<string | null>(null);
   const [resetPinValue, setResetPinValue] = useState("");
 
+  // SA-P1-004: GRN excess alerts state
+  const [grnAlerts, setGrnAlerts] = useState<GrnExcessAlert[]>([]);
+  const [grnAlertsLoading, setGrnAlertsLoading] = useState(false);
+  const [grnAlertsError, setGrnAlertsError] = useState("");
+  const [grnAlertsFilter, setGrnAlertsFilter] = useState<"" | "OPEN" | "ACKNOWLEDGED" | "DISMISSED">("");
+  const [grnAlertsTotal, setGrnAlertsTotal] = useState(0);
+  const [grnAlertsOpenCount, setGrnAlertsOpenCount] = useState(0);
+  const [grnAlertsOffset, setGrnAlertsOffset] = useState(0);
+  const [grnAlertActionLoading, setGrnAlertActionLoading] = useState<string | null>(null);
+
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
@@ -1467,8 +1478,40 @@ export default function App() {
     }
   }
 
+  // SA-P1-004: GRN excess alerts handlers
+  async function refreshGrnAlerts() {
+    setGrnAlertsLoading(true);
+    setGrnAlertsError("");
+    try {
+      const data = await fetchGrnAlerts({
+        status: grnAlertsFilter || undefined,
+        limit: 50,
+        offset: grnAlertsOffset,
+      });
+      setGrnAlerts(data.alerts || []);
+      setGrnAlertsTotal(data.pagination?.total || 0);
+      setGrnAlertsOpenCount(data.openCount || 0);
+    } catch (e: unknown) {
+      setGrnAlertsError(e instanceof Error ? e.message : "Failed to load GRN alerts");
+    } finally {
+      setGrnAlertsLoading(false);
+    }
+  }
+
+  async function handleGrnAlertAction(alertId: string, status: "ACKNOWLEDGED" | "DISMISSED") {
+    setGrnAlertActionLoading(alertId);
+    try {
+      await updateGrnAlert(alertId, { status });
+      refreshGrnAlerts();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to update alert");
+    } finally {
+      setGrnAlertActionLoading(null);
+    }
+  }
+
   // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
-  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents };
+  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents, refreshStaff, refreshGrnAlerts, refreshAnalytics };
 
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
@@ -1484,22 +1527,25 @@ export default function App() {
     const shouldRefreshDocuments = tab === "documents"; // DOCS-001
     const shouldRefreshRegEvents = tab === "registrations"; // RO-007
 
-    refreshHealth();
-    if (shouldRefreshEvents) refreshEvents();
-    if (shouldRefreshDevices) refreshDevices();
-    if (shouldRefreshStores) refreshStores();
-    if (shouldRefreshSuppliers) refreshSuppliers();
-    if (shouldRefreshUsers) refreshUsers();
-    if (shouldRefreshSettings) refreshSettings();
+    // ISSUE-MICRO-024: Use refreshRef for initial calls too (consistent with polling)
+    const r = refreshRef.current;
+    r.refreshHealth?.();
+    if (shouldRefreshEvents) r.refreshEvents?.();
+    if (shouldRefreshDevices) r.refreshDevices?.();
+    if (shouldRefreshStores) r.refreshStores?.();
+    if (shouldRefreshSuppliers) r.refreshSuppliers?.();
+    if (shouldRefreshUsers) r.refreshUsers?.();
+    if (shouldRefreshSettings) r.refreshSettings?.();
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
         .catch(() => setAiConfigured(null));
     }
-    if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
-    if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
-    if (shouldRefreshRegEvents) refreshRegEvents(); // RO-007
-    if (tab === "staff" && staffStoreId) refreshStaff(); // SA-P1-001
+    if (shouldRefreshAudit) r.refreshAuditLogs?.(); // GO-LIVE-011
+    if (shouldRefreshDocuments) r.refreshDocuments?.(); // DOCS-001
+    if (shouldRefreshRegEvents) r.refreshRegEvents?.(); // RO-007
+    if (tab === "staff" && staffStoreId) r.refreshStaff?.(); // SA-P1-001
+    if (tab === "grn-alerts") r.refreshGrnAlerts?.(); // SA-P1-004
 
     // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
     const id = setInterval(() => {
@@ -1521,41 +1567,41 @@ export default function App() {
       r.refreshRegEvents?.(); // DR-010: Always poll for badge count
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
-  }, [tab]);
+  }, [tab, staffStoreId]);
 
   // If user changes limit, refresh immediately.
   useEffect(() => {
-    refreshEvents();
+    refreshRef.current.refreshEvents?.();
     setPage(0);
   }, [limit]);
 
   // GO-LIVE-011: Refresh audit logs when page or filter changes
   useEffect(() => {
     if (tab === "audit") {
-      refreshAuditLogs();
+      refreshRef.current.refreshAuditLogs?.();
     }
-  }, [auditLogsPage, auditLogsFilter]);
+  }, [auditLogsPage, auditLogsFilter, tab]);
 
   // DOCS-001: Refresh documents when page or filter changes
   useEffect(() => {
     if (tab === "documents") {
-      refreshDocuments();
+      refreshRef.current.refreshDocuments?.();
     }
-  }, [documentsPage, documentsEntityFilter]);
+  }, [documentsPage, documentsEntityFilter, tab]);
 
   // RO-007: Refresh registration events when page or filter changes
   useEffect(() => {
     if (tab === "registrations") {
-      refreshRegEvents();
+      refreshRef.current.refreshRegEvents?.();
     }
-  }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter]);
+  }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter, tab]);
 
   // DR-010: Clear badge when admin views the registrations tab
   useEffect(() => {
     if (tab === "registrations") {
       setRegEventsLastSeenTotal(regEventsTotal);
     }
-  }, [tab]);
+  }, [tab, regEventsTotal]);
 
   // ISSUE-MICRO-059: Reset audit page to 0 when filter changes
   useEffect(() => {
@@ -1578,14 +1624,14 @@ export default function App() {
   useEffect(() => {
     if (tab !== "devices") return;
     const timer = setTimeout(() => {
-      refreshDevices(0);
+      refreshRef.current.refreshDevices?.(0);
     }, 300);
     return () => clearTimeout(timer);
-  }, [deviceIdFilter, storeIdFilter]);
+  }, [deviceIdFilter, storeIdFilter, tab]);
 
   useEffect(() => {
     if (tab !== "analytics") return;
-    refreshAnalytics(analyticsTab);
+    refreshRef.current.refreshAnalytics?.(analyticsTab);
   }, [tab, analyticsTab, analyticsFrom, analyticsTo, analyticsStoreId, productsGroupBy]);
 
   useEffect(() => {
@@ -1660,7 +1706,7 @@ export default function App() {
         .then((res) => setAiConfigured(res.configured))
         .catch(() => setAiConfigured(null));
     }
-  }, [aiPanelOpen]);
+  }, [aiPanelOpen, aiConfigured]);
 
   const filteredEvents = useMemo(() => {
     const d = deviceIdFilter.trim();
@@ -2251,6 +2297,16 @@ export default function App() {
         {/* SA-P1-001: Staff management tab */}
         <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>
           Staff
+        </button>
+
+        {/* SA-P1-004: GRN Alerts tab */}
+        <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>
+          GRN Alerts
+          {grnAlertsOpenCount > 0 && (
+            <span style={{ marginLeft: 6, background: "#f59e0b", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 600 }}>
+              {grnAlertsOpenCount}
+            </span>
+          )}
         </button>
 
         <div className="tabsRight muted">
@@ -4894,6 +4950,149 @@ export default function App() {
           {staffStoreId && !staffLoading && staffList.length === 0 && !staffError && (
             <div className="muted" style={{ textAlign: "center", padding: 32 }}>
               No staff members found for this store. Click "Add Staff" to create one.
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* SA-P1-004: GRN Excess Alerts Tab */}
+      {tab === "grn-alerts" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div className="cardTitle">GRN Excess Receipt Alerts</div>
+            <div className="muted">Items received in quantities exceeding purchase order amounts</div>
+          </div>
+
+          {/* Filters */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+            <select
+              value={grnAlertsFilter}
+              onChange={(e) => { setGrnAlertsFilter(e.target.value as any); setGrnAlertsOffset(0); }}
+              style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
+            >
+              <option value="">All Statuses</option>
+              <option value="OPEN">Open</option>
+              <option value="ACKNOWLEDGED">Acknowledged</option>
+              <option value="DISMISSED">Dismissed</option>
+            </select>
+            <button className="btn" onClick={() => refreshGrnAlerts()} disabled={grnAlertsLoading}>
+              {grnAlertsLoading ? "Loading..." : "Refresh"}
+            </button>
+            <span className="muted" style={{ marginLeft: "auto", fontSize: 12 }}>
+              {grnAlertsTotal} alert{grnAlertsTotal !== 1 ? "s" : ""} total
+              {grnAlertsOpenCount > 0 && (
+                <span style={{ marginLeft: 6, color: "#f59e0b", fontWeight: 600 }}>
+                  ({grnAlertsOpenCount} open)
+                </span>
+              )}
+            </span>
+          </div>
+
+          {grnAlertsError && <div className="alertDanger" style={{ marginBottom: 12 }}>{grnAlertsError}</div>}
+
+          {/* Alerts Table */}
+          {grnAlerts.length > 0 && (
+            <div className="tableWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Store</th>
+                    <th>Order #</th>
+                    <th>Product</th>
+                    <th>Ordered</th>
+                    <th>Received</th>
+                    <th>Excess</th>
+                    <th>%</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {grnAlerts.map((a) => (
+                    <tr key={a.id}>
+                      <td style={{ fontSize: 12 }}>{a.store_name || a.store_id.slice(0, 8)}</td>
+                      <td style={{ fontSize: 12 }}>{a.order_number || a.purchase_order_id.slice(0, 8)}</td>
+                      <td style={{ fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {a.product_name}
+                      </td>
+                      <td>{a.ordered_qty}</td>
+                      <td style={{ fontWeight: 600 }}>{a.total_received_qty}</td>
+                      <td style={{ color: "#dc2626", fontWeight: 600 }}>+{a.excess_qty}</td>
+                      <td style={{ color: "#f59e0b", fontWeight: 600 }}>{a.excess_pct}%</td>
+                      <td>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: 6,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: a.status === "OPEN" ? "#fef3c7" : a.status === "ACKNOWLEDGED" ? "#dbeafe" : "#f1f5f9",
+                          color: a.status === "OPEN" ? "#92400e" : a.status === "ACKNOWLEDGED" ? "#1e40af" : "#475569",
+                        }}>
+                          {a.status}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 12 }}>{formatDateTime(a.created_at)}</td>
+                      <td>
+                        {a.status === "OPEN" && (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button
+                              className="btn btnSm"
+                              onClick={() => handleGrnAlertAction(a.id, "ACKNOWLEDGED")}
+                              disabled={grnAlertActionLoading === a.id}
+                              style={{ fontSize: 11, padding: "2px 8px" }}
+                            >
+                              Acknowledge
+                            </button>
+                            <button
+                              className="btnGhost btnSm"
+                              onClick={() => handleGrnAlertAction(a.id, "DISMISSED")}
+                              disabled={grnAlertActionLoading === a.id}
+                              style={{ fontSize: 11, padding: "2px 8px" }}
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        )}
+                        {a.status !== "OPEN" && a.acknowledged_at && (
+                          <span className="muted" style={{ fontSize: 11 }}>
+                            {formatDateTime(a.acknowledged_at)}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {grnAlertsTotal > 50 && (
+            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12 }}>
+              <button
+                className="btn btnSm"
+                disabled={grnAlertsOffset === 0}
+                onClick={() => { setGrnAlertsOffset(Math.max(0, grnAlertsOffset - 50)); }}
+              >
+                Previous
+              </button>
+              <span className="muted" style={{ fontSize: 12, alignSelf: "center" }}>
+                {grnAlertsOffset + 1}–{Math.min(grnAlertsOffset + 50, grnAlertsTotal)} of {grnAlertsTotal}
+              </span>
+              <button
+                className="btn btnSm"
+                disabled={grnAlertsOffset + 50 >= grnAlertsTotal}
+                onClick={() => { setGrnAlertsOffset(grnAlertsOffset + 50); }}
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {!grnAlertsLoading && grnAlerts.length === 0 && !grnAlertsError && (
+            <div className="muted" style={{ textAlign: "center", padding: 32 }}>
+              No GRN excess alerts found.
             </div>
           )}
         </section>

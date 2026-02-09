@@ -1510,6 +1510,21 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
           itemStatus = "received";
         }
 
+        // SA-P1-004: Detect excess receipt and create alert for SuperAdmin
+        const orderedQty = orderItem.ordered_quantity || 0;
+        if (orderedQty > 0 && newReceivedQty > orderedQty) {
+          const excessQty = newReceivedQty - orderedQty;
+          const excessPct = parseFloat(((excessQty / orderedQty) * 100).toFixed(2));
+          await client.query(
+            `INSERT INTO platform.grn_excess_alerts
+             (store_id, purchase_order_id, order_item_id, receive_id,
+              product_name, ordered_qty, total_received_qty, excess_qty, excess_pct)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [storeId, orderId, item.orderItemId, receiveId,
+             orderItem.productName, orderedQty, newReceivedQty, excessQty, excessPct]
+          );
+        }
+
         // Update order item
         await client.query(
           `UPDATE orders.purchase_order_items

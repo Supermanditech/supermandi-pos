@@ -49,16 +49,18 @@ export function ReceiveQuantityInput({
     }
   }, [disabled, max, onChange]);
 
+  // SA-P1-004: Allow typing values above max for excess receipt.
+  // Buttons still cap at max; only text input allows exceeding.
   const handleTextChange = useCallback(
     (text: string) => {
       const num = parseInt(text, 10);
       if (isNaN(num)) {
         onChange(0);
       } else {
-        onChange(Math.min(max, Math.max(0, num)));
+        onChange(Math.max(0, num));
       }
     },
-    [max, onChange]
+    [onChange]
   );
 
   return (

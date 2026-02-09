@@ -33,6 +33,10 @@ export function GRNItemRow({
   const remainingQuantity = item.orderedQuantity - item.receivedQuantity;
   const isFullyReceived = remainingQuantity <= 0;
 
+  // SA-P1-004: Detect excess receipt (receiving more than remaining)
+  const isExcessEntry = receiveQuantity > Math.max(0, remainingQuantity);
+  const excessAmount = isExcessEntry ? receiveQuantity - Math.max(0, remainingQuantity) : 0;
+
   const handleQuantityChange = useCallback(
     (quantity: number) => {
       onReceiveQuantityChange(item.id, quantity);
@@ -68,7 +72,8 @@ export function GRNItemRow({
       style={[
         styles.container,
         isHighlighted && styles.containerHighlighted,
-        isFullyReceived && styles.containerCompleted,
+        isFullyReceived && !isExcessEntry && styles.containerCompleted,
+        isExcessEntry && styles.containerExcess,
       ]}
     >
       {/* Product Info */}
@@ -124,14 +129,28 @@ export function GRNItemRow({
         </View>
       </View>
 
+      {/* SA-P1-004: Excess receipt warning */}
+      {isExcessEntry && (
+        <View style={styles.excessWarning}>
+          <MaterialCommunityIcons
+            name="alert"
+            size={14}
+            color={theme.colors.warning}
+          />
+          <Text style={styles.excessWarningText}>
+            Exceeds order by {excessAmount} — will alert SuperAdmin
+          </Text>
+        </View>
+      )}
+
       {/* Receive Input */}
       <View style={styles.receiveSection}>
         <Text style={styles.receiveSectionLabel}>Receive Now</Text>
         <ReceiveQuantityInput
           value={receiveQuantity}
           onChange={handleQuantityChange}
-          max={remainingQuantity}
-          disabled={isFullyReceived}
+          max={Math.max(0, remainingQuantity)}
+          disabled={false}
         />
       </View>
 
@@ -144,7 +163,7 @@ export function GRNItemRow({
               styles.progressFill,
               styles.progressReceived,
               {
-                width: `${(item.receivedQuantity / item.orderedQuantity) * 100}%`,
+                width: `${Math.min(100, (item.receivedQuantity / item.orderedQuantity) * 100)}%`,
               },
             ]}
           />
@@ -153,15 +172,15 @@ export function GRNItemRow({
             <View
               style={[
                 styles.progressFill,
-                styles.progressReceiving,
+                isExcessEntry ? styles.progressExcess : styles.progressReceiving,
                 {
-                  width: `${(receiveQuantity / item.orderedQuantity) * 100}%`,
+                  width: `${Math.min(100 - Math.min(100, (item.receivedQuantity / item.orderedQuantity) * 100), (receiveQuantity / item.orderedQuantity) * 100)}%`,
                 },
               ]}
             />
           )}
         </View>
-        <Text style={styles.progressText}>
+        <Text style={[styles.progressText, isExcessEntry && styles.progressTextExcess]}>
           {item.receivedQuantity + receiveQuantity} / {item.orderedQuantity}
         </Text>
       </View>
@@ -190,6 +209,11 @@ const styles = StyleSheet.create({
   containerCompleted: {
     opacity: 0.7,
     backgroundColor: theme.colors.successSoft,
+  },
+  containerExcess: {
+    borderColor: theme.colors.warning,
+    borderWidth: 2,
+    backgroundColor: theme.colors.warningSoft,
   },
   productInfo: {
     marginBottom: theme.spacing.md,
@@ -293,12 +317,35 @@ const styles = StyleSheet.create({
   progressReceiving: {
     backgroundColor: theme.colors.primary,
   },
+  progressExcess: {
+    backgroundColor: theme.colors.warning,
+  },
   progressText: {
     fontSize: 11,
     fontWeight: "500",
     color: theme.colors.textTertiary,
     minWidth: 50,
     textAlign: "right",
+  },
+  progressTextExcess: {
+    color: theme.colors.warning,
+    fontWeight: "700",
+  },
+  excessWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: theme.colors.warningSoft,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  excessWarningText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.warning,
+    flex: 1,
   },
 });
 

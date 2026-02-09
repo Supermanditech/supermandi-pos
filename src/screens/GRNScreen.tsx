@@ -274,6 +274,16 @@ export default function GRNScreen({
     setSelectedItems(new Set());
   }, [selectedItems, receiveQuantities]);
 
+  // SA-P1-004: Check for excess items (receiveQty > remaining)
+  const excessItems = useMemo(() => {
+    if (!order) return [];
+    return order.items.filter((item) => {
+      const qty = receiveQuantities[item.id] || 0;
+      const remaining = item.orderedQuantity - item.receivedQuantity;
+      return qty > 0 && qty > Math.max(0, remaining);
+    });
+  }, [order, receiveQuantities]);
+
   // Submit GRN
   const handleSubmit = useCallback(async () => {
     if (!storeId || !order || !canSubmit) return;
@@ -291,46 +301,57 @@ export default function GRNScreen({
       return;
     }
 
-    Alert.alert(
-      "Confirm Receive",
-      `Receive ${totals.receivingQty} units across ${totals.receivingItems} items?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Receive",
-          onPress: async () => {
-            setSubmitting(true);
+    // SA-P1-004: Proceed with submission (possibly after excess warning)
+    const doSubmit = async () => {
+      setSubmitting(true);
+      try {
+        const result = await orderApi.receiveGoods(storeId, orderId, {
+          items,
+          notes: notes.trim() || undefined,
+        });
 
-            try {
-              const result = await orderApi.receiveGoods(storeId, orderId, {
-                items,
-                notes: notes.trim() || undefined,
-              });
+        Alert.alert(
+          "Success",
+          `Received ${result.data.itemsUpdated.length} items. Order status: ${getStatusLabel(result.data.order.status)}`,
+          [
+            {
+              text: "OK",
+              onPress: () => onSuccess?.(),
+            },
+          ]
+        );
+      } catch (err) {
+        console.error("[GRNScreen] Failed to receive:", err);
+        Alert.alert(
+          "Error",
+          "Failed to receive goods. Please try again."
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    };
 
-              Alert.alert(
-                "Success",
-                `Received ${result.data.itemsUpdated.length} items. Order status: ${getStatusLabel(result.data.order.status)}`,
-                [
-                  {
-                    text: "OK",
-                    onPress: () => onSuccess?.(),
-                  },
-                ]
-              );
-            } catch (err) {
-              console.error("[GRNScreen] Failed to receive:", err);
-              Alert.alert(
-                "Error",
-                "Failed to receive goods. Please try again."
-              );
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [storeId, order, canSubmit, receiveQuantities, totals, notes, orderId, onSuccess]);
+    // SA-P1-004: Show excess warning if any items exceed ordered qty
+    if (excessItems.length > 0) {
+      Alert.alert(
+        "Excess Receipt Warning",
+        `${excessItems.length} item(s) exceed ordered quantity. This will create an alert for SuperAdmin.\n\nContinue with receiving ${totals.receivingQty} units across ${totals.receivingItems} items?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Continue Anyway", style: "destructive", onPress: doSubmit },
+        ]
+      );
+    } else {
+      Alert.alert(
+        "Confirm Receive",
+        `Receive ${totals.receivingQty} units across ${totals.receivingItems} items?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Receive", onPress: doSubmit },
+        ]
+      );
+    }
+  }, [storeId, order, canSubmit, receiveQuantities, totals, notes, orderId, onSuccess, excessItems]);
 
   // Render item
   const renderItem = useCallback(
