@@ -241,6 +241,7 @@ jobs:
 
       - name: Run database migrations
         working-directory: backend
+        timeout-minutes: 2
         env:
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
