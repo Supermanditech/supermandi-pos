@@ -17,6 +17,7 @@ export type StoreRecord = {
   kyc_status?: string | null;
   upi_vpa_updated_at?: string | null;
   upi_vpa_updated_by?: string | null;
+  allowed_payment_methods?: string[] | null; // SA-P1-006
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -122,6 +123,7 @@ export type StoreUpdateInput = {
   contactName?: string;
   contactPhone?: string;
   contactEmail?: string;
+  allowedPaymentMethods?: string[]; // SA-P1-006
 };
 
 export async function updateStore(
