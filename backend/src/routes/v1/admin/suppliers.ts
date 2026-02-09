@@ -1522,3 +1522,122 @@ adminSuppliersRouter.patch("/suppliers/:supplierId/verification-status", require
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to update supplier status" });
   }
 });
+
+// =============================================================================
+// SA-P1-008: Supplier Bank Detail Re-Verification
+// =============================================================================
+
+/**
+ * GET /api/v1/admin/suppliers/bank-changes
+ * List suppliers with pending bank verifications
+ */
+adminSuppliersRouter.get("/suppliers/bank-changes", requireAdminToken, requirePermission("suppliers", "read"), async (_req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const result = await pool.query(
+      `SELECT s.id, s.business_name, s.gstin, s.primary_phone, s.primary_email,
+              s.bank_account_number, s.bank_ifsc, s.bank_account_name,
+              s.bank_verification_status, s.updated_at
+       FROM supplier.suppliers s
+       WHERE s.bank_verification_status = 'pending'
+         AND s.bank_account_number IS NOT NULL
+       ORDER BY s.updated_at DESC`
+    );
+
+    const data = result.rows.map((s) => ({
+      id: s.id,
+      businessName: s.business_name,
+      gstin: s.gstin,
+      phone: s.primary_phone,
+      email: s.primary_email,
+      bankAccountMasked: s.bank_account_number
+        ? "******" + s.bank_account_number.slice(-4)
+        : null,
+      bankIfsc: s.bank_ifsc,
+      bankAccountName: s.bank_account_name,
+      bankVerificationStatus: s.bank_verification_status,
+      updatedAt: s.updated_at,
+    }));
+
+    return res.json({ data, count: data.length });
+  } catch (err: any) {
+    console.error("[admin/suppliers/bank-changes] Query failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch pending bank changes" });
+  }
+});
+
+/**
+ * POST /api/v1/admin/suppliers/:supplierId/bank-verify
+ * Approve or reject a supplier's pending bank detail change
+ */
+adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToken, requirePermission("suppliers", "approve"), supplierApprovalRateLimiter, async (req, res) => {
+  const supplierId = typeof req.params.supplierId === "string" ? req.params.supplierId.trim() : "";
+  if (!supplierId || !UUID_PATTERN.test(supplierId)) {
+    return res.status(400).json({ error: "supplierId must be a valid UUID" });
+  }
+
+  const { action, reason } = req.body as { action?: string; reason?: string };
+  if (!action || !["approve", "reject"].includes(action)) {
+    return res.status(400).json({ error: "action must be 'approve' or 'reject'" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Verify supplier exists and has pending bank verification
+    const check = await pool.query(
+      `SELECT id, bank_verification_status FROM supplier.suppliers WHERE id = $1::uuid`,
+      [supplierId]
+    );
+    if (!check.rows[0]) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+    if (check.rows[0].bank_verification_status !== "pending") {
+      return res.status(400).json({
+        error: "no_pending_verification",
+        message: `Bank verification status is '${check.rows[0].bank_verification_status}', not 'pending'`,
+      });
+    }
+
+    const adminId = (req as any).adminId || null;
+
+    if (action === "approve") {
+      await pool.query(
+        `UPDATE supplier.suppliers
+         SET bank_verification_status = 'verified', bank_verified_at = NOW(), updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [supplierId]
+      );
+    } else {
+      await pool.query(
+        `UPDATE supplier.suppliers
+         SET bank_verification_status = 'rejected', updated_at = NOW()
+         WHERE id = $1::uuid`,
+        [supplierId]
+      );
+    }
+
+    // Log to approval_logs
+    try {
+      await pool.query(
+        `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, reason, actor_id)
+         VALUES ('bank_change', $1::uuid, $2, 'pending', $3, $4, $5)`,
+        [supplierId, action, action === "approve" ? "verified" : "rejected", reason || null, adminId || supplierId]
+      );
+    } catch (logErr) {
+      console.error("[SA-P1-008] Failed to log bank verification:", (logErr as Error).message);
+    }
+
+    return res.json({
+      supplierId,
+      bankVerificationStatus: action === "approve" ? "verified" : "rejected",
+      action,
+    });
+  } catch (err: any) {
+    console.error("[admin/suppliers/bank-verify] Failed:", err?.message);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to verify bank details" });
+  }
+});

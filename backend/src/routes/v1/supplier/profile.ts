@@ -46,6 +46,7 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
         bank_account_number,
         bank_ifsc,
         bank_account_name,
+        bank_verification_status,
         created_at
       FROM supplier.suppliers
       WHERE id = $1`,
@@ -83,6 +84,7 @@ router.get("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, res
           ifscCode: supplier.bank_ifsc,
           accountName: supplier.bank_account_name,
         } : null,
+        bankVerificationStatus: supplier.bank_verification_status || 'pending',
         createdAt: supplier.created_at,
       },
     });
@@ -185,18 +187,46 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
       updates.push(`trade_name = $${paramIndex++}`);
       values.push(tradeName);
     }
+    // SA-P1-008: Track whether bank fields are changing for re-verification
+    let bankFieldsChanging = false;
+    let oldBankDetails: { account_number: string | null; ifsc: string | null; account_name: string | null; status: string } | null = null;
+
     if (bankDetails !== undefined) {
+      // Fetch current bank details to detect actual changes
+      const currentRes = await pool.query(
+        `SELECT bank_account_number as account_number, bank_ifsc as ifsc, bank_account_name as account_name, bank_verification_status as status
+         FROM supplier.suppliers WHERE id = $1`,
+        [req.supplierId]
+      );
+      oldBankDetails = currentRes.rows[0] || null;
+
       if (bankDetails.accountNumber !== undefined) {
+        if (oldBankDetails && bankDetails.accountNumber !== oldBankDetails.account_number) {
+          bankFieldsChanging = true;
+        }
         updates.push(`bank_account_number = $${paramIndex++}`);
         values.push(bankDetails.accountNumber);
       }
       if (bankDetails.ifscCode !== undefined) {
+        const normalized = bankDetails.ifscCode?.toUpperCase();
+        if (oldBankDetails && normalized !== oldBankDetails.ifsc) {
+          bankFieldsChanging = true;
+        }
         updates.push(`bank_ifsc = $${paramIndex++}`);
-        values.push(bankDetails.ifscCode?.toUpperCase());
+        values.push(normalized);
       }
       if (bankDetails.accountName !== undefined) {
+        if (oldBankDetails && bankDetails.accountName !== oldBankDetails.account_name) {
+          bankFieldsChanging = true;
+        }
         updates.push(`bank_account_name = $${paramIndex++}`);
         values.push(bankDetails.accountName);
+      }
+
+      // SA-P1-008: If bank fields actually changed, trigger re-verification
+      if (bankFieldsChanging) {
+        updates.push(`bank_verification_status = 'pending'`);
+        updates.push(`bank_verified_at = NULL`);
       }
     }
 
@@ -228,11 +258,33 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
          verification_status,
          bank_account_number,
          bank_ifsc,
-         bank_account_name`,
+         bank_account_name,
+         bank_verification_status`,
       values
     );
 
     const supplier = result.rows[0];
+
+    // SA-P1-008: Log bank change to approval_logs for audit trail
+    if (bankFieldsChanging && oldBankDetails) {
+      try {
+        await pool.query(
+          `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, changes, reason, actor_id)
+           VALUES ('bank_change', $1, 'submit', $2, 'pending', $3, 'Supplier updated bank details', $1)`,
+          [
+            req.supplierId,
+            oldBankDetails.status || 'pending',
+            JSON.stringify({
+              old: { account_number: oldBankDetails.account_number, ifsc: oldBankDetails.ifsc, account_name: oldBankDetails.account_name },
+              new: { account_number: supplier.bank_account_number, ifsc: supplier.bank_ifsc, account_name: supplier.bank_account_name },
+            }),
+          ]
+        );
+      } catch (logErr) {
+        // Audit log failure should not block the profile update
+        console.error("[SA-P1-008] Failed to log bank change:", (logErr as Error).message);
+      }
+    }
 
     res.json({
       data: {
@@ -253,6 +305,7 @@ router.patch("/profile", requireSupplierAuth, async (req: SupplierAuthRequest, r
           ifscCode: supplier.bank_ifsc,
           accountName: supplier.bank_account_name,
         } : null,
+        bankVerificationStatus: supplier.bank_verification_status || 'pending',
       },
     });
   } catch (error) {
