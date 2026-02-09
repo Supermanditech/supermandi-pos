@@ -270,6 +270,78 @@ export async function rejectProduct(productId: string, reason: string): Promise<
   return res.json();
 }
 
+// =============================================================================
+// SA-P1-005: Supplier Suspension / Reactivation
+// =============================================================================
+
+export type SupplierStatusHistoryEntry = {
+  id: string;
+  previousStatus: string;
+  newStatus: string;
+  reason: string | null;
+  changedBy: string | null;
+  changedByType: string | null;
+  createdAt: string;
+};
+
+/**
+ * Change supplier verification status (suspend/reactivate) via state machine
+ */
+export async function changeSupplierStatus(
+  supplierId: string,
+  status: string,
+  reason?: string
+): Promise<{ supplier: VerifiedSupplier; previousStatus: string; newStatus: string }> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/suppliers/${encodeURIComponent(supplierId)}/verification-status`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ status, reason }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch supplier status change history (audit trail)
+ */
+export async function fetchSupplierStatusHistory(
+  supplierId: string
+): Promise<SupplierStatusHistoryEntry[]> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/suppliers/${encodeURIComponent(supplierId)}/status-history`,
+    {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.history) ? data.history : [];
+}
+
 /**
  * Edit product details, set margin, and configure BNPL (SA-1.3-003)
  */
