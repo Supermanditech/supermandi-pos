@@ -43,10 +43,12 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let bnplEnabled = false;
   // CA-1.4-005: Credit enabled status for credit/loans feature
   let creditEnabled = false;
+  // SA-P1-006: Allowed payment methods per store
+  let allowedPaymentMethods: string[] = ['CASH', 'UPI', 'DUE'];
   if (status.storeId) {
     try {
       const storeRes = await pool.query(
-        `SELECT name, code, status, bnpl_enabled, credit_enabled FROM platform.stores WHERE id = $1::uuid`,
+        `SELECT name, code, status, bnpl_enabled, credit_enabled, allowed_payment_methods FROM platform.stores WHERE id = $1::uuid`,
         [status.storeId]
       );
       const storeRow = storeRes.rows[0];
@@ -58,6 +60,10 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
       bnplEnabled = storeRow?.bnpl_enabled === true;
       // CA-1.4-005: Credit enabled status from store settings
       creditEnabled = storeRow?.credit_enabled === true;
+      // SA-P1-006: Allowed payment methods (default all if not set)
+      if (Array.isArray(storeRow?.allowed_payment_methods) && storeRow.allowed_payment_methods.length > 0) {
+        allowedPaymentMethods = storeRow.allowed_payment_methods;
+      }
     } catch (storeErr: any) {
       console.error("[uiStatus] Store lookup failed:", storeErr?.message);
     }
@@ -125,6 +131,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     lastSyncAt: row.last_sync_at ? new Date(row.last_sync_at).toISOString() : null,
     lastSeenOnline: nowIso,
     upiVpa,
+    // SA-P1-006: Payment methods allowed for this store
+    allowedPaymentMethods,
     printerOk: null,
     scannerOk: null,
     features: {

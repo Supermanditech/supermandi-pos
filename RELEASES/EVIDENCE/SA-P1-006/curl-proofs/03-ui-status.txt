@@ -1,0 +1,27 @@
+# SA-P1-006 Curl Proof: POS ui-status — allowedPaymentMethods in response
+
+## Command
+curl -s "http://localhost:3010/api/v1/pos/ui-status" -H "X-Device-Token: demo-smoke-test-token-001"
+
+## Actual Response — DUE disabled (2026-02-09T14:47Z)
+# {
+#   "storeId": "a0000000-0000-0000-0000-000000000001",
+#   "storeName": "SuperMandi Demo Store",
+#   "storeCode": "SU260208-004",
+#   "storeStatus": "ACTIVE",
+#   "deviceId": "demo-device-001",
+#   "storeActive": true,
+#   "deviceActive": true,
+#   "allowedPaymentMethods": ["CASH", "UPI"],
+#   "features": { "buyEnabled": true, "reorderEnabled": true, ... }
+# }
+
+## Actual Response — defaults restored (2026-02-09T14:47Z)
+# {
+#   "storeId": "a0000000-0000-0000-0000-000000000001",
+#   "storeName": "SuperMandi Demo Store",
+#   "allowedPaymentMethods": ["CASH", "UPI", "DUE"],
+#   ...
+# }
+
+## Status: PASS

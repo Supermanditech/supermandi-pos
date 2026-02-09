@@ -193,6 +193,7 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
           scan_lookup_v2_enabled,
           upi_vpa_updated_at,
           upi_vpa_updated_by,
+          allowed_payment_methods,
           created_at,
           updated_at
         FROM platform.stores
@@ -207,7 +208,8 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
     const stores = result.rows.map((row) => ({
       ...row,
       storeName: row.name,
-      storeCode: row.store_code ?? row.code
+      storeCode: row.store_code ?? row.code,
+      allowedPaymentMethods: row.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE']
     }));
 
     return res.json({ stores, total, limit, offset });
@@ -271,6 +273,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           scan_lookup_v2_enabled,
           upi_vpa_updated_at,
           upi_vpa_updated_by,
+          allowed_payment_methods,
           created_at,
           updated_at
         FROM platform.stores
@@ -284,7 +287,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       return res.status(404).json({ error: "store not found" });
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code } });
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'] } });
   } catch (error: any) {
     console.error("[admin/stores/:storeId] Query failed:", error?.message);
     // Fallback with base columns
@@ -325,7 +328,9 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     posDeviceId,
     kycStatus,
     scanLookupV2Enabled,
-    scan_lookup_v2_enabled: scanLookupV2EnabledSnake
+    scan_lookup_v2_enabled: scanLookupV2EnabledSnake,
+    allowedPaymentMethods,
+    allowed_payment_methods: allowedPaymentMethodsSnake
   } = req.body as Record<string, unknown>;
 
   const updates: string[] = [];
@@ -384,6 +389,20 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
     addUpdate("contact_email", trimmedEmail);
   }
 
+  // SA-P1-006: Allowed payment methods per store
+  const apmValue = (allowedPaymentMethods ?? allowedPaymentMethodsSnake) as unknown;
+  if (apmValue !== undefined) {
+    if (!Array.isArray(apmValue) || apmValue.length === 0) {
+      return res.status(400).json({ error: "allowedPaymentMethods must be a non-empty array" });
+    }
+    const validMethods = ['CASH', 'UPI', 'DUE'];
+    const normalized = (apmValue as string[]).map((m) => String(m).toUpperCase());
+    if (normalized.some((m) => !validMethods.includes(m))) {
+      return res.status(400).json({ error: "allowedPaymentMethods: only CASH, UPI, DUE allowed" });
+    }
+    addUpdate("allowed_payment_methods", `{${normalized.join(',')}}`);
+  }
+
   if (updates.length === 0) {
     return res.status(400).json({ error: "No fields to update" });
   }
@@ -399,7 +418,7 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       UPDATE platform.stores
       SET ${updates.join(", ")}
       WHERE ${isUuid ? `id = $${values.length + 1}::uuid` : `UPPER(code) = UPPER($${values.length + 1})`}
-      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, created_at, updated_at
+      RETURNING id::TEXT as id, name, code, status, address, contact_name, contact_phone, contact_email, allowed_payment_methods, created_at, updated_at
     `;
     values.push(storeId);
 
@@ -416,7 +435,8 @@ adminStoresRouter.patch("/stores/:storeId", requirePermission("stores", "update"
       active: store.status === "ACTIVE", // FIX-019-006: Match UPPERCASE DB status
       contactName: store.contact_name,
       contactPhone: store.contact_phone,
-      contactEmail: store.contact_email
+      contactEmail: store.contact_email,
+      allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE']
     } });
   } catch (err: any) {
     console.error("[admin/stores PATCH] Update failed:", err?.message);

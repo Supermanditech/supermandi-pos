@@ -1,0 +1,36 @@
+# SA-P1-006 Curl Proof: Sale confirm — 403 payment_method_not_allowed
+
+## Precondition
+# DUE disabled for Demo store via PATCH (see 02-admin-patch-disable-due.txt)
+
+## Command — DUE (disallowed)
+curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: demo-smoke-test-token-001" \
+  -d '{"paymentMode":"DUE"}'
+
+## Actual Response (2026-02-09T14:47Z)
+# HTTP 403
+# {
+#   "error": "payment_method_not_allowed",
+#   "message": "DUE is not enabled for this store",
+#   "allowedMethods": ["CASH", "UPI"]
+# }
+
+## Command — CASH (allowed, passes payment gate)
+curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: demo-smoke-test-token-001" \
+  -d '{"paymentMode":"CASH"}'
+
+## Actual Response (2026-02-09T14:47Z)
+# HTTP 404
+# {"error":"sale_not_found"}
+# (CASH passes SA-P1-006 gate, fails at sale lookup — proves enforcement works)
+
+## Gate order proven:
+# 1. SA-P1-006 payment_method_not_allowed (line 1198) fires FIRST
+# 2. sale_not_found (line 1225) fires SECOND for allowed methods
+# Defense-in-depth: POS hides tabs + backend rejects at confirm
+
+## Status: PASS

@@ -1,0 +1,87 @@
+# SA-P1-006: Payment Method Control Per Store — Scope & Parity
+
+## Baseline
+
+| Key | Value |
+|-----|-------|
+| Branch | feat/sa-p1-006-payment-method-control |
+| HEAD SHA | (run: git rev-parse --short HEAD) |
+| Base | main (after SA-P1-005 merge) |
+| Commits | 5 (migration + backend + POS + superadmin + fix) |
+
+## Services Under Test
+
+| Service | Port | Image |
+|---------|------|-------|
+| main-backend | 3010 | supermandi/main-backend:local (build from source) |
+| api-gateway | 8080 | supermandi/api-gateway:9bb03f7 |
+| superadmin | 8083 | supermandi/superadmin:local (build from source) |
+| postgres | 5432 | postgres:16-alpine |
+
+## Change Scope (9 files, SA-P1-006 only)
+
+| File | Purpose | Scope |
+|------|---------|-------|
+| backend/migrations/100_sa_p1_006_allowed_payment_methods.sql | Migration: column + view | SA-P1-006 |
+| backend/src/routes/v1/pos/uiStatus.ts | Return allowedPaymentMethods | SA-P1-006 |
+| backend/src/routes/v1/admin/stores.ts | PATCH accept + GET return | SA-P1-006 |
+| backend/src/routes/v1/pos/sales.ts | 403 enforcement at confirm | SA-P1-006 |
+| backend/src/routes/v1/pos/payments.ts | 403 enforcement at split | SA-P1-006 |
+| src/services/api/uiStatusApi.ts | Parse allowedPaymentMethods | SA-P1-006 |
+| src/screens/PaymentScreen.tsx | Filter mode tabs + fallback | SA-P1-006 |
+| supermandi-superadmin/src/api/stores.ts | StoreRecord + StoreUpdateInput | SA-P1-006 |
+| supermandi-superadmin/src/App.tsx | Checkboxes in expanded row | SA-P1-006 |
+
+### NOT Changed (scope guard)
+- No env var additions
+- No dependency changes
+- No CI pipeline changes
+- No changes to retailer-admin, supplier-portal, or landing
+- No changes to auth flow
+- Existing stores default to all methods enabled (zero disruption)
+
+## Migration Details
+
+- **Column**: `allowed_payment_methods TEXT[] DEFAULT '{CASH,UPI,DUE}'` on `platform.stores`
+- **View**: `public.stores` recreated to include new column
+- **Auto-run**: Migration runs automatically on `main-backend` container startup via `migrate-prod.js`
+- **Idempotent**: `ADD COLUMN IF NOT EXISTS` + `DROP VIEW IF EXISTS`
+
+## API Endpoints
+
+### Admin (x-admin-token: local-test-token)
+
+| Method | URL | Purpose |
+|--------|-----|---------|
+| GET | /api/v1/admin/stores | List stores (includes allowed_payment_methods) |
+| GET | /api/v1/admin/stores/:storeId | Single store (includes allowedPaymentMethods) |
+| PATCH | /api/v1/admin/stores/:storeId | Update (accepts allowedPaymentMethods) |
+
+### POS (X-Device-Token: demo-smoke-test-token-001)
+
+| Method | URL | Purpose |
+|--------|-----|---------|
+| GET | /api/v1/pos/ui-status | Returns allowedPaymentMethods for device's store |
+| POST | /api/v1/pos/sales/:saleId/confirm | 403 if paymentMode not in allowed |
+
+## Defense-in-Depth Layers
+
+1. **SuperAdmin UI**: Checkboxes — controls which methods a store can use
+2. **Admin PATCH API**: Validates CASH/UPI/DUE only, non-empty array
+3. **POS ui-status**: Returns allowed methods → POS hides disabled tabs
+4. **Sale confirm**: Backend 403 `payment_method_not_allowed` (inside txn, first check)
+5. **Split payment**: Backend 403 `payment_method_not_allowed` (per split component)
+
+## Demo Store IDs (local-prod)
+
+| Store | ID | Code |
+|-------|----|------|
+| Demo | a0000000-0000-0000-0000-000000000001 | DEMO001 |
+| Prelive | a0000000-0000-0000-0000-000000000002 | SU260208-003 |
+
+## Demo Device Token (pre-seeded in migration 056)
+
+| Device | Token | Store |
+|--------|-------|-------|
+| demo-device-001 | demo-smoke-test-token-001 | Demo (DEMO001) |
+| demo-device-002 | demo-smoke-test-token-002 | Demo (DEMO001) |

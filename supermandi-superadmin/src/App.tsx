@@ -663,6 +663,8 @@ export default function App() {
   // P1-SADM-002: Store contact fields
   const [storeContactEdits, setStoreContactEdits] = useState<Record<string, { address: string; contactName: string; contactPhone: string; contactEmail: string }>>({});
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null);
+  // SA-P1-006: Payment method edits per store
+  const [storePaymentEdits, setStorePaymentEdits] = useState<Record<string, string[]>>({});
 
   // Store creation
   const [createStoreName, setCreateStoreName] = useState<string>("");
@@ -1886,6 +1888,18 @@ export default function App() {
     };
   }
 
+  // SA-P1-006: Payment method editing helpers
+  function getStorePaymentDraft(s: StoreRecord): string[] {
+    return storePaymentEdits[s.id] ?? (s.allowed_payment_methods ?? ["CASH", "UPI", "DUE"]);
+  }
+  function toggleStorePaymentMethod(storeId: string, method: string, current: string[]) {
+    const next = current.includes(method)
+      ? current.filter((m) => m !== method)
+      : [...current, method];
+    if (next.length === 0) return; // at least one method required
+    setStorePaymentEdits((prev) => ({ ...prev, [storeId]: next }));
+  }
+
   async function handleStoreNameSave(storeId: string) {
     const nextName = (storeNameEdits[storeId] ?? "").trim();
     if (!nextName) {
@@ -1897,6 +1911,8 @@ export default function App() {
     try {
       // P1-SADM-002: Include contact fields in update
       const contactDraft = storeContactEdits[storeId];
+      // SA-P1-006: Include payment methods in update
+      const paymentDraft = storePaymentEdits[storeId];
       const updated = await updateStore(storeId, {
         storeName: nextName,
         ...(contactDraft ? {
@@ -1904,10 +1920,15 @@ export default function App() {
           contactName: contactDraft.contactName,
           contactPhone: contactDraft.contactPhone,
           contactEmail: contactDraft.contactEmail
-        } : {})
+        } : {}),
+        ...(paymentDraft ? { allowedPaymentMethods: paymentDraft } : {})
       });
       setStoreDirectory((prev) => prev.map((s) => (s.id === storeId ? updated : s)));
       setStoreNameEdits((prev) => ({ ...prev, [storeId]: updated.name ?? updated.storeName ?? nextName }));
+      // SA-P1-006: Clear payment draft after successful save
+      if (paymentDraft) {
+        setStorePaymentEdits((prev) => { const next = { ...prev }; delete next[storeId]; return next; });
+      }
     } catch (e: any) {
       setStoreNameError(e?.message ? String(e.message) : "Failed to update store.");
     } finally {
@@ -2993,6 +3014,25 @@ export default function App() {
                                     onChange={(e) => updateStoreContactDraft(s.id, { address: e.target.value })}
                                     placeholder="Store address"
                                   />
+                                </div>
+                              </div>
+                              {/* SA-P1-006: Payment method checkboxes */}
+                              <div style={{ marginTop: "12px" }}>
+                                <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Payment Methods</label>
+                                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                                  {(["CASH", "UPI", "DUE"] as const).map((method) => {
+                                    const draft = getStorePaymentDraft(s);
+                                    return (
+                                      <label key={method} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={draft.includes(method)}
+                                          onChange={() => toggleStorePaymentMethod(s.id, method, draft)}
+                                        />
+                                        {method}
+                                      </label>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </td>
