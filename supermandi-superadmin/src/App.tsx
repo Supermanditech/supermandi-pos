@@ -63,7 +63,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
-import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags"; // SA-P0-005+P1-007
+import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags"; // SA-P0-005+P1-007
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -862,6 +862,13 @@ export default function App() {
   const [storeFeatureFlags, setStoreFeatureFlags] = useState<Record<string, StoreFeatureFlag[]>>({});
   const [storeFFLoading, setStoreFFLoading] = useState<Record<string, boolean>>({});
 
+  // SA-P1-007: Bulk feature flag state
+  const [selectedStoreIds, setSelectedStoreIds] = useState<Set<string>>(new Set());
+  const [bulkFlagKey, setBulkFlagKey] = useState("");
+  const [bulkFlagAction, setBulkFlagAction] = useState<"enable" | "disable">("enable");
+  const [bulkFlagLoading, setBulkFlagLoading] = useState(false);
+  const [bulkFlagResult, setBulkFlagResult] = useState("");
+
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
@@ -1592,6 +1599,35 @@ export default function App() {
     }
   }
 
+  // SA-P1-007: Bulk feature flag handlers
+  function toggleStoreSelection(storeId: string) {
+    setSelectedStoreIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(storeId)) next.delete(storeId); else next.add(storeId);
+      return next;
+    });
+  }
+
+  async function handleBulkFF() {
+    if (!selectedStoreIds.size || !bulkFlagKey) return;
+    setBulkFlagLoading(true);
+    setBulkFlagResult("");
+    try {
+      const result = await bulkSetOverride(Array.from(selectedStoreIds), bulkFlagKey, bulkFlagAction === "enable");
+      setBulkFlagResult(`Updated ${result.updated} store(s)`);
+      setStoreFeatureFlags((prev) => {
+        const next = { ...prev };
+        for (const id of selectedStoreIds) delete next[id];
+        return next;
+      });
+      setSelectedStoreIds(new Set());
+    } catch (e: unknown) {
+      setBulkFlagResult(`Error: ${e instanceof Error ? e.message : "unknown"}`);
+    } finally {
+      setBulkFlagLoading(false);
+    }
+  }
+
   // SA-P1-004: GRN excess alerts handlers
   async function refreshGrnAlerts() {
     setGrnAlertsLoading(true);
@@ -1646,7 +1682,7 @@ export default function App() {
     r.refreshHealth?.();
     if (shouldRefreshEvents) r.refreshEvents?.();
     if (shouldRefreshDevices) r.refreshDevices?.();
-    if (shouldRefreshStores) r.refreshStores?.();
+    if (shouldRefreshStores) { r.refreshStores?.(); refreshFeatureFlags(); }
     if (shouldRefreshSuppliers) r.refreshSuppliers?.();
     if (shouldRefreshUsers) r.refreshUsers?.();
     if (shouldRefreshSettings) { r.refreshSettings?.(); refreshFeatureFlags(); }
@@ -2997,6 +3033,26 @@ export default function App() {
           {storeDirectoryError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
           {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
 
+          {/* SA-P1-007: Bulk feature flag toolbar */}
+          {selectedStoreIds.size > 0 && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 16px", background: "#eff6ff", borderRadius: 6, margin: "0 16px 8px" }}>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{selectedStoreIds.size} store(s) selected</span>
+              <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} style={{ fontSize: 13, padding: "4px 8px" }}>
+                <option value="">Select flag...</option>
+                {featureFlags.map((f) => <option key={f.flag_key} value={f.flag_key}>{f.flag_key}</option>)}
+              </select>
+              <select value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} style={{ fontSize: 13, padding: "4px 8px" }}>
+                <option value="enable">Enable</option>
+                <option value="disable">Disable</option>
+              </select>
+              <button onClick={handleBulkFF} disabled={bulkFlagLoading || !bulkFlagKey}>
+                {bulkFlagLoading ? "Applying..." : "Apply"}
+              </button>
+              <button className="btnGhost" onClick={() => setSelectedStoreIds(new Set())}>Clear</button>
+              {bulkFlagResult && <span style={{ fontSize: 12, color: "#666" }}>{bulkFlagResult}</span>}
+            </div>
+          )}
+
           {storeDirectory.length === 0 ? (
             <div className="empty">
               {storeDirectoryLoading ? "Loading stores..." : "No stores found."}
@@ -3006,6 +3062,20 @@ export default function App() {
               <table className="table">
                 <thead>
                   <tr>
+                    <th style={{ width: 32 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStoreIds.size === storeDirectory.length && storeDirectory.length > 0}
+                        onChange={() => {
+                          if (selectedStoreIds.size === storeDirectory.length) {
+                            setSelectedStoreIds(new Set());
+                          } else {
+                            setSelectedStoreIds(new Set(storeDirectory.map((s) => s.id)));
+                          }
+                        }}
+                        title="Select all"
+                      />
+                    </th>
                     <th>Store ID</th>
                     <th>Store Name</th>
                     <th>Contact</th>
@@ -3020,6 +3090,13 @@ export default function App() {
                     return (
                       <React.Fragment key={s.id}>
                         <tr>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedStoreIds.has(s.id)}
+                              onChange={() => toggleStoreSelection(s.id)}
+                            />
+                          </td>
                           <td className="mono">{s.id}</td>
                           <td>
                             <input
@@ -3048,7 +3125,7 @@ export default function App() {
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={5} style={{ background: "#f9fafb", padding: "12px" }}>
+                            <td colSpan={6} style={{ background: "#f9fafb", padding: "12px" }}>
                               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", maxWidth: "600px" }}>
                                 <div>
                                   <label style={{ fontSize: "12px", color: "#666" }}>Contact Name</label>
