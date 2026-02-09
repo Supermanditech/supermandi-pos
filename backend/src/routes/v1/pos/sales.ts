@@ -1195,6 +1195,21 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     await client.query("BEGIN");
     await client.query("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE");
 
+    // SA-P1-006: Check store-level payment method restrictions
+    const apmRes = await client.query(
+      `SELECT allowed_payment_methods FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    const allowedMethods: string[] = apmRes.rows[0]?.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'];
+    if (!allowedMethods.includes(paymentMode)) {
+      await client.query("ROLLBACK");
+      return res.status(403).json({
+        error: "payment_method_not_allowed",
+        message: `${paymentMode} is not enabled for this store`,
+        allowedMethods
+      });
+    }
+
     // AUD-060-D FIX: Get sale WITH ROW LOCK to prevent cancel+confirm race
     const saleRes = await client.query(
       `

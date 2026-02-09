@@ -384,6 +384,22 @@ posPaymentsRouter.post(
       return res.status(503).json({ error: "database unavailable" });
     }
 
+    // SA-P1-006: Validate each split payment mode against store settings
+    const apmRes = await pool.query(
+      `SELECT allowed_payment_methods FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+    const allowedMethods: string[] = apmRes.rows[0]?.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'];
+    for (const p of payments) {
+      if (!allowedMethods.includes(p.mode)) {
+        return res.status(403).json({
+          error: "payment_method_not_allowed",
+          message: `${p.mode} is not enabled for this store`,
+          allowedMethods
+        });
+      }
+    }
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
