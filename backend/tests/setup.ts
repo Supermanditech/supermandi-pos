@@ -118,9 +118,12 @@ async function cleanTestData(client: any): Promise<void> {
 
   for (const table of tables) {
     try {
+      await client.query(`SAVEPOINT clean_${table.replace('.', '_')}`);
       await client.query(`DELETE FROM ${table} WHERE id::text LIKE '00000000-0000-0000-0000-%' OR store_id::text LIKE '00000000-0000-0000-0000-%'`);
+      await client.query(`RELEASE SAVEPOINT clean_${table.replace('.', '_')}`);
     } catch {
-      // Table might not exist or column might not exist, continue
+      // Table might not exist or column might not exist — rollback to savepoint and continue
+      await client.query(`ROLLBACK TO SAVEPOINT clean_${table.replace('.', '_')}`);
     }
   }
 }
