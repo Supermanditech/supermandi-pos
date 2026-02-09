@@ -1602,7 +1602,9 @@ adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToke
       });
     }
 
-    const adminId = (req as any).adminId || null;
+    // adminId may be "master-token" or "jwt-session" (not a UUID) for legacy/session auth
+    const rawAdminId = (req as any).adminId || null;
+    const adminId = rawAdminId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawAdminId) ? rawAdminId : null;
 
     if (action === "approve") {
       await pool.query(
