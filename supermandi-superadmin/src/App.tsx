@@ -63,6 +63,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
+import { fetchGlobalFlags, toggleGlobalFlag, type GlobalFeatureFlag } from "./api/featureFlags"; // SA-P0-005
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -851,6 +852,12 @@ export default function App() {
   const [grnAlertsOffset, setGrnAlertsOffset] = useState(0);
   const [grnAlertActionLoading, setGrnAlertActionLoading] = useState<string | null>(null);
 
+  // SA-P0-005: Feature flags state
+  const [featureFlags, setFeatureFlags] = useState<GlobalFeatureFlag[]>([]);
+  const [featureFlagsLoading, setFeatureFlagsLoading] = useState(false);
+  const [featureFlagSaving, setFeatureFlagSaving] = useState<Record<string, boolean>>({});
+  const [featureFlagsError, setFeatureFlagsError] = useState("");
+
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
@@ -1521,6 +1528,36 @@ export default function App() {
     }
   }
 
+  // SA-P0-005: Feature flags handlers
+  async function refreshFeatureFlags() {
+    setFeatureFlagsLoading(true);
+    setFeatureFlagsError("");
+    try {
+      const flags = await fetchGlobalFlags();
+      setFeatureFlags(flags);
+    } catch (e: unknown) {
+      setFeatureFlagsError(e instanceof Error ? e.message : "Failed to fetch feature flags");
+    } finally {
+      setFeatureFlagsLoading(false);
+    }
+  }
+
+  async function handleToggleGlobalFlag(key: string, enabled: boolean) {
+    setFeatureFlagSaving((prev) => ({ ...prev, [key]: true }));
+    try {
+      await toggleGlobalFlag(key, enabled);
+      setFeatureFlags((prev) =>
+        prev.map((f) =>
+          f.flag_key === key ? { ...f, enabled, updated_at: new Date().toISOString() } : f
+        )
+      );
+    } catch (e: unknown) {
+      setFeatureFlagsError(e instanceof Error ? e.message : "Failed to toggle flag");
+    } finally {
+      setFeatureFlagSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
   // SA-P1-004: GRN excess alerts handlers
   async function refreshGrnAlerts() {
     setGrnAlertsLoading(true);
@@ -1578,7 +1615,7 @@ export default function App() {
     if (shouldRefreshStores) r.refreshStores?.();
     if (shouldRefreshSuppliers) r.refreshSuppliers?.();
     if (shouldRefreshUsers) r.refreshUsers?.();
-    if (shouldRefreshSettings) r.refreshSettings?.();
+    if (shouldRefreshSettings) { r.refreshSettings?.(); refreshFeatureFlags(); }
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
@@ -4338,6 +4375,78 @@ export default function App() {
                 ) : (
                   <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
                 )}
+              </div>
+            </div>
+
+            {/* SA-P0-005: Feature Kill Switch Panel */}
+            <div style={{ marginTop: 24 }}>
+              <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>Feature Kill Switch</h3>
+              <div className="muted" style={{ marginBottom: 12 }}>
+                Disable features globally. POS respects changes on next ui-status fetch.
+              </div>
+
+              <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} style={{ marginBottom: 12 }}>
+                {featureFlagsLoading ? "Loading..." : "Refresh Flags"}
+              </button>
+
+              {featureFlagsError && <div className="banner" style={{ marginBottom: 8 }}>{featureFlagsError}</div>}
+
+              <div className="tableWrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                      <th>Last Changed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {featureFlags.map((flag) => (
+                      <tr key={flag.flag_key}>
+                        <td><span className="mono">{flag.flag_key}</span></td>
+                        <td style={{ fontSize: 12, color: "#666" }}>{flag.description || "\u2014"}</td>
+                        <td>
+                          <span className={`badge ${flag.enabled ? "badgeOk" : "badgeErr"}`}>
+                            {flag.enabled ? "ENABLED" : "DISABLED"}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => handleToggleGlobalFlag(flag.flag_key, !flag.enabled)}
+                            disabled={featureFlagSaving[flag.flag_key]}
+                            style={{
+                              background: flag.enabled ? "#ef4444" : "#22c55e",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 4,
+                              padding: "4px 12px",
+                              cursor: "pointer",
+                              fontSize: 12,
+                            }}
+                          >
+                            {featureFlagSaving[flag.flag_key]
+                              ? "Saving..."
+                              : flag.enabled
+                              ? "KILL"
+                              : "Enable"}
+                          </button>
+                        </td>
+                        <td style={{ fontSize: 11, color: "#888" }}>
+                          {flag.updated_at ? formatDateTime(flag.updated_at) : "\u2014"}
+                        </td>
+                      </tr>
+                    ))}
+                    {featureFlags.length === 0 && !featureFlagsLoading && (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: "center", color: "#888" }}>
+                          No feature flags found. Migration may be pending.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
