@@ -21,6 +21,7 @@ import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: 
 import { posStaffRouter } from "./pos/staff";  // SA-P1-001: POS staff login
 import { adminStaffRouter } from "./admin/staff";  // SA-P1-001: Admin staff CRUD
 import { adminGrnAlertsRouter } from "./admin/grnAlerts";  // SA-P1-004: GRN excess alerts
+import { adminFeatureFlagsRouter } from "./admin/featureFlags";  // SA-P0-005: Feature flags
 import posTranslationsRouter from "./pos/translations";
 import { reorderRouter } from "./reorder";
 import { ordersRouter } from "./orders";
@@ -127,6 +128,7 @@ v1Router.use("/admin/documents", adminDocumentsRouter);  // DOCS-001: Admin docu
 v1Router.use("/admin", adminRegistrationEventsRouter);  // RO-007: Registration events visibility
 v1Router.use("/admin", adminStaffRouter);  // SA-P1-001: Store staff CRUD
 v1Router.use("/admin", adminGrnAlertsRouter);  // SA-P1-004: GRN excess alerts
+v1Router.use("/admin", adminFeatureFlagsRouter);  // SA-P0-005: Feature flag CRUD
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);

@@ -1,0 +1,38 @@
+SA-P0-005 + SA-P1-007: Parity and Scope Verification
+=====================================================
+
+Date: 2026-02-09
+Branch: feat/sa-p0-005-p1-007-feature-flags
+Base: main (738ded5)
+Head: d88e4e0
+
+Files Changed (6 files, 664 insertions, 6 deletions):
+-----------------------------------------------------
+1. backend/migrations/123_sa_p0_005_feature_flag_seeds.sql  NEW  - Seed 7 canonical feature keys
+2. backend/src/routes/v1/admin/featureFlags.ts              NEW  - 6 admin API endpoints
+3. backend/src/routes/v1/index.ts                           MOD  - +2 lines (import + registration)
+4. backend/src/routes/v1/pos/uiStatus.ts                    MOD  - +35 lines (kill switch query + 2 new flags)
+5. supermandi-superadmin/src/App.tsx                         MOD  - +253 lines (kill switch panel + per-store + bulk)
+6. supermandi-superadmin/src/api/featureFlags.ts             NEW  - API client (6 functions + 2 types)
+
+Scope Check:
+-----------
+- NO lockfile changes (pnpm-lock.yaml unchanged)
+- NO unrelated file modifications
+- NO env var changes
+- NO package.json changes
+- All changes scoped to SA-P0-005 (Feature Kill Switch) and SA-P1-007 (Per-Store Overrides)
+- Existing ui-status response shape preserved (additive only: voiceEnabled, categoryBrowsingEnabled)
+- All 7 canonical flag keys default to enabled=true (no behavioral change on deploy)
+
+Typecheck:
+---------
+pnpm -r typecheck: 22/22 PASS (zero errors)
+
+Commits (5):
+-----------
+a907d93 SA-P0-005: seed 7 canonical feature keys in platform.feature_flags
+34ddad0 SA-P0-005: backend feature flag API + ui-status kill switch integration
+76bbaf3 SA-P0-005: SuperAdmin kill switch panel + feature flags API client
+f1ffa77 SA-P1-007: per-store feature flags in store expanded row
+d88e4e0 SA-P1-007: bulk feature flag operations (select + toolbar)

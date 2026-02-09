@@ -63,6 +63,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
+import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags"; // SA-P0-005+P1-007
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -851,6 +852,23 @@ export default function App() {
   const [grnAlertsOffset, setGrnAlertsOffset] = useState(0);
   const [grnAlertActionLoading, setGrnAlertActionLoading] = useState<string | null>(null);
 
+  // SA-P0-005: Feature flags state
+  const [featureFlags, setFeatureFlags] = useState<GlobalFeatureFlag[]>([]);
+  const [featureFlagsLoading, setFeatureFlagsLoading] = useState(false);
+  const [featureFlagSaving, setFeatureFlagSaving] = useState<Record<string, boolean>>({});
+  const [featureFlagsError, setFeatureFlagsError] = useState("");
+
+  // SA-P1-007: Per-store feature flags state
+  const [storeFeatureFlags, setStoreFeatureFlags] = useState<Record<string, StoreFeatureFlag[]>>({});
+  const [storeFFLoading, setStoreFFLoading] = useState<Record<string, boolean>>({});
+
+  // SA-P1-007: Bulk feature flag state
+  const [selectedStoreIds, setSelectedStoreIds] = useState<Set<string>>(new Set());
+  const [bulkFlagKey, setBulkFlagKey] = useState("");
+  const [bulkFlagAction, setBulkFlagAction] = useState<"enable" | "disable">("enable");
+  const [bulkFlagLoading, setBulkFlagLoading] = useState(false);
+  const [bulkFlagResult, setBulkFlagResult] = useState("");
+
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
@@ -1521,6 +1539,95 @@ export default function App() {
     }
   }
 
+  // SA-P0-005: Feature flags handlers
+  async function refreshFeatureFlags() {
+    setFeatureFlagsLoading(true);
+    setFeatureFlagsError("");
+    try {
+      const flags = await fetchGlobalFlags();
+      setFeatureFlags(flags);
+    } catch (e: unknown) {
+      setFeatureFlagsError(e instanceof Error ? e.message : "Failed to fetch feature flags");
+    } finally {
+      setFeatureFlagsLoading(false);
+    }
+  }
+
+  async function handleToggleGlobalFlag(key: string, enabled: boolean) {
+    setFeatureFlagSaving((prev) => ({ ...prev, [key]: true }));
+    try {
+      await toggleGlobalFlag(key, enabled);
+      setFeatureFlags((prev) =>
+        prev.map((f) =>
+          f.flag_key === key ? { ...f, enabled, updated_at: new Date().toISOString() } : f
+        )
+      );
+    } catch (e: unknown) {
+      setFeatureFlagsError(e instanceof Error ? e.message : "Failed to toggle flag");
+    } finally {
+      setFeatureFlagSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  // SA-P1-007: Per-store feature flag handlers
+  async function loadStoreFeatureFlags(storeId: string) {
+    if (storeFeatureFlags[storeId]) return;
+    setStoreFFLoading((prev) => ({ ...prev, [storeId]: true }));
+    try {
+      const flags = await fetchStoreFeatureFlags(storeId);
+      setStoreFeatureFlags((prev) => ({ ...prev, [storeId]: flags }));
+    } catch (e: unknown) {
+      console.error("[SA-P1-007] Load store flags failed:", e instanceof Error ? e.message : "unknown");
+    } finally {
+      setStoreFFLoading((prev) => ({ ...prev, [storeId]: false }));
+    }
+  }
+
+  async function handleStoreFFToggle(storeId: string, flag: StoreFeatureFlag) {
+    if (!flag.global_enabled) return;
+    const newEnabled = !flag.effective;
+    try {
+      if (flag.store_override !== null && newEnabled === flag.global_enabled) {
+        await removeStoreOverride(storeId, flag.flag_key);
+      } else {
+        await setStoreOverride(storeId, flag.flag_key, newEnabled);
+      }
+      const flags = await fetchStoreFeatureFlags(storeId);
+      setStoreFeatureFlags((prev) => ({ ...prev, [storeId]: flags }));
+    } catch (e: unknown) {
+      console.error("[SA-P1-007] Toggle store flag failed:", e instanceof Error ? e.message : "unknown");
+    }
+  }
+
+  // SA-P1-007: Bulk feature flag handlers
+  function toggleStoreSelection(storeId: string) {
+    setSelectedStoreIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(storeId)) next.delete(storeId); else next.add(storeId);
+      return next;
+    });
+  }
+
+  async function handleBulkFF() {
+    if (!selectedStoreIds.size || !bulkFlagKey) return;
+    setBulkFlagLoading(true);
+    setBulkFlagResult("");
+    try {
+      const result = await bulkSetOverride(Array.from(selectedStoreIds), bulkFlagKey, bulkFlagAction === "enable");
+      setBulkFlagResult(`Updated ${result.updated} store(s)`);
+      setStoreFeatureFlags((prev) => {
+        const next = { ...prev };
+        for (const id of selectedStoreIds) delete next[id];
+        return next;
+      });
+      setSelectedStoreIds(new Set());
+    } catch (e: unknown) {
+      setBulkFlagResult(`Error: ${e instanceof Error ? e.message : "unknown"}`);
+    } finally {
+      setBulkFlagLoading(false);
+    }
+  }
+
   // SA-P1-004: GRN excess alerts handlers
   async function refreshGrnAlerts() {
     setGrnAlertsLoading(true);
@@ -1575,10 +1682,10 @@ export default function App() {
     r.refreshHealth?.();
     if (shouldRefreshEvents) r.refreshEvents?.();
     if (shouldRefreshDevices) r.refreshDevices?.();
-    if (shouldRefreshStores) r.refreshStores?.();
+    if (shouldRefreshStores) { r.refreshStores?.(); refreshFeatureFlags(); }
     if (shouldRefreshSuppliers) r.refreshSuppliers?.();
     if (shouldRefreshUsers) r.refreshUsers?.();
-    if (shouldRefreshSettings) r.refreshSettings?.();
+    if (shouldRefreshSettings) { r.refreshSettings?.(); refreshFeatureFlags(); }
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
@@ -2926,6 +3033,26 @@ export default function App() {
           {storeDirectoryError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
           {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
 
+          {/* SA-P1-007: Bulk feature flag toolbar */}
+          {selectedStoreIds.size > 0 && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 16px", background: "#eff6ff", borderRadius: 6, margin: "0 16px 8px" }}>
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{selectedStoreIds.size} store(s) selected</span>
+              <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} style={{ fontSize: 13, padding: "4px 8px" }}>
+                <option value="">Select flag...</option>
+                {featureFlags.map((f) => <option key={f.flag_key} value={f.flag_key}>{f.flag_key}</option>)}
+              </select>
+              <select value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} style={{ fontSize: 13, padding: "4px 8px" }}>
+                <option value="enable">Enable</option>
+                <option value="disable">Disable</option>
+              </select>
+              <button onClick={handleBulkFF} disabled={bulkFlagLoading || !bulkFlagKey}>
+                {bulkFlagLoading ? "Applying..." : "Apply"}
+              </button>
+              <button className="btnGhost" onClick={() => setSelectedStoreIds(new Set())}>Clear</button>
+              {bulkFlagResult && <span style={{ fontSize: 12, color: "#666" }}>{bulkFlagResult}</span>}
+            </div>
+          )}
+
           {storeDirectory.length === 0 ? (
             <div className="empty">
               {storeDirectoryLoading ? "Loading stores..." : "No stores found."}
@@ -2935,6 +3062,20 @@ export default function App() {
               <table className="table">
                 <thead>
                   <tr>
+                    <th style={{ width: 32 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedStoreIds.size === storeDirectory.length && storeDirectory.length > 0}
+                        onChange={() => {
+                          if (selectedStoreIds.size === storeDirectory.length) {
+                            setSelectedStoreIds(new Set());
+                          } else {
+                            setSelectedStoreIds(new Set(storeDirectory.map((s) => s.id)));
+                          }
+                        }}
+                        title="Select all"
+                      />
+                    </th>
                     <th>Store ID</th>
                     <th>Store Name</th>
                     <th>Contact</th>
@@ -2949,6 +3090,13 @@ export default function App() {
                     return (
                       <React.Fragment key={s.id}>
                         <tr>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedStoreIds.has(s.id)}
+                              onChange={() => toggleStoreSelection(s.id)}
+                            />
+                          </td>
                           <td className="mono">{s.id}</td>
                           <td>
                             <input
@@ -2961,8 +3109,8 @@ export default function App() {
                           <td>
                             <button
                               className="btnGhost"
-                              onClick={() => setExpandedStoreId(isExpanded ? null : s.id)}
-                              title={isExpanded ? "Hide contact info" : "Edit contact info"}
+                              onClick={() => { const nextId = isExpanded ? null : s.id; setExpandedStoreId(nextId); if (nextId) loadStoreFeatureFlags(nextId); }}
+                              title={isExpanded ? "Hide details" : "Edit details"}
                             >
                               {s.contact_name || s.contact_phone ? `${s.contact_name ?? ""}` : "(none)"}
                               {isExpanded ? " ▲" : " ▼"}
@@ -2977,7 +3125,7 @@ export default function App() {
                         </tr>
                         {isExpanded && (
                           <tr>
-                            <td colSpan={5} style={{ background: "#f9fafb", padding: "12px" }}>
+                            <td colSpan={6} style={{ background: "#f9fafb", padding: "12px" }}>
                               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", maxWidth: "600px" }}>
                                 <div>
                                   <label style={{ fontSize: "12px", color: "#666" }}>Contact Name</label>
@@ -3034,6 +3182,29 @@ export default function App() {
                                     );
                                   })}
                                 </div>
+                              </div>
+                              {/* SA-P1-007: Per-store feature flag overrides */}
+                              <div style={{ marginTop: "12px" }}>
+                                <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Feature Flags</label>
+                                {storeFFLoading[s.id] ? (
+                                  <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
+                                ) : storeFeatureFlags[s.id] ? (
+                                  <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                                    {storeFeatureFlags[s.id].map((f) => (
+                                      <label key={f.flag_key} style={{ display: "flex", alignItems: "center", gap: "4px", cursor: f.global_enabled ? "pointer" : "default", fontSize: 13, opacity: f.global_enabled ? 1 : 0.5 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={f.effective}
+                                          disabled={!f.global_enabled}
+                                          onChange={() => handleStoreFFToggle(s.id, f)}
+                                        />
+                                        <span>{f.flag_key}</span>
+                                        {f.store_override !== null && <span style={{ fontSize: 10, color: "#f59e0b" }}>(override)</span>}
+                                        {!f.global_enabled && <span style={{ fontSize: 10, color: "#ef4444" }}>(killed)</span>}
+                                      </label>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
                             </td>
                           </tr>
@@ -4338,6 +4509,78 @@ export default function App() {
                 ) : (
                   <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
                 )}
+              </div>
+            </div>
+
+            {/* SA-P0-005: Feature Kill Switch Panel */}
+            <div style={{ marginTop: 24 }}>
+              <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>Feature Kill Switch</h3>
+              <div className="muted" style={{ marginBottom: 12 }}>
+                Disable features globally. POS respects changes on next ui-status fetch.
+              </div>
+
+              <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} style={{ marginBottom: 12 }}>
+                {featureFlagsLoading ? "Loading..." : "Refresh Flags"}
+              </button>
+
+              {featureFlagsError && <div className="banner" style={{ marginBottom: 8 }}>{featureFlagsError}</div>}
+
+              <div className="tableWrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Description</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                      <th>Last Changed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {featureFlags.map((flag) => (
+                      <tr key={flag.flag_key}>
+                        <td><span className="mono">{flag.flag_key}</span></td>
+                        <td style={{ fontSize: 12, color: "#666" }}>{flag.description || "\u2014"}</td>
+                        <td>
+                          <span className={`badge ${flag.enabled ? "badgeOk" : "badgeErr"}`}>
+                            {flag.enabled ? "ENABLED" : "DISABLED"}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => handleToggleGlobalFlag(flag.flag_key, !flag.enabled)}
+                            disabled={featureFlagSaving[flag.flag_key]}
+                            style={{
+                              background: flag.enabled ? "#ef4444" : "#22c55e",
+                              color: "#fff",
+                              border: "none",
+                              borderRadius: 4,
+                              padding: "4px 12px",
+                              cursor: "pointer",
+                              fontSize: 12,
+                            }}
+                          >
+                            {featureFlagSaving[flag.flag_key]
+                              ? "Saving..."
+                              : flag.enabled
+                              ? "KILL"
+                              : "Enable"}
+                          </button>
+                        </td>
+                        <td style={{ fontSize: 11, color: "#888" }}>
+                          {flag.updated_at ? formatDateTime(flag.updated_at) : "\u2014"}
+                        </td>
+                      </tr>
+                    ))}
+                    {featureFlags.length === 0 && !featureFlagsLoading && (
+                      <tr>
+                        <td colSpan={5} style={{ textAlign: "center", color: "#888" }}>
+                          No feature flags found. Migration may be pending.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
