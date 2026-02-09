@@ -208,7 +208,8 @@ adminStoresRouter.get("/stores", requirePermission("stores", "read"), async (req
     const stores = result.rows.map((row) => ({
       ...row,
       storeName: row.name,
-      storeCode: row.store_code ?? row.code
+      storeCode: row.store_code ?? row.code,
+      allowedPaymentMethods: row.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE']
     }));
 
     return res.json({ stores, total, limit, offset });
@@ -272,6 +273,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           scan_lookup_v2_enabled,
           upi_vpa_updated_at,
           upi_vpa_updated_by,
+          allowed_payment_methods,
           created_at,
           updated_at
         FROM platform.stores
@@ -285,7 +287,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       return res.status(404).json({ error: "store not found" });
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code } });
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'] } });
   } catch (error: any) {
     console.error("[admin/stores/:storeId] Query failed:", error?.message);
     // Fallback with base columns
