@@ -34,7 +34,7 @@ adminGrnAlertsRouter.get(
       LEFT JOIN orders.purchase_orders po ON po.id = a.purchase_order_id
       WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: (string | number)[] = [];
     let paramIdx = 1;
 
     if (status) {
@@ -56,7 +56,7 @@ adminGrnAlertsRouter.get(
       FROM platform.grn_excess_alerts a
       WHERE 1=1
     `;
-    const countParams: any[] = [];
+    const countParams: (string | number)[] = [];
     let countIdx = 1;
 
     if (status) {
@@ -88,12 +88,13 @@ adminGrnAlertsRouter.get(
         },
         openCount: openCountResult.rows[0]?.open_count || 0,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Table may not exist yet if migration hasn't run
-      if (err.code === "42P01") {
+      if (err && typeof err === "object" && "code" in err && (err as { code: string }).code === "42P01") {
         return res.json({ alerts: [], pagination: { total: 0, limit, offset }, openCount: 0 });
       }
-      console.error("[Admin GRN Alerts] List error:", err.message);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Admin GRN Alerts] List error:", msg);
       return res.status(500).json({ error: "Failed to list GRN alerts" });
     }
   }
@@ -116,7 +117,7 @@ adminGrnAlertsRouter.patch(
       });
     }
 
-    const adminUserId = (req as any).adminUser?.id || null;
+    const adminUserId = (req as { adminId?: string }).adminId || null;
 
     try {
       const result = await pool.query(
@@ -134,8 +135,9 @@ adminGrnAlertsRouter.patch(
       }
 
       return res.json({ alert: result.rows[0] });
-    } catch (err: any) {
-      console.error("[Admin GRN Alerts] Update error:", err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[Admin GRN Alerts] Update error:", msg);
       return res.status(500).json({ error: "Failed to update GRN alert" });
     }
   }

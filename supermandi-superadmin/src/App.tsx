@@ -1491,8 +1491,8 @@ export default function App() {
       setGrnAlerts(data.alerts || []);
       setGrnAlertsTotal(data.pagination?.total || 0);
       setGrnAlertsOpenCount(data.openCount || 0);
-    } catch (e: any) {
-      setGrnAlertsError(e?.message || "Failed to load GRN alerts");
+    } catch (e: unknown) {
+      setGrnAlertsError(e instanceof Error ? e.message : "Failed to load GRN alerts");
     } finally {
       setGrnAlertsLoading(false);
     }
@@ -1503,15 +1503,15 @@ export default function App() {
     try {
       await updateGrnAlert(alertId, { status });
       refreshGrnAlerts();
-    } catch (e: any) {
-      alert(e?.message || "Failed to update alert");
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to update alert");
     } finally {
       setGrnAlertActionLoading(null);
     }
   }
 
   // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
-  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents };
+  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents, refreshStaff, refreshGrnAlerts, refreshAnalytics };
 
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
@@ -1527,23 +1527,25 @@ export default function App() {
     const shouldRefreshDocuments = tab === "documents"; // DOCS-001
     const shouldRefreshRegEvents = tab === "registrations"; // RO-007
 
-    refreshHealth();
-    if (shouldRefreshEvents) refreshEvents();
-    if (shouldRefreshDevices) refreshDevices();
-    if (shouldRefreshStores) refreshStores();
-    if (shouldRefreshSuppliers) refreshSuppliers();
-    if (shouldRefreshUsers) refreshUsers();
-    if (shouldRefreshSettings) refreshSettings();
+    // ISSUE-MICRO-024: Use refreshRef for initial calls too (consistent with polling)
+    const r = refreshRef.current;
+    r.refreshHealth?.();
+    if (shouldRefreshEvents) r.refreshEvents?.();
+    if (shouldRefreshDevices) r.refreshDevices?.();
+    if (shouldRefreshStores) r.refreshStores?.();
+    if (shouldRefreshSuppliers) r.refreshSuppliers?.();
+    if (shouldRefreshUsers) r.refreshUsers?.();
+    if (shouldRefreshSettings) r.refreshSettings?.();
     if (shouldRefreshAi) {
       fetchAiHealth()
         .then((res) => setAiConfigured(res.configured))
         .catch(() => setAiConfigured(null));
     }
-    if (shouldRefreshAudit) refreshAuditLogs(); // GO-LIVE-011
-    if (shouldRefreshDocuments) refreshDocuments(); // DOCS-001
-    if (shouldRefreshRegEvents) refreshRegEvents(); // RO-007
-    if (tab === "staff" && staffStoreId) refreshStaff(); // SA-P1-001
-    if (tab === "grn-alerts") refreshGrnAlerts(); // SA-P1-004
+    if (shouldRefreshAudit) r.refreshAuditLogs?.(); // GO-LIVE-011
+    if (shouldRefreshDocuments) r.refreshDocuments?.(); // DOCS-001
+    if (shouldRefreshRegEvents) r.refreshRegEvents?.(); // RO-007
+    if (tab === "staff" && staffStoreId) r.refreshStaff?.(); // SA-P1-001
+    if (tab === "grn-alerts") r.refreshGrnAlerts?.(); // SA-P1-004
 
     // ISSUE-MICRO-024: Polling uses refreshRef to avoid stale closure
     const id = setInterval(() => {
@@ -1565,41 +1567,41 @@ export default function App() {
       r.refreshRegEvents?.(); // DR-010: Always poll for badge count
     }, ADMIN_POLL_MS);
     return () => clearInterval(id);
-  }, [tab]);
+  }, [tab, staffStoreId]);
 
   // If user changes limit, refresh immediately.
   useEffect(() => {
-    refreshEvents();
+    refreshRef.current.refreshEvents?.();
     setPage(0);
   }, [limit]);
 
   // GO-LIVE-011: Refresh audit logs when page or filter changes
   useEffect(() => {
     if (tab === "audit") {
-      refreshAuditLogs();
+      refreshRef.current.refreshAuditLogs?.();
     }
-  }, [auditLogsPage, auditLogsFilter]);
+  }, [auditLogsPage, auditLogsFilter, tab]);
 
   // DOCS-001: Refresh documents when page or filter changes
   useEffect(() => {
     if (tab === "documents") {
-      refreshDocuments();
+      refreshRef.current.refreshDocuments?.();
     }
-  }, [documentsPage, documentsEntityFilter]);
+  }, [documentsPage, documentsEntityFilter, tab]);
 
   // RO-007: Refresh registration events when page or filter changes
   useEffect(() => {
     if (tab === "registrations") {
-      refreshRegEvents();
+      refreshRef.current.refreshRegEvents?.();
     }
-  }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter]);
+  }, [regEventsPage, regEventsSourceFilter, regEventsOutcomeFilter, tab]);
 
   // DR-010: Clear badge when admin views the registrations tab
   useEffect(() => {
     if (tab === "registrations") {
       setRegEventsLastSeenTotal(regEventsTotal);
     }
-  }, [tab]);
+  }, [tab, regEventsTotal]);
 
   // ISSUE-MICRO-059: Reset audit page to 0 when filter changes
   useEffect(() => {
@@ -1622,14 +1624,14 @@ export default function App() {
   useEffect(() => {
     if (tab !== "devices") return;
     const timer = setTimeout(() => {
-      refreshDevices(0);
+      refreshRef.current.refreshDevices?.(0);
     }, 300);
     return () => clearTimeout(timer);
-  }, [deviceIdFilter, storeIdFilter]);
+  }, [deviceIdFilter, storeIdFilter, tab]);
 
   useEffect(() => {
     if (tab !== "analytics") return;
-    refreshAnalytics(analyticsTab);
+    refreshRef.current.refreshAnalytics?.(analyticsTab);
   }, [tab, analyticsTab, analyticsFrom, analyticsTo, analyticsStoreId, productsGroupBy]);
 
   useEffect(() => {
@@ -1704,7 +1706,7 @@ export default function App() {
         .then((res) => setAiConfigured(res.configured))
         .catch(() => setAiConfigured(null));
     }
-  }, [aiPanelOpen]);
+  }, [aiPanelOpen, aiConfigured]);
 
   const filteredEvents = useMemo(() => {
     const d = deviceIdFilter.trim();
