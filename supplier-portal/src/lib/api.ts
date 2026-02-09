@@ -1066,7 +1066,7 @@ export interface SupplierLookupResponse {
   exists: boolean;
   application_id?: string;
   status?: 'DRAFT' | 'OTP_VERIFIED' | 'KYC_SUBMITTED' | 'UNDER_REVIEW' | 'ACTIVE' | 'REJECTED' | 'NEEDS_FIX' | 'EXPIRED';
-  nextStep?: 'REGISTER' | 'VERIFY_PHONE' | 'UPLOAD_DOCUMENTS' | 'PENDING_APPROVAL' | 'FIX_REQUIRED' | 'CONTACT_SUPPORT' | 'LOGIN_ALLOWED';
+  nextStep?: 'REGISTER' | 'VERIFY_PHONE' | 'UPLOAD_DOCUMENTS' | 'PENDING_APPROVAL' | 'FIX_REQUIRED' | 'CONTACT_SUPPORT' | 'LOGIN_ALLOWED' | 'ACCOUNT_SUSPENDED';
   message: string;
   action?: 'REGISTER_REQUIRED';
   businessName?: string;

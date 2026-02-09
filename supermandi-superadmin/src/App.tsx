@@ -35,6 +35,7 @@ import {
   approveProduct,
   rejectProduct,
   editProduct,
+  changeSupplierStatus,
   type PendingSupplierRequest,
   type VerifiedSupplier,
   type PendingProduct,
@@ -728,6 +729,15 @@ export default function App() {
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
   const suppliersInFlightRef = useRef(false);
 
+  // SA-P1-005: Supplier suspension modal state
+  const [pendingSupplierSuspend, setPendingSupplierSuspend] = useState<{
+    supplierId: string;
+    businessName: string;
+    action: "suspend" | "reactivate";
+  } | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [supplierSuspendLoading, setSupplierSuspendLoading] = useState(false);
+
   // SA-1.3-001 to SA-1.3-003: Product Approval State
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
   const [productActionLoading, setProductActionLoading] = useState<Record<string, boolean>>({});
@@ -955,6 +965,37 @@ export default function App() {
     } finally {
       suppliersInFlightRef.current = false;
       setSuppliersLoading(false);
+    }
+  }
+
+  // SA-P1-005: Request supplier status change (opens confirmation modal)
+  function requestSupplierStatusChange(supplierId: string, businessName: string, action: "suspend" | "reactivate") {
+    setPendingSupplierSuspend({ supplierId, businessName, action });
+    setSuspendReason("");
+    setSupplierActionError("");
+  }
+
+  // SA-P1-005: Execute supplier status change after confirmation
+  async function executeSupplierStatusChange() {
+    if (!pendingSupplierSuspend) return;
+    const { supplierId, action } = pendingSupplierSuspend;
+    const newStatus = action === "suspend" ? "SUSPENDED" : "ACTIVE";
+    setSupplierSuspendLoading(true);
+    setSupplierActionError("");
+    try {
+      await changeSupplierStatus(supplierId, newStatus, suspendReason || undefined);
+      // Update local state
+      setVerifiedSuppliers((prev) =>
+        prev.map((s) =>
+          s.id === supplierId ? { ...s, verificationStatus: newStatus } : s
+        )
+      );
+      setPendingSupplierSuspend(null);
+      setSuspendReason("");
+    } catch (e: unknown) {
+      setSupplierActionError(e instanceof Error ? e.message : "Failed to update supplier status");
+    } finally {
+      setSupplierSuspendLoading(false);
     }
   }
 
@@ -3193,6 +3234,7 @@ export default function App() {
                     <th>Location</th>
                     <th>Status</th>
                     <th>Rating</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3209,11 +3251,29 @@ export default function App() {
                       </td>
                       <td>{[s.city, s.state].filter(Boolean).join(", ") || "-"}</td>
                       <td>
-                        <span className={`badge ${s.verificationStatus === "verified" ? "badgeOk" : "badgeWarn"}`}>
-                          {s.verificationStatus}
+                        <span className={`badge ${s.verificationStatus === "SUSPENDED" ? "badgeError" : "badgeOk"}`}>
+                          {s.verificationStatus === "SUSPENDED" ? "Suspended" : s.verificationStatus}
                         </span>
                       </td>
                       <td className="mono">{typeof s.rating === "number" ? s.rating.toFixed(1) : "-"}</td>
+                      <td>
+                        {s.verificationStatus === "SUSPENDED" ? (
+                          <button
+                            style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
+                            onClick={() => requestSupplierStatusChange(s.id, s.businessName, "reactivate")}
+                          >
+                            Reactivate
+                          </button>
+                        ) : (
+                          <button
+                            className="btnDanger"
+                            style={{ padding: "4px 10px", fontSize: 12 }}
+                            onClick={() => requestSupplierStatusChange(s.id, s.businessName, "suspend")}
+                          >
+                            Suspend
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -5203,6 +5263,61 @@ export default function App() {
               >
                 {createUserLoading ? "Creating..." : "Confirm & Create Admin"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SA-P1-005: Supplier Suspension/Reactivation Confirmation Modal */}
+      {pendingSupplierSuspend && (
+        <div className="modalOverlay" onClick={() => { if (!supplierSuspendLoading) setPendingSupplierSuspend(null); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h3>{pendingSupplierSuspend.action === "suspend" ? "Confirm Supplier Suspension" : "Confirm Supplier Reactivation"}</h3>
+            </div>
+            <div className="modalBody">
+              {pendingSupplierSuspend.action === "suspend" ? (
+                <>
+                  <p>Are you sure you want to suspend <strong>{pendingSupplierSuspend.businessName}</strong>?</p>
+                  <p className="muted" style={{ color: "#b45309" }}>This will block supplier login, revoke active sessions, and hide them from retailer/POS lists.</p>
+                  <div className="control" style={{ marginTop: 12 }}>
+                    <label>Reason for suspension (required)</label>
+                    <textarea
+                      value={suspendReason}
+                      onChange={(e) => setSuspendReason(e.target.value)}
+                      placeholder="Enter reason (minimum 10 characters)..."
+                      rows={3}
+                      style={{ width: "100%", resize: "vertical" }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>Are you sure you want to reactivate <strong>{pendingSupplierSuspend.businessName}</strong>?</p>
+                  <p className="muted">This will restore supplier login access and visibility in retailer/POS lists.</p>
+                </>
+              )}
+              {supplierActionError && <p className="errorText" style={{ marginTop: 8 }}>{supplierActionError}</p>}
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setPendingSupplierSuspend(null)} disabled={supplierSuspendLoading}>Cancel</button>
+              {pendingSupplierSuspend.action === "suspend" ? (
+                <button
+                  className="btnDanger"
+                  onClick={executeSupplierStatusChange}
+                  disabled={supplierSuspendLoading || suspendReason.trim().length < 10}
+                >
+                  {supplierSuspendLoading ? "Suspending..." : "Suspend Supplier"}
+                </button>
+              ) : (
+                <button
+                  style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+                  onClick={executeSupplierStatusChange}
+                  disabled={supplierSuspendLoading}
+                >
+                  {supplierSuspendLoading ? "Reactivating..." : "Reactivate Supplier"}
+                </button>
+              )}
             </div>
           </div>
         </div>

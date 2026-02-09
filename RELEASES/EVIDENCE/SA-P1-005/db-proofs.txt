@@ -1,0 +1,74 @@
+# SA-P1-005: DB Proofs
+# ====================
+# Stack: docker-compose.local-prod.yml
+# DB: scripts-postgres-1 (supermandi database)
+# Date: 2026-02-09
+
+## 1. Supplier Status After Suspension
+
+SELECT id, business_name, verification_status, tokens_revoked_at
+FROM supplier.suppliers WHERE id = 'b0000000-0000-0000-0000-000000000001';
+
+RESULT (during suspension):
+  id                                   | business_name                   | verification_status | tokens_revoked_at
+  b0000000-0000-0000-0000-000000000001 | Demo Wholesale Supplier Pvt Ltd | SUSPENDED           | 2026-02-09 12:46:13.676616+00
+
+VERDICT: PASS — verification_status=SUSPENDED, tokens_revoked_at set.
+
+---
+
+## 2. Full Audit Trail
+
+SELECT id, supplier_id, old_status, new_status, reason, changed_by_type, changed_at
+FROM supplier.supplier_status_audit
+WHERE supplier_id = 'b0000000-0000-0000-0000-000000000001'
+ORDER BY changed_at;
+
+RESULT:
+  old_status | new_status | reason                     | changed_by_type | changed_at
+  (null)     | ACTIVE     | Initial status (migration) | system          | 2026-02-08 12:31:01.115575+00
+  ACTIVE     | SUSPENDED  | (null)                     | system          | 2026-02-09 12:46:13.676616+00
+  SUSPENDED  | ACTIVE     | (null)                     | system          | 2026-02-09 12:47:58.709794+00
+
+VERDICT: PASS — 3 audit entries. Complete history: migration -> suspension -> reactivation.
+
+---
+
+## 3. Schema Prerequisites Verified
+
+SELECT column_name, data_type FROM information_schema.columns
+WHERE table_schema = 'supplier' AND table_name = 'suppliers'
+AND column_name IN ('verification_status', 'tokens_revoked_at', 'status_updated_at', 'status_updated_by');
+
+RESULT:
+  column_name         | data_type
+  status_updated_at   | timestamp with time zone
+  status_updated_by   | uuid
+  tokens_revoked_at   | timestamp with time zone
+  verification_status | character varying
+
+VERDICT: PASS — All required columns exist with correct types.
+
+---
+
+## 4. Audit Table Structure
+
+SELECT table_name FROM information_schema.tables
+WHERE table_schema = 'supplier' ORDER BY table_name;
+
+RESULT: 11 tables including:
+  - suppliers
+  - supplier_status_audit  (from migration 098)
+  - token_revocations
+
+VERDICT: PASS — All prerequisite tables exist.
+
+---
+
+## SUMMARY: ALL 4 DB PROOFS PASS
+| # | Check | Result |
+|---|-------|--------|
+| 1 | Supplier status + token revocation | PASS |
+| 2 | Audit trail (3 entries) | PASS |
+| 3 | Schema columns correct types | PASS |
+| 4 | Required tables exist | PASS |

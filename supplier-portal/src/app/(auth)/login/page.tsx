@@ -110,6 +110,9 @@ export default function LoginPage() {
       } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
         // BATCH-003: Stay on page, no auto-redirect - user requested explicit navigation
         setError('Your registration is incomplete. Please complete registration first, then return to login.');
+      } else if (data.nextStep === 'ACCOUNT_SUSPENDED') {
+        // SA-P1-005: Suspended supplier
+        setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
       } else if (data.nextStep === 'CONTACT_SUPPORT') {
         setError('Your application was not approved. Please contact support for assistance.');
       } else {
@@ -183,6 +186,9 @@ export default function LoginPage() {
           return; // BATCH-003: Stop execution after navigation
         } else if (err.code === 'ACCOUNT_LOCKED') {
           setError('Your account has been locked. Please contact support.');
+        } else if (err.code === 'ACCOUNT_SUSPENDED') {
+          // SA-P1-005: Suspended supplier
+          setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
         } else if (err.code === 'ACCOUNT_INACTIVE') {
           setError('Your account is not active. Please contact support.');
         } else if (err.code === 'USER_NOT_FOUND') {

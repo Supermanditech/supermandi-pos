@@ -519,6 +519,14 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
       return;
     }
 
+    // SA-P1-005: Block suspended suppliers
+    if (supplier.verification_status === 'SUSPENDED') {
+      res.status(403).json({
+        error: { code: 'ACCOUNT_SUSPENDED', message: 'Your account has been suspended. Please contact support.' }
+      });
+      return;
+    }
+
     // Verify password
     const isValid = await bcrypt.compare(password, supplier.password_hash);
     const clientIp = req.ip || req.socket?.remoteAddress || null;
@@ -1550,6 +1558,14 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
     if (supplier.status !== 'active') {
       res.status(403).json({
         error: { code: 'ACCOUNT_INACTIVE', message: 'Your account is not active. Please contact support.' }
+      });
+      return;
+    }
+
+    // SA-P1-005: Block suspended suppliers
+    if (supplier.verification_status === 'SUSPENDED') {
+      res.status(403).json({
+        error: { code: 'ACCOUNT_SUSPENDED', message: 'Your account has been suspended. Please contact support.' }
       });
       return;
     }
