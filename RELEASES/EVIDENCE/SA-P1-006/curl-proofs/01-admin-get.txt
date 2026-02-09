@@ -1,0 +1,29 @@
+# SA-P1-006 Curl Proof: Admin GET stores — allowed_payment_methods in response
+
+## Command
+# GET list of stores — should include allowed_payment_methods field
+curl -s "http://localhost:3010/api/v1/admin/stores" -H "x-admin-token: local-test-token" | jq '.stores[0] | {id, name, allowed_payment_methods, allowedPaymentMethods}'
+
+# GET single store — should include allowedPaymentMethods camelCase
+curl -s "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "x-admin-token: local-test-token" | jq '.store | {id, name, allowed_payment_methods, allowedPaymentMethods}'
+
+## Expected Response (list)
+# {
+#   "id": "a0000000-0000-0000-0000-000000000001",
+#   "name": "SuperMandi Demo Store",
+#   "allowed_payment_methods": ["CASH", "UPI", "DUE"],
+#   "allowedPaymentMethods": ["CASH", "UPI", "DUE"]
+# }
+
+## Expected Response (single)
+# {
+#   "id": "a0000000-0000-0000-0000-000000000001",
+#   "name": "SuperMandi Demo Store",
+#   "allowed_payment_methods": ["CASH", "UPI", "DUE"],
+#   "allowedPaymentMethods": ["CASH", "UPI", "DUE"]
+# }
+
+## Actual Response
+# (paste after running)
+
+## Status: PENDING

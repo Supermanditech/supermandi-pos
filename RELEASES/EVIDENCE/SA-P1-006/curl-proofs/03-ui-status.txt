@@ -1,0 +1,24 @@
+# SA-P1-006 Curl Proof: POS ui-status — allowedPaymentMethods in response
+
+## Command
+# Use demo smoke test token (pre-seeded in migration 056)
+curl -s "http://localhost:3010/api/v1/pos/ui-status" -H "X-Device-Token: demo-smoke-test-token-001" | jq '{storeId, storeName, allowedPaymentMethods}'
+
+## Expected Response (after DUE disabled via admin PATCH)
+# {
+#   "storeId": "a0000000-0000-0000-0000-000000000001",
+#   "storeName": "SuperMandi Demo Store",
+#   "allowedPaymentMethods": ["CASH", "UPI"]
+# }
+
+## Expected Response (with defaults / after restore)
+# {
+#   "storeId": "a0000000-0000-0000-0000-000000000001",
+#   "storeName": "SuperMandi Demo Store",
+#   "allowedPaymentMethods": ["CASH", "UPI", "DUE"]
+# }
+
+## Actual Response
+# (paste after running)
+
+## Status: PENDING

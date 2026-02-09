@@ -1,0 +1,25 @@
+# SA-P1-006 Curl Proof: Admin PATCH — disable DUE payment method
+
+## Command
+# Disable DUE for Demo store (keep only CASH + UPI)
+curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "Content-Type: application/json" -H "x-admin-token: local-test-token" -d "{\"allowedPaymentMethods\":[\"CASH\",\"UPI\"]}" | jq '.store | {id, name, allowedPaymentMethods}'
+
+## Expected Response
+# {
+#   "id": "a0000000-0000-0000-0000-000000000001",
+#   "name": "SuperMandi Demo Store",
+#   "allowedPaymentMethods": ["CASH", "UPI"]
+# }
+
+## Validation: invalid method rejected
+# curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "Content-Type: application/json" -H "x-admin-token: local-test-token" -d "{\"allowedPaymentMethods\":[\"CASH\",\"BITCOIN\"]}"
+# Expected: 400 {"error":"allowedPaymentMethods: only CASH, UPI, DUE allowed"}
+
+## Validation: empty array rejected
+# curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "Content-Type: application/json" -H "x-admin-token: local-test-token" -d "{\"allowedPaymentMethods\":[]}"
+# Expected: 400 {"error":"allowedPaymentMethods must be a non-empty array"}
+
+## Actual Response
+# (paste after running)
+
+## Status: PENDING

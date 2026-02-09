@@ -1,0 +1,26 @@
+# SA-P1-006 Curl Proof: Sale confirm — 403 payment_method_not_allowed
+
+## Precondition
+# DUE must be disabled for Demo store first (see 02-admin-patch-disable-due.txt)
+
+## Command
+# Try to confirm a sale with DUE (disallowed) — uses fake saleId because
+# the SA-P1-006 check fires BEFORE sale lookup (line 1198-1211 in sales.ts)
+curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" -H "Content-Type: application/json" -H "X-Device-Token: demo-smoke-test-token-001" -d "{\"paymentMode\":\"DUE\"}"
+
+## Expected Response
+# HTTP 403
+# {
+#   "error": "payment_method_not_allowed",
+#   "message": "DUE is not enabled for this store",
+#   "allowedMethods": ["CASH", "UPI"]
+# }
+
+## Positive test: CASH (allowed) should NOT get 403
+curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" -H "Content-Type: application/json" -H "X-Device-Token: demo-smoke-test-token-001" -d "{\"paymentMode\":\"CASH\"}"
+# Expected: 404 sale_not_found (passes the payment method gate, fails at sale lookup)
+
+## Actual Response
+# (paste after running)
+
+## Status: PENDING

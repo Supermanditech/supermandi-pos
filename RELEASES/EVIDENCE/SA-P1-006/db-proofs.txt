@@ -1,0 +1,34 @@
+# SA-P1-006 DB Proofs — Schema & Data Verification
+
+## 1. Column exists on platform.stores
+# docker compose -f scripts/docker-compose.local-prod.yml exec postgres psql -U postgres -d supermandi -c "SELECT column_name, data_type, column_default FROM information_schema.columns WHERE table_schema='platform' AND table_name='stores' AND column_name='allowed_payment_methods';"
+#
+# Expected:
+#        column_name        | data_type | column_default
+# --------------------------+-----------+-------------------
+#  allowed_payment_methods  | ARRAY     | '{CASH,UPI,DUE}'::text[]
+
+## 2. Column visible through public.stores VIEW
+# docker compose -f scripts/docker-compose.local-prod.yml exec postgres psql -U postgres -d supermandi -c "SELECT id, name, allowed_payment_methods FROM stores LIMIT 5;"
+#
+# Expected: rows with allowed_payment_methods column visible (no error)
+
+## 3. Default value applied to existing stores
+# docker compose -f scripts/docker-compose.local-prod.yml exec postgres psql -U postgres -d supermandi -c "SELECT id::text, name, allowed_payment_methods FROM platform.stores;"
+#
+# Expected: all stores have {CASH,UPI,DUE} as default
+
+## 4. After PATCH to disable DUE
+# docker compose -f scripts/docker-compose.local-prod.yml exec postgres psql -U postgres -d supermandi -c "SELECT id::text, name, allowed_payment_methods FROM platform.stores WHERE id = 'a0000000-0000-0000-0000-000000000001';"
+#
+# Expected: {CASH,UPI} after PATCH
+
+## 5. Migration recorded in _migrations table
+# docker compose -f scripts/docker-compose.local-prod.yml exec postgres psql -U postgres -d supermandi -c "SELECT name, applied_at FROM _migrations WHERE name LIKE '%sa_p1_006%';"
+#
+# Expected: 100_sa_p1_006_allowed_payment_methods.sql with recent timestamp
+
+## Actual Results
+# (paste after running)
+
+## Status: PENDING
