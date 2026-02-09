@@ -260,6 +260,29 @@ export default function ProfilePage() {
           {/* Bank Details Tab */}
           {activeTab === 'bank' && (
             <form onSubmit={handleBankSubmit} className="space-y-4">
+              {/* SA-P1-008: Bank verification status banner */}
+              {supplier?.bankVerificationStatus === 'pending' && supplier?.bankDetails && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-yellow-700 font-medium">
+                    Bank details are under review. Payouts are paused until verified.
+                  </p>
+                </div>
+              )}
+              {supplier?.bankVerificationStatus === 'rejected' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-red-700 font-medium">
+                    Bank details were rejected. Please update and resubmit.
+                  </p>
+                </div>
+              )}
+              {supplier?.bankVerificationStatus === 'verified' && supplier?.bankDetails && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-green-700 font-medium">
+                    Bank details verified.
+                  </p>
+                </div>
+              )}
+
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-700">
                   Bank details are used for order payouts. Please ensure the account

@@ -304,6 +304,7 @@ export async function getScheduledPayouts(pool: Pool): Promise<ScheduledPayout[]
       FROM payments.supplier_payouts sp
       JOIN supplier.suppliers s ON s.id = sp.supplier_id
       WHERE sp.status = 'scheduled'
+        AND s.bank_verification_status = 'verified'  -- SA-P1-008: Block payouts to unverified bank accounts
       ORDER BY sp.scheduled_at ASC
       LIMIT 100
     `);

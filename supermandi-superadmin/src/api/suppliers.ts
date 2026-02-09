@@ -347,7 +347,7 @@ export async function fetchSupplierStatusHistory(
  */
 export async function editProduct(productId: string, input: ProductEditInput): Promise<ProductEditResponse> {
   const base = requireApiBase();
-  
+
   const res = await fetchWithTimeout(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/edit`, {
     method: "PUT",
     headers: {
@@ -357,6 +357,76 @@ export async function editProduct(productId: string, input: ProductEditInput): P
     },
     body: JSON.stringify(input)
   });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
+}
+
+// =============================================================================
+// SA-P1-008: Supplier Bank Detail Re-Verification
+// =============================================================================
+
+export type BankChangeEntry = {
+  id: string;
+  businessName: string;
+  gstin: string;
+  phone: string | null;
+  email: string | null;
+  bankAccountMasked: string | null;
+  bankIfsc: string | null;
+  bankAccountName: string | null;
+  bankVerificationStatus: string;
+  updatedAt: string;
+};
+
+/**
+ * Fetch suppliers with pending bank detail verifications
+ */
+export async function fetchBankChanges(): Promise<BankChangeEntry[]> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/suppliers/bank-changes`, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const json = await res.json();
+  return Array.isArray(json?.data) ? (json.data as BankChangeEntry[]) : [];
+}
+
+/**
+ * Approve or reject a supplier's bank detail change
+ */
+export async function verifyBankDetails(
+  supplierId: string,
+  action: "approve" | "reject",
+  reason?: string
+): Promise<{ supplierId: string; bankVerificationStatus: string; action: string }> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/suppliers/${encodeURIComponent(supplierId)}/bank-verify`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ action, reason }),
+    }
+  );
 
   if (!res.ok) {
     throw new Error(await parseError(res));

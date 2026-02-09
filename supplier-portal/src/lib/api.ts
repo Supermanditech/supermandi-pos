@@ -306,6 +306,7 @@ export interface Supplier {
     ifscCode?: string;
     bankName?: string;
   };
+  bankVerificationStatus?: 'pending' | 'verified' | 'rejected'; // SA-P1-008
 }
 
 export interface AuthResponse {
