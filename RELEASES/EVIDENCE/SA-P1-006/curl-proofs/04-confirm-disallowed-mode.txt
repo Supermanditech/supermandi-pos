@@ -1,14 +1,15 @@
 # SA-P1-006 Curl Proof: Sale confirm — 403 payment_method_not_allowed
 
 ## Precondition
-# DUE must be disabled for Demo store first (see 02-admin-patch-disable-due.txt)
+# DUE disabled for Demo store via PATCH (see 02-admin-patch-disable-due.txt)
 
-## Command
-# Try to confirm a sale with DUE (disallowed) — uses fake saleId because
-# the SA-P1-006 check fires BEFORE sale lookup (line 1198-1211 in sales.ts)
-curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" -H "Content-Type: application/json" -H "X-Device-Token: demo-smoke-test-token-001" -d "{\"paymentMode\":\"DUE\"}"
+## Command — DUE (disallowed)
+curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: demo-smoke-test-token-001" \
+  -d '{"paymentMode":"DUE"}'
 
-## Expected Response
+## Actual Response (2026-02-09T14:47Z)
 # HTTP 403
 # {
 #   "error": "payment_method_not_allowed",
@@ -16,11 +17,20 @@ curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confir
 #   "allowedMethods": ["CASH", "UPI"]
 # }
 
-## Positive test: CASH (allowed) should NOT get 403
-curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" -H "Content-Type: application/json" -H "X-Device-Token: demo-smoke-test-token-001" -d "{\"paymentMode\":\"CASH\"}"
-# Expected: 404 sale_not_found (passes the payment method gate, fails at sale lookup)
+## Command — CASH (allowed, passes payment gate)
+curl -s -X POST "http://localhost:3010/api/v1/pos/sales/test-sale-for-403/confirm" \
+  -H "Content-Type: application/json" \
+  -H "X-Device-Token: demo-smoke-test-token-001" \
+  -d '{"paymentMode":"CASH"}'
 
-## Actual Response
-# (paste after running)
+## Actual Response (2026-02-09T14:47Z)
+# HTTP 404
+# {"error":"sale_not_found"}
+# (CASH passes SA-P1-006 gate, fails at sale lookup — proves enforcement works)
 
-## Status: PENDING
+## Gate order proven:
+# 1. SA-P1-006 payment_method_not_allowed (line 1198) fires FIRST
+# 2. sale_not_found (line 1225) fires SECOND for allowed methods
+# Defense-in-depth: POS hides tabs + backend rejects at confirm
+
+## Status: PASS

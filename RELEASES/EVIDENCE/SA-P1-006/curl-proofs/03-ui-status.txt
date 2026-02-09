@@ -1,24 +1,27 @@
 # SA-P1-006 Curl Proof: POS ui-status — allowedPaymentMethods in response
 
 ## Command
-# Use demo smoke test token (pre-seeded in migration 056)
-curl -s "http://localhost:3010/api/v1/pos/ui-status" -H "X-Device-Token: demo-smoke-test-token-001" | jq '{storeId, storeName, allowedPaymentMethods}'
+curl -s "http://localhost:3010/api/v1/pos/ui-status" -H "X-Device-Token: demo-smoke-test-token-001"
 
-## Expected Response (after DUE disabled via admin PATCH)
+## Actual Response — DUE disabled (2026-02-09T14:47Z)
 # {
 #   "storeId": "a0000000-0000-0000-0000-000000000001",
 #   "storeName": "SuperMandi Demo Store",
-#   "allowedPaymentMethods": ["CASH", "UPI"]
+#   "storeCode": "SU260208-004",
+#   "storeStatus": "ACTIVE",
+#   "deviceId": "demo-device-001",
+#   "storeActive": true,
+#   "deviceActive": true,
+#   "allowedPaymentMethods": ["CASH", "UPI"],
+#   "features": { "buyEnabled": true, "reorderEnabled": true, ... }
 # }
 
-## Expected Response (with defaults / after restore)
+## Actual Response — defaults restored (2026-02-09T14:47Z)
 # {
 #   "storeId": "a0000000-0000-0000-0000-000000000001",
 #   "storeName": "SuperMandi Demo Store",
-#   "allowedPaymentMethods": ["CASH", "UPI", "DUE"]
+#   "allowedPaymentMethods": ["CASH", "UPI", "DUE"],
+#   ...
 # }
 
-## Actual Response
-# (paste after running)
-
-## Status: PENDING
+## Status: PASS

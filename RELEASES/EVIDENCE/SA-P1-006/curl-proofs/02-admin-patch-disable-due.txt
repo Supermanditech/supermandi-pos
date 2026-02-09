@@ -1,25 +1,34 @@
 # SA-P1-006 Curl Proof: Admin PATCH — disable DUE payment method
 
 ## Command
-# Disable DUE for Demo store (keep only CASH + UPI)
-curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "Content-Type: application/json" -H "x-admin-token: local-test-token" -d "{\"allowedPaymentMethods\":[\"CASH\",\"UPI\"]}" | jq '.store | {id, name, allowedPaymentMethods}'
+curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" \
+  -H "Content-Type: application/json" -H "x-admin-token: local-test-token" \
+  -d '{"allowedPaymentMethods":["CASH","UPI"]}'
 
-## Expected Response
+## Actual Response (2026-02-09T14:47Z)
+# HTTP 200
 # {
-#   "id": "a0000000-0000-0000-0000-000000000001",
-#   "name": "SuperMandi Demo Store",
-#   "allowedPaymentMethods": ["CASH", "UPI"]
+#   "store": {
+#     "id": "a0000000-0000-0000-0000-000000000001",
+#     "name": "SuperMandi Demo Store",
+#     "code": "SU260208-004",
+#     "status": "ACTIVE",
+#     "allowed_payment_methods": ["CASH", "UPI"],
+#     "allowedPaymentMethods": ["CASH", "UPI"],
+#     "storeName": "SuperMandi Demo Store",
+#     "storeCode": "SU260208-004",
+#     "active": true
+#   }
 # }
 
 ## Validation: invalid method rejected
-# curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "Content-Type: application/json" -H "x-admin-token: local-test-token" -d "{\"allowedPaymentMethods\":[\"CASH\",\"BITCOIN\"]}"
-# Expected: 400 {"error":"allowedPaymentMethods: only CASH, UPI, DUE allowed"}
+# curl -s -X PATCH ".../stores/a0000000..." -d '{"allowedPaymentMethods":["CASH","BITCOIN"]}'
+# Actual: {"error":"allowedPaymentMethods: only CASH, UPI, DUE allowed"}
+# Status: PASS
 
 ## Validation: empty array rejected
-# curl -s -X PATCH "http://localhost:3010/api/v1/admin/stores/a0000000-0000-0000-0000-000000000001" -H "Content-Type: application/json" -H "x-admin-token: local-test-token" -d "{\"allowedPaymentMethods\":[]}"
-# Expected: 400 {"error":"allowedPaymentMethods must be a non-empty array"}
+# curl -s -X PATCH ".../stores/a0000000..." -d '{"allowedPaymentMethods":[]}'
+# Actual: {"error":"allowedPaymentMethods must be a non-empty array"}
+# Status: PASS
 
-## Actual Response
-# (paste after running)
-
-## Status: PENDING
+## Status: PASS
