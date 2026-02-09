@@ -1,0 +1,353 @@
+###############################################################################
+# SA-P1-008: Supplier Bank Detail Re-Verification — VS Code REST Client
+#
+# Prerequisites:
+#   1. Install "REST Client" extension (humao.rest-client) in VS Code
+#   2. Backend running at localhost:3010
+#   3. Migration 124 applied
+#   4. Set variables below from actual test data
+#
+# Usage:
+#   Click "Send Request" above each ### block in VS Code
+#   Or use Ctrl+Alt+R to send the focused request
+###############################################################################
+
+# =============================================================================
+# Variables — Update these from your test environment
+# =============================================================================
+
+@baseUrl = http://localhost:3010
+@adminToken = local-test-token
+
+# Get these from supplier registration or DB query
+@supplierToken = <PASTE_SUPPLIER_JWT_HERE>
+@supplierId = <PASTE_SUPPLIER_UUID_HERE>
+
+
+###############################################################################
+# STEP 1: Register a new supplier (one-time setup)
+###############################################################################
+
+### Register supplier
+# @name registerSupplier
+POST {{baseUrl}}/api/v1/supplier/auth/register
+Content-Type: application/json
+
+{
+  "email": "banktest-{{$timestamp}}@test.supermandi.com",
+  "password": "TestPass123!",
+  "businessName": "Bank Test Supplier {{$timestamp}}",
+  "gstin": "27AABCB0001A1Z5",
+  "phone": "+917001234567",
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "pincode": "400001"
+}
+
+### Capture: Copy token and supplier.id from response ↑
+# Then set @supplierToken and @supplierId variables above
+
+
+###############################################################################
+# STEP 2: Admin verifies supplier
+###############################################################################
+
+### Verify supplier (admin)
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/approve
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+
+###############################################################################
+# STEP 3: Get supplier profile (verify bankVerificationStatus field exists)
+###############################################################################
+
+### Get supplier profile
+# @name getProfile
+GET {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Accept: application/json
+
+# Expected: bankVerificationStatus: "pending", bankDetails: null
+
+
+###############################################################################
+# STEP 4: Supplier adds bank details → triggers re-verification
+###############################################################################
+
+### Update bank details (first time)
+# @name updateBank1
+PATCH {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Content-Type: application/json
+
+{
+  "bankDetails": {
+    "accountNumber": "9012345678",
+    "ifscCode": "HDFC0001234",
+    "accountName": "Test Business Account"
+  }
+}
+
+# Expected: bankVerificationStatus: "pending"
+
+
+###############################################################################
+# STEP 5: Admin checks pending bank changes queue
+###############################################################################
+
+### Get pending bank changes (admin)
+# @name bankChanges
+GET {{baseUrl}}/api/v1/admin/suppliers/bank-changes
+x-admin-token: {{adminToken}}
+Accept: application/json
+
+# Expected: supplier appears with masked bank account (******5678)
+
+
+###############################################################################
+# STEP 6: Admin rejects bank change
+###############################################################################
+
+### Reject bank change (admin)
+# @name rejectBank
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "reject",
+  "reason": "Account name does not match business registration"
+}
+
+# Expected: bankVerificationStatus: "rejected"
+
+
+###############################################################################
+# STEP 7: Verify rejection in profile
+###############################################################################
+
+### Get profile after rejection
+GET {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Accept: application/json
+
+# Expected: bankVerificationStatus: "rejected", bankDetails still present
+
+
+###############################################################################
+# STEP 8: Supplier resubmits corrected bank details
+###############################################################################
+
+### Update bank details (corrected)
+# @name updateBank2
+PATCH {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Content-Type: application/json
+
+{
+  "bankDetails": {
+    "accountNumber": "1234567890",
+    "ifscCode": "ICIC0002345",
+    "accountName": "Corrected Business Name"
+  }
+}
+
+# Expected: bankVerificationStatus: "pending" (reset)
+
+
+###############################################################################
+# STEP 9: Admin approves bank change
+###############################################################################
+
+### Approve bank change (admin)
+# @name approveBank
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve"
+}
+
+# Expected: bankVerificationStatus: "verified"
+
+
+###############################################################################
+# STEP 10: Verify approval in profile
+###############################################################################
+
+### Get profile after approval
+GET {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Accept: application/json
+
+# Expected: bankVerificationStatus: "verified"
+
+
+###############################################################################
+# STEP 11: Non-bank update should NOT reset bank status
+###############################################################################
+
+### Update contact name only (no bank change)
+PATCH {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Content-Type: application/json
+
+{
+  "contactName": "Updated Contact Person"
+}
+
+# Expected: bankVerificationStatus: "verified" (unchanged)
+
+
+###############################################################################
+# STEP 12: Re-edit bank details → triggers re-verification
+###############################################################################
+
+### Update bank details again (re-edit)
+PATCH {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Content-Type: application/json
+
+{
+  "bankDetails": {
+    "accountNumber": "5555666677",
+    "ifscCode": "SBIN0003456",
+    "accountName": "New Business Account"
+  }
+}
+
+# Expected: bankVerificationStatus: "pending" (reset!)
+
+
+###############################################################################
+# STEP 13: Same-value update → should NOT trigger re-verification
+###############################################################################
+
+### Approve first so status is verified
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve"
+}
+
+###
+
+### Send same bank details again
+PATCH {{baseUrl}}/api/v1/supplier/profile
+Authorization: Bearer {{supplierToken}}
+Content-Type: application/json
+
+{
+  "bankDetails": {
+    "accountNumber": "5555666677",
+    "ifscCode": "SBIN0003456",
+    "accountName": "New Business Account"
+  }
+}
+
+# Expected: bankVerificationStatus: "verified" (no change detected)
+
+
+###############################################################################
+# EDGE CASES
+###############################################################################
+
+### Invalid action
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "invalidAction"
+}
+
+# Expected: 400
+
+###
+
+### Approve already-verified (no pending)
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve"
+}
+
+# Expected: 400, error: "no_pending_verification"
+
+###
+
+### Non-existent supplier
+POST {{baseUrl}}/api/v1/admin/suppliers/00000000-0000-0000-0000-000000000999/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve"
+}
+
+# Expected: 404
+
+###
+
+### Invalid UUID
+POST {{baseUrl}}/api/v1/admin/suppliers/not-a-uuid/bank-verify
+x-admin-token: {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve"
+}
+
+# Expected: 400
+
+###
+
+### Unauthenticated bank-changes request
+GET {{baseUrl}}/api/v1/admin/suppliers/bank-changes
+Accept: application/json
+
+# Expected: 401
+
+###
+
+### Unauthenticated bank-verify request
+POST {{baseUrl}}/api/v1/admin/suppliers/{{supplierId}}/bank-verify
+Content-Type: application/json
+
+{
+  "action": "approve"
+}
+
+# Expected: 401
+
+
+###############################################################################
+# DB PROOF QUERIES (run in psql or pgAdmin)
+###############################################################################
+
+# -- Check bank_verification_status after updates:
+# SELECT id, business_name, bank_verification_status, bank_verified_at,
+#        bank_account_number, bank_ifsc, bank_account_name
+# FROM supplier.suppliers
+# WHERE bank_verification_status = 'pending';
+#
+# -- Check approval_logs for bank_change audit trail:
+# SELECT id, entity_type, entity_id, action, from_status, to_status,
+#        changes::text, reason, created_at
+# FROM supplier.approval_logs
+# WHERE entity_type = 'bank_change'
+# ORDER BY created_at DESC
+# LIMIT 10;
+#
+# -- Verify payout blocking (no unverified suppliers in scheduled payouts):
+# SELECT sp.id, sp.supplier_id, s.bank_verification_status
+# FROM payments.supplier_payouts sp
+# JOIN supplier.suppliers s ON s.id = sp.supplier_id
+# WHERE sp.status = 'scheduled';
+# -- All rows should have bank_verification_status = 'verified'

@@ -6,6 +6,7 @@
     "test": "playwright test",
     "test:onboarding": "playwright test --grep \"@onboarding|@config\"",
     "test:sync": "playwright test --grep \"@retailer-pos-sync\"",
+    "test:bank": "playwright test --grep \"@bank_reverification\" --project=chromium",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
