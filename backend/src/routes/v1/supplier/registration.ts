@@ -165,14 +165,28 @@ router.get("/lookup", registrationRateLimiter, async (req: Request, res: Respons
     const supplierResult = await pool.query(
       `SELECT id, business_name, verification_status
        FROM supplier.suppliers
-       WHERE primary_phone = $1 AND verification_status IN ('verified', 'active')
+       WHERE primary_phone = $1 AND verification_status IN ('verified', 'active', 'ACTIVE', 'SUSPENDED')
        LIMIT 1`,
       [phoneNormalized]
     );
 
     if (supplierResult.rows.length > 0) {
-      // Phone has an approved supplier - can login directly
       const supplier = supplierResult.rows[0];
+
+      // SA-P1-005: Block suspended suppliers at lookup
+      if (supplier.verification_status === 'SUSPENDED') {
+        res.json({
+          exists: true,
+          type: 'supplier',
+          status: 'SUSPENDED',
+          nextStep: 'ACCOUNT_SUSPENDED',
+          businessName: supplier.business_name,
+          message: 'Your account has been suspended. Please contact support.',
+        });
+        return;
+      }
+
+      // Phone has an approved supplier - can login directly
       res.json({
         exists: true,
         type: 'supplier',

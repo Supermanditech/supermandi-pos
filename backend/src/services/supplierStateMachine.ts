@@ -223,6 +223,14 @@ export async function transitionSupplier(
       [supplierId, newStatus, options.reason || null, options.changedBy || null]
     );
 
+    // SA-P1-005: Revoke all tokens when suspending
+    if (newStatus === SupplierStatus.SUSPENDED) {
+      await client.query(
+        `UPDATE supplier.suppliers SET tokens_revoked_at = NOW() WHERE id = $1`,
+        [supplierId]
+      );
+    }
+
     await client.query("COMMIT");
 
     return {
