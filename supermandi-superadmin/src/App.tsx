@@ -61,7 +61,7 @@ import { QRCodeSVG } from "qrcode.react";
 // RO-007: Registration events visibility
 import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
-import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert, type GrnAlertsResponse } from "./api/grnAlerts"; // SA-P1-004
+import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
