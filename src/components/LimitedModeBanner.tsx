@@ -57,6 +57,15 @@ const STATUS_CONFIG: Record<string, {
     label: "Action Required",
     message: "Please update your information and resubmit.",
   },
+  // SA-P0-001: Store suspension display
+  SUSPENDED: {
+    color: "#991B1B",
+    bgColor: "#FEE2E2",
+    borderColor: "#EF4444",
+    icon: "store-alert-outline",
+    label: "Suspended",
+    message: "This store has been temporarily suspended by the administrator. Contact support for details.",
+  },
   REJECTED: {
     color: "#991B1B",
     bgColor: "#FEE2E2",

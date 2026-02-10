@@ -38,6 +38,14 @@ const STATUS_CONFIG: Record<string, { color: string; bgColor: string; borderColo
     label: 'Action Required',
     message: 'Please update your information and resubmit.',
   },
+  // SA-P0-001: Store suspension display
+  SUSPENDED: {
+    color: '#991b1b',
+    bgColor: '#fee2e2',
+    borderColor: '#f87171',
+    label: 'Suspended',
+    message: 'Your store has been temporarily suspended. Please contact SuperMandi support.',
+  },
   EXPIRED: {
     color: '#374151',
     bgColor: '#f3f4f6',

@@ -444,9 +444,17 @@ Link: https://github.com/ORG/REPO/actions/runs/XXXXX
 
 ```
 BATCH-004 Retailer ──┐
-BATCH-005 Supplier ──┼──► BATCH-008 Cloud Run ──► BATCH-009 CI/CD ──► BATCH-012 Auth ──► BATCH-013 Infra ──► DEFERRED ──► BATCH-014 Polish ──► BATCH-010 Staging ──► BATCH-011 Go-Live
+BATCH-005 Supplier ──┼──► BATCH-008 Cloud Run ──► BATCH-009 CI/CD ──► BATCH-012 Auth ──► BATCH-013 Infra ──► DEFERRED ──► BATCH-014 Polish
 BATCH-006 Admin ─────┤                                                                                                         │
-BATCH-007 POS ───────┘                                                                                         Operator: GCP infra (Cloud SQL, Memorystore, AR, VPC, Secret Manager)
+BATCH-007 POS ───────┘                                                                              ┌──────────────────────────┘
+                                                                                                     ▼
+                                                                                              SA-MERGED (8 tickets)
+                                                                                                     │
+                                                                                              SA-GOLIVE (17 tickets) ◄── YOU ARE HERE
+                                                                                                     │
+                                                                                              BATCH-010 Staging ──► BATCH-011 Go-Live
+                                                                                                                          │
+                                                                                                                   SA-DEFERRED (8 tickets, post go-live)
 ```
 
 ---
@@ -461,12 +469,15 @@ BATCH-007 POS ───────┘                                          
 | BATCH-007 | POS App | `CODE_COMPLETE` | 7/7 DONE | Claude | d3e9e45 | — | 2026-02-05 |
 | BATCH-008 | Cloud Run Prep | `CODE_COMPLETE` | 11/11 DONE | Claude | 59d7ebb | — | 2026-02-05 |
 | BATCH-009 | GCP CI/CD | `CODE_COMPLETE` | 9/9 DONE | Claude+Operator | 59d7ebb | — | 2026-02-05 |
-| BATCH-010 | Staging Deploy | `NEXT` | 1/6 DONE (E2E config) | Claude+Operator | — | — | 2026-02-07 |
-| BATCH-011 | Go-Live | `DRAFT` | 0/4 | Operator | — | — | 2026-02-05 |
 | BATCH-012 | Auth & Session Security | `CODE_COMPLETE` | 18/18 DONE | Claude | 9bb03f7 | — | 2026-02-06 |
 | BATCH-013 | Prod Testing + Infra Hardening | `CODE_COMPLETE` | FULL PASS | Claude | f7cb90d | — | 2026-02-06 |
-| DEFERRED  | Deferred Tickets (P1+P2+P3) | `CODE_COMPLETE` | 7/7 DONE | Claude | 609d875 | — | 2026-02-06 |
 | BATCH-014 | Production Grade Polish | `CODE_COMPLETE` | 10/10 DONE | Claude | 609d875 | — | 2026-02-07 |
+| SA-MERGED | SuperAdmin Tickets (merged) | `CODE_COMPLETE` | 8/8 MERGED | Claude | bd90493 | — | 2026-02-10 |
+| **SA-GOLIVE** | **SuperAdmin Critical Go-Live** | `NEXT` | **0/17** | **Claude** | — | — | **2026-02-10** |
+| SA-DEFERRED | SuperAdmin Post Go-Live | `DEFERRED` | 0/8 | — | — | — | 2026-02-10 |
+| DEFERRED  | Deferred Tickets (P1+P2+P3) | `CODE_COMPLETE` | 7/7 DONE | Claude | 609d875 | — | 2026-02-06 |
+| BATCH-010 | Staging Deploy | `BLOCKED` | 1/6 DONE (E2E config) | Claude+Operator | — | — | 2026-02-07 |
+| BATCH-011 | Go-Live | `DRAFT` | 0/4 | Operator | — | — | 2026-02-05 |
 
 ### Scaling Note
 
@@ -1626,9 +1637,69 @@ Grants AR push + Cloud Run deploy permissions.
 
 ---
 
+### SA-GOLIVE: SuperAdmin Critical Go-Live Tickets
+
+**Status**: `NEXT` | **RC_SHA**: — | **CI Run**: — | **Updated**: 2026-02-10
+
+> **Goal**: Implement 17 remaining SuperAdmin tickets required before go-live.
+> Operator phasing decision (2026-02-10): 8 tickets deferred to post go-live.
+> Full ticket specs: `RELEASES/SUPERADMIN_IMPLEMENTATION_TICKETS.md`
+
+#### Already Merged (8 tickets — reference only)
+| # | Ticket | PR | SHA |
+|---|--------|----|-----|
+| 1 | SA-P0-005 — Feature kill switch | #9 | 0b8fac7 |
+| 2 | SA-P0-006 — Refund & sale reversal | #11 | f2bfe25 |
+| 3 | SA-P1-001 — Staff identity/RBAC | #5 | 9fcf73f |
+| 4 | SA-P1-004 — GRN quantity validation | #6 | 6dd82d9 |
+| 5 | SA-P1-005 — Supplier suspension | #7 | 477682d |
+| 6 | SA-P1-006 — Payment method control | #8 | 861d009 |
+| 7 | SA-P1-007 — Per-store feature flags | #9 | 0b8fac7 |
+| 8 | SA-P1-008 — Bank detail re-verification | #10 | 8446cd4 |
+
+#### Critical Go-Live Progress (17 tickets)
+| # | Ticket | Risk | Status | Evidence |
+|---|--------|------|--------|----------|
+| 1 | SA-P0-001 — Store suspension & reactivation | B | PENDING | — |
+| 2 | SA-P0-004 — Stock-in supplier info (optional) | B | PENDING | — |
+| 3 | SA-P0-007 — System maintenance mode | B | PENDING | — |
+| 4 | SA-P1-009 — Store health dashboard | A | PENDING | — |
+| 5 | SA-P1-012 — Offline sale re-validation | B | PENDING | — |
+| 6 | SA-P1-014 — Store settings visibility | A | PENDING | — |
+| 7 | SA-P1-015 — Reorder policy supervision | B | PENDING | — |
+| 8 | SA-P2-001 — Force device re-enrollment | B | PENDING | — |
+| 9 | SA-P2-002 — Remote config push notification | B | PENDING | — |
+| 10 | SA-P2-003 — Minimum app version enforcement | B | PENDING | — |
+| 11 | SA-P2-004 — Compliance status aggregation | A | PENDING | — |
+| 12 | SA-P2-005 — Force POS sync trigger | B | PENDING | — |
+| 13 | SA-P2-006 — Product category manual override | A | PENDING | — |
+| 14 | SA-P2-007 — BNPL limit adjustment UI | A | PENDING | — |
+| 15 | SA-P2-008 — Retailer bulk import notification | A | PENDING | — |
+| 16 | SA-P2-009 — Device hardware whitelist | B | PENDING | — |
+| 17 | SA-P2-010 — Retailer user force password reset | B | PENDING | — |
+
+#### Deferred — Post Go-Live (8 tickets)
+| # | Ticket | Reason |
+|---|--------|--------|
+| 1 | SA-P0-002 — Discount limits | Store-owned, not blocking launch |
+| 2 | SA-P0-003 — Price bounds | Store-owned, not blocking launch |
+| 3 | SA-P1-002 — Spending limits | Retailer Dashboard owned |
+| 4 | SA-P1-003 — Due limits | Retailer Dashboard owned |
+| 5 | SA-P1-010 — Anomaly detection | Nice-to-have, not blocking |
+| 6 | SA-P1-011 — Stock adjustment audit | Retailer Dashboard owned |
+| 7 | SA-P1-013 — Device token revocation UI | Covered by SA-P2-001 (force re-enroll) |
+| 8 | SA-P2-011 — Persistent rate limiting | Infra optimization, not blocking |
+
+#### Gates
+- [ ] `pnpm -r typecheck` = 0 errors
+- [ ] `@prod` E2E = 0 failures
+- [ ] CI green for RC_SHA
+
+---
+
 ### BATCH-010: Staging Deploy + Pre-Live Testing
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `BLOCKED` (waiting for SA-GOLIVE) | **RC_SHA**: — | **CI Run**: —
 
 > **Goal**: Full staging environment working on Cloud Run. All portals tested.
 > E2E passes against staging. Rollback drill completed. Operator signs off.
