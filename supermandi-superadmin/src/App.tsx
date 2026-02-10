@@ -876,8 +876,7 @@ export default function App() {
   const [featureFlagSaving, setFeatureFlagSaving] = useState<Record<string, boolean>>({});
   const [featureFlagsError, setFeatureFlagsError] = useState("");
 
-  // SA-P2-003: Min app version input state
-  const [minAppVersionInput, setMinAppVersionInput] = useState("");
+  // SA-P2-003-AUTO: Version input removed — auto-detected from MIN_APP_VERSION env var
 
   // SA-P1-007: Per-store feature flags state
   const [storeFeatureFlags, setStoreFeatureFlags] = useState<Record<string, StoreFeatureFlag[]>>({});
@@ -1624,11 +1623,7 @@ export default function App() {
     try {
       const flags = await fetchGlobalFlags();
       setFeatureFlags(flags);
-      // SA-P2-003: Initialize version input from loaded flag payload
-      const mvFlag = flags.find((f) => f.flag_key === "minAppVersion");
-      if (mvFlag?.payload_json && typeof (mvFlag.payload_json as any).version === "string") {
-        setMinAppVersionInput((mvFlag.payload_json as any).version);
-      }
+      // SA-P2-003-AUTO: Version auto-detected from env var — no UI initialization needed
     } catch (e: unknown) {
       setFeatureFlagsError(e instanceof Error ? e.message : "Failed to fetch feature flags");
     } finally {
@@ -1639,11 +1634,8 @@ export default function App() {
   async function handleToggleGlobalFlag(key: string, enabled: boolean) {
     setFeatureFlagSaving((prev) => ({ ...prev, [key]: true }));
     try {
-      // SA-P2-003: Pass version payload for minAppVersion flag
-      const payload = key === "minAppVersion" && minAppVersionInput.trim()
-        ? { version: minAppVersionInput.trim() }
-        : undefined;
-      const updated = await toggleGlobalFlag(key, enabled, payload);
+      // SA-P2-003-AUTO: Version auto-detected — no payload needed from UI
+      const updated = await toggleGlobalFlag(key, enabled);
       setFeatureFlags((prev) =>
         prev.map((f) =>
           f.flag_key === key ? { ...f, ...updated } : f
@@ -4772,16 +4764,12 @@ export default function App() {
                             {flag.enabled ? "ENABLED" : "DISABLED"}
                           </span>
                         </td>
-                        {/* SA-P2-003: Config column — version input for minAppVersion */}
+                        {/* SA-P2-003-AUTO: Config column — version auto-detected from build */}
                         <td>
                           {flag.flag_key === "minAppVersion" ? (
-                            <input
-                              type="text"
-                              placeholder="e.g. 1.0.1"
-                              value={minAppVersionInput || (flag.payload_json as any)?.version || ""}
-                              onChange={(e) => setMinAppVersionInput(e.target.value)}
-                              style={{ width: 80, fontSize: 12, padding: "2px 6px", borderRadius: 3, border: "1px solid #ccc" }}
-                            />
+                            <span style={{ fontSize: 12, color: "#666" }}>
+                              Auto (from build)
+                            </span>
                           ) : (
                             <span style={{ color: "#999", fontSize: 11 }}>{"\u2014"}</span>
                           )}
