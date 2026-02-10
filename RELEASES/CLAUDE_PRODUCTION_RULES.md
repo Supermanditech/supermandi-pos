@@ -3,7 +3,7 @@
 > **Discipline contract for every Claude session on SuperMandi.**
 > This file is MANDATORY reading at session start — referenced by MASTER_PLAN.md.
 > Claude MUST internalize every rule before writing a single line of code.
-> Last Updated: 2026-02-10
+> Last Updated: 2026-02-11
 
 ---
 
@@ -152,6 +152,90 @@ All database changes follow the **expand → migrate → contract** pattern:
 - Write endpoints: < 500ms p95
 - Batch operations: < 2s p95
 
+#### B.6.1 Load Testing (k6/Locust)
+
+Run load profiles against Docker stack (and later staging):
+
+| Endpoint Class | Target QPS | p95 Target | Notes |
+|----------------|-----------|------------|-------|
+| `scan/resolve` | High | < 300ms | Hot path — most frequent POS operation |
+| `search` | High | < 500ms | Realistic queries, not just prefix |
+| `checkout` | Medium | < 500ms | Must be reliable + idempotent |
+| `stock-in` | Medium | < 500ms | GRN/purchase receiving |
+
+**Pass criteria**:
+- p95 latency within targets above
+- Error rate < 0.1%
+- Zero DB deadlocks/timeouts under target load
+- Zero duplicate records from concurrent writes
+
+#### B.6.2 DB Performance Proof
+
+Required indexes (must exist and be used):
+
+| Index | Purpose |
+|-------|---------|
+| `barcode → product` mapping | Fast scan resolve |
+| `store_id` scoped search | Store-isolated queries |
+| `store_products` lookup | POS product catalog |
+| Composite `(store_id, barcode)` | Primary POS hot path |
+
+**Enforcement**:
+- Run `EXPLAIN ANALYZE` on hot-path queries
+- Enable slow-query logging (> 100ms) in local-prod
+- All hot-path queries must use index scan, not seq scan
+- Document results in evidence pack
+
+#### B.6.3 Large Dataset Simulation
+
+Before go-live, test with realistic data volumes:
+
+| Fixture | Size | Purpose |
+|---------|------|---------|
+| Single store | 100k SKUs | Prove scan/search/checkout at scale |
+| Multi-store (optional) | 10 stores × 50k SKUs each | Prove store isolation under load |
+| Cart stress | 50-line carts | Prove checkout with large orders |
+
+**Test scenarios**:
+- Search pagination with 100k results
+- Scan resolve cache hit/miss patterns
+- Checkout with 50-line carts
+- Barcode density (multiple products per barcode prefix)
+
+### B.7 Resilience & Graceful Degradation
+
+The system must degrade gracefully when dependencies fail — not crash.
+
+| Failure Scenario | Expected Behavior | Test Method |
+|-----------------|-------------------|-------------|
+| **DB temporarily down** | API returns 503 (not crash), retries on reconnect | Stop Postgres container, verify API response, restart, verify recovery |
+| **Redis down** | Cache miss → DB fallback, sessions degrade gracefully | Stop Redis container, verify read paths still work (slower), verify no crash |
+| **Single service down** | Gateway returns correct 503 for affected routes, other routes unaffected | Stop one backend service, verify gateway isolates failure |
+| **Slow DB response** | Request timeout fires, client gets clear error | Simulate slow query, verify timeout + error response (not hang) |
+
+**Enforcement**:
+- `test:resilience` runs against Docker stack with controlled container stop/start
+- Every service MUST handle connection pool exhaustion without crashing
+- Gateway MUST NOT crash when a downstream service is unreachable
+- POS MUST show clear user-facing error (not blank screen) when API is down
+
+### B.8 Security Enforcement
+
+| Security Concern | Rule | Test Method |
+|-----------------|------|-------------|
+| **AuthN everywhere** | Every API endpoint (except `/health`, `/version`) requires valid token | `test:security` — hit all routes without token, verify 401 |
+| **RBAC enforcement** | Cashier cannot access manager endpoints, manager cannot access superadmin | `test:security` — hit endpoints with wrong role token, verify 403 |
+| **Tenant isolation** | Store A token never returns Store B data (API + DB + cache) | `test:invariants` — already covers (B.3 invariant #3) |
+| **Input validation** | SQL injection, XSS payloads rejected at API boundary | `test:security` — send malicious payloads, verify rejection |
+| **Secrets audit** | No dev keys, test tokens, or `.env` values in production builds | CI grep gate — scan built artifacts for known test patterns |
+| **Config validation** | Missing required env var = fail-fast on startup (not silent fallback) | Startup test — omit each required var, verify crash with clear message |
+
+**Enforcement**:
+- `test:security` runs as part of CI (not optional)
+- Auth header enforcement: zero public admin/write endpoints
+- Rate limiting on auth endpoints (login, OTP) to prevent brute force
+- All user input sanitized before DB queries (parameterized queries only, no string concatenation)
+
 ---
 
 ## PART C: TEST POLICY — AFTER EVERY FIX
@@ -163,7 +247,12 @@ pnpm -r typecheck          # Zero errors across all projects
 pnpm -r lint               # Zero warnings (errors are blocked)
 pnpm -r build              # All projects build successfully
 pnpm test:ci               # Unit test suite
+pnpm test:contract         # API contract validation (Zod/OpenAPI schema match)
 ```
+
+> **Contract-Lock Gate**: Validates real API responses against Zod/OpenAPI schemas.
+> Fails CI if any response shape changes or required header is missing.
+> This catches the #1 go-live crash: "API changed, UI breaks" or "env/header missing".
 
 ### C.2 By Change Type
 
@@ -183,6 +272,15 @@ pnpm test:ci               # Unit test suite
 3. Store isolation: query with Store B token returns zero rows of Store A data
 4. Idempotency: same request with same key = same response, no double-count
 5. Scan: barcode query scoped to token's store only
+
+**Transaction-safe integration scenarios** (must pass as atomic operations):
+
+| Scenario | Writes | Invariant |
+|----------|--------|-----------|
+| Sale checkout | sale record + ledger entry + stock deduction | All three written in one transaction, or none |
+| Stock-in (GRN) | ledger entry + stock increment | Both written atomically |
+| Scan resolve | read-only | Always returns store-scoped product only |
+| Retry checkout | same idempotency key | No duplicate orders, no double stock deduction |
 
 #### B. Migration Changes
 
@@ -208,6 +306,26 @@ pnpm test:ci               # Unit test suite
 | Typecheck + lint | `pnpm typecheck && pnpm lint` (in POS root) | No type errors |
 | API smoke | `pnpm test:pos:smoke` | POS can reach API, auth works, basic CRUD |
 | Emulator E2E | Maestro/Detox flow | Sell flow completes on emulator |
+| Release build smoke | Build release APK, test scan+sell loop 30–60 min | No memory leaks, no crashes in production mode |
+| Offline/flaky network | Simulate airplane mode mid-checkout, 2G latency | Graceful degradation, retry with backoff, clear error UI |
+
+**POS Scanner & Hardware Tests**:
+
+| Test | What It Proves |
+|------|----------------|
+| HID scanner buffering | Rapid sequential scans are debounced correctly, Enter key terminates barcode |
+| Duplicate scan guard | Same barcode scanned twice rapidly adds quantity (not duplicate line item) |
+| Camera scan fallback | If HID scanner disconnected, camera scan activates and resolves barcode |
+| Background/foreground | App resumes correctly after backgrounding mid-checkout (no state loss) |
+| Soak test (extended) | 2+ hour continuous scan+sell loop on release APK — no memory leaks, no ANR |
+
+**POS Crash-Proofing Requirements**:
+- Lists MUST be virtualized (FlashList/FlatList with windowing) — no unbounded renders
+- Guard against unbounded state growth (scan buffer, logs, cart arrays)
+- All writes MUST use idempotency keys
+- All network calls MUST have timeouts + retry with exponential backoff
+- User-facing error UI for network failures ("retry safely" not just "error")
+- Scanner input buffer MUST be bounded and cleared after resolve
 
 #### E. Infrastructure Changes (Docker, CI, nginx, deploy scripts)
 
@@ -228,12 +346,74 @@ These scripts MUST exist in `package.json` (root or per-service):
 | `test:invariants` | Domain invariant verification (stock, ledger, isolation, idempotency, scan, price) |
 | `test:migrate-zero` | Empty DB → all migrations → verify schema |
 | `test:schema-verify` | Compare live schema to expected |
-| `test:contract` | API contract tests |
+| `test:contract` | API contract validation (Zod/OpenAPI schema match) |
 | `test:e2e:retailer` | Retailer admin Playwright smoke |
 | `test:e2e:supplier` | Supplier portal Playwright smoke |
 | `test:e2e:superadmin` | SuperAdmin Playwright smoke |
 | `test:pos:smoke` | POS API smoke tests |
-| `release:gate` | Full release gate (typecheck + lint + build + @prod E2E) |
+| `test:resilience` | Graceful degradation (DB down, Redis down, service down) |
+| `test:security` | Auth enforcement, RBAC, input validation, tenant isolation |
+| `test:load` | k6/Locust load profiles (scan, search, checkout, stock-in) |
+| `test:load:dataset` | Large dataset simulation (100k SKU fixture + stress scenarios) |
+| `test:deploy-parity` | Docker build + stack startup + gateway routing + health + config validation |
+| `release:gate` | Full release gate (typecheck + lint + build + contract + @prod E2E) |
+
+### C.4 Critical E2E Paths (Playwright @prod)
+
+These are the specific end-to-end journeys that @prod E2E tests MUST cover:
+
+| # | Journey | Steps | What It Catches |
+|---|---------|-------|-----------------|
+| 1 | **SuperAdmin → POS sell** | SuperAdmin provisions store → POS login → scan → sell → receipt + ledger | Full provisioning + sell chain |
+| 2 | **Retailer creates SKU → POS finds it** | Retailer creates product/SKU → POS scan → product found | Catalog sync + store-scoped search |
+| 3 | **Supplier adds product → visible** | Supplier adds product → appears in retailer catalog | Supplier-to-retailer pipeline |
+| 4 | **Checkout → stock deduction → ledger** | POS checkout → verify stock decremented → verify ledger entry | Transaction safety |
+| 5 | **Login/logout all portals** | Each portal: login → verify auth → logout → verify session cleared | Auth/session correctness |
+| 6 | **Store isolation proof** | Login as Store A → query → login as Store B → query → verify zero cross-contamination | Data isolation |
+
+### C.5 Three-Layer Catch Net
+
+If Claude coded incorrectly, these three layers catch it before staging:
+
+```
+Layer 1: CONTRACT TESTS  → catch wrong API shapes, missing headers
+Layer 2: INTEGRATION TESTS → catch wrong DB logic, ledger, isolation
+Layer 3: LOAD TESTS + BIG DATASET → catch performance and scale failures
+```
+
+Any failure at any layer = BLOCKED. Fix before proceeding.
+
+### C.6 Deploy Parity Tests
+
+Verify that the built artifacts behave correctly in a production-like environment before staging deploy.
+
+| Test | Command / Method | What It Proves |
+|------|-----------------|----------------|
+| Docker build all services | `docker-compose -f docker-compose.local-prod.yml build` | Every service image builds successfully |
+| Stack startup | `docker-compose up` + wait for healthy | All containers start, health checks pass, migrations run |
+| Gateway routing | Hit every `/api/v1/*` route → verify not-404 | All expected routes are registered and reachable |
+| Health + version | `curl /api/v1/health` + `curl /api/v1/version` | Services report correct status and SHA |
+| Config validation | Start with missing required env var → verify fail-fast | App crashes with clear message (not silent fallback) |
+| Portal base paths | Hit `/retailer/`, `/supplier/`, `/admin/` → verify 200 | Production builds serve at correct base paths |
+| CORS headers | Cross-origin request from portal to API → verify allowed | CORS config correct for all portal origins |
+
+**Pass criteria**: All 7 checks green. Any failure = BLOCKED before CI push.
+
+**Relationship to other tests**: Deploy parity runs AFTER Packs 1–3 (contract, integration, E2E) pass. It's the final local gate before pushing to CI.
+
+### C.7 Security Test Matrix
+
+Automated security checks that run in CI:
+
+| # | Test | Target | Pass Criteria |
+|---|------|--------|---------------|
+| 1 | **Unauthenticated access** | Every non-public endpoint | 401 for all |
+| 2 | **Wrong-role access** | Cashier → manager endpoints, manager → superadmin | 403 for all |
+| 3 | **Tenant isolation** | Store A token → query → zero Store B data | Zero cross-store rows |
+| 4 | **SQL injection** | `' OR 1=1 --` in search, login, barcode fields | Rejected or parameterized (no data leak) |
+| 5 | **XSS payloads** | `<script>alert(1)</script>` in text fields | Sanitized or rejected |
+| 6 | **Secrets in build** | Grep built artifacts for test tokens, `.env` patterns | Zero matches |
+| 7 | **Rate limiting** | 100 rapid login attempts | Rate-limited after threshold |
 
 ---
 
@@ -552,8 +732,19 @@ After the first production deploy succeeds:
 5. Collect evidence (Part D)
 6. Commit with format: BATCH-XXX: TICKET-ID - Description
 7. Update MASTER_PLAN.md ticket status
-8. When batch complete → run full release:gate → prepare evidence pack
+8. When batch complete:
+   a. Run Claude automated gates (typecheck + unit tests + build)
+   b. Provide E2E PowerShell script to operator → operator runs in VS Code terminal
+   c. Operator pastes results → Claude fixes ANY issues (even minor) → repeat a-b until ZERO issues
+   d. Push to CI → CI gates must pass
+   e. Prepare evidence pack
 ```
+
+### Promotion Gate (Full Project Completion Required)
+
+Steps 11-13 of RELEASE_POLICY.md (PROMOTE → POST-DEPLOY → CLOSE) are **blocked**
+until ALL portals (retailer/supplier/admin) + POS app are complete and verified.
+The team stays in the steps 1–10 iterative cycle until then.
 
 ---
 
@@ -567,6 +758,9 @@ Jobs:
   - lint (pnpm -r lint)
   - build (pnpm -r build)
   - test:ci (unit tests)
+  - test:contract (API contract validation — Zod/OpenAPI)
+  - test:invariants (domain invariant verification)
+  - test:security (auth enforcement, RBAC, input validation)
   - test:migrate-zero (empty DB → all migrations)
   - docker build (all service images)
 ```
@@ -589,6 +783,242 @@ Shifts traffic to the staging-verified revision. Same image, same SHA.
 
 ---
 
+## PART O: GO-LIVE SAFEGUARDS
+
+### O.1 Observability (Day 0 Requirements)
+
+These MUST be in place before first production deploy:
+
+| Requirement | Implementation | Why |
+|-------------|---------------|-----|
+| Request correlation ID | Every request gets unique `x-request-id`, propagated across services | Trace failures end-to-end |
+| Structured error logging | JSON logs with `service`, `endpoint`, `storeId`, `error`, `stack` | Searchable in Cloud Logging |
+| Metrics dashboard | Error rate, p95 latency, DB connections, active requests | Detect degradation before users report |
+| POS crash reporting | Sentry or Firebase Crashlytics in release APK | Catch Android-specific crashes |
+| Uptime monitoring | External health check every 60s on `/api/v1/health` | Detect outages immediately |
+
+#### O.1.1 Observability Verification Tests
+
+Requirements from O.1 must be **testable**, not just documented:
+
+| Test | What It Verifies |
+|------|-----------------|
+| Correlation ID propagation | Send request → verify `x-request-id` appears in response headers AND in service logs |
+| Structured error logging | Trigger a known error → verify JSON log contains `service`, `endpoint`, `storeId`, `error`, `stack` |
+| Metrics smoke | After a checkout → verify key counters incremented (orders_created, stock_updated) |
+| Health endpoint | `/api/v1/health` returns `{"status":"ok"}` with service name, SHA, uptime |
+| POS crash reporting | Trigger a handled exception → verify it appears in Sentry/Crashlytics dashboard |
+
+**Enforcement**: These tests run once during staging verification (not on every commit).
+
+### O.2 Feature Flags / Kill Switch (Recommendation)
+
+> **Status**: Recommendation for implementation — requires new development work.
+
+| Capability | Purpose |
+|------------|---------|
+| Server-side kill switch per endpoint/workflow | Disable risky modules (reorder, bulk import) without redeploy |
+| Feature flag per store | Roll out new features store-by-store |
+| Client-side feature config | POS reads feature flags on startup |
+
+**Implementation priority**: After first go-live, before adding new major features.
+
+### O.3 Canary Rollout (Post Go-Live Only)
+
+> **Note**: Does NOT apply to MEGA-RC (first deploy). Canary applies after go-live for subsequent batches.
+
+Post go-live deployment pattern:
+```
+Staging → 1-2 pilot stores (canary) → monitor → expand to all stores
+```
+
+| Step | Duration | Pass Criteria |
+|------|----------|---------------|
+| Pilot store(s) | 1-2 hours | Zero errors, zero user reports |
+| Expand to 50% | 1 hour | Error rate < 0.1% |
+| Full rollout | — | Stable for 15 min (per ROLLBACK_PLAYBOOK) |
+
+---
+
+## PART P: CLAUDE COMPLETENESS PROTOCOL
+
+> **Problem**: Claude writes code, runs tests, declares done — but how does Claude ensure
+> EVERY required test was run, EVERY business function was covered, and NOTHING was forgotten?
+>
+> **Solution**: A systematic pre-task → post-task → batch-level verification protocol
+> that makes forgetting structurally impossible.
+
+### P.1 Pre-Task Scope Analysis
+
+Before writing ANY code for a ticket, Claude MUST:
+
+```
+1. LIST all files that will be touched (read git diff --stat if already started)
+2. CLASSIFY each file using the Change-Impact Router (P.2)
+3. DERIVE the full test set required
+4. ANNOUNCE the test plan in the "Starting TICKET-ID" message
+```
+
+**Template** (added to Communication Protocol):
+```
+Starting TICKET-ID: [description]
+Risk Class: X
+Files in scope: [list]
+Required tests: [derived from P.2 router]
+Business functions affected: [from P.3 registry]
+```
+
+### P.2 Change-Impact Router
+
+Automatic file-to-test mapping. Claude uses this table to determine which tests are required for ANY file change.
+
+| File Pattern | Change Type | Required Tests |
+|-------------|-------------|----------------|
+| `backend/services/*` | Backend service | test:ci + test:contract + test:invariants + test:security + test:integration |
+| `backend/services/api-gateway/*` | Gateway/routing | test:ci + test:contract + test:deploy-parity |
+| `backend/migrations/*` | Schema change | migrate-from-zero + schema-verify + test:ci + test:contract + test:invariants |
+| `retailer-admin/*` | Retailer portal | build (retailer) + test:ci + e2e(@prod, retailer flows) |
+| `supplier-portal/*` | Supplier portal | build (supplier) + test:ci + e2e(@prod, supplier flows) |
+| `supermandi-superadmin/*` | Admin portal | build (admin) + test:ci + e2e(@prod, admin flows) |
+| `src/*` (root) | POS app | typecheck + test:ci + API smoke + emulator E2E + offline/flaky + scanner hardware |
+| `docker-compose*.yml` | Infrastructure | test:deploy-parity + full stack startup test |
+| `.github/workflows/*` | CI pipeline | Dry-run CI locally if possible, review all gate coverage |
+| `e2e-tests/*` | Test changes | Run the changed tests + verify no regressions in existing tests |
+| `backend/shared/*` | Shared library | ALL backend tests (shared code affects every service) |
+| `scripts/*` | Deploy/migrate scripts | test:deploy-parity + migrate-from-zero |
+
+**Rule**: If a file matches multiple patterns, the UNION of all required tests applies.
+
+**Rule**: If a file matches NO pattern, Claude MUST explicitly state: "File [X] does not match any router pattern — manually determining required tests."
+
+### P.3 Business Logic Registry
+
+Master list of all business functions. Claude uses this to verify complete coverage when working on a batch or declaring a batch GATED.
+
+| # | Business Function | Primary Services | Key Endpoints | Required Tests | Invariant |
+|---|-------------------|-----------------|---------------|----------------|-----------|
+| 1 | **Barcode Scan** | pos-service, catalog-service | `POST /pos/scan` | POS E2E + scanner hardware + offline/flaky | Scan scope (B.3) |
+| 2 | **Product Search** | catalog-service | `GET /catalog/products/search` | Contract + integration + 100k SKU load | Price integrity (B.3) |
+| 3 | **Checkout / Sale** | order-service, inventory-service, pos-service | `POST /orders/checkout` | E2E critical path + invariants + idempotency | Stock (B.3), Ledger (B.3), Idempotency (B.3) |
+| 4 | **Stock-In / Receive** | inventory-service, reorder-service | `POST /inventory/stock-in` | Integration + invariants + contract | Stock (B.3), Ledger (B.3) |
+| 5 | **Store Provisioning** | platform-service, auth-service | `POST /platform/stores` | Integration + security + tenant isolation | Store isolation (B.3) |
+| 6 | **Auth (Login/Register)** | auth-service | `POST /auth/login`, `POST /auth/register` | Security + RBAC + contract | — |
+| 7 | **Supplier Products** | supplier-service, catalog-service | `GET/POST /supplier/products` | Contract + integration + tenant isolation | Store isolation (B.3) |
+| 8 | **Retailer SKU Mgmt** | catalog-service, inventory-service | `GET/PUT /catalog/skus` | Contract + integration + 100k SKU load | Price integrity (B.3) |
+| 9 | **Ledger / Transactions** | order-service, analytics-service | `GET /orders/ledger` | Invariants + integration + contract | Ledger (B.3) |
+| 10 | **Pricing (MRP/Sell)** | catalog-service | `GET/PUT /catalog/pricing` | Contract + invariants + integration | Price integrity (B.3) |
+
+### P.4 Post-Task Verification
+
+After completing code for a ticket, BEFORE declaring it done, Claude MUST:
+
+```
+1. RUN: git diff --stat (list all changed files)
+2. ROUTE: Apply P.2 router to every changed file
+3. COMPARE: Required tests (from router) vs actually-run tests
+4. GAP CHECK: If any required test was NOT run → run it now
+5. BUSINESS CHECK: Cross-reference P.3 registry — did changes touch any business function's service/endpoint?
+   - If yes → verify that function's required tests were run
+6. DECLARE: List all tests run with pass/fail status in the "TICKET-ID DONE" message
+```
+
+**Template** (added to Communication Protocol):
+```
+TICKET-ID DONE:
+- Fix: [one-line summary]
+- Files changed: [list from git diff]
+- Tests required (P.2 router): [list]
+- Tests actually run: [list with pass/fail]
+- Business functions affected (P.3): [list or "none"]
+- Coverage gap: NONE | [describe gap and why it's acceptable]
+- Evidence: [screenshot/curl/SQL reference]
+- Guard: [test added or proof path]
+- Risk: [what could break if this is wrong]
+```
+
+### P.5 Batch-Level Completeness Scan
+
+Before declaring a batch GATED, Claude MUST run a full completeness scan:
+
+```
+1. DIFF: git diff <batch-start-sha>..HEAD --stat
+2. ROUTE: Apply P.2 router to EVERY file in the diff
+3. UNION: Compute the union of all required tests
+4. VERIFY: Every test in the union has been run and passed
+5. REGISTRY: Walk P.3 registry — for each business function:
+   a. Were any of its services/endpoints touched?
+   b. If yes, were all its required tests run?
+   c. If no tests needed, explicitly note "not affected"
+6. REPORT: Generate completeness report
+```
+
+**Completeness Report Template:**
+```
+BATCH-XXX COMPLETENESS SCAN:
+Files changed: [count]
+Router-required test sets: [list]
+All router tests passed: YES/NO
+Business functions affected: [list with test status]
+Business functions NOT affected: [list]
+Unmatched files (no router pattern): [list or "none"]
+VERDICT: COMPLETE / INCOMPLETE (reason)
+```
+
+### P.6 Five Safety Nets (Defense in Depth)
+
+No single check catches everything. These five layers ensure completeness:
+
+```
+NET 1: Pre-Task (P.1)     — Claude announces scope + test plan BEFORE coding
+NET 2: Post-Task (P.4)    — Claude verifies all router-required tests AFTER coding
+NET 3: Batch Scan (P.5)   — Full diff review before declaring GATED
+NET 4: Operator E2E        — Human runs Playwright, catches what automated tests miss
+NET 5: CI Pipeline         — Independent gate, overrides all local results
+```
+
+| Net | Catches | When |
+|-----|---------|------|
+| Pre-Task | Forgotten test plans, scope creep | Before first line of code |
+| Post-Task | Missed tests, untested file changes | After each ticket |
+| Batch Scan | Cross-ticket gaps, cumulative drift | Before GATED declaration |
+| Operator E2E | UI regressions, flow breaks, visual issues | Before CI push |
+| CI Pipeline | Environment differences, integration failures | After push |
+
+**Rule**: If any net catches an issue, Claude fixes it AND traces back to understand which earlier net should have caught it — then tightens the earlier net's rules.
+
+### P.7 Session Navigation Workflow
+
+How Claude uses this protocol throughout a session:
+
+**Session Start:**
+```
+1. Read CLAUDE_PRODUCTION_RULES.md (this file)
+2. Read MASTER_PLAN.md (current batch, tickets)
+3. Check git log + git status
+4. Identify current batch and pending tickets
+```
+
+**Per Ticket:**
+```
+1. P.1 — Pre-Task Scope Analysis (announce plan)
+2. Write code (following Parts A-B rules)
+3. Run tests (following Part C test policy)
+4. P.4 — Post-Task Verification (confirm completeness)
+5. Record evidence (following Part D)
+6. Declare done (Communication Protocol)
+```
+
+**Batch Complete:**
+```
+1. P.5 — Batch-Level Completeness Scan
+2. Run all automated gates (Gate 1: typecheck + test:ci + build + contract + invariants + security)
+3. Provide E2E script to operator (Gate 2)
+4. Fix any issues from operator E2E → repeat gates
+5. Declare GATED (with completeness report)
+```
+
+---
+
 ## QUICK REFERENCE CHECKLIST
 
 Before declaring any fix complete, verify:
@@ -600,11 +1030,20 @@ Before declaring any fix complete, verify:
 - [ ] Business invariants preserved (Part B.3)
 - [ ] Full integration: UI → API → DB → UI (Part B.4)
 - [ ] Migrations are idempotent and backward-compatible (Part B.5)
+- [ ] Contract tests pass — API shapes match schema (Part C.1)
+- [ ] Performance: no N+1, queries use indexes (Part B.6)
+- [ ] Resilience: graceful degradation when dependencies fail (Part B.7)
+- [ ] Security: auth enforced, RBAC correct, no injection vectors (Part B.8)
+- [ ] POS: lists virtualized, state bounded, scanner debounced, idempotency keys (Part C.2.D)
+- [ ] Deploy parity: Docker build + gateway routing + health checks pass (Part C.6)
 - [ ] Evidence collected, appropriate to risk class (Part D)
 - [ ] Regression guard in place (Part D.1)
 - [ ] Scope limited to ticket (Part A.4)
 - [ ] Definition of Done met (Part H, all 7 criteria)
 - [ ] Commit message follows format (Part G.2)
+- [ ] Pre-task scope analysis done — test plan announced (Part P.1)
+- [ ] Change-impact router applied — all required tests derived (Part P.2)
+- [ ] Post-task verification — no coverage gaps (Part P.4)
 
 ---
 
@@ -633,3 +1072,7 @@ Before declaring any fix complete, verify:
 | 3.0 | 2026-02-10 | Part L rewritten: "Staging-Ready While Blocked" → "Staging Transition Discipline" with Session Modes (A/B), First Deploy Protocol (mega-batch), Post Go-Live cadence. GCP setup now being resolved by operator. | Claude |
 | 3.1 | 2026-02-10 | DOC-020: G.3 made mode-aware (Mode A: direct push, Mode B: PR branches). G.4: RC tag ownership assigned to Claude. | Claude |
 | 3.2 | 2026-02-10 | DOC-021: D.3 Evidence Pack rewritten to MEGA-RC-aware structure. OPERATOR_RUNBOOK.md marked SUPERSEDED in relationship table. | Claude |
+| 4.0 | 2026-02-11 | DOC-022: Part M Phase 1 updated — operator E2E review before CI push. Added Promotion Gate (full project completion required). | Claude |
+| 5.0 | 2026-02-11 | DOC-023: B.6 expanded (load testing profiles, DB performance proof, 100k SKU dataset simulation). C.1 added contract-lock gate. C.2.A added transaction-safe integration scenarios. C.2.D added POS release build smoke + offline/flaky network testing + crash-proofing requirements. C.4 Critical E2E Paths defined (6 journeys). C.5 Three-Layer Catch Net principle. N.1 CI jobs added (contract, invariants). Part O Go-Live Safeguards (observability, feature flags, canary rollout). | Claude |
+| 6.0 | 2026-02-11 | DOC-024: B.7 Resilience & Graceful Degradation (DB/Redis/service down tests). B.8 Security Enforcement (RBAC, input validation, secrets audit). C.2.D extended with POS scanner hardware tests (HID, camera, soak). C.3 added test:resilience, test:security, test:deploy-parity scripts. C.6 Deploy Parity Tests (gateway routing, config validation, CORS). C.7 Security Test Matrix. O.1.1 Observability Verification Tests. N.1 CI added test:security. | Claude |
+| 7.0 | 2026-02-11 | DOC-025: Part P — Claude Completeness Protocol. P.1 Pre-Task Scope Analysis. P.2 Change-Impact Router (file-to-test mapping). P.3 Business Logic Registry (10 business functions). P.4 Post-Task Verification. P.5 Batch-Level Completeness Scan. P.6 Five Safety Nets. P.7 Session Navigation Workflow. Quick Reference Checklist extended with P.1/P.2/P.4 items. | Claude |

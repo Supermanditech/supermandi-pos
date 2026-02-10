@@ -99,6 +99,19 @@ LOCAL SCHEMA === STAGING SCHEMA === PROD SCHEMA
 
 ## PART 3: TESTING GATES (ALL MUST PASS)
 
+> **Gate Mapping to RELEASE_POLICY.md:**
+> This file uses granular gate numbering for testing specificity.
+> RELEASE_POLICY.md groups them into 6 release gates:
+>
+> | RELEASE_POLICY.md | ZERO_REGRESSION_RULES.md |
+> |-------------------|--------------------------|
+> | Gate 1: Claude Automated | Gates 1 + 2 + 2.5 + 2.7 + 2.9 (typecheck + unit tests + build + contract/invariants + security) |
+> | Gate 2: Operator E2E (Pre-CI) | Gate 3 (E2E Local — operator runs) |
+> | Gate 3: CI Pipeline | *(CI, not listed as testing gate)* |
+> | Gate 4: Staging Smoke | *(deploy-time check)* |
+> | Gate 5: Staging E2E | Gate 4 (E2E Staging — operator runs) |
+> | Gate 6: Browser Acceptance | Gate 5 (Manual Testing Matrix) |
+
 ### Gate 1: Type Safety
 ```powershell
 pnpm -r typecheck
@@ -120,20 +133,49 @@ pnpm -r build
 - All projects must build successfully (exit 0)
 - Build failures = BLOCKED
 
-### Gate 3: E2E Tests (Local)
+### Gate 2.7: Contract + Invariant Validation
+```powershell
+pnpm test:contract              # API responses match Zod/OpenAPI schemas
+pnpm test:invariants            # Domain invariants (stock, ledger, isolation, idempotency, scan, price)
+```
+- Contract failures = API shape changed without updating consumers = BLOCKED
+- Invariant failures = Business logic broken = BLOCKED
+- See CLAUDE_PRODUCTION_RULES.md C.1 (contract-lock) and B.3 (invariants) for details
+
+### Gate 2.9: Security Enforcement
+```powershell
+pnpm test:security              # Auth enforcement, RBAC, input validation, secrets audit
+```
+- Auth failures = unauthenticated access to protected endpoints = BLOCKED
+- RBAC failures = wrong-role access not rejected = BLOCKED
+- Input validation failures = injection payloads not rejected = BLOCKED
+- See CLAUDE_PRODUCTION_RULES.md B.8 (security enforcement) and C.7 (security test matrix) for details
+
+### Gate 3: E2E Tests — Operator Runs (Local)
+
+Claude provides this PowerShell script; **operator runs in VS Code terminal** and pastes full output back to Claude.
+
 ```powershell
 cd e2e-tests
 node .\node_modules\@playwright\test\cli.js test --grep "@prod"
 ```
+- **Process**: Claude provides script → operator runs → pastes results to Claude
 - All @prod tests pass against local stack
+- ANY failure (even minor) = Claude fixes → re-run Gates 1–2.5 → repeat Gate 3
+- Claude MUST NOT push to CI until operator E2E results show ZERO issues
 - Screenshots captured for evidence
 
-### Gate 4: E2E Tests (Staging)
+### Gate 4: E2E Tests — Operator Runs (Staging)
+
+Same as Gate 3 but against staging. Claude provides staging-targeted script.
+
 ```powershell
 cd e2e-tests
 $env:STAGING="true"; node .\node_modules\@playwright\test\cli.js test --grep "@prod"
 ```
+- **Process**: Same as Gate 3 — operator runs, pastes results, Claude fixes issues
 - All @prod tests pass against staging
+- ANY failure = Claude fixes → re-tag → re-deploy staging → repeat Gate 4
 - Video recordings for critical flows
 
 ### Gate 5: Manual Testing Matrix
@@ -151,14 +193,18 @@ $env:STAGING="true"; node .\node_modules\@playwright\test\cli.js test --grep "@p
 
 ## PART 4: DEPLOYMENT PROCESS
 
-### Step 1: Local Verification
+### Step 1: Local Verification + Operator E2E
 ```
 [ ] All code changes have ticket IDs
-[ ] pnpm -r typecheck passes
-[ ] pnpm -r build passes
-[ ] pnpm test:ci passes
-[ ] Local E2E passes
-[ ] Manual browser testing complete
+[ ] pnpm -r typecheck passes (Claude runs)
+[ ] pnpm -r build passes (Claude runs)
+[ ] pnpm test:ci passes (Claude runs)
+[ ] pnpm test:contract passes (API schema validation — Claude runs)
+[ ] pnpm test:invariants passes (domain invariants — Claude runs)
+[ ] pnpm test:security passes (auth, RBAC, input validation — Claude runs)
+[ ] Claude provides E2E PowerShell script to operator
+[ ] Operator runs E2E in VS Code terminal, pastes results to Claude
+[ ] Claude fixes ANY issues (even minor) → repeat until ZERO issues
 [ ] Evidence screenshots collected
 ```
 
@@ -437,4 +483,7 @@ Date: _______________
 | 1.0 | 2026-02-05 | Initial creation | Claude |
 | 2.0 | 2026-02-10 | DOC-019/020: Mode-aware git workflow, MEGA-RC evidence structure, standardized E2E gate commands, first-deploy migration exception | Claude |
 | 2.1 | 2026-02-10 | DOC-021: Gate 2 `pnpm -r test` → `pnpm test:ci`, added Gate 2.5 `pnpm -r build`, rollback commitment aligned with Failure Handoff Matrix | Claude |
+| 3.0 | 2026-02-11 | DOC-022: Gates 3-4 updated — operator runs E2E (Claude provides script, operator pastes results). Step 1 updated to include operator E2E pre-CI gate. | Claude |
+| 3.1 | 2026-02-11 | DOC-023: Added Gate 2.7 (contract + invariant validation). Step 1 checklist expanded with contract + invariant gates. Gate mapping table updated. | Claude |
+| 3.2 | 2026-02-11 | DOC-024: Added Gate 2.9 (security enforcement). Step 1 checklist expanded with security gate. Gate mapping table updated. | Claude |
 

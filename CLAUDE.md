@@ -9,7 +9,7 @@
 
 Before writing ANY code, Claude MUST read and internalize:
 
-1. **`RELEASES/CLAUDE_PRODUCTION_RULES.md`** — How Claude writes code (14 parts: safety rules, test policy, evidence requirements, debugging stages, git discipline, anti-patterns, incident workflow, priority order)
+1. **`RELEASES/CLAUDE_PRODUCTION_RULES.md`** — How Claude writes code (16 parts: safety rules, test policy, evidence requirements, debugging stages, git discipline, anti-patterns, incident workflow, priority order, go-live safeguards, completeness protocol)
 2. **`RELEASES/MASTER_PLAN.md`** — What to do (batches, tickets, gates, current status, change class matrix)
 3. **`RELEASES/ZERO_REGRESSION_RULES.md`** — How deploys work (immutability, rollback, CI gates, forbidden actions)
 
@@ -72,10 +72,22 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 - Every data query must include `WHERE store_id = $token.storeId`
 
 ### Test Discipline
-- Every fix: `pnpm -r typecheck` + applicable test packs
-- Backend changes: migrate-from-zero + schema verify + integration + invariants
+- Every fix: `pnpm -r typecheck` + `pnpm test:contract` + applicable test packs
+- Backend changes: migrate-from-zero + schema verify + integration + invariants + contract + security
 - Portal changes: production build + Playwright smoke
-- POS changes: typecheck + API smoke + emulator E2E
+- POS changes: typecheck + API smoke + emulator E2E + release build smoke + offline/flaky + scanner hardware
+- Resilience: graceful degradation when DB/Redis/service down (test:resilience)
+- Security: auth enforcement + RBAC + input validation + secrets audit (test:security)
+- Deploy parity: Docker build + gateway routing + config validation before CI push
+- Three-layer catch net: contract tests → integration tests → load tests + big dataset
+
+### Completeness Protocol (Part P)
+- **Pre-task**: Announce scope + derive test plan from Change-Impact Router (P.2) before coding
+- **Post-task**: git diff → router → verify all required tests ran, check Business Logic Registry (P.3)
+- **Batch-level**: Full completeness scan before declaring GATED (P.5)
+- **Five safety nets**: Pre-task → Post-task → Batch scan → Operator E2E → CI pipeline
+- **Business Logic Registry**: 10 business functions tracked (scan, search, checkout, stock-in, provisioning, auth, supplier products, retailer SKU, ledger, pricing)
+- If a file matches no router pattern → Claude MUST explicitly state and manually determine tests
 
 ### Evidence
 - Every fix needs evidence appropriate to risk class
@@ -85,7 +97,13 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 ### Pipeline
 - DEBUG → FIND → FIX → RETEST → GUARD (every issue)
 - Debugging stages: 0 (dev) → 1 (Docker) → 2 (CI) → 3 (staging) → 4 (production)
-- Release: code-complete → local gates → CI → tag RC → staging → verify → promote
+- Release (13 steps, see RELEASE_POLICY.md): code-complete → Claude gates → **operator E2E** → CI → tag RC → staging → staging E2E → verify → sign-off → promote → post-deploy → close
+
+### Operator E2E Gate (Pre-CI)
+- Claude provides PowerShell E2E script → operator runs in VS Code terminal → pastes results
+- Claude fixes ANY issues (even minor) before pushing to CI
+- Same E2E review repeats after staging deploy (staging E2E gate)
+- **Promotion to production only after ALL portals + POS app complete**
 
 ### Git Discipline
 - **Mode A**: Direct push to `main` allowed (no deploy risk)
@@ -175,12 +193,15 @@ TICKET-ID DONE:
 
 ### First Deploy Protocol (Mega-Batch)
 When GCP is ready AND SA-GOLIVE is complete:
-1. Run full gates on HEAD → all batches `GATED`
-2. Operator browser tests all 4 portals → per-batch `TESTED`
-3. Collect per-batch evidence → per-batch `EVIDENCED`
-4. Tag MEGA-RC → deploy staging with Migration Safety Protocol
-5. Verify staging → promote to production
-6. After go-live → switch to Mode B, resume normal cadence
+1. Claude runs automated gates (typecheck + unit tests + build) on HEAD
+2. Claude provides E2E script → operator runs → pastes results → Claude fixes until clean
+3. Push to CI → all CI gates green
+4. Operator browser tests all 4 portals → per-batch `TESTED`
+5. Collect per-batch evidence → per-batch `EVIDENCED`
+6. Tag MEGA-RC → deploy staging with Migration Safety Protocol
+7. Repeat E2E gate on staging (Claude provides staging script → operator runs → fix loop)
+8. Operator sign-off → promote to production (only after ALL portals + POS complete)
+9. After go-live → switch to Mode B, resume normal cadence
 
 ### Migration Safety (First Deploy Only)
 - Cloud SQL backup BEFORE migration run
