@@ -415,6 +415,170 @@ Automated security checks that run in CI:
 | 6 | **Secrets in build** | Grep built artifacts for test tokens, `.env` patterns | Zero matches |
 | 7 | **Rate limiting** | 100 rapid login attempts | Rate-limited after threshold |
 
+### C.8 UI/UX/Navigation Tests
+
+Every portal change and POS screen change MUST verify the full UI stack — from atomic elements to portal-level render.
+
+#### C.8.1 UI Element Verification (Atomic Layer)
+
+Every screen touched by a ticket MUST have its atomic UI elements verified:
+
+| Element | What to Verify | How |
+|---------|---------------|-----|
+| **Buttons** | Renders, correct label, click fires handler, disabled state when appropriate, loading state during async | Playwright `locator('button')` + `click()` + assert side effect |
+| **Form fields** | Renders, accepts input, validation fires on blur/submit, error message displays, required indicator shown | Playwright `fill()` + `blur()` + assert validation message |
+| **Headers** | Correct text, correct hierarchy (h1/h2/h3), portal branding present | Playwright `locator('h1')` + assert text content |
+| **Footers** | Renders on every page, correct links, copyright/version info | Playwright page scroll + assert footer visible |
+| **Tables** | Renders with data, empty state when no data, pagination controls work, sort headers clickable | Playwright assert row count + click sort + assert reorder |
+| **Modals/Dialogs** | Opens on trigger, closes on X/escape/outside-click, form inside submits correctly | Playwright trigger → assert visible → close → assert hidden |
+| **Toasts/Alerts** | Success/error/warning variants render with correct styling and auto-dismiss | Playwright trigger action → assert toast appears → wait → assert disappears |
+| **Dropdowns/Selects** | Opens, shows options, selection updates display and state | Playwright click → assert options → select → assert value |
+
+**Rule**: If a ticket adds or modifies a screen, Claude MUST verify every interactive element on that screen renders and functions correctly. "It compiles" is not "it works."
+
+**POS-Specific Elements** (Expo/React Native):
+
+| Element | What to Verify |
+|---------|---------------|
+| **Scan input** | Focus on mount, accepts barcode, fires resolve on Enter/submit |
+| **Cart list** | Virtualized (FlashList), shows items, quantity +/- works, swipe-to-remove works |
+| **Checkout button** | Disabled when cart empty, shows total, triggers payment flow |
+| **Receipt view** | Renders after successful sale, shows all line items + total + store info |
+
+#### C.8.2 UI Wiring Verification (Component → API → State)
+
+Every UI action that triggers an API call MUST be verified end-to-end:
+
+```
+WIRING CHAIN:
+  User Action (click/submit/scan)
+      → API Call fires (correct endpoint, correct payload, auth header present)
+          → Loading state shown
+              → Success: response processed, UI updates, state correct
+              → Error: error state shown, user can retry
+                  → Network failure: offline/timeout handled gracefully
+```
+
+| Wiring Check | What to Verify | Failure = |
+|--------------|---------------|-----------|
+| **Button → API** | Click triggers correct `fetch`/`axios` call with right method, path, body | Dead button (user clicks, nothing happens) |
+| **Auth header** | Every API call includes `Authorization: Bearer <token>` | 401 in production |
+| **Request payload** | Correct field names, correct types, no extra fields | 400 or wrong behavior |
+| **Loading indicator** | Shown between request fire and response | User thinks app is frozen |
+| **Success handling** | Response data correctly updates component state / store | Stale UI after mutation |
+| **Error handling** | API error (4xx/5xx) shows user-facing message, no console-only errors | Silent failure |
+| **Optimistic update rollback** | If using optimistic UI, failed request reverts the optimistic change | Phantom data shown |
+
+**Test method**: Playwright intercept (`page.route`) to verify request shape, then assert UI state after response.
+
+**POS wiring** (React Native): Same chain, but also verify:
+- Offline queue: action queued when offline, synced when online
+- Retry with backoff: failed API call retries with exponential backoff
+- Idempotency key: every mutating call sends `x-idempotency-key` header
+
+#### C.8.3 Navigation & Route Guards
+
+Every portal and POS navigation path MUST be verified:
+
+| Navigation Check | What to Verify | Test Method |
+|-----------------|---------------|-------------|
+| **Unauthenticated redirect** | Visiting protected page without token → redirect to login | Playwright: navigate to `/retailer/dashboard` without auth → assert URL is `/retailer/login` |
+| **Role-based route guard** | Wrong role token → redirect to appropriate portal or 403 page | Playwright: login as cashier → navigate to manager route → assert redirect |
+| **Deep link preservation** | Login → redirect back to originally requested page | Playwright: visit `/retailer/orders/123` → login → assert URL is `/retailer/orders/123` |
+| **404 handling** | Non-existent route → 404 page (not blank screen, not crash) | Playwright: navigate to `/retailer/nonexistent` → assert 404 page renders |
+| **Back button** | Browser back navigates to previous page (not login loop) | Playwright: navigate → navigate → `goBack()` → assert previous page |
+| **Breadcrumbs** | If present, show correct hierarchy and are clickable | Playwright: assert breadcrumb text + click parent → assert navigation |
+| **Menu/sidebar** | Correct items for user role, active item highlighted, click navigates | Playwright: assert menu items match role → click each → assert page loads |
+| **Tab navigation** | If tabbed interface, tabs switch content correctly, active tab highlighted | Playwright: click each tab → assert content changes |
+
+**Portal-specific routes to verify**:
+
+| Portal | Critical Routes | Guard |
+|--------|----------------|-------|
+| **Retailer** | `/retailer/login`, `/retailer/dashboard`, `/retailer/products`, `/retailer/orders` | Auth + retailer role |
+| **Supplier** | `/supplier/login`, `/supplier/dashboard`, `/supplier/products`, `/supplier/orders` | Auth + supplier role |
+| **SuperAdmin** | `/admin/login`, `/admin/dashboard`, `/admin/stores`, `/admin/users` | Auth + superadmin role |
+
+**POS navigation** (React Native):
+- Stack navigation: screen transitions correct, back gesture works
+- Tab navigation: bottom tabs show correct screens, badge counts update
+- Modal screens: present over current screen, dismiss correctly
+- Deep link from push notification: opens correct screen with correct params
+
+#### C.8.4 UX State Coverage
+
+Every API-driven screen MUST handle **all four states**. No screen may only handle the happy path.
+
+```
+FOUR STATES (MANDATORY):
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   LOADING   │     │   SUCCESS   │     │    EMPTY     │     │    ERROR    │
+│             │     │             │     │             │     │             │
+│ Spinner or  │     │ Data shown  │     │ "No items"  │     │ Error msg + │
+│ skeleton    │     │ correctly   │     │ + CTA       │     │ retry btn   │
+└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
+```
+
+| State | Required UI | Common Failure |
+|-------|------------|----------------|
+| **Loading** | Spinner, skeleton screen, or shimmer placeholder — never blank screen | User sees blank page for 2s, thinks app is broken |
+| **Success** | Data rendered correctly, all fields populated, no "undefined" | Partial render, missing fields, raw JSON displayed |
+| **Empty** | Friendly message ("No products yet"), optional call-to-action button | Blank screen or broken table with 0 rows |
+| **Error** | User-readable error message + retry button (not raw error stack) | `TypeError: Cannot read property 'map' of undefined` |
+
+**Verification matrix** (per portal, per screen):
+
+| Screen Type | Loading | Success | Empty | Error |
+|-------------|---------|---------|-------|-------|
+| Dashboard | Skeleton cards | Stats populated | "No data yet" | "Failed to load — Retry" |
+| List/table | Skeleton rows | Rows with data | "No items found" + CTA | Error banner + Retry |
+| Detail view | Skeleton fields | All fields shown | N/A (redirect if not found) | "Item not found" or error |
+| Form | N/A (pre-filled fields load) | Submission success toast | N/A | Validation errors inline |
+| Search results | Spinner in results area | Result cards/rows | "No results for 'X'" | "Search failed — Retry" |
+
+**Test method**: Playwright + API mocking:
+- Loading: Delay API response → assert spinner/skeleton visible
+- Success: Return valid data → assert all fields rendered
+- Empty: Return empty array → assert empty state message
+- Error: Return 500 → assert error message + retry button visible
+
+**POS-specific UX states**:
+- Scan result: found / not found / store mismatch / offline
+- Checkout: processing / success (receipt) / failed (retry) / partial (items remaining)
+- Sync: syncing / synced / conflict / offline-queued
+
+#### C.8.5 Portal Render Smoke
+
+After ANY change to a portal (retailer-admin, supplier-portal, supermandi-superadmin), verify that ALL screens in that portal still render correctly.
+
+**Render smoke test** (per portal):
+
+```
+FOR EACH screen in the portal:
+  1. Navigate to the screen (authenticated)
+  2. Assert: no console.error
+  3. Assert: no "undefined" or "null" text in visible content
+  4. Assert: page title / header matches expected
+  5. Assert: primary content area is not empty (at least skeleton/loading)
+  6. Assert: no broken images (img elements with naturalWidth === 0)
+  7. Assert: no layout shifts > 0.1 CLS
+```
+
+**Portal render checklist** (must all pass after any portal change):
+
+| Portal | Screens to Smoke | Priority |
+|--------|-----------------|----------|
+| **Retailer** | Login, Register, Dashboard, Products, Orders, Settings, Profile | P0 |
+| **Supplier** | Login, Register, Dashboard, Products, Orders, Settings, Profile | P0 |
+| **SuperAdmin** | Login, Dashboard, Stores, Users, Config, Analytics | P0 |
+| **POS** | Login, Home/Scan, Cart, Checkout, Receipt, History, Settings | P0 |
+
+**Automation**: `test:e2e:<portal>` Playwright tests MUST include render smoke for all screens.
+
+**Visual regression** (recommended post-go-live):
+- Screenshot comparison for key screens after each deployment
+- Catch unintended layout changes from CSS/dependency updates
+
 ---
 
 ## PART D: EVIDENCE AND REGRESSION GUARDS
@@ -757,9 +921,9 @@ Run increasing gate coverage after completing each layer:
 | Layer 1-2 | `typecheck` + `migrate-from-zero` + `schema-verify` | Schema + compilation |
 | Layer 3 | + `test:ci` + `test:contract` + `test:invariants` | + Unit + API shape + business logic |
 | Layer 4 | + `test:integration` | + Cross-service correctness |
-| Layer 5 | + `build` (all portals) + POS typecheck | + Frontend builds |
+| Layer 5 | + `build` (all portals) + POS typecheck + **UI wiring (C.8.2)** + **navigation guards (C.8.3)** + **UX 4-state (C.8.4)** + **render smoke (C.8.5)** | + Frontend builds + **UI/UX verification** |
 | Layer 6 | + `test:security` + API smoke | + Auth + RBAC + push |
-| Layer 7 | **FULL GATE SUITE** (all gates in one run) | Everything |
+| Layer 7 | **FULL GATE SUITE** (all gates in one run) | Everything (including all C.8 UI/UX tests) |
 
 **Rule**: If a gate fails at any layer, STOP. Fix the regression before proceeding to the next ticket. Do not accumulate failures.
 
@@ -809,10 +973,10 @@ Concrete ordering for the 15 remaining SA-GOLIVE tickets, organized by layer:
 ```
 After Phase A: typecheck + migrate-from-zero + build
 After Phase B: + test:ci + test:contract + test:invariants
-After Phase C: + build (SA portal specifically)
-After Phase D: + test:security (new admin routes need auth checks)
-After Phase E: + API smoke (push integration)
-After Phase F: FULL GATE SUITE → One-Click Pre-Staging Checklist (M.0.3)
+After Phase C: + build (SA portal) + UI wiring (C.8.2) + UX 4-state (C.8.4) + render smoke (C.8.5) for SA dashboards
+After Phase D: + test:security (new admin routes) + navigation guards (C.8.3) + UI element verification (C.8.1) for config screens
+After Phase E: + API smoke (push integration) + UI wiring for notification triggers
+After Phase F: FULL GATE SUITE (including all C.8 UI/UX tests) → One-Click Pre-Staging Checklist (M.0.3)
 ```
 
 #### M.0.5 Regression Prevention During Pickup
@@ -996,10 +1160,10 @@ Automatic file-to-test mapping. Claude uses this table to determine which tests 
 | `backend/services/*` | Backend service | test:ci + test:contract + test:invariants + test:security + test:integration |
 | `backend/services/api-gateway/*` | Gateway/routing | test:ci + test:contract + test:deploy-parity |
 | `backend/migrations/*` | Schema change | migrate-from-zero + schema-verify + test:ci + test:contract + test:invariants |
-| `retailer-admin/*` | Retailer portal | build (retailer) + test:ci + e2e(@prod, retailer flows) |
-| `supplier-portal/*` | Supplier portal | build (supplier) + test:ci + e2e(@prod, supplier flows) |
-| `supermandi-superadmin/*` | Admin portal | build (admin) + test:ci + e2e(@prod, admin flows) |
-| `src/*` (root) | POS app | typecheck + test:ci + API smoke + emulator E2E + offline/flaky + scanner hardware |
+| `retailer-admin/*` | Retailer portal | build (retailer) + test:ci + e2e(@prod, retailer flows) + **UI wiring (C.8.2)** + **navigation guards (C.8.3)** + **UX 4-state (C.8.4)** + **render smoke (C.8.5)** |
+| `supplier-portal/*` | Supplier portal | build (supplier) + test:ci + e2e(@prod, supplier flows) + **UI wiring (C.8.2)** + **navigation guards (C.8.3)** + **UX 4-state (C.8.4)** + **render smoke (C.8.5)** |
+| `supermandi-superadmin/*` | Admin portal | build (admin) + test:ci + e2e(@prod, admin flows) + **UI wiring (C.8.2)** + **navigation guards (C.8.3)** + **UX 4-state (C.8.4)** + **render smoke (C.8.5)** |
+| `src/*` (root) | POS app | typecheck + test:ci + API smoke + emulator E2E + offline/flaky + scanner hardware + **UI elements (C.8.1)** + **UI wiring (C.8.2)** + **POS navigation (C.8.3)** + **UX 4-state (C.8.4)** |
 | `docker-compose*.yml` | Infrastructure | test:deploy-parity + full stack startup test |
 | `.github/workflows/*` | CI pipeline | Dry-run CI locally if possible, review all gate coverage |
 | `e2e-tests/*` | Test changes | Run the changed tests + verify no regressions in existing tests |
@@ -1014,18 +1178,18 @@ Automatic file-to-test mapping. Claude uses this table to determine which tests 
 
 Master list of all business functions. Claude uses this to verify complete coverage when working on a batch or declaring a batch GATED.
 
-| # | Business Function | Primary Services | Key Endpoints | Required Tests | Invariant |
-|---|-------------------|-----------------|---------------|----------------|-----------|
-| 1 | **Barcode Scan** | pos-service, catalog-service | `POST /pos/scan` | POS E2E + scanner hardware + offline/flaky | Scan scope (B.3) |
-| 2 | **Product Search** | catalog-service | `GET /catalog/products/search` | Contract + integration + 100k SKU load | Price integrity (B.3) |
-| 3 | **Checkout / Sale** | order-service, inventory-service, pos-service | `POST /orders/checkout` | E2E critical path + invariants + idempotency | Stock (B.3), Ledger (B.3), Idempotency (B.3) |
-| 4 | **Stock-In / Receive** | inventory-service, reorder-service | `POST /inventory/stock-in` | Integration + invariants + contract | Stock (B.3), Ledger (B.3) |
-| 5 | **Store Provisioning** | platform-service, auth-service | `POST /platform/stores` | Integration + security + tenant isolation | Store isolation (B.3) |
-| 6 | **Auth (Login/Register)** | auth-service | `POST /auth/login`, `POST /auth/register` | Security + RBAC + contract | — |
-| 7 | **Supplier Products** | supplier-service, catalog-service | `GET/POST /supplier/products` | Contract + integration + tenant isolation | Store isolation (B.3) |
-| 8 | **Retailer SKU Mgmt** | catalog-service, inventory-service | `GET/PUT /catalog/skus` | Contract + integration + 100k SKU load | Price integrity (B.3) |
-| 9 | **Ledger / Transactions** | order-service, analytics-service | `GET /orders/ledger` | Invariants + integration + contract | Ledger (B.3) |
-| 10 | **Pricing (MRP/Sell)** | catalog-service | `GET/PUT /catalog/pricing` | Contract + invariants + integration | Price integrity (B.3) |
+| # | Business Function | Primary Services | Key Endpoints | UI Surface | Required Tests | Invariant |
+|---|-------------------|-----------------|---------------|-----------|----------------|-----------|
+| 1 | **Barcode Scan** | pos-service, catalog-service | `POST /pos/scan` | POS: scan input, result card, not-found state | POS E2E + scanner hardware + offline/flaky + **UI wiring + UX 4-state** | Scan scope (B.3) |
+| 2 | **Product Search** | catalog-service | `GET /catalog/products/search` | Retailer: search bar, results table, pagination; POS: search screen | Contract + integration + 100k SKU load + **UX 4-state (empty/loading)** | Price integrity (B.3) |
+| 3 | **Checkout / Sale** | order-service, inventory-service, pos-service | `POST /orders/checkout` | POS: cart list, checkout button, receipt view, payment modal | E2E critical path + invariants + idempotency + **UI wiring + UX 4-state** | Stock (B.3), Ledger (B.3), Idempotency (B.3) |
+| 4 | **Stock-In / Receive** | inventory-service, reorder-service | `POST /inventory/stock-in` | Retailer: GRN form, stock-in confirmation | Integration + invariants + contract + **UI wiring** | Stock (B.3), Ledger (B.3) |
+| 5 | **Store Provisioning** | platform-service, auth-service | `POST /platform/stores` | Admin: store creation form, store list table | Integration + security + tenant isolation + **UI wiring + navigation** | Store isolation (B.3) |
+| 6 | **Auth (Login/Register)** | auth-service | `POST /auth/login`, `POST /auth/register` | All portals: login form, register form, OTP input; POS: login screen | Security + RBAC + contract + **navigation guards + UX 4-state** | — |
+| 7 | **Supplier Products** | supplier-service, catalog-service | `GET/POST /supplier/products` | Supplier: product list, product form, image upload | Contract + integration + tenant isolation + **UI wiring + render smoke** | Store isolation (B.3) |
+| 8 | **Retailer SKU Mgmt** | catalog-service, inventory-service | `GET/PUT /catalog/skus` | Retailer: SKU list, SKU edit form, barcode display | Contract + integration + 100k SKU load + **UI wiring + UX 4-state** | Price integrity (B.3) |
+| 9 | **Ledger / Transactions** | order-service, analytics-service | `GET /orders/ledger` | Retailer: ledger table, filters, export button; Admin: analytics dashboard | Invariants + integration + contract + **UX 4-state (loading/empty)** | Ledger (B.3) |
+| 10 | **Pricing (MRP/Sell)** | catalog-service | `GET/PUT /catalog/pricing` | Retailer: pricing form, price history; POS: price display in cart | Contract + invariants + integration + **UI wiring** | Price integrity (B.3) |
 
 ### P.4 Post-Task Verification
 
@@ -1154,6 +1318,11 @@ Before declaring any fix complete, verify:
 - [ ] Resilience: graceful degradation when dependencies fail (Part B.7)
 - [ ] Security: auth enforced, RBAC correct, no injection vectors (Part B.8)
 - [ ] POS: lists virtualized, state bounded, scanner debounced, idempotency keys (Part C.2.D)
+- [ ] UI elements: buttons, fields, headers, footers render and function on affected screens (Part C.8.1)
+- [ ] UI wiring: every button/form → API call → loading → success/error path verified (Part C.8.2)
+- [ ] Navigation: route guards, deep links, 404, back button, menus work correctly (Part C.8.3)
+- [ ] UX 4-state: every API-driven screen handles loading, success, empty, error (Part C.8.4)
+- [ ] Portal render smoke: all screens in affected portal still render without errors (Part C.8.5)
 - [ ] Deploy parity: Docker build + gateway routing + health checks pass (Part C.6)
 - [ ] Evidence collected, appropriate to risk class (Part D)
 - [ ] Regression guard in place (Part D.1)
@@ -1196,3 +1365,4 @@ Before declaring any fix complete, verify:
 | 6.0 | 2026-02-11 | DOC-024: B.7 Resilience & Graceful Degradation (DB/Redis/service down tests). B.8 Security Enforcement (RBAC, input validation, secrets audit). C.2.D extended with POS scanner hardware tests (HID, camera, soak). C.3 added test:resilience, test:security, test:deploy-parity scripts. C.6 Deploy Parity Tests (gateway routing, config validation, CORS). C.7 Security Test Matrix. O.1.1 Observability Verification Tests. N.1 CI added test:security. | Claude |
 | 7.0 | 2026-02-11 | DOC-025: Part P — Claude Completeness Protocol. P.1 Pre-Task Scope Analysis. P.2 Change-Impact Router (file-to-test mapping). P.3 Business Logic Registry (10 business functions). P.4 Post-Task Verification. P.5 Batch-Level Completeness Scan. P.6 Five Safety Nets. P.7 Session Navigation Workflow. Quick Reference Checklist extended with P.1/P.2/P.4 items. | Claude |
 | 8.0 | 2026-02-11 | DOC-026: Part M rewritten — M.0 Ticket Pickup Strategy (bottom-up, dependency-aware). M.0.1 Layer ordering (7 layers). M.0.2 Progressive gate schedule. M.0.3 One-click pre-staging readiness definition + checklist. M.0.4 SA-GOLIVE concrete ticket ordering (6 phases, 15 tickets). M.0.5 Regression prevention at each step. Phase 1 updated with P.1/P.4/P.5 integration + layer-aware pickup. | Claude |
+| 9.0 | 2026-02-11 | DOC-027: C.8 UI/UX/Navigation Tests — comprehensive front-end verification from atomic elements to portal render. C.8.1 UI Element Verification (buttons, fields, headers, footers, tables, modals, toasts, dropdowns + POS-specific elements). C.8.2 UI Wiring (component → API → loading → success/error chain). C.8.3 Navigation & Route Guards (auth redirect, role guard, deep link, 404, back button, menu, tabs + POS navigation). C.8.4 UX State Coverage (mandatory 4-state: loading/success/empty/error for every API-driven screen). C.8.5 Portal Render Smoke (all-screen render verification per portal). P.2 router updated — portal/POS file changes now require C.8 UI/UX tests. P.3 registry updated — UI Surface column added to all 10 business functions. M.0.2 progressive gates updated — Layer 5 now includes UI/UX verification. M.0.4 SA-GOLIVE phases C/D/E updated with UI verification gates. Quick Reference Checklist extended with 5 UI/UX items. | Claude |

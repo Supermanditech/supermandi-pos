@@ -74,8 +74,9 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 ### Test Discipline
 - Every fix: `pnpm -r typecheck` + `pnpm test:contract` + applicable test packs
 - Backend changes: migrate-from-zero + schema verify + integration + invariants + contract + security
-- Portal changes: production build + Playwright smoke
-- POS changes: typecheck + API smoke + emulator E2E + release build smoke + offline/flaky + scanner hardware
+- Portal changes: production build + Playwright smoke + **UI wiring** + **navigation guards** + **UX 4-state** + **render smoke** (C.8)
+- POS changes: typecheck + API smoke + emulator E2E + release build smoke + offline/flaky + scanner hardware + **UI elements** + **UI wiring** + **POS navigation** + **UX 4-state** (C.8)
+- **UI/UX (C.8)**: Every screen change requires UI element verification (buttons, fields, headers, footers) + wiring (click → API → state) + navigation guards + UX 4-state (loading/success/empty/error) + portal render smoke
 - Resilience: graceful degradation when DB/Redis/service down (test:resilience)
 - Security: auth enforcement + RBAC + input validation + secrets audit (test:security)
 - Deploy parity: Docker build + gateway routing + config validation before CI push
