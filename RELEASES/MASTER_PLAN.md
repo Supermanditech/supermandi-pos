@@ -1943,7 +1943,7 @@ Grants AR push + Cloud Run deploy permissions.
 | 7 | SA-P1-015 — Reorder policy supervision | B | PENDING | — |
 | 8 | SA-P2-001 — Force device re-enrollment | B | PENDING | — |
 | 9 | SA-P2-002 — Remote config push notification | B | PENDING | — |
-| 10 | SA-P2-003 — Minimum app version enforcement | B | PENDING | — |
+| 10 | SA-P2-003 — Minimum app version enforcement | B | WRITTEN | PR #17 + #18, E2E deferred (needs local-prod) |
 | 11 | SA-P2-004 — Compliance status aggregation | A | PENDING | — |
 | 12 | SA-P2-005 — Force POS sync trigger | B | PENDING | — |
 | 13 | SA-P2-006 — Product category manual override | A | PENDING | — |
