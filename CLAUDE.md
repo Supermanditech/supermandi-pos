@@ -121,11 +121,16 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 - Same E2E review repeats after staging deploy (staging E2E gate)
 - **Promotion to production only after ALL portals + POS app complete**
 
-### Git Discipline
-- **Mode A**: Direct push to `main` allowed (no deploy risk)
-- **Mode B**: Work via PR branches (`feat/`, `fix/`, `hotfix/`), CI green before merge
-- Commit format: `BATCH-XXX: TICKET-ID - Description`
-- RC tags are immutable
+### Git Discipline (Part G — Production-Grade)
+- **One ticket = one branch = one PR = one tag** — no mixed scope, no direct pushes to main (both modes)
+- **Per-ticket flow**: clean main → create branch → commit (chore → fix → test → docs) → pre-PR gates → open PR → merge → tag → next ticket
+- **No jumping ahead**: Next ticket MUST NOT start until current ticket's pre-stage tag exists on main
+- **Branch naming**: `feat/<ticket-id>-<slug>`, `fix/<ticket-id>-<slug>`, `reg/<reg-id>-<slug>`
+- **Tag naming**: `prestage-<TICKET-ID>-YYYY-MM-DD_HHMMIST` on every merged ticket
+- **Cascade regression triage**: Blocking = separate `reg/` branch (Case A), Non-blocking = backlog ticket (Case B)
+- **Semantic commits**: `chore(TICKET)`, `fix(TICKET)`, `test(TICKET)`, `docs(TICKET)`
+- **Mode A**: Claude self-merges PRs (no external review needed, but branches/PRs still required)
+- **Mode B**: Requires CI green + operator review before merge
 
 ---
 
@@ -134,7 +139,8 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 ### Mode A: Pre-Staging (CURRENT)
 - Claude starts independently — no operator paste required
 - Claude can work on SA-GOLIVE tickets directly
-- No deploy risk (code-only work on main)
+- No deploy risk — but branches + PRs still required (Claude self-merges)
+- One ticket = one branch = one PR = one tag (no direct pushes to main)
 - Run `git log --oneline -5` and `git status` at session start
 
 ### Mode B: Staging/Production (activate after GCP + SA-GOLIVE done)

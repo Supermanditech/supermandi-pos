@@ -114,10 +114,21 @@ Source-mounted volumes              Bundled artifacts (no source access)
 **What "Cascading Fix" Means:**
 
 A cascading fix is when fixing or testing ticket X reveals a broken behavior in feature Y that was previously unnoticed. In Cascading E2E Hardening Mode:
-- Claude fixes Y immediately (not in a future ticket)
-- The fix for Y is part of the same commit or an atomic follow-up commit
-- Claude re-runs the full test suite after fixing Y
-- If fixing Y breaks Z, Claude fixes Z — the cascade continues until zero failures
+
+**Case A — Regression BLOCKS ticket X** (ticket X's E2E cannot pass):
+- Claude stops ticket X's branch
+- Creates a new regression ticket (REG-NNN) and a separate `reg/` branch
+- Fixes the regression in its own PR, merges to main, tags it
+- Returns to ticket X's branch, rebases on main, continues
+- See Part G.6 for exact Git flow
+
+**Case B — Regression is NON-BLOCKING** (ticket X can still pass):
+- Claude does NOT fix it in ticket X's branch (prevents scope creep)
+- Creates a regression ticket in MASTER_PLAN.md backlog
+- Continues ticket X — it proceeds to pre-staging eligible
+- The REG ticket is picked up in layer order later
+
+**In both cases**: Claude re-runs the full test suite after any fix. The cascade continues until ticket X's E2E = zero failures.
 
 **Forbidden Anti-Patterns:**
 
@@ -763,54 +774,246 @@ When debugging any issue, systematically verify these areas:
 
 ---
 
-## PART G: RELEASE TRAIN & GIT DISCIPLINE
+## PART G: PRODUCTION-GRADE GIT DISCIPLINE
+
+> **Core principle**: One ticket = one branch = one PR = one tag.
+> No mixed scope. Main is always releasable. No broken main ever.
+> Claude picks one ticket, takes it end-to-end, makes it pre-staging eligible,
+> and ONLY THEN starts the next ticket.
 
 ### G.1 Branch Strategy
 
-| Branch | Purpose |
-|--------|---------|
-| `main` | Always deployable. Protected. CI must pass before merge. |
-| `feat/<ticket-id>-<desc>` | Feature branches. PR to main. |
-| `fix/<ticket-id>-<desc>` | Bug fix branches. PR to main. |
-| `hotfix/<ticket-id>` | Emergency fixes. PR to main, expedited review. |
+| Branch | Pattern | Purpose |
+|--------|---------|---------|
+| `main` | — | Always deployable. Protected. Only receives merges from ticket branches. |
+| Feature | `feat/<ticket-id>-<slug>` | New functionality. PR to main. |
+| Fix | `fix/<ticket-id>-<slug>` | Bug fixes. PR to main. |
+| Regression | `reg/<reg-id>-<slug>` | Regressions discovered during E2E. PR to main. |
+| Hotfix | `hotfix/<ticket-id>` | Emergency production fixes. PR to main, expedited. |
 
-### G.2 Commit Message Format
+**Rules**:
+- **No mixed scope**: A branch MUST contain only changes for its ticket. No unrelated fixes.
+- **No direct pushes to main**: All changes go through branches + PR (both Mode A and Mode B).
+- **One active branch at a time**: Claude finishes one ticket's branch before starting another.
+
+### G.2 Per-Ticket Git Flow (Exact Steps)
 
 ```
-BATCH-XXX: TICKET-ID - Description
+STEP 0: START FROM CLEAN MAIN
+───────────────────────────────
+  git checkout main
+  git pull origin main
+  git status                    # MUST be clean
+
+STEP 1: CREATE TICKET BRANCH
+───────────────────────────────
+  git checkout -b fix/<TICKET-ID>-<slug>
+  # Example: fix/SA-P0-007-maintenance-mode
+
+STEP 2: COMMIT DISCIPLINE (inside the branch)
+───────────────────────────────
+  Small, reviewable commits with strict meaning:
+
+  chore(TICKET-ID): add failing test (repro)        ← first commit: lock the test
+  fix(TICKET-ID): implement minimal correct fix      ← actual code change
+  test(TICKET-ID): extend E2E/integration coverage   ← full test coverage
+  docs(TICKET-ID): add evidence + runbook notes      ← optional
+
+  Rule: First commit SHOULD add/lock a test or repro.
+  Co-Authored-By trailer on every commit.
+
+STEP 3: LOCAL PRE-PR GATE (must pass before opening PR)
+───────────────────────────────
+  pnpm -r typecheck              # exit 0
+  pnpm -r lint                   # exit 0
+  pnpm test:ci                   # exit 0
+  pnpm test:contract             # exit 0
+  pnpm -r build                  # exit 0
+  Playwright E2E relevant to ticket
+  Production build (docker-compose local-prod)
+
+  If any fails → fix in same branch until green.
+
+STEP 4: OPEN PR TO MAIN (strict template)
+───────────────────────────────
+  PR MUST include:
+  - Ticket ID + scope description
+  - Test commands run + results
+  - Evidence links/paths (screenshots, logs)
+  - Migration notes (if any)
+  - Rollback notes (if risky)
+
+  Mode A: Claude self-merges (no external review required)
+  Mode B: Requires CI green + operator review
+
+STEP 5: MERGE ONLY WHEN PRE-STAGING ELIGIBLE
+───────────────────────────────
+  Pre-conditions (ALL must be true):
+  ✅ All gates green (typecheck + test + build + contract + E2E)
+  ✅ Cascading E2E Hardening complete (A.5) — zero failures on prod build
+  ✅ No new regressions introduced
+  ✅ Evidence pack exists for this ticket
+
+  Merge strategy: Squash merge (recommended) or rebase merge.
+  NEVER merge a broken branch.
+
+STEP 6: TAG THE MERGE COMMIT ON MAIN
+───────────────────────────────
+  git checkout main
+  git pull origin main
+  git tag -a prestage-<TICKET-ID>-YYYY-MM-DD_HHMMIST \
+    -m "<TICKET-ID> pre-staging eligible"
+  git push origin <tag>
+
+  This tag is the "staging candidate" for that ticket.
+
+STEP 7: START NEXT TICKET ONLY AFTER TAG EXISTS
+───────────────────────────────
+  Claude MUST NOT begin the next ticket until:
+  - PR is merged to main
+  - Pre-stage tag is created and pushed
+  - Evidence folder is committed or attached
+
+  This prevents Claude from jumping ahead with unfinished work.
+```
+
+### G.3 Commit Message Format
+
+```
+<type>(<TICKET-ID>): <description>
+
+<optional body explaining why, not what>
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ```
 
-### G.3 PR Rules (Mode-Aware)
+**Commit types**:
 
-**Mode A (Pre-Staging — CURRENT):**
-- Direct push to `main` is allowed — no deploy risk exists
-- Claude works independently on tickets without waiting for PR review
-- Commit discipline still applies (atomic commits, ticket IDs, evidence)
+| Type | When |
+|------|------|
+| `chore` | Add failing test (repro), setup, scaffolding |
+| `fix` | Implement the actual fix or feature |
+| `test` | Extend test coverage (E2E, integration, contract) |
+| `docs` | Add evidence, update runbook notes |
+| `refactor` | Code restructure without behavior change (rare — must be in ticket scope) |
 
-**Mode B (Staging/Production):**
-- Work only via PR branches — never commit directly to `main`
-- CI must be green before merge (typecheck + lint + build + test)
-- PR description includes: Summary, Files Changed, Test Plan
-- Squash merge preferred for clean history
+**Examples**:
+```
+chore(SA-P0-007): add failing test for maintenance mode middleware
+fix(SA-P0-007): implement maintenance mode toggle + bypass header
+test(SA-P0-007): add E2E for maintenance mode activation/deactivation
+docs(SA-P0-007): add evidence screenshots + curl proofs
+```
 
-### G.4 RC Tag Rules
+### G.4 PR Template
 
-- **Owner**: Claude creates the RC tag after all gates pass
-- Format: `supermandi-YYYY-MM-DD-HHmm-BATCH-XXX`
-- Operator verifies tag SHA matches expected HEAD before deploying
+Every PR to main MUST include this structure:
+
+```markdown
+## <TICKET-ID>: <Title>
+
+### Scope
+- What this ticket does (1-3 sentences)
+- Files changed: [list]
+
+### Tests Run
+- [ ] `pnpm -r typecheck` — exit 0
+- [ ] `pnpm test:ci` — exit 0
+- [ ] `pnpm -r build` — exit 0
+- [ ] `pnpm test:contract` — exit 0
+- [ ] Playwright E2E — [relevant tests listed]
+- [ ] Production build (docker-compose local-prod) — verified
+
+### Evidence
+- Screenshots: `RELEASES/EVIDENCE/<BATCH-ID>/<ticket>/`
+- API proof: [curl commands or network logs]
+- DB proof: [SQL verification if applicable]
+
+### Migration Notes
+- [ ] No migrations | [ ] Migration added: `NNN_description.sql`
+
+### Rollback Notes
+- Risk level: [Low/Medium/High]
+- Rollback impact: [description]
+
+### Cascade Regressions
+- [ ] None found | [ ] Found and fixed: [list tickets]
+- [ ] Found but non-blocking — new tickets created: [list]
+```
+
+### G.5 Tag Naming Standard
+
+| Tag Pattern | When | Example |
+|-------------|------|---------|
+| `prestage-<TICKET-ID>-YYYY-MM-DD_HHMMIST` | After ticket PR merged to main | `prestage-SA-P0-007-2026-02-12_1430IST` |
+| `staging-rc-YYYY-MM-DD_HHMMIST` | When staging deploy happens | `staging-rc-2026-02-15_1000IST` |
+| `prod-rc-YYYY-MM-DD_HHMMIST` | When production deploy happens | `prod-rc-2026-02-15_1400IST` |
+| `supermandi-YYYY-MM-DD-HHmm-BATCH-XXX` | Batch-level RC (legacy/MEGA-RC) | `supermandi-2026-02-15-1000-MEGA-RC` |
+
+**Rules**:
 - Tags are immutable — never delete or move a tag
-- If RC fails verification, fix → re-tag with new timestamp
-- Freeze `main` once RC is tagged (no new merges until RC is deployed or rejected)
+- **Owner**: Claude creates pre-stage tags after merge. Claude creates RC tags after all batch gates pass.
+- Operator verifies tag SHA matches expected HEAD before deploying
+- If a tag's code fails verification → fix → new branch → new PR → new tag (never reuse)
 
-### G.5 Freeze Rules
+### G.6 Cascade Regression Git Handling
+
+When E2E testing for ticket X reveals a regression in feature Y:
+
+#### Case A: Regression is BLOCKING (ticket X cannot pass without fixing Y)
+
+```
+1. STOP current ticket X's branch work
+2. Create a new regression ticket: REG-<NNN>
+3. Create a new branch: reg/<REG-NNN>-<slug>
+4. Fix the regression in the reg/ branch
+5. Open PR, pass gates, merge to main
+6. Tag: prestage-REG-<NNN>-YYYY-MM-DD_HHMMIST
+7. Return to ticket X's branch:
+   git checkout fix/<TICKET-X>
+   git rebase main              # pick up the regression fix
+8. Continue ticket X's E2E verification
+```
+
+**When to use**: The regression directly prevents ticket X's E2E from passing (e.g., gateway 404 blocks the flow).
+
+#### Case B: Regression is NON-BLOCKING (ticket X can pass, but Y is broken)
+
+```
+1. DO NOT fix it inside ticket X's branch
+2. Create a regression ticket: REG-<NNN> in MASTER_PLAN.md
+3. Add it to the backlog with appropriate priority
+4. Continue ticket X's work — it can still pass E2E
+5. The REG ticket will be picked up in layer order (M.0.1)
+```
+
+**When to use**: The regression exists but doesn't block ticket X's specific E2E criteria (e.g., a supplier portal bug while working on a POS ticket).
+
+**Why this matters**: Prevents scope creep and "unreviewable mega PRs". Each branch stays focused on one ticket.
+
+### G.7 Freeze Rules
 
 | Phase | Rule |
 |-------|------|
-| **Pre-Deploy** | Once RC tagged, no new commits to main unless fixing a gate failure |
+| **Per-Ticket** | No second ticket branch until first ticket's tag exists on main |
+| **Pre-Deploy** | Once RC tagged, no new merges to main unless fixing a gate failure |
 | **Post-Deploy** | Monitor 15 minutes after deploy. No new deploys during monitoring. |
-| **Gate Failure** | Fix → new commit → new tag → restart verification |
+| **Gate Failure** | Fix in new branch → merge → new tag → restart verification |
+
+### G.8 What "DONE" Means in Git Terms
+
+A ticket is DONE in Git only when ALL of these exist:
+
+| # | Git Artifact | Status |
+|---|-------------|--------|
+| 1 | Branch created from clean main | merged |
+| 2 | PR opened with full template | merged |
+| 3 | All pre-PR gates passed | green |
+| 4 | Squash/rebase merged to main | on main |
+| 5 | Pre-stage tag on merge commit | pushed |
+| 6 | Evidence folder committed | in repo |
+
+If any is missing → ticket is NOT pre-staging eligible. Claude MUST NOT start the next ticket.
 
 ---
 
@@ -818,17 +1021,18 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 A ticket is DONE only when ALL of these are true:
 
-| # | Criterion |
-|---|-----------|
-| 1 | Code compiles: `pnpm -r typecheck` = 0 errors |
-| 2 | Tests pass: all applicable test packs from Part C green |
-| 3 | **Cascading E2E Hardening complete**: full E2E suite run against production-grade build (docker-compose local-prod), zero failures, all cascade regressions fixed (Part A.5) |
-| 4 | Evidence collected: appropriate to fix type (Part D) |
-| 5 | Works in Docker: verified in `docker-compose.local-prod.yml` (not just dev server) |
-| 6 | Business invariants preserved: if applicable, invariant tests pass |
-| 7 | No hardcoded values, no temp fixes, no manual infra patches, no isolated changes |
-| 8 | Commit follows format, PR created, CI green |
-| 9 | Ticket marked **PRE-STAGING ELIGIBLE** (only after criteria 1-8 all met) |
+| # | Criterion | Git Artifact |
+|---|-----------|-------------|
+| 1 | Code compiles: `pnpm -r typecheck` = 0 errors | commits in ticket branch |
+| 2 | Tests pass: all applicable test packs from Part C green | pre-PR gate results |
+| 3 | **Cascading E2E Hardening complete**: full E2E suite run against production-grade build (docker-compose local-prod), zero failures, all cascade regressions triaged (Part A.5, G.6) | E2E evidence in PR |
+| 4 | Evidence collected: appropriate to fix type (Part D) | evidence folder committed |
+| 5 | Works in Docker: verified in `docker-compose.local-prod.yml` (not just dev server) | prod build proof in PR |
+| 6 | Business invariants preserved: if applicable, invariant tests pass | test results in PR |
+| 7 | No hardcoded values, no temp fixes, no manual infra patches, no isolated changes | code review |
+| 8 | **PR merged to main**: Squash/rebase merge with full PR template (G.4) | PR on GitHub |
+| 9 | **Pre-stage tag created and pushed**: `prestage-<TICKET-ID>-YYYY-MM-DD_HHMMIST` on merge commit (G.5) | tag on main |
+| 10 | Ticket marked **PRE-STAGING ELIGIBLE** (only after criteria 1-9 all met) | MASTER_PLAN status |
 
 ---
 
@@ -850,6 +1054,11 @@ A ticket is DONE only when ALL of these are true:
 | 12 | `SELECT *` without pagination | Unbounded queries are production bombs |
 | 13 | Editing a deployed migration | Create a new migration instead |
 | 14 | `if (env === 'staging') skip_check()` | Same validation in all environments |
+| 15 | Pushing directly to main | All changes via ticket branches + PR (Part G.1) |
+| 16 | Mixing unrelated fixes in one branch | One ticket = one branch = one PR (Part G.2) |
+| 17 | Starting next ticket before tag exists | Finish current ticket end-to-end first (Part G.2 Step 7) |
+| 18 | Merging a broken branch to main | Main must always be releasable (Part G.1) |
+| 19 | Fixing non-blocking regressions in current ticket's branch | Create separate REG ticket + branch (Part G.6 Case B) |
 
 ---
 
@@ -1084,28 +1293,61 @@ How Cascading E2E Hardening Mode prevents regression at each step:
 3. Verify Docker local-prod: `docker-compose -f docker-compose.local-prod.yml up`
 4. Verify test infrastructure: all test scripts from Part C.3 exist and are runnable
 
-### Phase 1: Repeat Forever (Every Ticket — Cascading E2E Hardening Mode)
+### Phase 1: Repeat Forever (Every Ticket — Cascading E2E Hardening Mode + Git Discipline)
 
 ```
-1.  Identify current layer (M.0.1) and pick next ticket in layer order
-2.  P.1 — Pre-task scope analysis (announce plan, derive tests from P.2 router)
-3.  Read ticket scope, identify risk class and change type
-4.  DEBUG → FIND → FIX → RETEST → GUARD (Part E loop)
-5.  Run applicable test packs (Part C, by change type)
-6.  ┌─ CASCADING E2E HARDENING (A.5) ────────────────────────────┐
-    │ 6a. Run full E2E suite against production-grade build       │
+ 0. START FROM CLEAN MAIN (G.2 Step 0)
+    git checkout main && git pull origin main && git status (must be clean)
+
+ 1. CREATE TICKET BRANCH (G.2 Step 1)
+    git checkout -b <type>/<TICKET-ID>-<slug>
+
+ 2. Identify current layer (M.0.1) and pick next ticket in layer order
+
+ 3. P.1 — Pre-task scope analysis (announce plan, derive tests from P.2 router)
+
+ 4. Read ticket scope, identify risk class and change type
+
+ 5. First commit: add failing test or repro (G.3 — chore commit)
+
+ 6. DEBUG → FIND → FIX → RETEST → GUARD (Part E loop)
+    Commits: fix(TICKET-ID) and test(TICKET-ID) as appropriate
+
+ 7. Run applicable test packs (Part C, by change type)
+
+ 8. ┌─ CASCADING E2E HARDENING (A.5) ────────────────────────────┐
+    │ 8a. Run full E2E suite against production-grade build       │
     │     (docker-compose local-prod, not pnpm dev)               │
-    │ 6b. Any regression exposed → fix immediately (cascade fix)  │
-    │ 6c. After each cascade fix → re-run FULL E2E suite again    │
-    │ 6d. REPEAT 6b-6c until ZERO failures                       │
-    │ 6e. Only proceed when E2E = ZERO failures on prod build     │
+    │ 8b. Regression exposed?                                     │
+    │     → BLOCKING (Case A, G.6): stop → new reg/ branch →     │
+    │       fix → merge → tag → return → rebase this branch      │
+    │     → NON-BLOCKING (Case B, G.6): create REG ticket →      │
+    │       continue this ticket                                  │
+    │ 8c. After each cascade fix → re-run FULL E2E suite again    │
+    │ 8d. REPEAT 8b-8c until ZERO failures for this ticket        │
+    │ 8e. Only proceed when E2E = ZERO failures on prod build     │
     └─────────────────────────────────────────────────────────────┘
-7.  P.4 — Post-task verification (git diff → router → verify all tests ran)
-8.  Collect evidence (Part D)
-9.  Commit with format: BATCH-XXX: TICKET-ID - Description
-10. Update MASTER_PLAN.md ticket status → mark PRE-STAGING ELIGIBLE
-11. If layer complete → run progressive gates for that layer (M.0.2)
-12. When batch complete:
+
+ 9. P.4 — Post-task verification (git diff → router → verify all tests ran)
+
+10. Collect evidence (Part D) — commit: docs(TICKET-ID)
+
+11. OPEN PR TO MAIN with full template (G.4)
+    All pre-PR gates must pass (G.2 Step 3)
+
+12. MERGE PR (squash or rebase) — only when pre-staging eligible (G.2 Step 5)
+
+13. TAG MERGE COMMIT on main (G.2 Step 6)
+    git tag -a prestage-<TICKET-ID>-YYYY-MM-DD_HHMMIST
+
+14. Update MASTER_PLAN.md ticket status → mark PRE-STAGING ELIGIBLE
+
+15. If layer complete → run progressive gates for that layer (M.0.2)
+
+16. NEXT TICKET: Return to step 0 (clean main, new branch)
+    *** Claude MUST NOT start step 0 for the next ticket until step 13 is complete ***
+
+17. When batch complete:
     a. P.5 — Batch-level completeness scan
     b. Run one-click pre-staging checklist (M.0.3)
     c. If all pass → provide E2E PowerShell script to operator
@@ -1114,7 +1356,7 @@ How Cascading E2E Hardening Mode prevents regression at each step:
     f. Prepare evidence pack
 ```
 
-**Step 6 is the heart of Cascading E2E Hardening Mode.** Steps 1-5 write and unit-test the code. Step 6 proves it works end-to-end on a production-grade build. No ticket exits step 6 with any failures — not even "unrelated" ones.
+**Step 8 is Cascading E2E Hardening.** Steps 1-7 create the branch, write code, and unit-test it. Step 8 proves it works end-to-end on a production-grade build. Steps 11-13 lock it down in Git (PR + merge + tag). No ticket skips any step.
 
 ### Promotion Gate (Full Project Completion Required)
 
@@ -1421,9 +1663,14 @@ Before declaring any fix complete, verify:
 - [ ] Evidence collected, appropriate to risk class (Part D)
 - [ ] Regression guard in place (Part D.1)
 - [ ] Scope limited to ticket (Part A.4)
-- [ ] Ticket marked PRE-STAGING ELIGIBLE after cascading hardening (Part H, criterion 9)
-- [ ] Definition of Done met (Part H, all 9 criteria)
-- [ ] Commit message follows format (Part G.2)
+- [ ] One ticket = one branch = one PR — no mixed scope (Part G.1, G.2)
+- [ ] PR merged to main with full template (Part G.4)
+- [ ] Pre-stage tag created and pushed on merge commit (Part G.5)
+- [ ] Cascade regressions triaged: blocking = separate reg/ branch, non-blocking = backlog ticket (Part G.6)
+- [ ] Next ticket NOT started until current ticket's tag exists (Part G.2 Step 7)
+- [ ] Ticket marked PRE-STAGING ELIGIBLE after cascading hardening (Part H, criterion 10)
+- [ ] Definition of Done met (Part H, all 10 criteria)
+- [ ] Commit message follows semantic format (Part G.3)
 - [ ] Pre-task scope analysis done — test plan announced (Part P.1)
 - [ ] Change-impact router applied — all required tests derived (Part P.2)
 - [ ] Post-task verification — no coverage gaps (Part P.4)
@@ -1462,3 +1709,4 @@ Before declaring any fix complete, verify:
 | 8.0 | 2026-02-11 | DOC-026: Part M rewritten — M.0 Ticket Pickup Strategy (bottom-up, dependency-aware). M.0.1 Layer ordering (7 layers). M.0.2 Progressive gate schedule. M.0.3 One-click pre-staging readiness definition + checklist. M.0.4 SA-GOLIVE concrete ticket ordering (6 phases, 15 tickets). M.0.5 Regression prevention at each step. Phase 1 updated with P.1/P.4/P.5 integration + layer-aware pickup. | Claude |
 | 9.0 | 2026-02-11 | DOC-027: C.8 UI/UX/Navigation Tests — comprehensive front-end verification from atomic elements to portal render. C.8.1 UI Element Verification (buttons, fields, headers, footers, tables, modals, toasts, dropdowns + POS-specific elements). C.8.2 UI Wiring (component → API → loading → success/error chain). C.8.3 Navigation & Route Guards (auth redirect, role guard, deep link, 404, back button, menu, tabs + POS navigation). C.8.4 UX State Coverage (mandatory 4-state: loading/success/empty/error for every API-driven screen). C.8.5 Portal Render Smoke (all-screen render verification per portal). P.2 router updated — portal/POS file changes now require C.8 UI/UX tests. P.3 registry updated — UI Surface column added to all 10 business functions. M.0.2 progressive gates updated — Layer 5 now includes UI/UX verification. M.0.4 SA-GOLIVE phases C/D/E updated with UI verification gates. Quick Reference Checklist extended with 5 UI/UX items. | Claude |
 | 10.0 | 2026-02-11 | DOC-028: Cascading E2E Hardening Mode — mandatory development mode for all tickets. A.5 defines the cascade loop (write → E2E on prod build → cascade fix regressions → re-run → repeat until zero failures → eligible). Phase 1 updated with explicit step 6 cascading E2E block. Part H Definition of Done expanded to 9 criteria (added cascading E2E, PRE-STAGING ELIGIBLE status). M.0.3 pre-staging checklist prepended with ticket eligibility + final cascading verification. M.0.5 regression prevention expanded with cascade-specific rows. Quick Reference Checklist extended with cascading and eligibility items. PURPOSE section updated. | Claude |
+| 11.0 | 2026-02-11 | DOC-029: Production-grade Git discipline. Part G completely rewritten (G.1-G.8). G.1 Branch strategy — one ticket = one branch = one PR = one tag, no direct pushes to main (both modes). G.2 Per-Ticket Git Flow — 7-step exact process (clean main → branch → commits → pre-PR gate → PR → merge → tag → next ticket). G.3 Semantic commit format (chore/fix/test/docs). G.4 PR template (scope, tests, evidence, migrations, rollback, cascade notes). G.5 Tag naming standard (prestage/staging-rc/prod-rc). G.6 Cascade regression Git handling — Case A (blocking: separate reg/ branch) vs Case B (non-blocking: backlog ticket). G.7 Freeze rules updated. G.8 Git Definition of Done (6 artifacts). A.5 cascade fix section updated with blocking vs non-blocking triage aligned to G.6. Part H expanded to 10 criteria (PR merged + tag created). Phase 1 rewritten with Git flow integration (18 steps: branch → code → E2E → PR → merge → tag → next). Part I: 5 new Git anti-patterns (15-19). Quick Reference: 5 new Git discipline items. Mode A no longer allows direct push — branches required in all modes. | Claude |
