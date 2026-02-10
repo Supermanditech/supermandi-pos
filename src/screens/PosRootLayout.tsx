@@ -38,7 +38,7 @@ import ReorderScreen from "./ReorderScreen";
 import CreditScreen from "./CreditScreen";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import * as reorderApi from "../services/api/reorderApi";
-import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo, updateDeviceMetadata } from "../services/deviceInfo";
+import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo, getDeviceMeta, updateDeviceMetadata } from "../services/deviceInfo";
 import { clearDeviceSession, getDeviceSession } from "../services/deviceSession";
 import { ApiError } from "../services/api/apiClient";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
@@ -461,6 +461,21 @@ export default function PosRootLayout() {
 
         if (status.deviceActive === false) {
           navigation.reset({ index: 0, routes: [{ name: "DeviceBlocked" }] });
+          return;
+        }
+        // SA-P2-003: Force update screen when app version is below minimum
+        if (status.forceUpdate) {
+          const meta = getDeviceMeta();
+          navigation.reset({
+            index: 0,
+            routes: [{
+              name: "ForceUpdate" as any,
+              params: {
+                currentVersion: meta.appVersion ?? "unknown",
+                requiredVersion: status.minAppVersion ?? "unknown",
+              },
+            }],
+          });
           return;
         }
       } catch (error) {

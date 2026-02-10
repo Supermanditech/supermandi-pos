@@ -23,6 +23,8 @@ import PosRootLayout from "./src/screens/PosRootLayout";
 import PaymentScreen from "./src/screens/PaymentScreen";
 import SuccessPrintScreen from "./src/screens/SuccessPrintScreenV2";
 import DeviceBlockedScreen from "./src/screens/DeviceBlockedScreen";
+// SA-P2-003: Force update screen for minimum app version enforcement
+import ForceUpdateScreen from "./src/screens/ForceUpdateScreen";
 import SalesHistoryScreen from "./src/screens/SalesHistoryScreen";
 import BillDetailScreen from "./src/screens/BillDetailScreen";
 import BarcodeSheetScreen from "./src/screens/BarcodeSheetScreen";
@@ -249,6 +251,8 @@ export default function App() {
           {/* RO-004: POS store registration */}
           <Stack.Screen name="RegisterStore" component={RegisterStoreScreen} />
           <Stack.Screen name="DeviceBlocked" component={DeviceBlockedScreen} />
+          {/* SA-P2-003: Force update screen for minimum app version enforcement */}
+          <Stack.Screen name="ForceUpdate" component={ForceUpdateScreen} />
           <Stack.Screen name="SellScan" component={PosRootLayout} />
           <Stack.Screen name="Payment" component={PaymentScreen} />
           <Stack.Screen name="SuccessPrint" component={SuccessPrintScreen} />
