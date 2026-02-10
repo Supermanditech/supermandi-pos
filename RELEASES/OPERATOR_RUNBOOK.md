@@ -1,7 +1,29 @@
 # Operator Runbook — SuperMandi Deployment
 
-> **This runbook is MANDATORY. Claude follows this at every session start and before every deploy.**
-> Do not skip steps. Do not summarize. Do not assume.
+> **SUPERSEDED (2026-02-10)**
+>
+> This file is from the **pre-Cloud Run VM era** and is NO LONGER the source of truth.
+> It remains for historical reference only. **Do NOT follow these steps.**
+>
+> **Authoritative replacements:**
+> - **Operator deploy process**: `MASTER_PLAN.md` Part 2 (Operator Rules) + First Deploy Runbook
+> - **Gate commands**: `MASTER_PLAN.md` Part 7 (Gate Commands)
+> - **Deploy scripts**: `deploy-cloud-run.sh` + `promote-to-prod.sh` (NOT `deploy-production.sh`)
+> - **Session modes**: `MASTER_PLAN.md` Part 1 (Mode A / Mode B)
+> - **Status lifecycle**: `MASTER_PLAN.md` Part 7 (PENDING → WRITTEN → GATED → TESTED → EVIDENCED → LIVE)
+> - **Staging-first flow**: `RELEASE_POLICY.md` (11-step flow)
+>
+> **Key differences from this old runbook:**
+> - Claude runs all automated gates (not Operator)
+> - Staging deploy is MANDATORY before production (this file skips staging)
+> - Mode A: Claude starts independently, no operator paste needed
+> - Cloud Run replaces VM/nginx/PM2
+
+---
+
+**--- HISTORICAL CONTENT BELOW (DO NOT FOLLOW) ---**
+
+---
 
 ---
 

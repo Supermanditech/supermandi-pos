@@ -106,6 +106,31 @@
 
 ---
 
+## Upcoming: MEGA-RC (First Combined Deploy)
+
+> All batches 004 through SA-GOLIVE deploy as a single combined RC.
+> See MASTER_PLAN.md for full runbook.
+
+| Field | Value |
+|-------|-------|
+| **Status** | `PENDING` (waiting for SA-GOLIVE + GCP setup) |
+| **RC_SHA** | *(set after SA-GOLIVE complete + gates pass)* |
+| **Includes** | BATCH-004, 005, 006, 007, 008, 009, 012, 013, 014, SA-MERGED, SA-GOLIVE, DEFERRED |
+| **Evidence** | `RELEASES/EVIDENCE/` — per-batch folders required (no waivers) |
+
+### Batch Status (New Lifecycle)
+
+| Status | Meaning |
+|--------|---------|
+| `WRITTEN` | Code on main, no gates verified |
+| `GATED` | typecheck + build + E2E pass |
+| `TESTED` | Operator browser tests pass |
+| `EVIDENCED` | Per-batch evidence folder complete |
+
+**Current batch statuses**: See MASTER_PLAN.md Part 4 table.
+
+---
+
 ## Current Production State
 
 | URL | Status |
@@ -120,6 +145,7 @@
 
 **Current PROD_SHA**: `fe359fd` (BATCH-003)
 **ROLLBACK_SHA**: `8c90592` (BATCH-002)
+**Next deploy**: MEGA-RC (pending — see MASTER_PLAN.md)
 
 ---
 
@@ -141,12 +167,13 @@
 
 ## Next Steps
 
-See [MASTER_PLAN.md](./MASTER_PLAN.md) for:
-- BATCH-004: Retailer Web Production-Grade
-- BATCH-005: Supplier Web Production-Grade
-- BATCH-006: SuperAdmin Production-Grade
-- BATCH-007: POS App Production-Grade
-- BATCH-008: Cloud Run Prep
-- BATCH-009: Integration Testing
-- BATCH-010: Staging Deploy
-- BATCH-011: Production Go-Live
+See [MASTER_PLAN.md](./MASTER_PLAN.md) for full batch details.
+
+**Current priority**: SA-GOLIVE (2/17 tickets done) → then MEGA-RC gate run → staging → production.
+
+| Batch | Status |
+|-------|--------|
+| BATCH-004 through 014, SA-MERGED | `WRITTEN` |
+| SA-GOLIVE | `IN_PROGRESS` (2/17) |
+| BATCH-010 (Staging) | `PENDING` |
+| BATCH-011 (Go-Live) | `PENDING` |

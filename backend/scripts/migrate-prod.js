@@ -149,6 +149,56 @@ async function showStatus() {
   }
 }
 
+async function dryRun() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error('[migrate] DATABASE_URL environment variable is required');
+    process.exit(1);
+  }
+
+  const pool = new Pool({ connectionString: databaseUrl });
+
+  try {
+    await ensureMigrationsTable(pool);
+
+    const applied = await getAppliedMigrations(pool);
+    const appliedNames = new Set(applied.map(m => m.name));
+
+    const files = parseMigrationFiles(migrationsDir);
+    const pending = files.filter(f => !appliedNames.has(f.name));
+
+    console.log('[dry-run] === MIGRATION DRY RUN ===');
+    console.log(`[dry-run] Applied: ${applied.length} migration(s)`);
+    console.log(`[dry-run] Pending: ${pending.length} migration(s)`);
+    console.log('');
+
+    if (pending.length === 0) {
+      console.log('[dry-run] No pending migrations. Nothing to do.');
+      return;
+    }
+
+    console.log('[dry-run] The following migrations WOULD be applied:');
+    for (const migration of pending) {
+      const sql = fs.readFileSync(migration.path, 'utf-8');
+      const lines = sql.split('\n').length;
+      const hasDrop = /\bDROP\b/i.test(sql);
+      const hasDelete = /\bDELETE\b/i.test(sql);
+      const hasAlterDrop = /ALTER\s+TABLE.*DROP/i.test(sql);
+      const flags = [];
+      if (hasDrop) flags.push('DROP');
+      if (hasDelete) flags.push('DELETE');
+      if (hasAlterDrop) flags.push('ALTER-DROP');
+      const warning = flags.length > 0 ? ` ⚠ DESTRUCTIVE: ${flags.join(', ')}` : '';
+      console.log(`  ○ ${migration.name} (${lines} lines)${warning}`);
+    }
+
+    console.log('');
+    console.log('[dry-run] NO CHANGES WERE MADE. Use "up" to apply.');
+  } finally {
+    await pool.end();
+  }
+}
+
 const command = process.argv[2] || 'up';
 
 switch (command) {
@@ -164,7 +214,13 @@ switch (command) {
       process.exit(1);
     });
     break;
+  case 'dry-run':
+    dryRun().catch(err => {
+      console.error('[migrate] Fatal error:', err.message);
+      process.exit(1);
+    });
+    break;
   default:
-    console.log('Usage: node scripts/migrate-prod.js <up|status>');
+    console.log('Usage: node scripts/migrate-prod.js <up|status|dry-run>');
     process.exit(1);
 }

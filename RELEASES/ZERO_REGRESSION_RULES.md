@@ -86,8 +86,12 @@ LOCAL SCHEMA === STAGING SCHEMA === PROD SCHEMA
 ```
 
 **Enforcement:**
-- Prisma/Drizzle migrations ONLY (no manual SQL)
-- Migration runs automatically on container startup
+- Migrations ONLY via `backend/scripts/migrate-prod.js` (no manual SQL)
+- **Normal cadence**: Migration runs automatically on container startup
+- **First deploy exception (MEGA-RC only)**: Manual migration execution
+  with Cloud SQL backup + `migrate-prod.js dry-run` before apply.
+  See MASTER_PLAN.md BATCH-010 Migration Safety Protocol.
+  After first successful deploy, auto-migration resumes.
 - Schema diff check in CI before deploy
 - Drift detected = deploy blocked
 
@@ -104,25 +108,32 @@ pnpm -r typecheck
 
 ### Gate 2: Unit Tests
 ```powershell
-pnpm -r test
+pnpm test:ci
 ```
 - 100% pass rate required
 - No skipped tests without ticket ID
 
+### Gate 2.5: Production Build
+```powershell
+pnpm -r build
+```
+- All projects must build successfully (exit 0)
+- Build failures = BLOCKED
+
 ### Gate 3: E2E Tests (Local)
 ```powershell
 cd e2e-tests
-npx playwright test --grep "@smoke"
+node .\node_modules\@playwright\test\cli.js test --grep "@prod"
 ```
-- All smoke tests pass against local stack
+- All @prod tests pass against local stack
 - Screenshots captured for evidence
 
 ### Gate 4: E2E Tests (Staging)
 ```powershell
 cd e2e-tests
-STAGING=true npx playwright test --grep "@prod"
+$env:STAGING="true"; node .\node_modules\@playwright\test\cli.js test --grep "@prod"
 ```
-- All production tests pass against staging
+- All @prod tests pass against staging
 - Video recordings for critical flows
 
 ### Gate 5: Manual Testing Matrix
@@ -144,7 +155,8 @@ STAGING=true npx playwright test --grep "@prod"
 ```
 [ ] All code changes have ticket IDs
 [ ] pnpm -r typecheck passes
-[ ] pnpm -r test passes
+[ ] pnpm -r build passes
+[ ] pnpm test:ci passes
 [ ] Local E2E passes
 [ ] Manual browser testing complete
 [ ] Evidence screenshots collected
@@ -152,7 +164,7 @@ STAGING=true npx playwright test --grep "@prod"
 
 ### Step 2: Git Push + CI
 ```
-[ ] Push to feature branch
+[ ] Push to main (Mode A) or merge PR to main (Mode B)
 [ ] CI builds Docker image
 [ ] CI runs all gates
 [ ] CI pushes image to Artifact Registry
@@ -247,27 +259,42 @@ Every deploy records rollback target:
 
 ## PART 7: EVIDENCE REQUIREMENTS
 
-### Per Batch Evidence Folder Structure
+### Evidence Folder Structure (MEGA-RC Aware)
+
+> For the first combined deploy (MEGA-RC), per-batch folders hold scope evidence.
+> Combined gate/CI/staging artifacts go in `MEGA-RC/`.
+> After go-live, each batch resumes its own full evidence folder.
+
+**Per-Batch Folder (scope-specific evidence):**
 ```
 RELEASES/EVIDENCE/BATCH-XXX/
-├── local/
-│   ├── retailer-login.png
-│   ├── supplier-dashboard.png
-│   ├── admin-users.png
-│   └── pos-sale.png
-├── staging/
-│   ├── retailer-login.png
-│   ├── supplier-dashboard.png
-│   ├── admin-users.png
-│   └── pos-sale.png
-├── e2e-results/
-│   ├── local-report.html
-│   └── staging-report.html
-├── ci/
-│   ├── build-log.txt
-│   └── image-sha.txt
-└── sign-off.md
+├── screenshots/              # Browser test evidence (operator)
+├── scope-verification.md     # Scope + parity verification (Claude)
+└── [batch-specific artifacts] # e.g., curl-proofs/, docker-build-log.txt
 ```
+
+**MEGA-RC Combined Folder (one-time first deploy):**
+```
+RELEASES/EVIDENCE/MEGA-RC/
+├── gates/
+│   ├── typecheck.txt         # pnpm -r typecheck output
+│   ├── build.txt             # pnpm -r build output
+│   └── e2e-local.html        # Playwright @prod report
+├── ci/
+│   └── ci-run-link.txt       # GitHub Actions run URL
+├── migration/
+│   ├── dry-run.txt           # migrate-prod.js dry-run output
+│   └── staging-migration.txt # First staging migration log
+├── staging/
+│   ├── health.txt            # /health response
+│   ├── version.txt           # /version response (SHA match)
+│   └── rollback-drill.txt    # Rollback drill output
+└── signoff.md                # Operator sign-off
+```
+
+**Post Go-Live (Normal Cadence):**
+Each batch gets its own full folder matching the original per-batch structure
+with local/, staging/, e2e-results/, ci/, and sign-off.md.
 
 ### Sign-off Template (sign-off.md)
 ```markdown
@@ -380,7 +407,7 @@ I, Claude, commit to:
 4. **ALWAYS** record evidence
 5. **ALWAYS** have rollback ready
 6. **ALWAYS** wait for operator sign-off
-7. **IMMEDIATELY** rollback if issues detected
+7. **IMMEDIATELY** recommend rollback to operator if issues detected
 8. **HONESTLY** report any concerns or risks
 
 **Violation of any rule = I will refuse to proceed until corrected.**
@@ -408,4 +435,6 @@ Date: _______________
 | Version | Date | Change | Author |
 |---------|------|--------|--------|
 | 1.0 | 2026-02-05 | Initial creation | Claude |
+| 2.0 | 2026-02-10 | DOC-019/020: Mode-aware git workflow, MEGA-RC evidence structure, standardized E2E gate commands, first-deploy migration exception | Claude |
+| 2.1 | 2026-02-10 | DOC-021: Gate 2 `pnpm -r test` → `pnpm test:ci`, added Gate 2.5 `pnpm -r build`, rollback commitment aligned with Failure Handoff Matrix | Claude |
 

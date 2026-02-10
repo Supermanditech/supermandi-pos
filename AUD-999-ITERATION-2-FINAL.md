@@ -360,7 +360,7 @@ ITER2-004: Fix supplier schema namespace (supplier.* not public.*)
 ITER2-005: Fix reorder stock column (current_qty not stock_on_hand)
 ITER2-006: Pre-sort sync events for dependency order
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push origin wip/trace-2026-01-15
 ```
 

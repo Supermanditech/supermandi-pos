@@ -1,6 +1,28 @@
 # BATCH {ID} — {DATE}
 
-## Batch Info
+> **SUPERSEDED (2026-02-10)**
+>
+> This template is from the **pre-Cloud Run VM era** and is NO LONGER the source of truth.
+> It remains for historical reference only. **Do NOT use this template for new batches.**
+>
+> **Authoritative replacements:**
+> - **Batch definitions**: `MASTER_PLAN.md` Part 5 (batch detail sections)
+> - **Status lifecycle**: `PENDING → IN_PROGRESS → WRITTEN → GATED → TESTED → EVIDENCED → LIVE`
+> - **Evidence structure**: `MASTER_PLAN.md` Part 6 + `ZERO_REGRESSION_RULES.md` Part 7
+> - **Deploy commands**: `deploy-cloud-run.sh` + `promote-to-prod.sh` (NOT `deploy-production.sh`)
+>
+> **Key differences from this old template:**
+> - Statuses `DRAFT / READY_FOR_DEPLOY / DEPLOYED` are replaced by new lifecycle
+> - VM-era references (nginx, PM2, SSH) are replaced by Cloud Run
+> - `deploy-production.sh` is replaced by `deploy-cloud-run.sh` + `promote-to-prod.sh`
+
+---
+
+**--- HISTORICAL CONTENT BELOW (DO NOT USE) ---**
+
+---
+
+## Batch Info (OLD — See MASTER_PLAN.md)
 | Field | Value |
 |-------|-------|
 | **Batch ID** | BATCH-{ID} |

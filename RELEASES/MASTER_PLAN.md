@@ -39,13 +39,13 @@ I, Claude, commit to the 0.000% regression guarantee:
 4. ALWAYS record evidence
 5. ALWAYS have rollback ready
 6. ALWAYS wait for operator sign-off
-7. IMMEDIATELY rollback if issues detected
+7. IMMEDIATELY recommend rollback to operator if issues detected
 8. HONESTLY report any concerns or risks
 9. REFUSE to proceed if any rule is violated
 
 Violation of ANY rule = I will BLOCK and refuse to proceed.
 
-Signed: Claude Opus 4.5
+Signed: Claude Opus 4.6
 Date: 2026-02-05
 ```
 
@@ -193,14 +193,24 @@ Every Claude session MUST begin with:
 ```
 1. Read this file: RELEASES/MASTER_PLAN.md
 2. Show current batch status (from Part 4 table)
-3. Ask operator to run git sync and paste output
-4. Do NOT propose any fixes until operator paste confirms:
-   - Clean git tree (no uncommitted changes)
-   - RC_SHA is known
-   - No lockfile drift
+3. Follow current Session Mode:
+
+   MODE A (Pre-Staging — CURRENT):
+   - Run `git log --oneline -5` and `git status`
+   - Check Operator Action Tracker for GCP progress
+   - Start working on current batch tickets independently
+   - No operator paste required
+
+   MODE B (Staging/Production):
+   - Ask operator to run git sync and paste output
+   - Do NOT propose any fixes until operator paste confirms:
+     - Clean git tree (no uncommitted changes)
+     - RC_SHA is known
+     - No lockfile drift
 ```
 
-**Enforcement**: Claude must not start solutioning until sync output is pasted.
+**Enforcement**: In Mode B, Claude must not start solutioning until sync output is pasted.
+**Current Mode**: A — switch to B when operator confirms GCP + SA-GOLIVE complete.
 
 ### Development Rules
 
@@ -229,7 +239,7 @@ BATCH-XXX: TICKET-ID - Description
 Risk Class: X
 Evidence: [link or path]
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ```
 
 ### Definition of Done (Per Ticket)
@@ -245,8 +255,14 @@ A ticket is DONE only when:
 
 ## PART 2: OPERATOR RULES
 
-### Before Any Batch
+### Before Any Batch (Mode-Aware)
 
+**Mode A (Pre-Staging — CURRENT):**
+- Operator does NOT need to paste git sync before Claude starts
+- Claude runs `git log --oneline -5` and `git status` independently
+- Operator involvement comes AFTER Claude completes all tests (see Final Verification below)
+
+**Mode B (Staging/Production):**
 ```powershell
 cd C:\supermandi-pos
 git fetch origin
@@ -258,21 +274,84 @@ node -v                       # Must match .nvmrc
 pnpm -v                       # Must match packageManager
 git diff pnpm-lock.yaml       # Must be empty
 ```
-
 **Paste output to Claude before proceeding.**
 
-### Gate Commands
+### Gate Commands (Claude Runs)
+
+Claude runs all automated gates and provides results. Operator does NOT run gates manually.
 
 ```powershell
 pnpm -r typecheck
+pnpm -r build
+pnpm test:ci
 cd e2e-tests
 node .\node_modules\@playwright\test\cli.js test --grep "@prod"
 cd ..
 ```
 
+### Final Verification Script (Claude Provides → Operator Runs)
+
+After Claude completes all automated gates, Claude provides a **single PowerShell script** that the operator runs in VS Code terminal. Operator pastes the output back to Claude.
+
+```powershell
+# Claude generates this script per-batch with current context filled in:
+# scripts/final-verify.ps1
+# Operator runs: .\scripts\final-verify.ps1
+
+Write-Host "=== SUPERMANDI FINAL VERIFICATION ===" -ForegroundColor Cyan
+Write-Host "Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+Write-Host ""
+
+# 1. Git state
+Write-Host "--- GIT STATE ---" -ForegroundColor Yellow
+git status --short
+git rev-parse --short HEAD
+git log --oneline -3
+Write-Host ""
+
+# 2. Environment parity
+Write-Host "--- ENVIRONMENT ---" -ForegroundColor Yellow
+node -v
+pnpm -v
+git diff --stat pnpm-lock.yaml
+Write-Host ""
+
+# 3. Gate results summary (Claude fills these in)
+Write-Host "--- GATE RESULTS (from Claude) ---" -ForegroundColor Yellow
+Write-Host "Typecheck: [Claude fills: PASS/FAIL + error count]"
+Write-Host "Build: [Claude fills: PASS/FAIL]"
+Write-Host "E2E @prod: [Claude fills: PASS/FAIL + test count]"
+Write-Host ""
+
+# 4. Operator browser test checklist
+Write-Host "--- OPERATOR BROWSER TESTS ---" -ForegroundColor Yellow
+Write-Host "Please test in Chrome Incognito and confirm:"
+Write-Host "  [ ] Retailer portal: login + dashboard"
+Write-Host "  [ ] Supplier portal: login + dashboard"
+Write-Host "  [ ] SuperAdmin: login + all tabs"
+Write-Host "  [ ] POS app: connect + sell flow (Redmi)"
+Write-Host ""
+
+Write-Host "=== PASTE THIS OUTPUT TO CLAUDE ===" -ForegroundColor Green
+```
+
+**Flow:**
+1. Claude completes all gates → reports results
+2. Claude generates `final-verify.ps1` with gate results filled in
+3. Operator runs script, does browser tests, pastes output to Claude
+4. Claude confirms batch status progression
+
+**When Claude generates this script:**
+- **MEGA-RC (first deploy):** Once, after all SA-GOLIVE tickets are done and combined gates pass on HEAD
+- **Normal cadence (post go-live):** Once per batch, after that batch's gates pass
+- **Format:** Claude pastes the script content inline — operator copies to PowerShell terminal
+- **Not a committed file** — the script is session-specific with live gate results filled in
+
 **Required Results:**
 - Typecheck: 0 errors
+- Build: all projects pass
 - E2E @prod: 0 failures
+- Operator browser tests: all checked
 
 ### Testing Matrix
 
@@ -295,26 +374,35 @@ cd ..
 | HTML no-store (if needed) | Check `Cache-Control` header | `no-store` |
 | No console errors | Browser DevTools | 0 errors |
 
-### Batch Completion Checklist V2
+### Batch Completion Checklist V2 (MEGA-RC Aware)
 
-> A batch is COMPLETE only when ALL items checked:
+> For the first deploy (MEGA-RC), completion is split into per-batch and combined checks.
+> After go-live, resume per-batch CI requirement (each batch gets its own CI green).
 
+**Per-Batch (applies to each batch individually):**
+- [ ] All tickets have code committed to main
+- [ ] Per-batch parity checklist filled (Dev + Docker columns)
+- [ ] Per-batch `scope-verification.md` written
+- [ ] Browser tests passed (per Testing Matrix — batch-specific scope)
+- [ ] Evidence folder complete: `RELEASES/EVIDENCE/BATCH-XXX/`
+  - [ ] `screenshots/` — browser test evidence
+  - [ ] `scope-verification.md` — Claude's scope + parity verification
+- [ ] All tickets have evidence attached
+
+**MEGA-RC Combined (applies once to HEAD after all batches):**
 - [ ] Git status clean (`git status` shows nothing to commit)
 - [ ] `pnpm -r typecheck` = 0 errors
+- [ ] `pnpm -r build` = all projects pass
 - [ ] `@prod` E2E = 0 failures
-- [ ] **CI pipeline green for RC_SHA** (not just local)
+- [ ] Docker local-prod 17/17 healthy
+- [ ] **CI pipeline green for RC_SHA** (one CI run on HEAD)
+- [ ] `migrate-prod.js dry-run` = no issues
 - [ ] `/version` endpoint shows RC_SHA on deployed environment
-- [ ] Evidence folder complete: `RELEASES/EVIDENCE/BATCH-XXX/`
-  - [ ] `commits.txt` — git log of batch commits
-  - [ ] `typecheck.txt` — typecheck output
-  - [ ] `e2e.txt` — E2E test results
-  - [ ] `ci-run.txt` — CI run link or screenshot
-  - [ ] `screenshots/` — browser test evidence
-  - [ ] `curl-proofs/` — non-functional proofs
-- [ ] BATCH_LEDGER.md entry added (status: READY or DEPLOYED)
-- [ ] All tickets have evidence attached
-- [ ] Browser tests passed (per Testing Matrix)
-- [ ] Device tests passed (if POS in scope)
+- [ ] BATCH_LEDGER.md entry added
+- [ ] All per-batch evidence folders complete (no waivers for 004–014)
+
+**Post Go-Live (Normal Cadence):**
+Resume per-batch CI requirement. Each batch's RC_SHA gets its own CI green.
 
 ---
 
@@ -461,27 +549,148 @@ BATCH-007 POS ───────┘                                          
 
 ## PART 4: CURRENT STATUS
 
-| Batch | Portal | Status | Progress | Owner | RC_SHA | CI Run | Updated |
-|-------|--------|--------|----------|-------|--------|--------|---------|
-| BATCH-004 | Retailer Web | `CODE_COMPLETE` | 5/5 DONE | Claude | d3e9e45 | — | 2026-02-05 |
-| BATCH-005 | Supplier Web | `CODE_COMPLETE` | 4/4 DONE | Claude | d3e9e45 | — | 2026-02-05 |
-| BATCH-006 | SuperAdmin | `CODE_COMPLETE` | 11/11 DONE | Claude | d3e9e45 | — | 2026-02-05 |
-| BATCH-007 | POS App | `CODE_COMPLETE` | 7/7 DONE | Claude | d3e9e45 | — | 2026-02-05 |
-| BATCH-008 | Cloud Run Prep | `CODE_COMPLETE` | 11/11 DONE | Claude | 59d7ebb | — | 2026-02-05 |
-| BATCH-009 | GCP CI/CD | `CODE_COMPLETE` | 9/9 DONE | Claude+Operator | 59d7ebb | — | 2026-02-05 |
-| BATCH-012 | Auth & Session Security | `CODE_COMPLETE` | 18/18 DONE | Claude | 9bb03f7 | — | 2026-02-06 |
-| BATCH-013 | Prod Testing + Infra Hardening | `CODE_COMPLETE` | FULL PASS | Claude | f7cb90d | — | 2026-02-06 |
-| BATCH-014 | Production Grade Polish | `CODE_COMPLETE` | 10/10 DONE | Claude | 609d875 | — | 2026-02-07 |
-| SA-MERGED | SuperAdmin Tickets (merged) | `CODE_COMPLETE` | 8/8 MERGED | Claude | bd90493 | — | 2026-02-10 |
-| **SA-GOLIVE** | **SuperAdmin Critical Go-Live** | `NEXT` | **2/17** | **Claude** | — | — | **2026-02-10** |
-| SA-DEFERRED | SuperAdmin Post Go-Live | `DEFERRED` | 0/8 | — | — | — | 2026-02-10 |
-| DEFERRED  | Deferred Tickets (P1+P2+P3) | `CODE_COMPLETE` | 7/7 DONE | Claude | 609d875 | — | 2026-02-06 |
-| BATCH-010 | Staging Deploy | `BLOCKED` | 1/6 DONE (E2E config) | Claude+Operator | — | — | 2026-02-07 |
-| BATCH-011 | Go-Live | `DRAFT` | 0/4 | Operator | — | — | 2026-02-05 |
+> **Status definitions**: See Part 7 Status Legend.
+> **Batch_SHA**: Historical — the HEAD SHA when that batch's code was last committed.
+> **RC_SHA**: Set once on the combined release candidate (see MEGA-RC section below).
+
+| Batch | Portal | Status | Progress | Owner | Batch_SHA | Updated |
+|-------|--------|--------|----------|-------|-----------|---------|
+| BATCH-004 | Retailer Web | `WRITTEN` | 5/5 | Claude | d3e9e45 | 2026-02-05 |
+| BATCH-005 | Supplier Web | `WRITTEN` | 4/4 | Claude | d3e9e45 | 2026-02-05 |
+| BATCH-006 | SuperAdmin | `WRITTEN` | 11/11 | Claude | d3e9e45 | 2026-02-05 |
+| BATCH-007 | POS App | `WRITTEN` | 7/7 | Claude | d3e9e45 | 2026-02-05 |
+| BATCH-008 | Cloud Run Prep | `WRITTEN` | 11/11 | Claude | 59d7ebb | 2026-02-05 |
+| BATCH-009 | GCP CI/CD | `WRITTEN` | 9/9 | Claude+Operator | 59d7ebb | 2026-02-05 |
+| BATCH-012 | Auth & Session Security | `WRITTEN` | 18/18 | Claude | 9bb03f7 | 2026-02-06 |
+| BATCH-013 | Prod Testing + Infra Hardening | `WRITTEN` | ALL | Claude | f7cb90d | 2026-02-06 |
+| BATCH-014 | Production Grade Polish | `WRITTEN` | 10/10 | Claude | 609d875 | 2026-02-07 |
+| SA-MERGED | SuperAdmin Tickets (merged) | `WRITTEN` | 8/8 | Claude | bd90493 | 2026-02-10 |
+| **SA-GOLIVE** | **SuperAdmin Critical Go-Live** | **`IN_PROGRESS`** | **2/17** | **Claude** | — | **2026-02-10** |
+| SA-DEFERRED | SuperAdmin Post Go-Live | `DEFERRED` | 0/8 | — | — | 2026-02-10 |
+| DEFERRED | Deferred Tickets (P1+P2+P3) | `WRITTEN` | 7/7 | Claude | 609d875 | 2026-02-06 |
+| BATCH-010 | Staging Deploy | `PENDING` | 1/6 | Claude+Operator | — | 2026-02-10 |
+| BATCH-011 | Go-Live | `PENDING` | 0/4 | Operator | — | 2026-02-10 |
+
+### Note on Batch Statuses
+
+Batches 004–014 + SA-MERGED are `WRITTEN` (code on main, no gates verified). These are **not** `GATED`, `TESTED`, or `EVIDENCED` yet. Each batch must individually progress through the evidence collection phase during the combined release gate run.
+
+---
+
+### MEGA-RC: Combined Release Candidate
+
+All batches 004 through SA-GOLIVE are merged on `main`. The single RC_SHA for staging and production is HEAD after SA-GOLIVE completes. Individual Batch_SHA values are historical reference only.
+
+| Field | Value |
+|-------|-------|
+| **RC_SHA** | *(set after SA-GOLIVE code-complete + gates pass)* |
+| **Includes** | BATCH-004, 005, 006, 007, 008, 009, 012, 013, 014, SA-MERGED, SA-GOLIVE, DEFERRED |
+| **Gate Status** | `PENDING` |
+| **Evidence** | `RELEASES/EVIDENCE/` — per-batch folders + combined gate artifacts |
+| **CI Run** | *(set after CI green)* |
+
+**Rules:**
+1. RC_SHA is the `git rev-parse HEAD` of `main` after SA-GOLIVE is complete
+2. All gates run once against this single SHA (not per-batch SHAs)
+3. Evidence is collected per-batch scope (each batch gets its own folder)
+4. One RC tag: `supermandi-YYYY-MM-DD-HHmm-MEGA-RC`
+5. This is a **one-time** combined RC. After go-live, resume normal "one batch = one RC" cadence
+
+**MEGA-RC Lifecycle:**
+```
+SA-GOLIVE complete
+    → Set RC_SHA = HEAD
+    → Run full gate suite (typecheck + build + E2E + docker local-prod)
+    → Operator browser tests all 4 portals
+    → Collect per-batch evidence
+    → Tag RC
+    → CI green
+    → Deploy staging (BATCH-010)
+    → Verify staging
+    → Promote to production (BATCH-011)
+```
+
+---
+
+### Operator Action Tracker (GCP Infrastructure)
+
+> **Owner**: Operator. **Status**: Pre-staging — operator solving immediately.
+> Claude CANNOT start BATCH-010 until all rows show `DONE`.
+
+| # | Action | Script / Method | Status | Date |
+|---|--------|----------------|--------|------|
+| 1 | GCP project with billing enabled | Manual (GCP Console) | PENDING | — |
+| 2 | Artifact Registry repo | `scripts/gcp/setup-artifact-registry.sh` | PENDING | — |
+| 3 | Cloud SQL (Postgres 15) | `scripts/gcp/setup-cloud-sql.sh` | PENDING | — |
+| 4 | Memorystore (Redis 7) | `scripts/gcp/setup-memorystore.sh` | PENDING | — |
+| 5 | VPC Connector | `scripts/gcp/setup-vpc-connector.sh` | PENDING | — |
+| 6 | Secret Manager (all secrets) | `scripts/gcp/setup-secret-manager.sh` | PENDING | — |
+| 7 | Workload Identity Federation | `scripts/gcp/setup-wif.sh` | PENDING | — |
+| 8 | GitHub secrets set | Manual (`GCP_WIF_PROVIDER`, `GCP_SA_EMAIL`) | PENDING | — |
+| 9 | DNS: staging.supermandi.tech | Manual (Cloud LB or domain mapping) | PENDING | — |
+
+**Operator**: Update this table as each item is completed. Paste command output as evidence.
+
+---
+
+### Mega-Batch Acceptance Criteria (One-Time First Deploy)
+
+> Batches 004 through SA-GOLIVE accumulated during the pre-GCP phase.
+> The first staging deploy is a combined mega-batch. This is a **ONE-TIME exception**.
+> After go-live, resume normal "one batch = one RC" cadence.
+
+**Risk Mitigations:**
+1. Full gate suite on HEAD — not per-batch SHAs
+2. Docker local-prod full stack test before staging
+3. Cloud SQL backup BEFORE migration run on staging
+4. Staging migration run as separate step — not auto on container start
+5. 4-portal browser test on staging — not skippable
+6. Rollback drill BEFORE production promote
+7. Per-batch evidence collected — no waivers
+
+**First Deploy Runbook:**
+```
+1. Claude finishes SA-GOLIVE → all batches WRITTEN
+2. Claude runs full gates on HEAD → all batches GATED
+3. Operator completes GCP setup (Operator Action Tracker above)
+4. Operator browser tests all 4 portals → per-batch TESTED
+5. Claude + Operator collect per-batch evidence → per-batch EVIDENCED
+6. **Claude** tags MEGA-RC (`git tag supermandi-YYYY-MM-DD-HHmm-MEGA-RC`) → RC_TAGGED
+7. CI builds images → pushes to Artifact Registry → CI green
+8. Migration safety protocol (see BATCH-010) → backup + dry-run + apply
+9. Deploy services to staging Cloud Run → STAGED
+10. Full staging verification (BATCH-010 tickets)
+11. Promote to production (BATCH-011) → LIVE
+```
+
+### Failure Handoff Protocol (Who Acts First)
+
+> When something fails during the deploy workflow, this matrix defines who detects, who acts first, and who assists.
+
+| Failure During | Who Detects | Who Acts First | Who Assists | Escalation |
+|----------------|-------------|----------------|-------------|------------|
+| Gate failure (typecheck/E2E) | Claude | Claude (fix code) | — | If unfixable: BLOCKED → Operator decides revert/defer |
+| Docker local-prod failure | Claude | Claude (fix config) | — | If infra: Operator checks Docker Desktop |
+| GCP setup failure | Operator | Operator (retry/quota) | — | Claude cannot help — GCP console only |
+| CI failure | CI | Claude (fix code) | — | If flaky: Operator checks GitHub Actions settings |
+| Migration failure (staging) | Claude (sees log) | **Operator restores backup** | Claude fixes migration | NEVER retry failed migration without backup restore |
+| Staging service won't start | Claude (sees log) | Claude (diagnose) | Operator checks Cloud Run console | If Cloud Run config: Operator fixes |
+| Staging browser test fails | Operator (sees UI) | **Operator reports to Claude** | Claude fixes code | Re-deploy staging after fix |
+| Staging parity mismatch | Both | Claude (creates HOTFIX) | Operator verifies | New RC tag required |
+| Production health check fails | Claude (curl) | **Operator runs rollback** | Claude investigates | ROLLBACK FIRST, investigate second |
+| Production 5xx errors | Cloud Logging | **Operator runs rollback** | Claude diagnoses | ROLLBACK FIRST, investigate second |
+| POS device can't connect | Operator (device) | Operator reports | Claude checks API | If API healthy: POS network issue |
+
+**Key principles:**
+- **Code problems** → Claude acts first
+- **Infrastructure problems** → Operator acts first
+- **Production incidents** → Operator ALWAYS rollbacks first, Claude investigates after
+
+---
 
 ### Scaling Note
 
-For 1000+ batches: Each batch has detailed section below. Completed batches move to BATCH_LEDGER.md with evidence links. This table shows only active/upcoming batches.
+For future batches: Each batch has a detailed section in Part 5 below. After go-live, completed batches move to BATCH_LEDGER.md with evidence links. This table shows only active/upcoming batches.
 
 ---
 
@@ -494,7 +703,7 @@ For 1000+ batches: Each batch has detailed section below. Completed batches move
 
 ### BATCH-004: Retailer Web
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: d3e9e45 | **CI Run**: —
 
 #### Operator Scope (CONFIRMED 2026-02-05)
 ```
@@ -520,10 +729,10 @@ Confirmed by: Operator
 #### Progress
 | # | Ticket | Risk | Status | Evidence |
 |---|--------|------|--------|----------|
-| 1 | RET-FORGOT-001 | C | CODE_VERIFIED | ForgotPasswordPage.tsx fully implemented with OTP flow |
-| 2 | RET-CATALOG-001 | A | CODE_VERIFIED | SupplierCatalogPage.tsx - browse & add products |
-| 3 | RET-QUEUE-001 | A | CODE_VERIFIED | SupplierQueuePage.tsx - approve/reject suppliers |
-| 4 | RET-BANK-001 | B | CODE_VERIFIED | SettingsPage.tsx - UPI VPA persists |
+| 1 | RET-FORGOT-001 | C | DONE | ForgotPasswordPage.tsx fully implemented with OTP flow |
+| 2 | RET-CATALOG-001 | A | DONE | SupplierCatalogPage.tsx - browse & add products |
+| 3 | RET-QUEUE-001 | A | DONE | SupplierQueuePage.tsx - approve/reject suppliers |
+| 4 | RET-BANK-001 | B | DONE | SettingsPage.tsx - UPI VPA persists |
 | 5 | RET-CLEANUP-001 | A | DONE | Route added at /retailer/forgot-password + "Forgot Password?" link on LoginPage |
 
 **Code Review Notes (2026-02-05):**
@@ -550,11 +759,21 @@ Confirmed by: Operator
 - [ ] `/version` shows RC_SHA
 - [ ] No console errors in Incognito
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| basePath /retailer/ serves SPA | — | — | — | — |
+| API calls use VITE_API_BASE_URL (not hardcoded) | — | — | — | — |
+| Login → OTP → Dashboard flow | — | — | — | — |
+| Static assets have cache-control immutable | — | — | — | — |
+| No CORS errors in console | — | — | — | — |
+| Forgot password page reachable | — | — | — | — |
+
 ---
 
 ### BATCH-005: Supplier Web
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: d3e9e45 | **CI Run**: —
 
 #### Operator Scope (CONFIRMED 2026-02-05)
 ```
@@ -578,10 +797,10 @@ Confirmed by: Operator
 #### Progress
 | # | Ticket | Risk | Status | Evidence |
 |---|--------|------|--------|----------|
-| 1 | SUP-VERIFY-001 | A | CODE_VERIFIED | 12 pages found (dashboard, products, orders, earnings, kyc, upload, profile, login, register, onboard, pending-approval, forgot-password) |
-| 2 | SUP-ORDER-001 | B | CODE_VERIFIED | orders/page.tsx (717 lines) - full order management with shipment tracking |
-| 3 | SUP-EARNINGS-001 | B | CODE_VERIFIED | earnings/page.tsx (440 lines) - payout history with order breakdown |
-| 4 | SUP-KYC-001 | C | CODE_VERIFIED | kyc/page.tsx (480 lines) - document upload + IFSC lookup + bank verification |
+| 1 | SUP-VERIFY-001 | A | DONE | 12 pages found (dashboard, products, orders, earnings, kyc, upload, profile, login, register, onboard, pending-approval, forgot-password) |
+| 2 | SUP-ORDER-001 | B | DONE | orders/page.tsx (717 lines) - full order management with shipment tracking |
+| 3 | SUP-EARNINGS-001 | B | DONE | earnings/page.tsx (440 lines) - payout history with order breakdown |
+| 4 | SUP-KYC-001 | C | DONE | kyc/page.tsx (480 lines) - document upload + IFSC lookup + bank verification |
 
 **Code Review Notes (2026-02-05):**
 - Next.js App Router structure with (dashboard) and (auth) route groups
@@ -607,11 +826,21 @@ Confirmed by: Operator
 - [ ] `/version` shows RC_SHA
 - [ ] No console errors in Incognito
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| basePath /supplier/ serves Next.js | — | — | — | — |
+| NEXT_PUBLIC_API_BASE_URL from env (not hardcoded) | — | — | — | — |
+| SSR pages render server-side in Docker | — | — | — | — |
+| Login → OTP → Dashboard flow | — | — | — | — |
+| KYC document upload works | — | — | — | — |
+| No hydration mismatch warnings | — | — | — | — |
+
 ---
 
 ### BATCH-006: SuperAdmin
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: d3e9e45 | **CI Run**: —
 
 #### Operator Scope (CONFIRMED 2026-02-05)
 ```
@@ -649,17 +878,17 @@ Confirmed by: Operator
 #### Progress
 | # | Ticket | Risk | Status | Evidence |
 |---|--------|------|--------|----------|
-| 1 | ADM-EVENTS-001 | A | CODE_VERIFIED | Awaiting browser test |
-| 2 | ADM-DEVICES-001 | A | CODE_VERIFIED | Awaiting browser test |
-| 3 | ADM-STORES-001 | B | CODE_VERIFIED | Awaiting browser test |
-| 4 | ADM-SUPPLIERS-001 | B | CODE_VERIFIED | Awaiting browser test |
-| 5 | ADM-PAYMENTS-001 | A | CODE_VERIFIED | Awaiting browser test |
-| 6 | ADM-ANALYTICS-001 | A | CODE_VERIFIED | Awaiting browser test |
-| 7 | ADM-AI-001 | B | CODE_VERIFIED | Awaiting browser test |
-| 8 | ADM-USERS-001 | C | CODE_VERIFIED | Awaiting browser test |
-| 9 | ADM-SETTINGS-001 | B | CODE_VERIFIED | Awaiting browser test |
-| 10 | ADM-AUDIT-001 | A | CODE_VERIFIED | Awaiting browser test |
-| 11 | ADM-DOCS-001 | B | CODE_VERIFIED | Awaiting browser test |
+| 1 | ADM-EVENTS-001 | A | DONE | Awaiting browser test |
+| 2 | ADM-DEVICES-001 | A | DONE | Awaiting browser test |
+| 3 | ADM-STORES-001 | B | DONE | Awaiting browser test |
+| 4 | ADM-SUPPLIERS-001 | B | DONE | Awaiting browser test |
+| 5 | ADM-PAYMENTS-001 | A | DONE | Awaiting browser test |
+| 6 | ADM-ANALYTICS-001 | A | DONE | Awaiting browser test |
+| 7 | ADM-AI-001 | B | DONE | Awaiting browser test |
+| 8 | ADM-USERS-001 | C | DONE | Awaiting browser test |
+| 9 | ADM-SETTINGS-001 | B | DONE | Awaiting browser test |
+| 10 | ADM-AUDIT-001 | A | DONE | Awaiting browser test |
+| 11 | ADM-DOCS-001 | B | DONE | Awaiting browser test |
 
 **Code Review Notes (2026-02-05):**
 - All 11 API modules exist: posEvents.ts, devices.ts, stores.ts, suppliers.ts, analytics.ts, ai.ts, users.ts, settings.ts, audit.ts, documents.ts
@@ -683,11 +912,21 @@ Confirmed by: Operator
 - [ ] `/version` shows RC_SHA
 - [ ] No console errors in Incognito
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| basePath /admin/ serves SPA | — | — | — | — |
+| API calls use VITE_API_BASE_URL | — | — | — | — |
+| Login with admin token works | — | — | — | — |
+| All 11 tabs load without error | — | — | — | — |
+| Real data displays (not mock) | — | — | — | — |
+| No console errors | — | — | — | — |
+
 ---
 
 ### BATCH-007: POS App
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: d3e9e45 | **CI Run**: —
 
 #### Operator Scope (CONFIRMED 2026-02-05)
 ```
@@ -755,11 +994,21 @@ Confirmed by: Operator
 - [ ] `/health` returns ok from device
 - [ ] No crash logs in device console
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| API URL is HTTPS (app.json) | — | — | — | — |
+| Device activation against backend | — | — | — | — |
+| Barcode scan resolves store-scoped | — | — | — | — |
+| Sell flow: scan → cart → pay → receipt | — | — | — | — |
+| Offline queue stores transactions | — | — | — | — |
+| ReadinessGate probes all endpoints | — | — | — | — |
+
 ---
 
 ### BATCH-008: Cloud Run Prep
 
-**Status**: `CODE_COMPLETE` | **RC_SHA**: 59d7ebb | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: 59d7ebb | **CI Run**: —
 
 > **Goal**: Every Docker image builds. All services ready for Cloud Run deployment.
 > Database migrations are clean. Service URLs parameterized (no Docker DNS hardcoding).
@@ -1157,7 +1406,7 @@ Add `/version` route to each service returning:
 
 ### BATCH-009: GCP CI/CD Pipeline
 
-**Status**: `CODE_COMPLETE` | **RC_SHA**: 59d7ebb | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: 59d7ebb | **CI Run**: —
 
 > **Goal**: Push to main → CI gates → CD builds all images → Artifact Registry → auto-deploy
 > to staging Cloud Run. One manual "promote" command → production Cloud Run.
@@ -1394,11 +1643,21 @@ Grants AR push + Cloud Run deploy permissions.
 - [ ] **No `:latest` tag used**: all deploys use digest pin or SHA tag
 - [ ] CI green for RC_SHA
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| CI gates trigger on push to main | — | — | — | — |
+| CD builds + pushes to Artifact Registry | — | — | — | — |
+| WIF authentication works from GitHub | — | — | — | — |
+| deploy-cloud-run.sh deploys services | — | — | — | — |
+| promote-to-prod.sh enforces SHA match | — | — | — | — |
+| No :latest tag used anywhere | — | — | — | — |
+
 ---
 
 ### BATCH-013: Production Testing Fixes + Infra Hardening
 
-**Status**: `CODE_COMPLETE` | **RC_SHA**: f7cb90d | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: f7cb90d | **CI Run**: —
 
 > **Goal**: Fix production testing issues and harden infrastructure based on local prod stack validation.
 > Committed as single batch in f7cb90d.
@@ -1413,11 +1672,18 @@ Grants AR push + Cloud Run deploy permissions.
 - [x] Local prod stack 17/17 healthy
 - [ ] CI green for RC_SHA
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| All 17 containers healthy in local-prod | — | — | — | — |
+| Graceful shutdown on SIGTERM | — | — | — | — |
+| Structured JSON logging (LOG_FORMAT=json) | — | — | — | — |
+
 ---
 
 ### DEFERRED: Deferred Tickets (P1+P2+P3)
 
-**Status**: `CODE_COMPLETE` | **RC_SHA**: 609d875 | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: 609d875 | **CI Run**: —
 
 > **Goal**: Fix all deferred tickets from MICRO-BATCH-07, MICRO-BATCH-08, and remaining P3s.
 > Includes HttpOnly cookie migration (P1), AbortController on tab change (P2), and 5 P3 polish items.
@@ -1442,7 +1708,7 @@ Grants AR push + Cloud Run deploy permissions.
 
 ### BATCH-014: Production Grade Polish
 
-**Status**: `CODE_COMPLETE` | **RC_SHA**: 609d875 | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: 609d875 | **CI Run**: —
 
 > **Goal**: Final production-grade polish before staging deployment.
 > Fix CI Node version mismatch, add lightweight logger, graceful shutdown,
@@ -1635,11 +1901,19 @@ Grants AR push + Cloud Run deploy permissions.
 - [ ] Local prod stack 17/17 healthy
 - [ ] All 14 Docker images build
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| CI uses Node 20 (matches Docker) | — | — | — | — |
+| console.log stripped from supplier prod build | — | — | — | — |
+| CORS maxAge header present | — | — | — | — |
+| No critical TODO/FIXME blocking go-live | — | — | — | — |
+
 ---
 
 ### SA-GOLIVE: SuperAdmin Critical Go-Live Tickets
 
-**Status**: `NEXT` | **RC_SHA**: — | **CI Run**: — | **Updated**: 2026-02-10
+**Status**: `IN_PROGRESS` | **Batch_SHA**: — | **CI Run**: — | **Updated**: 2026-02-10
 
 > **Goal**: Implement 17 remaining SuperAdmin tickets required before go-live.
 > Operator phasing decision (2026-02-10): 8 tickets deferred to post go-live.
@@ -1695,13 +1969,99 @@ Grants AR push + Cloud Run deploy permissions.
 - [ ] `@prod` E2E = 0 failures
 - [ ] CI green for RC_SHA
 
+#### Parity Checklist — SA-MERGED (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| Feature kill switch toggles features | — | — | — | — |
+| Refund/reversal creates correct ledger entries | — | — | — | — |
+| RBAC restricts staff actions | — | — | — | — |
+| GRN quantity validation prevents over-receipt | — | — | — | — |
+| Supplier suspension blocks their products | — | — | — | — |
+
+#### Parity Checklist — SA-GOLIVE (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| Maintenance mode blocks all portals | — | — | — | — |
+| Store suspension blocks store access | — | — | — | — |
+| Store health dashboard shows metrics | — | — | — | — |
+| Offline sale re-validation works | — | — | — | — |
+| Force device re-enrollment works | — | — | — | — |
+| Min app version enforcement rejects old POS | — | — | — | — |
+
 ---
 
 ### BATCH-010: Staging Deploy + Pre-Live Testing
 
-**Status**: `BLOCKED` (waiting for SA-GOLIVE) | **RC_SHA**: — | **CI Run**: —
+**Status**: `PENDING` (waiting for SA-GOLIVE + GCP setup) | **Batch_SHA**: — | **CI Run**: —
 
 > **Goal**: Full staging environment working on Cloud Run. All portals tested.
+
+#### Migration Safety Protocol (First Staging Deploy)
+
+> Migrations 000–118+ will run against staging Cloud SQL for the first time.
+> This protocol is MANDATORY for the first deploy. After go-live, auto-migration resumes.
+
+**Before Running Migrations:**
+1. Operator takes Cloud SQL backup:
+   ```bash
+   gcloud sql backups create --instance=supermandi-db --description="pre-mega-rc-migration"
+   ```
+2. Record backup ID in BATCH_LEDGER.md
+3. Claude verifies `test:migrate-zero` passes locally (empty DB → all migrations)
+4. Claude runs `node backend/scripts/migrate-prod.js dry-run` to list pending migrations
+5. Claude reviews all pending migrations for destructive operations (DROP, DELETE, ALTER DROP)
+
+**Migration Execution (Staging):**
+1. Disable auto-migration in container entrypoint for first deploy
+2. Deploy service containers WITHOUT auto-migrate
+3. Run migrations manually against staging Cloud SQL:
+   ```bash
+   DATABASE_URL=<staging-url> node backend/scripts/migrate-prod.js up
+   ```
+4. Verify schema:
+   ```bash
+   DATABASE_URL=<staging-url> node backend/scripts/migrate-prod.js status
+   ```
+5. ONLY THEN enable services to accept traffic
+
+**If Migration Fails:**
+1. DO NOT retry the failed migration
+2. Restore from backup:
+   ```bash
+   gcloud sql backups restore <BACKUP_ID> --restore-instance=supermandi-db
+   ```
+3. Fix the migration — create a NEW migration file (never edit the failed one)
+4. Re-tag RC with new timestamp
+5. Start from step 1
+
+**After First Successful Deploy:**
+Resume auto-migration on container startup (normal flow).
+
+---
+
+#### Cloud Run Parity Checklist (First Deploy Discovery)
+
+> Run after STAGE-DEPLOY-001. Operator + Claude document any differences found.
+> Any `NO` in Match column becomes a HOTFIX ticket.
+
+| Area | Local-Prod Behavior | Cloud Run Behavior | Match? | Fix Ticket |
+|------|--------------------|--------------------|--------|------------|
+| Service URLs | Docker DNS (`http://auth-service:3001`) | Cloud Run URLs (env var) | — | — |
+| Secrets | `.env` file or Docker secrets | Secret Manager env vars | — | — |
+| PORT | Fixed per service | Cloud Run sets PORT dynamically | — | — |
+| VPC connectivity | Docker network | VPC Connector | — | — |
+| DB connection | localhost:5432 | Cloud SQL via VPC Connector | — | — |
+| Redis connection | localhost:6379 | Memorystore via VPC Connector | — | — |
+| Health checks | None enforced | Cloud Run startup/liveness probes | — | — |
+| Request timeout | None | Cloud Run 300s default | — | — |
+| Concurrency | Unlimited | Cloud Run max-instances setting | — | — |
+| Cold start | Instant (containers always running) | Possible cold start delay | — | — |
+| File system | Writable | Read-only (Cloud Run) | — | — |
+| Memory limit | Host memory | Cloud Run 512Mi-2Gi | — | — |
+
+**Process:** Operator fills this table during first staging deploy. Claude creates HOTFIX tickets for any mismatches found.
+
+---
 > E2E passes against staging. Rollback drill completed. Operator signs off.
 
 #### Staging URLs
@@ -1851,7 +2211,7 @@ Date: _______________
 
 ### BATCH-011: Production Go-Live
 
-**Status**: `DRAFT` | **RC_SHA**: — | **CI Run**: —
+**Status**: `PENDING` | **Batch_SHA**: — | **CI Run**: —
 
 > **Goal**: Promote staging-approved image to production Cloud Run. Verify. Monitor. Sign off.
 > This batch has ONE action: run the promote script. Everything else is verification.
@@ -1993,7 +2353,7 @@ gcloud run services update-traffic api-gateway \
 
 ### BATCH-012: Auth & Session Security
 
-**Status**: `CODE_COMPLETE` | **RC_SHA**: 9bb03f7 | **CI Run**: —
+**Status**: `WRITTEN` | **Batch_SHA**: 9bb03f7 | **CI Run**: —
 
 > **Goal**: Fix all 18 auth/session vulnerabilities identified in the Security Audit Report
 > (Agent af78518, SHA 7ff2bd1). This batch MUST complete before staging deployment.
@@ -2629,28 +2989,109 @@ CORS origin checks exist but may not cover all scenarios.
 - [ ] CSP headers present
 - [ ] CORS restricted to allowed origins only
 
+#### Parity Checklist (Dev → Docker → Staging)
+| Area | Dev | Docker | Staging | Match? |
+|------|-----|--------|---------|--------|
+| Firebase ID token validated on backend | — | — | — | — |
+| Cross-portal token rejected (retailer → supplier = 403) | — | — | — | — |
+| OTP rate limiting (3 per 5 min) | — | — | — | — |
+| Idle timeout enforced server-side | — | — | — | — |
+| HttpOnly cookies (no localStorage tokens) | — | — | — | — |
+| Refresh token rotation works | — | — | — | — |
+| CSRF protection active | — | — | — | — |
+
 ---
 
 ## PART 6: EVIDENCE
 
-Evidence stored in: `RELEASES/EVIDENCE/BATCH-XXX/`
+> **No waivers.** Every batch (004–014, SA-MERGED, SA-GOLIVE) requires its own evidence folder.
+> Evidence is collected during the combined MEGA-RC gate run, scoped to each batch.
 
-### Required Evidence Per Batch
+Evidence stored in: `RELEASES/EVIDENCE/`
 
-| File | Contents |
-|------|----------|
-| `commits.txt` | `git log --oneline START_SHA..END_SHA` |
-| `typecheck.txt` | `pnpm -r typecheck` output |
-| `e2e.txt` | E2E @prod test results |
-| `ci-run.txt` | Link to CI run + screenshot |
-| `version-proof.txt` | `curl /version` output showing RC_SHA |
-| `screenshots/` | Browser test evidence |
-| `curl-proofs/` | Non-functional curl outputs |
-| `signoff.md` | Operator sign-off with checklist |
+### Per-Batch Evidence Folder (MANDATORY — No Waivers)
 
-### Evidence Per Ticket
+Each batch gets its own folder. Status cannot progress from `WRITTEN` → `EVIDENCED` without it.
 
-Each ticket in Progress table must link to evidence:
+```
+RELEASES/EVIDENCE/
+├── BATCH-004/                    # Retailer Web
+│   ├── screenshots/              # Operator: retailer portal browser tests
+│   ├── typecheck.txt             # Claude: typecheck output (shared across batches)
+│   └── scope-verification.md     # Claude: which tickets, what was verified
+├── BATCH-005/                    # Supplier Web
+│   ├── screenshots/              # Operator: supplier portal browser tests
+│   └── scope-verification.md
+├── BATCH-006/                    # SuperAdmin
+│   ├── screenshots/              # Operator: admin portal browser tests (11 tabs)
+│   └── scope-verification.md
+├── BATCH-007/                    # POS App
+│   ├── screenshots/              # Operator: POS device tests
+│   └── scope-verification.md
+├── BATCH-008/                    # Cloud Run Prep
+│   ├── docker-build-log.txt      # Claude: all 14 images build
+│   ├── health-checks.txt         # Claude: /health endpoint proofs
+│   ├── version-checks.txt        # Claude: /version endpoint proofs
+│   └── scope-verification.md
+├── BATCH-009/                    # GCP CI/CD
+│   ├── ci-run-link.txt           # CI run URL + screenshot
+│   ├── deploy-dry-run.txt        # Deploy script dry-run output
+│   └── scope-verification.md
+├── BATCH-012/                    # Auth & Session Security
+│   ├── screenshots/              # Cross-portal auth tests
+│   ├── curl-proofs/              # 401/403/200 response proofs
+│   └── scope-verification.md
+├── BATCH-013/                    # Infra Hardening
+│   ├── local-prod-log.txt        # Docker local-prod 17/17 healthy
+│   └── scope-verification.md
+├── BATCH-014/                    # Production Polish
+│   ├── typecheck.txt             # Node 20 CI parity
+│   └── scope-verification.md
+├── SA-MERGED/                    # SuperAdmin merged tickets
+│   ├── screenshots/              # Feature verification
+│   └── scope-verification.md
+├── SA-GOLIVE/                    # SuperAdmin go-live tickets
+│   ├── screenshots/              # Feature verification
+│   └── scope-verification.md
+├── MEGA-RC/                      # Combined release candidate
+│   ├── gates/
+│   │   ├── typecheck.txt         # pnpm -r typecheck output
+│   │   ├── build.txt             # pnpm -r build output
+│   │   ├── e2e-local.html        # Playwright @prod report (local)
+│   │   └── e2e-staging.html      # Playwright @prod report (staging)
+│   ├── docker-local-prod/
+│   │   ├── containers.txt        # docker ps showing all healthy
+│   │   └── health-checks.txt     # curl output for all /health endpoints
+│   ├── migration/
+│   │   ├── migrate-zero.txt      # test:migrate-zero output
+│   │   ├── dry-run.txt           # migrate-prod.js dry-run output
+│   │   └── staging-migration.txt # First staging migration log
+│   ├── ci/
+│   │   └── ci-run-link.txt       # GitHub Actions run URL
+│   ├── staging/
+│   │   ├── health.txt            # /health response from staging
+│   │   ├── version.txt           # /version response (SHA match)
+│   │   ├── portal-status.txt     # HTTP status for all portal URLs
+│   │   └── rollback-drill.txt    # Rollback drill timestamped output
+│   └── signoff.md                # Operator sign-off
+```
+
+### Evidence Collection Timeline
+
+| Phase | Who | What | Batches Progressed |
+|-------|-----|------|-------------------|
+| 1. SA-GOLIVE complete | Claude | Run gates, save `MEGA-RC/gates/` | All → `GATED` |
+| 2. Docker local-prod | Claude | Run local-prod stack, save `MEGA-RC/docker-local-prod/` | — |
+| 3. Browser tests | Operator | Test all 4 portals, save per-batch `screenshots/` | Per-batch → `TESTED` |
+| 4. Per-batch scope verify | Claude | Write `scope-verification.md` per batch | Per-batch → `EVIDENCED` |
+| 5. CI green | Claude | Save `MEGA-RC/ci/` | — |
+| 6. Staging deploy | Both | Migration + staging proofs in `MEGA-RC/staging/` | — |
+| 7. Staging verify | Operator | Screenshots of staging portals | — |
+| 8. Sign-off | Operator | Fill `MEGA-RC/signoff.md` | RC → `STAGED` |
+
+### Evidence Per Ticket (Risk Class)
+
+Each ticket in a batch's Progress table must link to evidence appropriate to its risk class:
 - Class A: Screenshot
 - Class B: Screenshot + response JSON
 - Class C: Video/screenshot + console logs
@@ -2666,14 +3107,26 @@ Each ticket in Progress table must link to evidence:
 
 | Status | Meaning |
 |--------|---------|
-| `DRAFT` | Not started, awaiting operator scope |
-| `IN_PROGRESS` | Claude implementing tickets |
-| `GATES_PENDING` | Awaiting local gate run |
-| `CI_PENDING` | Awaiting CI green |
-| `TESTING` | Operator browser/device testing |
-| `READY` | Complete, awaiting deploy |
-| `DEPLOYED` | Live in environment |
-| `BLOCKED` | Issue found, stopped |
+| `PENDING` | Not yet started |
+| `IN_PROGRESS` | Claude actively implementing tickets |
+| `WRITTEN` | All code committed to main. No gates run yet. |
+| `GATED` | typecheck + build + E2E pass against HEAD |
+| `TESTED` | Operator browser/device tests pass |
+| `EVIDENCED` | Per-batch evidence folder complete |
+| `RC_TAGGED` | Release candidate tag applied to HEAD |
+| `STAGED` | Deployed to staging Cloud Run, verified |
+| `LIVE` | Deployed to production, monitoring clean |
+| `BLOCKED` | Cannot proceed, reason documented |
+| `DEFERRED` | Moved to post go-live |
+
+**Lifecycle per batch:**
+```
+PENDING → IN_PROGRESS → WRITTEN → GATED → TESTED → EVIDENCED
+```
+**Lifecycle for release:**
+```
+All batches EVIDENCED → RC_TAGGED → STAGED → LIVE
+```
 
 ### Gate Commands
 
@@ -2798,3 +3251,39 @@ Cloud Logging: https://console.cloud.google.com/logs?project=supermandi-pos
 | 2026-02-06 | **BATCH-013**: Added to plan (prod testing + infra hardening, RC_SHA: f7cb90d) | DOC-SYNC-001 |
 | 2026-02-06 | **BATCH-014**: Production Grade Polish — 10 tickets (3 P0, 7 P1) | BATCH-014 |
 | 2026-02-06 | CI-NODE-001: CI Node 18→20 (parity with Docker images) | BATCH-014 |
+| 2026-02-10 | **CONFLICT RESOLUTION**: Redesigned status system — `CODE_COMPLETE` → `WRITTEN` (code only, no gates verified). New lifecycle: PENDING → IN_PROGRESS → WRITTEN → GATED → TESTED → EVIDENCED → RC_TAGGED → STAGED → LIVE | DOC-018 |
+| 2026-02-10 | **MEGA-RC**: All batches 004–GOLIVE deploy as single combined RC. Individual Batch_SHA is historical. One RC_SHA from HEAD after SA-GOLIVE | DOC-018 |
+| 2026-02-10 | **Operator Action Tracker**: 9-item GCP setup tracker added to Part 4. Operator resolving immediately. | DOC-018 |
+| 2026-02-10 | **Mega-Batch Acceptance Criteria**: One-time first deploy runbook with 7 risk mitigations | DOC-018 |
+| 2026-02-10 | **Cloud Run Parity Checklist**: 12-area checklist added to BATCH-010 for first deploy discovery | DOC-018 |
+| 2026-02-10 | **Migration Safety Protocol**: Backup-first + dry-run + manual execution for first staging deploy | DOC-018 |
+| 2026-02-10 | **migrate-prod.js**: Added `dry-run` command — lists pending migrations with destructive operation warnings | DOC-018 |
+| 2026-02-10 | **Evidence Plan**: Per-batch evidence folders (no waivers for 004–014) + MEGA-RC combined artifacts | DOC-018 |
+| 2026-02-10 | **Session Modes**: Mode A (pre-staging, independent) / Mode B (staging/production, operator sync required) | DOC-018 |
+| 2026-02-10 | **CLAUDE_PRODUCTION_RULES.md Part L**: Updated from "staging-ready while blocked" to "staging transition discipline" with session modes + first deploy protocol | DOC-018 |
+| 2026-02-10 | **BATCH-010**: Status BLOCKED → PENDING (operator resolving GCP immediately) | DOC-018 |
+| 2026-02-10 | **CONFLICT RESOLUTION (Round 2)**: 11 conflicts identified and resolved across 4 files | DOC-019 |
+| 2026-02-10 | **Part 1 Session Start**: Made mode-aware (Mode A: independent, Mode B: operator paste required) | DOC-019 |
+| 2026-02-10 | **Part 2 Operator Rules**: Rewritten — operator pastes final results (not initial sync), Claude provides `final-verify.ps1` PowerShell script | DOC-019 |
+| 2026-02-10 | **Batch detail headers**: Fixed 5 stale headers (BATCH-004/005/006/007: DRAFT→WRITTEN, BATCH-011: DRAFT→PENDING, SA-GOLIVE: NEXT→IN_PROGRESS, BATCH-010: RC_SHA→Batch_SHA) | DOC-019 |
+| 2026-02-10 | **Batch Completion Checklist V2**: Split into per-batch + MEGA-RC combined checklists | DOC-019 |
+| 2026-02-10 | **Failure Handoff Matrix**: Added to Mega-Batch Acceptance Criteria — who detects, who acts first, who assists per failure type | DOC-019 |
+| 2026-02-10 | **Per-batch parity checklists**: Added scope-appropriate Dev→Docker→Staging parity tables to BATCH-004/005/006/007/009/012/013/014/SA-MERGED/SA-GOLIVE (10 batches, BATCH-008 already had one) | DOC-019 |
+| 2026-02-10 | **ZERO_REGRESSION_RULES.md**: Rule 2.3 — added first-deploy exception for manual migration with backup + dry-run | DOC-019 |
+| 2026-02-10 | **RELEASE_POLICY.md**: "CURRENTLY BLOCKED" → "CURRENT STATUS" — reflects parallel progress on GCP + SA-GOLIVE | DOC-019 |
+| 2026-02-10 | **BATCH_LEDGER.md**: Added MEGA-RC placeholder, batch status legend, next-deploy reference, updated Next Steps table | DOC-019 |
+| 2026-02-10 | **CONFLICT RESOLUTION (Round 3)**: 7 conflicts (L–R) resolved across 5 files | DOC-020 |
+| 2026-02-10 | **Co-Authored-By**: Fixed Opus 4.5 → 4.6 in MASTER_PLAN.md commit template | DOC-020 |
+| 2026-02-10 | **Git Workflow**: Made mode-aware — Mode A: direct push to main, Mode B: PR branches only. Updated CLAUDE_PRODUCTION_RULES.md G.3, CLAUDE.md, ZERO_REGRESSION_RULES.md Step 2 | DOC-020 |
+| 2026-02-10 | **Per-ticket status**: Replaced 19 stale `CODE_VERIFIED` → `DONE` in BATCH-004/005/006 progress tables | DOC-020 |
+| 2026-02-10 | **Evidence structure**: ZERO_REGRESSION_RULES.md Part 7 rewritten to match MEGA-RC-aware per-batch + combined layout from MASTER_PLAN.md | DOC-020 |
+| 2026-02-10 | **RC Tag ownership**: Explicitly assigned to Claude. Updated MASTER_PLAN.md runbook, RELEASE_POLICY.md flow, CLAUDE_PRODUCTION_RULES.md G.4 | DOC-020 |
+| 2026-02-10 | **E2E gate commands**: Standardized across ZERO_REGRESSION_RULES.md to use `node .\node_modules\@playwright\test\cli.js test --grep "@prod"` (matching MASTER_PLAN.md + RELEASE_POLICY.md) | DOC-020 |
+| 2026-02-10 | **final-verify.ps1 lifecycle**: Defined when/how Claude generates it — once per MEGA-RC, once per batch in normal cadence, inline (not committed file) | DOC-020 |
+| 2026-02-10 | **SUPERSEDED files**: Marked OPERATOR_RUNBOOK.md + BATCH_TEMPLATE.md as SUPERSEDED (VM-era, not authoritative). Added redirect headers pointing to MASTER_PLAN.md + RELEASE_POLICY.md | DOC-021 |
+| 2026-02-10 | **ZERO_REGRESSION_RULES.md**: Gate 2 `pnpm -r test` → `pnpm test:ci` (matching MASTER_PLAN + CLAUDE_PRODUCTION_RULES). Added Gate 2.5 `pnpm -r build`. Deployment checklist updated. | DOC-021 |
+| 2026-02-10 | **ZERO_REGRESSION_RULES.md Part 10**: Claude commitment "IMMEDIATELY rollback" → "IMMEDIATELY recommend rollback to operator" (operator owns rollback per Failure Handoff Matrix) | DOC-021 |
+| 2026-02-10 | **RELEASE_POLICY.md**: Step 11 `status = DEPLOYED` → `status = LIVE` (matching MASTER_PLAN lifecycle) | DOC-021 |
+| 2026-02-10 | **CLAUDE_PRODUCTION_RULES.md D.3**: Evidence Pack rewritten to MEGA-RC-aware structure matching MASTER_PLAN.md Part 6 + ZERO_REGRESSION_RULES.md Part 7 | DOC-021 |
+| 2026-02-10 | **CLAUDE.md**: Updated Secondary References — OPERATOR_RUNBOOK.md moved to new "Superseded Files" section with BATCH_TEMPLATE.md | DOC-021 |
+| 2026-02-10 | **CLAUDE_PRODUCTION_RULES.md**: Relationship table — OPERATOR_RUNBOOK.md marked as SUPERSEDED | DOC-021 |

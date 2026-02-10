@@ -62,7 +62,7 @@ git commit -m "$COMMIT_MSG
 - GL-CRIT-0051: Docker secrets for API keys
 - GL-CRIT-0053: Admin 2FA OTP system
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>" 2>/dev/null || echo "    No changes to commit"
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>" 2>/dev/null || echo "    No changes to commit"
 git push origin main || echo "    Push completed (or no changes)"
 echo "    Code pushed to origin"
 

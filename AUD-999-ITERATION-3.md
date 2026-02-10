@@ -344,7 +344,7 @@ ITER3-003: Add stock drift detection logging
 ITER3-006: Add structured request audit logging for 10k store monitoring
 ITER3-007: Fix denormalized stock updates in sync.ts
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 git push origin wip/trace-2026-01-15
 ```
 
