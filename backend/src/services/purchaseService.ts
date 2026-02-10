@@ -29,6 +29,7 @@ export type PurchaseItemInput = {
 export type PurchaseInput = {
   purchaseId?: string;
   supplierName?: string | null;
+  supplierGstin?: string | null; // SA-P0-004
   currency?: string | null;
   items: PurchaseItemInput[];
 };
@@ -468,13 +469,14 @@ export async function createPurchase(params: {
 
   const totalMinor = resolvedItems.reduce((sum, item) => sum + item.lineTotalMinor, 0);
   const supplierName = input.supplierName?.trim() || null;
+  const supplierGstin = input.supplierGstin?.trim() || null; // SA-P0-004
 
   await client.query(
     `
-    INSERT INTO purchases (id, store_id, supplier_name, total_minor, currency)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO purchases (id, store_id, supplier_name, supplier_gstin, total_minor, currency)
+    VALUES ($1, $2, $3, $4, $5, $6)
     `,
-    [purchaseId, storeId, supplierName, totalMinor, currency]
+    [purchaseId, storeId, supplierName, supplierGstin, totalMinor, currency]
   );
 
   for (const item of resolvedItems) {

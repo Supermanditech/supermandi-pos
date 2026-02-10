@@ -133,6 +133,11 @@ export default function PurchaseScreen({
   const [quickItems, setQuickItems] = useState<QuickPurchaseItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // SA-P0-004: Optional supplier details for walk-in stock-in
+  const [walkInSupplierName, setWalkInSupplierName] = useState("");
+  const [walkInSupplierGstin, setWalkInSupplierGstin] = useState("");
+  const [showSupplierFields, setShowSupplierFields] = useState(false);
+
   // POS-BUY-001: Live Suppliers catalog state
   const [searchQuery, setSearchQuery] = useState("");
   const [catalogProducts, setCatalogProducts] = useState<CatalogProduct[]>([]);
@@ -419,6 +424,9 @@ export default function PurchaseScreen({
           isNewProduct: item.isNew,
         })),
         totalAmount: quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0),
+        // SA-P0-004: Include optional supplier info for walk-in purchases
+        ...(walkInSupplierName.trim() ? { supplierName: walkInSupplierName.trim() } : {}),
+        ...(walkInSupplierGstin.trim() ? { supplierGstin: walkInSupplierGstin.trim() } : {}),
       };
       // GATE-000: Use real API or demo based on readiness
       const result = stockInReady
@@ -429,12 +437,15 @@ export default function PurchaseScreen({
         `${result.itemsProcessed} items ${stockInReady ? "added to ledger" : "saved locally (not synced)"}.`
       );
       setQuickItems([]);
+      setWalkInSupplierName("");
+      setWalkInSupplierGstin("");
+      setShowSupplierFields(false);
     } catch (error) {
       Alert.alert("Error", "Failed to submit. Try again.");
     } finally {
       setSubmitting(false);
     }
-  }, [quickItems, stockInReady]);
+  }, [quickItems, stockInReady, walkInSupplierName, walkInSupplierGstin]);
 
   const quickTotal = quickItems.reduce((sum, i) => sum + i.quantity * i.buyPrice, 0);
 
@@ -641,6 +652,53 @@ export default function PurchaseScreen({
             contentContainerStyle={[styles.quickList, { paddingBottom: insets.bottom + 90 }]}
             showsVerticalScrollIndicator={false}
           />
+
+          {/* SA-P0-004: Optional Supplier Details (collapsible) */}
+          {quickItems.length > 0 && (
+            <View style={styles.supplierSection}>
+              <Pressable
+                style={styles.supplierToggle}
+                onPress={() => setShowSupplierFields(!showSupplierFields)}
+              >
+                <MaterialCommunityIcons
+                  name={showSupplierFields ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={theme.colors.textSecondary}
+                />
+                <Text style={styles.supplierToggleText}>
+                  Supplier Details (Optional)
+                </Text>
+                {(walkInSupplierName.trim() || walkInSupplierGstin.trim()) && (
+                  <View style={styles.supplierBadge}>
+                    <Text style={styles.supplierBadgeText}>
+                      {walkInSupplierGstin.trim() ? "GSTIN" : "Name"}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+              {showSupplierFields && (
+                <View style={styles.supplierFields}>
+                  <TextInput
+                    style={styles.supplierInput}
+                    value={walkInSupplierName}
+                    onChangeText={setWalkInSupplierName}
+                    placeholder="Supplier Name"
+                    placeholderTextColor={theme.colors.textTertiary}
+                    autoCapitalize="words"
+                  />
+                  <TextInput
+                    style={styles.supplierInput}
+                    value={walkInSupplierGstin}
+                    onChangeText={(text) => setWalkInSupplierGstin(text.toUpperCase())}
+                    placeholder="GSTIN (e.g. 27AABCU9603R1ZM)"
+                    placeholderTextColor={theme.colors.textTertiary}
+                    autoCapitalize="characters"
+                    maxLength={15}
+                  />
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Quick Purchase Action Bar */}
           <View style={[styles.actionBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -1160,5 +1218,48 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     fontStyle: "italic",
+  },
+  // SA-P0-004: Supplier details styles
+  supplierSection: {
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: 12,
+  },
+  supplierToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    gap: 6,
+  },
+  supplierToggleText: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    flex: 1,
+  },
+  supplierBadge: {
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  supplierBadgeText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  supplierFields: {
+    gap: 8,
+    paddingBottom: 10,
+  },
+  supplierInput: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
   },
 });

@@ -124,6 +124,27 @@ export async function fetchAnalyticsProducts(params: { storeId?: string; from?: 
   return getJson<ProductsResponse>(`/api/v1/admin/analytics/products?${qs.toString()}`);
 }
 
+// SA-P0-004: Stock-in breakdown types
+export type StockInSupplierEntry = {
+  name: string;
+  gstin: string | null;
+  count: number;
+  total_minor: number;
+};
+
+export type StockInTypeBreakdown = {
+  type: "verified" | "walk_in" | "unknown";
+  count: number;
+  total_minor: number;
+  suppliers: StockInSupplierEntry[];
+};
+
+export type StockInBreakdown = {
+  total_entries: number;
+  total_amount_minor: number;
+  by_type: StockInTypeBreakdown[];
+};
+
 export type PurchasesResponse = {
   purchases: {
     storeId?: string;
@@ -137,6 +158,7 @@ export type PurchasesResponse = {
       avg_cost_minor: number;
       last_cost_minor: number | null;
     }>;
+    stock_in_breakdown?: StockInBreakdown; // SA-P0-004
   };
 };
 

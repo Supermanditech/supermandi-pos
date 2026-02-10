@@ -123,7 +123,16 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireR
   }
 
   // AUD-074-A FIX: Accept supplierId for proper FK tracking
-  const { items, supplierId, supplierName, notes, totalAmount } = req.body;
+  // SA-P0-004: Accept supplierGstin for GSTIN tracking on stock-in
+  const { items, supplierId, supplierName, supplierGstin, notes, totalAmount } = req.body;
+
+  // SA-P0-004: Validate GSTIN format if provided
+  if (supplierGstin && typeof supplierGstin === "string" && supplierGstin.trim()) {
+    const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+    if (!GSTIN_PATTERN.test(supplierGstin.trim())) {
+      return res.status(400).json({ success: false, error: "Invalid GSTIN format" });
+    }
+  }
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ success: false, error: "items array is required" });
@@ -188,12 +197,13 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireR
 
       // Insert single ledger entry to inventory.inventory_ledger with source tracking
       // AUD-074-A FIX: Include supplier_id FK for proper supplier tracking
+      // SA-P0-004: Include supplier_gstin for GSTIN tracking
       const invLedgerId = randomUUID();
       await client.query(
         `INSERT INTO inventory.inventory_ledger
          (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
-          stock_before, stock_after, unit_cost, source, notes, supplier_id)
-         VALUES ($1, $2, $3, $4, 'purchase_received', 'po', $5, $6, $7, $8, 'POS_STOCK_IN', $9, $10)`,
+          stock_before, stock_after, unit_cost, source, notes, supplier_id, supplier_gstin)
+         VALUES ($1, $2, $3, $4, 'purchase_received', 'po', $5, $6, $7, $8, 'POS_STOCK_IN', $9, $10, $11)`,
         [
           invLedgerId,
           storeId,
@@ -205,6 +215,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireR
           buyPrice || null,
           supplierName || notes || null,
           supplierId || null,
+          (typeof supplierGstin === "string" ? supplierGstin.trim() : null) || null,
         ]
       );
 

@@ -4247,6 +4247,47 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* SA-P0-004: Stock-In Breakdown by Supplier Type */}
+                {analyticsPurchases.stock_in_breakdown && analyticsPurchases.stock_in_breakdown.total_entries > 0 && (
+                  <>
+                    <div className="cardHeader" style={{ paddingTop: 0 }}>
+                      <div className="cardTitle">
+                        Stock-In Breakdown ({analyticsPurchases.stock_in_breakdown.total_entries} entries — {formatCurrency(analyticsPurchases.stock_in_breakdown.total_amount_minor)})
+                      </div>
+                    </div>
+                    <div className="tableWrap" style={{ paddingTop: 0 }}>
+                      <table className="table">
+                        <thead>
+                          <tr>
+                            <th>Type</th>
+                            <th>Supplier</th>
+                            <th>GSTIN</th>
+                            <th>Entries</th>
+                            <th>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {analyticsPurchases.stock_in_breakdown.by_type.flatMap((t) =>
+                            t.suppliers.map((s, idx) => (
+                              <tr key={`${t.type}-${s.name}-${idx}`}>
+                                {idx === 0 ? (
+                                  <td rowSpan={t.suppliers.length} style={{ verticalAlign: "top", fontWeight: 600 }}>
+                                    {t.type === "verified" ? "Verified" : t.type === "walk_in" ? "Walk-in" : "Unknown"}
+                                  </td>
+                                ) : null}
+                                <td>{s.name}</td>
+                                <td className="mono">{s.gstin ?? "-"}</td>
+                                <td className="mono">{s.count}</td>
+                                <td className="mono">{formatCurrency(s.total_minor)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
