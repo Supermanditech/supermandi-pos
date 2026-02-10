@@ -715,6 +715,121 @@ After the first production deploy succeeds:
 
 ## PART M: PRIORITY ORDER FOR CLAUDE
 
+### M.0 Ticket Pickup Strategy (Bottom-Up, Dependency-Aware)
+
+> **Principle**: Pick tickets in dependency order, not random order.
+> Each ticket builds on a verified foundation. Progressive gates at each
+> layer catch regressions immediately — not 50 issues at the end.
+
+#### M.0.1 Layer Ordering (General — Applies to Any Batch)
+
+Claude picks tickets following this layer order. Within a layer, pick by priority (P0 → P1 → P2).
+
+```
+Layer 1: SCHEMA & MIGRATIONS    DB schema changes first — everything depends on this
+         │
+Layer 2: SYSTEM INFRASTRUCTURE  Middleware, config, auth — affects all services
+         │
+Layer 3: BACKEND CORE           Individual service logic (API routes, business rules)
+         │
+Layer 4: CROSS-SERVICE          Integration points, cross-service flows
+         │
+Layer 5: FRONTEND / UI          Portal pages, POS screens (depend on API being correct)
+         │
+Layer 6: PUSH / NOTIFICATIONS   FCM, alerts (depend on backend + POS being ready)
+         │
+Layer 7: HARDENING              Security, resilience, performance (verify entire stack)
+         │
+         ▼
+         ONE-CLICK PRE-STAGING READY
+```
+
+**Rule**: Never start a higher layer if a lower layer has failing gates.
+
+**Rule**: If a ticket spans multiple layers (e.g., backend + UI), classify it by its LOWEST layer and implement bottom-up within the ticket (schema → API → UI).
+
+#### M.0.2 Progressive Gate Schedule
+
+Run increasing gate coverage after completing each layer:
+
+| After Layer | Gates to Run | Cumulative Coverage |
+|-------------|-------------|---------------------|
+| Layer 1-2 | `typecheck` + `migrate-from-zero` + `schema-verify` | Schema + compilation |
+| Layer 3 | + `test:ci` + `test:contract` + `test:invariants` | + Unit + API shape + business logic |
+| Layer 4 | + `test:integration` | + Cross-service correctness |
+| Layer 5 | + `build` (all portals) + POS typecheck | + Frontend builds |
+| Layer 6 | + `test:security` + API smoke | + Auth + RBAC + push |
+| Layer 7 | **FULL GATE SUITE** (all gates in one run) | Everything |
+
+**Rule**: If a gate fails at any layer, STOP. Fix the regression before proceeding to the next ticket. Do not accumulate failures.
+
+**Rule**: When returning to work after a session break, re-run gates for the current layer before picking the next ticket (environment may have drifted).
+
+#### M.0.3 One-Click Pre-Staging Readiness
+
+**Definition**: Pre-staging is achieved when ALL of the following pass in a **single uninterrupted run**:
+
+```
+ONE-CLICK PRE-STAGING CHECKLIST:
+[ ] pnpm -r typecheck                    exit 0
+[ ] pnpm test:ci                         exit 0
+[ ] pnpm -r build                        exit 0 (all portals + backend)
+[ ] pnpm test:contract                   exit 0
+[ ] pnpm test:invariants                 exit 0
+[ ] pnpm test:security                   exit 0
+[ ] P.5 completeness scan                COMPLETE (all business functions verified)
+[ ] Per-batch evidence                   collected (RELEASES/EVIDENCE/)
+[ ] git status                           clean (no uncommitted changes)
+[ ] git log matches MASTER_PLAN tickets  all tickets accounted for
+```
+
+**When this checklist passes**: Claude declares **PRE-STAGING READY** and provides the operator E2E PowerShell script (Gate 2 of RELEASE_POLICY.md).
+
+**One-click script** (Claude runs this as the final verification):
+```powershell
+pnpm -r typecheck && pnpm test:ci && pnpm -r build && pnpm test:contract && pnpm test:invariants && pnpm test:security
+```
+If exit 0 → PRE-STAGING READY.
+If any failure → Claude fixes, re-runs from the beginning.
+
+#### M.0.4 SA-GOLIVE Ticket Ordering (Current Batch)
+
+Concrete ordering for the 15 remaining SA-GOLIVE tickets, organized by layer:
+
+| Phase | Layer | Tickets | Rationale |
+|-------|-------|---------|-----------|
+| **A** | 2 (System) | SA-P0-007 (maintenance mode), SA-P2-003 (min app version) | System middleware — all other features depend on maintenance toggle existing |
+| **B** | 3 (Backend) | SA-P2-001 (force re-enroll), SA-P2-010 (force password reset), SA-P1-012 (offline sale re-validation) | Isolated admin API routes — no cross-service dependency |
+| **C** | 3-5 (Backend+UI) | SA-P1-009 (store health dashboard), SA-P1-014 (store settings visibility), SA-P2-004 (compliance aggregation) | Read-only dashboards — aggregation API + SA UI, low regression risk |
+| **D** | 3-5 (Backend+UI) | SA-P2-007 (BNPL limit), SA-P2-006 (category override), SA-P2-009 (device whitelist) | Config management — CRUD on settings + SA UI |
+| **E** | 6 (Push) | SA-P2-002 (remote config push), SA-P2-005 (force sync), SA-P2-008 (bulk import notification) | Push/notification — depends on FCM + backend + POS ready |
+| **F** | 4-5 (Cross-portal) | SA-P1-015 (reorder policy supervision) | Retailer Dashboard + SA read-only — cross-portal dependency |
+
+**Progressive gates for SA-GOLIVE**:
+```
+After Phase A: typecheck + migrate-from-zero + build
+After Phase B: + test:ci + test:contract + test:invariants
+After Phase C: + build (SA portal specifically)
+After Phase D: + test:security (new admin routes need auth checks)
+After Phase E: + API smoke (push integration)
+After Phase F: FULL GATE SUITE → One-Click Pre-Staging Checklist (M.0.3)
+```
+
+#### M.0.5 Regression Prevention During Pickup
+
+How the strategy prevents regression at each step:
+
+| Step | Regression Risk | Prevention |
+|------|----------------|------------|
+| Pick ticket | Wrong order → building on unverified foundation | Layer ordering (M.0.1) |
+| Write code | Break existing functionality | P.1 pre-task scope analysis + P.2 change-impact router |
+| Test ticket | Miss required tests | P.4 post-task verification |
+| Move to next ticket | Previous ticket's work regressed | Progressive gates (M.0.2) — re-run layer gates |
+| Complete batch | Cumulative drift across tickets | P.5 batch-level completeness scan |
+| Declare pre-staging | Something still broken | One-click verification (M.0.3) — single run, all gates |
+| Operator E2E | Automated tests missed a UI issue | Human runs Playwright + browser tests |
+| CI push | Local environment ≠ CI environment | CI overrides all local results |
+
 ### Phase 0: One-Time Setup (Done Once Per Fresh Clone)
 
 1. Read MASTER_PLAN.md, ZERO_REGRESSION_RULES.md, this file
@@ -725,19 +840,23 @@ After the first production deploy succeeds:
 ### Phase 1: Repeat Forever (Every Ticket)
 
 ```
-1. Pick next ticket from MASTER_PLAN.md (highest priority unblocked)
-2. Read ticket scope, identify risk class and change type
-3. DEBUG → FIND → FIX → RETEST → GUARD (Part E loop)
-4. Run applicable test packs (Part C, by change type)
-5. Collect evidence (Part D)
-6. Commit with format: BATCH-XXX: TICKET-ID - Description
-7. Update MASTER_PLAN.md ticket status
-8. When batch complete:
-   a. Run Claude automated gates (typecheck + unit tests + build)
-   b. Provide E2E PowerShell script to operator → operator runs in VS Code terminal
-   c. Operator pastes results → Claude fixes ANY issues (even minor) → repeat a-b until ZERO issues
-   d. Push to CI → CI gates must pass
-   e. Prepare evidence pack
+1. Identify current layer (M.0.1) and pick next ticket in layer order
+2. P.1 — Pre-task scope analysis (announce plan, derive tests from P.2 router)
+3. Read ticket scope, identify risk class and change type
+4. DEBUG → FIND → FIX → RETEST → GUARD (Part E loop)
+5. Run applicable test packs (Part C, by change type)
+6. P.4 — Post-task verification (git diff → router → verify all tests ran)
+7. Collect evidence (Part D)
+8. Commit with format: BATCH-XXX: TICKET-ID - Description
+9. Update MASTER_PLAN.md ticket status
+10. If layer complete → run progressive gates for that layer (M.0.2)
+11. When batch complete:
+    a. P.5 — Batch-level completeness scan
+    b. Run one-click pre-staging checklist (M.0.3)
+    c. If all pass → provide E2E PowerShell script to operator
+    d. Operator runs → pastes results → Claude fixes ANY issues → repeat until ZERO issues
+    e. Push to CI → CI gates must pass
+    f. Prepare evidence pack
 ```
 
 ### Promotion Gate (Full Project Completion Required)
@@ -1076,3 +1195,4 @@ Before declaring any fix complete, verify:
 | 5.0 | 2026-02-11 | DOC-023: B.6 expanded (load testing profiles, DB performance proof, 100k SKU dataset simulation). C.1 added contract-lock gate. C.2.A added transaction-safe integration scenarios. C.2.D added POS release build smoke + offline/flaky network testing + crash-proofing requirements. C.4 Critical E2E Paths defined (6 journeys). C.5 Three-Layer Catch Net principle. N.1 CI jobs added (contract, invariants). Part O Go-Live Safeguards (observability, feature flags, canary rollout). | Claude |
 | 6.0 | 2026-02-11 | DOC-024: B.7 Resilience & Graceful Degradation (DB/Redis/service down tests). B.8 Security Enforcement (RBAC, input validation, secrets audit). C.2.D extended with POS scanner hardware tests (HID, camera, soak). C.3 added test:resilience, test:security, test:deploy-parity scripts. C.6 Deploy Parity Tests (gateway routing, config validation, CORS). C.7 Security Test Matrix. O.1.1 Observability Verification Tests. N.1 CI added test:security. | Claude |
 | 7.0 | 2026-02-11 | DOC-025: Part P — Claude Completeness Protocol. P.1 Pre-Task Scope Analysis. P.2 Change-Impact Router (file-to-test mapping). P.3 Business Logic Registry (10 business functions). P.4 Post-Task Verification. P.5 Batch-Level Completeness Scan. P.6 Five Safety Nets. P.7 Session Navigation Workflow. Quick Reference Checklist extended with P.1/P.2/P.4 items. | Claude |
+| 8.0 | 2026-02-11 | DOC-026: Part M rewritten — M.0 Ticket Pickup Strategy (bottom-up, dependency-aware). M.0.1 Layer ordering (7 layers). M.0.2 Progressive gate schedule. M.0.3 One-click pre-staging readiness definition + checklist. M.0.4 SA-GOLIVE concrete ticket ordering (6 phases, 15 tickets). M.0.5 Regression prevention at each step. Phase 1 updated with P.1/P.4/P.5 integration + layer-aware pickup. | Claude |

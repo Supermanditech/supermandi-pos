@@ -94,6 +94,13 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 - Evidence Triplet: UI proof + API proof + DB proof
 - "I think it works" is not evidence
 
+### Ticket Pickup Strategy (Part M.0)
+- **Bottom-up, dependency-aware**: Schema → System infra → Backend core → Cross-service → Frontend → Push → Hardening
+- **Progressive gates**: Run increasing gate coverage after each layer (not just at the end)
+- **Layer rule**: Never start a higher layer if a lower layer has failing gates
+- **One-click pre-staging**: Single run of all gates must pass before involving operator
+- **SA-GOLIVE ordering**: 6 phases (A-F) mapped to 7 layers, 15 remaining tickets
+
 ### Pipeline
 - DEBUG → FIND → FIX → RETEST → GUARD (every issue)
 - Debugging stages: 0 (dev) → 1 (Docker) → 2 (CI) → 3 (staging) → 4 (production)
