@@ -21,6 +21,8 @@ async function parseError(res: Response): Promise<string> {
 export type GlobalFeatureFlag = {
   flag_key: string;
   enabled: boolean;
+  // SA-P2-003: Optional JSON payload (e.g. minAppVersion stores { version: "X.Y.Z" })
+  payload_json?: Record<string, unknown> | null;
   description: string | null;
   updated_at: string;
 };
@@ -43,12 +45,21 @@ export async function fetchGlobalFlags(): Promise<GlobalFeatureFlag[]> {
   return data.flags ?? [];
 }
 
-export async function toggleGlobalFlag(key: string, enabled: boolean): Promise<GlobalFeatureFlag> {
+// SA-P2-003: Extended to accept optional payloadJson (e.g. { version: "1.2.0" } for minAppVersion)
+export async function toggleGlobalFlag(
+  key: string,
+  enabled: boolean,
+  payloadJson?: Record<string, unknown>
+): Promise<GlobalFeatureFlag> {
   const base = requireApiBase();
+  const body: Record<string, unknown> = { enabled };
+  if (payloadJson !== undefined) {
+    body.payloadJson = payloadJson;
+  }
   const res = await fetchWithTimeout(`${base}/api/v1/admin/feature-flags/${encodeURIComponent(key)}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json", ...getAuthHeaders() },
-    body: JSON.stringify({ enabled }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(await parseError(res));
   const data = (await res.json().catch(() => ({}))) as { flag?: GlobalFeatureFlag };
