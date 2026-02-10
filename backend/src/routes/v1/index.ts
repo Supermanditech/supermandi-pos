@@ -102,9 +102,11 @@ v1Router.use("/admin", adminHealthRouter);  // MED-011: Public health check (no 
 v1Router.use("/admin", adminAuthRouter);  // GO-LIVE-LOGIN-004: Admin email OTP auth (no auth required)
 // ISSUE-MICRO-082: General rate limiter for admin API endpoints
 // 200 requests per 15 minutes per IP — high enough for normal use, catches abuse
+// DEPLOY-OPS: Respect RATE_LIMIT_MULTIPLIER for local-prod/staging (production default=1)
+const adminRateLimitMultiplier = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
 v1Router.use("/admin", rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 200 * adminRateLimitMultiplier,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { code: "ADMIN_RATE_LIMITED", message: "Too many admin requests. Please slow down." } },
