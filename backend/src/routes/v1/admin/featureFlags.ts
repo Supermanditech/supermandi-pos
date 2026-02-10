@@ -10,7 +10,8 @@ adminFeatureFlagsRouter.use(requireAdminToken);
 // Canonical feature keys (must match ui-status features object)
 const VALID_FEATURE_KEYS = [
   "buyEnabled", "reorderEnabled", "voiceEnabled", "bnplEnabled",
-  "creditEnabled", "categoryBrowsingEnabled", "scanLookupV2"
+  "creditEnabled", "categoryBrowsingEnabled", "scanLookupV2",
+  "minAppVersion" // SA-P2-003: Minimum app version enforcement
 ] as const;
 
 function isValidFeatureKey(key: string): boolean {
@@ -27,7 +28,7 @@ adminFeatureFlagsRouter.get(
 
     try {
       const result = await pool.query(
-        `SELECT flag_key, enabled, description, updated_at
+        `SELECT flag_key, enabled, payload_json, description, updated_at
          FROM platform.feature_flags
          WHERE scope_type = 'global'
          ORDER BY flag_key`
@@ -54,18 +55,19 @@ adminFeatureFlagsRouter.patch(
       return res.status(400).json({ error: "invalid_feature_key", valid_keys: VALID_FEATURE_KEYS });
     }
 
-    const { enabled } = req.body as { enabled?: boolean };
+    const { enabled, payloadJson } = req.body as { enabled?: boolean; payloadJson?: Record<string, unknown> };
     if (typeof enabled !== "boolean") {
       return res.status(400).json({ error: "enabled_must_be_boolean" });
     }
 
     try {
+      // SA-P2-003: Support optional payload_json update (e.g. minAppVersion version value)
       const result = await pool.query(
         `UPDATE platform.feature_flags
-         SET enabled = $1, updated_at = NOW()
+         SET enabled = $1, payload_json = COALESCE($3::jsonb, payload_json), updated_at = NOW()
          WHERE flag_key = $2 AND scope_type = 'global'
-         RETURNING flag_key, enabled, description, updated_at`,
-        [enabled, key]
+         RETURNING flag_key, enabled, payload_json, description, updated_at`,
+        [enabled, key, payloadJson ? JSON.stringify(payloadJson) : null]
       );
       if (result.rowCount === 0) {
         return res.status(404).json({ error: "feature_key_not_found" });

@@ -18,6 +18,9 @@ export type UiStatusResponse = {
   allowedPaymentMethods?: string[] | null; // SA-P1-006: Payment methods allowed for this store
   printerOk?: boolean | null;
   scannerOk?: boolean | null;
+  // SA-P2-003: Minimum app version enforcement
+  forceUpdate?: boolean;
+  minAppVersion?: string | null;
   features?: {
     scan_lookup_v2?: boolean;
     reorderEnabled?: boolean;
@@ -56,6 +59,9 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
       pendingOutboxCount: 0,
       // SA-P1-006: Parse allowed payment methods from store data
       allowedPaymentMethods: Array.isArray(store.allowedPaymentMethods) ? store.allowedPaymentMethods as string[] : null,
+      // SA-P2-003: Version enforcement from nested format
+      forceUpdate: (data.forceUpdate as boolean) ?? false,
+      minAppVersion: (data.minAppVersion as string) ?? null,
       features: {
         scan_lookup_v2: (features.scanLookupV2 as boolean) ?? true,
         reorderEnabled: (features.reorderEnabled as boolean) ?? true,
@@ -83,6 +89,9 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
     pendingOutboxCount: (obj.pendingOutboxCount as number) ?? 0,
     // SA-P1-006: Parse allowed payment methods from legacy flat format
     allowedPaymentMethods: Array.isArray(obj.allowedPaymentMethods) ? obj.allowedPaymentMethods as string[] : null,
+    // SA-P2-003: Version enforcement from flat format
+    forceUpdate: (obj.forceUpdate as boolean) ?? false,
+    minAppVersion: (obj.minAppVersion as string) ?? null,
     features: obj.features as UiStatusResponse['features'],
   };
 }
@@ -92,6 +101,8 @@ function getDefaultUiStatus(): UiStatusResponse {
     storeActive: true,
     deviceActive: true,
     pendingOutboxCount: 0,
+    // SA-P2-003: Default no enforcement when offline/error
+    forceUpdate: false,
     // SA-P1-006: Default all payment methods enabled
     allowedPaymentMethods: ['CASH', 'UPI', 'DUE'],
     features: {

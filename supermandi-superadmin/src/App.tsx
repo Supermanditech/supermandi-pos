@@ -876,6 +876,9 @@ export default function App() {
   const [featureFlagSaving, setFeatureFlagSaving] = useState<Record<string, boolean>>({});
   const [featureFlagsError, setFeatureFlagsError] = useState("");
 
+  // SA-P2-003: Min app version input state
+  const [minAppVersionInput, setMinAppVersionInput] = useState("");
+
   // SA-P1-007: Per-store feature flags state
   const [storeFeatureFlags, setStoreFeatureFlags] = useState<Record<string, StoreFeatureFlag[]>>({});
   const [storeFFLoading, setStoreFFLoading] = useState<Record<string, boolean>>({});
@@ -1621,6 +1624,11 @@ export default function App() {
     try {
       const flags = await fetchGlobalFlags();
       setFeatureFlags(flags);
+      // SA-P2-003: Initialize version input from loaded flag payload
+      const mvFlag = flags.find((f) => f.flag_key === "minAppVersion");
+      if (mvFlag?.payload_json && typeof (mvFlag.payload_json as any).version === "string") {
+        setMinAppVersionInput((mvFlag.payload_json as any).version);
+      }
     } catch (e: unknown) {
       setFeatureFlagsError(e instanceof Error ? e.message : "Failed to fetch feature flags");
     } finally {
@@ -1631,10 +1639,14 @@ export default function App() {
   async function handleToggleGlobalFlag(key: string, enabled: boolean) {
     setFeatureFlagSaving((prev) => ({ ...prev, [key]: true }));
     try {
-      await toggleGlobalFlag(key, enabled);
+      // SA-P2-003: Pass version payload for minAppVersion flag
+      const payload = key === "minAppVersion" && minAppVersionInput.trim()
+        ? { version: minAppVersionInput.trim() }
+        : undefined;
+      const updated = await toggleGlobalFlag(key, enabled, payload);
       setFeatureFlags((prev) =>
         prev.map((f) =>
-          f.flag_key === key ? { ...f, enabled, updated_at: new Date().toISOString() } : f
+          f.flag_key === key ? { ...f, ...updated } : f
         )
       );
     } catch (e: unknown) {
@@ -4745,6 +4757,7 @@ export default function App() {
                       <th>Feature</th>
                       <th>Description</th>
                       <th>Status</th>
+                      <th>Config</th>
                       <th>Action</th>
                       <th>Last Changed</th>
                     </tr>
@@ -4758,6 +4771,20 @@ export default function App() {
                           <span className={`badge ${flag.enabled ? "badgeOk" : "badgeErr"}`}>
                             {flag.enabled ? "ENABLED" : "DISABLED"}
                           </span>
+                        </td>
+                        {/* SA-P2-003: Config column — version input for minAppVersion */}
+                        <td>
+                          {flag.flag_key === "minAppVersion" ? (
+                            <input
+                              type="text"
+                              placeholder="e.g. 1.0.1"
+                              value={minAppVersionInput || (flag.payload_json as any)?.version || ""}
+                              onChange={(e) => setMinAppVersionInput(e.target.value)}
+                              style={{ width: 80, fontSize: 12, padding: "2px 6px", borderRadius: 3, border: "1px solid #ccc" }}
+                            />
+                          ) : (
+                            <span style={{ color: "#999", fontSize: 11 }}>{"\u2014"}</span>
+                          )}
                         </td>
                         <td>
                           <button
@@ -4787,7 +4814,7 @@ export default function App() {
                     ))}
                     {featureFlags.length === 0 && !featureFlagsLoading && (
                       <tr>
-                        <td colSpan={5} style={{ textAlign: "center", color: "#888" }}>
+                        <td colSpan={6} style={{ textAlign: "center", color: "#888" }}>
                           No feature flags found. Migration may be pending.
                         </td>
                       </tr>

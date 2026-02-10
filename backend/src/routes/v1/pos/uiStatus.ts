@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceTokenAllowInactive, type PosDeviceStatusContext } from "../../../middleware/deviceToken";
+// SA-P2-003: Semantic version comparison for minimum app version enforcement
+import { compareSemver } from "../../../utils/semver";
 
 export const posUiStatusRouter = Router();
 
@@ -18,7 +20,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     SELECT pending_outbox_count,
            last_sync_at,
            last_seen_online,
-           scan_lookup_v2_enabled
+           scan_lookup_v2_enabled,
+           app_version
     FROM pos_devices
     WHERE id = $1
     `,
@@ -48,6 +51,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
   let creditEnabled = false;
   // SA-P1-006: Allowed payment methods per store
   let allowedPaymentMethods: string[] = ['CASH', 'UPI', 'DUE'];
+  // SA-P2-003: Minimum app version enforcement
+  let forceUpdate = false;
+  let minAppVersionValue: string | null = null;
   if (status.storeId) {
     try {
       const storeRes = await pool.query(
@@ -90,7 +96,8 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     try {
       const ffRes = await pool.query(
         `SELECT g.flag_key,
-                COALESCE(s.enabled, g.enabled) AS effective
+                COALESCE(s.enabled, g.enabled) AS effective,
+                g.payload_json
          FROM platform.feature_flags g
          LEFT JOIN platform.feature_flags s
            ON s.flag_key = g.flag_key AND s.scope_type = 'store' AND s.scope_id = $1::uuid
@@ -106,6 +113,14 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
           case "voiceEnabled": voiceEnabled = ffRow.effective; break;
           case "categoryBrowsingEnabled": categoryBrowsingEnabled = ffRow.effective; break;
           case "scanLookupV2": /* handled by device-level logic below */ break;
+          // SA-P2-003: Minimum app version enforcement
+          case "minAppVersion":
+            if (ffRow.effective && ffRow.payload_json?.version) {
+              minAppVersionValue = String(ffRow.payload_json.version);
+              const deviceVersion = row.app_version || "0.0.0";
+              forceUpdate = compareSemver(deviceVersion, minAppVersionValue) < 0;
+            }
+            break;
         }
       }
     } catch {
@@ -165,6 +180,9 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
     allowedPaymentMethods,
     printerOk: null,
     scannerOk: null,
+    // SA-P2-003: Minimum app version enforcement
+    forceUpdate,
+    minAppVersion: minAppVersionValue,
     features: {
       scan_lookup_v2: scanLookupV2Enabled,
       // GO-LIVE-REVEAL-001: Feature flags for POS tab visibility
