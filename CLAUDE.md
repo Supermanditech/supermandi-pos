@@ -134,6 +134,33 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 
 ---
 
+## Hard Lessons (Incident-Driven Rules)
+
+> Rules added after real mistakes. Claude MUST follow these without exception.
+
+### HL-001: One Ticket = One PR (No Exceptions)
+**Incident**: SA-P2-003 was merged via PR #17, then a follow-up change (auto-version) was merged as PR #18 under the same ticket ID. This violates G.1 "One ticket = one branch = one PR = one tag."
+
+**Rule**:
+- If the operator requests a change to a ticket that is **already merged**, Claude MUST either:
+  1. **Fold the change into the original PR** (amend/rebase before merge), OR
+  2. **Create a new ticket ID** for the follow-up change (e.g. SA-P2-003-A or a new ticket)
+- Claude MUST NEVER create a second PR under the same ticket ID after the first PR is merged
+- If Claude realizes mid-implementation that the ticket scope has expanded, STOP and ask the operator whether to expand the current PR or create a new ticket
+
+### HL-002: Operator E2E Gate Is Mandatory Before Merge
+**Incident**: SA-P2-003 was merged (both PR #17 and PR #18) without providing the operator any E2E verification script. The automated gates (typecheck, unit tests, build) passed, but the operator E2E gate from ZERO_REGRESSION_RULES.md Gate 3 was skipped entirely.
+
+**Rule**:
+- After all automated gates pass (typecheck + tests + build), Claude MUST provide the operator with a verification script **before pushing or merging**
+- The script should be a PowerShell block the operator can paste into VS Code terminal
+- If the feature requires docker local-prod to be running, Claude MUST state that prerequisite and provide the docker-compose up command
+- Claude MUST NOT push to remote or merge until operator pastes back the E2E results
+- If E2E is not possible in the current environment (no Docker, no DB), Claude MUST explicitly flag this as **"E2E DEFERRED — requires local-prod"** and note it in the PR description
+- "Automated gates passed" is NOT a substitute for operator E2E
+
+---
+
 ## Session Mode
 
 ### Mode A: Pre-Staging (CURRENT)
