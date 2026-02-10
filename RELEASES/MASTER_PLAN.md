@@ -473,7 +473,7 @@ BATCH-007 POS ───────┘                                          
 | BATCH-013 | Prod Testing + Infra Hardening | `CODE_COMPLETE` | FULL PASS | Claude | f7cb90d | — | 2026-02-06 |
 | BATCH-014 | Production Grade Polish | `CODE_COMPLETE` | 10/10 DONE | Claude | 609d875 | — | 2026-02-07 |
 | SA-MERGED | SuperAdmin Tickets (merged) | `CODE_COMPLETE` | 8/8 MERGED | Claude | bd90493 | — | 2026-02-10 |
-| **SA-GOLIVE** | **SuperAdmin Critical Go-Live** | `NEXT` | **1/17** | **Claude** | — | — | **2026-02-10** |
+| **SA-GOLIVE** | **SuperAdmin Critical Go-Live** | `NEXT` | **2/17** | **Claude** | — | — | **2026-02-10** |
 | SA-DEFERRED | SuperAdmin Post Go-Live | `DEFERRED` | 0/8 | — | — | — | 2026-02-10 |
 | DEFERRED  | Deferred Tickets (P1+P2+P3) | `CODE_COMPLETE` | 7/7 DONE | Claude | 609d875 | — | 2026-02-06 |
 | BATCH-010 | Staging Deploy | `BLOCKED` | 1/6 DONE (E2E config) | Claude+Operator | — | — | 2026-02-07 |
@@ -1661,7 +1661,7 @@ Grants AR push + Cloud Run deploy permissions.
 | # | Ticket | Risk | Status | Evidence |
 |---|--------|------|--------|----------|
 | 1 | SA-P0-001 — Store suspension & reactivation | B | DONE | PR #12 → `99da6fc`, E2E 10/10 |
-| 2 | SA-P0-004 — Stock-in supplier info (optional) | B | PENDING | — |
+| 2 | SA-P0-004 — Stock-in supplier info (optional) | B | DONE | PR #14 → `57a88db`, E2E 20/20 |
 | 3 | SA-P0-007 — System maintenance mode | B | PENDING | — |
 | 4 | SA-P1-009 — Store health dashboard | A | PENDING | — |
 | 5 | SA-P1-012 — Offline sale re-validation | B | PENDING | — |
