@@ -113,12 +113,16 @@ posUiStatusRouter.get("/ui-status", requireDeviceTokenAllowInactive, async (req,
           case "voiceEnabled": voiceEnabled = ffRow.effective; break;
           case "categoryBrowsingEnabled": categoryBrowsingEnabled = ffRow.effective; break;
           case "scanLookupV2": /* handled by device-level logic below */ break;
-          // SA-P2-003: Minimum app version enforcement
+          // SA-P2-003-AUTO: Min app version — env var (auto) → DB payload (fallback)
           case "minAppVersion":
-            if (ffRow.effective && ffRow.payload_json?.version) {
-              minAppVersionValue = String(ffRow.payload_json.version);
-              const deviceVersion = row.app_version || "0.0.0";
-              forceUpdate = compareSemver(deviceVersion, minAppVersionValue) < 0;
+            if (ffRow.effective) {
+              const autoVersion = process.env.MIN_APP_VERSION;
+              const dbVersion = ffRow.payload_json?.version ? String(ffRow.payload_json.version) : null;
+              minAppVersionValue = autoVersion || dbVersion || null;
+              if (minAppVersionValue) {
+                const deviceVersion = row.app_version || "0.0.0";
+                forceUpdate = compareSemver(deviceVersion, minAppVersionValue) < 0;
+              }
             }
             break;
         }

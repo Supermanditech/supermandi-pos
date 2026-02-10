@@ -37,6 +37,9 @@ if (-not $Tag) {
     $Tag = (git rev-parse --short HEAD 2>$null) ?? "latest"
 }
 
+# SA-P2-003-AUTO: Extract POS app version from app.json for min-version enforcement
+$AppVersion = (node -p "require('./app.json').expo.version" 2>$null) ?? "unknown"
+
 # Services to deploy (order matters: dependencies first)
 $SERVICES = @(
     @{ Name = "main-backend";     Dockerfile = "backend/Dockerfile.main";                    Context = "backend";  Port = 3010 },
@@ -249,7 +252,7 @@ foreach ($svc in $SERVICES) {
         "--cpu", "1",
         "--min-instances", "0",
         "--max-instances", "3",
-        "--set-env-vars", "NODE_ENV=$Env,GIT_SHA=$Tag",
+        "--set-env-vars", "NODE_ENV=$Env,GIT_SHA=$Tag,MIN_APP_VERSION=$AppVersion",
         "--quiet"
     )
 

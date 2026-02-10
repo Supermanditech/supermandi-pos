@@ -84,6 +84,8 @@ services:
       PORT: "3010"
       # FIX-019-003: Pass GIT_SHA so /version reports correct commit
       GIT_SHA: "local"
+      # SA-P2-003-AUTO: Min app version from app.json for automatic enforcement
+      MIN_APP_VERSION: "1.0.1"
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/supermandi}
       DB_HOST: postgres

@@ -105,6 +105,8 @@ app.get("/version", (_req, res) => {
     sha: process.env.GIT_SHA || 'unknown',
     service: 'main-backend',
     built: process.env.BUILD_TIME || new Date().toISOString(),
+    // SA-P2-003-AUTO: Min app version for operator verification
+    minAppVersion: process.env.MIN_APP_VERSION || 'not-set',
   });
 });
 

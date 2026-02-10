@@ -53,6 +53,9 @@ if [ "$ENV" = "staging" ]; then
   ENV_SUFFIX="-staging"
 fi
 
+# SA-P2-003-AUTO: Extract POS app version from app.json for min-version enforcement
+APP_VERSION=$(node -p "require('./app.json').expo.version" 2>/dev/null || echo "unknown")
+
 PASSED=0
 FAILED=0
 FAILURES=""
@@ -104,7 +107,7 @@ run_deploy() {
     --cpu=1 \
     --min-instances="$min_instances" \
     --max-instances="$max_instances" \
-    --set-env-vars="NODE_ENV=$ENV,GIT_SHA=$SHA" \
+    --set-env-vars="NODE_ENV=$ENV,GIT_SHA=$SHA,MIN_APP_VERSION=$APP_VERSION" \
     $extra_flags \
     $auth_flag \
     --quiet 2>&1; then
