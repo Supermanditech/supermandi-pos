@@ -5,7 +5,7 @@ import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { askAi, fetchAiHealth } from "./api/ai";
 import { hasValidSession, logout, refreshSession, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
-import { createStore, fetchStore, fetchStores, updateStore, type StoreRecord } from "./api/stores";
+import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
 import {
@@ -749,6 +749,16 @@ export default function App() {
   const [suspendReason, setSuspendReason] = useState("");
   const [supplierSuspendLoading, setSupplierSuspendLoading] = useState(false);
 
+  // SA-P0-001: Store suspension modal state
+  const [pendingStoreSuspend, setPendingStoreSuspend] = useState<{
+    storeId: string;
+    storeName: string;
+    action: "suspend" | "reactivate";
+  } | null>(null);
+  const [storeSuspendReason, setStoreSuspendReason] = useState("");
+  const [storeSuspendLoading, setStoreSuspendLoading] = useState(false);
+  const [storeSuspendError, setStoreSuspendError] = useState("");
+
   // SA-1.3-001 to SA-1.3-003: Product Approval State
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
   const [productActionLoading, setProductActionLoading] = useState<Record<string, boolean>>({});
@@ -1050,6 +1060,37 @@ export default function App() {
       setSupplierActionError(e instanceof Error ? e.message : "Failed to update supplier status");
     } finally {
       setSupplierSuspendLoading(false);
+    }
+  }
+
+  // SA-P0-001: Request store status change (opens confirmation modal)
+  function requestStoreStatusChange(storeId: string, storeName: string, action: "suspend" | "reactivate") {
+    setPendingStoreSuspend({ storeId, storeName, action });
+    setStoreSuspendReason("");
+    setStoreSuspendError("");
+  }
+
+  // SA-P0-001: Execute store status change after confirmation
+  async function executeStoreStatusChange() {
+    if (!pendingStoreSuspend) return;
+    const { storeId, action } = pendingStoreSuspend;
+    const newStatus = action === "suspend" ? "SUSPENDED" : "ACTIVE";
+    setStoreSuspendLoading(true);
+    setStoreSuspendError("");
+    try {
+      await changeStoreStatus(storeId, newStatus, storeSuspendReason || undefined);
+      // Update local state
+      setStoreDirectory((prev) =>
+        prev.map((s) =>
+          s.id === storeId ? { ...s, status: newStatus, active: newStatus === "ACTIVE" } : s
+        )
+      );
+      setPendingStoreSuspend(null);
+      setStoreSuspendReason("");
+    } catch (e: unknown) {
+      setStoreSuspendError(e instanceof Error ? e.message : "Failed to update store status");
+    } finally {
+      setStoreSuspendLoading(false);
     }
   }
 
@@ -3150,11 +3191,44 @@ export default function App() {
                               {isExpanded ? " ▲" : " ▼"}
                             </button>
                           </td>
-                          <td className="mono">{s.active ? "active" : "inactive"}</td>
+                          {/* SA-P0-001: Show raw status with color coding */}
                           <td>
+                            <span className="mono" style={{
+                              padding: "2px 8px",
+                              borderRadius: 4,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              ...(s.status === "SUSPENDED"
+                                ? { background: "#fee2e2", color: "#991b1b" }
+                                : s.status === "ACTIVE"
+                                ? { background: "#dcfce7", color: "#166534" }
+                                : { background: "#f3f4f6", color: "#374151" }),
+                            }}>
+                              {s.status ?? (s.active ? "ACTIVE" : "INACTIVE")}
+                            </span>
+                          </td>
+                          <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                             <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
                               {storeNameSaving[s.id] ? "Saving..." : "Save"}
                             </button>
+                            {/* SA-P0-001: Suspend/Reactivate buttons */}
+                            {s.status === "ACTIVE" && (
+                              <button
+                                className="btnDanger"
+                                style={{ fontSize: 12, padding: "4px 8px" }}
+                                onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "suspend")}
+                              >
+                                Suspend
+                              </button>
+                            )}
+                            {s.status === "SUSPENDED" && (
+                              <button
+                                style={{ fontSize: 12, padding: "4px 8px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
+                                onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "reactivate")}
+                              >
+                                Reactivate
+                              </button>
+                            )}
                           </td>
                         </tr>
                         {isExpanded && (
@@ -5697,6 +5771,61 @@ export default function App() {
                   disabled={supplierSuspendLoading}
                 >
                   {supplierSuspendLoading ? "Reactivating..." : "Reactivate Supplier"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SA-P0-001: Store Suspension/Reactivation Confirmation Modal */}
+      {pendingStoreSuspend && (
+        <div className="modalOverlay" onClick={() => { if (!storeSuspendLoading) setPendingStoreSuspend(null); }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modalHeader">
+              <h3>{pendingStoreSuspend.action === "suspend" ? "Confirm Store Suspension" : "Confirm Store Reactivation"}</h3>
+            </div>
+            <div className="modalBody">
+              {pendingStoreSuspend.action === "suspend" ? (
+                <>
+                  <p>Are you sure you want to suspend <strong>{pendingStoreSuspend.storeName}</strong>?</p>
+                  <p className="muted" style={{ color: "#b45309" }}>This will immediately block all POS transactions for this store. The store's devices will show a "Suspended" screen.</p>
+                  <div className="control" style={{ marginTop: 12 }}>
+                    <label>Reason for suspension (required)</label>
+                    <textarea
+                      value={storeSuspendReason}
+                      onChange={(e) => setStoreSuspendReason(e.target.value)}
+                      placeholder="Enter reason (minimum 10 characters)..."
+                      rows={3}
+                      style={{ width: "100%", resize: "vertical" }}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>Are you sure you want to reactivate <strong>{pendingStoreSuspend.storeName}</strong>?</p>
+                  <p className="muted">This will restore POS transactions and normal operations for this store.</p>
+                </>
+              )}
+              {storeSuspendError && <p className="errorText" style={{ marginTop: 8 }}>{storeSuspendError}</p>}
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setPendingStoreSuspend(null)} disabled={storeSuspendLoading}>Cancel</button>
+              {pendingStoreSuspend.action === "suspend" ? (
+                <button
+                  className="btnDanger"
+                  onClick={executeStoreStatusChange}
+                  disabled={storeSuspendLoading || storeSuspendReason.trim().length < 10}
+                >
+                  {storeSuspendLoading ? "Suspending..." : "Suspend Store"}
+                </button>
+              ) : (
+                <button
+                  style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
+                  onClick={executeStoreStatusChange}
+                  disabled={storeSuspendLoading}
+                >
+                  {storeSuspendLoading ? "Reactivating..." : "Reactivate Store"}
                 </button>
               )}
             </div>

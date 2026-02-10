@@ -706,10 +706,14 @@ adminStoresRouter.patch("/stores/:storeId/status", requirePermission("stores", "
     }
 
     // Perform the transition
+    // SA-P0-001: Skip validation for admin-initiated reactivation (SUSPENDED→ACTIVE)
+    // Matches reactivateStore() which uses skipValidation to bypass readiness flag checks
+    const skipValidation = currentStore.status === "SUSPENDED" && newStatus === "ACTIVE";
     const result = await transitionStore(storeId, newStatus, {
       reason: reason || undefined,
       changedBy: adminId,
       changedByType: "admin",
+      skipValidation,
     });
 
     if (!result.success) {

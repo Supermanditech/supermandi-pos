@@ -16,7 +16,14 @@
 > | SA-P1-003 | Due limits → **Retailer Dashboard** (retailer-owned) |
 > | SA-P1-011 | Stock adjustment logging → **Retailer Dashboard** (retailer-owned) |
 > | SA-P1-015 | Reorder policy supervision → **Retailer Dashboard** (store-owned) |
-> | **ALL** | **ALL 33 tickets (P0 + P1 + P2) are CRITICAL before go-live** — no phasing |
+>
+> ## PHASING DECISION (2026-02-10)
+>
+> | Category | Tickets | Count |
+> |----------|---------|-------|
+> | **ALREADY MERGED** | SA-P0-005, SA-P0-006, SA-P1-001, SA-P1-004, SA-P1-005, SA-P1-006, SA-P1-007, SA-P1-008 | 8 |
+> | **CRITICAL GO-LIVE** | SA-P0-001, SA-P0-004, SA-P0-007, SA-P1-009, SA-P1-012, SA-P1-014, SA-P1-015, SA-P2-001 thru SA-P2-010 | 17 |
+> | **DEFERRED (post go-live)** | SA-P0-002, SA-P0-003, SA-P1-002, SA-P1-003, SA-P1-010, SA-P1-011, SA-P1-013, SA-P2-011 | 8 |
 
 ---
 
@@ -794,56 +801,62 @@ Reorder policies control automated purchasing. Retailers need visibility into po
 
 ---
 
-## TICKET SUMMARY
+## TICKET SUMMARY (Updated 2026-02-10)
 
-| Priority | Count | Ticket IDs |
-|----------|-------|------------|
-| **P0** | **7** | SA-P0-001 through SA-P0-007 |
-| **P1** | **15** | SA-P1-001 through SA-P1-015 |
-| **P2** | **11** | SA-P2-001 through SA-P2-011 |
+| Category | Count | Details |
+|----------|-------|---------|
+| **Already Merged** | **8** | SA-P0-005, SA-P0-006, SA-P1-001, SA-P1-004, SA-P1-005, SA-P1-006, SA-P1-007, SA-P1-008 |
+| **Critical Go-Live** | **17** | 3 P0 + 4 P1 + 10 P2 (see implementation order) |
+| **Deferred (post go-live)** | **8** | SA-P0-002, SA-P0-003, SA-P1-002, SA-P1-003, SA-P1-010, SA-P1-011, SA-P1-013, SA-P2-011 |
 | **Total** | **33** | |
 
 ---
 
-## IMPLEMENTATION ORDER — ALL CRITICAL BEFORE GO-LIVE
+## IMPLEMENTATION ORDER (Updated 2026-02-10)
 
-> **Operator Decision:** ALL 33 tickets (P0 + P1 + P2) are required before go-live. No phasing.
+> **Operator Decision (2026-02-10):** Phased approach. 17 tickets critical for go-live; 8 deferred to post-launch.
 
-### Superadmin Tickets (SA-owned)
-1. SA-P0-005 — Feature kill switch (enables emergency control)
-2. SA-P0-001 — Store suspension (enables rogue store control)
+### ALREADY MERGED (8 tickets — DONE)
+1. ~~SA-P0-005 — Feature kill switch~~ (PR #9 — MERGED)
+2. ~~SA-P0-006 — Refund & sale reversal~~ (PR #11 — MERGED)
+3. ~~SA-P1-001 — Staff identity/RBAC~~ (PR #5 — MERGED)
+4. ~~SA-P1-004 — GRN quantity validation~~ (PR #6 — MERGED)
+5. ~~SA-P1-005 — Supplier suspension~~ (PR #7 — MERGED)
+6. ~~SA-P1-006 — Payment method control per store~~ (PR #8 — MERGED)
+7. ~~SA-P1-007 — Per-store feature flag overrides~~ (PR #9 — MERGED)
+8. ~~SA-P1-008 — Supplier bank detail re-verification~~ (PR #10 — MERGED)
+
+### CRITICAL GO-LIVE (17 tickets — must implement before launch)
+
+**P0 — Go-Live Blockers (3 tickets)**
+1. SA-P0-001 — Store suspension & reactivation
+2. SA-P0-004 — Stock-in supplier info (optional + editable on POS)
 3. SA-P0-007 — Maintenance mode (enables emergency shutdown)
-4. SA-P0-002 — Discount limits (prevents revenue loss)
-5. SA-P0-003 — Price bounds (prevents pricing abuse)
-6. SA-P0-004 — Stock-in supplier info (optional + editable on POS)
-7. SA-P0-006 — Refund capability (basic retail operation)
-8. SA-P1-001 — Staff identity/RBAC
-9. SA-P1-004 — GRN quantity validation
-10. SA-P1-005 — Supplier suspension
-11. SA-P1-006 — Payment method control per store
-12. SA-P1-007 — Per-store feature flag overrides
-13. SA-P1-008 — Supplier bank detail re-verification
-14. SA-P1-009 — Store health dashboard
-15. SA-P1-010 — Anomaly detection & alerting
-16. SA-P1-012 — Offline sale re-validation
-17. SA-P1-013 — Device token revocation UI
-18. SA-P1-014 — Store settings visibility (read-only)
 
-### Retailer Dashboard Tickets (Retailer-owned)
-19. SA-P1-002 — Purchase order spending limits (Retailer Dashboard)
-20. SA-P1-003 — Customer due limits (Retailer Dashboard)
-21. SA-P1-011 — Stock adjustment audit logging (Retailer Dashboard)
-22. SA-P1-015 — Reorder policy supervision (Retailer Dashboard)
+**P1 — Operational (4 tickets)**
+4. SA-P1-009 — Store health dashboard
+5. SA-P1-012 — Offline sale re-validation
+6. SA-P1-014 — Store settings visibility (read-only)
+7. SA-P1-015 — Reorder policy supervision (Retailer Dashboard)
 
-### Platform Tickets (Backend/Infra)
-23. SA-P2-001 — Force device re-enrollment
-24. SA-P2-002 — Remote config push notification
-25. SA-P2-003 — Minimum app version enforcement
-26. SA-P2-004 — Compliance status aggregation
-27. SA-P2-005 — Force POS sync trigger
-28. SA-P2-006 — Product category manual override
-29. SA-P2-007 — BNPL limit adjustment UI
-30. SA-P2-008 — Retailer bulk import notification
-31. SA-P2-009 — Device hardware whitelist
-32. SA-P2-010 — Retailer user force password reset
-33. SA-P2-011 — Persistent rate limiting
+**P2 — Platform (10 tickets)**
+8. SA-P2-001 — Force device re-enrollment
+9. SA-P2-002 — Remote config push notification
+10. SA-P2-003 — Minimum app version enforcement
+11. SA-P2-004 — Compliance status aggregation
+12. SA-P2-005 — Force POS sync trigger
+13. SA-P2-006 — Product category manual override
+14. SA-P2-007 — BNPL limit adjustment UI
+15. SA-P2-008 — Retailer bulk import notification
+16. SA-P2-009 — Device hardware whitelist
+17. SA-P2-010 — Retailer user force password reset
+
+### DEFERRED — POST GO-LIVE (8 tickets)
+- SA-P0-002 — Discount limits & approval gate
+- SA-P0-003 — Price bounds enforcement
+- SA-P1-002 — Purchase order spending limits (Retailer Dashboard)
+- SA-P1-003 — Customer due limits (Retailer Dashboard)
+- SA-P1-010 — Anomaly detection & alerting
+- SA-P1-011 — Stock adjustment audit logging (Retailer Dashboard)
+- SA-P1-013 — Device token revocation UI
+- SA-P2-011 — Persistent rate limiting

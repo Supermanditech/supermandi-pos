@@ -8,6 +8,8 @@ export type StoreRecord = {
   storeName?: string | null;
   upi_vpa?: string | null;
   active?: boolean;
+  status?: string | null; // SA-P0-001: Raw store status (DRAFT, ACTIVE, SUSPENDED, etc.)
+  status_reason?: string | null; // SA-P0-001: Reason for current status
   address?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
@@ -148,4 +150,76 @@ export async function updateStore(
 
   const data = await res.json();
   return (data?.store ?? {}) as StoreRecord;
+}
+
+// =============================================================================
+// SA-P0-001: Store Suspension / Reactivation
+// =============================================================================
+
+export type StoreStatusHistoryEntry = {
+  id: string;
+  old_status: string | null;
+  new_status: string;
+  reason: string | null;
+  changed_by: string | null;
+  changed_by_type: string | null;
+  changed_at: string;
+};
+
+/**
+ * Change store status (suspend/reactivate) via state machine
+ */
+export async function changeStoreStatus(
+  storeId: string,
+  status: string,
+  reason?: string
+): Promise<{ store: StoreRecord; previous_status: string; status_history: StoreStatusHistoryEntry[] }> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/status`,
+    {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ status, reason }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
+}
+
+/**
+ * Fetch store status change history (audit trail)
+ */
+export async function fetchStoreStatusHistory(
+  storeId: string
+): Promise<StoreStatusHistoryEntry[]> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(
+    `${base}/api/v1/admin/stores/${encodeURIComponent(storeId)}/status-history`,
+    {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        ...getAuthHeaders(),
+      },
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  const data = await res.json();
+  return Array.isArray(data?.history) ? data.history : [];
 }

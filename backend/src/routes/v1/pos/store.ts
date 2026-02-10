@@ -11,8 +11,9 @@ posStoreRouter.get("/stores/:storeId/status", requireDeviceToken, async (req, re
 
   const { storeId } = (req as any).posDevice as { storeId: string };
 
+  // SA-P0-001: Return raw status and suspension reason alongside active boolean
   const result = await pool.query(
-    `SELECT id::TEXT as id, name, (status = 'ACTIVE') AS active FROM platform.stores WHERE id = $1::uuid`,
+    `SELECT id::TEXT as id, name, status, status_reason, (status = 'ACTIVE') AS active FROM platform.stores WHERE id = $1::uuid`,
     [storeId]
   );
   const store = result.rows[0];
@@ -20,5 +21,11 @@ posStoreRouter.get("/stores/:storeId/status", requireDeviceToken, async (req, re
     return res.status(404).json({ error: "store not found" });
   }
 
-  return res.json({ storeId: store.id, active: Boolean(store.active), name: store.name });
+  return res.json({
+    storeId: store.id,
+    active: Boolean(store.active),
+    name: store.name,
+    status: store.status,
+    statusReason: store.status_reason ?? null,
+  });
 });

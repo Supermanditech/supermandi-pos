@@ -195,7 +195,7 @@ export async function getStoreStatus(storeId: string): Promise<StoreWithStatus |
       status_reason,
       COALESCE(status_updated_at, created_at) as status_updated_at
     FROM platform.stores
-    WHERE id = $1 AND status != 'deleted'`,
+    WHERE id = $1::uuid AND status != 'deleted'`,
     [storeId]
   );
 
@@ -239,7 +239,7 @@ export async function transitionStore(
         status_reason,
         COALESCE(status_updated_at, created_at) as status_updated_at
       FROM platform.stores
-      WHERE id = $1 AND status != 'deleted'
+      WHERE id = $1::uuid AND status != 'deleted'
       FOR UPDATE`,
       [storeId]
     );
@@ -287,13 +287,13 @@ export async function transitionStore(
     const updateResult = await client.query<StoreWithStatus>(
       `UPDATE platform.stores
       SET
-        status = $2,
+        status = $2::varchar,
         status_reason = $3,
         status_updated_at = NOW(),
-        status_updated_by = $4,
-        admin_approved = CASE WHEN $2 = 'ACTIVE' THEN true ELSE admin_approved END,
+        status_updated_by = $4::uuid,
+        admin_approved = CASE WHEN $2::varchar = 'ACTIVE' THEN true ELSE admin_approved END,
         updated_at = NOW()
-      WHERE id = $1
+      WHERE id = $1::uuid
       RETURNING
         id,
         name,
@@ -304,7 +304,10 @@ export async function transitionStore(
         admin_approved,
         status_reason,
         status_updated_at`,
-      [storeId, newStatus, options.reason || null, options.changedBy || null]
+      [storeId, newStatus, options.reason || null,
+       // SA-P0-001: status_updated_by is uuid; pass null if changedBy is not a valid UUID
+       options.changedBy && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(options.changedBy)
+         ? options.changedBy : null]
     );
 
     await client.query("COMMIT");
@@ -363,7 +366,7 @@ export async function updateStoreFlags(
   const result = await pool.query<StoreWithStatus>(
     `UPDATE platform.stores
     SET ${setClauses.join(", ")}
-    WHERE id = $1 AND status != 'deleted'
+    WHERE id = $1::uuid AND status != 'deleted'
     RETURNING
       id,
       name,
