@@ -52,8 +52,32 @@ Applies to:
 git revert 42694b0
 ```
 
-## Staging
+## Staging — BLOCKED (infra, not code)
+
+**Status:** BLOCKED as of 2026-02-10 18:15 IST
+
+**Blocker:** CD workflow (`deploy.yml`) fails at `google-github-actions/auth@v2` because
+GitHub repo secrets for GCP Workload Identity Federation are not configured.
+
+**Missing secrets:**
+- `GCP_WIF_PROVIDER` — `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-pool/providers/github-provider`
+- `GCP_SA_EMAIL` — `github-actions@supermandi-pos.iam.gserviceaccount.com`
+
+**Unblock steps (requires `gcloud` CLI + GCP project owner):**
+```bash
+# 1. Run WIF setup (one-time)
+./scripts/gcp/setup-wif.sh
+
+# 2. Add secrets in GitHub: Settings → Secrets and variables → Actions
+#    GCP_WIF_PROVIDER = <output from step 1>
+#    GCP_SA_EMAIL = github-actions@supermandi-pos.iam.gserviceaccount.com
+
+# 3. Re-trigger CD deploy from the tag-pinned commit
+gh workflow run deploy.yml --field sha=42694b0
+```
+
+**After unblock:**
 - [ ] Deploy this tag to staging
 - [ ] Verify rate limits work correctly (no 429 in normal use)
-- [ ] Re-run E2E spec against staging
+- [ ] Re-run E2E spec against staging (`API_BASE_URL=<staging-url>`)
 - [ ] Promote to production
