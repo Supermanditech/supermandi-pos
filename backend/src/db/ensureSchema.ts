@@ -337,6 +337,7 @@ export async function ensureCoreSchema(): Promise<void> {
       id TEXT PRIMARY KEY,
       store_id TEXT NOT NULL /* FK to stores omitted — public.stores is a view */,
       supplier_name TEXT NULL,
+      supplier_gstin TEXT NULL,
       total_minor INTEGER NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'INR',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

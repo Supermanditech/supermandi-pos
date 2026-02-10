@@ -76,6 +76,27 @@ export type ProductsResult = {
   missing_fields: string[];
 };
 
+// SA-P0-004: Stock-in breakdown types
+export type StockInSupplierEntry = {
+  name: string;
+  gstin: string | null;
+  count: number;
+  total_minor: number;
+};
+
+export type StockInTypeBreakdown = {
+  type: "verified" | "walk_in" | "unknown";
+  count: number;
+  total_minor: number;
+  suppliers: StockInSupplierEntry[];
+};
+
+export type StockInBreakdown = {
+  total_entries: number;
+  total_amount_minor: number;
+  by_type: StockInTypeBreakdown[];
+};
+
 export type PurchasesResult = {
   storeId?: string;
   range: { from: string; to: string };
@@ -88,6 +109,7 @@ export type PurchasesResult = {
     avg_cost_minor: number;
     last_cost_minor: number | null;
   }>;
+  stock_in_breakdown?: StockInBreakdown; // SA-P0-004
 };
 
 export type ConsumerSalesResult = {
@@ -803,6 +825,74 @@ export async function fetchProductsAnalytics(params: {
   };
 }
 
+// SA-P0-004: Fetch stock-in breakdown by supplier type
+async function fetchStockInBreakdown(
+  range: { fromIso: string; toIso: string },
+  storeId?: string
+): Promise<StockInBreakdown> {
+  const pool = getPool();
+  if (!pool) throw new Error("database unavailable");
+
+  const storeClause = storeId ? "AND il.store_id = $3" : "";
+  const params: unknown[] = [range.fromIso, range.toIso];
+  if (storeId) params.push(storeId);
+
+  const res = await pool.query(
+    `
+    SELECT
+      CASE
+        WHEN il.supplier_id IS NOT NULL THEN 'verified'
+        WHEN il.notes IS NOT NULL AND il.notes != '' THEN 'walk_in'
+        ELSE 'unknown'
+      END AS supplier_type,
+      COALESCE(s.business_name, s.trade_name, il.notes, 'Unknown') AS supplier_name,
+      il.supplier_gstin,
+      COUNT(DISTINCT il.reference_id) AS entry_count,
+      COALESCE(SUM(ABS(il.delta_qty) * COALESCE(il.unit_cost, 0)), 0) AS total_amount
+    FROM inventory.inventory_ledger il
+    LEFT JOIN supplier.suppliers s ON s.id = il.supplier_id
+    WHERE il.source = 'POS_STOCK_IN'
+      AND il.created_at >= $1 AND il.created_at <= $2
+      ${storeClause}
+    GROUP BY supplier_type, supplier_name, il.supplier_gstin
+    ORDER BY total_amount DESC
+    `,
+    params
+  );
+
+  const typeMap = new Map<string, StockInTypeBreakdown>();
+  let totalEntries = 0;
+  let totalAmount = 0;
+
+  for (const row of res.rows) {
+    const type = row.supplier_type as "verified" | "walk_in" | "unknown";
+    const count = toNumber(row.entry_count);
+    const amount = toNumber(row.total_amount);
+    totalEntries += count;
+    totalAmount += amount;
+
+    let bucket = typeMap.get(type);
+    if (!bucket) {
+      bucket = { type, count: 0, total_minor: 0, suppliers: [] };
+      typeMap.set(type, bucket);
+    }
+    bucket.count += count;
+    bucket.total_minor += amount;
+    bucket.suppliers.push({
+      name: String(row.supplier_name),
+      gstin: row.supplier_gstin ? String(row.supplier_gstin) : null,
+      count,
+      total_minor: amount,
+    });
+  }
+
+  return {
+    total_entries: totalEntries,
+    total_amount_minor: totalAmount,
+    by_type: Array.from(typeMap.values()),
+  };
+}
+
 export async function fetchPurchasesAnalytics(params: {
   storeId?: string;
   from?: string;
@@ -896,6 +986,14 @@ export async function fetchPurchasesAnalytics(params: {
     };
   });
 
+  // SA-P0-004: Fetch stock-in breakdown in parallel
+  let stockInBreakdown: StockInBreakdown | undefined;
+  try {
+    stockInBreakdown = await fetchStockInBreakdown(range, storeId);
+  } catch {
+    // Non-critical — don't fail purchases analytics if stock-in breakdown fails
+  }
+
   return {
     storeId,
     range: { from: range.fromIso, to: range.toIso },
@@ -904,7 +1002,8 @@ export async function fetchPurchasesAnalytics(params: {
       supplier: row.supplier,
       total_minor: toNumber(row.total)
     })),
-    sku_cost_summary: skuSummary
+    sku_cost_summary: skuSummary,
+    stock_in_breakdown: stockInBreakdown,
   };
 }
 

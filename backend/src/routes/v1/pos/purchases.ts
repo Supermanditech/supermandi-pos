@@ -6,7 +6,8 @@ import { createPurchase, type PurchaseItemInput } from "../../../services/purcha
 export const posPurchasesRouter = Router();
 
 posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
-  const { items, supplierName, currency, purchaseId } = req.body as {
+  // SA-P0-004: Accept supplierGstin for GSTIN tracking
+  const { items, supplierName, supplierGstin, currency, purchaseId } = req.body as {
     items?: Array<{
       barcode?: string;
       productId?: string;
@@ -24,6 +25,7 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
       currency?: string | null;
     }>;
     supplierName?: string | null;
+    supplierGstin?: string | null;
     currency?: string | null;
     purchaseId?: string;
   };
@@ -89,6 +91,7 @@ posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
       input: {
         purchaseId,
         supplierName: supplierName ?? null,
+        supplierGstin: supplierGstin ?? null,
         currency: currency ?? null,
         items: normalizedItems
       }
