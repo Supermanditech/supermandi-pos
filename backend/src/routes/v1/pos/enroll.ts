@@ -10,9 +10,12 @@ import { enrollStore } from "../../../services/storeStateMachine";  // DR-005
 // BUG-FIX: Demo stores get unlimited multi-use enrollment codes; production stores stay single-use
 
 // AUD-061-A FIX: Stricter burst rate limiter - 3 attempts per minute to prevent rapid-fire attacks
+// DEPLOY-OPS: Respect RATE_LIMIT_MULTIPLIER for local-prod/staging (production default=1)
+const rateLimitMultiplier = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
+
 const enrollmentBurstLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 3, // Maximum 3 enrollment attempts per minute per IP
+  max: 3 * rateLimitMultiplier,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please wait a minute before trying again." } }
@@ -21,7 +24,7 @@ const enrollmentBurstLimiter = rateLimit({
 // Rate limiter for enrollment endpoint to prevent brute force attacks
 const enrollmentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Maximum 10 enrollment attempts per IP
+  max: 10 * rateLimitMultiplier,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: { code: "ENROLLMENT_RATE_LIMITED", message: "Too many enrollment attempts. Please try again in 15 minutes." } }

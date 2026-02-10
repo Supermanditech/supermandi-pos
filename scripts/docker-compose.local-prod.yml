@@ -115,6 +115,8 @@ services:
       POS_APP_DOWNLOAD_URL: "https://supermandi.tech/pos"
       # DOCS-001: Document storage dir — must be writable by nodejs user (non-root)
       DOCUMENT_STORAGE_DIR: "/app/documents"
+      # DEPLOY-OPS: Scale ALL rate limits 100x for local-prod E2E testing (production default=1)
+      RATE_LIMIT_MULTIPLIER: "100"
     depends_on:
       postgres:
         condition: service_healthy

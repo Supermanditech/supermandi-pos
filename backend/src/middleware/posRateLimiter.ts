@@ -14,6 +14,10 @@
 import type { NextFunction, Request, Response } from "express";
 import type { PosDeviceContext } from "./deviceToken";
 
+// DEPLOY-OPS: Rate limit multiplier for non-production environments (local-prod, staging)
+// Production default = 1 (no change). Set RATE_LIMIT_MULTIPLIER=10 in local-prod to 10x all limits.
+const RATE_LIMIT_MULTIPLIER = Math.max(1, parseInt(process.env.RATE_LIMIT_MULTIPLIER || "1", 10));
+
 interface RateLimitEntry {
   timestamps: number[];
   lastAccess: number;
@@ -40,6 +44,9 @@ interface RateLimitState {
  * Creates a per-store or per-device rate limiter middleware
  */
 export function createPosRateLimiter(config: RateLimiterConfig) {
+  // DEPLOY-OPS: Apply multiplier to max (production=1x, local-prod/staging=Nx)
+  const effectiveMax = config.max * RATE_LIMIT_MULTIPLIER;
+
   const state: RateLimitState = {
     entries: new Map(),
     lastCleanup: Date.now(),
@@ -95,7 +102,7 @@ export function createPosRateLimiter(config: RateLimiterConfig) {
     entry.lastAccess = now;
 
     // Check if rate limit exceeded
-    if (entry.timestamps.length >= config.max) {
+    if (entry.timestamps.length >= effectiveMax) {
       const retryAfterMs = config.windowMs - (now - entry.timestamps[0]);
       const retryAfterSec = Math.ceil(retryAfterMs / 1000);
 
@@ -106,7 +113,7 @@ export function createPosRateLimiter(config: RateLimiterConfig) {
         key_type: config.keyType,
         route: req.path,
         method: req.method,
-        limit: config.max,
+        limit: effectiveMax,
         window_ms: config.windowMs,
         retry_after_ms: retryAfterMs,
         storeId: posDevice?.storeId || null,
@@ -116,7 +123,7 @@ export function createPosRateLimiter(config: RateLimiterConfig) {
       }));
 
       res.setHeader("Retry-After", retryAfterSec);
-      res.setHeader("X-RateLimit-Limit", config.max);
+      res.setHeader("X-RateLimit-Limit", effectiveMax);
       res.setHeader("X-RateLimit-Remaining", 0);
       res.setHeader("X-RateLimit-Reset", Math.ceil((entry.timestamps[0] + config.windowMs) / 1000));
 
@@ -133,8 +140,8 @@ export function createPosRateLimiter(config: RateLimiterConfig) {
     entry.timestamps.push(now);
 
     // Set rate limit headers
-    res.setHeader("X-RateLimit-Limit", config.max);
-    res.setHeader("X-RateLimit-Remaining", config.max - entry.timestamps.length);
+    res.setHeader("X-RateLimit-Limit", effectiveMax);
+    res.setHeader("X-RateLimit-Remaining", effectiveMax - entry.timestamps.length);
     res.setHeader("X-RateLimit-Reset", Math.ceil((now + config.windowMs) / 1000));
 
     next();
