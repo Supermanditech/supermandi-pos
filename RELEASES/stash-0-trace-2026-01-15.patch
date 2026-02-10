@@ -1,0 +1,948 @@
+diff --git a/backend/src/routes/v1/pos/storeProducts.ts b/backend/src/routes/v1/pos/storeProducts.ts
+index 0f3d78d..21ef82a 100644
+--- a/backend/src/routes/v1/pos/storeProducts.ts
++++ b/backend/src/routes/v1/pos/storeProducts.ts
+@@ -2,25 +2,34 @@ import { Router } from "express";
+ import { requireDeviceToken } from "../../../middleware/deviceToken";
+ import {
+   createStoreProductFromDigitisation,
+-  type CreateStoreProductInput
++  type CreateStoreProductInput,
++  type DigitisationMode
+ } from "../../../services/storeProductDigitisationService";
+ 
+ export const posStoreProductsRouter = Router();
+ 
+ /**
+  * POST /api/v1/pos/store-products
+- * Create a store product during digitisation flow
++ * Create a store product during digitisation flow (SD-ONBOARD-002)
++ *
++ * Supports two modes:
++ * - FAST_SELL: Quick add with minimal fields
++ * - DIGITISATION: Full product capture
+  *
+  * Request body:
+  * {
+  *   "barcode": "8901030000000",
+- *   "name": "Parle-G",
+- *   "sellPrice": 10,       // Minor units (paise) - REQUIRED
+- *   "mrp": 10,             // Minor units (paise) - optional
+- *   "initialStockQty": 48, // REQUIRED
+- *   "unit": "pcs",         // optional
+- *   "description": "",     // optional
+- *   "brand": ""            // optional
++ *   "mode": "FAST_SELL" | "DIGITISATION",  // optional, defaults to FAST_SELL
++ *   "name": "Parle-G",                      // optional for FAST_SELL, required for DIGITISATION
++ *   "sellPrice": 1000,                      // Minor units (paise) - REQUIRED
++ *   "mrp": 1000,                            // Minor units (paise) - optional
++ *   "purchasePrice": 800,                   // Minor units (paise) - required for DIGITISATION
++ *   "initialStockQty": 48,                  // REQUIRED (0 allowed for "stock unknown")
++ *   "unit": "pcs",                          // optional, defaults to "pcs"
++ *   "variant": "Red",                       // optional
++ *   "packSize": "500g",                     // optional
++ *   "description": "",                      // optional
++ *   "brand": ""                             // optional
+  * }
+  *
+  * Response (201 Created):
+@@ -29,13 +38,16 @@ export const posStoreProductsRouter = Router();
+  *     "storeProductId": "...",
+  *     "name": "Parle-G",
+  *     "barcode": "8901030000000",
+- *     "sellPrice": 10,
+- *     "mrp": 10,
++ *     "sellPrice": 1000,
++ *     "mrp": 1000,
++ *     "purchasePrice": 800,
+  *     "stock": { "isKnown": true, "qty": 48 },
+  *     "unit": "pcs",
+  *     "brand": "",
+  *     "description": "",
+- *     "imageUrl": ""
++ *     "imageUrl": "",
++ *     "variant": "",
++ *     "packSize": ""
+  *   }
+  * }
+  *
+@@ -57,14 +69,18 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
+ 
+   const {
+     barcode,
++    mode,
+     name,
+     sellPrice,
+     mrp,
++    purchasePrice,
+     initialStockQty,
+     unit,
++    variant,
++    packSize,
+     description,
+     brand
+-  } = req.body as Partial<CreateStoreProductInput>;
++  } = req.body as Partial<CreateStoreProductInput & { mode?: DigitisationMode }>;
+ 
+   // Basic validation
+   if (typeof barcode !== "string" || barcode.trim().length === 0) {
+@@ -74,6 +90,9 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
+     });
+   }
+ 
++  // Validate mode if provided
++  const digitisationMode: DigitisationMode = mode === "DIGITISATION" ? "DIGITISATION" : "FAST_SELL";
++
+   if (typeof sellPrice !== "number" || !Number.isFinite(sellPrice) || sellPrice <= 0) {
+     return res.status(422).json({
+       error: "VALIDATION_ERROR",
+@@ -88,14 +107,28 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, r
+     });
+   }
+ 
++  // Mode-specific validation
++  if (digitisationMode === "DIGITISATION") {
++    if (typeof purchasePrice !== "number" || !Number.isFinite(purchasePrice) || purchasePrice < 0) {
++      return res.status(422).json({
++        error: "VALIDATION_ERROR",
++        message: "Purchase price is required for DIGITISATION mode"
++      });
++    }
++  }
++
+   try {
+     const result = await createStoreProductFromDigitisation(storeId, {
+       barcode,
++      mode: digitisationMode,
+       name: name || "",
+       sellPrice,
+       mrp,
++      purchasePrice,
+       initialStockQty,
+       unit,
++      variant,
++      packSize,
+       description,
+       brand
+     });
+diff --git a/backend/src/services/storeProductDigitisationService.ts b/backend/src/services/storeProductDigitisationService.ts
+index 03f94b6..3d8c55c 100644
+--- a/backend/src/services/storeProductDigitisationService.ts
++++ b/backend/src/services/storeProductDigitisationService.ts
+@@ -1,22 +1,27 @@
+ /**
+  * Store Product Digitisation Service
+- * SD-ONBOARD-001B: Handles brand barcode digitisation during onboarding
++ * SD-ONBOARD-002: Two-Speed Product Capture + Internal Prefill
+  *
+  * Provides:
+- * - scan/resolve with FOUND/NEEDS_CREATE/NOT_FOUND contract
+- * - create store product with initial stock (INWARD ledger)
++ * - scan/resolve with FOUND/NEEDS_CREATE contract (no more NOT_FOUND)
++ * - internal prefill from platform catalog
++ * - FAST_SELL mode (minimal fields) vs DIGITISATION mode (full details)
+  * - store-scoped barcode mapping
+  */
+ 
+ import { randomUUID } from "crypto";
+ import { getPool } from "../db/client";
+-import { lookupBarcodeExternal, type BarcodeProductPrefill } from "./barcodeLookupProvider";
+ 
+ // =============================================================================
+ // Types (matching API contract)
+ // =============================================================================
+ 
+-export type ScanResolveStatus = "FOUND" | "NEEDS_CREATE" | "NOT_FOUND";
++export type ScanResolveStatus = "FOUND" | "NEEDS_CREATE";
++
++export type DigitisationMode = "FAST_SELL" | "DIGITISATION";
++
++export type PrefillSource = "platform_catalog" | "external_lookup";
++export type PrefillConfidence = "high" | "medium" | "low";
+ 
+ export interface StoreProductStock {
+   isKnown: boolean;
+@@ -29,11 +34,14 @@ export interface StoreProductResponse {
+   barcode: string;
+   sellPrice: number | null;
+   mrp: number | null;
++  purchasePrice: number | null;
+   stock: StoreProductStock;
+   unit: string;
+   brand: string;
+   description: string;
+   imageUrl: string;
++  variant: string;
++  packSize: string;
+ }
+ 
+ export interface ScanResolvePrefill {
+@@ -43,22 +51,30 @@ export interface ScanResolvePrefill {
+   unit: string;
+   imageUrl: string;
+   brand: string;
++  variant: string;
++  packSize: string;
++  source: PrefillSource;
++  confidence: PrefillConfidence;
++  productId: string | null; // Platform product ID if from platform_catalog
+ }
+ 
+ export type ScanResolveResult =
+   | { status: "FOUND"; storeProduct: StoreProductResponse }
+-  | { status: "NEEDS_CREATE"; prefill: ScanResolvePrefill }
+-  | { status: "NOT_FOUND"; barcode: string };
++  | { status: "NEEDS_CREATE"; barcode: string; prefill?: ScanResolvePrefill };
+ 
+ export interface CreateStoreProductInput {
+   barcode: string;
+-  name: string;
++  mode: DigitisationMode;
++  name?: string;
+   sellPrice: number; // Minor units (paise)
+   mrp?: number; // Minor units (paise)
++  purchasePrice?: number; // Minor units (paise)
+   initialStockQty: number;
+   unit?: string;
+   description?: string;
+   brand?: string;
++  variant?: string;
++  packSize?: string;
+ }
+ 
+ export type CreateStoreProductResult =
+@@ -92,10 +108,13 @@ async function lookupStoreProductByBarcode(
+       spb.barcode AS barcode,
+       sp.sell_price,
+       sp.mrp,
++      sp.purchase_price,
+       sp.current_stock,
+       p.unit,
+       p.brand,
+-      p.description
++      p.description,
++      p.variant,
++      p.pack_size::TEXT AS pack_size
+     FROM catalog.store_product_barcodes spb
+     JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
+     JOIN catalog.products p ON p.id = sp.product_id
+@@ -113,6 +132,7 @@ async function lookupStoreProductByBarcode(
+       barcode: row.barcode,
+       sellPrice: row.sell_price,
+       mrp: row.mrp,
++      purchasePrice: row.purchase_price,
+       stock: {
+         isKnown: row.current_stock !== null && row.current_stock >= 0,
+         qty: row.current_stock ?? 0
+@@ -120,7 +140,9 @@ async function lookupStoreProductByBarcode(
+       unit: row.unit || "pcs",
+       brand: row.brand || "",
+       description: row.description || "",
+-      imageUrl: ""
++      imageUrl: "",
++      variant: row.variant || "",
++      packSize: row.pack_size || ""
+     };
+   }
+ 
+@@ -134,10 +156,13 @@ async function lookupStoreProductByBarcode(
+       p.primary_barcode AS barcode,
+       sp.sell_price,
+       sp.mrp,
++      sp.purchase_price,
+       sp.current_stock,
+       p.unit,
+       p.brand,
+-      p.description
++      p.description,
++      p.variant,
++      p.pack_size::TEXT AS pack_size
+     FROM catalog.products p
+     JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
+     WHERE p.primary_barcode = $2 AND sp.is_active = true
+@@ -154,6 +179,7 @@ async function lookupStoreProductByBarcode(
+       barcode: row.barcode,
+       sellPrice: row.sell_price,
+       mrp: row.mrp,
++      purchasePrice: row.purchase_price,
+       stock: {
+         isKnown: row.current_stock !== null && row.current_stock >= 0,
+         qty: row.current_stock ?? 0
+@@ -161,7 +187,9 @@ async function lookupStoreProductByBarcode(
+       unit: row.unit || "pcs",
+       brand: row.brand || "",
+       description: row.description || "",
+-      imageUrl: ""
++      imageUrl: "",
++      variant: row.variant || "",
++      packSize: row.pack_size || ""
+     };
+   }
+ 
+@@ -169,56 +197,91 @@ async function lookupStoreProductByBarcode(
+ }
+ 
+ /**
+- * Get current stock for a store product from inventory ledger
++ * Lookup barcode in platform catalog (catalog.product_barcodes)
++ * Returns prefill data if found (internal prefill)
+  */
+-async function getCurrentStock(storeId: string, productId: string): Promise<{ isKnown: boolean; qty: number }> {
++async function lookupPlatformCatalog(
++  barcode: string
++): Promise<ScanResolvePrefill | null> {
+   const pool = getPool();
+-  if (!pool) return { isKnown: false, qty: 0 };
++  if (!pool) return null;
++
++  const normalizedBarcode = barcode.trim();
+ 
+-  // Check stock_balances first (faster)
+-  const balanceResult = await pool.query(
++  // Check catalog.product_barcodes for platform-wide barcode mapping
++  const result = await pool.query(
+     `
+-    SELECT current_qty FROM inventory.stock_balances
+-    WHERE store_id = $1 AND product_id = $2
++    SELECT
++      p.id AS product_id,
++      p.name,
++      p.description,
++      p.unit,
++      p.brand,
++      p.variant,
++      p.pack_size::TEXT AS pack_size,
++      pb.barcode
++    FROM catalog.product_barcodes pb
++    JOIN catalog.products p ON p.id = pb.product_id
++    WHERE pb.barcode = $1 AND p.is_active = true
++    LIMIT 1
+     `,
+-    [storeId, productId]
++    [normalizedBarcode]
+   );
+ 
+-  if (balanceResult.rows[0]) {
++  if (result.rows[0]) {
++    const row = result.rows[0];
+     return {
+-      isKnown: true,
+-      qty: balanceResult.rows[0].current_qty
++      barcode: row.barcode,
++      name: row.name || "",
++      description: row.description || "",
++      unit: row.unit || "pcs",
++      imageUrl: "",
++      brand: row.brand || "",
++      variant: row.variant || "",
++      packSize: row.pack_size || "",
++      source: "platform_catalog",
++      confidence: "high",
++      productId: row.product_id
+     };
+   }
+ 
+-  // Check if there are any ledger entries (means stock was recorded at some point)
+-  const ledgerResult = await pool.query(
++  // Also check primary_barcode on catalog.products
++  const fallbackResult = await pool.query(
+     `
+-    SELECT 1 FROM inventory.inventory_ledger
+-    WHERE store_id = $1 AND product_id = $2
++    SELECT
++      id AS product_id,
++      name,
++      description,
++      unit,
++      brand,
++      variant,
++      pack_size::TEXT AS pack_size,
++      primary_barcode AS barcode
++    FROM catalog.products
++    WHERE primary_barcode = $1 AND is_active = true
+     LIMIT 1
+     `,
+-    [storeId, productId]
++    [normalizedBarcode]
+   );
+ 
+-  if (ledgerResult.rows[0]) {
+-    // Has ledger entries but no balance record - compute from ledger
+-    const sumResult = await pool.query(
+-      `
+-      SELECT COALESCE(SUM(delta_qty), 0)::INTEGER AS total
+-      FROM inventory.inventory_ledger
+-      WHERE store_id = $1 AND product_id = $2
+-      `,
+-      [storeId, productId]
+-    );
++  if (fallbackResult.rows[0]) {
++    const row = fallbackResult.rows[0];
+     return {
+-      isKnown: true,
+-      qty: sumResult.rows[0]?.total ?? 0
++      barcode: row.barcode,
++      name: row.name || "",
++      description: row.description || "",
++      unit: row.unit || "pcs",
++      imageUrl: "",
++      brand: row.brand || "",
++      variant: row.variant || "",
++      packSize: row.pack_size || "",
++      source: "platform_catalog",
++      confidence: "high",
++      productId: row.product_id
+     };
+   }
+ 
+-  // No ledger entries = stock unknown
+-  return { isKnown: false, qty: 0 };
++  return null;
+ }
+ 
+ // =============================================================================
+@@ -226,13 +289,14 @@ async function getCurrentStock(storeId: string, productId: string): Promise<{ is
+ // =============================================================================
+ 
+ /**
+- * Resolve barcode scan for digitisation flow
++ * Resolve barcode scan for digitisation flow (SD-ONBOARD-002)
+  *
+  * Resolution order:
+- * 1. Store-scoped barcode mapping (catalog.store_product_barcodes)
+- * 2. Catalog primary barcode with store_product link
+- * 3. External provider lookup (returns NEEDS_CREATE with prefill)
+- * 4. NOT_FOUND
++ * 1. Store-scoped barcode mapping -> FOUND
++ * 2. Platform catalog (catalog.product_barcodes) -> NEEDS_CREATE with prefill
++ * 3. Unknown barcode -> NEEDS_CREATE without prefill
++ *
++ * Note: No more NOT_FOUND - unknown barcodes always get NEEDS_CREATE
+  */
+ export async function resolveScanForDigitisation(
+   storeId: string,
+@@ -241,7 +305,7 @@ export async function resolveScanForDigitisation(
+   const normalizedBarcode = barcode.trim();
+ 
+   if (!normalizedBarcode) {
+-    return { status: "NOT_FOUND", barcode: "" };
++    return { status: "NEEDS_CREATE", barcode: "" };
+   }
+ 
+   // Step 1: Check store-scoped barcode mapping
+@@ -252,35 +316,36 @@ export async function resolveScanForDigitisation(
+     return { status: "FOUND", storeProduct };
+   }
+ 
+-  // Step 2: Not in store - try external lookup for prefill
+-  console.log("[digitisation] Barcode not in store catalog, trying external lookup:", normalizedBarcode);
++  // Step 2: Check platform catalog for internal prefill
++  console.log("[digitisation] Barcode not in store catalog, checking platform catalog:", normalizedBarcode);
+ 
+-  const externalData = await lookupBarcodeExternal(normalizedBarcode);
++  const platformPrefill = await lookupPlatformCatalog(normalizedBarcode);
+ 
+-  if (externalData) {
+-    // External lookup found data - return NEEDS_CREATE with prefill
++  if (platformPrefill) {
++    console.log("[digitisation] Found in platform catalog:", platformPrefill.name);
+     return {
+       status: "NEEDS_CREATE",
+-      prefill: {
+-        barcode: normalizedBarcode,
+-        name: externalData.name,
+-        description: externalData.description,
+-        unit: externalData.unit || "pcs",
+-        imageUrl: externalData.imageUrl,
+-        brand: externalData.brand
+-      }
++      barcode: normalizedBarcode,
++      prefill: platformPrefill
+     };
+   }
+ 
+-  // Step 3: Nothing found - return NOT_FOUND (user enters manually)
+-  return { status: "NOT_FOUND", barcode: normalizedBarcode };
++  // Step 3: Nothing found - return NEEDS_CREATE without prefill
++  // User will enter product details manually
++  console.log("[digitisation] Barcode not found anywhere, user will enter manually:", normalizedBarcode);
++  return { status: "NEEDS_CREATE", barcode: normalizedBarcode };
+ }
+ 
+ /**
+- * Create store product from digitisation flow
++ * Create store product from digitisation flow (SD-ONBOARD-002)
++ *
++ * Supports two modes:
++ * - FAST_SELL: Minimal fields (name, sellPrice, initialStockQty)
++ * - DIGITISATION: Full details (all fields)
+  *
+  * Creates:
+  * - catalog.products (if barcode not in global catalog)
++ * - catalog.product_barcodes (global barcode mapping)
+  * - catalog.store_products (store-specific pricing/stock)
+  * - catalog.store_product_barcodes (store-scoped barcode binding)
+  * - inventory.inventory_ledger (initial stock INWARD)
+@@ -303,12 +368,32 @@ export async function createStoreProductFromDigitisation(
+     return { success: false, error: "VALIDATION", message: "Barcode is required" };
+   }
+ 
+-  if (typeof input.sellPrice !== "number" || input.sellPrice <= 0) {
+-    return { success: false, error: "VALIDATION", message: "Sell price must be positive" };
+-  }
++  const mode = input.mode || "FAST_SELL";
+ 
+-  if (typeof input.initialStockQty !== "number" || input.initialStockQty < 0) {
+-    return { success: false, error: "VALIDATION", message: "Initial stock quantity must be >= 0" };
++  // Mode-specific validation
++  if (mode === "FAST_SELL") {
++    // FAST_SELL requires: sellPrice
++    if (typeof input.sellPrice !== "number" || input.sellPrice <= 0) {
++      return { success: false, error: "VALIDATION", message: "Sell price must be positive" };
++    }
++    // initialStockQty can be 0 for "stock unknown"
++    if (typeof input.initialStockQty !== "number" || input.initialStockQty < 0) {
++      return { success: false, error: "VALIDATION", message: "Initial stock quantity must be >= 0" };
++    }
++  } else if (mode === "DIGITISATION") {
++    // DIGITISATION requires: name, unit, purchasePrice, sellPrice, initialStockQty
++    if (!input.name?.trim()) {
++      return { success: false, error: "VALIDATION", message: "Product name is required for digitisation" };
++    }
++    if (typeof input.sellPrice !== "number" || input.sellPrice <= 0) {
++      return { success: false, error: "VALIDATION", message: "Sell price must be positive" };
++    }
++    if (typeof input.purchasePrice !== "number" || input.purchasePrice < 0) {
++      return { success: false, error: "VALIDATION", message: "Purchase price must be >= 0 for digitisation" };
++    }
++    if (typeof input.initialStockQty !== "number" || input.initialStockQty < 0) {
++      return { success: false, error: "VALIDATION", message: "Initial stock quantity must be >= 0" };
++    }
+   }
+ 
+   const productName = input.name?.trim() || `Item ${normalizedBarcode.slice(-4)}`;
+@@ -330,59 +415,103 @@ export async function createStoreProductFromDigitisation(
+ 
+     // Step 1: Find or create catalog.products entry
+     let productId: string;
++    let isNewProduct = false;
+ 
+-    // Check if barcode exists in global catalog
+-    const existingProductResult = await client.query(
++    // Check if barcode exists in global catalog (product_barcodes)
++    const existingBarcodeResult = await client.query(
+       `
+-      SELECT id FROM catalog.products
+-      WHERE primary_barcode = $1
++      SELECT product_id FROM catalog.product_barcodes
++      WHERE barcode = $1
+       LIMIT 1
+       `,
+       [normalizedBarcode]
+     );
+ 
+-    if (existingProductResult.rows[0]) {
+-      productId = existingProductResult.rows[0].id;
+-      console.log("[digitisation] Using existing catalog product:", productId);
++    if (existingBarcodeResult.rows[0]) {
++      productId = existingBarcodeResult.rows[0].product_id;
++      console.log("[digitisation] Using existing product from product_barcodes:", productId);
+     } else {
+-      // Create new catalog product
+-      productId = randomUUID();
+-      await client.query(
++      // Check primary_barcode fallback
++      const existingProductResult = await client.query(
+         `
+-        INSERT INTO catalog.products (id, name, brand, description, unit, primary_barcode, is_active)
+-        VALUES ($1, $2, $3, $4, $5, $6, true)
++        SELECT id FROM catalog.products
++        WHERE primary_barcode = $1
++        LIMIT 1
+         `,
+-        [
+-          productId,
+-          productName,
+-          input.brand || null,
+-          input.description || null,
+-          input.unit || "pcs",
+-          normalizedBarcode
+-        ]
++        [normalizedBarcode]
+       );
+-      console.log("[digitisation] Created new catalog product:", productId);
++
++      if (existingProductResult.rows[0]) {
++        productId = existingProductResult.rows[0].id;
++        console.log("[digitisation] Using existing catalog product:", productId);
++      } else {
++        // Create new catalog product
++        productId = randomUUID();
++        isNewProduct = true;
++        await client.query(
++          `
++          INSERT INTO catalog.products (id, name, brand, description, unit, variant, primary_barcode, is_active)
++          VALUES ($1, $2, $3, $4, $5, $6, $7, true)
++          `,
++          [
++            productId,
++            productName,
++            input.brand || null,
++            input.description || null,
++            input.unit || "pcs",
++            input.variant || null,
++            normalizedBarcode
++          ]
++        );
++        console.log("[digitisation] Created new catalog product:", productId);
++
++        // Also create product_barcodes entry for future lookups
++        await client.query(
++          `
++          INSERT INTO catalog.product_barcodes (product_id, barcode, barcode_type, is_primary, source, created_by_store_id)
++          VALUES ($1, $2, 'ean13', true, 'retailer_digitisation', $3)
++          ON CONFLICT (barcode) DO NOTHING
++          `,
++          [productId, normalizedBarcode, storeId]
++        );
++      }
+     }
+ 
+     // Step 2: Create or update catalog.store_products
+     const storeProductId = randomUUID();
+     const sellPriceMinor = Math.round(input.sellPrice);
+     const mrpMinor = input.mrp ? Math.round(input.mrp) : sellPriceMinor;
++    const purchasePriceMinor = input.purchasePrice ? Math.round(input.purchasePrice) : null;
+ 
+     await client.query(
+       `
+-      INSERT INTO catalog.store_products (id, store_id, product_id, sell_price, mrp, display_name, is_active, current_stock)
+-      VALUES ($1, $2, $3, $4, $5, $6, true, $7)
++      INSERT INTO catalog.store_products (
++        id, store_id, product_id, sell_price, mrp, purchase_price,
++        display_name, is_active, current_stock, digitisation_mode
++      )
++      VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9)
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         sell_price = EXCLUDED.sell_price,
+         mrp = EXCLUDED.mrp,
++        purchase_price = COALESCE(EXCLUDED.purchase_price, catalog.store_products.purchase_price),
+         display_name = EXCLUDED.display_name,
+         current_stock = EXCLUDED.current_stock,
++        digitisation_mode = COALESCE(EXCLUDED.digitisation_mode, catalog.store_products.digitisation_mode),
+         is_active = true,
+         updated_at = NOW()
+       RETURNING id
+       `,
+-      [storeProductId, storeId, productId, sellPriceMinor, mrpMinor, productName, input.initialStockQty]
++      [
++        storeProductId,
++        storeId,
++        productId,
++        sellPriceMinor,
++        mrpMinor,
++        purchasePriceMinor,
++        productName,
++        input.initialStockQty,
++        mode
++      ]
+     );
+ 
+     // Get the actual store_product_id (might be existing if ON CONFLICT triggered)
+@@ -403,6 +532,11 @@ export async function createStoreProductFromDigitisation(
+     );
+ 
+     // Step 4: Create INWARD ledger entry for initial stock
++    const stockKnown = input.initialStockQty > 0;
++    const ledgerNotes = mode === "FAST_SELL"
++      ? "Initial stock from FAST_SELL"
++      : "Initial stock from DIGITISATION";
++
+     if (input.initialStockQty > 0) {
+       const ledgerId = randomUUID();
+       await client.query(
+@@ -411,9 +545,9 @@ export async function createStoreProductFromDigitisation(
+           id, store_id, product_id, delta_qty, transaction_type,
+           reference_type, reference_id, stock_before, stock_after, notes
+         )
+-        VALUES ($1, $2, $3, $4, 'adjustment', 'manual', $5, 0, $4, 'Initial stock from digitisation')
++        VALUES ($1, $2, $3, $4, 'adjustment', 'manual', $5, 0, $4, $6)
+         `,
+-        [ledgerId, storeId, productId, input.initialStockQty, `digitisation:${actualStoreProductId}`]
++        [ledgerId, storeId, productId, input.initialStockQty, `digitisation:${actualStoreProductId}`, ledgerNotes]
+       );
+ 
+       // Step 5: Create or update stock balance
+@@ -432,7 +566,7 @@ export async function createStoreProductFromDigitisation(
+ 
+     await client.query("COMMIT");
+ 
+-    console.log("[digitisation] Successfully created store product:", actualStoreProductId, "for store:", storeId);
++    console.log(`[digitisation] Successfully created store product via ${mode}:`, actualStoreProductId, "for store:", storeId);
+ 
+     // Return the created store product
+     return {
+@@ -443,14 +577,17 @@ export async function createStoreProductFromDigitisation(
+         barcode: normalizedBarcode,
+         sellPrice: sellPriceMinor,
+         mrp: mrpMinor,
++        purchasePrice: purchasePriceMinor,
+         stock: {
+-          isKnown: true,
++          isKnown: stockKnown,
+           qty: input.initialStockQty
+         },
+         unit: input.unit || "pcs",
+         brand: input.brand || "",
+         description: input.description || "",
+-        imageUrl: ""
++        imageUrl: "",
++        variant: input.variant || "",
++        packSize: input.packSize || ""
+       }
+     };
+   } catch (error) {
+diff --git a/src/screens/OrderDetailScreen.tsx b/src/screens/OrderDetailScreen.tsx
+index 8b6ef19..0f5d4b9 100644
+--- a/src/screens/OrderDetailScreen.tsx
++++ b/src/screens/OrderDetailScreen.tsx
+@@ -113,7 +113,9 @@ export default function OrderDetailScreen({
+             setCancelling(true);
+             try {
+               const result = await orderApi.cancelOrder(storeId, orderId);
+-              setOrder((prev) => (prev ? { ...prev, status: result.data.status } : prev));
++              if (result.data) {
++                setOrder((prev) => (prev ? { ...prev, status: result.data!.status } : prev));
++              }
+               // Reload events
+               const eventsData = await orderApi.getOrderEvents(storeId, orderId);
+               setEvents(eventsData);
+diff --git a/src/screens/SellScanScreen.tsx b/src/screens/SellScanScreen.tsx
+index 25fb847..dfc606b 100644
+--- a/src/screens/SellScanScreen.tsx
++++ b/src/screens/SellScanScreen.tsx
+@@ -235,7 +235,13 @@ function CartItemRow({
+     typeof availableStock === "number" && Number.isFinite(availableStock)
+       ? Math.max(0, Math.floor(availableStock))
+       : null;
+-  const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
++  // SD-ONBOARD-001B: Check if stock is known from item metadata
++  const stockIsKnown = item.metadata?.stockKnown === true;
++  const stockLabel = stockValue === null
++    ? "Unknown"
++    : stockIsKnown
++      ? `${stockValue} (known)`
++      : String(stockValue);
+ 
+   useEffect(() => {
+     setPriceInput(formatPriceInput(item.priceMinor));
+diff --git a/src/services/scan/handleScan.ts b/src/services/scan/handleScan.ts
+index 8e4f4b7..106c72a 100644
+--- a/src/services/scan/handleScan.ts
++++ b/src/services/scan/handleScan.ts
+@@ -6,7 +6,14 @@ import {
+   lookupStoreProductPreviewByScan,
+   type StoreLookupProduct
+ } from "../api/productsApi";
+-import { lookupProductByBarcode, resolveScan, type ScanProduct } from "../api/scanApi";
++import {
++  lookupProductByBarcode,
++  resolveScan,
++  resolveScanForDigitisation,
++  type ScanProduct,
++  type StoreProductResponse,
++  type ScanResolvePrefill
++} from "../api/scanApi";
+ import { isOnline } from "../networkStatus";
+ import { resolveOfflineScan, setLocalPrice, upsertLocalProduct } from "../offline/scan";
+ import { useCartStore } from "../../stores/cartStore";
+@@ -28,14 +35,25 @@ export type SellFirstOnboardingRequest = {
+   product: StoreLookupProduct;
+ };
+ 
++// SD-ONBOARD-001B: New digitisation flow request type
++export type AddStoreProductRequest = {
++  barcode: string;
++  prefill?: ScanResolvePrefill | null;
++};
++
+ type ScanRuntime = {
+   intent: ScanIntent;
+   mode: ScanMode;
+   storeActive?: boolean | null;
+   scanLookupV2Enabled?: boolean;
++  // SD-ONBOARD-001B: Enable new digitisation flow (takes precedence over scanLookupV2)
++  digitisationFlowEnabled?: boolean;
+   onNotice?: (notice: ScanNotice | null) => void;
+   onSellFirstOnboarding?: (request: SellFirstOnboardingRequest) => void;
+   sellFirstOnboardingActive?: boolean;
++  // SD-ONBOARD-001B: Callback for add store product modal
++  onAddStoreProduct?: (request: AddStoreProductRequest) => void;
++  addStoreProductActive?: boolean;
+   onDeviceAuthError?: (error: ApiError) => Promise<boolean> | boolean;
+   onStoreInactive?: () => void;
+ };
+@@ -188,6 +206,58 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
+   }
+ }
+ 
++/**
++ * SD-ONBOARD-001B: Add newly created store product to cart
++ * Called from AddStoreProductModal after successful product creation
++ */
++export function addStoreProductToCart(product: StoreProductResponse): boolean {
++  try {
++    console.log(`[SD-ONBOARD-001B] Adding to cart: ${product.name}, price=${product.sellPrice}`);
++
++    upsertStockEntries([
++      { key: product.storeProductId, stock: product.stock.qty },
++      { key: product.barcode, stock: product.stock.qty }
++    ]);
++
++    const added = addToSellCart(
++      {
++        id: product.storeProductId,
++        name: product.name,
++        barcode: product.barcode,
++        priceMinor: product.sellPrice ?? 0,
++        currency: "INR",
++        metadata: {
++          storeProductId: product.storeProductId,
++          unit: product.unit,
++          brand: product.brand,
++          stockKnown: product.stock.isKnown,
++          stockQty: product.stock.qty
++        }
++      },
++      product.sellPrice ?? 0
++    );
++
++    if (added) {
++      // Cache locally for offline use
++      cacheLocalProduct({
++        barcode: product.barcode,
++        name: product.name,
++        currency: "INR",
++        priceMinor: product.sellPrice
++      });
++
++      if (Platform.OS === "android") {
++        ToastAndroid.show("Added to store & cart", ToastAndroid.SHORT);
++      }
++    }
++
++    return added;
++  } catch (err) {
++    console.error("[SD-ONBOARD-001B] addStoreProductToCart error:", err);
++    return false;
++  }
++}
++
+ async function cacheLocalProduct(product: {
+   barcode: string;
+   name: string;
+@@ -275,6 +345,8 @@ async function handleScan(
+   const trimmed = barcode.trim();
+   if (!trimmed) return;
+   if (runtime.sellFirstOnboardingActive) return;
++  // SD-ONBOARD-001B: Block scan while add store product modal is open
++  if (runtime.addStoreProductActive) return;
+ 
+   const intent = intentOverride ?? runtime.intent;
+   const mode = runtime.mode;
+@@ -292,8 +364,95 @@ async function handleScan(
+ 
+   notify(null);
+   const useScanLookupV2 = runtime.scanLookupV2Enabled === true;
++  const useDigitisationFlow = runtime.digitisationFlowEnabled === true;
+ 
+   try {
++    // =========================================================================
++    // SD-ONBOARD-002: Two-Speed Product Capture + Internal Prefill
++    // Uses resolveScanForDigitisation API with FOUND/NEEDS_CREATE contract
++    // No more NOT_FOUND - unknown barcodes always get NEEDS_CREATE
++    // =========================================================================
++    if (intent === "SELL" && mode === "SELL" && useDigitisationFlow) {
++      if (await isOnline()) {
++        console.log(`[SD-ONBOARD-002] Resolving barcode: ${trimmed}`);
++        const result = await resolveScanForDigitisation(trimmed);
++
++        if (result.status === "FOUND") {
++          // Product exists in store - add to cart
++          const sp = result.storeProduct;
++          console.log(`[SD-ONBOARD-002] FOUND: ${sp.name}, price=${sp.sellPrice}`);
++
++          upsertStockEntries([
++            { key: sp.storeProductId, stock: sp.stock.qty },
++            { key: sp.barcode, stock: sp.stock.qty }
++          ]);
++
++          const added = addToSellCart(
++            {
++              id: sp.storeProductId,
++              name: sp.name,
++              barcode: sp.barcode,
++              priceMinor: sp.sellPrice ?? 0,
++              currency: "INR",
++              metadata: {
++                storeProductId: sp.storeProductId,
++                unit: sp.unit,
++                brand: sp.brand,
++                stockKnown: sp.stock.isKnown,
++                stockQty: sp.stock.qty
++              }
++            },
++            sp.sellPrice ?? 0
++          );
++
++          if (added) {
++            await cacheLocalProduct({
++              barcode: sp.barcode,
++              name: sp.name,
++              currency: "INR",
++              priceMinor: sp.sellPrice
++            });
++          }
++          return;
++        }
++
++        if (result.status === "NEEDS_CREATE") {
++          // Show modal - with or without prefill from platform catalog
++          const prefillName = result.prefill?.name ?? "manual entry";
++          console.log(`[SD-ONBOARD-002] NEEDS_CREATE: ${trimmed}, prefill=${prefillName}`);
++          runtime.onAddStoreProduct?.({
++            barcode: trimmed,
++            prefill: result.prefill ?? null
++          });
++          return;
++        }
++      }
++
++      // Offline fallback: use legacy offline scan
++      const offline = await resolveOfflineScan(trimmed, "SELL");
++      if (offline.action === "ADD_TO_CART") {
++        const priceMinor = offline.product.priceMinor ?? 0;
++        addToSellCart(
++          {
++            id: offline.product.barcode,
++            name: offline.product.name || offline.product.barcode,
++            barcode: offline.product.barcode,
++            priceMinor: offline.product.priceMinor,
++            currency: offline.product.currency ?? "INR"
++          },
++          priceMinor
++        );
++        return;
++      }
++
++      // Offline: show add product modal
++      runtime.onAddStoreProduct?.({
++        barcode: trimmed,
++        prefill: null
++      });
++      return;
++    }
++
+     if (intent === "SELL" && mode === "SELL" && useScanLookupV2) {
+       if (await isOnline()) {
+         const fallbackName = buildFallbackName(trimmed);
