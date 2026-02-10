@@ -13,6 +13,8 @@ MASTER_PLAN.md defines *what* gets done (batches, tickets, gates).
 ZERO_REGRESSION_RULES.md defines *how deploys work* (immutability, rollback).
 **This file defines *how Claude writes code* — the fix-quality standard, test discipline, pipeline workflow, and production safety rules.**
 
+**Development Mode: Cascading E2E Hardening** — All development follows this mode. No exceptions.
+
 ---
 
 ## PART A: NON-NEGOTIABLE PRINCIPLES
@@ -55,6 +57,78 @@ No "I think it works." Every fix must have proof appropriate to its risk class.
 ### A.4 Every Fix Is Scoped to One Ticket
 
 One ticket, one fix, one atomic commit. No scope creep.
+
+### A.5 Cascading E2E Hardening Mode (MANDATORY DEVELOPMENT MODE)
+
+**All development operates in Cascading E2E Hardening Mode. This is not optional. This is not a gate you pass at the end. This is how every ticket is worked from first line to last.**
+
+```
+CASCADING E2E HARDENING — Per-Ticket Loop:
+
+  ┌─────────────────────────────────────────────────────────────────┐
+  │ 1. WRITE          Code the ticket (schema → API → UI)         │
+  │         │                                                      │
+  │ 2. E2E TEST       Run full applicable test suite against       │
+  │         │         PRODUCTION-GRADE build (docker-compose        │
+  │         │         local-prod, not pnpm dev)                     │
+  │         │                                                      │
+  │ 3. CASCADE FIX    Any regression exposed by E2E → fix it NOW  │
+  │         │         (not "fix later", not "separate ticket")     │
+  │         │         Cascading fix = part of the same ticket      │
+  │         │                                                      │
+  │ 4. RE-RUN E2E     After every cascading fix, re-run the FULL  │
+  │         │         test suite again (not just the fixed test)   │
+  │         │                                                      │
+  │ 5. REPEAT         Steps 3-4 loop until ZERO failures          │
+  │         │                                                      │
+  │ 6. ELIGIBLE       Only when E2E = ZERO failures on prod-grade │
+  │                   build can the ticket be marked PRE-STAGING   │
+  │                   ELIGIBLE                                     │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+**Core Rules:**
+
+| # | Rule | Rationale |
+|---|------|-----------|
+| 1 | **Every ticket gets E2E tests** | No ticket is "too small" or "backend-only" to skip E2E. If it changes behavior, it gets tested end-to-end. |
+| 2 | **Test against production-grade builds** | `pnpm dev` is not enough. Tests run against `docker-compose.local-prod.yml` (built images, real networking, migrations applied). |
+| 3 | **Cascading fixes are mandatory** | If running E2E for ticket X exposes a regression in feature Y, Claude fixes Y immediately as part of ticket X's work. No deferral. |
+| 4 | **Full re-run after every fix** | After fixing a cascade regression, re-run the ENTIRE applicable test suite — not just the test that failed. One fix can break another. |
+| 5 | **Zero failures = eligible** | A ticket is only pre-staging eligible when the full test suite passes with zero failures on a production-grade build. No "known failures" exceptions. |
+| 6 | **No shortcuts** | No `test.skip()`, no `// TODO: fix in next ticket`, no "this only affects dev mode", no "I'll test this manually". |
+| 7 | **No isolated changes** | Every change is verified in the context of the entire system. A button change is tested with the API it calls. An API change is tested with the UI that consumes it. |
+
+**What "Production-Grade Build" Means:**
+
+```
+NOT production-grade:              PRODUCTION-GRADE:
+─────────────────────              ──────────────────
+pnpm dev                           docker-compose.local-prod.yml
+Hot reload servers                 Built Docker images
+In-memory DB                       PostgreSQL + Redis containers
+No migrations applied              Migrations run on startup
+Source-mounted volumes              Bundled artifacts (no source access)
+```
+
+**What "Cascading Fix" Means:**
+
+A cascading fix is when fixing or testing ticket X reveals a broken behavior in feature Y that was previously unnoticed. In Cascading E2E Hardening Mode:
+- Claude fixes Y immediately (not in a future ticket)
+- The fix for Y is part of the same commit or an atomic follow-up commit
+- Claude re-runs the full test suite after fixing Y
+- If fixing Y breaks Z, Claude fixes Z — the cascade continues until zero failures
+
+**Forbidden Anti-Patterns:**
+
+| Forbidden | Why | Required Instead |
+|-----------|-----|-----------------|
+| "I'll test this later" | Deferred testing = deferred failures | Test now, in hardening mode |
+| "This is just a config change" | Config changes break production | E2E verify config is correct |
+| "Skipping E2E, only backend changed" | Backend changes affect UI consumers | Run portal/POS tests that consume the changed API |
+| "Known failure, unrelated" | All failures matter in cascade mode | Fix it or prove it's pre-existing with git blame |
+| "Works in dev, ship it" | Dev ≠ production | Test in docker-compose local-prod |
+| "One test flaky, re-running" | Flaky tests hide real bugs | Fix the flaky test first, then re-run |
 
 ---
 
@@ -748,11 +822,13 @@ A ticket is DONE only when ALL of these are true:
 |---|-----------|
 | 1 | Code compiles: `pnpm -r typecheck` = 0 errors |
 | 2 | Tests pass: all applicable test packs from Part C green |
-| 3 | Evidence collected: appropriate to fix type (Part D) |
-| 4 | Works in Docker: verified in `docker-compose.local-prod.yml` (not just dev server) |
-| 5 | Business invariants preserved: if applicable, invariant tests pass |
-| 6 | No hardcoded values, no temp fixes, no manual infra patches |
-| 7 | Commit follows format, PR created, CI green |
+| 3 | **Cascading E2E Hardening complete**: full E2E suite run against production-grade build (docker-compose local-prod), zero failures, all cascade regressions fixed (Part A.5) |
+| 4 | Evidence collected: appropriate to fix type (Part D) |
+| 5 | Works in Docker: verified in `docker-compose.local-prod.yml` (not just dev server) |
+| 6 | Business invariants preserved: if applicable, invariant tests pass |
+| 7 | No hardcoded values, no temp fixes, no manual infra patches, no isolated changes |
+| 8 | Commit follows format, PR created, CI green |
+| 9 | Ticket marked **PRE-STAGING ELIGIBLE** (only after criteria 1-8 all met) |
 
 ---
 
@@ -931,21 +1007,25 @@ Run increasing gate coverage after completing each layer:
 
 #### M.0.3 One-Click Pre-Staging Readiness
 
-**Definition**: Pre-staging is achieved when ALL of the following pass in a **single uninterrupted run**:
+**Definition**: Pre-staging is achieved when ALL of the following pass in a **single uninterrupted run** AND every ticket has completed Cascading E2E Hardening (A.5):
 
 ```
 ONE-CLICK PRE-STAGING CHECKLIST:
+[ ] Every ticket is PRE-STAGING ELIGIBLE  (A.5 cascade loop complete, zero failures)
 [ ] pnpm -r typecheck                    exit 0
 [ ] pnpm test:ci                         exit 0
 [ ] pnpm -r build                        exit 0 (all portals + backend)
 [ ] pnpm test:contract                   exit 0
 [ ] pnpm test:invariants                 exit 0
 [ ] pnpm test:security                   exit 0
+[ ] Full E2E on local-prod build         ZERO failures (final cascading verification)
 [ ] P.5 completeness scan                COMPLETE (all business functions verified)
 [ ] Per-batch evidence                   collected (RELEASES/EVIDENCE/)
 [ ] git status                           clean (no uncommitted changes)
 [ ] git log matches MASTER_PLAN tickets  all tickets accounted for
 ```
+
+**Cascading prerequisite**: The first checklist item ("Every ticket is PRE-STAGING ELIGIBLE") is the aggregate result of running Cascading E2E Hardening Mode (A.5) on every ticket in the batch. A ticket is only eligible when its full E2E suite passes with zero failures on a production-grade build after all cascade regressions are fixed.
 
 **When this checklist passes**: Claude declares **PRE-STAGING READY** and provides the operator E2E PowerShell script (Gate 2 of RELEASE_POLICY.md).
 
@@ -954,7 +1034,7 @@ ONE-CLICK PRE-STAGING CHECKLIST:
 pnpm -r typecheck && pnpm test:ci && pnpm -r build && pnpm test:contract && pnpm test:invariants && pnpm test:security
 ```
 If exit 0 → PRE-STAGING READY.
-If any failure → Claude fixes, re-runs from the beginning.
+If any failure → Claude fixes (cascading), re-runs from the beginning.
 
 #### M.0.4 SA-GOLIVE Ticket Ordering (Current Batch)
 
@@ -979,18 +1059,21 @@ After Phase E: + API smoke (push integration) + UI wiring for notification trigg
 After Phase F: FULL GATE SUITE (including all C.8 UI/UX tests) → One-Click Pre-Staging Checklist (M.0.3)
 ```
 
-#### M.0.5 Regression Prevention During Pickup
+#### M.0.5 Regression Prevention During Pickup (Cascading E2E Hardening)
 
-How the strategy prevents regression at each step:
+How Cascading E2E Hardening Mode prevents regression at each step:
 
 | Step | Regression Risk | Prevention |
 |------|----------------|------------|
 | Pick ticket | Wrong order → building on unverified foundation | Layer ordering (M.0.1) |
 | Write code | Break existing functionality | P.1 pre-task scope analysis + P.2 change-impact router |
 | Test ticket | Miss required tests | P.4 post-task verification |
+| **E2E on prod build** | **Works in dev but fails in production** | **Cascading E2E Hardening (A.5) — test against docker-compose local-prod, not pnpm dev** |
+| **Cascade regression** | **Fix for X breaks Y** | **Mandatory cascade fix — fix Y immediately, re-run FULL suite, repeat until zero failures** |
+| **Declare eligible** | **Ticket has lingering failures** | **PRE-STAGING ELIGIBLE status only after zero E2E failures on prod build** |
 | Move to next ticket | Previous ticket's work regressed | Progressive gates (M.0.2) — re-run layer gates |
 | Complete batch | Cumulative drift across tickets | P.5 batch-level completeness scan |
-| Declare pre-staging | Something still broken | One-click verification (M.0.3) — single run, all gates |
+| Declare pre-staging | Something still broken | One-click verification (M.0.3) — single run, all gates, all tickets eligible |
 | Operator E2E | Automated tests missed a UI issue | Human runs Playwright + browser tests |
 | CI push | Local environment ≠ CI environment | CI overrides all local results |
 
@@ -1001,27 +1084,37 @@ How the strategy prevents regression at each step:
 3. Verify Docker local-prod: `docker-compose -f docker-compose.local-prod.yml up`
 4. Verify test infrastructure: all test scripts from Part C.3 exist and are runnable
 
-### Phase 1: Repeat Forever (Every Ticket)
+### Phase 1: Repeat Forever (Every Ticket — Cascading E2E Hardening Mode)
 
 ```
-1. Identify current layer (M.0.1) and pick next ticket in layer order
-2. P.1 — Pre-task scope analysis (announce plan, derive tests from P.2 router)
-3. Read ticket scope, identify risk class and change type
-4. DEBUG → FIND → FIX → RETEST → GUARD (Part E loop)
-5. Run applicable test packs (Part C, by change type)
-6. P.4 — Post-task verification (git diff → router → verify all tests ran)
-7. Collect evidence (Part D)
-8. Commit with format: BATCH-XXX: TICKET-ID - Description
-9. Update MASTER_PLAN.md ticket status
-10. If layer complete → run progressive gates for that layer (M.0.2)
-11. When batch complete:
+1.  Identify current layer (M.0.1) and pick next ticket in layer order
+2.  P.1 — Pre-task scope analysis (announce plan, derive tests from P.2 router)
+3.  Read ticket scope, identify risk class and change type
+4.  DEBUG → FIND → FIX → RETEST → GUARD (Part E loop)
+5.  Run applicable test packs (Part C, by change type)
+6.  ┌─ CASCADING E2E HARDENING (A.5) ────────────────────────────┐
+    │ 6a. Run full E2E suite against production-grade build       │
+    │     (docker-compose local-prod, not pnpm dev)               │
+    │ 6b. Any regression exposed → fix immediately (cascade fix)  │
+    │ 6c. After each cascade fix → re-run FULL E2E suite again    │
+    │ 6d. REPEAT 6b-6c until ZERO failures                       │
+    │ 6e. Only proceed when E2E = ZERO failures on prod build     │
+    └─────────────────────────────────────────────────────────────┘
+7.  P.4 — Post-task verification (git diff → router → verify all tests ran)
+8.  Collect evidence (Part D)
+9.  Commit with format: BATCH-XXX: TICKET-ID - Description
+10. Update MASTER_PLAN.md ticket status → mark PRE-STAGING ELIGIBLE
+11. If layer complete → run progressive gates for that layer (M.0.2)
+12. When batch complete:
     a. P.5 — Batch-level completeness scan
     b. Run one-click pre-staging checklist (M.0.3)
     c. If all pass → provide E2E PowerShell script to operator
-    d. Operator runs → pastes results → Claude fixes ANY issues → repeat until ZERO issues
+    d. Operator runs → pastes results → Claude fixes ANY issues (cascade) → repeat until ZERO issues
     e. Push to CI → CI gates must pass
     f. Prepare evidence pack
 ```
+
+**Step 6 is the heart of Cascading E2E Hardening Mode.** Steps 1-5 write and unit-test the code. Step 6 proves it works end-to-end on a production-grade build. No ticket exits step 6 with any failures — not even "unrelated" ones.
 
 ### Promotion Gate (Full Project Completion Required)
 
@@ -1306,6 +1399,7 @@ How Claude uses this protocol throughout a session:
 
 Before declaring any fix complete, verify:
 
+- [ ] Cascading E2E Hardening complete: full E2E on prod build, zero failures, all cascades fixed (Part A.5)
 - [ ] No temp fix / hack / workaround (Part A.1)
 - [ ] No hardcoded values (Part B.1)
 - [ ] No manual infra patches — fix exists in repo (Part B.2)
@@ -1327,7 +1421,8 @@ Before declaring any fix complete, verify:
 - [ ] Evidence collected, appropriate to risk class (Part D)
 - [ ] Regression guard in place (Part D.1)
 - [ ] Scope limited to ticket (Part A.4)
-- [ ] Definition of Done met (Part H, all 7 criteria)
+- [ ] Ticket marked PRE-STAGING ELIGIBLE after cascading hardening (Part H, criterion 9)
+- [ ] Definition of Done met (Part H, all 9 criteria)
 - [ ] Commit message follows format (Part G.2)
 - [ ] Pre-task scope analysis done — test plan announced (Part P.1)
 - [ ] Change-impact router applied — all required tests derived (Part P.2)
@@ -1366,3 +1461,4 @@ Before declaring any fix complete, verify:
 | 7.0 | 2026-02-11 | DOC-025: Part P — Claude Completeness Protocol. P.1 Pre-Task Scope Analysis. P.2 Change-Impact Router (file-to-test mapping). P.3 Business Logic Registry (10 business functions). P.4 Post-Task Verification. P.5 Batch-Level Completeness Scan. P.6 Five Safety Nets. P.7 Session Navigation Workflow. Quick Reference Checklist extended with P.1/P.2/P.4 items. | Claude |
 | 8.0 | 2026-02-11 | DOC-026: Part M rewritten — M.0 Ticket Pickup Strategy (bottom-up, dependency-aware). M.0.1 Layer ordering (7 layers). M.0.2 Progressive gate schedule. M.0.3 One-click pre-staging readiness definition + checklist. M.0.4 SA-GOLIVE concrete ticket ordering (6 phases, 15 tickets). M.0.5 Regression prevention at each step. Phase 1 updated with P.1/P.4/P.5 integration + layer-aware pickup. | Claude |
 | 9.0 | 2026-02-11 | DOC-027: C.8 UI/UX/Navigation Tests — comprehensive front-end verification from atomic elements to portal render. C.8.1 UI Element Verification (buttons, fields, headers, footers, tables, modals, toasts, dropdowns + POS-specific elements). C.8.2 UI Wiring (component → API → loading → success/error chain). C.8.3 Navigation & Route Guards (auth redirect, role guard, deep link, 404, back button, menu, tabs + POS navigation). C.8.4 UX State Coverage (mandatory 4-state: loading/success/empty/error for every API-driven screen). C.8.5 Portal Render Smoke (all-screen render verification per portal). P.2 router updated — portal/POS file changes now require C.8 UI/UX tests. P.3 registry updated — UI Surface column added to all 10 business functions. M.0.2 progressive gates updated — Layer 5 now includes UI/UX verification. M.0.4 SA-GOLIVE phases C/D/E updated with UI verification gates. Quick Reference Checklist extended with 5 UI/UX items. | Claude |
+| 10.0 | 2026-02-11 | DOC-028: Cascading E2E Hardening Mode — mandatory development mode for all tickets. A.5 defines the cascade loop (write → E2E on prod build → cascade fix regressions → re-run → repeat until zero failures → eligible). Phase 1 updated with explicit step 6 cascading E2E block. Part H Definition of Done expanded to 9 criteria (added cascading E2E, PRE-STAGING ELIGIBLE status). M.0.3 pre-staging checklist prepended with ticket eligibility + final cascading verification. M.0.5 regression prevention expanded with cascade-specific rows. Quick Reference Checklist extended with cascading and eligibility items. PURPOSE section updated. | Claude |

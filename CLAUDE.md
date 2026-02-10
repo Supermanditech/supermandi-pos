@@ -59,6 +59,14 @@ These files are from the pre-Cloud Run VM era. They remain in the repo for histo
 
 ## Key Rules Summary (From CLAUDE_PRODUCTION_RULES.md)
 
+### Development Mode: Cascading E2E Hardening (A.5)
+- **Every ticket** gets end-to-end tests — no exceptions, no "too small" tickets
+- **Test against production-grade builds** — docker-compose local-prod, not pnpm dev
+- **Cascade fix regressions** — if E2E exposes regression in feature Y while testing ticket X, fix Y immediately (not "fix later")
+- **Full re-run after every fix** — re-run ENTIRE test suite after each cascade fix, not just the failed test
+- **Zero failures = eligible** — ticket is PRE-STAGING ELIGIBLE only when full E2E = zero failures on prod build
+- **No shortcuts** — no test.skip(), no isolated changes, no "works in dev"
+
 ### Non-Negotiable
 - **No temp fixes** — every commit must be production-grade
 - **No hardcoded values** — use env vars and named constants
