@@ -212,6 +212,7 @@ export function abortActiveRequests(): void {
  * ISSUE-MICRO-107: Fetch wrapper with 30s timeout to prevent hanging requests.
  * ISSUE-MICRO-025: Includes credentials for HttpOnly cookie auth.
  * ISSUE-MICRO-063: Cascades tab-change abort to in-flight requests.
+ * STAGING-FIX-005: Auto-clears stale token on 401 and dispatches auth-expired event.
  * Drop-in replacement for global fetch() — adds AbortController with 30s default.
  */
 export async function fetchWithTimeout(
@@ -222,7 +223,9 @@ export async function fetchWithTimeout(
 
   // If caller provided their own signal, use it directly (skip tab/timeout logic)
   if (fetchInit.signal) {
-    return await fetch(input, { ...fetchInit, credentials: fetchInit.credentials ?? 'include' });
+    const res = await fetch(input, { ...fetchInit, credentials: fetchInit.credentials ?? 'include' });
+    if (res.status === 401) handleAutoLogout();
+    return res;
   }
 
   const controller = new AbortController();
@@ -233,15 +236,36 @@ export async function fetchWithTimeout(
   tabController.signal.addEventListener('abort', onTabAbort, { once: true });
 
   try {
-    return await fetch(input, {
+    const res = await fetch(input, {
       ...fetchInit,
       credentials: fetchInit.credentials ?? 'include',
       signal: controller.signal,
     });
+    // STAGING-FIX-005: Auto-clear stale token on 401 so UI can show login gate
+    if (res.status === 401) handleAutoLogout();
+    return res;
   } finally {
     clearTimeout(timeoutId);
     tabController.signal.removeEventListener('abort', onTabAbort);
   }
+}
+
+/**
+ * STAGING-FIX-005: Clear stale token and notify UI on 401.
+ * Dispatches a custom window event so App.tsx can show the login gate.
+ * Debounced to avoid multiple rapid logouts from concurrent API calls.
+ */
+let autoLogoutFired = false;
+function handleAutoLogout(): void {
+  if (autoLogoutFired) return;
+  autoLogoutFired = true;
+  console.warn('[STAGING-FIX-005] 401 received — clearing stale session token');
+  clearSessionToken();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('supermandi-auth-expired'));
+  }
+  // Reset debounce after 2s so future 401s after re-login are also handled
+  setTimeout(() => { autoLogoutFired = false; }, 2000);
 }
 
 /**

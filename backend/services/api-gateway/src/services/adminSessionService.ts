@@ -36,7 +36,8 @@ const SESSION_EXPIRY_MS = SESSION_EXPIRY_HOURS * 60 * 60 * 1000;
 const MAX_ACTIVE_SESSIONS = 10; // Per admin
 
 // JWT configuration
-const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
+// STAGING-FIX-005: Align fallback chain with backend's adminAuth.ts to prevent secret mismatches
+const JWT_SECRET = process.env['JWT_SECRET'] || process.env['ADMIN_TOKEN'] || 'dev-jwt-secret';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-admin';
 
 // SECRET-CLEANUP-001: ADMIN_TOKEN from env var only (Cloud Run compatible)

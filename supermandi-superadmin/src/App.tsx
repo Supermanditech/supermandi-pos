@@ -588,6 +588,16 @@ export default function App() {
 
   // ITER4-CRIT-001: Removed adminTokenInput state - login now handled by LoginGate component
 
+  // STAGING-FIX-005: Listen for auth-expired event from fetchWithTimeout (auto-logout on 401)
+  useEffect(() => {
+    const onAuthExpired = () => {
+      console.warn('[STAGING-FIX-005] Auth expired event received — showing login gate');
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('supermandi-auth-expired', onAuthExpired);
+    return () => window.removeEventListener('supermandi-auth-expired', onAuthExpired);
+  }, []);
+
   // AUTH-EXPIRY-003: Idle timeout - logout after 30 minutes of inactivity
   useEffect(() => {
     if (!isAuthenticated) {

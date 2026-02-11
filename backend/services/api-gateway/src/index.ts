@@ -74,10 +74,11 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
 
   // Check if the origin is allowed
-  if (origin && allowedOrigins.includes(origin)) {
+  // STAGING-FIX-005: Support '*' wildcard in CORS_ALLOWED_ORIGINS
+  if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
     res.header('Access-Control-Allow-Origin', origin);
-  } else if (config.env === 'development' && !origin) {
-    // Allow requests without origin header in development (curl, Postman, etc.)
+  } else if ((config.env === 'development' || allowedOrigins.includes('*')) && !origin) {
+    // Allow requests without origin header in development or wildcard mode (curl, Postman, etc.)
     res.header('Access-Control-Allow-Origin', '*');
   }
   // Note: If origin not in allowedOrigins, we don't set the header (browser will block)

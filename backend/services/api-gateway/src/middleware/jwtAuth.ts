@@ -43,7 +43,8 @@ declare global {
 // CONFIGURATION
 // =============================================================================
 
-const JWT_SECRET = process.env['JWT_SECRET'] || 'dev-secret-change-in-prod';
+// STAGING-FIX-005: Align fallback chain with backend's adminAuth.ts to prevent secret mismatches
+const JWT_SECRET = process.env['JWT_SECRET'] || process.env['ADMIN_TOKEN'] || 'dev-jwt-secret';
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // =============================================================================
