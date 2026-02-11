@@ -52,7 +52,7 @@ export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; o
 
 export async function fetchPendingSuppliers(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<PendingSupplierRequest>> {
   const base = requireApiBase();
-  const url = new URL(`${base}/api/v1/admin/pending-suppliers`);
+  const url = new URL(`${base}/api/v1/admin/pending-suppliers`, window.location.origin);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 
@@ -81,7 +81,7 @@ export async function fetchPendingSuppliers(params?: { limit?: number; offset?: 
 export async function fetchVerifiedSuppliers(params?: { search?: string; limit?: number; offset?: number }): Promise<PaginatedResponse<VerifiedSupplier>> {
   const base = requireApiBase();
 
-  const url = new URL(`${base}/api/v1/admin/verified-suppliers`);
+  const url = new URL(`${base}/api/v1/admin/verified-suppliers`, window.location.origin);
   if (params?.search) url.searchParams.set("search", params.search);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));

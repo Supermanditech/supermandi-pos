@@ -29,7 +29,7 @@ async function parseError(res: Response): Promise<string> {
 export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
 
 export async function fetchUsers(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<UserRecord>> {
-  const url = new URL(`${API_BASE}/api/v1/admin/users`);
+  const url = new URL(`${API_BASE}/api/v1/admin/users`, window.location.origin);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 

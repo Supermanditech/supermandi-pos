@@ -30,7 +30,7 @@ export async function fetchPosEvents(params: FetchPosEventsParams): Promise<PosE
   const base = requireApiBase();
   const limit = Math.min(1000, Math.max(1, Number(params.limit || 100)));
 
-  const url = new URL(`${base}/api/v1/admin/pos/events`);
+  const url = new URL(`${base}/api/v1/admin/pos/events`, window.location.origin);
   url.searchParams.set("limit", String(limit));
   if (params.storeId?.trim()) url.searchParams.set("storeId", params.storeId.trim());
   if (params.deviceId?.trim()) url.searchParams.set("deviceId", params.deviceId.trim());

@@ -64,7 +64,7 @@ export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; o
 export async function fetchStores(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<StoreRecord>> {
   const base = requireApiBase();
 
-  const url = new URL(`${base}/api/v1/admin/stores`);
+  const url = new URL(`${base}/api/v1/admin/stores`, window.location.origin);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
 

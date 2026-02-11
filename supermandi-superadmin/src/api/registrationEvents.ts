@@ -48,7 +48,7 @@ export async function fetchRegistrationEvents(
   params: FetchRegistrationEventsParams = {}
 ): Promise<RegistrationEventsResponse> {
   const base = requireApiBase();
-  const url = new URL(`${base}/api/v1/admin/registration-events`);
+  const url = new URL(`${base}/api/v1/admin/registration-events`, window.location.origin);
 
   if (params.limit) url.searchParams.set("limit", String(params.limit));
   if (params.offset) url.searchParams.set("offset", String(params.offset));
