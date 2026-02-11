@@ -494,24 +494,37 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       }
 
       if (exists_in === 'application') {
-        if (can_resume) {
-          res.status(409).json({
-            error: {
-              code: "APPLICATION_EXISTS",
-              message: "An application with this GSTIN already exists. Please resume it.",
-              applicationId: entity_id,
-              applicationStatus: entity_status,
-            }
-          });
-        } else {
-          res.status(409).json({
-            error: {
-              code: "GSTIN_EXISTS",
-              message: "This GSTIN is already registered.",
-            }
-          });
+        // STAGING-FIX-011: If the GSTIN belongs to the same user's DRAFT app (same phone),
+        // skip the 409 and let the phone-based upsert below handle it.
+        // This allows re-submission of the same form without blocking.
+        const ownerCheck = await pool.query(
+          `SELECT id FROM auth.applications
+           WHERE id = $1::uuid AND phone = $2 AND status IN ('DRAFT', 'OTP_VERIFIED')`,
+          [entity_id, phoneNormalized]
+        );
+
+        if (ownerCheck.rows.length === 0) {
+          // GSTIN belongs to a different user's application or non-resumable status
+          if (can_resume) {
+            res.status(409).json({
+              error: {
+                code: "APPLICATION_EXISTS",
+                message: "An application with this GSTIN already exists. Please resume it.",
+                applicationId: entity_id,
+                applicationStatus: entity_status,
+              }
+            });
+          } else {
+            res.status(409).json({
+              error: {
+                code: "GSTIN_EXISTS",
+                message: "This GSTIN is already registered.",
+              }
+            });
+          }
+          return;
         }
-        return;
+        // Same phone owns this GSTIN application — fall through to upsert
       }
     }
 
