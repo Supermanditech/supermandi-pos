@@ -591,11 +591,25 @@ export default function App() {
   // STAGING-FIX-005: Listen for auth-expired event from fetchWithTimeout (auto-logout on 401)
   useEffect(() => {
     const onAuthExpired = () => {
-      console.warn('[STAGING-FIX-005] Auth expired event received — showing login gate');
       setIsAuthenticated(false);
     };
     window.addEventListener('supermandi-auth-expired', onAuthExpired);
     return () => window.removeEventListener('supermandi-auth-expired', onAuthExpired);
+  }, []);
+
+  // STAGING-FIX-008: Validate token server-side on startup to catch stale/invalid tokens
+  // Prevents showing "Authenticated" with a token signed by a different JWT_SECRET
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    (async () => {
+      const valid = await refreshSession();
+      if (!cancelled && !valid) {
+        await logout();
+        setIsAuthenticated(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // AUTH-EXPIRY-003: Idle timeout - logout after 30 minutes of inactivity

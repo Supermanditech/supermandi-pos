@@ -30,7 +30,7 @@ export default function ProtectedLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate(`/s/${storeCode}/login`);
+    navigate('/retailer/login');  // STAGING-FIX-008: Route to public login page
   };
 
   // Check if current path matches nav item

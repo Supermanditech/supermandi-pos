@@ -526,7 +526,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
     const jti = randomUUID();
     const jwtPayload = {
       sub: user.id,
-      actorType: 'RETAILER',
+      actorType: 'STORE',             // STAGING-FIX-008: Must match gateway policy ('store')
       phone: phoneNormalized,
       permissions: ['retailer:read', 'retailer:write', 'inventory:read', 'inventory:write'],
       jti,
