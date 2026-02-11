@@ -185,8 +185,8 @@ export default function SupplierOnboardingPage() {
         upiVpa: upiVpa.toLowerCase().trim() || undefined,
       });
 
-      setApplicationId(createResult.applicationId);
-      setApplicationStatus(createResult.status);
+      setApplicationId(createResult.application?.id || createResult.applicationId || '');
+      setApplicationStatus(createResult.application?.status || createResult.status || '');
       toast.success('Application created!');
       setStep('phone');
     } catch (err) {

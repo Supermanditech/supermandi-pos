@@ -989,8 +989,17 @@ export interface SupplierRegistrationInput {
 
 export interface SupplierApplicationResponse {
   success: boolean;
-  applicationId: string;
-  status: string;
+  // STAGING-FIX-009: Backend returns nested application object
+  application?: {
+    id: string;
+    status: string;
+    createdAt?: string;
+  };
+  // Legacy flat fields (backward compat)
+  applicationId?: string;
+  status?: string;
+  resumed?: boolean;
+  nextStep?: string;
   message?: string;
   action?: 'CREATED' | 'RESUMED';
 }

@@ -444,11 +444,28 @@ export default function RegisterPage() {
         setStep('documents');
       }
     } catch (err: unknown) {
-      const error = err as { code?: string; message?: string; status?: number };
-      if (error.code === 'GSTIN_EXISTS') {
-        setError('This GSTIN is already registered. Please login instead.');
+      const error = err as { code?: string; message?: string; status?: number; applicationId?: string; applicationStatus?: string };
+      // STAGING-FIX-009: Auto-resume existing application from 409 error body
+      if (error.code === 'APPLICATION_EXISTS' && error.applicationId) {
+        try {
+          setApplicationId(error.applicationId);
+          if (error.applicationStatus === 'OTP_VERIFIED' || error.applicationStatus === 'UPLOAD_DOCUMENTS') {
+            // Already OTP-verified, skip directly to documents
+            setStep('documents');
+          } else {
+            // Verify OTP to advance the application
+            await verifyRetailerOtp({ idToken, applicationId: error.applicationId });
+            setStep('documents');
+          }
+          return;
+        } catch {
+          // Resume failed — show fallback error
+        }
+        setError('A registration already exists for this GSTIN. Please contact support.');
       } else if (error.code === 'APPLICATION_EXISTS') {
-        setError('A registration with this GSTIN is already in progress. Please contact support.');
+        setError('A registration already exists for this GSTIN. Please contact support.');
+      } else if (error.code === 'GSTIN_EXISTS') {
+        setError('This GSTIN is already registered. Please login instead.');
       } else if (error.code === 'DUPLICATE_ENTRY') {
         setError('This GSTIN is already registered with a different account.');
       } else {

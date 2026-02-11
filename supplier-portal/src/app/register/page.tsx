@@ -329,6 +329,7 @@ function RegisterPage() {
       }
 
       // Create application
+      // STAGING-FIX-009: Backend returns { application: { id, status } }, not { applicationId }
       const result = await createSupplierApplication({
         phone: normalizedPhone,
         businessName: businessName.trim(),
@@ -342,25 +343,55 @@ function RegisterPage() {
         pincode: pincode.trim(),
       });
 
-      // REG-SUP-002: Validate applicationId before calling verify
-      if (!result.applicationId) {
+      // STAGING-FIX-009: Extract applicationId from nested or flat response
+      const appId = result.application?.id || result.applicationId;
+      const appStatus = result.application?.status || result.status;
+
+      if (!appId) {
         setError('Unable to create application. Please try again.');
         return;
       }
 
-      setApplicationId(result.applicationId);
+      setApplicationId(appId);
 
       // If application was resumed and already OTP-verified, skip to documents
-      if (result.status === 'OTP_VERIFIED') {
+      if (appStatus === 'OTP_VERIFIED') {
         setStep('documents');
         toast.success('Application resumed! Please upload documents.');
       } else {
         // Verify OTP with application ID
-        await verifySupplierOtp(idToken, result.applicationId);
+        await verifySupplierOtp(idToken, appId);
         setStep('documents');
         toast.success('Details saved! Please upload documents.');
       }
     } catch (err) {
+      // STAGING-FIX-009: Handle APPLICATION_EXISTS by auto-resuming
+      if (err instanceof ApiError && err.code === 'APPLICATION_EXISTS') {
+        // Extract applicationId from error response and resume
+        const match = err.message.match(/already exists/i);
+        // The backend error includes applicationId in the response body
+        // Try to extract it from the raw error or use lookup
+        try {
+          let normalizedPhone = phone.replace(/[\s-]/g, '');
+          if (!normalizedPhone.startsWith('+')) {
+            normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+          }
+          const lookup = await lookupSupplierRegistration(normalizedPhone);
+          if (lookup.application_id) {
+            setApplicationId(lookup.application_id);
+            // Try to verify OTP with existing application
+            await verifySupplierOtp(idToken, lookup.application_id);
+            setStep('documents');
+            toast.success('Existing application found. Please upload documents.');
+            return;
+          }
+        } catch {
+          // Lookup or verify failed
+        }
+        setError('An application already exists for this GSTIN. Please use a different GSTIN or contact support.');
+        return;
+      }
+
       // REG-SUP-002 & REG-COPY-001: Map error codes to user-friendly messages
       if (err instanceof ApiError) {
         // Don't show "Registration required before login" during registration flow
