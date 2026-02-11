@@ -1018,20 +1018,33 @@ function RegisterPage() {
             </label>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary w-full py-4 text-base font-semibold"
-            disabled={isLoading || !agreement}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                Saving Details...
-              </span>
-            ) : (
-              'Continue to Document Upload'
-            )}
-          </button>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              className="btn w-full py-4 text-base font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg"
+              onClick={() => {
+                setStep('otp');
+                setError('');
+              }}
+              disabled={isLoading}
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary w-full py-4 text-base font-semibold"
+              disabled={isLoading || !agreement}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                  Saving Details...
+                </span>
+              ) : (
+                'Continue to Document Upload'
+              )}
+            </button>
+          </div>
         </form>
       )}
 
@@ -1192,20 +1205,33 @@ function RegisterPage() {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary w-full py-4 text-base font-semibold"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
-                Submitting Application...
-              </span>
-            ) : (
-              'Submit Application'
-            )}
-          </button>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              className="btn w-full py-4 text-base font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg"
+              onClick={() => {
+                setStep('details');
+                setError('');
+              }}
+              disabled={isLoading}
+            >
+              Back
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary w-full py-4 text-base font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                  Submitting Application...
+                </span>
+              ) : (
+                'Submit Application'
+              )}
+            </button>
+          </div>
         </form>
       )}
 

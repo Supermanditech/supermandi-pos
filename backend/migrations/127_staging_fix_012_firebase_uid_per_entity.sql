@@ -6,6 +6,6 @@
 DROP INDEX IF EXISTS auth.ux_applications_firebase_uid;
 
 -- Create a new partial unique constraint scoped to entity_type
-CREATE UNIQUE INDEX ux_applications_firebase_uid_entity
+CREATE UNIQUE INDEX IF NOT EXISTS ux_applications_firebase_uid_entity
   ON auth.applications (firebase_uid, entity_type)
-  WHERE firebase_uid IS NOT NULL AND deleted_at IS NULL;
+  WHERE firebase_uid IS NOT NULL;

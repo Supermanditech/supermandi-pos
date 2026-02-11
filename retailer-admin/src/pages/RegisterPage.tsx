@@ -816,18 +816,28 @@ export default function RegisterPage() {
                 {fieldErrors.agreement && <div style={styles.fieldError}>{fieldErrors.agreement}</div>}
               </div>
 
-              <button
-                type="submit"
-                style={{ ...styles.btnPrimary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600, ...(isLoading || !agreement ? styles.btnPrimaryDisabled : {}) }}
-                disabled={isLoading || !agreement}
-              >
-                {isLoading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    Saving Details...
-                  </span>
-                ) : 'Continue to Document Upload'}
-              </button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  type="button"
+                  style={{ ...styles.btnSecondary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600 }}
+                  onClick={() => { setStep('otp'); setError(''); setFieldErrors({}); }}
+                  disabled={isLoading}
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  style={{ ...styles.btnPrimary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600, ...(isLoading || !agreement ? styles.btnPrimaryDisabled : {}) }}
+                  disabled={isLoading || !agreement}
+                >
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      Saving Details...
+                    </span>
+                  ) : 'Continue to Document Upload'}
+                </button>
+              </div>
             </form>
           )}
 
@@ -921,22 +931,32 @@ export default function RegisterPage() {
                 );
               })}
 
-              <button
-                type="button"
-                onClick={handleSubmitKyc}
-                style={{
-                  ...styles.btnPrimary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600,
-                  ...(!allRequiredDocsUploaded || isLoading ? styles.btnPrimaryDisabled : {}),
-                }}
-                disabled={!allRequiredDocsUploaded || isLoading}
-              >
-                {isLoading ? (
-                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                    <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    Submitting Application...
-                  </span>
-                ) : 'Submit Application'}
-              </button>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  type="button"
+                  style={{ ...styles.btnSecondary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600 }}
+                  onClick={() => { setStep('details'); setError(''); }}
+                  disabled={isLoading}
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitKyc}
+                  style={{
+                    ...styles.btnPrimary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600,
+                    ...(!allRequiredDocsUploaded || isLoading ? styles.btnPrimaryDisabled : {}),
+                  }}
+                  disabled={!allRequiredDocsUploaded || isLoading}
+                >
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                      Submitting Application...
+                    </span>
+                  ) : 'Submit Application'}
+                </button>
+              </div>
             </div>
           )}
 
