@@ -649,7 +649,7 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
           const phoneFromToken = normalizePhoneNumber(verifyResult.payload.phone_number);
           if (phoneFromToken === phoneNormalized) {
             await pool.query(
-              `UPDATE auth.applications SET firebase_uid = $1, phone_verified = true, updated_at = NOW() WHERE id = $2`,
+              `UPDATE auth.applications SET firebase_uid = $1, updated_at = NOW() WHERE id = $2`,
               [verifyResult.payload.uid, application.id]
             );
             phoneVerified = true;
