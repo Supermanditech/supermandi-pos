@@ -6,6 +6,9 @@
 # =============================================================================
 FROM node:20-alpine AS builder
 
+# Next.js SWC requires glibc compat on Alpine
+RUN apk add --no-cache libc6-compat
+
 WORKDIR /app
 
 # Copy package files

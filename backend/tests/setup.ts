@@ -76,35 +76,69 @@ export async function seedTestDatabase(): Promise<void> {
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.storeId]);
 
-    // 2. Create and enroll device (pos_devices — column is "label" not "device_label")
+    // 2. Create staff user (auth.users — actor_type='store' requires actor_id per constraint)
+    const pinHash = await hashPin(TEST_CREDENTIALS.staffPin);
+    await safeSeed('user', `
+      INSERT INTO auth.users (id, phone, password_hash, actor_type, actor_id, name, status)
+      VALUES ($1, $2, $3, 'store', $4, 'Test Staff', 'active')
+      ON CONFLICT (id) DO NOTHING
+    `, [TEST_IDS.staffUserId, TEST_CREDENTIALS.staffPhone, pinHash, TEST_IDS.storeId]);
+
+    // 3. Assign STORE_STAFF role to user (auth.user_roles)
+    await safeSeed('user_role', `
+      INSERT INTO auth.user_roles (user_id, role_id, scope_type, scope_id)
+      SELECT $1, r.id, 'store', $2
+      FROM auth.roles r WHERE r.name = 'STORE_STAFF'
+      ON CONFLICT DO NOTHING
+    `, [TEST_IDS.staffUserId, TEST_IDS.storeId]);
+
+    // 4. Create and enroll device (pos_devices — column is "label" not "device_label")
     await safeSeed('device', `
       INSERT INTO pos_devices (id, store_id, device_token, label, active, created_at)
       VALUES ($1, $2, $3, 'Test POS Device', true, NOW())
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.deviceId, TEST_IDS.storeId, TEST_CREDENTIALS.deviceFingerprint]);
 
-    // 3. Create supplier (supplier.suppliers — lowercase status is valid per migration 003)
+    // 5. Create supplier (supplier.suppliers — gstin NOT NULL, verification_status per migration 032)
     await safeSeed('supplier', `
-      INSERT INTO supplier.suppliers (id, business_name, primary_email, primary_phone, status)
-      VALUES ($1, 'Test Supplier', 'supplier@test.com', '+919999900002', 'active')
+      INSERT INTO supplier.suppliers (id, gstin, business_name, primary_email, primary_phone, status, verification_status)
+      VALUES ($1, '29AABCT1332L1ZM', 'Test Supplier', 'supplier@test.com', '+919999900002', 'active', 'ACTIVE')
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.supplierId]);
 
-    // 4. Create category (catalog.categories may not exist — safeSeed handles gracefully)
+    // 6. Create category (catalog.fmcg_taxonomy — not catalog.categories which doesn't exist)
     await safeSeed('category', `
-      INSERT INTO catalog.categories (id, name, slug, sort_order, status)
-      VALUES ($1, 'Test Category', 'test-category', 1, 'active')
+      INSERT INTO catalog.fmcg_taxonomy (id, label_en, icon_key, sort_order, is_active)
+      VALUES ($1, 'Test Category', 'package-variant', 1, true)
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.categoryId]);
 
-    // 5. Create store products (public.store_products schema per migration 104)
-    await safeSeed('products', `
+    // 7. Create global products (required FK for store_products.global_product_id)
+    await safeSeed('global_products', `
+      INSERT INTO global_products (id, global_name, category)
+      VALUES
+        ($1, 'Test Product 1', 'Test Category'),
+        ($2, 'Test Product 2', 'Test Category')
+      ON CONFLICT (id) DO NOTHING
+    `, [TEST_IDS.productId1, TEST_IDS.productId2]);
+
+    // 8. Create store products (public.store_products schema per migration 104)
+    await safeSeed('store_products', `
       INSERT INTO store_products (id, store_id, global_product_id, store_display_name, unit, sell_price_minor)
       VALUES
         ($1, $2, $1, 'Test Product 1', 'pcs', 10000),
         ($3, $2, $3, 'Test Product 2', 'kg', 5000)
       ON CONFLICT (id) DO NOTHING
     `, [TEST_IDS.productId1, TEST_IDS.storeId, TEST_IDS.productId2]);
+
+    // 9. Create supplier products (catalog.supplier_products — for supplier catalog tests)
+    await safeSeed('supplier_products', `
+      INSERT INTO catalog.supplier_products (id, supplier_id, name, purchase_price, moq, supplier_sku, unit, barcode)
+      VALUES
+        ($1, $2, 'Test Product 1', 8000, 10, 'SKU-001', 'pcs', '8901234567890'),
+        ($3, $2, 'Test Product 2', 4000, 5, 'SKU-002', 'kg', '8901234567891')
+      ON CONFLICT (id) DO NOTHING
+    `, [TEST_IDS.supplierProductId1, TEST_IDS.supplierId, TEST_IDS.supplierProductId2]);
 
     await client.query('COMMIT');
     console.log('✓ Test database seeded (best-effort)');
@@ -121,12 +155,17 @@ export async function seedTestDatabase(): Promise<void> {
  * Clean test data from database.
  */
 async function cleanTestData(client: any): Promise<void> {
-  // Delete in reverse dependency order - using actual schema tables
+  // Delete in reverse dependency order — deepest FK dependents first
   const tables = [
     'inventory.inventory_ledger',
     'store_products',
-    'catalog.categories',
+    'global_products',
+    'catalog.supplier_products',
+    'catalog.fmcg_taxonomy',
+    'auth.user_roles',
+    'auth.refresh_tokens',
     'pos_devices',
+    'auth.users',
     'supplier.suppliers',
     'platform.stores'
   ];
@@ -147,7 +186,8 @@ async function cleanTestData(client: any): Promise<void> {
  * Hash PIN for test user.
  */
 async function hashPin(pin: string): Promise<string> {
-  const bcrypt = await import('bcryptjs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const bcrypt = require('bcryptjs');
   return bcrypt.hash(pin, 10);
 }
 

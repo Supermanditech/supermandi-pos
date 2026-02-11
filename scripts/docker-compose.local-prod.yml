@@ -43,8 +43,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   api-gateway:
-    image: supermandi/api-gateway:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/api-gateway/Dockerfile
+    image: supermandi/api-gateway:local
     restart: unless-stopped
     ports: ["8080:3000"]
     environment:
@@ -136,8 +140,12 @@ services:
           cpus: '1.0'
           memory: 512M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   auth-service:
-    image: supermandi/auth-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/auth-service/Dockerfile
+    image: supermandi/auth-service:local
     restart: unless-stopped
     environment:
       PORT: "3001"
@@ -156,8 +164,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   catalog-service:
-    image: supermandi/catalog-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/catalog-service/Dockerfile
+    image: supermandi/catalog-service:local
     restart: unless-stopped
     environment:
       PORT: "3004"
@@ -180,8 +192,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   inventory-service:
-    image: supermandi/inventory-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/inventory-service/Dockerfile
+    image: supermandi/inventory-service:local
     restart: unless-stopped
     environment:
       PORT: "3005"
@@ -200,8 +216,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   order-service:
-    image: supermandi/order-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/order-service/Dockerfile
+    image: supermandi/order-service:local
     restart: unless-stopped
     environment:
       PORT: "3006"
@@ -221,8 +241,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   payment-service:
-    image: supermandi/payment-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/payment-service/Dockerfile
+    image: supermandi/payment-service:local
     restart: unless-stopped
     environment:
       PORT: "3011"
@@ -240,8 +264,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   platform-service:
-    image: supermandi/platform-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/platform-service/Dockerfile
+    image: supermandi/platform-service:local
     restart: unless-stopped
     environment:
       PORT: "3002"
@@ -260,8 +288,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   reorder-service:
-    image: supermandi/reorder-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/reorder-service/Dockerfile
+    image: supermandi/reorder-service:local
     restart: unless-stopped
     environment:
       PORT: "3007"
@@ -284,8 +316,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   supplier-service:
-    image: supermandi/supplier-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/supplier-service/Dockerfile
+    image: supermandi/supplier-service:local
     restart: unless-stopped
     environment:
       PORT: "3003"
@@ -304,8 +340,12 @@ services:
           cpus: '0.5'
           memory: 256M
 
+  # LOCAL-PROD-BUILD: Build from source (was: stale image :9bb03f7)
   voice-service:
-    image: supermandi/voice-service:9bb03f7
+    build:
+      context: ../backend
+      dockerfile: services/voice-service/Dockerfile
+    image: supermandi/voice-service:local
     restart: unless-stopped
     environment:
       PORT: "3008"
