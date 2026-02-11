@@ -273,6 +273,7 @@ export async function uploadDocument(
 
   const response = await fetch(`${DOCUMENTS_BASE}/upload`, {
     method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
     body: formData,
   });
   const json = await response.json();

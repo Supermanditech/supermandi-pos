@@ -1108,6 +1108,7 @@ export async function uploadSupplierDocument(
   // AUTH-STORAGE-001: credentials: 'include' for cookie auth
   const response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
     method: 'POST',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' },
     body: formData,
     credentials: 'include',
   });

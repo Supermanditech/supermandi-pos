@@ -86,9 +86,13 @@ function createProxyOptions(service: ServiceConfig): Options {
       // P1-001: Handle body forwarding for POST/PUT/PATCH requests ONLY.
       // STAGING-FIX-003: express.json() sets req.body={} even for GET requests.
       // Forwarding a body on GET causes Cloud Run GFE to reject with 400.
+      // STAGING-FIX-010: Skip body rewriting for multipart/form-data (file uploads).
+      // express.json() doesn't consume multipart streams, so http-proxy can pipe them directly.
+      const contentType = req.headers['content-type'] || '';
+      const isMultipart = contentType.includes('multipart/form-data');
       const hasBody = req.body !== undefined && req.body !== null;
       const isBodyMethod = ['POST', 'PUT', 'PATCH'].includes(req.method);
-      if (hasBody && isBodyMethod) {
+      if (hasBody && isBodyMethod && !isMultipart) {
         const bodyData = JSON.stringify(req.body);
         // Update content-length header to match the actual body size
         proxyReq.setHeader('Content-Type', 'application/json');

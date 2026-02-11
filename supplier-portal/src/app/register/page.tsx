@@ -454,6 +454,7 @@ function RegisterPage() {
 
       const response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
         method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         body: formData,
       });
 
