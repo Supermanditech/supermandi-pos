@@ -302,11 +302,16 @@ export default function RegisterPage() {
 
       setApplicationId(result.applicationId);
 
-      // Verify OTP with application ID
-      await verifySupplierOtp(idToken, result.applicationId);
-
-      setStep('documents');
-      toast.success('Details saved! Please upload documents.');
+      // If application was resumed and already OTP-verified, skip to documents
+      if (result.status === 'OTP_VERIFIED') {
+        setStep('documents');
+        toast.success('Application resumed! Please upload documents.');
+      } else {
+        // Verify OTP with application ID
+        await verifySupplierOtp(idToken, result.applicationId);
+        setStep('documents');
+        toast.success('Details saved! Please upload documents.');
+      }
     } catch (err) {
       // REG-SUP-002 & REG-COPY-001: Map error codes to user-friendly messages
       if (err instanceof ApiError) {

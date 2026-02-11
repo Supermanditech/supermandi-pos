@@ -36,7 +36,7 @@ try {
 // Rate limiter for registration endpoints
 const registrationRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
+  max: 30, // 30 attempts per window (multi-step flow needs headroom for retries)
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -515,60 +515,113 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       }
     }
 
-    // Create application with individual payment columns
-    const result = await pool.query(
-      `INSERT INTO auth.applications (
-        entity_type,
-        phone,
-        email,
-        business_name,
-        owner_name,
-        gstin,
-        address_line1,
-        address_line2,
-        city,
-        state,
-        pincode,
-        bank_account_number,
-        bank_ifsc,
-        bank_name,
-        upi_vpa,
-        status
-      ) VALUES (
-        'supplier',
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12, $13, $14,
-        'DRAFT'
-      )
-      RETURNING id, status, created_at`,
-      [
-        phoneNormalized,
-        email.trim().toLowerCase(),
-        businessName.trim(),
-        ownerName.trim(),
-        gstinNormalized,
-        addressLine1?.trim() || null,
-        addressLine2?.trim() || null,
-        city?.trim() || null,
-        state?.trim() || null,
-        pincode?.trim() || null,
-        bankAccountNumber || null,
-        bankIfsc?.toUpperCase() || null,
-        bankAccountName || null,
-        upiVpa?.toLowerCase() || null,
-      ]
+    // Check if a DRAFT application already exists for this phone (allow re-registration)
+    const existingApp = await pool.query(
+      `SELECT id, status, gstin FROM auth.applications
+       WHERE phone = $1 AND entity_type = 'supplier' AND status IN ('DRAFT', 'OTP_VERIFIED')
+       ORDER BY created_at DESC LIMIT 1`,
+      [phoneNormalized]
     );
 
-    const application = result.rows[0];
+    let application;
+    let isResumed = false;
 
-    // Log status change
-    await pool.query(
-      `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
-       VALUES ($1, NULL, 'DRAFT', 'Supplier application created')`,
-      [application.id]
-    );
+    if (existingApp.rows.length > 0) {
+      // Update existing DRAFT/OTP_VERIFIED application with new details
+      const existing = existingApp.rows[0];
+      const updateResult = await pool.query(
+        `UPDATE auth.applications SET
+          business_name = $2,
+          owner_name = $3,
+          gstin = $4,
+          email = $5,
+          address_line1 = $6,
+          address_line2 = $7,
+          city = $8,
+          state = $9,
+          pincode = $10,
+          bank_account_number = $11,
+          bank_ifsc = $12,
+          bank_name = $13,
+          upi_vpa = $14,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, status, created_at`,
+        [
+          existing.id,
+          businessName.trim(),
+          ownerName.trim(),
+          gstinNormalized,
+          email.trim().toLowerCase(),
+          addressLine1?.trim() || null,
+          addressLine2?.trim() || null,
+          city?.trim() || null,
+          state?.trim() || null,
+          pincode?.trim() || null,
+          bankAccountNumber || null,
+          bankIfsc?.toUpperCase() || null,
+          bankAccountName || null,
+          upiVpa?.toLowerCase() || null,
+        ]
+      );
+      application = updateResult.rows[0];
+      isResumed = true;
+      console.log(`[SupplierReg] REG-AUTH-202: Application updated ${application.id} (phone re-registration) for GSTIN ${gstinNormalized}`);
+    } else {
+      // Create new application
+      const result = await pool.query(
+        `INSERT INTO auth.applications (
+          entity_type,
+          phone,
+          email,
+          business_name,
+          owner_name,
+          gstin,
+          address_line1,
+          address_line2,
+          city,
+          state,
+          pincode,
+          bank_account_number,
+          bank_ifsc,
+          bank_name,
+          upi_vpa,
+          status
+        ) VALUES (
+          'supplier',
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14,
+          'DRAFT'
+        )
+        RETURNING id, status, created_at`,
+        [
+          phoneNormalized,
+          email.trim().toLowerCase(),
+          businessName.trim(),
+          ownerName.trim(),
+          gstinNormalized,
+          addressLine1?.trim() || null,
+          addressLine2?.trim() || null,
+          city?.trim() || null,
+          state?.trim() || null,
+          pincode?.trim() || null,
+          bankAccountNumber || null,
+          bankIfsc?.toUpperCase() || null,
+          bankAccountName || null,
+          upiVpa?.toLowerCase() || null,
+        ]
+      );
+      application = result.rows[0];
 
-    console.log(`[SupplierReg] REG-AUTH-202: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+      // Log status change
+      await pool.query(
+        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
+         VALUES ($1, NULL, 'DRAFT', 'Supplier application created')`,
+        [application.id]
+      );
+
+      console.log(`[SupplierReg] REG-AUTH-202: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+    }
 
     res.status(201).json({
       success: true,
@@ -577,16 +630,19 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
         status: application.status,
         createdAt: application.created_at,
       },
-      nextStep: 'VERIFY_PHONE',
-      message: 'Application created. Please verify your phone number with OTP.',
+      resumed: isResumed,
+      nextStep: application.status === 'OTP_VERIFIED' ? 'UPLOAD_DOCUMENTS' : 'VERIFY_PHONE',
+      message: isResumed
+        ? 'Application updated with new details. Please continue registration.'
+        : 'Application created. Please verify your phone number with OTP.',
     });
   } catch (error) {
     if ((error as { code?: string }).code === '23505') {
-      // Unique constraint violation
+      // Unique constraint violation (e.g. GSTIN used by another phone)
       res.status(409).json({
         error: {
           code: "DUPLICATE_ENTRY",
-          message: "This phone number or GSTIN is already registered."
+          message: "This GSTIN is already registered with a different account."
         }
       });
       return;

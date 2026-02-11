@@ -384,10 +384,14 @@ export default function RegisterPage() {
       const appId = appResult.application.id;
       setApplicationId(appId);
 
-      // 2. Verify OTP on backend (links firebase_uid to application)
-      await verifyRetailerOtp({ idToken, applicationId: appId });
-
-      setStep('documents');
+      // If application was resumed and already OTP-verified, skip to documents
+      if (appResult.application.status === 'OTP_VERIFIED') {
+        setStep('documents');
+      } else {
+        // 2. Verify OTP on backend (links firebase_uid to application)
+        await verifyRetailerOtp({ idToken, applicationId: appId });
+        setStep('documents');
+      }
     } catch (err: unknown) {
       const error = err as { code?: string; message?: string; status?: number };
       if (error.code === 'GSTIN_EXISTS') {
@@ -395,7 +399,7 @@ export default function RegisterPage() {
       } else if (error.code === 'APPLICATION_EXISTS') {
         setError('A registration with this GSTIN is already in progress. Please contact support.');
       } else if (error.code === 'DUPLICATE_ENTRY') {
-        setError('This phone number or GSTIN is already registered.');
+        setError('This GSTIN is already registered with a different account.');
       } else {
         setError(error.message || 'Registration failed. Please try again.');
       }

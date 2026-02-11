@@ -10,10 +10,27 @@
 // 6. ONLY THEN can user access full features
 
 import { Router, Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
-import { authRateLimiter } from "../../../middleware/posRateLimiter";
 
 const router = Router();
+
+// Rate limiter for registration endpoints (matches supplier registration)
+const registrationRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 attempts per window (multi-step flow needs headroom for retries)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMITED',
+      message: 'Too many registration attempts. Please try again in 15 minutes.'
+    }
+  },
+  keyGenerator: (req) => {
+    return req.ip || 'unknown';
+  }
+});
 
 // Firebase verification
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{
@@ -101,7 +118,7 @@ function validateGSTIN(gstin: string): boolean {
  * - action: LOGIN_ALLOWED | REGISTER_REQUIRED | PENDING_APPROVAL | ...
  * - message: Human-readable guidance
  */
-router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.get("/lookup", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { phone } = req.query as { phone?: string };
 
@@ -223,7 +240,7 @@ router.get("/lookup", authRateLimiter, async (req: Request, res: Response, next:
  * - action: 'CREATE' | 'RESUME' | 'LOGIN'
  * - message: Human-readable guidance
  */
-router.post("/check-gstin", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/check-gstin", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { gstin } = req.body as { gstin?: string };
 
@@ -307,7 +324,7 @@ router.post("/check-gstin", authRateLimiter, async (req: Request, res: Response,
  * This creates an application in DRAFT status.
  * Phone must be verified via OTP before proceeding.
  */
-router.post("/create", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/create", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
       phone,
@@ -403,53 +420,100 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
       }
     }
 
-    // Create application
-    const result = await pool.query(
-      `INSERT INTO auth.applications (
-        entity_type,
-        phone,
-        email,
-        business_name,
-        owner_name,
-        gstin,
-        business_type,
-        address_line1,
-        address_line2,
-        city,
-        state,
-        pincode,
-        status
-      ) VALUES (
-        'retailer',
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
-        'DRAFT'
-      )
-      RETURNING id, status, created_at`,
-      [
-        phoneNormalized,
-        email?.trim().toLowerCase() || null,
-        businessName.trim(),
-        ownerName.trim(),
-        gstinNormalized,
-        businessType?.trim() || null,
-        addressLine1?.trim() || null,
-        addressLine2?.trim() || null,
-        city?.trim() || null,
-        state?.trim() || null,
-        pincode?.trim() || null,
-      ]
+    // Check if a DRAFT application already exists for this phone (allow re-registration)
+    const existingApp = await pool.query(
+      `SELECT id, status, gstin FROM auth.applications
+       WHERE phone = $1 AND entity_type = 'retailer' AND status IN ('DRAFT', 'OTP_VERIFIED')
+       ORDER BY created_at DESC LIMIT 1`,
+      [phoneNormalized]
     );
 
-    const application = result.rows[0];
+    let application;
+    let isResumed = false;
 
-    // Log status change
-    await pool.query(
-      `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
-       VALUES ($1, NULL, 'DRAFT', 'Application created')`,
-      [application.id]
-    );
+    if (existingApp.rows.length > 0) {
+      // Update existing DRAFT/OTP_VERIFIED application with new details
+      const existing = existingApp.rows[0];
+      const updateResult = await pool.query(
+        `UPDATE auth.applications SET
+          business_name = $2,
+          owner_name = $3,
+          gstin = $4,
+          business_type = $5,
+          email = $6,
+          address_line1 = $7,
+          address_line2 = $8,
+          city = $9,
+          state = $10,
+          pincode = $11,
+          updated_at = NOW()
+        WHERE id = $1
+        RETURNING id, status, created_at`,
+        [
+          existing.id,
+          businessName.trim(),
+          ownerName.trim(),
+          gstinNormalized,
+          businessType?.trim() || null,
+          email?.trim().toLowerCase() || null,
+          addressLine1?.trim() || null,
+          addressLine2?.trim() || null,
+          city?.trim() || null,
+          state?.trim() || null,
+          pincode?.trim() || null,
+        ]
+      );
+      application = updateResult.rows[0];
+      isResumed = true;
+      console.log(`[RetailerReg] REG-AUTH-201: Application updated ${application.id} (phone re-registration) for GSTIN ${gstinNormalized}`);
+    } else {
+      // Create new application
+      const result = await pool.query(
+        `INSERT INTO auth.applications (
+          entity_type,
+          phone,
+          email,
+          business_name,
+          owner_name,
+          gstin,
+          business_type,
+          address_line1,
+          address_line2,
+          city,
+          state,
+          pincode,
+          status
+        ) VALUES (
+          'retailer',
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+          'DRAFT'
+        )
+        RETURNING id, status, created_at`,
+        [
+          phoneNormalized,
+          email?.trim().toLowerCase() || null,
+          businessName.trim(),
+          ownerName.trim(),
+          gstinNormalized,
+          businessType?.trim() || null,
+          addressLine1?.trim() || null,
+          addressLine2?.trim() || null,
+          city?.trim() || null,
+          state?.trim() || null,
+          pincode?.trim() || null,
+        ]
+      );
+      application = result.rows[0];
 
-    console.log(`[RetailerReg] REG-AUTH-201: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+      // Log status change
+      await pool.query(
+        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
+         VALUES ($1, NULL, 'DRAFT', 'Application created')`,
+        [application.id]
+      );
+
+      console.log(`[RetailerReg] REG-AUTH-201: Application created ${application.id} for GSTIN ${gstinNormalized}`);
+    }
 
     res.status(201).json({
       success: true,
@@ -458,16 +522,19 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
         status: application.status,
         createdAt: application.created_at,
       },
-      nextStep: 'VERIFY_PHONE',
-      message: 'Application created. Please verify your phone number with OTP.',
+      resumed: isResumed,
+      nextStep: application.status === 'OTP_VERIFIED' ? 'UPLOAD_DOCUMENTS' : 'VERIFY_PHONE',
+      message: isResumed
+        ? 'Application updated with new details. Please continue registration.'
+        : 'Application created. Please verify your phone number with OTP.',
     });
   } catch (error) {
     if ((error as { code?: string }).code === '23505') {
-      // Unique constraint violation
+      // Unique constraint violation (e.g. GSTIN used by another phone)
       res.status(409).json({
         error: {
           code: "DUPLICATE_ENTRY",
-          message: "This phone number or GSTIN is already registered."
+          message: "This GSTIN is already registered with a different account."
         }
       });
       return;
@@ -483,7 +550,7 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
  * CRITICAL: Requires application_id - cannot verify without existing application
  * This is the REG-AUTH-203 guardrail enforcement
  */
-router.post("/verify-otp", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/verify-otp", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { idToken, applicationId } = req.body as VerifyOtpRequest;
 
@@ -616,7 +683,7 @@ router.post("/verify-otp", authRateLimiter, async (req: Request, res: Response, 
  *
  * Changes status from DRAFT → KYC_SUBMITTED
  */
-router.post("/submit-kyc", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { applicationId } = req.body as { applicationId?: string };
 
