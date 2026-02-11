@@ -135,6 +135,10 @@ export async function fetchRegistrationSummary(): Promise<RegistrationSummary> {
   );
 
   if (!res.ok) {
+    // STAGING-FIX-006: Consistent 401 handling (matches fetchRegistrationEvents + sendEnrollmentCodeToStore)
+    if (res.status === 401) {
+      throw new Error("Session expired. Please log in again.");
+    }
     throw new Error(`Failed to fetch registration summary (${res.status})`);
   }
 

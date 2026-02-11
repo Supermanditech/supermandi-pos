@@ -612,7 +612,8 @@ export default function App() {
   }, [isAuthenticated]);
 
   // AUTH-EXPIRY-003: Periodic token refresh (every 10 minutes)
-  // POST-BATCH-018-FIX-002: Retry once before logging out (transient failure resilience)
+  // STAGING-FIX-006: Increased threshold from 2→5 consecutive failures before logout
+  // Prevents false logouts from transient network issues or Cloud Run cold starts
   useEffect(() => {
     if (!isAuthenticated) return;
     let consecutiveFailures = 0;
@@ -622,8 +623,8 @@ export default function App() {
         consecutiveFailures = 0;
       } else {
         consecutiveFailures++;
-        if (consecutiveFailures >= 2) {
-          console.warn('[FIX-002] Token refresh failed twice consecutively, logging out');
+        if (consecutiveFailures >= 5) {
+          console.warn('[STAGING-FIX-006] Token refresh failed 5 times consecutively, logging out');
           await logout();
           setIsAuthenticated(false);
         }

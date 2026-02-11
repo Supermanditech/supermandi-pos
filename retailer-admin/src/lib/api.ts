@@ -307,3 +307,24 @@ export async function getApplicationStatus(
   }
   return json;
 }
+
+// STAGING-FIX-006: Lookup registration by phone for resume flow
+export interface LookupResponse {
+  exists: boolean;
+  application_id?: string;
+  status?: string;
+  action?: string;
+  message?: string;
+}
+
+export async function lookupRetailerRegistration(phone: string): Promise<LookupResponse> {
+  const response = await fetch(
+    `${REGISTRATION_BASE}/lookup?phone=${encodeURIComponent(phone)}`,
+    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+  );
+  const json = await response.json();
+  if (!response.ok) {
+    throw { status: response.status, ...(json.error || {}) };
+  }
+  return json;
+}

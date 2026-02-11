@@ -88,7 +88,8 @@ export async function refreshSession(): Promise<boolean> {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/v1/admin/auth/refresh`, {
+    // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch to prevent hanging
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/refresh`, {
       method: "POST",
       credentials: 'include',
       headers: {
@@ -136,10 +137,11 @@ export async function logout(): Promise<void> {
   // Try to revoke session on server
   if (sessionToken) {
     try {
-      // ISSUE-MICRO-025: credentials: 'include' to clear HttpOnly cookie
-      await fetch(`${API_BASE}/api/v1/admin/auth/logout`, {
+      // STAGING-FIX-006: Use fetchWithTimeout (10s) — logout should not hang
+      await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/logout`, {
         method: "POST",
         credentials: 'include',
+        timeoutMs: 10000,
         headers: {
           Authorization: `Bearer ${sessionToken}`,
         },
@@ -288,7 +290,8 @@ export function handle401Response(): void {
  */
 export async function sendAdminOtp(email: string): Promise<{ success: boolean; error?: string; expiresIn?: number }> {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/admin/auth/send-email-otp`, {
+    // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/send-email-otp`, {
       method: "POST",
       credentials: 'include',
       headers: {
@@ -330,8 +333,8 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
   admin?: { email: string; role: string };
 }> {
   try {
-    // ISSUE-MICRO-025: credentials: 'include' to accept Set-Cookie from server
-    const res = await fetch(`${API_BASE}/api/v1/admin/auth/verify-email-otp`, {
+    // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch
+    const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/verify-email-otp`, {
       method: "POST",
       credentials: 'include',
       headers: {

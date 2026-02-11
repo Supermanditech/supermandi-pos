@@ -18,6 +18,7 @@ import {
   verifyRetailerOtp,
   uploadDocument,
   submitRetailerKyc,
+  lookupRetailerRegistration,
 } from '../lib/api';
 import {
   setupRecaptcha,
@@ -251,6 +252,40 @@ export default function RegisterPage() {
     }
     return () => { cleanup(); recaptchaInitialized.current = false; };
   }, [step]);
+
+  // STAGING-FIX-006: Resume registration flow — when arriving from login with resume: true,
+  // look up existing application and skip to the appropriate step
+  const resumeChecked = useRef(false);
+  useEffect(() => {
+    if (resumeChecked.current) return;
+    if (!locationState?.resume || !locationState?.phone) return;
+    resumeChecked.current = true;
+
+    (async () => {
+      try {
+        setIsLoading(true);
+        let normalizedPhone = locationState.phone!.replace(/[\s-]/g, '');
+        if (!normalizedPhone.startsWith('+')) {
+          normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+        }
+        const lookup = await lookupRetailerRegistration(normalizedPhone);
+        if (lookup.application_id) {
+          setApplicationId(lookup.application_id);
+          if (lookup.action === 'UPLOAD_DOCUMENTS') {
+            setStep('documents');
+          } else if (lookup.action === 'FIX_REQUIRED') {
+            setStep('documents');
+            setError('Some documents need to be re-uploaded.');
+          }
+          // For VERIFY_PHONE or other states, stay on phone step (user needs OTP)
+        }
+      } catch {
+        // Lookup failed — proceed with normal registration
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [locationState]);
 
   // Timers
   useEffect(() => {

@@ -8,7 +8,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { ApiError, createSupplierApplication, verifySupplierOtp, submitSupplierKyc } from '@/lib/api';
+import { ApiError, createSupplierApplication, verifySupplierOtp, submitSupplierKyc, lookupSupplierRegistration } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 
 // Indian states for dropdown
@@ -105,6 +105,45 @@ function RegisterPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // STAGING-FIX-006: Resume registration flow — when arriving from login with resume=true,
+  // look up existing application and skip to the appropriate step
+  const resumeChecked = useRef(false);
+  useEffect(() => {
+    if (resumeChecked.current) return;
+    const isResume = searchParams.get('resume') === 'true';
+    const resumePhone = searchParams.get('phone');
+    if (!isResume || !resumePhone) return;
+    resumeChecked.current = true;
+
+    (async () => {
+      try {
+        setIsLoading(true);
+        let normalizedPhone = resumePhone.replace(/[\s-]/g, '');
+        if (!normalizedPhone.startsWith('+')) {
+          normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
+        }
+        const lookup = await lookupSupplierRegistration(normalizedPhone);
+        if (lookup.application_id) {
+          setApplicationId(lookup.application_id);
+          if (lookup.nextStep === 'UPLOAD_DOCUMENTS') {
+            setStep('documents');
+            toast.success('Welcome back! Please complete your document uploads.');
+          } else if (lookup.nextStep === 'FIX_REQUIRED') {
+            setStep('documents');
+            toast.error('Some documents need to be re-uploaded.');
+          } else {
+            // VERIFY_PHONE or other — need to go through phone verification first
+            toast('Please verify your phone to resume registration.');
+          }
+        }
+      } catch {
+        // Lookup failed — proceed with normal registration
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [searchParams]);
 
   // Setup reCAPTCHA on mount
   useEffect(() => {

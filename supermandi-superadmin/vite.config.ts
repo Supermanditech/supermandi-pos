@@ -3,13 +3,16 @@ import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
 
 // GO-LIVE-SOP: Get build info for cache-proof deployment verification
+// STAGING-FIX-006: Check VITE_GIT_SHA env var first (Docker builds lack .git directory)
 function getBuildInfo() {
   try {
-    const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
+    const sha = process.env.VITE_GIT_SHA
+      || process.env.VITE_BUILD_SHA
+      || execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
     const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }).replace(',', '');
     return { sha, time };
   } catch {
-    return { sha: 'unknown', time: new Date().toISOString() };
+    return { sha: process.env.VITE_GIT_SHA || 'unknown', time: new Date().toISOString() };
   }
 }
 
