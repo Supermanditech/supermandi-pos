@@ -88,6 +88,8 @@ const PUBLIC_PATHS = [
   '/api/v1/supplier/auth/firebase-login',
   '/api/v1/supplier/auth/refresh',
   '/api/v1/supplier/registration/',
+  // Document upload (public for registration - application entity validated server-side)
+  '/api/v1/documents/upload',
   // Health
   '/health',
   '/healthz',

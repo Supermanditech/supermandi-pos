@@ -2,7 +2,7 @@
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
 export type SystemSettings = {
   version: string;
@@ -32,10 +32,6 @@ async function parseError(res: Response): Promise<string> {
 }
 
 export async function fetchSettings(): Promise<SystemSettings> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
-  }
-
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/settings`, {
     cache: "no-store",
     headers: {
@@ -56,10 +52,6 @@ export async function fetchSettings(): Promise<SystemSettings> {
 }
 
 export async function fetchSystemStats(): Promise<SystemStats> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
-  }
-
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/settings/stats`, {
     cache: "no-store",
     headers: {

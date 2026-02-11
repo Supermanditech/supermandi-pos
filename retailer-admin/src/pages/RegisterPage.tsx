@@ -108,7 +108,7 @@ const styles = {
     justifyContent: 'center',
     padding: '2rem 1rem',
   },
-  container: { width: '100%', maxWidth: '640px' },
+  container: { width: '100%', maxWidth: '720px' },
   card: {
     background: 'white',
     borderRadius: '8px',
@@ -120,6 +120,19 @@ const styles = {
   cardTitle: { fontSize: '1.5rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' },
   cardSubtitle: { color: '#64748b', fontSize: '0.875rem', marginBottom: '1.5rem' },
   sectionTitle: { fontSize: '1rem', fontWeight: 600, color: '#0F172A', marginBottom: '1rem', marginTop: '1.5rem' },
+  sectionCard: {
+    background: 'white', borderRadius: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+    border: '1px solid #e2e8f0', padding: '1.5rem 2rem',
+  },
+  sectionHeader: {
+    fontSize: '1.125rem', fontWeight: 600, color: '#0F172A',
+    marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0',
+  },
+  gridTwo: {
+    display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem',
+  } as React.CSSProperties,
+  gridFull: { gridColumn: '1 / -1' } as React.CSSProperties,
   formGroup: { marginBottom: '1rem' },
   formRow: { display: 'flex', gap: '1rem', marginBottom: '1rem' },
   label: { display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#0F172A', marginBottom: '0.5rem' },
@@ -474,7 +487,7 @@ export default function RegisterPage() {
             <span style={styles.logoSeparator}>|</span>
             <span style={styles.logoSubtext}>Retailer Portal</span>
           </div>
-          <Link to="/retailer/login" style={styles.textLink}>Sign In</Link>
+          {/* Removed Sign In from registration header — matching supplier (REG-SUP-001) */}
         </div>
       </header>
 
@@ -623,150 +636,162 @@ export default function RegisterPage() {
             </div>
           )}
 
-          {/* STEP 3: Business Details */}
+          {/* STEP 3: Business Details — Multi-card layout matching Supplier Portal */}
           {step === 'details' && (
-            <div style={styles.card}>
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1.5rem', fontSize: '0.875rem', color: '#166534' }}>
-                Phone verified: {phone}
+            <form onSubmit={handleSubmitDetails} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Phone verified banner */}
+              <div style={{ ...styles.alertSuccess, display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: 0 }}>
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Phone verified: <strong>{phone}</strong></span>
               </div>
 
-              {error && <div style={styles.alertError}>{error}</div>}
+              {error && <div style={{ ...styles.alertError, marginBottom: 0 }}>{error}</div>}
 
-              <form onSubmit={handleSubmitDetails}>
-                {/* Business Identity */}
-                <h3 style={styles.sectionTitle}>Business Identity</h3>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Business / Store Name *</label>
-                  <input type="text" style={styles.input} placeholder="e.g. Sharma General Store"
-                    value={businessName} onChange={(e) => setBusinessName(e.target.value)} disabled={isLoading} autoFocus />
-                  {fieldErrors.businessName && <div style={styles.fieldError}>{fieldErrors.businessName}</div>}
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Business Type *</label>
-                  <select style={styles.select} value={businessType} onChange={(e) => setBusinessType(e.target.value)} disabled={isLoading}>
-                    <option value="">Select business type</option>
-                    {BUSINESS_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                  {fieldErrors.businessType && <div style={styles.fieldError}>{fieldErrors.businessType}</div>}
-                </div>
-
-                {businessType === 'other' && (
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Specify Business Type *</label>
-                    <input type="text" style={styles.input} placeholder="e.g. Wholesale Club"
-                      value={businessTypeOther} onChange={(e) => setBusinessTypeOther(e.target.value)} disabled={isLoading} />
-                    {fieldErrors.businessTypeOther && <div style={styles.fieldError}>{fieldErrors.businessTypeOther}</div>}
+              {/* Business Identity Card */}
+              <div style={styles.sectionCard}>
+                <h3 style={styles.sectionHeader}>Business Identity</h3>
+                <div style={styles.gridTwo}>
+                  <div style={styles.gridFull}>
+                    <label style={styles.label}>Business / Store Name *</label>
+                    <input type="text" style={styles.input} placeholder="e.g. Sharma General Store"
+                      value={businessName} onChange={(e) => setBusinessName(e.target.value)} disabled={isLoading} autoFocus />
+                    {fieldErrors.businessName && <div style={styles.fieldError}>{fieldErrors.businessName}</div>}
                   </div>
-                )}
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>GSTIN *</label>
-                  <input type="text" style={styles.input} placeholder="22AAAAA0000A1Z5" maxLength={15}
-                    value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} disabled={isLoading} />
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>15-character GST Identification Number</div>
-                  {fieldErrors.gstin && <div style={styles.fieldError}>{fieldErrors.gstin}</div>}
+                  <div>
+                    <label style={styles.label}>Business Type *</label>
+                    <select style={styles.select} value={businessType} onChange={(e) => setBusinessType(e.target.value)} disabled={isLoading}>
+                      <option value="">Select business type</option>
+                      {BUSINESS_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                    {fieldErrors.businessType && <div style={styles.fieldError}>{fieldErrors.businessType}</div>}
+                  </div>
+                  {businessType === 'other' && (
+                    <div>
+                      <label style={styles.label}>Specify Business Type *</label>
+                      <input type="text" style={styles.input} placeholder="e.g. Wholesale Club"
+                        value={businessTypeOther} onChange={(e) => setBusinessTypeOther(e.target.value)} disabled={isLoading} />
+                      {fieldErrors.businessTypeOther && <div style={styles.fieldError}>{fieldErrors.businessTypeOther}</div>}
+                    </div>
+                  )}
+                  <div>
+                    <label style={styles.label}>GSTIN *</label>
+                    <input type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="22AAAAA0000A1Z5" maxLength={15}
+                      value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())} disabled={isLoading} />
+                    <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>15-character GST Identification Number</div>
+                    {fieldErrors.gstin && <div style={styles.fieldError}>{fieldErrors.gstin}</div>}
+                  </div>
                 </div>
+              </div>
 
-                {/* Contact Person */}
-                <h3 style={styles.sectionTitle}>Contact Person</h3>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Owner / Authorized Person Name *</label>
-                  <input type="text" style={styles.input} placeholder="e.g. Rajesh Sharma"
-                    value={ownerName} onChange={(e) => setOwnerName(e.target.value)} disabled={isLoading} />
-                  {fieldErrors.ownerName && <div style={styles.fieldError}>{fieldErrors.ownerName}</div>}
+              {/* Contact Person Card */}
+              <div style={styles.sectionCard}>
+                <h3 style={styles.sectionHeader}>Contact Person</h3>
+                <div style={styles.gridTwo}>
+                  <div>
+                    <label style={styles.label}>Owner / Authorized Person Name *</label>
+                    <input type="text" style={styles.input} placeholder="e.g. Rajesh Sharma"
+                      value={ownerName} onChange={(e) => setOwnerName(e.target.value)} disabled={isLoading} />
+                    {fieldErrors.ownerName && <div style={styles.fieldError}>{fieldErrors.ownerName}</div>}
+                  </div>
+                  <div>
+                    <label style={styles.label}>Email <span style={styles.optionalBadge}>(optional)</span></label>
+                    <input type="email" style={styles.input} placeholder="store@example.com"
+                      value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
+                    {fieldErrors.email && <div style={styles.fieldError}>{fieldErrors.email}</div>}
+                  </div>
+                  <div>
+                    <label style={styles.label}>Phone (Verified)</label>
+                    <input type="text" style={{ ...styles.input, background: '#f1f5f9', cursor: 'not-allowed' }}
+                      value={phone} disabled />
+                  </div>
                 </div>
+              </div>
 
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone (Verified)</label>
-                  <input type="text" style={{ ...styles.input, background: '#f8fafc', cursor: 'not-allowed' }}
-                    value={phone} disabled />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Email <span style={styles.optionalBadge}>(optional)</span></label>
-                  <input type="email" style={styles.input} placeholder="store@example.com"
-                    value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} />
-                  {fieldErrors.email && <div style={styles.fieldError}>{fieldErrors.email}</div>}
-                </div>
-
-                {/* Business Address */}
-                <h3 style={styles.sectionTitle}>Business Address</h3>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Address Line 1 *</label>
-                  <input type="text" style={styles.input} placeholder="Shop No., Building, Street"
-                    value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} disabled={isLoading} />
-                  {fieldErrors.addressLine1 && <div style={styles.fieldError}>{fieldErrors.addressLine1}</div>}
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Address Line 2 <span style={styles.optionalBadge}>(optional)</span></label>
-                  <input type="text" style={styles.input} placeholder="Area, Landmark"
-                    value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} disabled={isLoading} />
-                </div>
-
-                <div style={styles.formRow}>
-                  <div style={{ flex: 1 }}>
+              {/* Business Address Card */}
+              <div style={styles.sectionCard}>
+                <h3 style={styles.sectionHeader}>Business Address</h3>
+                <div style={styles.gridTwo}>
+                  <div style={styles.gridFull}>
+                    <label style={styles.label}>Address Line 1 *</label>
+                    <input type="text" style={styles.input} placeholder="Building name, Street"
+                      value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} disabled={isLoading} />
+                    {fieldErrors.addressLine1 && <div style={styles.fieldError}>{fieldErrors.addressLine1}</div>}
+                  </div>
+                  <div style={styles.gridFull}>
+                    <label style={styles.label}>Address Line 2 <span style={styles.optionalBadge}>(optional)</span></label>
+                    <input type="text" style={styles.input} placeholder="Area, Landmark"
+                      value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} disabled={isLoading} />
+                  </div>
+                  <div>
                     <label style={styles.label}>City *</label>
                     <input type="text" style={styles.input} placeholder="City"
                       value={city} onChange={(e) => setCity(e.target.value)} disabled={isLoading} />
                     {fieldErrors.city && <div style={styles.fieldError}>{fieldErrors.city}</div>}
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div>
+                    <label style={styles.label}>State *</label>
+                    <select style={styles.select} value={selectedState} onChange={(e) => setSelectedState(e.target.value)} disabled={isLoading}>
+                      <option value="">Select state</option>
+                      {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    {fieldErrors.state && <div style={styles.fieldError}>{fieldErrors.state}</div>}
+                  </div>
+                  <div>
                     <label style={styles.label}>Pincode *</label>
-                    <input type="text" style={styles.input} placeholder="110001" maxLength={6}
+                    <input type="text" style={{ ...styles.input, fontFamily: 'monospace' }} placeholder="400001" maxLength={6}
                       value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} disabled={isLoading} />
                     {fieldErrors.pincode && <div style={styles.fieldError}>{fieldErrors.pincode}</div>}
                   </div>
                 </div>
+              </div>
 
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>State *</label>
-                  <select style={styles.select} value={selectedState} onChange={(e) => setSelectedState(e.target.value)} disabled={isLoading}>
-                    <option value="">Select state</option>
-                    {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  {fieldErrors.state && <div style={styles.fieldError}>{fieldErrors.state}</div>}
-                </div>
+              {/* Agreement Card */}
+              <div style={styles.sectionCard}>
+                <label style={styles.checkboxLabel}>
+                  <input type="checkbox" checked={agreement} onChange={(e) => setAgreement(e.target.checked)} disabled={isLoading}
+                    style={{ marginTop: '0.25rem', width: '20px', height: '20px' }} />
+                  <span>
+                    I confirm that all the details provided are correct and accurate. I agree to the{' '}
+                    <span style={{ color: '#2563eb' }}>Terms of Service</span> and{' '}
+                    <span style={{ color: '#2563eb' }}>Privacy Policy</span>. *
+                  </span>
+                </label>
+                {fieldErrors.agreement && <div style={styles.fieldError}>{fieldErrors.agreement}</div>}
+              </div>
 
-                {/* Agreement */}
-                <div style={{ ...styles.formGroup, marginTop: '1.5rem' }}>
-                  <label style={styles.checkboxLabel}>
-                    <input type="checkbox" checked={agreement} onChange={(e) => setAgreement(e.target.checked)} disabled={isLoading}
-                      style={{ marginTop: '0.125rem' }} />
-                    <span>
-                      I confirm that all the details provided are correct and accurate. I agree to the{' '}
-                      <span style={{ color: '#2563eb' }}>Terms of Service</span> and{' '}
-                      <span style={{ color: '#2563eb' }}>Privacy Policy</span>. *
-                    </span>
-                  </label>
-                  {fieldErrors.agreement && <div style={styles.fieldError}>{fieldErrors.agreement}</div>}
-                </div>
-
-                <button
-                  type="submit"
-                  style={{ ...styles.btnPrimary, marginTop: '0.5rem', ...(isLoading ? styles.btnPrimaryDisabled : {}) }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Submitting...' : 'Continue to Document Upload'}
-                </button>
-              </form>
-            </div>
+              <button
+                type="submit"
+                style={{ ...styles.btnPrimary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600, ...(isLoading || !agreement ? styles.btnPrimaryDisabled : {}) }}
+                disabled={isLoading || !agreement}
+              >
+                {isLoading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Saving Details...
+                  </span>
+                ) : 'Continue to Document Upload'}
+              </button>
+            </form>
           )}
 
-          {/* STEP 4: KYC Documents */}
+          {/* STEP 4: KYC Documents — Card-per-document layout matching Supplier Portal */}
           {step === 'documents' && (
-            <div style={styles.card}>
-              <h2 style={styles.cardTitle}>Upload KYC Documents</h2>
-              <p style={styles.cardSubtitle}>
-                Upload the required documents to complete your registration. Accepted formats: JPEG, PNG, PDF (max 5MB each).
-              </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {/* Upload guidelines */}
+              <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af', padding: '1rem 1.5rem', borderRadius: '8px' }}>
+                <h4 style={{ fontWeight: 500, marginBottom: '0.5rem', fontSize: '0.9375rem' }}>Document Upload Guidelines</h4>
+                <ul style={{ fontSize: '0.875rem', margin: 0, paddingLeft: '1.25rem', lineHeight: 1.8 }}>
+                  <li>Supported formats: JPEG, PNG, PDF</li>
+                  <li>Maximum file size: 5MB per document</li>
+                  <li>Ensure documents are clear and readable</li>
+                </ul>
+              </div>
 
-              {error && <div style={styles.alertError}>{error}</div>}
+              {error && <div style={{ ...styles.alertError, marginBottom: 0 }}>{error}</div>}
 
+              {/* Individual document cards */}
               {Object.entries(DOCUMENT_TYPES).map(([key, config]) => {
                 const doc = documents[key];
                 const isUploaded = doc?.status === 'uploaded';
@@ -774,16 +799,20 @@ export default function RegisterPage() {
                 const hasError = doc?.status === 'error';
 
                 return (
-                  <div key={key} style={{ marginBottom: '1.5rem' }}>
-                    <label style={styles.label}>
+                  <div key={key} style={styles.sectionCard}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0F172A', marginBottom: '0.5rem' }}>
                       {config.label} {config.required && '*'}
-                    </label>
+                    </h3>
+                    <p style={{ color: '#64748b', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                      Upload a clear copy of your {config.label.toLowerCase()}
+                    </p>
                     <label
                       style={{
                         ...styles.uploadBox,
                         ...(isUploaded ? styles.uploadBoxUploaded : {}),
                         ...(hasError ? styles.uploadBoxError : {}),
-                        display: 'block',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        padding: '2rem 1.5rem', cursor: 'pointer',
                       }}
                     >
                       <input
@@ -798,33 +827,41 @@ export default function RegisterPage() {
                         disabled={isUploading}
                       />
                       {isUploading && (
-                        <div style={{ color: '#2563eb', fontWeight: 500 }}>Uploading...</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-block', width: '32px', height: '32px', border: '3px solid #2563eb', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: '0.5rem' }} />
+                          <p style={{ color: '#64748b', margin: 0 }}>Uploading...</p>
+                        </div>
                       )}
                       {isUploaded && (
-                        <div>
-                          <div style={{ color: '#16a34a', fontWeight: 500, marginBottom: '0.25rem' }}>
-                            &#10003; {doc.file?.name}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Click to replace</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <svg width="32" height="32" fill="none" stroke="#22c55e" viewBox="0 0 24 24" style={{ marginBottom: '0.5rem' }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <p style={{ color: '#16a34a', fontWeight: 500, margin: 0 }}>{doc.file?.name || 'Uploaded'}</p>
+                          <p style={{ color: '#64748b', fontSize: '0.8125rem', margin: '0.25rem 0 0' }}>Click to replace</p>
                         </div>
                       )}
                       {hasError && (
-                        <div>
-                          <div style={{ color: '#dc2626', fontWeight: 500, marginBottom: '0.25rem' }}>
-                            {doc.error || 'Upload failed'}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>Click to try again</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ color: '#dc2626', fontWeight: 500, margin: '0 0 0.25rem' }}>{doc.error || 'Upload failed'}</p>
+                          <p style={{ color: '#64748b', fontSize: '0.8125rem', margin: 0 }}>Click to try again</p>
                         </div>
                       )}
                       {doc?.status === 'pending' && (
-                        <div>
-                          <div style={{ color: '#64748b', marginBottom: '0.25rem' }}>
-                            Click to upload or drag and drop
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>JPEG, PNG, or PDF — max 5MB</div>
+                        <div style={{ textAlign: 'center' }}>
+                          <svg width="40" height="40" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style={{ marginBottom: '0.75rem' }}>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <p style={{ color: '#475569', fontWeight: 500, margin: '0 0 0.25rem' }}>Click to upload</p>
+                          <p style={{ color: '#94a3b8', fontSize: '0.8125rem', margin: 0 }}>or drag and drop</p>
                         </div>
                       )}
                     </label>
+                    {doc?.preview && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <img src={doc.preview} alt="Preview" style={{ maxWidth: '100%', height: '96px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }} />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -833,12 +870,17 @@ export default function RegisterPage() {
                 type="button"
                 onClick={handleSubmitKyc}
                 style={{
-                  ...styles.btnPrimary,
+                  ...styles.btnPrimary, padding: '1rem 1.5rem', fontSize: '1rem', fontWeight: 600,
                   ...(!allRequiredDocsUploaded || isLoading ? styles.btnPrimaryDisabled : {}),
                 }}
                 disabled={!allRequiredDocsUploaded || isLoading}
               >
-                {isLoading ? 'Submitting...' : 'Submit Application'}
+                {isLoading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <span style={{ display: 'inline-block', width: '20px', height: '20px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Submitting Application...
+                  </span>
+                ) : 'Submit Application'}
               </button>
             </div>
           )}

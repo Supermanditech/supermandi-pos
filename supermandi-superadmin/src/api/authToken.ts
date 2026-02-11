@@ -13,7 +13,7 @@
  * POST-BATCH-018-FIX-002: No hard redirects from API modules — callers decide
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
 // Storage keys
 const SESSION_TOKEN_KEY = "supermandi_admin_session";
@@ -83,7 +83,7 @@ function clearSessionToken(): void {
  */
 export async function refreshSession(): Promise<boolean> {
   const currentToken = getSessionToken();
-  if (!currentToken || !API_BASE) {
+  if (!currentToken) {
     return false;
   }
 
@@ -134,7 +134,7 @@ export async function logout(): Promise<void> {
   const sessionToken = getSessionToken();
 
   // Try to revoke session on server
-  if (sessionToken && API_BASE) {
+  if (sessionToken) {
     try {
       // ISSUE-MICRO-025: credentials: 'include' to clear HttpOnly cookie
       await fetch(`${API_BASE}/api/v1/admin/auth/logout`, {
@@ -263,10 +263,6 @@ export function handle401Response(): void {
  * GO-LIVE-LOGIN-004: Email-based admin authentication
  */
 export async function sendAdminOtp(email: string): Promise<{ success: boolean; error?: string; expiresIn?: number }> {
-  if (!API_BASE) {
-    return { success: false, error: "API base URL not configured" };
-  }
-
   try {
     const res = await fetch(`${API_BASE}/api/v1/admin/auth/send-email-otp`, {
       method: "POST",
@@ -309,10 +305,6 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
   token?: string;
   admin?: { email: string; role: string };
 }> {
-  if (!API_BASE) {
-    return { success: false, error: "API base URL not configured" };
-  }
-
   try {
     // ISSUE-MICRO-025: credentials: 'include' to accept Set-Cookie from server
     const res = await fetch(`${API_BASE}/api/v1/admin/auth/verify-email-otp`, {

@@ -2,7 +2,7 @@
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
 export type AuditLogRecord = {
   id: string;
@@ -53,10 +53,6 @@ export async function fetchAuditLogs(params?: {
   from_date?: string;
   to_date?: string;
 }): Promise<AuditLogsResponse> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing");
-  }
-
   const qs = new URLSearchParams();
   if (params?.limit) qs.set("limit", String(params.limit));
   if (params?.offset) qs.set("offset", String(params.offset));
@@ -81,10 +77,6 @@ export async function fetchAuditLogs(params?: {
 }
 
 export async function fetchAuditStats(): Promise<AuditStatsResponse> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing");
-  }
-
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/audit/stats`, {
     cache: "no-store",
     headers: {
@@ -116,11 +108,6 @@ export type AuditLogInput = {
  * This should be called after every mutation action in SuperAdmin
  */
 export async function createAuditLog(input: AuditLogInput): Promise<void> {
-  if (!API_BASE) {
-    console.warn('GL-CRIT-0049: Cannot log audit - VITE_API_BASE_URL missing');
-    return;
-  }
-
   const authHeaders = getAuthHeaders();
   if (Object.keys(authHeaders).length === 0) {
     console.warn('GL-CRIT-0049: Cannot log audit - no admin token');

@@ -2,10 +2,9 @@
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
 function requireApiBase(): string {
-  if (!API_BASE) throw new Error("VITE_API_BASE_URL is missing");
   return API_BASE;
 }
 

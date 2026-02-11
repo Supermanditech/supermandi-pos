@@ -487,6 +487,7 @@ export default function LoginPage() {
 
   return (
     <div style={styles.pageContainer}>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       {/* Header Bar */}
       <header style={styles.header}>
         <div style={styles.headerInner}>
@@ -557,7 +558,12 @@ export default function LoginPage() {
                   }}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Checking...' : 'Continue'}
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      Checking...
+                    </span>
+                  ) : 'Continue'}
                 </button>
 
                 <div style={styles.divider}>
@@ -600,7 +606,12 @@ export default function LoginPage() {
                   }}
                   disabled={isLoading || !isFirebaseReady()}
                 >
-                  {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      Sending OTP...
+                    </span>
+                  ) : 'Send OTP'}
                 </button>
 
                 <div style={{ textAlign: 'center' }}>
@@ -630,7 +641,7 @@ export default function LoginPage() {
                       letterSpacing: '0.5rem',
                       fontFamily: 'monospace',
                     }}
-                    placeholder="------"
+                    placeholder="123456"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     maxLength={6}
@@ -669,7 +680,12 @@ export default function LoginPage() {
                   }}
                   disabled={isLoading || otp.length !== 6}
                 >
-                  {isLoading ? 'Verifying...' : 'Verify & Sign In'}
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      Verifying...
+                    </span>
+                  ) : 'Verify & Sign In'}
                 </button>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -679,7 +695,7 @@ export default function LoginPage() {
                     style={styles.textLink}
                     disabled={isLoading}
                   >
-                    Change Phone
+                    Change Phone Number
                   </button>
 
                   <button

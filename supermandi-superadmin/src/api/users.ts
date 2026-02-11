@@ -2,7 +2,7 @@
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
 import { sanitizeErrorMessage } from "./errorSanitizer";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined;
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
 export type UserRecord = {
   id: string;
@@ -29,10 +29,6 @@ async function parseError(res: Response): Promise<string> {
 export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
 
 export async function fetchUsers(params?: { limit?: number; offset?: number }): Promise<PaginatedResponse<UserRecord>> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
-  }
-
   const url = new URL(`${API_BASE}/api/v1/admin/users`);
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.offset) url.searchParams.set("offset", String(params.offset));
@@ -63,10 +59,6 @@ export type UserPatchInput = {
 };
 
 export async function patchUser(userId: string, input: UserPatchInput): Promise<UserRecord> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
-  }
-
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/users/${encodeURIComponent(userId)}`, {
     method: "PATCH",
     headers: {
@@ -103,10 +95,6 @@ export type UserCreateInput = {
 };
 
 export async function createUser(input: UserCreateInput): Promise<UserRecord> {
-  if (!API_BASE) {
-    throw new Error("VITE_API_BASE_URL is missing (set it in .env / hosting env vars)");
-  }
-
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/users`, {
     method: "POST",
     headers: {
