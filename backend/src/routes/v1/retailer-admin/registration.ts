@@ -42,6 +42,7 @@ interface CreateApplicationRequest {
   businessName: string;
   ownerName: string;
   gstin: string;
+  businessType?: string;
   email?: string;
   addressLine1?: string;
   addressLine2?: string;
@@ -313,6 +314,7 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
       businessName,
       ownerName,
       gstin,
+      businessType,
       email,
       addressLine1,
       addressLine2,
@@ -410,6 +412,7 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
         business_name,
         owner_name,
         gstin,
+        business_type,
         address_line1,
         address_line2,
         city,
@@ -418,7 +421,7 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
         status
       ) VALUES (
         'retailer',
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
         'DRAFT'
       )
       RETURNING id, status, created_at`,
@@ -428,6 +431,7 @@ router.post("/create", authRateLimiter, async (req: Request, res: Response, next
         businessName.trim(),
         ownerName.trim(),
         gstinNormalized,
+        businessType?.trim() || null,
         addressLine1?.trim() || null,
         addressLine2?.trim() || null,
         city?.trim() || null,

@@ -6010,7 +6010,7 @@ export default function App() {
       </div>
 
       <footer className="footer muted">
-        Tip: this dashboard is static-deployable. Set <span className="mono">VITE_API_BASE_URL</span> in hosting env.
+        {import.meta.env.DEV && <>Tip: this dashboard is static-deployable. Set <span className="mono">VITE_API_BASE_URL</span> in hosting env. </>}
         <BuildStamp />
       </footer>
     </div>
