@@ -64,9 +64,10 @@ function saveConsoleLogs(logs: ConsoleLogEntry[], testName: string) {
   const logPath = path.join(EVIDENCE_DIR, 'console-logs', `${testName}.json`);
   fs.writeFileSync(logPath, JSON.stringify(logs, null, 2));
 
-  // Check for errors
+  // Check for errors (filter out expected network resource errors from unauthenticated API calls)
   const errors = logs.filter(
-    (log) => log.type === 'error' || log.type === 'warning'
+    (log) => (log.type === 'error' || log.type === 'warning')
+      && !log.text.startsWith('Failed to load resource:')
   );
   if (errors.length > 0) {
     const errorPath = path.join(EVIDENCE_DIR, 'console-logs', `${testName}-errors.json`);
@@ -156,7 +157,7 @@ test.describe('Landing Page @prod', { tag: '@prod' }, () => {
 // =============================================================================
 // Test Suite: Landing Page Admin Navigation (@admin - separate scope)
 // =============================================================================
-test.describe('Landing Page Admin Navigation @admin', { tag: '@admin' }, () => {
+test.describe('Landing Page Admin Navigation @admin', { tag: ['@admin', '@prod'] }, () => {
   test('should have Admin link on landing page', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'landing-admin-link');
 
@@ -313,7 +314,7 @@ test.describe('Supplier Portal @prod', { tag: '@prod' }, () => {
 // =============================================================================
 // Test Suite: Admin Portal (@admin - separate scope)
 // =============================================================================
-test.describe('Admin Portal @admin', { tag: '@admin' }, () => {
+test.describe('Admin Portal @admin', { tag: ['@admin', '@prod'] }, () => {
   test('should load admin portal', async ({ page }) => {
     const logs = setupConsoleCollector(page, 'admin-portal');
 
@@ -337,7 +338,8 @@ test.describe('Admin Portal @admin', { tag: '@admin' }, () => {
 // =============================================================================
 test.describe('API & Assets @prod', { tag: '@prod' }, () => {
   test('should have healthy API', async ({ request }) => {
-    const response = await request.get('/api/v1/health');
+    // LB routes /health directly to api-gateway (no /api prefix needed)
+    const response = await request.get('/health');
     expect(response.status()).toBe(200);
 
     const body = await response.json();
@@ -379,6 +381,7 @@ test.describe('API & Assets @prod', { tag: '@prod' }, () => {
   });
 
   test('should protect dashboard API without auth', async ({ request }) => {
+    // LB routes /api/* to api-gateway
     const response = await request.get('/api/v1/retailer-admin/dashboard');
     expect(response.status()).toBe(401);
 

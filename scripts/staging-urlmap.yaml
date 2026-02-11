@@ -1,0 +1,27 @@
+defaultService: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/landing-backend
+hostRules:
+- hosts:
+  - '*'
+  pathMatcher: portal-routes
+pathMatchers:
+- defaultService: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/landing-backend
+  name: portal-routes
+  pathRules:
+  - paths:
+    - /api/*
+    service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/api-gateway-backend
+  - paths:
+    - /health
+    service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/api-gateway-backend
+  - paths:
+    - /version
+    service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/api-gateway-backend
+  - paths:
+    - /retailer/*
+    service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/retailer-backend
+  - paths:
+    - /admin/*
+    service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/superadmin-backend
+  - paths:
+    - /supplier/*
+    service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/supplier-backend

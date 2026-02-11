@@ -38,8 +38,8 @@ FROM nginx:alpine
 # Copy built files
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config (subpath-aware: serves SPA under /retailer/ prefix)
+COPY nginx-local-prod.conf /etc/nginx/conf.d/default.conf
 
 # Add health check
 RUN echo "OK" > /usr/share/nginx/html/health.txt

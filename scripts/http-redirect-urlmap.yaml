@@ -1,0 +1,5 @@
+kind: compute#urlMap
+name: supermandi-staging-http-redirect
+defaultUrlRedirect:
+  httpsRedirect: true
+  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
