@@ -223,6 +223,15 @@ app.get('/version', (_req, res) => {
   });
 });
 
+// STAGING-GATE-004: /api/v1/version for LB path rule /api/*
+app.get('/api/v1/version', (_req, res) => {
+  res.json({
+    sha: process.env.GIT_SHA || 'unknown',
+    service: 'api-gateway',
+    built: process.env.BUILD_TIME || new Date().toISOString(),
+  });
+});
+
 // =============================================================================
 // GO-LIVE-002: ADMIN AUTH ROUTES
 // Session-based authentication with JWT tokens
