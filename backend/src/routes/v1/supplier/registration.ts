@@ -648,6 +648,13 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
         if (verifyResult.success && verifyResult.payload?.phone_number) {
           const phoneFromToken = normalizePhoneNumber(verifyResult.payload.phone_number);
           if (phoneFromToken === phoneNormalized) {
+            // STAGING-FIX-012b: Clear firebase_uid from other entity types first
+            // (unique constraint is global, same phone can have supplier + retailer apps)
+            await pool.query(
+              `UPDATE auth.applications SET firebase_uid = NULL
+               WHERE firebase_uid = $1 AND entity_type != 'supplier'`,
+              [verifyResult.payload.uid]
+            );
             await pool.query(
               `UPDATE auth.applications SET firebase_uid = $1, updated_at = NOW() WHERE id = $2`,
               [verifyResult.payload.uid, application.id]
@@ -800,6 +807,12 @@ router.post("/verify-otp", registrationRateLimiter, async (req: Request, res: Re
       return;
     }
 
+    // STAGING-FIX-012b: Clear firebase_uid from other entity types first
+    await pool.query(
+      `UPDATE auth.applications SET firebase_uid = NULL
+       WHERE firebase_uid = $1 AND entity_type != 'supplier'`,
+      [firebaseUid]
+    );
     // Update application with Firebase UID
     await pool.query(
       `UPDATE auth.applications
