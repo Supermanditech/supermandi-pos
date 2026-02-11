@@ -40,6 +40,15 @@ function createProxyOptions(service: ServiceConfig): Options {
     proxyTimeout: 30000,
     timeout: 30000,
     onProxyReq: (proxyReq: ClientRequest, req: Request) => {
+      // STAGING-FIX-001: Explicitly set Host header for Cloud Run-to-Cloud Run proxying.
+      // Cloud Run's front-end (Google Front End) validates that the Host header matches
+      // the target service URL. If mismatched, it returns a Google 400 HTML error page.
+      // changeOrigin: true alone is insufficient — we must set it in onProxyReq.
+      try {
+        const targetHost = new URL(service.url).host;
+        proxyReq.setHeader('host', targetHost);
+      } catch { /* keep existing host if URL parse fails */ }
+
       // Forward correlation ID to backend service
       if (req.correlationId) {
         proxyReq.setHeader(CORRELATION_ID_HEADER, req.correlationId);

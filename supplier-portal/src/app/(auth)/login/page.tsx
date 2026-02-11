@@ -468,7 +468,7 @@ export default function LoginPage() {
 
       {/* GO-LIVE-AUTH-FIX: Single register link at bottom - shown on phone/otp steps only */}
       {(step === 'phone' || step === 'otp') && (
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center space-y-2">
           <p className="text-slate-600">
             Don't have an account?{' '}
             <Link
@@ -476,6 +476,14 @@ export default function LoginPage() {
               className="text-primary-600 hover:text-primary-700 font-medium"
             >
               Register
+            </Link>
+          </p>
+          <p>
+            <Link
+              href="/forgot-password"
+              className="text-sm text-slate-500 hover:text-slate-700"
+            >
+              Forgot Password?
             </Link>
           </p>
         </div>
