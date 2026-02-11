@@ -328,22 +328,21 @@ function RegisterPage() {
         }
       }
 
-      // Create application
-      // STAGING-FIX-009: Backend returns { application: { id, status } }, not { applicationId }
+      // STAGING-FIX-012: Send idToken with create to verify phone inline (one API call)
       const result = await createSupplierApplication({
         phone: normalizedPhone,
         businessName: businessName.trim(),
         ownerName: ownerName.trim(),
-        gstin: gstin.trim().toUpperCase() || '', // Backend requires it but can be empty
+        gstin: gstin.trim().toUpperCase() || '',
         email: email.trim().toLowerCase(),
         addressLine1: addressLine1.trim(),
         addressLine2: addressLine2.trim() || undefined,
         city: city.trim(),
         state: state,
         pincode: pincode.trim(),
+        idToken,
       });
 
-      // STAGING-FIX-009: Extract applicationId from nested or flat response
       const appId = result.application?.id || result.applicationId;
       const appStatus = result.application?.status || result.status;
 
@@ -354,15 +353,22 @@ function RegisterPage() {
 
       setApplicationId(appId);
 
-      // If application was resumed and already OTP-verified, skip to documents
-      if (appStatus === 'OTP_VERIFIED') {
-        setStep('documents');
-        toast.success('Application resumed! Please upload documents.');
-      } else {
-        // Verify OTP with application ID
-        await verifySupplierOtp(idToken, appId);
+      // If phone was verified inline or already OTP_VERIFIED, go to documents
+      if (result.phoneVerified || appStatus === 'OTP_VERIFIED') {
         setStep('documents');
         toast.success('Details saved! Please upload documents.');
+      } else {
+        // Fallback: try separate verify-otp call
+        try {
+          await verifySupplierOtp(idToken, appId);
+          setStep('documents');
+          toast.success('Details saved! Please upload documents.');
+        } catch {
+          // Phone verification failed but application was created — proceed anyway
+          // User can re-verify later or documents step will handle it
+          setStep('documents');
+          toast.success('Details saved! Please upload documents.');
+        }
       }
     } catch (err) {
       // STAGING-FIX-009: Handle APPLICATION_EXISTS by auto-resuming

@@ -985,6 +985,8 @@ export interface SupplierRegistrationInput {
   bankIfsc?: string;
   bankAccountName?: string;
   upiVpa?: string;
+  // STAGING-FIX-012: Inline phone verification during create
+  idToken?: string;
 }
 
 export interface SupplierApplicationResponse {
@@ -999,6 +1001,7 @@ export interface SupplierApplicationResponse {
   applicationId?: string;
   status?: string;
   resumed?: boolean;
+  phoneVerified?: boolean;
   nextStep?: string;
   message?: string;
   action?: 'CREATED' | 'RESUMED';

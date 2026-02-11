@@ -636,15 +636,42 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
       console.log(`[SupplierReg] REG-AUTH-202: Application created ${application.id} for GSTIN ${gstinNormalized}`);
     }
 
+    // STAGING-FIX-012: Inline phone verification during create.
+    // If idToken is provided, verify Firebase token and set firebase_uid in one step.
+    // This avoids a separate verify-otp call that can fail due to token serialization issues.
+    const { idToken } = req.body;
+    let phoneVerified = application.status === 'OTP_VERIFIED';
+
+    if (idToken && verifyFirebaseIdToken && !phoneVerified) {
+      try {
+        const verifyResult = await verifyFirebaseIdToken(idToken);
+        if (verifyResult.success && verifyResult.payload?.phone_number) {
+          const phoneFromToken = normalizePhoneNumber(verifyResult.payload.phone_number);
+          if (phoneFromToken === phoneNormalized) {
+            await pool.query(
+              `UPDATE auth.applications SET firebase_uid = $1, phone_verified = true, updated_at = NOW() WHERE id = $2`,
+              [verifyResult.payload.uid, application.id]
+            );
+            phoneVerified = true;
+            console.log(`[SupplierReg] STAGING-FIX-012: Phone verified inline for ${application.id}`);
+          }
+        }
+      } catch (firebaseErr) {
+        // Firebase verification failed — non-blocking, user can verify separately
+        console.warn(`[SupplierReg] STAGING-FIX-012: Inline verify failed for ${application.id}:`, firebaseErr);
+      }
+    }
+
     res.status(201).json({
       success: true,
       application: {
         id: application.id,
-        status: application.status,
+        status: phoneVerified ? 'OTP_VERIFIED' : application.status,
         createdAt: application.created_at,
       },
       resumed: isResumed,
-      nextStep: application.status === 'OTP_VERIFIED' ? 'UPLOAD_DOCUMENTS' : 'VERIFY_PHONE',
+      phoneVerified,
+      nextStep: phoneVerified ? 'UPLOAD_DOCUMENTS' : 'VERIFY_PHONE',
       message: isResumed
         ? 'Application updated with new details. Please continue registration.'
         : 'Application created. Please verify your phone number with OTP.',
