@@ -195,3 +195,115 @@ export async function safeJsonWithError<T = any>(response: Response): Promise<{
     };
   }
 }
+
+// =============================================================================
+// STAGING-FIX-004: Retailer Registration API (KYC/Application flow)
+// =============================================================================
+
+const REGISTRATION_BASE = `${API_GATEWAY_BASE}/api/v1/retailer-admin/registration`;
+const DOCUMENTS_BASE = `${API_GATEWAY_BASE}/api/v1/documents`;
+
+export interface CreateRetailerApplicationInput {
+  phone: string;
+  businessName: string;
+  ownerName: string;
+  gstin: string;
+  businessType?: string;
+  email?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
+
+export interface ApplicationResponse {
+  success: boolean;
+  application: {
+    id: string;
+    status: string;
+    createdAt?: string;
+  };
+  nextStep: string;
+  message: string;
+}
+
+export async function createRetailerApplication(
+  data: CreateRetailerApplicationInput
+): Promise<ApplicationResponse> {
+  const response = await fetch(`${REGISTRATION_BASE}/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await response.json();
+  if (!response.ok) {
+    throw { status: response.status, ...json.error };
+  }
+  return json;
+}
+
+export async function verifyRetailerOtp(data: {
+  idToken: string;
+  applicationId: string;
+}): Promise<{ success: boolean; nextStep: string; message: string }> {
+  const response = await fetch(`${REGISTRATION_BASE}/verify-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await response.json();
+  if (!response.ok) {
+    throw { status: response.status, ...json.error };
+  }
+  return json;
+}
+
+export async function uploadDocument(
+  file: File,
+  documentType: string,
+  entityType: string,
+  entityId: string,
+): Promise<{ success: boolean }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('document_type', documentType);
+  formData.append('entity_type', entityType);
+  formData.append('entity_id', entityId);
+
+  const response = await fetch(`${DOCUMENTS_BASE}/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  const json = await response.json();
+  if (!response.ok) {
+    throw { status: response.status, ...json.error };
+  }
+  return json;
+}
+
+export async function submitRetailerKyc(
+  applicationId: string
+): Promise<{ success: boolean; application: { id: string; status: string }; message: string }> {
+  const response = await fetch(`${REGISTRATION_BASE}/submit-kyc`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ applicationId }),
+  });
+  const json = await response.json();
+  if (!response.ok) {
+    throw { status: response.status, ...(json.error || {}), missingDocuments: json.missingDocuments };
+  }
+  return json;
+}
+
+export async function getApplicationStatus(
+  applicationId: string
+): Promise<{ application: Record<string, unknown>; documents: Array<Record<string, unknown>> }> {
+  const response = await fetch(`${REGISTRATION_BASE}/status/${applicationId}`);
+  const json = await response.json();
+  if (!response.ok) {
+    throw { status: response.status, ...json.error };
+  }
+  return json;
+}
