@@ -240,11 +240,21 @@ export function revokeAdminSession(token: string): boolean {
 /**
  * Refresh an admin session
  * Creates a new session and revokes the old one
+ * STAGING-FIX-005: Don't convert email OTP tokens to gateway session tokens.
+ * Email OTP tokens are self-contained (verified cryptographically) and survive
+ * gateway restarts. Gateway session tokens depend on in-memory state and are
+ * lost on cold start, causing recurring 401 errors.
  */
 export function refreshAdminSession(token: string, ip: string, userAgent?: string): { token: string; expiresAt: number } | null {
   const currentSession = verifyAdminSession(token);
   if (!currentSession) {
     return null;
+  }
+
+  // STAGING-FIX-005: Email OTP tokens are self-contained and survive gateway restarts.
+  // Don't "upgrade" them to gateway session tokens (which are lost on cold start).
+  if (currentSession.sessionId.startsWith('email-otp-')) {
+    return { token, expiresAt: currentSession.expiresAt };
   }
 
   // Revoke old session
