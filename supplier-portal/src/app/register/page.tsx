@@ -4,7 +4,7 @@
 // 3-Step Flow: Phone OTP → Business Details → KYC Documents
 // FULL-WIDTH ONBOARDING LAYOUT (not compact login-card)
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -51,7 +51,15 @@ interface DocumentUpload {
 // API Base URL from environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
-export default function RegisterPage() {
+export default function RegisterPageWrapper() {
+  return (
+    <Suspense fallback={<div className="text-center py-8">Loading...</div>}>
+      <RegisterPage />
+    </Suspense>
+  );
+}
+
+function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
