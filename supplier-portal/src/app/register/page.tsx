@@ -5,7 +5,7 @@
 // FULL-WIDTH ONBOARDING LAYOUT (not compact login-card)
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { ApiError, createSupplierApplication, verifySupplierOtp, submitSupplierKyc } from '@/lib/api';
@@ -53,12 +53,13 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Step state
   const [step, setStep] = useState<Step>('phone');
 
-  // Step 1: Phone
-  const [phone, setPhone] = useState('');
+  // Step 1: Phone — pre-fill from login redirect if available
+  const [phone, setPhone] = useState(searchParams.get('phone') || '');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');

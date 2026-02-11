@@ -11,7 +11,7 @@ import { phoneOtpLogin, ApiError, lookupSupplierRegistration } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 
-type Step = 'phone' | 'otp' | 'not_onboarded';
+type Step = 'phone' | 'otp' | 'not_onboarded' | 'incomplete';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -108,8 +108,7 @@ export default function LoginPage() {
       } else if (data.nextStep === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
       } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
-        // BATCH-003: Stay on page, no auto-redirect - user requested explicit navigation
-        setError('Your registration is incomplete. Please complete registration first, then return to login.');
+        setStep('incomplete');
       } else if (data.nextStep === 'ACCOUNT_SUSPENDED') {
         // SA-P1-005: Suspended supplier
         setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
@@ -449,6 +448,34 @@ export default function LoginPage() {
             className="btn btn-primary w-full py-3 block text-center"
           >
             Register
+          </Link>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setStep('phone');
+                setPhone('');
+                setError('');
+              }}
+              className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+            >
+              Use a different phone number
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Incomplete Registration — Resume flow */}
+      {step === 'incomplete' && (
+        <div className="text-center py-4">
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg mb-4 text-sm text-left">
+            Your registration is incomplete. Please resume to complete your application.
+          </div>
+          <Link
+            href={`/register?phone=${encodeURIComponent(phone)}&resume=true`}
+            className="btn btn-primary w-full py-3 block text-center"
+          >
+            Resume Registration
           </Link>
           <div className="mt-4">
             <button

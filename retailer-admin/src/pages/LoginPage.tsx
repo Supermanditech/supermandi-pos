@@ -8,7 +8,7 @@ import { BuildStamp } from '../components/BuildStamp';
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
 
-type Step = 'phone' | 'otp' | 'stores' | 'not_onboarded';
+type Step = 'phone' | 'otp' | 'stores' | 'not_onboarded' | 'incomplete';
 
 interface Store {
   id: string;
@@ -360,7 +360,7 @@ export default function LoginPage() {
       } else if (action === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
       } else if (action === 'VERIFY_PHONE' || action === 'UPLOAD_DOCUMENTS' || action === 'FIX_REQUIRED') {
-        setError('Your registration is incomplete. Please complete registration first, then return to login.');
+        setStep('incomplete');
       } else if (action === 'CONTACT_SUPPORT') {
         setError('Your application was not approved. Please contact support for assistance.');
       } else {
@@ -782,6 +782,43 @@ export default function LoginPage() {
                   }}
                 >
                   Register
+                </Link>
+                <div style={{ marginTop: '1rem' }}>
+                  <button
+                    onClick={() => {
+                      setStep('phone');
+                      setPhone('');
+                      setError('');
+                    }}
+                    style={styles.textLink}
+                  >
+                    Use a different phone number
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Incomplete Registration — Resume flow */}
+            {step === 'incomplete' && (
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{
+                  ...styles.alertWarning,
+                  textAlign: 'left',
+                }}>
+                  Your registration is incomplete. Please resume to complete your application.
+                </div>
+                <Link
+                  to="/retailer/register"
+                  state={{ phone, resume: true }}
+                  style={{
+                    ...styles.btnPrimary,
+                    display: 'block',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    lineHeight: '46px',
+                  }}
+                >
+                  Resume Registration
                 </Link>
                 <div style={{ marginTop: '1rem' }}>
                   <button

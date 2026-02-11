@@ -12,7 +12,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   createRetailerApplication,
   verifyRetailerOtp,
@@ -200,11 +200,14 @@ const styles = {
 };
 
 export default function RegisterPage() {
+  const location = useLocation();
+  const locationState = location.state as { phone?: string; resume?: boolean } | null;
+
   // Step state
   const [step, setStep] = useState<Step>('phone');
 
-  // Phone + OTP
-  const [phone, setPhone] = useState('');
+  // Phone + OTP — pre-fill from login redirect if available
+  const [phone, setPhone] = useState(locationState?.phone || '');
   const [otp, setOtp] = useState('');
   const [idToken, setIdToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
