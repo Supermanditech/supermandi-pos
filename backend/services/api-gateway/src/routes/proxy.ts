@@ -32,22 +32,41 @@ function createProxyOptions(service: ServiceConfig): Options {
   }
   // else: undefined = keep path as-is
 
+  // STAGING-FIX-002: Pre-compute target host for Cloud Run GFE Host header validation.
+  // Cloud Run's Google Front End rejects requests where Host header doesn't match target.
+  // Both changeOrigin and explicit headers option are set to ensure correct Host header.
+  let targetHost: string;
+  try {
+    targetHost = new URL(service.url).host;
+  } catch {
+    targetHost = '';
+  }
+
   return {
     target: service.url,
     changeOrigin: true,
+    // STAGING-FIX-002: Set Host via options.headers (applied in setupOutgoing before request creation)
+    headers: targetHost ? { host: targetHost } : undefined,
     pathRewrite,
     // P1-001: Set timeout to 30s to prevent premature connection drops
     proxyTimeout: 30000,
     timeout: 30000,
     onProxyReq: (proxyReq: ClientRequest, req: Request) => {
-      // STAGING-FIX-001: Explicitly set Host header for Cloud Run-to-Cloud Run proxying.
-      // Cloud Run's front-end (Google Front End) validates that the Host header matches
-      // the target service URL. If mismatched, it returns a Google 400 HTML error page.
-      // changeOrigin: true alone is insufficient — we must set it in onProxyReq.
-      try {
-        const targetHost = new URL(service.url).host;
+      // STAGING-FIX-003: Strip headers that cause Cloud Run GFE 400 errors.
+      // When proxying between Cloud Run services, the first GFE adds headers like
+      // x-forwarded-host that can confuse the second GFE. Remove them.
+      proxyReq.removeHeader('x-forwarded-host');
+      proxyReq.removeHeader('x-forwarded-server');
+      proxyReq.removeHeader('x-cloud-trace-context');
+      proxyReq.removeHeader('traceparent');
+      proxyReq.removeHeader('x-forwarded-for');
+      proxyReq.removeHeader('x-forwarded-proto');
+      proxyReq.removeHeader('via');
+
+      // STAGING-FIX-002: Belt-and-suspenders — also set Host in onProxyReq
+      if (targetHost) {
         proxyReq.setHeader('host', targetHost);
-      } catch { /* keep existing host if URL parse fails */ }
+      }
 
       // Forward correlation ID to backend service
       if (req.correlationId) {
@@ -64,11 +83,12 @@ function createProxyOptions(service: ServiceConfig): Options {
         }
       }
 
-      // P1-001: Handle body forwarding for POST/PUT/PATCH requests
-      // When express.json() or body-parser middleware has already parsed the body,
-      // the raw stream is consumed. We need to re-serialize and write it to the proxy request.
-      // GO-LIVE-FIX: Forward body even if empty object {} (for validation endpoints)
-      if (req.body !== undefined && req.body !== null) {
+      // P1-001: Handle body forwarding for POST/PUT/PATCH requests ONLY.
+      // STAGING-FIX-003: express.json() sets req.body={} even for GET requests.
+      // Forwarding a body on GET causes Cloud Run GFE to reject with 400.
+      const hasBody = req.body !== undefined && req.body !== null;
+      const isBodyMethod = ['POST', 'PUT', 'PATCH'].includes(req.method);
+      if (hasBody && isBodyMethod) {
         const bodyData = JSON.stringify(req.body);
         // Update content-length header to match the actual body size
         proxyReq.setHeader('Content-Type', 'application/json');
