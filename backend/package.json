@@ -7,6 +7,8 @@
     "dev": "concurrently --kill-others-on-fail \"pnpm -r --parallel run dev\" \"nodemon --watch src --ext ts --exec ts-node --project tsconfig.main.json src/server.ts\"",
     "build": "pnpm -r run build",
     "test": "jest",
+    "test:unit": "jest --config jest.unit.config.ts",
+    "test:integration": "jest --setupFilesAfterEnv ./tests/setup.ts",
     "test:golden": "jest --testPathPattern=goldenPath",
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
