@@ -1,5 +1,5 @@
 // SA-001: AI floating panel extracted from App.tsx
-import { askAi, fetchAiHealth } from "../api/ai";
+import { askAi } from "../api/ai";
 
 interface AiPanelProps {
   aiQuestion: string;

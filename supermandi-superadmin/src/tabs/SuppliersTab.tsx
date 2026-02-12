@@ -1,6 +1,6 @@
 // SA-001: Suppliers tab extracted from App.tsx
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
-import { formatDateTime, formatCurrency } from "../lib/formatters";
+import { formatDateTime } from "../lib/formatters";
 
 interface SuppliersTabProps {
   refreshSuppliers: () => void;

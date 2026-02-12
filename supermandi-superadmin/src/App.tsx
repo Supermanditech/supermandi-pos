@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 // ISSUE-MICRO-105: Global error boundary
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { fetchHealth } from "./api/health";
@@ -57,19 +57,17 @@ import {
   rejectDocument,
   type DocumentRecord
 } from "./api/documents";
-import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
+import { fetchRegistrationEvents, type RegistrationEvent } from "./api/registrationEvents";
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff";
 import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts";
 import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags";
 import { fetchApplications, approveApplication, rejectApplication, type Application } from "./api/applications";
-import { isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
-import { formatDateTime, formatCurrency } from "./lib/formatters";
+import { formatCurrency } from "./lib/formatters";
 // SA-001: Shared types and constants
-import { type TabKey, type GroupKey, type AnalyticsTabKey, type DeviceType, DEVICE_TYPE_LABELS, ADMIN_POLL_MS, UPI_VPA_PATTERN, clamp, toIsoSafe, includesInsensitive, toIsoStart, toIsoEnd } from "./types";
+import { type TabKey, type GroupKey, type AnalyticsTabKey, type DeviceType, ADMIN_POLL_MS, UPI_VPA_PATTERN, clamp, toIsoSafe, includesInsensitive, toIsoStart, toIsoEnd } from "./types";
 // SA-001: Extracted components
 import { LoginGate } from "./components/LoginGate";
-import { PayloadDetails } from "./components/PayloadDetails";
 import { ConfirmationModals } from "./components/ConfirmationModals";
 import { AiPanel } from "./components/AiPanel";
 // SA-001: Extracted tab components
