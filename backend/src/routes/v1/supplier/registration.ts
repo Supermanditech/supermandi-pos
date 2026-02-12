@@ -422,6 +422,15 @@ router.post("/create", registrationRateLimiter, async (req: Request, res: Respon
     const gstinNormalized = gstin.trim().toUpperCase();
     const phoneNormalized = normalizePhoneNumber(phone);
 
+    // AUDIT-API-009: Validate phone format (must resolve to valid Indian mobile: +91 + 10 digits starting with 6-9)
+    const phoneDigits = phoneNormalized.replace(/\D/g, "");
+    if (!/^91[6-9]\d{9}$/.test(phoneDigits)) {
+      res.status(400).json({
+        error: { code: "INVALID_PHONE", message: "Please enter a valid 10-digit Indian mobile number" }
+      });
+      return;
+    }
+
     // Validate GSTIN format
     if (!validateGSTIN(gstinNormalized)) {
       res.status(400).json({
