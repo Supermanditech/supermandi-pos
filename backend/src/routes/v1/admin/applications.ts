@@ -265,11 +265,7 @@ adminApplicationsRouter.post(
 
     const { id } = req.params;
     const { notes } = req.body as { notes?: string };
-    const adminId = (req as any).adminUserId;
-
-    if (!adminId) {
-      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Admin ID required" } });
-    }
+    const adminId = req.adminId || 'unknown';
 
     const client = await pool.connect();
     try {
@@ -425,17 +421,13 @@ adminApplicationsRouter.post(
 
     const { id } = req.params;
     const { reason, notes } = req.body as { reason?: string; notes?: string };
-    const adminId = (req as any).adminUserId;
+    const adminId = req.adminId || 'unknown';
 
     const rejectionReason = reason || notes;
     if (!rejectionReason || rejectionReason.trim().length < 5) {
       return res.status(400).json({
         error: { code: "VALIDATION_ERROR", message: "Rejection reason is required (minimum 5 characters)" }
       });
-    }
-
-    if (!adminId) {
-      return res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Admin ID required" } });
     }
 
     try {
