@@ -1204,6 +1204,12 @@ export default function App() {
       return;
     }
 
+    // AUDIT-SA-005: Platform admin users require email for OTP login
+    if (actor_type === "platform" && !email.trim()) {
+      setCreateUserError("Email is required for admin users");
+      return;
+    }
+
     // GL-CRIT-0053: Platform users require verification
     if (actor_type === "platform") {
       setPendingAdminUser({
@@ -1416,9 +1422,15 @@ export default function App() {
       };
 
       if (editProductForm.marginType === "fixed" && editProductForm.fixedMargin) {
-        input.superMandiMarginMinor = Math.round(parseFloat(editProductForm.fixedMargin) * 100);
+        const fixedVal = parseFloat(editProductForm.fixedMargin);
+        // AUDIT-SA-004: Reject negative margin values
+        if (fixedVal < 0) { setEditProductError("Margin cannot be negative"); setEditProductLoading(false); return; }
+        input.superMandiMarginMinor = Math.round(fixedVal * 100);
       } else if (editProductForm.marginType === "percent" && editProductForm.percentMargin) {
-        input.marginPercent = parseFloat(editProductForm.percentMargin);
+        const pctVal = parseFloat(editProductForm.percentMargin);
+        // AUDIT-SA-004: Reject negative margin values
+        if (pctVal < 0) { setEditProductError("Margin percentage cannot be negative"); setEditProductLoading(false); return; }
+        input.marginPercent = pctVal;
       }
 
       const result = await editProduct(editingProduct.id, input);
@@ -1564,8 +1576,9 @@ export default function App() {
 
   // DOCS-001: Reject a document
   async function handleRejectDocument(docId: string, reason: string) {
-    if (!reason.trim()) {
-      alert("Please provide a rejection reason");
+    // AUDIT-SA-014: Require meaningful rejection reason (min 10 chars)
+    if (reason.trim().length < 10) {
+      alert("Please provide a detailed rejection reason (at least 10 characters)");
       return;
     }
     setDocumentActionLoading(docId);

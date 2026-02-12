@@ -354,7 +354,9 @@ export async function verifyAdminOtp(email: string, otp: string): Promise<{
 
     // Store the JWT token
     if (data.token) {
-      const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+      // AUDIT-SA-039: Use server-provided expiresIn (seconds), fallback to 24h
+      const ttlMs = (data.expiresIn ? data.expiresIn * 1000 : 24 * 60 * 60 * 1000);
+      const expiresAt = Date.now() + ttlMs;
       try {
         localStorage.setItem(SESSION_TOKEN_KEY, data.token);
         localStorage.setItem(SESSION_EXPIRY_KEY, expiresAt.toString());
