@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 import UpiInput, { validateUpiVpa } from '../components/UpiInput';
 
 interface PaymentSettings {
@@ -39,7 +39,7 @@ export default function PaymentsPage() {
       try {
         const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
         if (response.ok) {
-          const data = await response.json();
+          const data = await safeJson(response);
           setSettings({
             upiVpa: data.settings?.upiVpa || '',
             bankAccount: '', // Not stored in backend yet
@@ -109,7 +109,7 @@ export default function PaymentsPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         setSaveSuccess(true);
         setStatusTransitioned(data.statusTransitioned || false);
 
@@ -119,7 +119,7 @@ export default function PaymentsPage() {
           setStatusTransitioned(false);
         }, 5000);
       } else {
-        const data = await response.json();
+        const data = await safeJson(response);
         setSaveError(data.error?.message || 'Failed to save payment settings');
       }
     } catch (err: any) {

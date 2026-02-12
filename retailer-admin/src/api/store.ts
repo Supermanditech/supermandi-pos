@@ -274,11 +274,14 @@ export async function createSupplier(accessToken: string, data: SupplierFormData
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
+    const error = await safeJson(response).catch(() => ({})) as Record<string, string>;
     throw new Error(error.message || 'Failed to create supplier');
   }
 
-  return response.json();
+  // AUDIT-RET-041: Use safeJson instead of bare response.json()
+  const result = await safeJson<ApiResponse<{ id: string }>>(response);
+  if (!result) throw new Error('Invalid response from server');
+  return result;
 }
 
 export async function updateSupplier(accessToken: string, id: string, data: Partial<SupplierFormData>): Promise<ApiResponse<{ id: string }>> {
@@ -296,11 +299,14 @@ export async function updateSupplier(accessToken: string, id: string, data: Part
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
+    const error = await safeJson(response).catch(() => ({})) as Record<string, string>;
     throw new Error(error.message || 'Failed to update supplier');
   }
 
-  return response.json();
+  // AUDIT-RET-041: Use safeJson instead of bare response.json()
+  const result = await safeJson<ApiResponse<{ id: string }>>(response);
+  if (!result) throw new Error('Invalid response from server');
+  return result;
 }
 
 export async function deleteSupplier(accessToken: string, id: string): Promise<ApiResponse<{ success: boolean }>> {
@@ -314,11 +320,14 @@ export async function deleteSupplier(accessToken: string, id: string): Promise<A
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
+    const error = await safeJson(response).catch(() => ({})) as Record<string, string>;
     throw new Error(error.message || 'Failed to delete supplier');
   }
 
-  return response.json();
+  // AUDIT-RET-041: Use safeJson instead of bare response.json()
+  const result = await safeJson<ApiResponse<{ success: boolean }>>(response);
+  if (!result) throw new Error('Invalid response from server');
+  return result;
 }
 
 // RCAT-SEARCH-001: Unified search results
@@ -367,7 +376,10 @@ export async function fetchSearch(accessToken: string, query: string, limit = 10
     throw new Error('Search failed');
   }
 
-  return response.json();
+  // AUDIT-RET-041: Use safeJson instead of bare response.json()
+  const data = await safeJson<ApiResponse<SearchResult>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }
 
 export async function fetchCompliance(accessToken: string): Promise<ApiResponse<unknown[]>> {
@@ -382,5 +394,8 @@ export async function fetchCompliance(accessToken: string): Promise<ApiResponse<
     throw new Error('Failed to fetch compliance documents');
   }
 
-  return response.json();
+  // AUDIT-RET-041: Use safeJson instead of bare response.json()
+  const data = await safeJson<ApiResponse<unknown[]>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
 }

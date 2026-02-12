@@ -195,6 +195,7 @@ export default function UploadPage() {
               <button
                 onClick={handleReset}
                 className="text-slate-400 hover:text-slate-600"
+                aria-label="Close upload preview"
               >
                 ✕
               </button>

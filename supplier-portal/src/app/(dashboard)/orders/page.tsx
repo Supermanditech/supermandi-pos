@@ -271,7 +271,17 @@ export default function OrdersPage() {
       {/* Orders Table */}
       <div className="card p-0 overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-500">Loading orders...</div>
+          <div className="p-4" role="status" aria-label="Loading orders">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-4 py-3 border-b border-slate-100">
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '15%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '20%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '12%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '18%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '10%' }} />
+              </div>
+            ))}
+          </div>
         ) : filteredOrders && filteredOrders.length > 0 ? (
           <table className="w-full">
             <thead>
@@ -402,6 +412,7 @@ export default function OrdersPage() {
                   setNewNoteText('');
                 }}
                 className="text-slate-400 hover:text-slate-600"
+                aria-label="Close order details"
               >
                 ✕
               </button>

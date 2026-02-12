@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { API_GATEWAY_BASE } from '../lib/api';
+import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 
@@ -343,7 +343,7 @@ export default function LoginPage() {
         { method: 'GET', headers: { 'Content-Type': 'application/json' } }
       );
 
-      const data = await response.json() as LookupResponse;
+      const data = await safeJson(response) as LookupResponse;
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to check registration status');
@@ -413,7 +413,7 @@ export default function LoginPage() {
         credentials: 'include',
       });
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         throw new Error(data.error?.message || 'Login failed');
@@ -489,7 +489,14 @@ export default function LoginPage() {
 
   return (
     <div style={styles.pageContainer}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      {/* AUDIT-RET-004: Fade-in + spin animations to prevent white flash on mount */}
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
+        .login-page-fade { animation: fadeIn 0.3s ease-out; }
+        .login-skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200px 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+      `}</style>
       {/* Header Bar */}
       <header style={styles.header}>
         <div style={styles.headerInner}>
@@ -502,7 +509,7 @@ export default function LoginPage() {
       </header>
 
       {/* Main Content */}
-      <main style={styles.main}>
+      <main style={styles.main} className="login-page-fade">
         <div style={styles.cardContainer}>
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Sign in to your account</h2>

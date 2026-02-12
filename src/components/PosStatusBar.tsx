@@ -142,7 +142,7 @@ export default function PosStatusBar({
 
   // DEV-059: Camera status split from scanner
   const cameraReady = cameraAvailable === true;
-  const cameraIcon = cameraReady ? "camera" : "camera-off";
+  const cameraIcon: React.ComponentProps<typeof MaterialCommunityIcons>["name"] = cameraReady ? "camera" : "camera-off";
   const cameraLabel = cameraReady ? "Camera available" : "Camera not available";
 
   const closePopover = useCallback(() => {
@@ -350,7 +350,7 @@ export default function PosStatusBar({
             style={styles.iconSlot}
           >
             <MaterialCommunityIcons
-              name={cameraIcon as any}
+              name={cameraIcon}
               size={iconSize}
               color={cameraReady ? iconActiveColor : iconInactiveColor}
             />

@@ -30,6 +30,8 @@ export default function KycPage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'documents' | 'bank'>('documents');
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  // AUDIT-SUP-017: Track last attempted file per doc type for retry on failure
+  const [failedUploads, setFailedUploads] = useState<Record<string, File>>({});
 
   // Bank verification form state
   const [bankForm, setBankForm] = useState({
@@ -56,16 +58,21 @@ export default function KycPage() {
   });
 
   // Upload document mutation
+  // AUDIT-SUP-017: Track failed uploads for retry
   const uploadMutation = useMutation({
     mutationFn: ({ type, file }: { type: KycDocument['documentType']; file: File }) =>
       uploadKycDocument(type, file),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success(data.message || 'Document uploaded successfully');
+      // Clear failed upload tracker on success
+      setFailedUploads(prev => { const next = { ...prev }; delete next[variables.type]; return next; });
       queryClient.invalidateQueries({ queryKey: ['kyc-documents'] });
       queryClient.invalidateQueries({ queryKey: ['kyc-status'] });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
       toast.error(error.message || 'Failed to upload document');
+      // AUDIT-SUP-017: Store the failed file for retry
+      setFailedUploads(prev => ({ ...prev, [variables.type]: variables.file }));
     },
   });
 
@@ -314,6 +321,15 @@ export default function KycPage() {
                           )}
                         </div>
                       )}
+                      {/* AUDIT-SUP-017: Show failed upload info with retry hint */}
+                      {!existingDoc && failedUploads[docType.key] && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">Upload Failed</span>
+                          <span className="text-sm text-slate-500">
+                            {failedUploads[docType.key].name} — click Retry to re-upload
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -324,6 +340,17 @@ export default function KycPage() {
                           disabled={deleteMutation.isPending}
                         >
                           Delete
+                        </button>
+                      )}
+
+                      {/* AUDIT-SUP-017: Retry button for failed uploads */}
+                      {failedUploads[docType.key] && (
+                        <button
+                          onClick={() => uploadMutation.mutate({ type: docType.key, file: failedUploads[docType.key] })}
+                          className="text-amber-600 hover:text-amber-700 text-sm font-medium"
+                          disabled={uploadMutation.isPending}
+                        >
+                          {uploadMutation.isPending ? 'Retrying...' : 'Retry'}
                         </button>
                       )}
 

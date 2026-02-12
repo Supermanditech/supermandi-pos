@@ -4,6 +4,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../../middleware/deviceToken";
+// AUDIT-API-041/063: Rate limit BNPL financial endpoints
+import { financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
 import { randomUUID } from "crypto";
 
 export const posBnplRouter = Router();
@@ -157,7 +159,7 @@ posBnplRouter.get("/bnpl/summary", requireDeviceToken, async (req: Request, res:
  * SM-019: Pay off a BNPL drawdown
  * Generates UPI payment link for repayment
  */
-posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, async (req: Request, res: Response) => {
+posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, financialOperationsRateLimiter, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -339,7 +341,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, async (req: Requ
  * POST /api/v1/pos/bnpl/:drawdownId/pay/confirm
  * SM-019: Confirm UPI repayment with UTR
  */
-posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (req: Request, res: Response) => {
+posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, financialOperationsRateLimiter, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
@@ -541,7 +543,7 @@ posBnplRouter.get("/bnpl/:drawdownId/pay/:repaymentId/status", requireDeviceToke
  * GO-LIVE-240: Submit a dispute for a BNPL drawdown
  * Creates a dispute record for review by support team
  */
-posBnplRouter.post("/bnpl/:drawdownId/dispute", requireDeviceToken, async (req: Request, res: Response) => {
+posBnplRouter.post("/bnpl/:drawdownId/dispute", requireDeviceToken, financialOperationsRateLimiter, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 

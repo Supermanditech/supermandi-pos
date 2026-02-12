@@ -16,8 +16,18 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Test secret - only used in non-production
-const TEST_JWT_SECRET = process.env.JWT_SECRET || 'test-secret-do-not-use-in-prod';
+// AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
+const TEST_JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET'];
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[FATAL] JWT_SECRET must be set in production');
+      process.exit(1);
+    }
+    return 'dev-secret-change-in-prod';
+  }
+  return secret;
+})();
 
 // Test user data structure
 interface TestTokenPayload {

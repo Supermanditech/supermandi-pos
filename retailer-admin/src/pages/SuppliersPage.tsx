@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 // Debounce delay for server-side search (RCAT-SUP-API-001)
 const SEARCH_DEBOUNCE_MS = 350;
@@ -273,7 +273,7 @@ export default function SuppliersPage() {
       const response = await authFetch(url, accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch suppliers');
-      const data = await response.json();
+      const data = await safeJson(response);
       setSuppliers(data.data || []);
     } catch (err) {
       console.error('Error fetching suppliers:', err);
@@ -472,7 +472,7 @@ export default function SuppliersPage() {
       });
 
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         if (data.error?.code === 'CANNOT_EDIT_SUPERMANDI') {
@@ -507,7 +507,7 @@ export default function SuppliersPage() {
       });
 
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to delete supplier');

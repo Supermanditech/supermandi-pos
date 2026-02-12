@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 interface Device {
   id: string;
@@ -91,7 +91,7 @@ export default function DeviceActivationPage() {
     try {
       const response = await authFetch('/api/v1/retailer-admin/devices', accessToken);
       if (response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         setDevices(data.devices || []);
       }
     } catch (err) {
@@ -124,7 +124,7 @@ export default function DeviceActivationPage() {
         body: JSON.stringify({ activation_code: activationCode }),
       });
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (response.ok && data.success) {
         setSuccess(`Device activated successfully! Device ID: ${data.device_id.substring(0, 8)}...`);
@@ -179,14 +179,14 @@ export default function DeviceActivationPage() {
         body: JSON.stringify({ active: !currentlyActive }),
       });
 
-      const data: DeviceUpdateResponse = await response.json();
+      const data = await safeJson(response) as DeviceUpdateResponse | null;
 
-      if (response.ok && data.success) {
+      if (response.ok && data?.success) {
         setSuccess(`Device ${currentlyActive ? 'deactivated' : 'reactivated'} successfully.`);
         // Reload devices list
         loadDevices();
       } else {
-        setError(data.error?.message || `Failed to ${action} device.`);
+        setError(data?.error?.message || `Failed to ${action} device.`);
       }
     } catch (err: any) {
       console.error('Device toggle error:', err);

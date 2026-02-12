@@ -1,20 +1,11 @@
 // SA-P0-005 + SA-P1-007: Feature Flags API Client
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
-import { sanitizeErrorMessage } from "./errorSanitizer";
+import { parseError } from "./errorSanitizer";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
 function requireApiBase(): string {
   return API_BASE;
-}
-
-async function parseError(res: Response): Promise<string> {
-  const fallback = `Request failed (${res.status})`;
-  const data = await res.json().catch(() => ({}));
-  if (data && typeof data === "object" && "error" in data) {
-    return sanitizeErrorMessage(String((data as { error: string }).error), fallback);
-  }
-  return fallback;
 }
 
 export type GlobalFeatureFlag = {

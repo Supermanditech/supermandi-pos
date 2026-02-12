@@ -7,7 +7,7 @@
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
-import { sanitizeErrorMessage } from "./errorSanitizer";
+import { parseError } from "./errorSanitizer";
 
 export type ApplicationStatus = 'DRAFT' | 'KYC_SUBMITTED' | 'PAYMENTS_SUBMITTED' | 'ACTIVE' | 'NEEDS_FIX' | 'EXPIRED';
 
@@ -64,17 +64,6 @@ export type ApplicationDetail = {
 
 function requireApiBase(): string {
   return API_BASE;
-}
-
-async function parseError(res: Response): Promise<string> {
-  const fallback = `Request failed (${res.status})`;
-  const data = await res.json().catch(() => ({}));
-  if (data && typeof data === "object" && "error" in data) {
-    const err = (data as any).error;
-    const msg = typeof err === 'string' ? err : err?.message || fallback;
-    return sanitizeErrorMessage(String(msg), fallback);
-  }
-  return fallback;
 }
 
 /**

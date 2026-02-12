@@ -1,5 +1,5 @@
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
-import { sanitizeErrorMessage } from "./errorSanitizer";
+import { parseError } from "./errorSanitizer";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
@@ -22,18 +22,6 @@ export type DeviceRecord = {
   created_at?: string | null;
   updated_at?: string | null;
 };
-
-async function parseError(res: Response): Promise<string> {
-  const fallback = `Request failed (${res.status})`;
-  const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (res.status === 503 && data.error === "admin_disabled") return "Admin disabled (ADMIN_TOKEN missing)";
-  // POST-BATCH-018-FIX-002: No hard redirect — let caller handle auth errors
-  if (res.status === 401) {
-    return "Unauthorized — session may have expired";
-  }
-  // GL-CRIT-0055: Sanitize error messages
-  return sanitizeErrorMessage(data.error, fallback);
-}
 
 // ADMIN-PAGINATION-001: Paginated response type
 export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };

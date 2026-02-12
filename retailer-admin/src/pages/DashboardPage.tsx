@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 import { useEscapeKey } from '../lib/hooks';
 import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
 // GL-CRIT-0066: Use centralized category icons configuration
@@ -87,7 +87,7 @@ export default function DashboardPage() {
         setEditingCategory(null);
       } else {
         // GL-CRIT-0039: Show error to user on API failure
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response).catch(() => ({}));
         setCatEditError(data.error?.message || 'Failed to rename category. Please try again.');
       }
     } catch (err) {
@@ -109,13 +109,13 @@ export default function DashboardPage() {
         method: 'DELETE',
       });
       if (response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         setCategories(prev => prev.map(c =>
           c.id === category.id ? { ...c, isHidden: data.isHidden } : c
         ));
       } else {
         // RET-AUD-040: Show API error to user
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response).catch(() => ({}));
         setCatToggleError(data.error?.message || `Failed to ${category.isHidden ? 'show' : 'hide'} category. Please try again.`);
       }
     } catch (err) {
@@ -257,6 +257,8 @@ export default function DashboardPage() {
       background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
       padding: '2rem',
     }}>
+      {/* AUDIT-RET-008: Shimmer animation for loading skeletons */}
+      <style>{`@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }`}</style>
       {/* Welcome Hero Section */}
       <div style={{
         background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 40%, #0891b2 100%)',
@@ -517,7 +519,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Products</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : inventoryTotals.totalProducts}
+            {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : inventoryTotals.totalProducts}
           </div>
         </div>
 
@@ -543,7 +545,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Stock Qty</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
+            {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : inventoryTotals.totalStockQty.toLocaleString('en-IN')}
           </div>
         </div>
 
@@ -569,7 +571,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Purchase Value</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#1e293b' }}>
-            {inventoryLoading ? '...' : formatCurrencyWhole(inventoryTotals.totalPurchaseValue)}
+            {inventoryLoading ? <span style={{ display: 'inline-block', width: '80px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : formatCurrencyWhole(inventoryTotals.totalPurchaseValue)}
           </div>
         </div>
 
@@ -595,7 +597,7 @@ export default function DashboardPage() {
             <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>Total Sell Revenue</span>
           </div>
           <div style={{ fontSize: '1.75rem', fontWeight: '700', color: '#059669' }}>
-            {inventoryLoading ? '...' : formatCurrencyWhole(inventoryTotals.totalSellRevenue)}
+            {inventoryLoading ? <span style={{ display: 'inline-block', width: '80px', height: '1.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px' }} /> : formatCurrencyWhole(inventoryTotals.totalSellRevenue)}
           </div>
         </div>
       </div>
@@ -630,8 +632,13 @@ export default function DashboardPage() {
         </div>
 
         {dailySummaryLoading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-            Loading daily summary...
+          <div style={{ padding: '1rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ borderRadius: '10px', padding: '1rem', background: '#f8fafc' }}>
+                <div style={{ width: '60%', height: '1.5rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '6px', margin: '0 auto 0.5rem' }} />
+                <div style={{ width: '40%', height: '0.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', margin: '0 auto' }} />
+              </div>
+            ))}
           </div>
         ) : dailySummaryError ? (
           <div style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>
@@ -1001,9 +1008,17 @@ export default function DashboardPage() {
           gap: '1rem',
         }}>
           {categoriesLoading ? (
-            <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-              Loading categories...
-            </div>
+            <>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '1.25rem', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                    <span style={{ width: '36px', height: '36px', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '8px', display: 'inline-block' }} />
+                    <span style={{ width: '60%', height: '0.95rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', display: 'inline-block' }} />
+                  </div>
+                  <span style={{ width: '40%', height: '0.75rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px', display: 'inline-block' }} />
+                </div>
+              ))}
+            </>
           ) : categories.length === 0 ? (
             <div style={{ gridColumn: '1 / -1', padding: '2rem', textAlign: 'center', color: '#64748b' }}>
               No categories yet. Add products to see category breakdown.
@@ -1229,7 +1244,7 @@ export default function DashboardPage() {
             fontSize: '0.75rem',
             fontWeight: '600',
           }}>
-            {inventoryLoading ? 'Loading...' : `${inventoryTotals.totalProducts} products`}
+            {inventoryLoading ? <span style={{ display: 'inline-block', width: '60px', height: '0.75rem', background: 'linear-gradient(90deg, #e0f2fe 25%, #bae6fd 50%, #e0f2fe 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '10px' }} /> : `${inventoryTotals.totalProducts} products`}
           </span>
         </div>
 
@@ -1295,11 +1310,17 @@ export default function DashboardPage() {
             </thead>
             <tbody>
               {inventoryLoading ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: '3rem 2rem', textAlign: 'center', color: '#64748b' }}>
-                    Loading inventory...
-                  </td>
-                </tr>
+                <>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      {Array.from({ length: 4 }).map((_, j) => (
+                        <td key={j} style={{ padding: '1rem 1.5rem' }}>
+                          <span style={{ display: 'inline-block', width: j === 0 ? '70%' : '50%', height: '1rem', background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)', backgroundSize: '200px 100%', animation: 'shimmer 1.5s infinite', borderRadius: '4px' }} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </>
               ) : inventoryError ? (
                 <tr>
                   <td colSpan={4} style={{ padding: '3rem 2rem', textAlign: 'center', color: '#ef4444' }}>

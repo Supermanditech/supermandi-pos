@@ -527,8 +527,16 @@ export default function ProductsPage() {
       {/* Products Table */}
       <div className="card p-0 overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center text-slate-500">
-            Loading products...
+          <div className="p-4" role="status" aria-label="Loading products">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex gap-4 py-3 border-b border-slate-100">
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '25%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '15%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '12%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '10%' }} />
+                <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '15%' }} />
+              </div>
+            ))}
           </div>
         ) : isError ? (
           /* GL-CRIT-0034: Show error state with retry button */
