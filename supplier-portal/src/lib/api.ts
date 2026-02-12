@@ -151,7 +151,8 @@ function handle401Response(): void {
     // Use replace to prevent back button returning to protected page
     // Use setTimeout to ensure token is cleared before redirect
     setTimeout(() => {
-      window.location.replace('/login');
+      // AUDIT-SUP-015/037: Include basePath — portal is served at /supplier/
+      window.location.replace('/supplier/login');
     }, 0);
   }
 }
