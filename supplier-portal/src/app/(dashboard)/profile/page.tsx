@@ -83,6 +83,11 @@ export default function ProfilePage() {
 
   const handleBankSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // AUDIT-SUP-013: Validate IFSC code format (4 letters + 0 + 6 alphanumeric)
+    if (bankData.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankData.ifscCode)) {
+      alert('Invalid IFSC code format. Expected: 4 letters + 0 + 6 alphanumeric (e.g., HDFC0001234)');
+      return;
+    }
     updateProfileMutation.mutate({ bankDetails: bankData });
   };
 
@@ -341,6 +346,8 @@ export default function ProfilePage() {
                     className="input font-mono"
                     placeholder="e.g., HDFC0001234"
                     maxLength={11}
+                    pattern="[A-Z]{4}0[A-Z0-9]{6}"
+                    title="4 letters + 0 + 6 alphanumeric (e.g., HDFC0001234)"
                   />
                 </div>
               </div>
