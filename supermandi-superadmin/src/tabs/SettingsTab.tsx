@@ -33,7 +33,7 @@ export function SettingsTab({
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
           <button onClick={refreshSettings} disabled={settingsLoading}>{settingsLoading ? "Loading..." : "Refresh"}</button>
         </div>
-        {settingsError && <div className="errorText" style={{ marginBottom: 8 }}>{settingsError}</div>}
+        {settingsError && <div className="errorText" style={{ marginBottom: 8 }}>{settingsError} <button onClick={refreshSettings} style={{ marginLeft: 8, padding: "2px 8px", fontSize: 12, cursor: "pointer" }}>Retry</button></div>}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
           <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
             <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>System Information</h4>

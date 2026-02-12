@@ -728,14 +728,9 @@ export default function App() {
       setCreateUserError("Name is required");
       return;
     }
-    if (!email.trim() && !phone.trim()) {
-      setCreateUserError("Either email or phone is required");
-      return;
-    }
-
-    // AUDIT-SA-005: Platform admin users require email for OTP login
-    if (actor_type === "platform" && !email.trim()) {
-      setCreateUserError("Email is required for admin users");
+    // AUDIT-SA-005: Email is required for all user types
+    if (!email.trim()) {
+      setCreateUserError("Email is required");
       return;
     }
 

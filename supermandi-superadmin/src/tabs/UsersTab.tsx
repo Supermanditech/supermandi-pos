@@ -47,8 +47,8 @@ export function UsersTab({
               <input value={createUserForm.name} onChange={(e) => setCreateUserForm((f) => ({ ...f, name: e.target.value }))} placeholder="Full name" />
             </div>
             <div className="control">
-              <label>Email</label>
-              <input type="email" value={createUserForm.email} onChange={(e) => setCreateUserForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@example.com" />
+              <label>Email *</label>
+              <input type="email" value={createUserForm.email} onChange={(e) => setCreateUserForm((f) => ({ ...f, email: e.target.value }))} placeholder="email@example.com" required />
             </div>
             <div className="control">
               <label>Phone</label>
@@ -75,7 +75,7 @@ export function UsersTab({
             {createUserError && <span className="errorText">{createUserError}</span>}
             {createUserSuccess && <span style={{ color: "#22c55e", fontWeight: 600 }}>{createUserSuccess}</span>}
           </div>
-          <div className="muted" style={{ marginTop: 8 }}>* Name is required. At least one of Email or Phone must be provided.</div>
+          <div className="muted" style={{ marginTop: 8 }}>* Name and Email are required.</div>
         </div>
       )}
 

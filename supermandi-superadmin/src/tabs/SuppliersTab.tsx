@@ -241,7 +241,7 @@ export function SuppliersTab({
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
                   <button
                     className="btnPrimary"
-                    onClick={() => handleBankVerify(bc.id, "approve")}
+                    onClick={() => { if (window.confirm(`Approve bank details for ${bc.businessName}? This action cannot be undone.`)) handleBankVerify(bc.id, "approve"); }}
                     disabled={bankVerifyLoading[bc.id]}
                     style={{ fontSize: 12, padding: "4px 12px" }}
                   >
