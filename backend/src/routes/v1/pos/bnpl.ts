@@ -275,15 +275,15 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, async (req: Requ
       await client.query(`
         UPDATE payments.bnpl_drawdowns
         SET status = 'paid', paid_at = NOW(), paid_amount_minor = $1
-        WHERE id = $2
-      `, [payAmount, drawdownId]);
+        WHERE id = $2 AND store_id = $3
+      `, [payAmount, drawdownId, storeId]);
 
       // Update the original buy_payment
       await client.query(`
         UPDATE payments.buy_payments
         SET status = 'completed', completed_at = NOW()
-        WHERE bnpl_drawdown_id = $1
-      `, [drawdownId]);
+        WHERE bnpl_drawdown_id = $1 AND store_id = $2
+      `, [drawdownId, storeId]);
 
       // Create a cash payment record
       const repaymentId = randomUUID();
@@ -395,15 +395,15 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (r
     await client.query(`
       UPDATE payments.bnpl_drawdowns
       SET status = 'paid', paid_at = NOW(), paid_amount_minor = $1
-      WHERE id = $2
-    `, [repayment.amount_minor, drawdownId]);
+      WHERE id = $2 AND store_id = $3
+    `, [repayment.amount_minor, drawdownId, storeId]);
 
     // Update the original BNPL buy_payment
     await client.query(`
       UPDATE payments.buy_payments
       SET status = 'completed', completed_at = NOW()
-      WHERE bnpl_drawdown_id = $1 AND mode = 'BNPL'
-    `, [drawdownId]);
+      WHERE bnpl_drawdown_id = $1 AND store_id = $2 AND mode = 'BNPL'
+    `, [drawdownId, storeId]);
 
     await client.query("COMMIT");
 

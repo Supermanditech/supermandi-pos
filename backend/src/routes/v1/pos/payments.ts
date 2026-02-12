@@ -646,11 +646,11 @@ posPaymentsRouter.post(
         return res.status(400).json({ error: "Payment already completed" });
       }
 
-      // Check if UPI portion is completed
+      // Check if UPI portion is completed (AUDIT-API-018: include store_id)
       const upiCheck = await client.query(
         `SELECT id, status FROM payments.sell_payments
-         WHERE sale_id = $1 AND mode = 'UPI' AND is_split = true`,
-        [payment.sale_id]
+         WHERE sale_id = $1 AND store_id = $2 AND mode = 'UPI' AND is_split = true`,
+        [payment.sale_id, storeId]
       );
 
       if (upiCheck.rowCount && upiCheck.rows[0]) {
