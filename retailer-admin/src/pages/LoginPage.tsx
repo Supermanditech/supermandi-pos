@@ -405,10 +405,12 @@ export default function LoginPage() {
       const idToken = await verifyOtp(otp);
 
       // Exchange Firebase token with backend for session JWT + stores list
+      // AUDIT-RET-003: Include credentials for cookie-based session auth
       const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/firebase-otp-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken }),
+        credentials: 'include',
       });
 
       const data = await response.json();
