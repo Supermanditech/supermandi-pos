@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 // FLOW-001: Device Required Banner
@@ -60,6 +60,13 @@ export default function ProtectedLayout() {
     { path: 'admin/products', label: 'Product Queue', icon: '📝' },
   ];
 
+  // AUDIT-RET-057: Filter navigation in limited mode — only allow dashboard and settings
+  const limitedAllowedPaths = new Set(['', 'settings', 'devices']);
+  const visibleNavItems = isLimitedMode
+    ? navItems.filter((item) => limitedAllowedPaths.has(item.path))
+    : navItems;
+  const visibleAdminItems = isLimitedMode ? [] : adminNavItems;
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
       {/* Sidebar */}
@@ -107,10 +114,11 @@ export default function ProtectedLayout() {
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {navItems.map((item) => (
-            <a
+          {/* AUDIT-RET-015: Use Link for SPA navigation instead of <a> full reloads */}
+          {visibleNavItems.map((item) => (
+            <Link
               key={item.path}
-              href={`/s/${storeCode}${item.path ? `/${item.path}` : ''}`}
+              to={`/s/${storeCode}${item.path ? `/${item.path}` : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -145,11 +153,11 @@ export default function ProtectedLayout() {
             >
               <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
               {item.label}
-            </a>
+            </Link>
           ))}
 
           {/* SM-024: Admin Section Divider - GL-WF-033: Only show for admin users */}
-          {isAdmin && (
+          {isAdmin && visibleAdminItems.length > 0 && (
             <div style={{
               borderTop: '1px solid rgba(255,255,255,0.1)',
               margin: '0.75rem 0',
@@ -165,10 +173,10 @@ export default function ProtectedLayout() {
               }}>
                 SuperAdmin
               </div>
-              {adminNavItems.map((item) => (
-                <a
+              {visibleAdminItems.map((item) => (
+                <Link
                   key={item.path}
-                  href={`/s/${storeCode}/${item.path}`}
+                  to={`/s/${storeCode}/${item.path}`}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -203,7 +211,7 @@ export default function ProtectedLayout() {
                 >
                   <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
                   {item.label}
-                </a>
+                </Link>
               ))}
             </div>
           )}
@@ -249,27 +257,29 @@ export default function ProtectedLayout() {
 
       {/* Main Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        {/* A1: RouterDebug Banner - top-right debug info */}
-        <div style={{
-          position: 'fixed',
-          top: '0.5rem',
-          right: '0.5rem',
-          background: 'rgba(15, 23, 42, 0.95)',
-          color: '#94a3b8',
-          padding: '0.5rem 0.75rem',
-          borderRadius: '8px',
-          fontSize: '0.65rem',
-          fontFamily: 'monospace',
-          zIndex: 9999,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          border: '1px solid #334155',
-          maxWidth: '300px',
-        }}>
-          <div style={{ color: '#22c55e', fontWeight: '600', marginBottom: '0.25rem' }}>RouterDebug</div>
-          <div><span style={{ color: '#64748b' }}>path:</span> <span style={{ color: '#38bdf8' }}>{location.pathname}</span></div>
-          <div><span style={{ color: '#64748b' }}>store:</span> <span style={{ color: '#a78bfa' }}>{storeCode}</span></div>
-          <div><span style={{ color: '#64748b' }}>api:</span> <span style={{ color: '#fbbf24', wordBreak: 'break-all' }}>{getApiBaseUrl()}</span></div>
-        </div>
+        {/* AUDIT-RET-014: Gate debug banner behind DEV — exposes API URLs in production */}
+        {import.meta.env.DEV && (
+          <div style={{
+            position: 'fixed',
+            top: '0.5rem',
+            right: '0.5rem',
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#94a3b8',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '8px',
+            fontSize: '0.65rem',
+            fontFamily: 'monospace',
+            zIndex: 9999,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            border: '1px solid #334155',
+            maxWidth: '300px',
+          }}>
+            <div style={{ color: '#22c55e', fontWeight: '600', marginBottom: '0.25rem' }}>RouterDebug</div>
+            <div><span style={{ color: '#64748b' }}>path:</span> <span style={{ color: '#38bdf8' }}>{location.pathname}</span></div>
+            <div><span style={{ color: '#64748b' }}>store:</span> <span style={{ color: '#a78bfa' }}>{storeCode}</span></div>
+            <div><span style={{ color: '#64748b' }}>api:</span> <span style={{ color: '#fbbf24', wordBreak: 'break-all' }}>{getApiBaseUrl()}</span></div>
+          </div>
+        )}
 
         {/* FLOW-001: Device Required Banner - shows when no device bound */}
         <DeviceRequiredBanner />
