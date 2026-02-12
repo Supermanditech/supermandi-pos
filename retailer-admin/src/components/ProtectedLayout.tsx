@@ -33,12 +33,13 @@ export default function ProtectedLayout() {
     navigate('/retailer/login');  // STAGING-FIX-008: Route to public login page
   };
 
-  // Check if current path matches nav item
+  // AUDIT-RET-066: Exact segment match to prevent double-highlight (settings vs settings/payments)
   const isActive = (path: string) => {
     if (path === '') {
       return location.pathname === `/s/${storeCode}` || location.pathname === `/s/${storeCode}/`;
     }
-    return location.pathname.startsWith(`/s/${storeCode}/${path}`);
+    const full = `/s/${storeCode}/${path}`;
+    return location.pathname === full || location.pathname.startsWith(full + '/');
   };
 
   const navItems = [

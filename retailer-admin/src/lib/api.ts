@@ -76,9 +76,10 @@ export async function authFetch(
     headers['Content-Type'] = 'application/json';
   }
 
-  // ISSUE-MICRO-107: 30s timeout to prevent hanging requests
+  // AUDIT-RET-050: Configurable timeout (default 30s, CSV imports may need longer)
+  const timeoutMs = (options as any).timeoutMs ?? 30000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   // AUTH-STORAGE-001: credentials: 'include' sends HttpOnly cookies automatically
   // CACHE-000: Prevent browser from caching API responses
@@ -238,9 +239,10 @@ export async function createRetailerApplication(
     credentials: 'include',
     body: JSON.stringify(data),
   });
-  const json = await response.json();
+  // AUDIT-RET-041/052: Use safeJson + throw proper Error
+  const json = await safeJson(response);
   if (!response.ok) {
-    throw { status: response.status, ...json.error };
+    throw new Error(json?.error?.message || `Registration failed (${response.status})`);
   }
   return json;
 }
@@ -256,9 +258,10 @@ export async function verifyRetailerOtp(data: {
     credentials: 'include',
     body: JSON.stringify(data),
   });
-  const json = await response.json();
+  // AUDIT-RET-041/052: Use safeJson + throw proper Error
+  const json = await safeJson(response);
   if (!response.ok) {
-    throw { status: response.status, ...json.error };
+    throw new Error(json?.error?.message || `OTP verification failed (${response.status})`);
   }
   return json;
 }
@@ -282,9 +285,10 @@ export async function uploadDocument(
     credentials: 'include',
     body: formData,
   });
-  const json = await response.json();
+  // AUDIT-RET-041/052: Use safeJson + throw proper Error
+  const json = await safeJson(response);
   if (!response.ok) {
-    throw { status: response.status, ...json.error };
+    throw new Error(json?.error?.message || `Upload failed (${response.status})`);
   }
   return json;
 }
@@ -299,9 +303,12 @@ export async function submitRetailerKyc(
     credentials: 'include',
     body: JSON.stringify({ applicationId }),
   });
-  const json = await response.json();
+  // AUDIT-RET-041/052: Use safeJson + throw proper Error
+  const json = await safeJson(response);
   if (!response.ok) {
-    throw { status: response.status, ...(json.error || {}), missingDocuments: json.missingDocuments };
+    const err = new Error(json?.error?.message || `KYC submission failed (${response.status})`);
+    (err as any).missingDocuments = json?.missingDocuments;
+    throw err;
   }
   return json;
 }
@@ -313,9 +320,10 @@ export async function getApplicationStatus(
   const response = await fetch(`${REGISTRATION_BASE}/status/${applicationId}`, {
     credentials: 'include',
   });
-  const json = await response.json();
+  // AUDIT-RET-041/052: Use safeJson + throw proper Error
+  const json = await safeJson(response);
   if (!response.ok) {
-    throw { status: response.status, ...json.error };
+    throw new Error(json?.error?.message || `Failed to get status (${response.status})`);
   }
   return json;
 }
@@ -334,9 +342,10 @@ export async function lookupRetailerRegistration(phone: string): Promise<LookupR
     `${REGISTRATION_BASE}/lookup?phone=${encodeURIComponent(phone)}`,
     { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
   );
-  const json = await response.json();
+  // AUDIT-RET-041/052: Use safeJson + throw proper Error
+  const json = await safeJson(response);
   if (!response.ok) {
-    throw { status: response.status, ...(json.error || {}) };
+    throw new Error(json?.error?.message || `Lookup failed (${response.status})`);
   }
   return json;
 }
