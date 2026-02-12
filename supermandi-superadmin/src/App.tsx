@@ -575,8 +575,20 @@ function EnrollmentCountdown({ expiresAt }: { expiresAt: string }) {
 export default function App() {
   const [tab, setTabRaw] = useState<TabKey>("events");
   // ISSUE-MICRO-063: Abort in-flight requests when switching tabs
+  // AUDIT-SA-016: Clear error states on tab switch to prevent stale errors
   const setTab = (newTab: TabKey) => {
-    if (newTab !== tab) abortActiveRequests();
+    if (newTab !== tab) {
+      abortActiveRequests();
+      setEventsError(""); setHealthError(""); setAiError(""); setStoreError("");
+      setStoreDirectoryError(""); setStoreNameError(""); setCreateStoreError("");
+      setBarcodeSheetError(""); setDevicesError(""); setDeviceActionError("");
+      setEnrollError(""); setAnalyticsError(""); setSuppliersError("");
+      setSupplierActionError(""); setStoreSuspendError(""); setProductActionError("");
+      setEditProductError(""); setUsersError(""); setUserActionError("");
+      setCreateUserError(""); setSettingsError(""); setAuditLogsError("");
+      setRegEventsError(""); setDocumentsError(""); setStaffError("");
+      setGrnAlertsError(""); setFeatureFlagsError(""); setApplicationsError("");
+    }
     setTabRaw(newTab);
   };
 
@@ -1855,7 +1867,8 @@ export default function App() {
 
     const shouldRefreshEvents = tab === "events" || tab === "devices" || tab === "payments"; // P0-DEPLOY-002: Include payments
     const shouldRefreshDevices = tab === "devices";
-    const shouldRefreshStores = tab === "stores";
+    // AUDIT-SA-033: Also load storeDirectory on staff tab (depends on store data)
+    const shouldRefreshStores = tab === "stores" || tab === "staff";
     const shouldRefreshSuppliers = tab === "suppliers";
     const shouldRefreshUsers = tab === "users";
     const shouldRefreshSettings = tab === "settings";
