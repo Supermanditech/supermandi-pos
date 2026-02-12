@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
+import { formatDate } from "../i18n/formatters";
 import { StatusTimeline } from "../components/orders/StatusTimeline";
 import * as orderApi from "../services/api/orderApi";
 import type {
@@ -519,19 +520,6 @@ function OrderItemRow({ item, isLast }: OrderItemRowProps) {
       </View>
     </View>
   );
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function formatDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 // =============================================================================

@@ -17,6 +17,7 @@ import { useProductsStore } from "../stores/productsStore";
 
 import { getPurchaseHistory, type LedgerEntry } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
+import { formatDate, formatTime } from "../i18n/formatters";
 import { theme } from "../theme";
 
 interface PurchaseHistoryScreenProps {
@@ -30,23 +31,6 @@ interface GroupedPurchase {
   entries: LedgerEntry[];
   totalQty: number;
   totalValue: number;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
