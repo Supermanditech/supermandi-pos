@@ -13,6 +13,7 @@ import {
   verifySupplierOtp,
   submitSupplierKyc,
   uploadSupplierDocument,
+  getAuthToken,
   ApiError,
 } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
@@ -38,6 +39,13 @@ function validatePincode(pincode: string): string | null {
 
 export default function SupplierOnboardingPage() {
   const router = useRouter();
+
+  // AUDIT-SUP-001: Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (getAuthToken()) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
 
   // Form state
   const [step, setStep] = useState<Step>('business');
