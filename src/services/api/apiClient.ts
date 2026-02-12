@@ -245,10 +245,11 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
   const locale = i18n.language || "en";
 
   const fullUrl = `${API_BASE_URL}${path}`;
-  console.log(`[api_debug] ${method} ${fullUrl}`);
-  // GO-LIVE DEBUG: Log token length to verify full token is being sent
-  console.log(`[api_debug] X-Device-Token: ${deviceToken ? `${deviceToken.slice(0, 8)}...(len=${deviceToken.length})` : "none"}`);
-  if (body) console.log(`[api_debug] body: ${JSON.stringify(body).slice(0, 200)}`);
+  if (__DEV__) {
+    console.log(`[api_debug] ${method} ${fullUrl}`);
+    console.log(`[api_debug] X-Device-Token: ${deviceToken ? `len=${deviceToken.length}` : "none"}`);
+    if (body) console.log(`[api_debug] body keys: ${Object.keys(body as Record<string, unknown>).join(', ')}`);
+  }
 
   // GO-LIVE FIX: Block requests to protected endpoints if token is missing
   // This prevents 401 errors from being sent with empty token
@@ -294,7 +295,9 @@ async function requestJson<T>(method: HttpMethod, path: string, body?: unknown):
     });
 
     const text = await res.text();
-    console.log(`[api_debug] status: ${res.status}, body: ${text.slice(0, 300)}`);
+    if (__DEV__) {
+      console.log(`[api_debug] status: ${res.status}, body: ${text.slice(0, 300)}`);
+    }
 
     // GO-LIVE-169: Parse with error handling
     let parsed: unknown;
