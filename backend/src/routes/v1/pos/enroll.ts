@@ -388,7 +388,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
                 updated_at = NOW(),
                 re_enrolled = true,
                 re_enrolled_at = NOW(),
-                token_expires_at = NOW() + INTERVAL '${TOKEN_EXPIRY_DAYS} days',
+                token_expires_at = NOW() + ($11 * INTERVAL '1 day'),
                 token_refreshed_at = NOW()
             WHERE id = $10
             `,
@@ -402,7 +402,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               appVersion,
               printingMode,
               deviceFingerprint,
-              deviceId
+              deviceId,
+              TOKEN_EXPIRY_DAYS
             ]
           );
 
@@ -449,7 +450,7 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               token_expires_at,
               token_refreshed_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW() + INTERVAL '${TOKEN_EXPIRY_DAYS} days', NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW(), NOW() + ($12 * INTERVAL '1 day'), NOW())
             `,
             [
               deviceId,
@@ -462,7 +463,8 @@ posEnrollRouter.post("/enroll", enrollmentBurstLimiter, enrollmentLimiter, async
               androidVersion,
               appVersion,
               printingMode,
-              deviceFingerprint
+              deviceFingerprint,
+              TOKEN_EXPIRY_DAYS
             ]
           );
 
