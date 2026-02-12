@@ -271,19 +271,26 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, async (req: Requ
 
     // For CASH mode, mark as paid immediately (cashier confirms)
     if (mode === 'CASH') {
-      // Mark drawdown as paid
+      // AUDIT-API-010: Distinguish partial vs full payment
+      const isFullPayment = payAmount >= drawdown.principal_minor;
+
+      // Update drawdown — only mark 'paid' if fully covered
       await client.query(`
         UPDATE payments.bnpl_drawdowns
-        SET status = 'paid', paid_at = NOW(), paid_amount_minor = $1
+        SET status = CASE WHEN $1 >= principal_minor THEN 'paid' ELSE status END,
+            paid_at = CASE WHEN $1 >= principal_minor THEN NOW() ELSE paid_at END,
+            paid_amount_minor = COALESCE(paid_amount_minor, 0) + $1
         WHERE id = $2 AND store_id = $3
       `, [payAmount, drawdownId, storeId]);
 
-      // Update the original buy_payment
-      await client.query(`
-        UPDATE payments.buy_payments
-        SET status = 'completed', completed_at = NOW()
-        WHERE bnpl_drawdown_id = $1 AND store_id = $2
-      `, [drawdownId, storeId]);
+      // Only mark original buy_payment completed if fully paid
+      if (isFullPayment) {
+        await client.query(`
+          UPDATE payments.buy_payments
+          SET status = 'completed', completed_at = NOW()
+          WHERE bnpl_drawdown_id = $1 AND store_id = $2
+        `, [drawdownId, storeId]);
+      }
 
       // Create a cash payment record
       const repaymentId = randomUUID();

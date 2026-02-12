@@ -459,6 +459,16 @@ posPaymentsRouter.post(
         });
       }
 
+      // AUDIT-API-016: Validate customer_phone for DUE payments — unrecoverable without it
+      const hasDue = payments.some(p => p.mode === 'DUE');
+      if (hasDue && !sale.customer_phone) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({
+          error: "Customer phone is required for DUE payments",
+          code: "CUSTOMER_PHONE_REQUIRED"
+        });
+      }
+
       // 4. Create payment records
       const paymentIds: string[] = [];
       let upiPayment: { paymentId: string; orderId: string; qrData: string; expiresAt: string } | null = null;
