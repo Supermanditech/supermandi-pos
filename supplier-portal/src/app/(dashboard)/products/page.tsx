@@ -13,12 +13,7 @@ import {
   ProductInput,
   PaginatedResponse,
 } from '@/lib/api';
-
-// AUDIT-SUP-020: Fix 0 treated as falsy — use null check instead
-function formatPrice(paise: number | undefined): string {
-  if (paise == null) return '-';
-  return `₹${(paise / 100).toFixed(2)}`;
-}
+import { formatCurrency } from '@/lib/formatters';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -593,11 +588,11 @@ export default function ProductsPage() {
                   </td>
                   <td className="py-3 px-4">
                     <div className="font-medium">
-                      {formatPrice(product.purchasePrice)}
+                      {product.purchasePrice != null ? formatCurrency(product.purchasePrice) : '-'}
                     </div>
-                    {product.mrp && (
+                    {product.mrp != null && (
                       <div className="text-sm text-slate-500">
-                        MRP: {formatPrice(product.mrp)}
+                        MRP: {formatCurrency(product.mrp)}
                       </div>
                     )}
                   </td>

@@ -10,6 +10,8 @@ import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
 // SEC-001: Import store status gate for ACTIVE store enforcement
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
+// AUDIT-API-035: Rate limit UPI generate to prevent QR abuse
+import { financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
 
 export const posPaymentsRouter = Router();
 
@@ -84,6 +86,7 @@ posPaymentsRouter.post(
   "/payments/upi/generate",
   requireDeviceToken,
   requireActiveStore,
+  financialOperationsRateLimiter,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId, deviceId } = (req as unknown as PosRequest).posDevice;
     const { saleId, amountMinor } = req.body as UpiInitRequest;
