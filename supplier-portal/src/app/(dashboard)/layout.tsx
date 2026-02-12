@@ -187,24 +187,7 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Verification Banner */}
-        {supplier?.verificationStatus === 'pending' && (
-          <div className="bg-yellow-50 border-b border-yellow-200 px-6 py-3">
-            <p className="text-yellow-800 text-sm">
-              <span className="font-medium">Verification Pending:</span> Your
-              account is under review. Products will be visible to retailers
-              once approved.
-            </p>
-          </div>
-        )}
-        {supplier?.verificationStatus === 'rejected' && (
-          <div className="bg-red-50 border-b border-red-200 px-6 py-3">
-            <p className="text-red-800 text-sm">
-              <span className="font-medium">Verification Rejected:</span>{' '}
-              Please contact support for more information.
-            </p>
-          </div>
-        )}
+        {/* AUDIT-SUP-023: Removed duplicate inline banners — LimitedModeBanner handles all non-verified states */}
 
         {/* REG-AUTH-302: LIMITED MODE Banner for non-verified suppliers */}
         {supplier?.verificationStatus && supplier.verificationStatus !== 'verified' && (

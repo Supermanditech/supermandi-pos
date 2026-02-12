@@ -54,6 +54,8 @@ export default function ProductsPage() {
   const [showForm, setShowForm] = useState(showAddForm);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  // AUDIT-SUP-024: Track which product is being resubmitted (per-product loading)
+  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   // ISSUE-MICRO-096: Sync status filter to URL for refresh/back-button persistence
   const statusFilter = searchParams.get('status') || 'all';
@@ -128,16 +130,19 @@ export default function ProductsPage() {
     mutationFn: ({ id, data }: { id: string; data: Partial<ProductInput> }) =>
       updateProduct(id, data),
     onSuccess: () => {
+      setResubmittingId(null);
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product resubmitted for review!');
     },
     onError: (error: Error) => {
+      setResubmittingId(null);
       toast.error(error.message || 'Failed to resubmit product');
     },
   });
 
   // GO-LIVE-026: Handle resubmit - include ALL product fields to prevent data loss
   const handleResubmit = (product: Product) => {
+    setResubmittingId(product.id);
     resubmitMutation.mutate({
       id: product.id,
       data: {
@@ -624,13 +629,14 @@ export default function ProductsPage() {
                         Edit
                       </button>
                       {/* GL-WF-037: Resubmit button for rejected products */}
+                      {/* AUDIT-SUP-024: Per-product resubmit loading state */}
                       {product.approvalStatus === 'rejected' && (
                         <button
                           onClick={() => handleResubmit(product)}
                           className="text-amber-600 hover:text-amber-700 text-sm font-medium"
-                          disabled={resubmitMutation.isPending}
+                          disabled={resubmittingId === product.id}
                         >
-                          {resubmitMutation.isPending ? 'Submitting...' : 'Resubmit'}
+                          {resubmittingId === product.id ? 'Submitting...' : 'Resubmit'}
                         </button>
                       )}
                       <button

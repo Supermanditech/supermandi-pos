@@ -95,11 +95,16 @@ export async function refreshAccessToken(): Promise<boolean> {
   refreshPromise = (async () => {
     try {
       // AUTH-STORAGE-001: credentials: 'include' sends refresh token cookie automatically
+      // AUDIT-SUP-025: 10s timeout prevents indefinite hang on token refresh
+      const refreshController = new AbortController();
+      const refreshTimeout = setTimeout(() => refreshController.abort(), 10000);
       const response = await fetch(`${API_BASE_URL}/api/v1/supplier/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: refreshController.signal,
       });
+      clearTimeout(refreshTimeout);
 
       if (!response.ok) {
         console.warn('[AUTH-EXPIRY-002] Token refresh failed:', response.status);
