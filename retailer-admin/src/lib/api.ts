@@ -231,9 +231,11 @@ export interface ApplicationResponse {
 export async function createRetailerApplication(
   data: CreateRetailerApplicationInput
 ): Promise<ApplicationResponse> {
+  // AUDIT-RET-051: Include credentials for cookie-based auth
   const response = await fetch(`${REGISTRATION_BASE}/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(data),
   });
   const json = await response.json();
@@ -247,9 +249,11 @@ export async function verifyRetailerOtp(data: {
   idToken: string;
   applicationId: string;
 }): Promise<{ success: boolean; nextStep: string; message: string }> {
+  // AUDIT-RET-051: Include credentials for cookie-based auth
   const response = await fetch(`${REGISTRATION_BASE}/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify(data),
   });
   const json = await response.json();
@@ -271,9 +275,11 @@ export async function uploadDocument(
   formData.append('entity_type', entityType);
   formData.append('entity_id', entityId);
 
+  // AUDIT-RET-051: Include credentials for cookie-based auth
   const response = await fetch(`${DOCUMENTS_BASE}/upload`, {
     method: 'POST',
     headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    credentials: 'include',
     body: formData,
   });
   const json = await response.json();
@@ -286,9 +292,11 @@ export async function uploadDocument(
 export async function submitRetailerKyc(
   applicationId: string
 ): Promise<{ success: boolean; application: { id: string; status: string }; message: string }> {
+  // AUDIT-RET-051: Include credentials for cookie-based auth
   const response = await fetch(`${REGISTRATION_BASE}/submit-kyc`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
     body: JSON.stringify({ applicationId }),
   });
   const json = await response.json();
@@ -301,7 +309,10 @@ export async function submitRetailerKyc(
 export async function getApplicationStatus(
   applicationId: string
 ): Promise<{ application: Record<string, unknown>; documents: Array<Record<string, unknown>> }> {
-  const response = await fetch(`${REGISTRATION_BASE}/status/${applicationId}`);
+  // AUDIT-RET-051: Include credentials for cookie-based auth
+  const response = await fetch(`${REGISTRATION_BASE}/status/${applicationId}`, {
+    credentials: 'include',
+  });
   const json = await response.json();
   if (!response.ok) {
     throw { status: response.status, ...json.error };
@@ -321,7 +332,7 @@ export interface LookupResponse {
 export async function lookupRetailerRegistration(phone: string): Promise<LookupResponse> {
   const response = await fetch(
     `${REGISTRATION_BASE}/lookup?phone=${encodeURIComponent(phone)}`,
-    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+    { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
   );
   const json = await response.json();
   if (!response.ok) {

@@ -81,12 +81,15 @@ export default function SettingsPage() {
     loadSettings();
   }, [accessToken, store?.name]);
 
-  // Validate UPI VPA format
+  // AUDIT-RET-046: Unified UPI VPA validation (matches UpiInput component)
   const validateUpiVpa = (vpa: string): string | undefined => {
     if (!vpa) return undefined; // Optional
-    const upiRegex = /^[\w.-]+@[\w]+$/;
-    if (!upiRegex.test(vpa)) {
-      return 'Invalid UPI VPA format (e.g., store@upi)';
+    const trimmed = vpa.trim();
+    if (trimmed.length < 6) return 'UPI VPA must be at least 6 characters';
+    if (trimmed.length > 100) return 'UPI VPA cannot exceed 100 characters';
+    const upiRegex = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9]{2,}$/;
+    if (!upiRegex.test(trimmed)) {
+      return 'Invalid UPI VPA format. Use: name@bank (e.g., store@ybl)';
     }
     return undefined;
   };
