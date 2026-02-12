@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { onAuthFailure, API_GATEWAY_BASE, logoutApi, hasAuthCookie } from './api';
+import { onAuthFailure, API_GATEWAY_BASE, logoutApi, hasAuthCookie, safeJson } from './api';
 
 // GO-LIVE-109 + AUTH-EXPIRY-001: Token refresh configuration
 // Access token expires in 15 minutes. Refresh 5 minutes before expiry.
@@ -275,9 +275,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false;
       }
 
-      const data = await response.json();
-      const newAccessToken = data.data?.accessToken;
-      const expiresIn = data.data?.expiresIn;
+      // AUDIT-RET-041: Use safeJson instead of bare response.json()
+      const data = await safeJson(response) as { data?: { accessToken?: string; expiresIn?: number } } | null;
+      const newAccessToken = data?.data?.accessToken;
+      const expiresIn = data?.data?.expiresIn;
 
       if (newAccessToken) {
         // Store in memory only (cookies are set by server)

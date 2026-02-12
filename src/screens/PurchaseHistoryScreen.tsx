@@ -51,7 +51,7 @@ function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
         referenceId: refId,
         entries: [entry],
         totalQty: entry.deltaQty,
-        totalValue: entry.deltaQty * 10000, // placeholder
+        totalValue: 0, // AUDIT-POS-001: No unit cost available from ledger API
       });
     }
   }

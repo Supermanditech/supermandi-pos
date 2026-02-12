@@ -52,6 +52,7 @@ export default function BarcodeSheetScreen() {
     }
     setLoading(true);
     setError(null);
+    setPreviewPage(0); // AUDIT-POS-010: Reset pagination on new generation
     try {
       const results = await fetchBarcodeSheetItems(tier);
       setItems(results);
@@ -108,10 +109,17 @@ export default function BarcodeSheetScreen() {
     }
   };
 
+  // AUDIT-POS-010: Client-side pagination for barcode preview
+  const PAGE_SIZE = 10;
+  const [previewPage, setPreviewPage] = useState(0);
   const previewTitle = activeTier === "TIER_2" ? "Tier 2 Sheet" : "Tier 1 Sheet";
   const actionDisabled = !activeTier || items.length === 0 || loading;
   const actionIconColor = actionDisabled ? theme.colors.textTertiary : theme.colors.textInverse;
-  const previewItems = useMemo(() => items.slice(0, 6), [items]);
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const previewItems = useMemo(
+    () => items.slice(previewPage * PAGE_SIZE, (previewPage + 1) * PAGE_SIZE),
+    [items, previewPage]
+  );
   const previewCount = items.length;
   const sheetCapacity = activeTier ? getBarcodeSheetCapacity(activeTier) : 0;
 
@@ -175,11 +183,32 @@ export default function BarcodeSheetScreen() {
                     </Text>
                   </View>
                 ))}
-                {previewCount > previewItems.length ? (
-                  <Text style={styles.previewMoreText}>
-                    +{previewCount - previewItems.length} more labels
-                  </Text>
-                ) : null}
+                {/* AUDIT-POS-010: Pagination controls for large barcode sets */}
+                {items.length > PAGE_SIZE && (
+                  <View style={styles.paginationRow}>
+                    <Pressable
+                      style={[styles.paginationBtn, previewPage === 0 && styles.paginationBtnDisabled]}
+                      onPress={() => setPreviewPage(p => Math.max(0, p - 1))}
+                      disabled={previewPage === 0}
+                      accessibilityLabel="Previous page"
+                    >
+                      <MaterialCommunityIcons name="chevron-left" size={18} color={previewPage === 0 ? theme.colors.textTertiary : theme.colors.primary} />
+                      <Text style={[styles.paginationText, previewPage === 0 && styles.paginationTextDisabled]}>Prev</Text>
+                    </Pressable>
+                    <Text style={styles.paginationInfo}>
+                      {previewPage + 1} / {totalPages}
+                    </Text>
+                    <Pressable
+                      style={[styles.paginationBtn, previewPage >= totalPages - 1 && styles.paginationBtnDisabled]}
+                      onPress={() => setPreviewPage(p => Math.min(totalPages - 1, p + 1))}
+                      disabled={previewPage >= totalPages - 1}
+                      accessibilityLabel="Next page"
+                    >
+                      <Text style={[styles.paginationText, previewPage >= totalPages - 1 && styles.paginationTextDisabled]}>Next</Text>
+                      <MaterialCommunityIcons name="chevron-right" size={18} color={previewPage >= totalPages - 1 ? theme.colors.textTertiary : theme.colors.primary} />
+                    </Pressable>
+                  </View>
+                )}
               </View>
             </View>
           ) : hasFetched ? (
@@ -415,5 +444,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: theme.colors.textInverse,
+  },
+  // AUDIT-POS-010: Pagination styles
+  paginationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  paginationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  paginationBtnDisabled: {
+    opacity: 0.4,
+  },
+  paginationText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  paginationTextDisabled: {
+    color: theme.colors.textTertiary,
+  },
+  paginationInfo: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
   },
 });

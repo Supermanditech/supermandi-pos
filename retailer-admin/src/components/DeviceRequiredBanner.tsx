@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 interface DeviceRequiredBannerProps {
   onStatusLoaded?: (hasBoundDevices: boolean) => void;
@@ -28,7 +28,8 @@ export default function DeviceRequiredBanner({ onStatusLoaded }: DeviceRequiredB
       try {
         const response = await authFetch('/api/v1/retailer-admin/devices', accessToken);
         if (response.ok) {
-          const data = await response.json();
+          // AUDIT-RET-041: Use safeJson instead of bare response.json()
+          const data = await safeJson(response) as Record<string, unknown[]>;
           const devices = data.devices || [];
           const hasBoundDevices = devices.length > 0;
           setHasDevices(hasBoundDevices);
