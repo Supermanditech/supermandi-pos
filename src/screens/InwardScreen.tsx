@@ -388,9 +388,16 @@ export default function InwardScreen({
         await doSubmit();
       }
     } catch (error) {
-      // If stock check fails, still allow submission
-      console.warn("[InwardScreen] GO-LIVE-235: Stock check failed, proceeding:", error);
-      await doSubmit();
+      // AUDIT-POS-035: Block submission on stock check failure instead of silently proceeding
+      console.warn("[InwardScreen] Stock check failed:", error);
+      Alert.alert(
+        "Stock Check Failed",
+        "Could not verify current stock levels. Please check your connection and try again.",
+        [
+          { text: "Cancel", style: "cancel", onPress: () => setSubmitting(false) },
+          { text: "Submit Anyway", onPress: () => doSubmit() },
+        ]
+      );
     }
   };
 
