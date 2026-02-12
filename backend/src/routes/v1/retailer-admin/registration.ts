@@ -12,6 +12,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+import { sendRegistrationConfirmationEmail } from "../../../services/emailService";
 
 const router = Router();
 
@@ -774,6 +775,20 @@ router.post("/submit-kyc", registrationRateLimiter, async (req: Request, res: Re
     );
 
     console.log(`[RetailerReg] REG-AUTH-201: KYC submitted for application ${applicationId}`);
+
+    // STAGING-FIX-014: Send registration confirmation email (non-blocking)
+    const appDetails = await pool.query(
+      `SELECT email, business_name FROM auth.applications WHERE id = $1`,
+      [applicationId]
+    );
+    if (appDetails.rows[0]?.email) {
+      sendRegistrationConfirmationEmail(
+        appDetails.rows[0].email,
+        appDetails.rows[0].business_name || 'Retailer',
+        'retailer',
+        applicationId
+      ).catch(err => console.error('[RetailerReg] Email send failed (non-blocking):', err));
+    }
 
     res.json({
       success: true,

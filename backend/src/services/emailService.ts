@@ -599,6 +599,111 @@ export function recordEmailSend(email: string): void {
   limits.hour.push(now);
 }
 
+// =============================================================================
+// STAGING-FIX-014: Registration Confirmation Email
+// =============================================================================
+
+function getRegistrationConfirmationHtml(businessName: string, entityType: string, applicationId: string): string {
+  const portalLabel = entityType === 'supplier' ? 'Supplier' : 'Retailer';
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Received - SuperMandi</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">SuperMandi</h1>
+              <p style="color: rgba(255, 255, 255, 0.9); margin: 8px 0 0 0; font-size: 14px;">${portalLabel} Portal</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 32px;">
+              <h2 style="color: #1f2937; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">Application Received!</h2>
+              <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">
+                Dear <strong>${businessName}</strong>,
+              </p>
+              <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">
+                Thank you for registering as a ${portalLabel.toLowerCase()} on SuperMandi. We have received your application and KYC documents.
+              </p>
+              <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+                <p style="color: #166534; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">Application Details:</p>
+                <p style="color: #15803d; margin: 0; font-size: 13px;">Application ID: <strong>${applicationId}</strong></p>
+                <p style="color: #15803d; margin: 4px 0 0 0; font-size: 13px;">Status: <strong>Under Review</strong></p>
+              </div>
+              <p style="color: #4b5563; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">
+                Our team will review your application and documents. You will receive an email notification once your application is approved.
+              </p>
+              <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 0 8px 8px 0;">
+                <p style="color: #1e40af; margin: 0; font-size: 13px; line-height: 1.5;">
+                  <strong>What happens next?</strong><br>
+                  1. Our team reviews your documents (1-2 business days)<br>
+                  2. You receive an approval email<br>
+                  3. Login to your ${portalLabel.toLowerCase()} portal and start using SuperMandi
+                </p>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f9fafb; padding: 24px 32px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; margin: 0; font-size: 12px; text-align: center; line-height: 1.5;">
+                This email was sent by SuperMandi. If you have questions, contact support.<br>
+                &copy; ${new Date().getFullYear()} SuperMandi. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Send registration confirmation email after KYC submission.
+ * Non-blocking: failures are logged but don't break the registration flow.
+ */
+export async function sendRegistrationConfirmationEmail(
+  to: string,
+  businessName: string,
+  entityType: string,
+  applicationId: string
+): Promise<SendEmailResult> {
+  const config = getEmailConfig();
+
+  console.log(`[EmailService] Sending registration confirmation to ${to} for ${entityType} app ${applicationId}`);
+
+  if (config.provider === 'disabled') {
+    console.warn('[EmailService] Email provider is disabled — registration confirmation not sent');
+    return { sent: false, errorCode: 'EMAIL_DISABLED', errorMessage: 'Email service not configured' };
+  }
+
+  const subject = `SuperMandi - Application Received (${entityType === 'supplier' ? 'Supplier' : 'Retailer'})`;
+  const html = getRegistrationConfirmationHtml(businessName, entityType, applicationId);
+  const text = `Dear ${businessName},\n\nThank you for registering on SuperMandi. Your application (ID: ${applicationId}) has been received and is under review.\n\nOur team will review your documents within 1-2 business days.\n\n- SuperMandi Team`;
+
+  try {
+    if (config.provider === 'resend') {
+      return await sendViaResend(config, to, subject, html, text);
+    }
+    if (config.provider === 'smtp') {
+      return await sendViaSMTP(config, to, subject, html, text);
+    }
+    return { sent: false, errorCode: 'UNKNOWN_PROVIDER', errorMessage: `Unknown provider: ${config.provider}` };
+  } catch (err) {
+    console.error('[EmailService] Registration confirmation email failed:', err);
+    return { sent: false, errorCode: 'SEND_FAILED', errorMessage: 'Failed to send email' };
+  }
+}
+
 // Cleanup old rate limit entries periodically
 setInterval(() => {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;

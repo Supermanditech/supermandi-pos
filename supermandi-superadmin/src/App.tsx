@@ -67,6 +67,7 @@ import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEv
 import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
 import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
 import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags"; // SA-P0-005+P1-007
+import { fetchApplications, approveApplication, rejectApplication, type Application } from "./api/applications"; // STAGING-FIX-014
 import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
 import { BuildStamp } from "./components/BuildStamp";
 import { formatDateTime, formatCurrency } from "./lib/formatters";
@@ -74,7 +75,7 @@ import "./App.css";
 
 // GO-LIVE-011: Added "audit" tab for audit logs
 // DOCS-001: Added "documents" tab for document management
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff" | "grn-alerts";
+type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff" | "grn-alerts" | "applications";
 type GroupKey = "none" | "transactionId" | "billId";
 type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
 
@@ -913,6 +914,16 @@ export default function App() {
   const [bulkFlagAction, setBulkFlagAction] = useState<"enable" | "disable">("enable");
   const [bulkFlagLoading, setBulkFlagLoading] = useState(false);
   const [bulkFlagResult, setBulkFlagResult] = useState("");
+
+  // STAGING-FIX-014: Application approval state
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [applicationsTotal, setApplicationsTotal] = useState(0);
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
+  const [applicationsError, setApplicationsError] = useState("");
+  const [appActionLoading, setAppActionLoading] = useState<Record<string, boolean>>({});
+  const [appRejectReason, setAppRejectReason] = useState<Record<string, string>>({});
+  const [appEntityFilter, setAppEntityFilter] = useState<string>("");
+  const applicationsInFlightRef = useRef(false);
 
   // Filters (apply to event table + payments view)
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
@@ -1764,8 +1775,67 @@ export default function App() {
     }
   }
 
+  // STAGING-FIX-014: Application approval refresh + handlers
+  async function refreshApplications() {
+    if (applicationsInFlightRef.current) return;
+    applicationsInFlightRef.current = true;
+    setApplicationsLoading(true);
+    setApplicationsError("");
+    try {
+      const data = await fetchApplications({
+        entityType: appEntityFilter || undefined,
+        limit: 100,
+      });
+      setApplications(data.items);
+      setApplicationsTotal(data.total);
+    } catch (e: any) {
+      setApplicationsError(e?.message ? String(e.message) : "Failed to fetch applications");
+    } finally {
+      applicationsInFlightRef.current = false;
+      setApplicationsLoading(false);
+    }
+  }
+
+  async function handleApproveApplication(appId: string) {
+    setAppActionLoading((prev) => ({ ...prev, [appId]: true }));
+    setApplicationsError("");
+    try {
+      await approveApplication(appId);
+      setApplications((prev) => prev.filter((a) => a.id !== appId));
+      setApplicationsTotal((prev) => Math.max(0, prev - 1));
+    } catch (e: any) {
+      setApplicationsError(e?.message ? String(e.message) : "Failed to approve application");
+    } finally {
+      setAppActionLoading((prev) => ({ ...prev, [appId]: false }));
+    }
+  }
+
+  async function handleRejectApplication(appId: string) {
+    const reason = appRejectReason[appId];
+    if (!reason || reason.trim().length < 5) {
+      setApplicationsError("Rejection reason must be at least 5 characters");
+      return;
+    }
+    setAppActionLoading((prev) => ({ ...prev, [appId]: true }));
+    setApplicationsError("");
+    try {
+      await rejectApplication(appId, { reason: reason.trim() });
+      setApplications((prev) => prev.filter((a) => a.id !== appId));
+      setApplicationsTotal((prev) => Math.max(0, prev - 1));
+      setAppRejectReason((prev) => {
+        const next = { ...prev };
+        delete next[appId];
+        return next;
+      });
+    } catch (e: any) {
+      setApplicationsError(e?.message ? String(e.message) : "Failed to reject application");
+    } finally {
+      setAppActionLoading((prev) => ({ ...prev, [appId]: false }));
+    }
+  }
+
   // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
-  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents, refreshStaff, refreshGrnAlerts, refreshAnalytics };
+  refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents, refreshStaff, refreshGrnAlerts, refreshAnalytics, refreshApplications };
 
   useEffect(() => {
     // ITER4-CRIT-001: Token pre-fill removed - login now handled by LoginGate component
@@ -1780,6 +1850,7 @@ export default function App() {
     const shouldRefreshAudit = tab === "audit"; // GO-LIVE-011
     const shouldRefreshDocuments = tab === "documents"; // DOCS-001
     const shouldRefreshRegEvents = tab === "registrations"; // RO-007
+    const shouldRefreshApplications = tab === "applications"; // STAGING-FIX-014
 
     // ISSUE-MICRO-024: Use refreshRef for initial calls too (consistent with polling)
     const r = refreshRef.current;
@@ -1798,6 +1869,7 @@ export default function App() {
     if (shouldRefreshAudit) r.refreshAuditLogs?.(); // GO-LIVE-011
     if (shouldRefreshDocuments) r.refreshDocuments?.(); // DOCS-001
     if (shouldRefreshRegEvents) r.refreshRegEvents?.(); // RO-007
+    if (shouldRefreshApplications) r.refreshApplications?.(); // STAGING-FIX-014
     if (tab === "staff" && staffStoreId) r.refreshStaff?.(); // SA-P1-001
     if (tab === "grn-alerts") r.refreshGrnAlerts?.(); // SA-P1-004
 
@@ -2520,6 +2592,15 @@ export default function App() {
           {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
             <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
               {pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}
+            </span>
+          )}
+        </button>
+        {/* STAGING-FIX-014: Applications approval tab */}
+        <button className={tab === "applications" ? "tab tabActive" : "tab"} onClick={() => setTab("applications")}>
+          Applications
+          {applicationsTotal > 0 && (
+            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
+              {applicationsTotal}
             </span>
           )}
         </button>
@@ -5191,6 +5272,136 @@ export default function App() {
                 )}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {/* STAGING-FIX-014: Applications Approval Tab */}
+      {tab === "applications" && (
+        <section className="card">
+          <div className="cardHeader">
+            <div>
+              <div className="cardTitle">Registration Applications</div>
+              <div className="muted">Review and approve/reject retailer and supplier registration applications</div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select
+                className="selectSmall"
+                value={appEntityFilter}
+                onChange={(e) => { setAppEntityFilter(e.target.value); setTimeout(() => refreshApplications(), 50); }}
+              >
+                <option value="">All Types</option>
+                <option value="retailer">Retailer</option>
+                <option value="supplier">Supplier</option>
+              </select>
+              <button onClick={refreshApplications} disabled={applicationsLoading}>
+                {applicationsLoading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+          </div>
+
+          {applicationsError && <div className="banner" style={{ margin: "0 16px 12px" }}>{applicationsError}</div>}
+
+          {applications.length === 0 ? (
+            <div className="empty">
+              {applicationsLoading ? "Loading applications..." : "No pending applications."}
+            </div>
+          ) : (
+            <div className="tableWrap">
+              <div className="deviceGrid">
+                {applications.map((app) => (
+                  <div className="deviceCard" key={app.id}>
+                    <div className="deviceHeader">
+                      <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
+                        {app.businessName || "Unknown Business"}
+                      </div>
+                      <div className="badgeRow">
+                        <span className={`badge ${app.entityType === 'retailer' ? 'badgeOk' : 'badgeInfo'}`} style={{ textTransform: "capitalize" }}>
+                          {app.entityType}
+                        </span>
+                        <span className={`badge ${app.status === 'KYC_SUBMITTED' ? 'badgeWarn' : app.status === 'NEEDS_FIX' ? 'badgeError' : 'badgeOk'}`}>
+                          {app.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="deviceMetaGrid">
+                      <div>
+                        <strong>Owner:</strong> <span>{app.ownerName}</span>
+                      </div>
+                      <div>
+                        <strong>Phone:</strong> <span className="mono">{app.phone}</span>
+                      </div>
+                      <div>
+                        <strong>GSTIN:</strong> <span className="mono">{app.gstin}</span>
+                      </div>
+                      {app.email && (
+                        <div>
+                          <strong>Email:</strong> <span className="mono">{app.email}</span>
+                        </div>
+                      )}
+                      {app.city && (
+                        <div>
+                          <strong>Location:</strong> <span>{app.city}{app.state ? `, ${app.state}` : ''}{app.pincode ? ` - ${app.pincode}` : ''}</span>
+                        </div>
+                      )}
+                      <div>
+                        <strong>Applied:</strong> <span className="mono">{formatDateTime(app.createdAt)}</span>
+                      </div>
+                      {app.submittedAt && (
+                        <div>
+                          <strong>KYC Submitted:</strong> <span className="mono">{formatDateTime(app.submittedAt)}</span>
+                        </div>
+                      )}
+                      {app.documentUrls && Object.keys(app.documentUrls).length > 0 && (
+                        <div>
+                          <strong>Documents:</strong> <span>{Object.keys(app.documentUrls).length} uploaded</span>
+                        </div>
+                      )}
+                      {app.rejectionReason && (
+                        <div style={{ gridColumn: "1 / -1", color: "#dc2626" }}>
+                          <strong>Previous Rejection:</strong> <span>{app.rejectionReason}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ marginTop: 8 }}>
+                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject):</label>
+                      <input
+                        className="tableInput"
+                        style={{ width: "100%", marginBottom: 8 }}
+                        placeholder="Reason for rejection (min 5 chars)..."
+                        value={appRejectReason[app.id] || ""}
+                        onChange={(e) => setAppRejectReason((prev) => ({ ...prev, [app.id]: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
+                      <button
+                        onClick={() => handleApproveApplication(app.id)}
+                        disabled={appActionLoading[app.id]}
+                        style={{ background: "#22c55e", color: "white" }}
+                        title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
+                      >
+                        {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
+                      </button>
+                      <button
+                        className="btnGhost"
+                        onClick={() => handleRejectApplication(app.id)}
+                        disabled={appActionLoading[app.id]}
+                        style={{ color: "#ef4444" }}
+                      >
+                        {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ padding: "12px 16px", fontSize: 12, color: "#666" }}>
+            Showing {applications.length} of {applicationsTotal} pending applications
           </div>
         </section>
       )}
