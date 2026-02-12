@@ -115,8 +115,8 @@ export function DocumentsTab({
                 {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
               </button>
               <div style={{ display: "flex", gap: 8 }}>
-                <input type="text" placeholder="Rejection reason (required)" value={docRejectReason} onChange={(e) => setDocRejectReason(e.target.value)} style={{ flex: 1, padding: "8px 12px" }} />
-                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || !docRejectReason.trim()} style={{ padding: "10px 20px", backgroundColor: "#ef4444", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading || !docRejectReason.trim() ? "not-allowed" : "pointer", opacity: !docRejectReason.trim() ? 0.5 : 1 }}>
+                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => setDocRejectReason(e.target.value)} style={{ flex: 1, padding: "8px 12px" }} />
+                <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} style={{ padding: "10px 20px", backgroundColor: "#ef4444", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
                   ✕ Reject
                 </button>
               </div>
