@@ -142,9 +142,9 @@ voiceRouter.post(
         });
       }
 
-      // Get store context from device token
+      // Get store context from device token (AUDIT-API-006: never trust client-sent storeId)
       const device = (req as any).device;
-      const storeId = req.body.storeId || device?.storeId || device?.store_id;
+      const storeId = device?.storeId || device?.store_id;
 
       if (!storeId) {
         return res.status(400).json({
@@ -273,8 +273,9 @@ voiceRouter.post(
         });
       }
 
+      // AUDIT-API-006: derive storeId from device token only (never trust client-sent)
       const device = (req as any).device;
-      const storeId = req.body.storeId || device?.storeId || device?.store_id;
+      const storeId = device?.storeId || device?.store_id;
 
       if (!storeId) {
         return res.status(400).json({
