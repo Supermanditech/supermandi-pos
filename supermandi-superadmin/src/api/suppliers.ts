@@ -1,6 +1,6 @@
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
-import { sanitizeErrorMessage } from "./errorSanitizer";
+import { parseError } from "./errorSanitizer";
 
 export type PendingSupplierRequest = {
   id: string;
@@ -35,16 +35,6 @@ export type VerifiedSupplier = {
 
 function requireApiBase(): string {
   return API_BASE;
-}
-
-async function parseError(res: Response): Promise<string> {
-  const fallback = `Request failed (${res.status})`;
-  const data = await res.json().catch(() => ({}));
-  if (data && typeof data === "object" && "error" in data) {
-    // GL-CRIT-0055: Sanitize error messages
-    return sanitizeErrorMessage(String((data as any).error), fallback);
-  }
-  return fallback;
 }
 
 // ADMIN-PAGINATION-001: Paginated response type

@@ -104,3 +104,20 @@ export function sanitizeErrorMessage(rawError: string | undefined | null, fallba
 
   return cleaned || fallback;
 }
+
+/**
+ * AUDIT-SA-053: Centralized response error parser — replaces 10 duplicate parseError functions.
+ * Handles 503/admin_disabled, 401/session expired, and sanitizes error/message fields.
+ */
+export async function parseError(res: Response): Promise<string> {
+  const fallback = `Request failed (${res.status})`;
+  const data = (await res.json().catch(() => ({}))) as { error?: unknown; message?: unknown };
+  if (res.status === 503 && data.error === "admin_disabled") return "Admin service unavailable";
+  if (res.status === 401) return "Session expired or unauthorized. Please log in again.";
+  if (data.error) {
+    const err = typeof data.error === "string" ? data.error : (data.error as { message?: string })?.message || fallback;
+    return sanitizeErrorMessage(String(err), fallback);
+  }
+  if (data.message) return sanitizeErrorMessage(String(data.message), fallback);
+  return fallback;
+}

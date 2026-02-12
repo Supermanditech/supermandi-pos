@@ -1,6 +1,6 @@
 // ADM-SCR-002: Users API Module
 import { getAuthHeaders, fetchWithTimeout } from "./authToken";
-import { sanitizeErrorMessage } from "./errorSanitizer";
+import { parseError } from "./errorSanitizer";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 
@@ -15,15 +15,6 @@ export type UserRecord = {
   created_at: string;
   updated_at: string;
 };
-
-async function parseError(res: Response): Promise<string> {
-  const fallback = `Request failed (${res.status})`;
-  const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (res.status === 503 && data.error === "admin_disabled") return "Admin service unavailable";
-  if (res.status === 401) return "Session expired or unauthorized. Please log in again.";
-  // GL-CRIT-0055: Sanitize error messages
-  return sanitizeErrorMessage(data.error, fallback);
-}
 
 // ADMIN-PAGINATION-001: Paginated response type
 export type PaginatedResponse<T> = { items: T[]; total: number; limit: number; offset: number };
