@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import React, { useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
+import { FeatureFlagProvider } from './lib/FeatureFlagContext';
 import ProtectedLayout from './components/ProtectedLayout';
 // ISSUE-MICRO-105: Global error boundary
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -217,7 +218,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
-        <AppRoutes />
+        <FeatureFlagProvider>
+          <AppRoutes />
+        </FeatureFlagProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
