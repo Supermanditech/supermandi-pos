@@ -11,7 +11,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  ToastAndroid,
   findNodeHandle,
   useWindowDimensions,
   View,
@@ -66,6 +65,7 @@ import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/sto
 import { refreshStockSnapshot } from "../services/stockService";
 import { useSettingsStore } from "../stores/settingsStore";
 import { theme } from "../theme";
+import { showToast } from "../utils/showToast";
 // GATE-000: Import probeReadiness for startup endpoint check
 import { probeReadiness } from "../services/api/readinessGate";
 
@@ -821,31 +821,23 @@ export default function PosRootLayout() {
       // Check if we should block the scan and show feedback
       if (sellOnboardingActive) {
         console.log("hid_scan_blocked:onboarding_active");
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Complete price setup first", ToastAndroid.SHORT);
-        }
+        showToast("Complete price setup first");
         return;
       }
       // SD-ONBOARD-001B: Block scans when add store product modal is open
       if (addStoreProductActive) {
         console.log("hid_scan_blocked:add_store_product_active");
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Complete adding product first", ToastAndroid.SHORT);
-        }
+        showToast("Complete adding product first");
         return;
       }
       if (scannerOpen) {
         console.log("hid_scan_blocked:camera_open");
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Close camera to use scanner", ToastAndroid.SHORT);
-        }
+        showToast("Close camera to use scanner");
         return;
       }
       if (storeActive === false) {
         console.log("hid_scan_blocked:store_inactive");
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Store is inactive", ToastAndroid.SHORT);
-        }
+        showToast("Store is inactive");
         return;
       }
       if (!isFocused) {
@@ -886,21 +878,13 @@ export default function PosRootLayout() {
     // If scanning is disabled, show feedback on why (only once per blocked scan)
     if (scanDisabled && text.length >= 4) {
       if (sellOnboardingActive) {
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Complete price setup first", ToastAndroid.SHORT);
-        }
+        showToast("Complete price setup first");
       } else if (addStoreProductActive) {
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Complete adding product first", ToastAndroid.SHORT);
-        }
+        showToast("Complete adding product first");
       } else if (scannerOpen) {
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Close camera to use scanner", ToastAndroid.SHORT);
-        }
+        showToast("Close camera to use scanner");
       } else if (storeActive === false) {
-        if (Platform.OS === "android") {
-          ToastAndroid.show("Store is inactive", ToastAndroid.SHORT);
-        }
+        showToast("Store is inactive");
       }
     }
   };
@@ -1078,13 +1062,13 @@ export default function PosRootLayout() {
               onPress={() => {
                 // SA-P1-001: Show toast for role-restricted tabs
                 if (isRoleRestricted) {
-                  ToastAndroid.show("Stock-in is restricted to Stock Manager and Manager roles", ToastAndroid.SHORT);
+                  showToast("Stock-in is restricted to Stock Manager and Manager roles");
                   return;
                 }
                 // UI-REVEAL: Show toast for feature-disabled tabs instead of hiding them
                 if (isFeatureDisabled) {
                   const featureName = isPurchase ? "Purchase Orders" : isReorder ? "Reorder" : "Credit";
-                  ToastAndroid.show(`${featureName} is not enabled for this store`, ToastAndroid.SHORT);
+                  showToast(`${featureName} is not enabled for this store`);
                   return;
                 }
                 setSelectedMode(tab.id);

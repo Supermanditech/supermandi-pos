@@ -89,10 +89,8 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
         }
       }
 
-      // 3) Final fallback to bundled sample data
-      const productsData = await loadProductsFromData();
-      set({ products: productsData, loading: false, error: null });
-      upsertStockFromProducts(productsData);
+      // AUDIT-POS-042: Removed hardcoded sample products fallback — show error instead
+      // Silent fallback to fake data caused inventory mismatches and false transactions
 
       const errorMessage = error instanceof Error ? error.message : 'Failed to load products';
       set({

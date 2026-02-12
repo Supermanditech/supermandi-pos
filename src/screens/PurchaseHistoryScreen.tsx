@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useProductsStore } from "../stores/productsStore";
 
 import { getPurchaseHistory, type LedgerEntry } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
@@ -59,7 +60,7 @@ function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
       existing.entries.push(entry);
       existing.totalQty += entry.deltaQty;
       // Estimate value: deltaQty * some default price (we don't have unitCost in ledger response)
-      existing.totalValue += entry.deltaQty * 10000; // placeholder
+      existing.totalValue += 0; // AUDIT-POS-001: Removed placeholder calculation — real unit cost not available from ledger
     } else {
       groups.set(refId, {
         date: entry.createdAt,
@@ -78,6 +79,8 @@ function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
 }
 
 function PurchaseCard({ purchase }: { purchase: GroupedPurchase }) {
+  // AUDIT-POS-025: Look up product names from store instead of showing truncated UUIDs
+  const products = useProductsStore((s) => s.products);
   const isManual = purchase.referenceId.startsWith("INWARD-") || purchase.referenceId.startsWith("OPEN-");
   const referenceLabel = isManual ? "Manual Inward" : purchase.referenceId;
 
@@ -112,7 +115,11 @@ function PurchaseCard({ purchase }: { purchase: GroupedPurchase }) {
         <View style={[styles.cardStat, styles.cardStatRight]}>
           <Text style={styles.cardStatLabel}>Products</Text>
           <Text style={styles.cardStatValue}>
-            {purchase.entries.map((e) => e.productId.slice(0, 8)).join(", ")}
+            {/* AUDIT-POS-025: Show product names instead of truncated UUIDs */}
+            {purchase.entries.map((e) => {
+              const p = products.find((prod) => prod.id === e.productId);
+              return p?.name || e.productId.slice(0, 8);
+            }).join(", ")}
           </Text>
         </View>
       </View>

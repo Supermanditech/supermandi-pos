@@ -824,7 +824,29 @@ export default function PurchaseScreen({
                     </Text>
                     <Text style={styles.actionTotal}>{formatMoney(purchaseCartTotals.grandTotal)}</Text>
                   </View>
-                  <Pressable style={styles.actionBtn}>
+                  {/* AUDIT-POS-002: Wire Review Order button with cart summary */}
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => {
+                      const items = purchaseCart.items;
+                      const summary = items
+                        .map((ci) => `${ci.productName || ci.productId.slice(0, 8)} x${ci.quantity}`)
+                        .join("\n");
+                      Alert.alert(
+                        "Review Order",
+                        `${purchaseCartTotals.itemCount} items from ${purchaseCartTotals.supplierCount} supplier(s)\n\n${summary}\n\nTotal: ${formatMoney(purchaseCartTotals.grandTotal)}`,
+                        [
+                          { text: "Continue Shopping", style: "cancel" },
+                          {
+                            text: "Place Order",
+                            onPress: () => {
+                              Alert.alert("Coming Soon", "Order placement will be available after supplier integration is complete.");
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
                     <Text style={styles.actionBtnText}>Review Order</Text>
                   </Pressable>
                 </View>

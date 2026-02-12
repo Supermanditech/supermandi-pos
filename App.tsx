@@ -15,6 +15,8 @@ logAppStartup();
 // I18N: Internationalization
 import i18n, { initI18n } from "./src/i18n";
 
+// AUDIT-POS-049: Error Boundary to catch render crashes
+import ErrorBoundary from "./src/components/ErrorBoundary";
 import SplashScreen from "./src/screens/SplashScreen";
 import EnrollDeviceScreen from "./src/screens/EnrollDeviceScreen";
 // RO-004: POS store registration screen
@@ -237,6 +239,7 @@ export default function App() {
           barStyle={Platform.OS === "android" ? "dark-content" : "default"}
         />
 
+        <ErrorBoundary>
         <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
@@ -279,6 +282,7 @@ export default function App() {
           <Stack.Screen name="BnplDues" component={BnplDuesWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
+        </ErrorBoundary>
       </GestureHandlerRootView>
     </I18nextProvider>
   );

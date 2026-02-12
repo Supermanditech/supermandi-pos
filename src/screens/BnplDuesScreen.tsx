@@ -365,10 +365,16 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         ]
       );
     } catch (error) {
+      // AUDIT-POS-003: Show error alert on failure — not false success
       console.error("[BnplDuesScreen] Dispute submission failed:", error);
-      Alert.alert("Dispute Submitted", "Your dispute has been recorded. Our team will contact you shortly.", [
+      Alert.alert("Dispute Failed", "Could not submit your dispute. Please try again.", [
         {
-          text: "OK",
+          text: "Retry",
+          onPress: () => setDisputeModal((prev) => ({ ...prev, submitting: false })),
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
           onPress: () => setDisputeModal({ visible: false, drawdown: null, reason: "", description: "", submitting: false }),
         },
       ]);

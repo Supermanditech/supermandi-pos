@@ -4,14 +4,13 @@
 import React, { useCallback, useState } from "react";
 import {
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  ToastAndroid,
   View,
 } from "react-native";
+import { showToast } from "../../utils/showToast";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -233,20 +232,13 @@ export default function LiveSuppliersView({ onOpenScanner, onItemsAdded }: LiveS
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Show success toast
-      if (Platform.OS === "android") {
-        ToastAndroid.show(
-          `${addedCount} item${addedCount > 1 ? "s" : ""} added to cart`,
-          ToastAndroid.SHORT
-        );
-      }
+      showToast(`${addedCount} item${addedCount > 1 ? "s" : ""} added to cart`);
 
       // Notify parent for navigation/badge update
       onItemsAdded?.(addedCount);
     } catch (error) {
       console.error("Failed to add items to order:", error);
-      if (Platform.OS === "android") {
-        ToastAndroid.show("Failed to add items", ToastAndroid.SHORT);
-      }
+      showToast("Failed to add items");
     } finally {
       setIsAdding(false);
     }
