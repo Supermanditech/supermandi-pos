@@ -145,7 +145,7 @@ const DEMO_PRODUCTS = [
  *
  * Body: { storeId: string }
  */
-demoRouter.post("/seed", async (req: Request, res: Response) => {
+demoRouter.post("/seed", devOnlyMiddleware(), async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
