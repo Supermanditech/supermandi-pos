@@ -331,7 +331,10 @@ webhooksRouter.post("/payouts/process", async (req: Request, res: Response) => {
 
   // Simple API key protection (should use proper auth in production)
   const apiKey = req.headers["x-api-key"] as string | undefined;
-  const expectedKey = process.env.PAYOUT_PROCESS_API_KEY || "sm_payout_dev_key";
+  const expectedKey = process.env.PAYOUT_PROCESS_API_KEY;
+  if (!expectedKey) {
+    return res.status(503).json({ error: "Payout API key not configured" });
+  }
 
   if (apiKey !== expectedKey) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -371,7 +374,10 @@ webhooksRouter.get("/payouts/pending", async (req: Request, res: Response) => {
 
   // Simple API key protection
   const apiKey = req.headers["x-api-key"] as string | undefined;
-  const expectedKey = process.env.PAYOUT_PROCESS_API_KEY || "sm_payout_dev_key";
+  const expectedKey = process.env.PAYOUT_PROCESS_API_KEY;
+  if (!expectedKey) {
+    return res.status(503).json({ error: "Payout API key not configured" });
+  }
 
   if (apiKey !== expectedKey) {
     return res.status(401).json({ error: "Unauthorized" });
