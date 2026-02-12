@@ -337,7 +337,8 @@ export async function cleanupOldAuditLogs(daysToKeep: number = 90): Promise<numb
 
   try {
     const result = await pool.query(
-      `DELETE FROM pos_token_audit_log WHERE created_at < NOW() - INTERVAL '${daysToKeep} days'`
+      `DELETE FROM pos_token_audit_log WHERE created_at < NOW() - ($1 * INTERVAL '1 day')`,
+      [daysToKeep]
     );
     return result.rowCount || 0;
   } catch (err) {
