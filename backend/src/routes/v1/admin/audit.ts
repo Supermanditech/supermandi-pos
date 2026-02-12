@@ -9,6 +9,30 @@ export const adminAuditRouter = Router();
 
 adminAuditRouter.use(requireAdminToken);
 
+// AUDIT-API-015: PII fields to redact from request_body before returning
+const PII_FIELDS = new Set([
+  "pan_number", "pan", "aadhaar", "aadhaar_number",
+  "password", "new_password", "old_password", "confirm_password",
+  "otp", "otp_code", "verification_code",
+  "bank_account", "account_number", "ifsc",
+  "device_token", "token", "id_token", "refresh_token",
+]);
+
+function redactPII(body: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!body || typeof body !== "object") return body;
+  const redacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(body)) {
+    if (PII_FIELDS.has(key.toLowerCase())) {
+      redacted[key] = "[REDACTED]";
+    } else if (value && typeof value === "object" && !Array.isArray(value)) {
+      redacted[key] = redactPII(value as Record<string, unknown>);
+    } else {
+      redacted[key] = value;
+    }
+  }
+  return redacted;
+}
+
 export interface AuditLogRecord {
   id: string;
   actor_user_id: string | null;
@@ -107,8 +131,14 @@ adminAuditRouter.get("/audit", async (req, res) => {
       values.slice(0, -2) // Remove limit and offset
     );
 
+    // AUDIT-API-015: Redact PII from request_body before returning
+    const redactedLogs = result.rows.map((row) => ({
+      ...row,
+      request_body: redactPII(row.request_body),
+    }));
+
     return res.json({
-      logs: result.rows,
+      logs: redactedLogs,
       total: parseInt(countResult.rows[0]?.total || "0", 10),
       limit: limitNum,
       offset: offsetNum,
