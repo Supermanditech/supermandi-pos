@@ -460,3 +460,67 @@ export function requireActiveStore(
 
   next();
 }
+
+/**
+ * RCAT-FIX-002: Require that the authenticated user has active status in DB.
+ * Blocks deactivated/suspended users even if their JWT is still valid.
+ * Reads x-user-id header (set by gateway from JWT claims).
+ * Must be applied AFTER gateway JWT verification.
+ */
+export async function requireActiveUser(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  // SuperAdmin bypasses user status check
+  if (isSuperAdmin(req)) {
+    return next();
+  }
+
+  const userId = req.headers['x-user-id'];
+  if (!userId || typeof userId !== 'string') {
+    // No user ID — let other middleware handle auth
+    return next();
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    res.status(503).json({
+      error: { code: 'SERVICE_UNAVAILABLE', message: 'Database unavailable' },
+    });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT status FROM auth.users WHERE id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(401).json({
+        error: { code: 'USER_NOT_FOUND', message: 'User account not found' },
+      });
+      return;
+    }
+
+    const userStatus = result.rows[0].status;
+    if (userStatus !== 'active') {
+      console.warn(`[RCAT-FIX-002] Blocked ${userStatus} user ${userId} on ${req.method} ${req.path}`);
+      res.status(403).json({
+        error: {
+          code: 'USER_INACTIVE',
+          message: `Account is ${userStatus}. Please contact support.`,
+        },
+      });
+      return;
+    }
+
+    next();
+  } catch (error: any) {
+    console.error('[requireActiveUser] DB error:', error.message);
+    // Fail open on DB error to avoid blocking all traffic
+    // Production monitoring will catch persistent failures
+    next();
+  }
+}
