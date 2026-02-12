@@ -1,4 +1,5 @@
-import { Alert, ToastAndroid, Platform } from "react-native";
+import { Alert } from "react-native";
+import { showToast } from "../../utils/showToast";
 import { ApiError } from "../api/apiClient";
 import {
   createStoreProductFromScan,
@@ -167,9 +168,7 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
     // Validate we have at least an id
     if (!productId) {
       console.error("addToSellCart: product.id is missing");
-      if (Platform.OS === "android") {
-        ToastAndroid.show("Cannot add item: missing product ID", ToastAndroid.SHORT);
-      }
+      showToast("Cannot add item: missing product ID");
       return false;
     }
 
@@ -204,12 +203,7 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
 
     if (safePriceMinor <= 0) {
       console.warn(`scan_invalid_price:${productBarcode || productId},price=${priceMinor}`);
-      if (Platform.OS === "android") {
-        ToastAndroid.show("Price not set for this item. Cannot add to cart.", ToastAndroid.LONG);
-      } else {
-        // For iOS, the caller should handle showing an alert
-        console.warn("[Scan] GL-CRIT-0046: Item blocked due to invalid price");
-      }
+      showToast("Price not set for this item. Cannot add to cart.", "long");
       return false;
     }
 
@@ -227,16 +221,14 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
     // ISSUE-MICRO-075: Soft stock warning at scan time
     // Show a toast when available stock is low (≤5 units) so the cashier knows
     const availableQty = typeof product.metadata?.availableQty === "number" ? product.metadata.availableQty : null;
-    if (availableQty !== null && availableQty <= 5 && availableQty > 0 && Platform.OS === "android") {
-      ToastAndroid.show(`Low stock: only ${availableQty} left`, ToastAndroid.SHORT);
+    if (availableQty !== null && availableQty <= 5 && availableQty > 0) {
+      showToast(`Low stock: only ${availableQty} left`);
     }
 
     return true;
   } catch (err) {
     console.error("addToSellCart error:", err);
-    if (Platform.OS === "android") {
-      ToastAndroid.show("Error adding item to cart", ToastAndroid.SHORT);
-    }
+    showToast("Error adding item to cart");
     return false;
   }
 }

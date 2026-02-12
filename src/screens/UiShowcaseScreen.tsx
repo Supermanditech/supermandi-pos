@@ -10,13 +10,12 @@ import {
   Pressable,
   View,
   Alert,
-  Platform,
-  ToastAndroid,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 
 import { theme } from "../theme";
+import { showToast } from "../utils/showToast";
 import { ProductDetailModal } from "../components/buy/ProductDetailModal";
 import { PurchaseCartModal } from "../components/buy/PurchaseCartModal";
 import type { CatalogProduct } from "../services/api/catalogApi";
@@ -190,14 +189,6 @@ export default function UiShowcaseScreen({ onNavigateTo, onBack }: UiShowcaseScr
       trigger: "Tap item row in Inward screen",
     },
   ];
-
-  const showToast = (message: string) => {
-    if (Platform.OS === "android") {
-      ToastAndroid.show(message, ToastAndroid.SHORT);
-    } else {
-      Alert.alert("Info", message);
-    }
-  };
 
   const [seeding, setSeeding] = useState(false);
 

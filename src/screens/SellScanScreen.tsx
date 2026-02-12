@@ -9,13 +9,11 @@ import {
   FlatList,
   Modal,
   PanResponder,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  ToastAndroid,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -63,6 +61,7 @@ import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } fr
 // GL-CRIT-0089: Import centralized pagination constant
 // GO-LIVE-170: Import pagination safeguard
 import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
+import { showToast } from "../utils/showToast";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -767,11 +766,7 @@ export default function SellScanScreen({
     }
 
     if (message) {
-      if (Platform.OS === "android") {
-        ToastAndroid.show(message, ToastAndroid.LONG);
-      } else {
-        Alert.alert("Cart Updated", message);
-      }
+      showToast(message, "long");
     }
 
     // Clear after showing notification
@@ -793,9 +788,7 @@ export default function SellScanScreen({
               style: "destructive",
               onPress: () => {
                 void clearCorruptedEvents().then((cleared) => {
-                  if (Platform.OS === "android") {
-                    ToastAndroid.show(`Cleared ${cleared} failed sales`, ToastAndroid.SHORT);
-                  }
+                  showToast(`Cleared ${cleared} failed sales`);
                 });
               }
             }
@@ -1772,15 +1765,13 @@ export default function SellScanScreen({
 
   useEffect(() => {
     if (!stockLimitEvent) return;
-    if (Platform.OS === "android") {
-      const message =
-        stockLimitEvent.reason === "out_of_stock"
-          ? "Out of stock"
-          : stockLimitEvent.reason === "unknown_stock"
-            ? "Stock unavailable. Sync required."
-            : `Only ${stockLimitEvent.availableStock} in stock`;
-      ToastAndroid.show(message, ToastAndroid.SHORT);
-    }
+    const message =
+      stockLimitEvent.reason === "out_of_stock"
+        ? "Out of stock"
+        : stockLimitEvent.reason === "unknown_stock"
+          ? "Stock unavailable. Sync required."
+          : `Only ${stockLimitEvent.availableStock} in stock`;
+    showToast(message);
     if (stockLimitEvent.itemId) {
       setStockLimitItemId(stockLimitEvent.itemId);
       setStockLimitPulse((prev) => prev + 1);
@@ -1977,7 +1968,7 @@ export default function SellScanScreen({
         }
       }
       closeDetail();
-      if (Platform.OS === "android") ToastAndroid.show("Product updated", ToastAndroid.SHORT);
+      showToast("Product updated");
     } catch (e: any) {
       console.error("[SellScanScreen] Product edit failed:", e);
       // RET-POS-SYNC-009: Handle 409 conflict (server has newer data from Dashboard)
@@ -2076,7 +2067,7 @@ export default function SellScanScreen({
     } else {
       // Validate percentage discount doesn't exceed 100%
       if (editorDiscountType === "percentage" && parsedDiscount > 100) {
-        ToastAndroid.show("Discount cannot exceed 100%", ToastAndroid.SHORT);
+        showToast("Discount cannot exceed 100%");
         return;
       }
       const value = editorDiscountType === "fixed" ? Math.round(parsedDiscount * 100) : parsedDiscount;
@@ -2216,9 +2207,7 @@ export default function SellScanScreen({
       // Item already in cart - increase quantity instead of adding duplicate
       console.log(`handleAddSku:duplicate_found:${item.barcode},existingId=${existing.id},qty=${existing.quantity}+1`);
       cartState.updateQuantity(existing.id, existing.quantity + 1);
-      if (Platform.OS === "android") {
-        ToastAndroid.show(`${existing.name} qty +1`, ToastAndroid.SHORT);
-      }
+      showToast(`${existing.name} qty +1`);
     } else {
       // New item - add to cart (store identifiers in metadata for sync)
       console.log(`handleAddSku:new_item:${item.barcode}`);

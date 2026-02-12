@@ -1,8 +1,9 @@
 // Error Handler - V3.0.9 compliant
 // Utilities for parsing and handling API errors
 
-import { Platform, ToastAndroid, Alert } from "react-native";
+import { Alert } from "react-native";
 import { ApiError } from "../services/api/apiClient";
+import { showToast as platformToast } from "./showToast";
 
 // =============================================================================
 // TYPES
@@ -205,15 +206,7 @@ export function parseError(error: unknown): ParsedApiError {
  * Show a toast message (Android) or alert (iOS).
  */
 export function showToast(message: string, duration: "short" | "long" = "short"): void {
-  if (Platform.OS === "android") {
-    ToastAndroid.show(
-      message,
-      duration === "short" ? ToastAndroid.SHORT : ToastAndroid.LONG
-    );
-  } else {
-    // iOS doesn't have native toast, use a simple alert
-    Alert.alert("", message);
-  }
+  platformToast(message, duration);
 }
 
 /**
