@@ -124,7 +124,18 @@ async function verifyAdminApiKey(apiKey: string): Promise<AdminInfo | null> {
 }
 
 // GO-LIVE-SESSION: JWT secret for session token verification
-const JWT_SECRET = process.env.JWT_SECRET || process.env.ADMIN_TOKEN || 'dev-jwt-secret';
+// AUDIT-API-007: Fail-fast in production if secrets missing
+const JWT_SECRET = (() => {
+  const secret = process.env.JWT_SECRET || process.env.ADMIN_TOKEN;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[FATAL] JWT_SECRET must be set in production');
+      process.exit(1);
+    }
+    return 'dev-jwt-secret';
+  }
+  return secret;
+})();
 
 /**
  * GO-LIVE-128: Enhanced admin token middleware with RBAC support
