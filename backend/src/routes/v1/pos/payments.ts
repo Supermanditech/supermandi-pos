@@ -844,6 +844,7 @@ posPaymentsRouter.post(
   "/payments/upi/verify-utr",
   requireDeviceToken,
   requireActiveStore,
+  financialOperationsRateLimiter,
   async (req: Request, res: Response, _next: NextFunction) => {
     const { storeId } = (req as unknown as PosRequest).posDevice;
     const { utr, amountMinor, paymentId } = req.body as UtrVerifyRequest;

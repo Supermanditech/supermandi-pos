@@ -5,8 +5,10 @@ import { requireDeviceTokenAllowInactive, type PosDeviceStatusContext } from "..
 export const posDevicesRouter = Router();
 
 // P3-001: Helper to safely extract trimmed strings
-function asTrimmedString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
+// AUDIT-API-037: Enforce max length to prevent unbounded metadata strings
+function asTrimmedString(value: unknown, maxLength = 255): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  return value.trim().slice(0, maxLength);
 }
 
 // GET /api/v1/pos/devices/me

@@ -3,6 +3,8 @@ import { Router } from "express";
 import type { PoolClient } from "pg";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+// AUDIT-API-039: Rate limit sync endpoint
+import { salesRateLimiter } from "../../../middleware/posRateLimiter";
 import {
   applyBulkDeductions,
   ensureSaleAvailability,
@@ -572,7 +574,7 @@ async function clearFailedEvent(
 }
 
 // POST /api/v1/pos/sync
-posSyncRouter.post("/sync", requireDeviceToken, async (req, res) => {
+posSyncRouter.post("/sync", requireDeviceToken, salesRateLimiter, async (req, res) => {
   const batchStartTime = Date.now();
 
   const pendingRaw = asNumber(req.body?.pendingOutboxCount);
