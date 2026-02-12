@@ -435,6 +435,11 @@ export function requireActiveStore(
   res: Response,
   next: NextFunction
 ): void {
+  // RCAT-FIX-001: Skip for auth/registration endpoints (same pattern as requireStoreOwnership)
+  if (req.path.startsWith('/auth/') || req.path.startsWith('/registration')) {
+    return next();
+  }
+
   const storeInfo = getVerifiedStoreInfo(req);
 
   if (!storeInfo) {
