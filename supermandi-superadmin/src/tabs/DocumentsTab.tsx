@@ -1,6 +1,7 @@
 // SA-001: Documents verification tab extracted from App.tsx
 import type { DocumentRecord } from "../api/documents";
 import { formatDateTime } from "../lib/formatters";
+import { TableSkeleton } from "../components/TableSkeleton";
 
 interface DocumentsTabProps {
   pendingDocuments: DocumentRecord[];
@@ -54,7 +55,9 @@ export function DocumentsTab({
 
         {documentsError && <div className="errorText" style={{ marginBottom: 8 }}>{documentsError}</div>}
 
-        {pendingDocuments.length === 0 ? (
+        {documentsLoading ? (
+          <TableSkeleton rows={5} columns={6} />
+        ) : pendingDocuments.length === 0 ? (
           <div className="empty">No pending documents to review.</div>
         ) : (
           <table className="table">

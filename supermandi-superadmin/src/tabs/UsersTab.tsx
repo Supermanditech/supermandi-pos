@@ -1,5 +1,6 @@
 // SA-001: Users management tab extracted from App.tsx
 import type { UserRecord } from "../api/users";
+import { TableSkeleton } from "../components/TableSkeleton";
 
 interface UsersTabProps {
   userRecords: UserRecord[];
@@ -86,6 +87,9 @@ export function UsersTab({
         </div>
         {userActionError && <div className="errorText" style={{ marginBottom: 8 }}>{userActionError}</div>}
         {usersError && <div className="errorText" style={{ marginBottom: 8 }}>{usersError}</div>}
+        {usersLoading ? (
+          <TableSkeleton rows={5} columns={7} />
+        ) : (
         <table className="table">
           <thead>
             <tr><th>Name</th><th>Email</th><th>Phone</th><th>Type</th><th>Status</th><th>Created</th><th>Actions</th></tr>
@@ -113,6 +117,7 @@ export function UsersTab({
             )}
           </tbody>
         </table>
+        )}
       </div>
     </section>
   );
