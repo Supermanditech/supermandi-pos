@@ -43,7 +43,7 @@ import { adminGstCreditsRouter } from "./admin/gstCredits";  // GO-LIVE-097: GST
 import { adminAuthRouter } from "./admin/adminAuth";  // GO-LIVE-LOGIN-004: Admin email OTP auth
 import { adminAuditMiddleware } from "../../middleware/adminAudit";  // GL-CRIT-0049: Audit logging
 import { validateGatewayHeaders } from "../../middleware/validateGatewayHeaders";  // GO-LIVE-046: Validate gateway headers
-import { requireStoreOwnership } from "../../middleware/storeOwnership";  // GO-LIVE-047: Store ownership verification
+import { requireStoreOwnership, verifyStoreExists, requireActiveStore } from "../../middleware/storeOwnership";  // GO-LIVE-047: Store ownership verification
 import { retailerAdminInventoryRouter } from "./retailer-admin/inventory";
 import { retailerAdminSuppliersRouter } from "./retailer-admin/suppliers";
 import { retailerAdminProductsRouter } from "./retailer-admin/products";
@@ -156,8 +156,11 @@ v1Router.use("/registration", retailerRegistrationRouter);
 
 // GO-LIVE-046: Apply gateway header validation to retailer-admin routes
 // GO-LIVE-047: Apply store ownership verification to retailer-admin routes
+// RCAT-FIX-001: Add verifyStoreExists + requireActiveStore to block suspended stores
 v1Router.use("/retailer-admin", validateGatewayHeaders);
 v1Router.use("/retailer-admin", requireStoreOwnership);
+v1Router.use("/retailer-admin", verifyStoreExists);
+v1Router.use("/retailer-admin", requireActiveStore);
 v1Router.use("/retailer-admin", retailerAdminInventoryRouter);
 v1Router.use("/retailer-admin", retailerAdminSuppliersRouter);
 v1Router.use("/retailer-admin", retailerAdminProductsRouter);
