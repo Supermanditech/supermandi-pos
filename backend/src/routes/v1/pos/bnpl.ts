@@ -392,11 +392,12 @@ posBnplRouter.post("/bnpl/:drawdownId/pay/confirm", requireDeviceToken, async (r
     }
 
     // Update repayment record (GO-LIVE-127: Use normalized UTR)
+    // AUDIT-API-017: Add store_id filter for store isolation
     await client.query(`
       UPDATE payments.buy_payments
       SET status = 'completed', upi_payer_ref = $1, completed_at = NOW()
-      WHERE id = $2
-    `, [normalizedUtr, repaymentId]);
+      WHERE id = $2 AND store_id = $3
+    `, [normalizedUtr, repaymentId, storeId]);
 
     // Mark drawdown as paid
     await client.query(`
