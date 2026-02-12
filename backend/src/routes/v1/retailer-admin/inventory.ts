@@ -121,18 +121,19 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
   const targetDate = dateParam || new Date().toISOString().split('T')[0];
 
   try {
-    // Get sales summary for the day
+    // RCAT-FIX-003: POS sales use status PAID_CASH/PAID_UPI/PAID_DUE (not 'completed')
+    // Also derive payment mode from status when payment_mode column is NULL
     const salesResult = await pool.query(
       `SELECT
         COUNT(*)::integer as "totalBills",
         COALESCE(SUM(total_minor), 0)::bigint as "totalSales",
-        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint as "cashTotal",
-        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::bigint as "upiTotal",
+        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' OR status = 'PAID_CASH' THEN total_minor ELSE 0 END), 0)::bigint as "cashTotal",
+        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' OR status = 'PAID_UPI' THEN total_minor ELSE 0 END), 0)::bigint as "upiTotal",
         COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::bigint as "cardTotal",
-        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint as "creditTotal"
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' OR status = 'PAID_DUE' THEN total_minor ELSE 0 END), 0)::bigint as "creditTotal"
       FROM public.sales
       WHERE store_id = $1
-        AND status = 'completed'
+        AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'PAID_DUE')
         AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2::date`,
       [storeId, targetDate]
     );
@@ -142,20 +143,19 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
     const totalSales = Number(salesRow.totalSales) || 0;
     const averageBillValue = totalBills > 0 ? Math.round(totalSales / totalBills) : 0;
 
-    // Get items sold count
+    // RCAT-FIX-003: Include POS sale statuses
     const itemsResult = await pool.query(
       `SELECT COALESCE(SUM(si.quantity), 0)::integer as "itemsSold"
       FROM public.sale_items si
       JOIN public.sales s ON s.id = si.sale_id
       WHERE s.store_id = $1
-        AND s.status = 'completed'
+        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'PAID_DUE')
         AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date`,
       [storeId, targetDate]
     );
     const itemsSold = Number(itemsResult.rows[0]?.itemsSold) || 0;
 
-    // Get top selling items (top 10)
-    // Note: sale_items uses variant_id (not product_id) and stores name/item_name
+    // RCAT-FIX-003: Include POS sale statuses for top selling items
     const topItemsResult = await pool.query(
       `SELECT
         si.variant_id as "productId",
@@ -165,7 +165,7 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
       FROM public.sale_items si
       JOIN public.sales s ON s.id = si.sale_id
       WHERE s.store_id = $1
-        AND s.status = 'completed'
+        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'PAID_DUE')
         AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date
       GROUP BY si.variant_id, si.name, si.item_name
       ORDER BY SUM(si.quantity) DESC
