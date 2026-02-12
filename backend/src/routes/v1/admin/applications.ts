@@ -356,22 +356,22 @@ adminApplicationsRouter.post(
       }
 
       // Update application status to ACTIVE
+      const adminNote = notes ? `${notes} (by ${adminId})` : `Approved by ${adminId}`;
       await client.query(
         `UPDATE auth.applications
          SET status = 'ACTIVE',
              ${entityTable} = $1,
-             reviewed_by_user_id = $2,
              reviewed_at = NOW(),
-             admin_notes = COALESCE($3, admin_notes)
-         WHERE id = $4`,
-        [approvedEntityId, adminId, notes || null, id]
+             admin_notes = $2
+         WHERE id = $3`,
+        [approvedEntityId, adminNote, id]
       );
 
       // Log status change
       await client.query(
-        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, changed_by_user_id, change_reason)
-         VALUES ($1, $2, 'ACTIVE', $3, $4)`,
-        [id, app.status, adminId, notes || 'Approved by admin']
+        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
+         VALUES ($1, $2, 'ACTIVE', $3)`,
+        [id, app.status, adminNote]
       ).catch(() => { /* status_log table may not exist yet */ });
 
       await client.query('COMMIT');
@@ -454,24 +454,24 @@ adminApplicationsRouter.post(
       }
 
       // Update application
+      const adminNote = `Rejected by ${adminId}: ${rejectionReason.trim()}`;
       await pool.query(
         `UPDATE auth.applications
          SET status = 'NEEDS_FIX',
              rejection_reason = $1,
-             admin_notes = COALESCE($2, admin_notes),
-             reviewed_by_user_id = $3,
+             admin_notes = $2,
              reviewed_at = NOW(),
              needs_fix_at = NOW(),
              expires_at = NOW() + INTERVAL '30 days'
-         WHERE id = $4`,
-        [rejectionReason.trim(), notes || null, adminId, id]
+         WHERE id = $3`,
+        [rejectionReason.trim(), adminNote, id]
       );
 
       // Log status change
       await pool.query(
-        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, changed_by_user_id, change_reason)
-         VALUES ($1, $2, 'NEEDS_FIX', $3, $4)`,
-        [id, app.status, adminId, rejectionReason.trim()]
+        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
+         VALUES ($1, $2, 'NEEDS_FIX', $3)`,
+        [id, app.status, rejectionReason.trim()]
       ).catch(() => { /* status_log table may not exist yet */ });
 
       res.json({
