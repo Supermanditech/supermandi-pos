@@ -67,6 +67,8 @@ export default function OrdersPage() {
   // GL-WF-063: Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
+  // AUDIT-SUP-018: Debounce timer for quantity input mutations
+  const qtyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // GL-WF-039: Shipment tracking state
   // GO-LIVE-029: Added shipment date fields
   const [showShipmentForm, setShowShipmentForm] = useState(false);
@@ -519,12 +521,16 @@ export default function OrdersPage() {
                               const raw = parseInt(e.target.value) || 0;
                               const qty = Math.max(0, Math.min(raw, item.quantity));
                               const newStatus = qty === 0 ? 'pending' : qty < item.quantity ? 'partial' : 'received';
-                              itemStatusMutation.mutate({
-                                orderId: selectedOrder.id,
-                                itemId: item.id,
-                                status: newStatus,
-                                receivedQuantity: qty,
-                              });
+                              // AUDIT-SUP-018: Debounce quantity mutation (500ms)
+                              if (qtyDebounceRef.current) clearTimeout(qtyDebounceRef.current);
+                              qtyDebounceRef.current = setTimeout(() => {
+                                itemStatusMutation.mutate({
+                                  orderId: selectedOrder.id,
+                                  itemId: item.id,
+                                  status: newStatus,
+                                  receivedQuantity: qty,
+                                });
+                              }, 500);
                             }}
                             className="w-16 px-2 py-1 border border-slate-300 rounded text-center text-sm"
                           />
