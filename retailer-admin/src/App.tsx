@@ -10,8 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import LoginPage from './pages/LoginPage';
 // RO-003: Simplified instant registration (replaces old 4-step onboarding flow)
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
-// Legacy: RetailerOnboardingPage kept for /retailer/onboard alias (deprecated)
-const RetailerOnboardingPage = lazy(() => import('./pages/RetailerOnboardingPage'));
+// AUDIT-RET-002: Removed deprecated RetailerOnboardingPage lazy import — redirects to RegisterPage
 
 // RET-AUD-048: Dashboard pages - lazy loaded for route-level code splitting
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -167,8 +166,8 @@ function AppRoutes() {
         <Route path="/retailer/login" element={<LoginPage />} />
         {/* RO-003: /retailer/register → instant registration (no application flow) */}
         <Route path="/retailer/register" element={<Suspense fallback={<PageLoadingFallback />}><RegisterPage /></Suspense>} />
-        {/* REG-AUTH-301: Alias for onboarding page */}
-        <Route path="/retailer/onboard" element={<Suspense fallback={<PageLoadingFallback />}><RetailerOnboardingPage /></Suspense>} />
+        {/* AUDIT-RET-002: Redirect deprecated onboard to register */}
+        <Route path="/retailer/onboard" element={<Navigate to="/retailer/register" replace />} />
         {/* RET-CLEANUP-001: Forgot password page - accessible without auth */}
         <Route path="/retailer/forgot-password" element={<Suspense fallback={<PageLoadingFallback />}><ForgotPasswordPage /></Suspense>} />
 

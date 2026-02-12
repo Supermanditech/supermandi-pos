@@ -14,8 +14,9 @@ import {
   PaginatedResponse,
 } from '@/lib/api';
 
+// AUDIT-SUP-020: Fix 0 treated as falsy — use null check instead
 function formatPrice(paise: number | undefined): string {
-  if (!paise) return '-';
+  if (paise == null) return '-';
   return `₹${(paise / 100).toFixed(2)}`;
 }
 
