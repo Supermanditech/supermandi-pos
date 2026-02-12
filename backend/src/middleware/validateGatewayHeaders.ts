@@ -62,20 +62,10 @@ export function validateGatewayHeaders(req: Request, res: Response, next: NextFu
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // Check if we have gateway headers without JWT
-    // This means request came from gateway after JWT validation
-    const gatewayUserId = req.headers['x-user-id'];
-    const gatewayActorId = req.headers['x-actor-id'];
-
-    // If we have gateway headers, trust them (requests coming from gateway)
-    // The gateway already validated the JWT
-    if (gatewayUserId && gatewayActorId) {
-      console.log(`[ValidateGateway] Trusted gateway headers - userId: ${gatewayUserId}, actorId: ${gatewayActorId}`);
-      return next();
-    }
-
-    // No authorization at all
-    console.log('[ValidateGateway] No authorization provided');
+    // AUDIT-API-019: Never trust x-user-id/x-actor-id headers without JWT.
+    // If backend is accessed directly (bypassing gateway), these headers
+    // can be spoofed. Always require Bearer token for defense-in-depth.
+    console.log('[ValidateGateway] No authorization provided (gateway headers alone are not trusted)');
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
