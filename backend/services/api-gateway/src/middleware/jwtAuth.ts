@@ -165,7 +165,7 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    console.log(`[JWT-DEBUG] Verifying token (len=${token.length}), secret preview: ${JWT_SECRET.substring(0, 10)}..., issuer: ${JWT_ISSUER}`);
+    console.log(`[JWT-DEBUG] Verifying token (len=${token.length}), issuer: ${JWT_ISSUER}`);
 
     // Verify and decode the token
     const decoded = jwt.verify(token, JWT_SECRET, {
