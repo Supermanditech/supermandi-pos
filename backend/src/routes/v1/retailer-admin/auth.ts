@@ -373,6 +373,13 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       userAgent: req.get('user-agent'),
     }).catch(() => {}); // Non-blocking
 
+    // RCAT-FIX-005: Fetch application status for limited-mode gating
+    const appStatusResult = await pool.query(
+      `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
+      [phoneNormalized]
+    );
+    const applicationStatus = appStatusResult.rows[0]?.status || 'ACTIVE';
+
     res.json({
       success: true,
       data: {
@@ -385,6 +392,7 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
           // ITER4-P0-018: Mask phone number in response to prevent PII exposure
           phone: maskPhoneNumber(phoneNormalized),
           role: "RETAILER_ADMIN",
+          applicationStatus,
         },
         store: {
           storeId: store.id,
@@ -559,6 +567,13 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
       userAgent: req.get('user-agent'),
     }).catch(() => {});
 
+    // RCAT-FIX-005: Fetch application status for limited-mode gating
+    const otpAppStatusResult = await pool.query(
+      `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
+      [phoneNormalized]
+    );
+    const otpApplicationStatus = otpAppStatusResult.rows[0]?.status || 'ACTIVE';
+
     console.log(`[RetailerAuth] GO-LIVE-RET-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}, ${stores.length} stores`);
 
     res.json({
@@ -571,6 +586,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
         id: user.id,
         phone: maskPhoneNumber(phoneNormalized),
         role: "RETAILER_ADMIN",
+        applicationStatus: otpApplicationStatus,
       },
       stores: stores.map(s => ({
         id: s.id,
@@ -884,6 +900,13 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       userAgent: req.get('user-agent'),
     }).catch(() => {});
 
+    // RCAT-FIX-005: Fetch application status for limited-mode gating
+    const pwAppStatusResult = await pool.query(
+      `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
+      [phoneNormalized]
+    );
+    const pwApplicationStatus = pwAppStatusResult.rows[0]?.status || 'ACTIVE';
+
     console.log(`[RetailerAuth] GO-LIVE-LOGIN: Password login successful for store ${storeCode}`);
 
     res.json({
@@ -897,6 +920,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
           id: user.id,
           phone: maskPhoneNumber(phoneNormalized),
           role: user.role || "RETAILER_ADMIN",
+          applicationStatus: pwApplicationStatus,
         },
         store: {
           storeId: store.id,
