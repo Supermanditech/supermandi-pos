@@ -124,7 +124,23 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireR
 
   // AUD-074-A FIX: Accept supplierId for proper FK tracking
   // SA-P0-004: Accept supplierGstin for GSTIN tracking on stock-in
-  const { items, supplierId, supplierName, supplierGstin, notes, totalAmount } = req.body;
+  const { items, supplierId, supplierName, supplierGstin, notes, totalAmount, idempotencyKey } = req.body;
+
+  // AUDIT-API-011: Idempotency check — prevent duplicate stock-in on double-submit
+  if (idempotencyKey && typeof idempotencyKey === "string") {
+    const dupCheck = await pool.query(
+      `SELECT id FROM inventory.inventory_ledger
+       WHERE store_id = $1 AND reference_id = $2 AND transaction_type = 'purchase_received'
+       LIMIT 1`,
+      [storeId, idempotencyKey]
+    );
+    if (dupCheck.rows.length > 0) {
+      return res.json({
+        success: true,
+        data: { ledgerEntryId: idempotencyKey, itemsProcessed: 0, duplicate: true },
+      });
+    }
+  }
 
   // SA-P0-004: Validate GSTIN format if provided
   if (supplierGstin && typeof supplierGstin === "string" && supplierGstin.trim()) {
@@ -138,7 +154,8 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireR
     return res.status(400).json({ success: false, error: "items array is required" });
   }
 
-  const ledgerEntryId = randomUUID();
+  // AUDIT-API-011: Use client-provided idempotency key as ledger reference for dedup
+  const ledgerEntryId = (idempotencyKey && typeof idempotencyKey === "string") ? idempotencyKey : randomUUID();
   const client = await pool.connect();
 
   try {
