@@ -1152,6 +1152,15 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     if (error instanceof Error && error.message === "sale_id_conflict") {
       return res.status(409).json({ error: "sale_id_conflict" });
     }
+    // AUDIT-API-020: Handle SERIALIZABLE transaction conflicts with retryable error
+    if ((error as any)?.code === "40001") {
+      console.warn("[POS/sales] Serialization conflict — client should retry:", (error as Error).message);
+      return res.status(409).json({
+        error: "serialization_conflict",
+        message: "Transaction conflict — please retry",
+        retryable: true
+      });
+    }
     console.error("[POS/sales] Unhandled sale creation error:", error instanceof Error ? error.message : error, error instanceof Error ? error.stack : "");
     return res.status(500).json({ error: "failed to create sale" });
   } finally {
