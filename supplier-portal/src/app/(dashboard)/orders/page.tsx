@@ -4,23 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, markOrdersRead, getOrderDetail, getOrderEvents, getOrderStreamUrl, Order, OrderItem, OrderNote, OrderDetail, OrderDetailItem, OrderEvent, PaginatedResponse } from '@/lib/api';
-
-function formatPrice(paise: number): string {
-  return `₹${(paise / 100).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { formatCurrency, formatDateTime } from '@/lib/formatters';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -326,7 +310,7 @@ export default function OrdersPage() {
                     {order.items.length} items
                   </td>
                   <td className="py-3 px-4 font-medium">
-                    {formatPrice(order.totalAmount)}
+                    {formatCurrency(order.totalAmount)}
                   </td>
                   <td className="py-3 px-4">
                     <span
@@ -338,7 +322,7 @@ export default function OrdersPage() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-sm text-slate-500">
-                    {formatDate(order.createdAt)}
+                    {formatDateTime(order.createdAt)}
                   </td>
                   <td className="py-3 px-4">
                     <button
@@ -441,7 +425,7 @@ export default function OrdersPage() {
               </div>
               <div>
                 <p className="text-slate-500">Date</p>
-                <p className="font-medium">{formatDate(selectedOrder.createdAt)}</p>
+                <p className="font-medium">{formatDateTime(selectedOrder.createdAt)}</p>
               </div>
               <div>
                 <p className="text-slate-500">Status</p>
@@ -456,7 +440,7 @@ export default function OrdersPage() {
               {orderDetail?.expectedDeliveryDate && (
                 <div>
                   <p className="text-slate-500">Expected Delivery</p>
-                  <p className="font-medium">{formatDate(orderDetail.expectedDeliveryDate)}</p>
+                  <p className="font-medium">{formatDateTime(orderDetail.expectedDeliveryDate)}</p>
                 </div>
               )}
               {orderDetail?.storeNotes && (
@@ -539,10 +523,10 @@ export default function OrdersPage() {
                         )}
                       </td>
                       <td className="py-2 px-4 text-right">
-                        {formatPrice(item.unitPrice)}
+                        {formatCurrency(item.unitPrice)}
                       </td>
                       <td className="py-2 px-4 text-right font-medium">
-                        {formatPrice(item.total)}
+                        {formatCurrency(item.total)}
                       </td>
                       <td className="py-2 px-4 text-center">
                         {/* GL-WF-038: Item status with dropdown for shipped/delivered orders */}
@@ -582,7 +566,7 @@ export default function OrdersPage() {
                       Total Amount
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-lg">
-                      {formatPrice(selectedOrder.totalAmount)}
+                      {formatCurrency(selectedOrder.totalAmount)}
                     </td>
                     <td></td>
                   </tr>
@@ -602,7 +586,7 @@ export default function OrdersPage() {
                         <p className="text-slate-700 font-medium">
                           {event.eventType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                         </p>
-                        <p className="text-slate-400 text-xs">{formatDate(event.createdAt)} &middot; {event.actorType}</p>
+                        <p className="text-slate-400 text-xs">{formatDateTime(event.createdAt)} &middot; {event.actorType}</p>
                       </div>
                     </div>
                   ))}
