@@ -304,8 +304,8 @@ adminApplicationsRouter.post(
           `INSERT INTO platform.stores (
             store_name, owner_name, gstin, phone, email,
             address_line1, address_line2, city, state, pincode,
-            upi_vpa, document_urls, application_id, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'active')
+            upi_vpa, document_urls, application_id, status, created_via
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'ACTIVE', 'ADMIN')
           RETURNING id`,
           [
             app.business_name,
@@ -332,8 +332,8 @@ adminApplicationsRouter.post(
             business_name, gstin, primary_phone, primary_email,
             address_line1, address_line2, city, state, pincode,
             bank_account_number, bank_ifsc, bank_account_name,
-            verification_status, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'verified', 'active')
+            verification_status, status, application_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'ACTIVE', 'active', $13)
           RETURNING id`,
           [
             app.business_name,
@@ -348,6 +348,7 @@ adminApplicationsRouter.post(
             app.bank_account_number,
             app.bank_ifsc,
             app.owner_name,
+            id,
           ]
         );
         approvedEntityId = supplierResult.rows[0].id;
