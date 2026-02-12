@@ -758,3 +758,69 @@ retailerAdminInventoryRouter.delete("/categories/:categoryId", async (req: Reque
     });
   }
 });
+
+// =============================================================================
+// FEATURE FLAGS - RCAT-FIX-004
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/feature-flags
+ * RCAT-FIX-004: Feature flags for retailer-admin portal
+ * Resolves global flags + store-level overrides (same logic as POS ui-status)
+ *
+ * Returns: { features: { buyEnabled, reorderEnabled, bnplEnabled, ... } }
+ */
+retailerAdminInventoryRouter.get("/feature-flags", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: "Store not identified" });
+  }
+
+  // Defaults (all enabled)
+  const features: Record<string, boolean> = {
+    buyEnabled: true,
+    reorderEnabled: true,
+    bnplEnabled: true,
+    creditEnabled: false,
+    voiceEnabled: false,
+    categoryBrowsingEnabled: true,
+  };
+
+  try {
+    // SA-P0-005: Resolve global flags + store overrides
+    const ffRes = await pool.query(
+      `SELECT g.flag_key,
+              COALESCE(s.enabled, g.enabled) AS effective
+       FROM platform.feature_flags g
+       LEFT JOIN platform.feature_flags s
+         ON s.flag_key = g.flag_key AND s.scope_type = 'store' AND s.scope_id = $1::uuid
+       WHERE g.scope_type = 'global'`,
+      [storeId]
+    );
+
+    for (const row of ffRes.rows) {
+      if (row.flag_key in features) {
+        features[row.flag_key] = Boolean(row.effective);
+      }
+    }
+
+    // Also check reorder_settings for reorderEnabled override
+    const reorderRes = await pool.query(
+      `SELECT reorder_enabled FROM reorder_settings WHERE store_id = $1`,
+      [storeId]
+    );
+    if (reorderRes.rows[0] !== undefined) {
+      features.reorderEnabled = Boolean(reorderRes.rows[0].reorder_enabled);
+    }
+  } catch {
+    // feature_flags or reorder_settings may not exist — defaults apply
+  }
+
+  return res.json({
+    success: true,
+    data: { features },
+  });
+});
