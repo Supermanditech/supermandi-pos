@@ -46,9 +46,9 @@ export function DocumentsTab({
             <option value="supplier">Suppliers</option>
           </select>
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-            <button disabled={documentsPage === 0} onClick={() => setDocumentsPage(prev => Math.max(0, prev - 1))}>← Prev</button>
+            <button disabled={documentsPage === 0} onClick={() => setDocumentsPage(prev => Math.max(0, prev - 1))} aria-label="Previous page">← Prev</button>
             <span className="muted">Page {documentsPage + 1} of {Math.max(1, Math.ceil(pendingDocsTotal / 50))}</span>
-            <button disabled={(documentsPage + 1) * 50 >= pendingDocsTotal} onClick={() => setDocumentsPage(prev => prev + 1)}>Next →</button>
+            <button disabled={(documentsPage + 1) * 50 >= pendingDocsTotal} onClick={() => setDocumentsPage(prev => prev + 1)} aria-label="Next page">Next →</button>
           </div>
         </div>
 
@@ -93,7 +93,7 @@ export function DocumentsTab({
           <div style={{ backgroundColor: "#1a1a2e", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>Review Document</h3>
-              <button onClick={() => setSelectedDocument(null)} style={{ padding: "4px 8px" }}>✕</button>
+              <button onClick={() => setSelectedDocument(null)} style={{ padding: "4px 8px" }} aria-label="Close document review">✕</button>
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ marginBottom: 8 }}><strong>Entity:</strong> {selectedDocument.entity_type} - {selectedDocument.entity_name || selectedDocument.entity_id}</div>

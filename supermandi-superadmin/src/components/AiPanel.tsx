@@ -31,6 +31,7 @@ export function AiPanel({
           className={`aiPanelToggle ${aiAnswer ? "hasAnswer" : ""}`}
           onClick={() => setAiPanelOpen(true)}
           title="Open AI Assistant"
+          aria-label="Open AI Assistant"
         >
           🤖
         </button>
@@ -42,7 +43,7 @@ export function AiPanel({
             <span className="brandPill">SuperMandi</span>
             AI Copilot
           </div>
-          <button className="aiPanelClose" onClick={() => setAiPanelOpen(false)} title="Close">
+          <button className="aiPanelClose" onClick={() => setAiPanelOpen(false)} title="Close" aria-label="Close AI panel">
             ✕
           </button>
         </div>

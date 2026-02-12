@@ -122,7 +122,7 @@ export function ProductDetailModal({
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable style={styles.closeButton} onPress={onClose}>
+          <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel="Close product details" accessibilityRole="button">
             <MaterialCommunityIcons
               name="close"
               size={24}
@@ -132,7 +132,7 @@ export function ProductDetailModal({
           <Text style={styles.headerTitle}>Product Details</Text>
           <View style={styles.headerRight}>
             {totalCartQuantity > 0 && onViewCart && (
-              <Pressable style={styles.cartButton} onPress={onViewCart}>
+              <Pressable style={styles.cartButton} onPress={onViewCart} accessibilityLabel={`View cart, ${totalCartQuantity} items`} accessibilityRole="button">
                 <MaterialCommunityIcons
                   name="cart"
                   size={20}

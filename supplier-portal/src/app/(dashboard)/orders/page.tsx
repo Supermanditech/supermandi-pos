@@ -418,6 +418,7 @@ export default function OrdersPage() {
                   setNewNoteText('');
                 }}
                 className="text-slate-400 hover:text-slate-600"
+                aria-label="Close order details"
               >
                 ✕
               </button>

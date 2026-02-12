@@ -96,6 +96,8 @@ export function CartItem({ item, onUpdateQuantity, onRemove }: CartItemProps) {
         style={styles.removeButton}
         onPress={handleRemove}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityLabel="Remove item from cart"
+        accessibilityRole="button"
       >
         <MaterialCommunityIcons
           name="trash-can-outline"

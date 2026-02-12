@@ -462,7 +462,7 @@ export function SuppliersTab({
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
             <div className="modalHeader">
               <h3 style={{ margin: 0 }}>Edit Product - Set Margin & BNPL</h3>
-              <button className="btnGhost" onClick={() => setEditingProduct(null)}>&times;</button>
+              <button className="btnGhost" onClick={() => setEditingProduct(null)} aria-label="Close product editor">&times;</button>
             </div>
 
             <div className="modalBody">

@@ -294,6 +294,7 @@ export default function EarningsPage() {
                 <button
                   onClick={() => setSelectedPayoutId(null)}
                   className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close payout details"
                 >
                   ✕
                 </button>
