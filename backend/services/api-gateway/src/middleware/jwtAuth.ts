@@ -44,7 +44,18 @@ declare global {
 // =============================================================================
 
 // STAGING-FIX-005: Align fallback chain with backend's adminAuth.ts to prevent secret mismatches
-const JWT_SECRET = process.env['JWT_SECRET'] || process.env['ADMIN_TOKEN'] || 'dev-jwt-secret';
+// AUDIT-API-007: Fail-fast in production if secrets missing
+const JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET'] || process.env['ADMIN_TOKEN'];
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[FATAL] JWT_SECRET must be set in production');
+      process.exit(1);
+    }
+    return 'dev-jwt-secret';
+  }
+  return secret;
+})();
 const JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 // =============================================================================

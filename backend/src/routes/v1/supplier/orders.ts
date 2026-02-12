@@ -9,7 +9,18 @@ import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middleware/supplierStatusGate";
 
 // SUP-POS-012: JWT config for SSE token verification (EventSource can't set headers)
-const SSE_JWT_SECRET = process.env['JWT_SECRET']?.trim() || 'dev-secret-change-in-prod';
+// AUDIT-API-007: Fail-fast in production if secrets missing
+const SSE_JWT_SECRET = (() => {
+  const secret = process.env['JWT_SECRET']?.trim();
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[FATAL] JWT_SECRET must be set in production');
+      process.exit(1);
+    }
+    return 'dev-secret-change-in-prod';
+  }
+  return secret;
+})();
 const SSE_JWT_ISSUER = process.env['JWT_ISSUER'] || 'supermandi-auth';
 
 const router = Router();
