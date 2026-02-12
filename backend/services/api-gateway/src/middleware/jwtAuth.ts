@@ -44,7 +44,7 @@ declare global {
 // =============================================================================
 
 // STAGING-FIX-005: Align fallback chain with backend's adminAuth.ts to prevent secret mismatches
-// AUDIT-API-007: Fail-fast in production if secrets missing
+// AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
 const JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'] || process.env['ADMIN_TOKEN'];
   if (!secret) {
@@ -52,7 +52,7 @@ const JWT_SECRET = (() => {
       console.error('[FATAL] JWT_SECRET must be set in production');
       process.exit(1);
     }
-    return 'dev-jwt-secret';
+    return 'dev-secret-change-in-prod';
   }
   return secret;
 })();

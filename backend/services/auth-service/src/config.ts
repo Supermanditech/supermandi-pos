@@ -31,12 +31,12 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
   return value ? parseInt(value, 10) : defaultValue;
 }
 
+// AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
 function getEnvRequired(key: string): string {
   const value = process.env[key];
   if (!value) {
-    // In development, use a default secret (DO NOT use in production)
     if (key === 'JWT_SECRET' && process.env['NODE_ENV'] !== 'production') {
-      return 'dev-secret-key-change-in-production-12345678901234567890';
+      return 'dev-secret-change-in-prod';
     }
     throw new Error(`Required environment variable ${key} is not set`);
   }
