@@ -103,6 +103,13 @@ function getRequestedStoreId(req: Request): string | null {
     return (req.body as any).store_id;
   }
 
+  // RCAT-FIX-001: Check verifiedStoreId set by requireStoreOwnership middleware
+  // This allows verifyStoreExists to work for retailer-admin routes where
+  // storeId comes from JWT (x-actor-id header) rather than path params
+  if ((req as any).verifiedStoreId) {
+    return (req as any).verifiedStoreId;
+  }
+
   return null;
 }
 
