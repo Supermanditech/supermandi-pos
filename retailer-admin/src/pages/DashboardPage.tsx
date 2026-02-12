@@ -29,6 +29,9 @@ export default function DashboardPage() {
   const [inventoryTotals, setInventoryTotals] = useState<{ totalProducts: number; totalStockQty: number; totalPurchaseValue: number; totalSellRevenue: number }>({ totalProducts: 0, totalStockQty: 0, totalPurchaseValue: 0, totalSellRevenue: 0 });
   const [inventoryLoading, setInventoryLoading] = useState(true);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
+  // AUDIT-RET-011: Client-side pagination for inventory table
+  const [invPage, setInvPage] = useState(0);
+  const INV_PAGE_SIZE = 20;
 
   // FE-RETAILER-CAT-001: Categories from POS taxonomy
   const [categories, setCategories] = useState<FmcgCategory[]>([]);
@@ -1343,7 +1346,7 @@ export default function DashboardPage() {
                   </td>
                 </tr>
               ) : (
-                inventory.map((item) => (
+                inventory.slice(invPage * INV_PAGE_SIZE, (invPage + 1) * INV_PAGE_SIZE).map((item) => (
                   <tr key={item.productId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{
                       padding: '1rem 1.5rem',
@@ -1380,6 +1383,18 @@ export default function DashboardPage() {
               )}
             </tbody>
           </table>
+          {/* AUDIT-RET-011: Pagination controls */}
+          {inventory.length > INV_PAGE_SIZE && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.5rem', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <span style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                Showing {invPage * INV_PAGE_SIZE + 1}–{Math.min((invPage + 1) * INV_PAGE_SIZE, inventory.length)} of {inventory.length}
+              </span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={() => setInvPage(p => Math.max(0, p - 1))} disabled={invPage === 0} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: invPage === 0 ? '#f1f5f9' : 'white', color: invPage === 0 ? '#94a3b8' : '#334155', cursor: invPage === 0 ? 'default' : 'pointer', fontSize: '0.85rem' }}>Previous</button>
+                <button onClick={() => setInvPage(p => Math.min(Math.ceil(inventory.length / INV_PAGE_SIZE) - 1, p + 1))} disabled={(invPage + 1) * INV_PAGE_SIZE >= inventory.length} style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid #cbd5e1', background: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? '#f1f5f9' : 'white', color: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? '#94a3b8' : '#334155', cursor: (invPage + 1) * INV_PAGE_SIZE >= inventory.length ? 'default' : 'pointer', fontSize: '0.85rem' }}>Next</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

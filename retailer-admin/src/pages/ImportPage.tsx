@@ -43,19 +43,30 @@ export default function ImportPage() {
   const [commitProgress, setCommitProgress] = useState<{ created: number; total: number } | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // AUDIT-RET-022: 5MB file size limit for CSV imports
+  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const validateFile = (f: File): boolean => {
+    if (f.size > MAX_FILE_SIZE) {
+      setError(`File too large (${(f.size / 1024 / 1024).toFixed(1)}MB). Maximum is 5MB.`);
+      return false;
+    }
+    setError('');
+    return true;
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile?.type === 'text/csv' || droppedFile?.name.endsWith('.csv')) {
-      setFile(droppedFile);
+      if (validateFile(droppedFile)) setFile(droppedFile);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
-      setFile(selectedFile);
+      if (validateFile(selectedFile)) setFile(selectedFile);
     }
   };
 
