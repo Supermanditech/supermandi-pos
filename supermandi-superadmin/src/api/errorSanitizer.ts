@@ -61,8 +61,10 @@ export function sanitizeErrorMessage(rawError: string | undefined | null, fallba
   // Check if error contains sensitive information
   for (const pattern of SENSITIVE_PATTERNS) {
     if (pattern.test(errorStr)) {
-      // Log for debugging but return generic message
-      console.warn("[GL-CRIT-0055] Sensitive error filtered:", errorStr.substring(0, 100));
+      // AUDIT-SA-032: Only log in dev — browser console.warn leaks filtered content
+      if (import.meta.env.DEV) {
+        console.warn("[GL-CRIT-0055] Sensitive error filtered:", errorStr.substring(0, 100));
+      }
       return fallback;
     }
   }
@@ -81,7 +83,10 @@ export function sanitizeErrorMessage(rawError: string | undefined | null, fallba
 
   // If error is very long (>200 chars), it likely contains sensitive info
   if (errorStr.length > 200) {
-    console.warn("[GL-CRIT-0055] Long error filtered:", errorStr.substring(0, 100));
+    // AUDIT-SA-032: Only log in dev — browser console.warn leaks filtered content
+    if (import.meta.env.DEV) {
+      console.warn("[GL-CRIT-0055] Long error filtered:", errorStr.substring(0, 100));
+    }
     return fallback;
   }
 
