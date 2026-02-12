@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 import { useEscapeKey } from '../lib/hooks';
 import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
 // GL-CRIT-0066: Use centralized category icons configuration
@@ -87,7 +87,7 @@ export default function DashboardPage() {
         setEditingCategory(null);
       } else {
         // GL-CRIT-0039: Show error to user on API failure
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response).catch(() => ({}));
         setCatEditError(data.error?.message || 'Failed to rename category. Please try again.');
       }
     } catch (err) {
@@ -109,13 +109,13 @@ export default function DashboardPage() {
         method: 'DELETE',
       });
       if (response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         setCategories(prev => prev.map(c =>
           c.id === category.id ? { ...c, isHidden: data.isHidden } : c
         ));
       } else {
         // RET-AUD-040: Show API error to user
-        const data = await response.json().catch(() => ({}));
+        const data = await safeJson(response).catch(() => ({}));
         setCatToggleError(data.error?.message || `Failed to ${category.isHidden ? 'show' : 'hide'} category. Please try again.`);
       }
     } catch (err) {

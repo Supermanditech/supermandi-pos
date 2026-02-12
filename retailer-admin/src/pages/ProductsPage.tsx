@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch, API_GATEWAY_BASE } from '../lib/api';
+import { authFetch, safeJson, API_GATEWAY_BASE } from '../lib/api';
 import { fetchCategories, FmcgCategory } from '../api/store';
 // CURRENCY-FORMAT-001: Use shared currency formatters
 import { formatCurrency } from '../lib/formatters';
@@ -199,7 +199,7 @@ export default function ProductsPage() {
       const response = await authFetch(url, accessToken, { signal: options?.signal });
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch products');
-      const data = await response.json();
+      const data = await safeJson(response);
       setProducts(data.data || []);
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
@@ -224,7 +224,7 @@ export default function ProductsPage() {
         setSupplierFetchError(true);
         return;
       }
-      const data = await response.json();
+      const data = await safeJson(response);
       setSuppliers(data.data || []);
     } catch (err) {
       // ISSUE-MICRO-079: Don't set error state on abort (component unmounted)
@@ -351,7 +351,7 @@ export default function ProductsPage() {
         method: 'DELETE',
       });
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await safeJson(response);
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to delete product');
       }
@@ -525,11 +525,11 @@ export default function ProductsPage() {
         throw new Error('Product not found. It may have been deleted.');
       }
       if (response.status === 409) {
-        await response.json(); // consume response body
+        await safeJson(response); // consume response body
         throw new Error('This product was updated elsewhere. Please refresh and try again.');
       }
       if (response.status === 422) {
-        const errData = await response.json() as { error?: { message?: string; details?: Record<string, string> } };
+        const errData = await safeJson(response) as { error?: { message?: string; details?: Record<string, string> } };
         const details = errData.error?.details;
         if (details && Object.keys(details).length > 0) {
           const fieldErrors = Object.entries(details).map(([k, v]) => `${k}: ${v}`).join(', ');
@@ -538,7 +538,7 @@ export default function ProductsPage() {
         throw new Error(errData.error?.message || 'Validation failed. Please check your input.');
       }
 
-      const data = await response.json() as ProductCreateResponse;
+      const data = await safeJson(response) as ProductCreateResponse;
 
       if (!response.ok) {
         // GL-CRIT-0101: Differentiate 4xx client errors from 5xx server errors
@@ -614,7 +614,7 @@ export default function ProductsPage() {
         body: JSON.stringify({ text: bulkData }),
       });
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await safeJson(response);
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to preview products');
       }
@@ -655,7 +655,7 @@ export default function ProductsPage() {
       });
 
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to import products');

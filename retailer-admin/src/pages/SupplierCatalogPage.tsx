@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 interface SupplierProduct {
   productId: string;
@@ -60,7 +60,7 @@ export default function SupplierCatalogPage() {
       const response = await authFetch(url, accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch supplier catalog');
-      const data = await response.json();
+      const data = await safeJson(response);
       // GL-CRIT-0037: Append products when loading more (offset > 0), replace on new search (offset = 0)
       if (offset > 0) {
         setProducts(prev => [...prev, ...(data.data || [])]);
@@ -110,7 +110,7 @@ export default function SupplierCatalogPage() {
         }
       );
       if (response.status === 401) return;
-      const data = await response.json();
+      const data = await safeJson(response);
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to add product');
       }

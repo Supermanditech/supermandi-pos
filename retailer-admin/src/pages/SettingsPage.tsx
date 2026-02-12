@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 interface StoreSettings {
   upiVpa: string;
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       try {
         const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
         if (response.ok) {
-          const data = await response.json();
+          const data = await safeJson(response);
           setSettings({
             upiVpa: data.upiVpa || '',
             taxRate: data.taxRate ?? 18,
@@ -174,7 +174,7 @@ export default function SettingsPage() {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        const data = await response.json();
+        const data = await safeJson(response);
         setSaveError(data.error || 'Failed to save settings');
       }
     } catch (err: any) {

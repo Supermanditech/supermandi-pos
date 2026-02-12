@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_GATEWAY_BASE } from '../lib/api';
+import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp as firebaseSendOtp, verifyOtp as firebaseVerifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 
@@ -511,7 +511,7 @@ export default function RetailerOnboardingPage() {
         }),
       });
 
-      const data: ApplicationResponse = await response.json();
+      const data = (await safeJson(response)) as ApplicationResponse;
 
       if (!response.ok) {
         // REG-COPY-001: Map backend error codes to user-friendly messages
@@ -597,7 +597,7 @@ export default function RetailerOnboardingPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         throw new Error(data.error?.message || 'Upload failed');
       }
 
@@ -662,7 +662,7 @@ export default function RetailerOnboardingPage() {
         body: JSON.stringify({ applicationId }),
       });
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         throw new Error(data.error?.message || 'Failed to submit KYC');

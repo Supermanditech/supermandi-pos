@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
-import { API_GATEWAY_BASE } from '../lib/api';
+import { API_GATEWAY_BASE, safeJson } from '../lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '../lib/firebase';
 import { BuildStamp } from '../components/BuildStamp';
 
@@ -343,7 +343,7 @@ export default function LoginPage() {
         { method: 'GET', headers: { 'Content-Type': 'application/json' } }
       );
 
-      const data = await response.json() as LookupResponse;
+      const data = await safeJson(response) as LookupResponse;
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to check registration status');
@@ -413,7 +413,7 @@ export default function LoginPage() {
         credentials: 'include',
       });
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         throw new Error(data.error?.message || 'Login failed');

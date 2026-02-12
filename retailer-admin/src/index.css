@@ -256,10 +256,17 @@ input, select, textarea {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+/* AUDIT-RET-044: Wrap tables for horizontal scroll on mobile */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Tables */
 .table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px;
 }
 
 .table th,
@@ -466,4 +473,14 @@ input, select, textarea {
   font-weight: 600;
   color: var(--text);
   margin-bottom: 0.5rem;
+}
+
+/* AUDIT-RET-049: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

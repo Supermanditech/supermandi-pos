@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { authFetch } from '../../lib/api';
+import { authFetch, safeJson } from '../../lib/api';
 import { useEscapeKey } from '../../lib/hooks';
 
 interface PendingProduct {
@@ -81,7 +81,7 @@ export default function ProductQueuePage() {
       const response = await authFetch('/api/v1/admin/products/pending', accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch pending products');
-      const data = await response.json();
+      const data = await safeJson(response);
       setPendingProducts(data.data || []);
     } catch (err) {
       console.error('Error fetching pending products:', err);
@@ -211,7 +211,7 @@ export default function ProductQueuePage() {
       );
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         throw new Error(data.error || 'Failed to approve product');
       }
 
@@ -242,7 +242,7 @@ export default function ProductQueuePage() {
       );
 
       if (!response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         throw new Error(data.error || 'Failed to reject product');
       }
 

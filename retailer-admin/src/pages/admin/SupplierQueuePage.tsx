@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/AuthContext';
-import { authFetch } from '../../lib/api';
+import { authFetch, safeJson } from '../../lib/api';
 
 interface PendingSupplier {
   id: string;
@@ -39,7 +39,7 @@ export default function SupplierQueuePage() {
       const response = await authFetch('/api/v1/retailer-admin/admin/suppliers/pending', accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch pending suppliers');
-      const data = await response.json();
+      const data = await safeJson(response);
       setPendingSuppliers(data.data || []);
     } catch (err) {
       console.error('Error fetching pending suppliers:', err);
@@ -67,7 +67,7 @@ export default function SupplierQueuePage() {
         { method: 'POST' }
       );
       if (!response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         throw new Error(data.error || 'Failed to approve supplier');
       }
       setSuccess('Supplier approved successfully!');
@@ -96,7 +96,7 @@ export default function SupplierQueuePage() {
         }
       );
       if (!response.ok) {
-        const data = await response.json();
+        const data = await safeJson(response);
         throw new Error(data.error || 'Failed to reject supplier');
       }
       setSuccess('Supplier rejected.');

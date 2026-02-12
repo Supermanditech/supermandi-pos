@@ -1,7 +1,7 @@
 // GL-WF-032: Compliance Document Upload with real API integration
 import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 interface Document {
   id: string;
@@ -42,7 +42,7 @@ export default function CompliancePage() {
       try {
         const response = await authFetch('/api/v1/retailer-admin/compliance/documents', accessToken);
         if (response.ok) {
-          const data = await response.json();
+          const data = await safeJson(response);
           setDocuments(data.data || []);
         }
       } catch (err) {
@@ -98,7 +98,7 @@ export default function CompliancePage() {
 
       if (response.status === 401) return;
 
-      const data = await response.json();
+      const data = await safeJson(response);
 
       if (!response.ok) {
         throw new Error(data.error?.message || 'Upload failed');
