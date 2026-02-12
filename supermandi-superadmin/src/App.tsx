@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 // ISSUE-MICRO-105: Global error boundary
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
-import { askAi, fetchAiHealth } from "./api/ai";
-import { hasValidSession, logout, refreshSession, sendAdminOtp, verifyAdminOtp, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
+import { fetchAiHealth } from "./api/ai";
+import { hasValidSession, logout, refreshSession, startIdleTimeout, stopIdleTimeout, abortActiveRequests } from "./api/authToken";
 import { createStore, fetchStore, fetchStores, updateStore, changeStoreStatus, type StoreRecord } from "./api/stores";
 import { fetchDevices, patchDevice, type DeviceRecord } from "./api/devices";
 import { createDeviceEnrollment, type DeviceEnrollmentResponse } from "./api/deviceEnrollments";
@@ -16,7 +16,6 @@ import {
   fetchAnalyticsConsumerSales,
   fetchAnalyticsActivity,
   fetchAnalyticsDues,
-  // GO-LIVE-010: Proper type imports for analytics data
   type OverviewResponse,
   type DevicesResponse,
   type ProductsResponse,
@@ -46,531 +45,49 @@ import {
 } from "./api/suppliers";
 import { fetchUsers, patchUser, createUser, type UserRecord, type UserCreateInput } from "./api/users";
 import { fetchSettings, fetchSystemStats, type SystemSettings, type SystemStats } from "./api/settings";
-// GL-CRIT-0049: Import audit logging functions
-// GO-LIVE-011: Added fetchAuditLogs and types for audit UI
 import {
   logAdminAction,
   logAdminActionError,
   fetchAuditLogs,
   type AuditLogRecord
 } from "./api/audit";
-// DOCS-001: Import document management functions
 import {
   fetchPendingDocuments,
   approveDocument,
   rejectDocument,
   type DocumentRecord
 } from "./api/documents";
-import { QRCodeSVG } from "qrcode.react";
-// RO-007: Registration events visibility
-import { fetchRegistrationEvents, sendEnrollmentCodeToStore, type RegistrationEvent } from "./api/registrationEvents";
-import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff"; // SA-P1-001
-import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts"; // SA-P1-004
-import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags"; // SA-P0-005+P1-007
-import { fetchApplications, approveApplication, rejectApplication, type Application } from "./api/applications"; // STAGING-FIX-014
-import { composeDeviceMessage, getDeviceTone, isDeviceOnline } from "./ui/status";
+import { fetchRegistrationEvents, type RegistrationEvent } from "./api/registrationEvents";
+import { fetchStoreStaff, createStaff, updateStaff, resetStaffPin, type StaffMember } from "./api/staff";
+import { fetchGrnAlerts, updateGrnAlert, type GrnExcessAlert } from "./api/grnAlerts";
+import { fetchGlobalFlags, toggleGlobalFlag, fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride, bulkSetOverride, type GlobalFeatureFlag, type StoreFeatureFlag } from "./api/featureFlags";
+import { fetchApplications, approveApplication, rejectApplication, type Application } from "./api/applications";
 import { BuildStamp } from "./components/BuildStamp";
-import { formatDateTime, formatCurrency } from "./lib/formatters";
+import { formatCurrency } from "./lib/formatters";
+// SA-001: Shared types and constants
+import { type TabKey, type GroupKey, type AnalyticsTabKey, type DeviceType, ADMIN_POLL_MS, UPI_VPA_PATTERN, clamp, toIsoSafe, includesInsensitive, toIsoStart, toIsoEnd } from "./types";
+// SA-001: Extracted components
+import { LoginGate } from "./components/LoginGate";
+import { ConfirmationModals } from "./components/ConfirmationModals";
+import { AiPanel } from "./components/AiPanel";
+// SA-001: Extracted tab components
+import { EventsTab } from "./tabs/EventsTab";
+import { DevicesTab } from "./tabs/DevicesTab";
+import { StoresTab } from "./tabs/StoresTab";
+import { SuppliersTab } from "./tabs/SuppliersTab";
+import { ApplicationsTab } from "./tabs/ApplicationsTab";
+import { AnalyticsTab } from "./tabs/AnalyticsTab";
+import { PaymentsTab } from "./tabs/PaymentsTab";
+import { UsersTab } from "./tabs/UsersTab";
+import { SettingsTab } from "./tabs/SettingsTab";
+import { DocumentsTab } from "./tabs/DocumentsTab";
+import { AuditTab } from "./tabs/AuditTab";
+import { RegistrationsTab } from "./tabs/RegistrationsTab";
+import { StaffTab } from "./tabs/StaffTab";
+import { GrnAlertsTab } from "./tabs/GrnAlertsTab";
 import "./App.css";
 
-// GO-LIVE-011: Added "audit" tab for audit logs
-// DOCS-001: Added "documents" tab for document management
-type TabKey = "events" | "devices" | "stores" | "suppliers" | "payments" | "analytics" | "ai" | "users" | "settings" | "audit" | "documents" | "registrations" | "staff" | "grn-alerts" | "applications";
-type GroupKey = "none" | "transactionId" | "billId";
-type AnalyticsTabKey = "overview" | "devices" | "products" | "payments" | "purchases" | "consumer" | "activity" | "dues";
-
-type DeviceType = "OEM_HANDHELD" | "SUPMANDI_PHONE" | "RETAILER_PHONE";
-
-const DEVICE_TYPE_OPTIONS: Array<{ value: DeviceType; label: string }> = [
-  { value: "OEM_HANDHELD", label: "OEM Handheld" },
-  { value: "SUPMANDI_PHONE", label: "SuperMandi Phone" },
-  { value: "RETAILER_PHONE", label: "Retailer Phone" }
-];
-
-const DEVICE_TYPE_LABELS: Record<DeviceType, string> = {
-  OEM_HANDHELD: "OEM Handheld",
-  SUPMANDI_PHONE: "SuperMandi Phone",
-  RETAILER_PHONE: "Retailer Phone"
-};
-
-const PRINTING_MODE_LABELS: Record<string, string> = {
-  DIRECT_ESC_POS: "Direct ESC/POS",
-  SHARE_TO_PRINTER_APP: "Share to Printer App",
-  NONE: "None"
-};
-
-const ADMIN_POLL_MS = 60000;
-const UPI_VPA_PATTERN = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/;
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, n));
-}
-
-function toIsoSafe(v: string): string {
-  const d = new Date(v);
-  return Number.isFinite(d.getTime()) ? d.toISOString() : new Date(0).toISOString();
-}
-
-function includesInsensitive(haystack: string, needle: string): boolean {
-  return haystack.toLowerCase().includes(needle.trim().toLowerCase());
-}
-
-function toIsoStart(dateStr: string): string | undefined {
-  if (!dateStr) return undefined;
-  const d = new Date(dateStr);
-  if (!Number.isFinite(d.getTime())) return undefined;
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-
-function toIsoEnd(dateStr: string): string | undefined {
-  if (!dateStr) return undefined;
-  const d = new Date(dateStr);
-  if (!Number.isFinite(d.getTime())) return undefined;
-  d.setHours(23, 59, 59, 999);
-  return d.toISOString();
-}
-
-function PayloadDetails({ payload }: { payload: unknown }) {
-  const [open, setOpen] = useState(false);
-
-  const text = useMemo(() => {
-    if (!open) return "";
-    try {
-      return JSON.stringify(payload, null, 2);
-    } catch {
-      return String(payload);
-    }
-  }, [open, payload]);
-
-  return (
-    <details
-      onToggle={(e) => {
-        const el = e.currentTarget;
-        setOpen(el.open);
-      }}
-    >
-      <summary className="summary">View JSON</summary>
-      {open && <pre className="json">{text}</pre>}
-    </details>
-  );
-}
-
-// GO-LIVE-LOGIN-004: Email OTP login gate component
-function LoginGate({ onLogin }: { onLogin: () => void }) {
-  const [step, setStep] = useState<'email' | 'otp'>('email');
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
-  // AUTH-OTP-001: OTP expiry countdown
-  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
-
-  // AUTH-OTP-001: OTP expiry countdown
-  useEffect(() => {
-    if (otpExpirySeconds > 0) {
-      const timer = setTimeout(() => setOtpExpirySeconds(otpExpirySeconds - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [otpExpirySeconds]);
-
-  // Admin email allowlist (for instant client-side feedback)
-  const ADMIN_EMAILS = ['supermanditech@gmail.com'];
-
-  const handleSendOtp = async () => {
-    const normalizedEmail = email.toLowerCase().trim();
-    if (!normalizedEmail) {
-      setError("Please enter your email address");
-      return;
-    }
-
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    // Client-side allowlist check for instant feedback
-    if (!ADMIN_EMAILS.includes(normalizedEmail)) {
-      setError("This email is not authorized for admin access");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    const result = await sendAdminOtp(normalizedEmail);
-
-    if (!result.success) {
-      setError(result.error || "Failed to send verification code");
-      setLoading(false);
-      return;
-    }
-
-    setSuccess("Verification code sent to your email");
-    setStep('otp');
-    // AUTH-OTP-001: Use expiresIn from API (default 600s / 10 min)
-    setOtpExpirySeconds(result.expiresIn || 600);
-    setLoading(false);
-  };
-
-  const handleVerifyOtp = async () => {
-    const normalizedEmail = email.toLowerCase().trim();
-    const otpTrimmed = otp.trim();
-
-    if (!otpTrimmed) {
-      setError("Please enter the verification code");
-      return;
-    }
-
-    if (otpTrimmed.length !== 6 || !/^\d+$/.test(otpTrimmed)) {
-      setError("Verification code must be 6 digits");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    const result = await verifyAdminOtp(normalizedEmail, otpTrimmed);
-
-    if (!result.success) {
-      setError(result.error || "Invalid verification code");
-      setLoading(false);
-      return;
-    }
-
-    // Login successful
-    onLogin();
-  };
-
-  const handleBack = () => {
-    setStep('email');
-    setOtp("");
-    setError("");
-    setSuccess("");
-    setOtpExpirySeconds(0); // AUTH-OTP-001: Clear countdown
-  };
-
-  // UI-SPEC-003: Stripe-level calm infrastructure design for admin portal
-  return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      flexDirection: "column",
-      background: "#F7F9FC",
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    }}>
-      {/* Header Bar - 64px height per spec */}
-      <header style={{
-        background: "white",
-        borderBottom: "1px solid #e2e8f0",
-        height: "64px",
-        display: "flex",
-        alignItems: "center"
-      }}>
-        <div style={{
-          maxWidth: "1152px",
-          width: "100%",
-          margin: "0 auto",
-          padding: "0 1.5rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{
-              fontSize: "1.5rem",
-              fontWeight: 600,
-              color: "#2563eb"
-            }}>SuperManditech</span>
-            <span style={{ color: "#94a3b8" }}>|</span>
-            <span style={{ color: "#475569", fontSize: "0.875rem", fontWeight: 500 }}>SuperAdmin</span>
-          </div>
-          <span style={{ fontSize: "0.875rem", color: "#64748b" }}>
-            Cloud POS Dashboard
-          </span>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main style={{
-        flex: 1,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "2rem 1rem"
-      }}>
-        <div style={{ width: "100%", maxWidth: "448px" }}>
-          <div style={{
-            background: "#fff",
-            padding: "2rem",
-            borderRadius: "8px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
-            border: "1px solid #e2e8f0"
-          }}>
-            <h2 style={{
-              fontSize: "1.5rem",
-              fontWeight: 600,
-              color: "#0F172A",
-              marginBottom: "0.5rem"
-            }}>
-              Admin Sign In
-            </h2>
-            <p style={{
-              color: "#64748b",
-              fontSize: "0.875rem",
-              marginBottom: "1.5rem"
-            }}>
-              {step === 'email' ? 'Enter your admin email to continue' : `Enter the 6-digit code sent to ${email}`}
-            </p>
-
-            {step === 'email' ? (
-              <>
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{
-                    display: "block",
-                    fontSize: "0.875rem",
-                    fontWeight: 500,
-                    color: "#0F172A",
-                    marginBottom: "0.5rem"
-                  }}>
-                    Admin Email
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
-                    placeholder="admin@example.com"
-                    style={{
-                      width: "100%",
-                      height: "42px",
-                      padding: "0 1rem",
-                      fontSize: "0.9375rem",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "6px",
-                      outline: "none",
-                      boxSizing: "border-box"
-                    }}
-                    autoFocus
-                  />
-                </div>
-
-                {error && (
-                  <div style={{
-                    background: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    color: "#991b1b",
-                    padding: "0.875rem 1rem",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    marginBottom: "1rem"
-                  }}>
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleSendOtp}
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    height: "46px",
-                    padding: "0 1.5rem",
-                    fontSize: "0.9375rem",
-                    fontWeight: 500,
-                    color: "white",
-                    background: loading ? "#93c5fd" : "#2563eb",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    marginBottom: "1rem"
-                  }}
-                >
-                  {loading ? "Sending..." : "Send Verification Code"}
-                </button>
-              </>
-            ) : (
-              <>
-                {success && (
-                  <div style={{
-                    background: "#ecfdf5",
-                    border: "1px solid #a7f3d0",
-                    color: "#065f46",
-                    padding: "0.875rem 1rem",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    marginBottom: "1rem"
-                  }}>
-                    {success}
-                  </div>
-                )}
-
-                <div style={{ marginBottom: "1rem" }}>
-                  <label style={{
-                    display: "block",
-                    fontSize: "0.875rem",
-                    fontWeight: 500,
-                    color: "#0F172A",
-                    marginBottom: "0.5rem"
-                  }}>
-                    Verification Code
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    onKeyDown={(e) => e.key === "Enter" && handleVerifyOtp()}
-                    placeholder="------"
-                    maxLength={6}
-                    style={{
-                      width: "100%",
-                      height: "48px",
-                      padding: "0 1rem",
-                      fontSize: "1.25rem",
-                      letterSpacing: "0.5rem",
-                      textAlign: "center",
-                      fontFamily: "monospace",
-                      border: "1px solid #cbd5e1",
-                      borderRadius: "6px",
-                      outline: "none",
-                      boxSizing: "border-box"
-                    }}
-                    autoFocus
-                  />
-                </div>
-
-                {/* AUTH-OTP-001: OTP expiry countdown */}
-                {otpExpirySeconds > 0 && (
-                  <p style={{
-                    fontSize: "0.8125rem",
-                    color: otpExpirySeconds <= 60 ? "#dc2626" : "#64748b",
-                    textAlign: "center",
-                    marginBottom: "1rem",
-                  }}>
-                    Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
-                  </p>
-                )}
-                {otpExpirySeconds === 0 && step === 'otp' && (
-                  <p style={{
-                    fontSize: "0.8125rem",
-                    color: "#dc2626",
-                    textAlign: "center",
-                    marginBottom: "1rem",
-                  }}>
-                    Code expired. Please request a new one.
-                  </p>
-                )}
-
-                {error && (
-                  <div style={{
-                    background: "#fef2f2",
-                    border: "1px solid #fecaca",
-                    color: "#991b1b",
-                    padding: "0.875rem 1rem",
-                    borderRadius: "6px",
-                    fontSize: "0.875rem",
-                    marginBottom: "1rem"
-                  }}>
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleVerifyOtp}
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    height: "46px",
-                    padding: "0 1.5rem",
-                    fontSize: "0.9375rem",
-                    fontWeight: 500,
-                    color: "white",
-                    background: loading ? "#93c5fd" : "#2563eb",
-                    border: "none",
-                    borderRadius: "6px",
-                    cursor: loading ? "not-allowed" : "pointer",
-                    marginBottom: "0.75rem"
-                  }}
-                >
-                  {loading ? "Verifying..." : "Verify & Login"}
-                </button>
-
-                <button
-                  onClick={handleBack}
-                  disabled={loading}
-                  style={{
-                    width: "100%",
-                    height: "46px",
-                    padding: "0 1.5rem",
-                    fontSize: "0.9375rem",
-                    fontWeight: 500,
-                    color: "#0F172A",
-                    background: "white",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "6px",
-                    cursor: loading ? "not-allowed" : "pointer"
-                  }}
-                >
-                  Back to Email
-                </button>
-              </>
-            )}
-
-            <div style={{
-              marginTop: "1.5rem",
-              paddingTop: "1rem",
-              borderTop: "1px solid #e5e7eb",
-              fontSize: "0.75rem",
-              color: "#64748b",
-              textAlign: "center"
-            }}>
-              Only authorized administrators can access this portal.
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer - minimal, muted per spec */}
-      <footer style={{
-        background: "white",
-        borderTop: "1px solid #e2e8f0"
-      }}>
-        <div style={{
-          maxWidth: "1152px",
-          margin: "0 auto",
-          padding: "1rem 1.5rem",
-          textAlign: "center",
-          fontSize: "0.8125rem",
-          color: "#64748b"
-        }}>
-          &copy; 2026 SuperManditech. All rights reserved.
-          <BuildStamp />
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-// ISSUE-MICRO-086: Extracted countdown to prevent QR code re-rendering every 1s
-function EnrollmentCountdown({ expiresAt }: { expiresAt: string }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const expiresAtMs = new Date(expiresAt).getTime();
-  if (!Number.isFinite(expiresAtMs)) return <>unknown</>;
-  const delta = expiresAtMs - now;
-  if (delta <= 0) return <>expired</>;
-  const totalSeconds = Math.floor(delta / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return <>{minutes}m {String(seconds).padStart(2, "0")}s</>;
-}
+// SA-001: PayloadDetails, LoginGate, EnrollmentCountdown extracted to ./components/
 
 export default function App() {
   const [tab, setTabRaw] = useState<TabKey>("events");
@@ -2755,3521 +2272,388 @@ export default function App() {
         </div>
       </section>
 
+      {/* SA-001: Tab content — extracted to separate components */}
       {tab === "events" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Event Stream</div>
-            <div className="muted">Showing {filteredEvents.length} events (newest first)</div>
-          </div>
-
-          {groupBy !== "none" && (
-            <div className="tableWrap">
-              <div className="muted" style={{ marginBottom: 8 }}>
-                Grouped by <span className="mono">{groupBy}</span> (showing {grouped.length} groups)
-              </div>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{groupBy}</th>
-                    <th>Count</th>
-                    <th>Last seen</th>
-                    <th>Last event</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {grouped.slice(0, 50).map((g) => (
-                    <tr key={g.key}>
-                      <td className="mono">{g.key}</td>
-                      <td className="mono">{g.count}</td>
-                      <td className="mono">{formatDateTime(g.lastSeen)}</td>
-                      <td className="mono">{g.lastEventType}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {grouped.length > 50 && <div className="muted" style={{ marginTop: 8 }}>Showing first 50 groups.</div>}
-            </div>
-          )}
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <button className="tab" onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                Prev
-              </button>
-              <button
-                className="tab"
-                onClick={() => {
-                  const maxPage = Math.max(0, Math.ceil(filteredEvents.length / pageSize) - 1);
-                  setPage((p) => Math.min(maxPage, p + 1));
-                }}
-              >
-                Next
-              </button>
-              <span className="muted">
-                Page {page + 1} / {Math.max(1, Math.ceil(filteredEvents.length / pageSize))}
-              </span>
-            </div>
-          </div>
-
-          {filteredEvents.length === 0 ? (
-            <div className="empty">No events found for the current filters.</div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Device ID</th>
-                    <th>Store ID</th>
-                    <th>Event Type</th>
-                    <th>Payload</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pageEvents.map((e) => (
-                    <tr key={e.id}>
-                      <td className="mono">{formatDateTime(e.createdAt)}</td>
-                      <td className="mono">{e.deviceId}</td>
-                      <td className="mono">{e.storeId}</td>
-                      <td className="mono">{e.eventType}</td>
-                      <td>
-                        <PayloadDetails payload={e.payload} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <EventsTab
+          filteredEvents={filteredEvents}
+          pageEvents={pageEvents}
+          grouped={grouped}
+          groupBy={groupBy}
+          page={page}
+          setPage={setPage}
+          pageSize={pageSize}
+        />
       )}
 
       {tab === "devices" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div>
-              <div className="cardTitle">Add Device</div>
-              <div className="muted">Scan this QR from POS {"->"} Enroll Device</div>
-            </div>
-          </div>
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div className="control">
-                <label>Store ID</label>
-                <input
-                  value={enrollStoreId}
-                  onChange={(e) => setEnrollStoreId(e.target.value)}
-                  placeholder="e.g. store-1"
-                />
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={handleCreateEnrollment} disabled={enrollLoading}>
-                  {enrollLoading ? "Generating..." : "Create enrollment"}
-                </button>
-              </div>
-            </div>
-
-            {enrollError && <div className="banner" style={{ marginTop: 12 }}>{enrollError}</div>}
-
-            {enrollment && (
-              <div className="qrCard" style={{ marginTop: 16 }}>
-                <div className="badgeRow">
-                  <span className="badge badgeInfo">Code: {enrollment.code}</span>
-                  <span className="badge">Expires in: {enrollment.expiresAt ? <EnrollmentCountdown expiresAt={enrollment.expiresAt} /> : "unknown"}</span>
-                </div>
-                <div style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
-                  <QRCodeSVG value={enrollment.qrPayload} size={160} />
-                  <div style={{ display: "grid", gap: 8 }}>
-                    <div className="mono qrPayload">{enrollment.qrPayload}</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <button
-                        className="tab"
-                        onClick={() => {
-                          if (navigator.clipboard?.writeText) {
-                            navigator.clipboard.writeText(enrollment.code).catch(() => undefined);
-                          }
-                        }}
-                      >
-                        Copy code
-                      </button>
-                      <button
-                        className="btnGhost"
-                        onClick={() => {
-                          if (navigator.clipboard?.writeText) {
-                            navigator.clipboard.writeText(enrollment.qrPayload).catch(() => undefined);
-                          }
-                        }}
-                      >
-                        Copy QR payload
-                      </button>
-                      {/* GO-LIVE-012: QR code regenerate button */}
-                      <button
-                        className="btnDanger"
-                        onClick={handleCreateEnrollment}
-                        disabled={enrollLoading}
-                        title="Regenerate QR code with new enrollment"
-                      >
-                        {enrollLoading ? "Regenerating..." : "Regenerate QR"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="cardHeader">
-            <div className="cardTitle">Devices (status)</div>
-            <div className="muted">Live heartbeat + sync status</div>
-          </div>
-
-          {deviceActionError && <div className="banner" style={{ marginBottom: 12 }}>{deviceActionError}</div>}
-          {devicesError && <div className="banner" style={{ marginBottom: 12 }}>{devicesError}</div>}
-
-          {filteredDeviceRecords.length === 0 ? (
-            <div className="empty">No devices synced yet.</div>
-          ) : (
-            <div className="tableWrap">
-              <div className="deviceGrid">
-                {filteredDeviceRecords.map((d) => {
-                  const draft = deviceEdits[d.id] ?? {
-                    label: d.label ?? "",
-                    deviceType: (d.device_type as DeviceType) ?? "RETAILER_PHONE",
-                    printingMode: d.printing_mode ?? "NONE",
-                    scanLookupV2Enabled: d.scan_lookup_v2_enabled ?? false,
-                    active: Boolean(d.active)
-                  };
-                  const pending = d.pending_outbox_count ?? 0;
-                  const online = isDeviceOnline(d.last_seen_online);
-                  const tone = getDeviceTone({
-                    active: Boolean(d.active),
-                    lastSeenOnline: d.last_seen_online,
-                    pendingOutboxCount: pending
-                  });
-                  const toneClass =
-                    tone === "error"
-                      ? "deviceMessageError"
-                      : tone === "warning"
-                      ? "deviceMessageWarning"
-                      : tone === "success"
-                      ? "deviceMessageSuccess"
-                      : "";
-                  const deviceTypeLabel = d.device_type
-                    ? DEVICE_TYPE_LABELS[d.device_type as DeviceType] ?? d.device_type
-                    : "Unknown";
-                  const printingLabel = d.printing_mode ? PRINTING_MODE_LABELS[d.printing_mode] ?? d.printing_mode : "None";
-                  const storeLabel = d.store_name ?? (d.store_id ? d.store_id : "Not Activated");
-                  const statusMessage = composeDeviceMessage({
-                    active: Boolean(d.active),
-                    lastSeenOnline: d.last_seen_online,
-                    pendingOutboxCount: pending
-                  });
-                  return (
-                    <div className="deviceCard" key={d.id}>
-                      <div className="deviceHeader">
-                        <input
-                          className="deviceLabelInput"
-                          value={draft.label}
-                          onChange={(e) => updateDeviceDraft(d.id, { label: e.target.value })}
-                          placeholder="Device label"
-                        />
-                        <div className="badgeRow">
-                          <span className={`badge ${online ? "badgeOk" : "badgeWarn"}`}>
-                            {online ? "Online" : "Offline"}
-                          </span>
-                          <span className={`badge ${d.active ? "badgeOk" : "badgeError"}`}>
-                            {d.active ? "Active" : "Inactive"}
-                          </span>
-                          <span className="badge badgeInfo">{deviceTypeLabel}</span>
-                          <span className={`badge ${pending > 0 ? "badgeWarn" : ""}`}>Sync {pending}</span>
-                        </div>
-                      </div>
-
-                      <div className={`deviceMessage ${toneClass}`}>{statusMessage}</div>
-
-                      <div className="deviceMetaGrid">
-                        <div>
-                          <strong>Store:</strong> <span className="mono">{storeLabel}</span>
-                        </div>
-                        <div>
-                          <strong>Device:</strong> <span className="mono">{d.id}</span>
-                        </div>
-                        <div>
-                          <strong>Last seen:</strong>{" "}
-                          {d.last_seen_online ? formatDateTime(d.last_seen_online) : "-"}
-                        </div>
-                        <div>
-                          <strong>Last sync:</strong> {d.last_sync_at ? formatDateTime(d.last_sync_at) : "-"}
-                        </div>
-                        <div>
-                          <strong>Model:</strong> {[d.manufacturer, d.model].filter(Boolean).join(" ") || "-"}
-                        </div>
-                        <div>
-                          <strong>Android:</strong> {d.android_version ?? "-"}
-                        </div>
-                        <div>
-                          <strong>App:</strong> {d.app_version ?? "-"}
-                        </div>
-                        <div>
-                          <strong>Printing:</strong> {printingLabel}
-                        </div>
-                      </div>
-
-                      <div className="deviceActions">
-                        <select
-                          className="selectSmall"
-                          value={draft.deviceType}
-                          onChange={(e) => updateDeviceDraft(d.id, { deviceType: e.target.value as DeviceType })}
-                        >
-                          {DEVICE_TYPE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-
-                        <select
-                          className="selectSmall"
-                          value={draft.printingMode}
-                          onChange={(e) => updateDeviceDraft(d.id, { printingMode: e.target.value })}
-                          title="Printing Mode"
-                        >
-                          <option value="DIRECT_ESC_POS">Direct ESC/POS</option>
-                          <option value="SHARE_TO_PRINTER_APP">Printer App</option>
-                          <option value="NONE">None</option>
-                        </select>
-
-                        <label className="toggle" title="Enable V2 Scan Lookup (faster barcode resolution)">
-                          V2 Scan
-                          <input
-                            type="checkbox"
-                            checked={draft.scanLookupV2Enabled}
-                            onChange={(e) => updateDeviceDraft(d.id, { scanLookupV2Enabled: e.target.checked })}
-                          />
-                        </label>
-
-                        <label className="toggle">
-                          Active
-                          <input
-                            type="checkbox"
-                            checked={draft.active}
-                            onChange={(e) => updateDeviceDraft(d.id, { active: e.target.checked })}
-                          />
-                        </label>
-
-                        <button onClick={() => requestDeviceSave(d.id)} disabled={deviceSaving[d.id]}>
-                          {deviceSaving[d.id] ? "Saving..." : "Save"}
-                        </button>
-                        <button className="btnGhost" onClick={() => requestDeviceReset(d.id)} disabled={deviceSaving[d.id]}>
-                          Reset Token
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="tableWrap" style={{ paddingTop: 8 }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <button className="tab" disabled={devicePage === 0 || devicesLoading} onClick={() => { const p = devicePage - 1; setDevicePage(p); refreshDevices(p); }}>
-                    {devicesLoading ? "Loading…" : "Prev"}
-                  </button>
-                  <button className="tab" disabled={(devicePage + 1) * DEVICE_PAGE_SIZE >= deviceTotal || devicesLoading} onClick={() => { const p = devicePage + 1; setDevicePage(p); refreshDevices(p); }}>
-                    {devicesLoading ? "Loading…" : "Next"}
-                  </button>
-                  <span className="muted">
-                    Page {devicePage + 1} / {Math.max(1, Math.ceil(deviceTotal / DEVICE_PAGE_SIZE))} ({deviceTotal} devices)
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ISSUE-MICRO-061: Visual separator between device registry and events-derived summary */}
-          <hr style={{ margin: "16px 0", borderColor: "#e2e8f0" }} />
-          <div className="cardHeader" style={{ paddingTop: 0 }}>
-            <div className="cardTitle">Device Activity (from events)</div>
-            <div className="muted">Unique devices in last {limit} events: {devices.length} — derived from event log, independent of device registry above</div>
-          </div>
-
-          {devices.length === 0 ? (
-            <div className="empty">No devices seen yet.</div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Device ID</th>
-                    <th>Store ID (last)</th>
-                    <th>Last seen</th>
-                    <th>Last event</th>
-                    <th>Events (window)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {devices.map((d) => (
-                    <tr key={d.deviceId}>
-                      <td className="mono">{d.deviceId}</td>
-                      <td className="mono">{d.storeId}</td>
-                      <td className="mono">{formatDateTime(d.lastSeen)}</td>
-                      <td className="mono">{d.lastEventType}</td>
-                      <td className="mono">{d.eventCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <DevicesTab
+          enrollStoreId={enrollStoreId}
+          setEnrollStoreId={setEnrollStoreId}
+          handleCreateEnrollment={handleCreateEnrollment}
+          enrollLoading={enrollLoading}
+          enrollError={enrollError}
+          enrollment={enrollment}
+          deviceActionError={deviceActionError}
+          devicesError={devicesError}
+          filteredDeviceRecords={filteredDeviceRecords}
+          deviceEdits={deviceEdits}
+          updateDeviceDraft={updateDeviceDraft}
+          deviceSaving={deviceSaving}
+          requestDeviceSave={requestDeviceSave}
+          requestDeviceReset={requestDeviceReset}
+          devicePage={devicePage}
+          setDevicePage={setDevicePage}
+          devicesLoading={devicesLoading}
+          deviceTotal={deviceTotal}
+          refreshDevices={refreshDevices}
+          limit={limit}
+          devices={devices}
+        />
       )}
 
       {tab === "stores" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Create Store</div>
-            <div className="muted">Generate a Store ID for new device enrollment.</div>
-          </div>
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div className="control">
-                <label>Store name</label>
-                <input
-                  value={createStoreName}
-                  onChange={(e) => setCreateStoreName(e.target.value)}
-                  placeholder="Supermandi Pilot Store"
-                />
-              </div>
-              <div className="control">
-                <label>Store ID (optional)</label>
-                <input
-                  value={createStoreId}
-                  onChange={(e) => setCreateStoreId(e.target.value)}
-                  placeholder="UUID or store code"
-                />
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={handleCreateStore} disabled={createStoreLoading}>
-                  {createStoreLoading ? "Creating..." : "Create store"}
-                </button>
-              </div>
-            </div>
-
-            {createStoreError && (
-              <div className="banner" style={{ marginTop: 12 }}>{createStoreError}</div>
-            )}
-            {createStoreSuccess && (
-              <div className="muted" style={{ marginTop: 12 }}>{createStoreSuccess}</div>
-            )}
-          </div>
-
-          <div className="cardHeader">
-            <div className="cardTitle">Store Activation (UPI VPA)</div>
-            <div className="muted">GET prefill â†’ PATCH save + activate/deactivate</div>
-          </div>
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div className="control">
-                <label>Store ID</label>
-                <input
-                  value={storeAdminId}
-                  onChange={(e) => setStoreAdminId(e.target.value)}
-                  placeholder="e.g. store-1"
-                />
-              </div>
-              <div className="control">
-                <label>UPI VPA</label>
-                <input
-                  ref={storeUpiInputRef}
-                  value={storeUpiInput}
-                  onChange={(e) => setStoreUpiInput(e.target.value)}
-                  placeholder="merchant@upi"
-                />
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={handleStoreLoad} disabled={storeLoading}>
-                  {storeLoading ? "Loading..." : "Load store"}
-                </button>
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={handleStoreSave} disabled={storeLoading}>
-                  {storeLoading ? "Saving..." : "Save VPA"}
-                </button>
-              </div>
-            </div>
-
-            {storeError && <div className="banner" style={{ marginTop: 12 }}>{storeError}</div>}
-            {storeSuccess && <div className="muted" style={{ marginTop: 12 }}>{storeSuccess}</div>}
-
-            {storeRecord && (
-              <div className="tableWrap" style={{ paddingTop: 6 }}>
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Store ID</th>
-                      <th>Name</th>
-                      <th>Active</th>
-                      <th>UPI VPA</th>
-                      <th>UPI Updated</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td className="mono">{storeRecord.id}</td>
-                      <td>{storeRecord.name ?? "-"}</td>
-                      <td className="mono">{storeRecord.active ? "true" : "false"}</td>
-                      <td className="mono">{storeRecord.upi_vpa ?? "-"}</td>
-                      <td className="mono">
-                        {storeRecord.upi_vpa_updated_at
-                          ? formatDateTime(storeRecord.upi_vpa_updated_at)
-                          : "-"}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div className="cardHeader" style={{ paddingTop: 0 }}>
-            <div className="cardTitle">Stores (directory)</div>
-            <div className="muted">Edit store names and status</div>
-          </div>
-
-          {storeDirectoryError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
-          {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
-
-          {/* SA-P1-007: Bulk feature flag toolbar */}
-          {selectedStoreIds.size > 0 && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "8px 16px", background: "#eff6ff", borderRadius: 6, margin: "0 16px 8px" }}>
-              <span style={{ fontSize: 13, fontWeight: 500 }}>{selectedStoreIds.size} store(s) selected</span>
-              <select value={bulkFlagKey} onChange={(e) => setBulkFlagKey(e.target.value)} style={{ fontSize: 13, padding: "4px 8px" }}>
-                <option value="">Select flag...</option>
-                {featureFlags.map((f) => <option key={f.flag_key} value={f.flag_key}>{f.flag_key}</option>)}
-              </select>
-              <select value={bulkFlagAction} onChange={(e) => setBulkFlagAction(e.target.value as "enable" | "disable")} style={{ fontSize: 13, padding: "4px 8px" }}>
-                <option value="enable">Enable</option>
-                <option value="disable">Disable</option>
-              </select>
-              <button onClick={handleBulkFF} disabled={bulkFlagLoading || !bulkFlagKey}>
-                {bulkFlagLoading ? "Applying..." : "Apply"}
-              </button>
-              <button className="btnGhost" onClick={() => setSelectedStoreIds(new Set())}>Clear</button>
-              {bulkFlagResult && <span style={{ fontSize: 12, color: "#666" }}>{bulkFlagResult}</span>}
-            </div>
-          )}
-
-          {storeDirectory.length === 0 ? (
-            <div className="empty">
-              {storeDirectoryLoading ? "Loading stores..." : "No stores found."}
-            </div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th style={{ width: 32 }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedStoreIds.size === storeDirectory.length && storeDirectory.length > 0}
-                        onChange={() => {
-                          if (selectedStoreIds.size === storeDirectory.length) {
-                            setSelectedStoreIds(new Set());
-                          } else {
-                            setSelectedStoreIds(new Set(storeDirectory.map((s) => s.id)));
-                          }
-                        }}
-                        title="Select all"
-                      />
-                    </th>
-                    <th>Store ID</th>
-                    <th>Store Name</th>
-                    <th>Contact</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {storeDirectory.map((s) => {
-                    const contactDraft = getStoreContactDraft(s);
-                    const isExpanded = expandedStoreId === s.id;
-                    return (
-                      <React.Fragment key={s.id}>
-                        <tr>
-                          <td>
-                            <input
-                              type="checkbox"
-                              checked={selectedStoreIds.has(s.id)}
-                              onChange={() => toggleStoreSelection(s.id)}
-                            />
-                          </td>
-                          <td className="mono">{s.id}</td>
-                          <td>
-                            <input
-                              className="tableInput"
-                              value={storeNameEdits[s.id] ?? s.name ?? s.storeName ?? ""}
-                              onChange={(e) => updateStoreNameDraft(s.id, e.target.value)}
-                              placeholder="Store name"
-                            />
-                          </td>
-                          <td>
-                            <button
-                              className="btnGhost"
-                              onClick={() => { const nextId = isExpanded ? null : s.id; setExpandedStoreId(nextId); if (nextId) loadStoreFeatureFlags(nextId); }}
-                              title={isExpanded ? "Hide details" : "Edit details"}
-                            >
-                              {s.contact_name || s.contact_phone ? `${s.contact_name ?? ""}` : "(none)"}
-                              {isExpanded ? " ▲" : " ▼"}
-                            </button>
-                          </td>
-                          {/* SA-P0-001: Show raw status with color coding */}
-                          <td>
-                            <span className="mono" style={{
-                              padding: "2px 8px",
-                              borderRadius: 4,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              ...(s.status === "SUSPENDED"
-                                ? { background: "#fee2e2", color: "#991b1b" }
-                                : s.status === "ACTIVE"
-                                ? { background: "#dcfce7", color: "#166534" }
-                                : { background: "#f3f4f6", color: "#374151" }),
-                            }}>
-                              {s.status ?? (s.active ? "ACTIVE" : "INACTIVE")}
-                            </span>
-                          </td>
-                          <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            <button onClick={() => handleStoreNameSave(s.id)} disabled={storeNameSaving[s.id]}>
-                              {storeNameSaving[s.id] ? "Saving..." : "Save"}
-                            </button>
-                            {/* SA-P0-001: Suspend/Reactivate buttons */}
-                            {s.status === "ACTIVE" && (
-                              <button
-                                className="btnDanger"
-                                style={{ fontSize: 12, padding: "4px 8px" }}
-                                onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "suspend")}
-                              >
-                                Suspend
-                              </button>
-                            )}
-                            {s.status === "SUSPENDED" && (
-                              <button
-                                style={{ fontSize: 12, padding: "4px 8px", background: "#16a34a", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}
-                                onClick={() => requestStoreStatusChange(s.id, s.name ?? s.storeName ?? s.id, "reactivate")}
-                              >
-                                Reactivate
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                        {isExpanded && (
-                          <tr>
-                            <td colSpan={6} style={{ background: "#f9fafb", padding: "12px" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "8px", maxWidth: "600px" }}>
-                                <div>
-                                  <label style={{ fontSize: "12px", color: "#666" }}>Contact Name</label>
-                                  <input
-                                    className="tableInput"
-                                    value={contactDraft.contactName}
-                                    onChange={(e) => updateStoreContactDraft(s.id, { contactName: e.target.value })}
-                                    placeholder="Contact name"
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ fontSize: "12px", color: "#666" }}>Phone</label>
-                                  <input
-                                    className="tableInput"
-                                    value={contactDraft.contactPhone}
-                                    onChange={(e) => updateStoreContactDraft(s.id, { contactPhone: e.target.value })}
-                                    placeholder="+91..."
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ fontSize: "12px", color: "#666" }}>Email</label>
-                                  <input
-                                    className="tableInput"
-                                    value={contactDraft.contactEmail}
-                                    onChange={(e) => updateStoreContactDraft(s.id, { contactEmail: e.target.value })}
-                                    placeholder="email@example.com"
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ fontSize: "12px", color: "#666" }}>Address</label>
-                                  <input
-                                    className="tableInput"
-                                    value={contactDraft.address}
-                                    onChange={(e) => updateStoreContactDraft(s.id, { address: e.target.value })}
-                                    placeholder="Store address"
-                                  />
-                                </div>
-                              </div>
-                              {/* SA-P1-006: Payment method checkboxes */}
-                              <div style={{ marginTop: "12px" }}>
-                                <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Payment Methods</label>
-                                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                                  {(["CASH", "UPI", "DUE"] as const).map((method) => {
-                                    const draft = getStorePaymentDraft(s);
-                                    return (
-                                      <label key={method} style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }}>
-                                        <input
-                                          type="checkbox"
-                                          checked={draft.includes(method)}
-                                          onChange={() => toggleStorePaymentMethod(s.id, method, draft)}
-                                        />
-                                        {method}
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                              {/* SA-P1-007: Per-store feature flag overrides */}
-                              <div style={{ marginTop: "12px" }}>
-                                <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "6px" }}>Feature Flags</label>
-                                {storeFFLoading[s.id] ? (
-                                  <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
-                                ) : storeFeatureFlags[s.id] ? (
-                                  <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                                    {storeFeatureFlags[s.id].map((f) => (
-                                      <label key={f.flag_key} style={{ display: "flex", alignItems: "center", gap: "4px", cursor: f.global_enabled ? "pointer" : "default", fontSize: 13, opacity: f.global_enabled ? 1 : 0.5 }}>
-                                        <input
-                                          type="checkbox"
-                                          checked={f.effective}
-                                          disabled={!f.global_enabled}
-                                          onChange={() => handleStoreFFToggle(s.id, f)}
-                                        />
-                                        <span>{f.flag_key}</span>
-                                        {f.store_override !== null && <span style={{ fontSize: 10, color: "#f59e0b" }}>(override)</span>}
-                                        {!f.global_enabled && <span style={{ fontSize: 10, color: "#ef4444" }}>(killed)</span>}
-                                      </label>
-                                    ))}
-                                  </div>
-                                ) : null}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <div className="cardHeader" style={{ paddingTop: 0 }}>
-            <div className="cardTitle">Barcode Sheets</div>
-            <div className="muted">Generate A4 PDF sheets with existing barcodes (Tier-1 / Tier-2).</div>
-          </div>
-
-          {barcodeSheetError && <div className="banner" style={{ margin: "0 16px 12px" }}>{barcodeSheetError}</div>}
-          {barcodeSheetSuccess && <div className="muted" style={{ margin: "0 16px 12px" }}>{barcodeSheetSuccess}</div>}
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-              <div className="control">
-                <label>Store ID</label>
-                <input
-                  value={barcodeSheetStoreId}
-                  onChange={(e) => setBarcodeSheetStoreId(e.target.value)}
-                  placeholder="UUID or store code"
-                />
-              </div>
-              <div className="control">
-                <label>Tier</label>
-                <select
-                  value={barcodeSheetTier}
-                  onChange={(e) => setBarcodeSheetTier(e.target.value as "tier1" | "tier2")}
-                  className="selectSmall"
-                >
-                  <option value="tier1">Tier 1 (large)</option>
-                  <option value="tier2">Tier 2 (compact)</option>
-                </select>
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={handleBarcodeSheetDownload} disabled={barcodeSheetBusy}>
-                  {barcodeSheetBusy ? "Working..." : "Download PDF"}
-                </button>
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={handleBarcodeSheetShare} disabled={barcodeSheetBusy}>
-                  {barcodeSheetBusy ? "Working..." : "Share to WhatsApp"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="cardHeader" style={{ paddingTop: 0 }}>
-            <div className="cardTitle">Stores (activity)</div>
-            <div className="muted">Activity summary in last {limit} events</div>
-          </div>
-
-          {stores.length === 0 ? (
-            <div className="empty">No stores seen yet.</div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Store ID</th>
-                    <th>Event count</th>
-                    <th>Last seen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stores.map((s) => (
-                    <tr key={s.storeId}>
-                      <td className="mono">{s.storeId}</td>
-                      <td className="mono">{s.eventCount}</td>
-                      <td className="mono">{formatDateTime(s.lastSeen)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <StoresTab
+          createStoreName={createStoreName}
+          setCreateStoreName={setCreateStoreName}
+          createStoreId={createStoreId}
+          setCreateStoreId={setCreateStoreId}
+          handleCreateStore={handleCreateStore}
+          createStoreLoading={createStoreLoading}
+          createStoreError={createStoreError}
+          createStoreSuccess={createStoreSuccess}
+          storeAdminId={storeAdminId}
+          setStoreAdminId={setStoreAdminId}
+          storeUpiInput={storeUpiInput}
+          setStoreUpiInput={setStoreUpiInput}
+          storeUpiInputRef={storeUpiInputRef}
+          handleStoreLoad={handleStoreLoad}
+          handleStoreSave={handleStoreSave}
+          storeLoading={storeLoading}
+          storeError={storeError}
+          storeSuccess={storeSuccess}
+          storeRecord={storeRecord}
+          storeDirectory={storeDirectory}
+          storeDirectoryLoading={storeDirectoryLoading}
+          storeDirectoryError={storeDirectoryError}
+          storeNameError={storeNameError}
+          storeNameEdits={storeNameEdits}
+          updateStoreNameDraft={updateStoreNameDraft}
+          storeNameSaving={storeNameSaving}
+          handleStoreNameSave={handleStoreNameSave}
+          expandedStoreId={expandedStoreId}
+          setExpandedStoreId={setExpandedStoreId}
+          loadStoreFeatureFlags={loadStoreFeatureFlags}
+          requestStoreStatusChange={requestStoreStatusChange}
+          getStoreContactDraft={getStoreContactDraft}
+          updateStoreContactDraft={updateStoreContactDraft}
+          getStorePaymentDraft={getStorePaymentDraft}
+          toggleStorePaymentMethod={toggleStorePaymentMethod}
+          storeFeatureFlags={storeFeatureFlags}
+          storeFFLoading={storeFFLoading}
+          handleStoreFFToggle={handleStoreFFToggle}
+          selectedStoreIds={selectedStoreIds}
+          setSelectedStoreIds={setSelectedStoreIds}
+          toggleStoreSelection={toggleStoreSelection}
+          bulkFlagKey={bulkFlagKey}
+          setBulkFlagKey={setBulkFlagKey}
+          bulkFlagAction={bulkFlagAction}
+          setBulkFlagAction={setBulkFlagAction}
+          handleBulkFF={handleBulkFF}
+          bulkFlagLoading={bulkFlagLoading}
+          bulkFlagResult={bulkFlagResult}
+          featureFlags={featureFlags}
+          barcodeSheetStoreId={barcodeSheetStoreId}
+          setBarcodeSheetStoreId={setBarcodeSheetStoreId}
+          barcodeSheetTier={barcodeSheetTier}
+          setBarcodeSheetTier={setBarcodeSheetTier}
+          barcodeSheetBusy={barcodeSheetBusy}
+          barcodeSheetError={barcodeSheetError}
+          barcodeSheetSuccess={barcodeSheetSuccess}
+          handleBarcodeSheetDownload={handleBarcodeSheetDownload}
+          handleBarcodeSheetShare={handleBarcodeSheetShare}
+          stores={stores}
+          limit={limit}
+        />
       )}
 
       {tab === "suppliers" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div>
-              <div className="cardTitle">Pending Supplier Requests</div>
-              <div className="muted">Retailers requesting to link suppliers - verify with platform suppliers or reject</div>
-            </div>
-            <button onClick={refreshSuppliers} disabled={suppliersLoading}>
-              {suppliersLoading ? "Refreshing..." : "Refresh"}
-            </button>
-          </div>
+        <SuppliersTab
+          refreshSuppliers={refreshSuppliers}
+          suppliersLoading={suppliersLoading}
+          suppliersError={suppliersError}
+          supplierActionError={supplierActionError}
+          pendingSuppliers={pendingSuppliers}
+          verifiedSuppliers={verifiedSuppliers}
+          selectedSupplierForLink={selectedSupplierForLink}
+          setSelectedSupplierForLink={setSelectedSupplierForLink}
+          rejectReason={rejectReason}
+          setRejectReason={setRejectReason}
+          supplierActionLoading={supplierActionLoading}
+          handleVerifySupplierDirectly={handleVerifySupplierDirectly}
+          handleVerifySupplier={handleVerifySupplier}
+          handleRejectSupplier={handleRejectSupplier}
+          bankChanges={bankChanges}
+          bankVerifyLoading={bankVerifyLoading}
+          bankRejectReason={bankRejectReason}
+          setBankRejectReason={setBankRejectReason}
+          handleBankVerify={handleBankVerify}
+          supplierSearch={supplierSearch}
+          setSupplierSearch={setSupplierSearch}
+          requestSupplierStatusChange={requestSupplierStatusChange}
+          pendingProducts={pendingProducts}
+          productActionError={productActionError}
+          productRejectReason={productRejectReason}
+          setProductRejectReason={setProductRejectReason}
+          productActionLoading={productActionLoading}
+          handleOpenEditProduct={handleOpenEditProduct}
+          handleApproveProduct={handleApproveProduct}
+          handleRejectProduct={handleRejectProduct}
+          editingProduct={editingProduct}
+          setEditingProduct={setEditingProduct}
+          editProductForm={editProductForm}
+          setEditProductForm={setEditProductForm}
+          editProductError={editProductError}
+          editProductSuccess={editProductSuccess}
+          editProductLoading={editProductLoading}
+          handleSubmitEditProduct={handleSubmitEditProduct}
+        />
+      )}
 
-          {suppliersError && <div className="banner" style={{ margin: "0 16px 12px" }}>{suppliersError}</div>}
-          {supplierActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{supplierActionError}</div>}
-
-          {pendingSuppliers.filter(s => s.status === "pending").length === 0 ? (
-            <div className="empty">
-              {suppliersLoading ? "Loading pending requests..." : "No pending supplier requests."}
-            </div>
-          ) : (
-            <div className="tableWrap">
-              <div className="deviceGrid">
-                {pendingSuppliers.filter(s => s.status === "pending").map((request) => (
-                  <div className="deviceCard" key={request.id}>
-                    <div className="deviceHeader">
-                      <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
-                        {request.requestedName || "Unknown Supplier"}
-                      </div>
-                      <div className="badgeRow">
-                        <span className="badge badgeWarn">Pending</span>
-                      </div>
-                    </div>
-
-                    <div className="deviceMetaGrid">
-                      <div>
-                        <strong>Store:</strong> <span className="mono">{request.storeName || request.storeId}</span>
-                      </div>
-                      <div>
-                        <strong>GSTIN:</strong> <span className="mono">{request.requestedGstin || "-"}</span>
-                      </div>
-                      <div>
-                        <strong>Phone:</strong> <span className="mono">{request.requestedPhone || "-"}</span>
-                      </div>
-                      <div>
-                        <strong>Email:</strong> <span className="mono">{request.requestedEmail || "-"}</span>
-                      </div>
-                      <div>
-                        <strong>Requested:</strong> <span className="mono">{formatDateTime(request.createdAt)}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: 12 }}>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Link to Verified Supplier:</label>
-                      <select
-                        className="selectSmall"
-                        style={{ width: "100%", marginBottom: 8 }}
-                        value={selectedSupplierForLink[request.id] || ""}
-                        onChange={(e) => setSelectedSupplierForLink((prev) => ({ ...prev, [request.id]: e.target.value }))}
-                      >
-                        <option value="">-- Select verified supplier --</option>
-                        {verifiedSuppliers.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.businessName} ({s.gstin}) - {s.city || "Unknown city"}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ marginTop: 8 }}>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Reject Reason (optional):</label>
-                      <input
-                        className="tableInput"
-                        style={{ width: "100%", marginBottom: 8 }}
-                        placeholder="Reason for rejection..."
-                        value={rejectReason[request.id] || ""}
-                        onChange={(e) => setRejectReason((prev) => ({ ...prev, [request.id]: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
-                      <button
-                        onClick={() => handleVerifySupplierDirectly(request.id)}
-                        disabled={supplierActionLoading[request.id]}
-                        style={{ background: "#3b82f6", color: "white" }}
-                        title="Verify the supplier directly without linking to another"
-                      >
-                        {supplierActionLoading[request.id] ? "Verifying..." : "Verify Directly"}
-                      </button>
-                      <button
-                        onClick={() => handleVerifySupplier(request.id)}
-                        disabled={supplierActionLoading[request.id] || !selectedSupplierForLink[request.id]}
-                        style={{ background: "#22c55e", color: "white" }}
-                        title="Link to an existing verified supplier"
-                      >
-                        {supplierActionLoading[request.id] ? "Linking..." : "Link to Verified"}
-                      </button>
-                      <button
-                        className="btnGhost"
-                        onClick={() => handleRejectSupplier(request.id)}
-                        disabled={supplierActionLoading[request.id]}
-                        style={{ color: "#ef4444" }}
-                      >
-                        {supplierActionLoading[request.id] ? "Rejecting..." : "Reject"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* SA-P1-008: Pending Bank Verifications */}
-          {bankChanges.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div className="cardHeader">
-                <div>
-                  <div className="cardTitle">
-                    Pending Bank Verifications
-                    <span className="badge badgeWarn" style={{ marginLeft: 8 }}>{bankChanges.length}</span>
-                  </div>
-                  <div className="muted">Suppliers who changed bank details — approve or reject before payouts resume</div>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "0 16px 16px" }}>
-                {bankChanges.map((bc) => (
-                  <div key={bc.id} className="card" style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>{bc.businessName}</div>
-                        <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>GSTIN: {bc.gstin}</div>
-                        {bc.phone && <div style={{ fontSize: 12, color: "#666" }}>Phone: {bc.phone}</div>}
-                      </div>
-                      <div style={{ textAlign: "right", fontSize: 11, color: "#888" }}>
-                        Changed: {new Date(bc.updatedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 24, marginTop: 8, fontSize: 13 }}>
-                      <div><span style={{ color: "#666" }}>Account:</span> {bc.bankAccountMasked || "N/A"}</div>
-                      <div><span style={{ color: "#666" }}>IFSC:</span> {bc.bankIfsc || "N/A"}</div>
-                      <div><span style={{ color: "#666" }}>Holder:</span> {bc.bankAccountName || "N/A"}</div>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
-                      <button
-                        className="btnPrimary"
-                        onClick={() => handleBankVerify(bc.id, "approve")}
-                        disabled={bankVerifyLoading[bc.id]}
-                        style={{ fontSize: 12, padding: "4px 12px" }}
-                      >
-                        {bankVerifyLoading[bc.id] ? "..." : "Approve Bank Details"}
-                      </button>
-                      <input
-                        type="text"
-                        placeholder="Rejection reason (min 5 chars)"
-                        value={bankRejectReason[bc.id] || ""}
-                        onChange={(e) => setBankRejectReason((prev) => ({ ...prev, [bc.id]: e.target.value }))}
-                        style={{ flex: 1, fontSize: 12, padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4 }}
-                      />
-                      <button
-                        className="btnGhost"
-                        onClick={() => handleBankVerify(bc.id, "reject")}
-                        disabled={bankVerifyLoading[bc.id]}
-                        style={{ color: "#ef4444", fontSize: 12, padding: "4px 12px" }}
-                      >
-                        {bankVerifyLoading[bc.id] ? "..." : "Reject"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="cardHeader" style={{ paddingTop: 0 }}>
-            <div>
-              <div className="cardTitle">Verified Suppliers (Platform)</div>
-              <div className="muted">Search platform suppliers for linking to requests</div>
-            </div>
-          </div>
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div className="control">
-                <label>Search</label>
-                <input
-                  value={supplierSearch}
-                  onChange={(e) => setSupplierSearch(e.target.value)}
-                  placeholder="GSTIN or business name..."
-                />
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={refreshSuppliers} disabled={suppliersLoading}>
-                  Search
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {verifiedSuppliers.length === 0 ? (
-            <div className="empty">
-              {suppliersLoading ? "Loading verified suppliers..." : "No verified suppliers found. Try a different search."}
-            </div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Business Name</th>
-                    <th>GSTIN</th>
-                    <th>Contact</th>
-                    <th>Location</th>
-                    <th>Status</th>
-                    <th>Rating</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {verifiedSuppliers.map((s) => (
-                    <tr key={s.id}>
-                      <td>
-                        <div>{s.businessName}</div>
-                        {s.tradeName && <div className="muted">{s.tradeName}</div>}
-                      </td>
-                      <td className="mono">{s.gstin}</td>
-                      <td>
-                        <div className="mono">{s.primaryPhone || "-"}</div>
-                        <div className="muted">{s.primaryEmail || ""}</div>
-                      </td>
-                      <td>{[s.city, s.state].filter(Boolean).join(", ") || "-"}</td>
-                      <td>
-                        <span className={`badge ${s.verificationStatus === "SUSPENDED" ? "badgeError" : "badgeOk"}`}>
-                          {s.verificationStatus === "SUSPENDED" ? "Suspended" : s.verificationStatus}
-                        </span>
-                      </td>
-                      <td className="mono">{typeof s.rating === "number" ? s.rating.toFixed(1) : "-"}</td>
-                      <td>
-                        {s.verificationStatus === "SUSPENDED" ? (
-                          <button
-                            style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 4, padding: "4px 10px", fontSize: 12, cursor: "pointer" }}
-                            onClick={() => requestSupplierStatusChange(s.id, s.businessName, "reactivate")}
-                          >
-                            Reactivate
-                          </button>
-                        ) : (
-                          <button
-                            className="btnDanger"
-                            style={{ padding: "4px 10px", fontSize: 12 }}
-                            onClick={() => requestSupplierStatusChange(s.id, s.businessName, "suspend")}
-                          >
-                            Suspend
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* SA-1.3-001 to SA-1.3-003: Pending Products Section */}
-          <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb" }}>
-            <div>
-              <div className="cardTitle">
-                Pending Products
-                {pendingProducts.length > 0 && (
-                  <span className="badge badgeWarn" style={{ marginLeft: 8 }}>
-                    {pendingProducts.length}
-                  </span>
-                )}
-              </div>
-              <div className="muted">Supplier products awaiting approval - set margin and BNPL settings</div>
-            </div>
-          </div>
-
-          {productActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{productActionError}</div>}
-
-          {pendingProducts.length === 0 ? (
-            <div className="empty">
-              {suppliersLoading ? "Loading pending products..." : "No products pending approval."}
-            </div>
-          ) : (
-            <div className="tableWrap">
-              <div className="deviceGrid">
-                {pendingProducts.map((product) => (
-                  <div className="deviceCard" key={product.id}>
-                    <div className="deviceHeader">
-                      <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
-                        {product.productName}
-                      </div>
-                      <div className="badgeRow">
-                        <span className="badge badgeWarn">Pending</span>
-                      </div>
-                    </div>
-
-                    <div className="deviceMetaGrid">
-                      <div>
-                        <strong>Supplier:</strong> <span>{product.supplierName}</span>
-                      </div>
-                      <div>
-                        <strong>Barcode:</strong> <span className="mono">{product.barcode || "-"}</span>
-                      </div>
-                      <div>
-                        <strong>Purchase Price:</strong> <span className="mono">INR {(product.purchasePrice / 100).toFixed(2)}</span>
-                      </div>
-                      <div>
-                        <strong>MRP:</strong> <span className="mono">INR {(product.mrp / 100).toFixed(2)}</span>
-                      </div>
-                      <div>
-                        <strong>MOQ:</strong> <span className="mono">{product.moq || 1}</span>
-                      </div>
-                      <div>
-                        <strong>Submitted:</strong> <span className="mono">{formatDateTime(product.createdAt)}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: 8 }}>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Reject Reason (min 10 chars):</label>
-                      <input
-                        className="tableInput"
-                        style={{ width: "100%", marginBottom: 8 }}
-                        placeholder="Enter reason for rejection..."
-                        value={productRejectReason[product.id] || ""}
-                        onChange={(e) => setProductRejectReason((prev) => ({ ...prev, [product.id]: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
-                      <button
-                        onClick={() => handleOpenEditProduct(product)}
-                        style={{ background: "#6366f1", color: "white" }}
-                        title="Edit product details, set margin and BNPL"
-                      >
-                        Edit / Set Margin
-                      </button>
-                      <button
-                        onClick={() => handleApproveProduct(product.id)}
-                        disabled={productActionLoading[product.id]}
-                        style={{ background: "#22c55e", color: "white" }}
-                        title="Approve this product"
-                      >
-                        {productActionLoading[product.id] ? "Approving..." : "Approve"}
-                      </button>
-                      <button
-                        className="btnGhost"
-                        onClick={() => handleRejectProduct(product.id)}
-                        disabled={productActionLoading[product.id] || (productRejectReason[product.id]?.length || 0) < 10}
-                        style={{ color: "#ef4444" }}
-                        title="Reject this product"
-                      >
-                        {productActionLoading[product.id] ? "Rejecting..." : "Reject"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Product Edit Modal (SA-1.3-003) */}
-          {editingProduct && (
-            <div className="modalOverlay" onClick={() => setEditingProduct(null)}>
-              <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
-                <div className="modalHeader">
-                  <h3 style={{ margin: 0 }}>Edit Product - Set Margin & BNPL</h3>
-                  <button className="btnGhost" onClick={() => setEditingProduct(null)}>&times;</button>
-                </div>
-
-                <div className="modalBody">
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>Original Name:</strong> {editingProduct.productName}
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>Purchase Price:</strong> INR {(editingProduct.purchasePrice / 100).toFixed(2)}
-                  </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <strong>MRP:</strong> INR {(editingProduct.mrp / 100).toFixed(2)}
-                  </div>
-
-                  <hr style={{ margin: "16px 0", borderColor: "#e5e7eb" }} />
-
-                  <div className="control" style={{ marginBottom: 16 }}>
-                    <label>Display Name (optional override)</label>
-                    <input
-                      value={editProductForm.editedName}
-                      onChange={(e) => setEditProductForm((f) => ({ ...f, editedName: e.target.value }))}
-                      placeholder={editingProduct.productName}
-                    />
-                  </div>
-
-                  <div className="control" style={{ marginBottom: 16 }}>
-                    <label>Margin Type</label>
-                    <select
-                      value={editProductForm.marginType}
-                      onChange={(e) => setEditProductForm((f) => ({ ...f, marginType: e.target.value as "fixed" | "percent" }))}
-                    >
-                      <option value="fixed">Fixed Amount (INR)</option>
-                      <option value="percent">Percentage (%)</option>
-                    </select>
-                  </div>
-
-                  {editProductForm.marginType === "fixed" ? (
-                    <div className="control" style={{ marginBottom: 16 }}>
-                      <label>Fixed Margin (INR)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={editProductForm.fixedMargin}
-                        onChange={(e) => setEditProductForm((f) => ({ ...f, fixedMargin: e.target.value }))}
-                        placeholder="e.g. 5.00"
-                      />
-                      <div className="muted" style={{ marginTop: 4 }}>
-                        Retailer Price: INR {((editingProduct.purchasePrice / 100) + (parseFloat(editProductForm.fixedMargin) || 0)).toFixed(2)}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="control" style={{ marginBottom: 16 }}>
-                      <label>Margin Percentage (%)</label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={editProductForm.percentMargin}
-                        onChange={(e) => setEditProductForm((f) => ({ ...f, percentMargin: e.target.value }))}
-                        placeholder="e.g. 10"
-                      />
-                      <div className="muted" style={{ marginTop: 4 }}>
-                        Retailer Price: INR {((editingProduct.purchasePrice / 100) * (1 + (parseFloat(editProductForm.percentMargin) || 0) / 100)).toFixed(2)}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="control" style={{ marginBottom: 16 }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <input
-                        type="checkbox"
-                        checked={editProductForm.bnplEligible}
-                        onChange={(e) => setEditProductForm((f) => ({ ...f, bnplEligible: e.target.checked }))}
-                      />
-                      BNPL Eligible (Buy Now Pay Later)
-                    </label>
-                  </div>
-
-                  {editProductForm.bnplEligible && (
-                    <div className="control" style={{ marginBottom: 16 }}>
-                      <label>BNPL Max Days</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="30"
-                        value={editProductForm.bnplMaxDays}
-                        onChange={(e) => setEditProductForm((f) => ({ ...f, bnplMaxDays: e.target.value }))}
-                      />
-                    </div>
-                  )}
-
-                  {editProductError && <div className="banner">{editProductError}</div>}
-                  {editProductSuccess && <div className="muted" style={{ color: "#22c55e", marginTop: 8 }}>{editProductSuccess}</div>}
-                </div>
-
-                <div className="modalFooter">
-                  <button className="btnGhost" onClick={() => setEditingProduct(null)}>Cancel</button>
-                  <button
-                    onClick={handleSubmitEditProduct}
-                    disabled={editProductLoading}
-                    style={{ background: "#3b82f6", color: "white" }}
-                  >
-                    {editProductLoading ? "Saving..." : "Save Changes"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="cardHeader" style={{ paddingTop: 24, borderTop: "1px solid #e5e7eb" }}>
-            <div>
-              <div className="cardTitle">Recently Processed</div>
-              <div className="muted">Approved and rejected requests</div>
-            </div>
-          </div>
-
-          {pendingSuppliers.filter(s => s.status !== "pending").length === 0 ? (
-            <div className="empty">No processed requests yet.</div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Store</th>
-                    <th>Requested Name</th>
-                    <th>GSTIN</th>
-                    <th>Status</th>
-                    <th>Processed</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingSuppliers.filter(s => s.status !== "pending").map((request) => (
-                    <tr key={request.id}>
-                      <td className="mono">{request.storeName || request.storeId}</td>
-                      <td>{request.requestedName || "-"}</td>
-                      <td className="mono">{request.requestedGstin || "-"}</td>
-                      <td>
-                        <span className={`badge ${request.status === "approved" ? "badgeOk" : "badgeError"}`}>
-                          {request.status}
-                        </span>
-                      </td>
-                      <td className="mono">
-                        {request.reviewedAt ? formatDateTime(request.reviewedAt) : "-"}
-                      </td>
-                      <td>{request.reviewNotes || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+      {tab === "applications" && (
+        <ApplicationsTab
+          applications={applications}
+          applicationsTotal={applicationsTotal}
+          applicationsLoading={applicationsLoading}
+          applicationsError={applicationsError}
+          appEntityFilter={appEntityFilter}
+          setAppEntityFilter={setAppEntityFilter}
+          appActionLoading={appActionLoading}
+          appRejectReason={appRejectReason}
+          setAppRejectReason={setAppRejectReason}
+          refreshApplications={refreshApplications}
+          handleApproveApplication={handleApproveApplication}
+          handleRejectApplication={handleRejectApplication}
+        />
       )}
 
       {tab === "analytics" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div>
-              <div className="cardTitle">Analytics</div>
-              <div className="muted">POS + Consumer + Purchases (admin-only)</div>
-            </div>
-          </div>
-
-          <div className="tableWrap" style={{ paddingTop: 0 }}>
-            <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-              <div className="control">
-                <label>Store ID (optional)</label>
-                <input
-                  value={analyticsStoreId}
-                  onChange={(e) => setAnalyticsStoreId(e.target.value)}
-                  placeholder="UUID or store code"
-                />
-              </div>
-              <div className="control">
-                <label>From</label>
-                <input type="date" value={analyticsFrom} onChange={(e) => setAnalyticsFrom(e.target.value)} />
-              </div>
-              <div className="control">
-                <label>To</label>
-                <input type="date" value={analyticsTo} onChange={(e) => setAnalyticsTo(e.target.value)} />
-              </div>
-              <div className="control">
-                <label>&nbsp;</label>
-                <button onClick={() => refreshAnalytics(analyticsTab)} disabled={analyticsLoading}>
-                  {analyticsLoading ? "Refreshing..." : "Refresh"}
-                </button>
-              </div>
-            </div>
-
-            <div className="subTabs" style={{ marginTop: 12 }}>
-              {(["overview", "devices", "products", "payments", "purchases", "consumer", "activity", "dues"] as AnalyticsTabKey[]).map((key) => (
-                <button
-                  key={key}
-                  className={analyticsTab === key ? "tab tabActive" : "tab"}
-                  onClick={() => setAnalyticsTab(key)}
-                >
-                  {key === "consumer" ? "Consumer Sales" : key === "payments" ? "Payments & Dues" : key === "activity" ? "Activity Logs" : key === "dues" ? "Dues Tracking" : key[0].toUpperCase() + key.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            {analyticsError && <div className="banner" style={{ marginTop: 12 }}>{analyticsError}</div>}
-
-            {analyticsTab === "overview" && overviewData && (
-              <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                <div className="analyticsGrid">
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Sales Total (POS)</div>
-                    <div className="analyticsValue">{formatCurrency(overviewData.sales_total.pos_minor)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Sales Total (Consumer)</div>
-                    <div className="analyticsValue">{formatCurrency(overviewData.sales_total.consumer_minor)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Sales Total (All)</div>
-                    <div className="analyticsValue">{formatCurrency(overviewData.sales_total.total_minor)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Collections Total</div>
-                    <div className="analyticsValue">{formatCurrency(overviewData.collections_total_minor)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">New Products (Retailer)</div>
-                    <div className="analyticsValue">{overviewData.new_products_created_count}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Devices Online / Offline</div>
-                    <div className="analyticsValue">
-                      {overviewData.devices.online} / {overviewData.devices.offline}
-                    </div>
-                    <div className="muted">Pending outbox: {overviewData.devices.pending_outbox_total}</div>
-                  </div>
-                </div>
-
-                <div className="analyticsGrid">
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
-                    <div className="analyticsValue">
-                      {formatCurrency(overviewData.payment_split_minor.cash)} / {formatCurrency(overviewData.payment_split_minor.upi)} / {formatCurrency(overviewData.payment_split_minor.due)}
-                    </div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Due Outstanding</div>
-                    <div className="analyticsValue">{formatCurrency(overviewData.due_outstanding.total_minor)}</div>
-                    <div className="muted">
-                      {overviewData.due_outstanding.buckets.map((b: any) => `${b.label}: ${formatCurrency(b.total_minor)}`).join(" | ")}
-                    </div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Profit (Gross)</div>
-                    {overviewData.profit ? (
-                      <>
-                        <div className="analyticsValue">{formatCurrency(overviewData.profit.gross_profit_minor)}</div>
-                        <div className="muted">
-                          Margin: {overviewData.profit.margin_percent ?? 0}% | Confidence: {overviewData.profit.profit_confidence}
-                        </div>
-                        {overviewData.profit.missing_cost_items_count > 0 && (
-                          <div className="muted">Missing cost items: {overviewData.profit.missing_cost_items_count}</div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="muted">
-                        Profit unavailable. Missing: {(overviewData.profit_missing_fields ?? []).join(", ") || "purchase data"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {analyticsTab === "payments" && overviewData && (
-              <div style={{ marginTop: 12 }}>
-                <div className="analyticsGrid">
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
-                    <div className="analyticsValue">
-                      {formatCurrency(overviewData.payment_split_minor.cash)} / {formatCurrency(overviewData.payment_split_minor.upi)} / {formatCurrency(overviewData.payment_split_minor.due)}
-                    </div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Due Outstanding</div>
-                    <div className="analyticsValue">{formatCurrency(overviewData.due_outstanding.total_minor)}</div>
-                  </div>
-                </div>
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">Due aging buckets</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Bucket</th>
-                        <th>Total</th>
-                        <th>Count</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {overviewData.due_outstanding.buckets.map((b: any) => (
-                        <tr key={b.label}>
-                          <td>{b.label}</td>
-                          <td className="mono">{formatCurrency(b.total_minor)}</td>
-                          <td className="mono">{b.count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {analyticsTab === "devices" && analyticsDevices && (
-              <div style={{ marginTop: 12 }}>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Label</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Pending Outbox</th>
-                        <th>Sales (count/value)</th>
-                        <th>Collections (count/value)</th>
-                        <th>Offline Sales</th>
-                        <th>Last Seen</th>
-                        <th>Last Sync</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsDevices.devices.map((d) => {
-                        const online = isDeviceOnline(d.last_seen_online);
-                        return (
-                          <tr key={d.device_id}>
-                            <td>{d.label ?? d.device_id}</td>
-                            <td>{d.device_type ?? "Unknown"}</td>
-                            <td>{online ? "Online" : "Offline"} / {d.active ? "Active" : "Inactive"}</td>
-                            <td className="mono">{d.pending_outbox_count}</td>
-                            <td className="mono">{d.sales_count} / {formatCurrency(d.sales_total_minor)}</td>
-                            <td className="mono">{d.collections_count} / {formatCurrency(d.collections_total_minor)}</td>
-                            <td className="mono">{d.offline_sales_count}</td>
-                            <td className="mono">{d.last_seen_online ? formatDateTime(d.last_seen_online) : "-"}</td>
-                            <td className="mono">{d.last_sync_at ? formatDateTime(d.last_sync_at) : "-"}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {analyticsTab === "products" && analyticsProducts && (
-              <div style={{ marginTop: 12 }}>
-                <div className="controls" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
-                  <div className="control">
-                    <label>Group By</label>
-                    <select value={productsGroupBy} onChange={(e) => setProductsGroupBy(e.target.value)} className="selectSmall">
-                      <option value="day">Day</option>
-                      <option value="hour">Hour</option>
-                      <option value="category">Category</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">Top Products</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Barcode</th>
-                        <th>Source</th>
-                        <th>Qty</th>
-                        <th>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsProducts.top_products.map((p) => (
-                        <tr key={p.product_id}>
-                          <td>{p.name}</td>
-                          <td className="mono">{p.barcode}</td>
-                          <td>{p.source}</td>
-                          <td className="mono">{p.quantity}</td>
-                          <td className="mono">{formatCurrency(p.total_minor)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">New Products (Retailer)</div>
-                  <div className="muted">Count: {analyticsProducts.new_products_created_count}</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Barcode</th>
-                        <th>Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsProducts.new_products_created.map((p) => (
-                        <tr key={p.id}>
-                          <td>{p.name}</td>
-                          <td className="mono">{p.barcode}</td>
-                          <td className="mono">{p.created_at ? formatDateTime(p.created_at) : "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {analyticsTab === "purchases" && analyticsPurchases && (
-              <div style={{ marginTop: 12 }}>
-                <div className="analyticsGrid">
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Purchases Total</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsPurchases.total_minor)}</div>
-                  </div>
-                </div>
-
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">Vendor Breakdown</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Supplier</th>
-                        <th>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsPurchases.vendor_breakdown.map((v) => (
-                        <tr key={v.supplier}>
-                          <td>{v.supplier}</td>
-                          <td className="mono">{formatCurrency(v.total_minor)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">SKU Cost Summary</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>SKU/Product</th>
-                        <th>Qty</th>
-                        <th>Avg Cost</th>
-                        <th>Last Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsPurchases.sku_cost_summary.map((s, idx) => (
-                        <tr key={`${s.product_id ?? s.sku ?? "sku"}-${idx}`}>
-                          <td className="mono">{s.sku ?? s.product_id ?? "unknown"}</td>
-                          <td className="mono">{s.quantity}</td>
-                          <td className="mono">{formatCurrency(s.avg_cost_minor)}</td>
-                          <td className="mono">{s.last_cost_minor ? formatCurrency(s.last_cost_minor) : "-"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* SA-P0-004: Stock-In Breakdown by Supplier Type */}
-                {analyticsPurchases.stock_in_breakdown && analyticsPurchases.stock_in_breakdown.total_entries > 0 && (
-                  <>
-                    <div className="cardHeader" style={{ paddingTop: 0 }}>
-                      <div className="cardTitle">
-                        Stock-In Breakdown ({analyticsPurchases.stock_in_breakdown.total_entries} entries — {formatCurrency(analyticsPurchases.stock_in_breakdown.total_amount_minor)})
-                      </div>
-                    </div>
-                    <div className="tableWrap" style={{ paddingTop: 0 }}>
-                      <table className="table">
-                        <thead>
-                          <tr>
-                            <th>Type</th>
-                            <th>Supplier</th>
-                            <th>GSTIN</th>
-                            <th>Entries</th>
-                            <th>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {analyticsPurchases.stock_in_breakdown.by_type.flatMap((t) =>
-                            t.suppliers.map((s, idx) => (
-                              <tr key={`${t.type}-${s.name}-${idx}`}>
-                                {idx === 0 ? (
-                                  <td rowSpan={t.suppliers.length} style={{ verticalAlign: "top", fontWeight: 600 }}>
-                                    {t.type === "verified" ? "Verified" : t.type === "walk_in" ? "Walk-in" : "Unknown"}
-                                  </td>
-                                ) : null}
-                                <td>{s.name}</td>
-                                <td className="mono">{s.gstin ?? "-"}</td>
-                                <td className="mono">{s.count}</td>
-                                <td className="mono">{formatCurrency(s.total_minor)}</td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {analyticsTab === "consumer" && analyticsConsumerSales && (
-              <div style={{ marginTop: 12 }}>
-                <div className="analyticsGrid">
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Consumer Sales Total</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsConsumerSales.total_minor)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Payment Split (Cash / UPI / Due)</div>
-                    <div className="analyticsValue">
-                      {formatCurrency(analyticsConsumerSales.payment_split_minor.cash)} / {formatCurrency(analyticsConsumerSales.payment_split_minor.upi)} / {formatCurrency(analyticsConsumerSales.payment_split_minor.due)}
-                    </div>
-                  </div>
-                </div>
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">Order Status</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Status</th>
-                        <th>Count</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsConsumerSales.status_counts.map((s) => (
-                        <tr key={s.status}>
-                          <td>{s.status}</td>
-                          <td className="mono">{s.count}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* P2-SADM-001: Activity Logs */}
-            {analyticsTab === "activity" && analyticsActivity && (
-              <div style={{ marginTop: 12 }}>
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">Activity Logs</div>
-                  <div className="muted">
-                    {analyticsActivity.range.from.slice(0, 10)} to {analyticsActivity.range.to.slice(0, 10)} (grouped by {analyticsActivity.groupBy})
-                  </div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Time Bucket</th>
-                        <th>Scans</th>
-                        <th>Sales</th>
-                        <th>Collections</th>
-                        <th>New Products</th>
-                        <th>Offline Synced</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsActivity.buckets.length === 0 ? (
-                        <tr><td colSpan={6} className="empty">No activity in this period.</td></tr>
-                      ) : (
-                        analyticsActivity.buckets.map((b) => (
-                          <tr key={b.bucket}>
-                            <td className="mono">{formatDateTime(b.bucket)}</td>
-                            <td className="mono">{b.scans}</td>
-                            <td className="mono">{b.sales}</td>
-                            <td className="mono">{b.collections}</td>
-                            <td className="mono">{b.new_products_created}</td>
-                            <td className="mono">{b.offline_events_synced}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* P2-SADM-002: Dues Tracking */}
-            {analyticsTab === "dues" && analyticsDues && (
-              <div style={{ marginTop: 12 }}>
-                <div className="analyticsGrid">
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">Outstanding Total</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsDues.outstanding_total_minor)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">0-1 Days</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d0_1)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">2-7 Days</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d2_7)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">8-30 Days</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d8_30)}</div>
-                  </div>
-                  <div className="analyticsCard">
-                    <div className="analyticsLabel">30+ Days</div>
-                    <div className="analyticsValue">{formatCurrency(analyticsDues.aging.d30_plus)}</div>
-                  </div>
-                </div>
-                <div className="cardHeader" style={{ paddingTop: 0 }}>
-                  <div className="cardTitle">Outstanding Dues ({analyticsDues.total} records)</div>
-                </div>
-                <div className="tableWrap" style={{ paddingTop: 0 }}>
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>Sale ID</th>
-                        <th>Customer</th>
-                        <th>Amount</th>
-                        <th>Created</th>
-                        <th>Age (Days)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analyticsDues.dues.length === 0 ? (
-                        <tr><td colSpan={5} className="empty">No outstanding dues.</td></tr>
-                      ) : (
-                        analyticsDues.dues.map((d) => (
-                          <tr key={d.sale_id}>
-                            <td className="mono">{d.sale_id.slice(0, 8)}</td>
-                            <td>{d.customer_name ?? "-"}</td>
-                            <td className="mono">{formatCurrency(d.amount_minor)}</td>
-                            <td className="mono">{new Date(d.created_at).toLocaleDateString()}</td>
-                            <td className="mono">{d.age_days}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
+        <AnalyticsTab
+          analyticsStoreId={analyticsStoreId}
+          setAnalyticsStoreId={setAnalyticsStoreId}
+          analyticsFrom={analyticsFrom}
+          setAnalyticsFrom={setAnalyticsFrom}
+          analyticsTo={analyticsTo}
+          setAnalyticsTo={setAnalyticsTo}
+          refreshAnalytics={refreshAnalytics}
+          analyticsTab={analyticsTab}
+          setAnalyticsTab={setAnalyticsTab}
+          analyticsLoading={analyticsLoading}
+          analyticsError={analyticsError}
+          overviewData={overviewData}
+          analyticsDevices={analyticsDevices}
+          analyticsProducts={analyticsProducts}
+          analyticsPurchases={analyticsPurchases}
+          analyticsConsumerSales={analyticsConsumerSales}
+          analyticsActivity={analyticsActivity}
+          analyticsDues={analyticsDues}
+          productsGroupBy={productsGroupBy}
+          setProductsGroupBy={setProductsGroupBy}
+        />
       )}
 
       {tab === "payments" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Payments</div>
-            <div className="muted">Events where eventType starts with PAYMENT_</div>
-          </div>
-
-          {paymentEvents.length === 0 ? (
-            <div className="empty">No payment events found for the current filters.</div>
-          ) : (
-            <div className="tableWrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Timestamp</th>
-                    <th>Device ID</th>
-                    <th>Store ID</th>
-                    <th>Event Type</th>
-                    <th>Payload</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentEvents.map((e) => (
-                    <tr key={e.id}>
-                      <td className="mono">{formatDateTime(e.createdAt)}</td>
-                      <td className="mono">{e.deviceId}</td>
-                      <td className="mono">{e.storeId}</td>
-                      <td className="mono">{e.eventType}</td>
-                      <td>
-                        <PayloadDetails payload={e.payload} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        <PaymentsTab paymentEvents={paymentEvents} />
       )}
 
-      {/* ADM-SCR-002: Users Management Tab */}
       {tab === "users" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div>
-              <div className="cardTitle">Users Management</div>
-              <div className="muted">Manage platform users and their access</div>
-            </div>
-            <button
-              onClick={() => setShowCreateUser(!showCreateUser)}
-              style={{ background: showCreateUser ? "#6b7280" : "#3b82f6", color: "white" }}
-            >
-              {showCreateUser ? "Cancel" : "+ Create User"}
-            </button>
-          </div>
-
-          {/* SA-1.3-004: Create User Form */}
-          {showCreateUser && (
-            <div className="tableWrap" style={{ borderBottom: "1px solid #e5e7eb", paddingBottom: 16 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-                <div className="control">
-                  <label>Name *</label>
-                  <input
-                    value={createUserForm.name}
-                    onChange={(e) => setCreateUserForm((f) => ({ ...f, name: e.target.value }))}
-                    placeholder="Full name"
-                  />
-                </div>
-                <div className="control">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    value={createUserForm.email}
-                    onChange={(e) => setCreateUserForm((f) => ({ ...f, email: e.target.value }))}
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div className="control">
-                  <label>Phone</label>
-                  <input
-                    type="tel"
-                    value={createUserForm.phone}
-                    onChange={(e) => setCreateUserForm((f) => ({ ...f, phone: e.target.value }))}
-                    placeholder="+91 98765 43210"
-                  />
-                </div>
-                <div className="control">
-                  <label>Type</label>
-                  <select
-                    value={createUserForm.actor_type}
-                    onChange={(e) => setCreateUserForm((f) => ({ ...f, actor_type: e.target.value }))}
-                  >
-                    <option value="store">Store</option>
-                    <option value="supplier">Supplier</option>
-                    <option value="platform">Platform Admin</option>
-                  </select>
-                </div>
-              </div>
-              {createUserForm.actor_type === "platform" && (
-                <div className="muted" style={{ marginTop: 8, color: "#b45309", background: "#fef3c7", padding: 8, borderRadius: 4 }}>
-                  Creating a Platform Admin grants full system access. Additional verification required.
-                </div>
-              )}
-              <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
-                <button
-                  onClick={requestCreateUser}
-                  disabled={createUserLoading}
-                  style={{ background: "#22c55e", color: "white" }}
-                >
-                  {createUserLoading ? "Creating..." : "Create User"}
-                </button>
-                {createUserError && <span className="errorText">{createUserError}</span>}
-                {createUserSuccess && <span style={{ color: "#22c55e", fontWeight: 600 }}>{createUserSuccess}</span>}
-              </div>
-              <div className="muted" style={{ marginTop: 8 }}>
-                * Name is required. At least one of Email or Phone must be provided.
-              </div>
-            </div>
-          )}
-
-          <div className="tableWrap">
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-              <input
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Search by name, email, or phone..."
-                style={{ flex: 1, minWidth: 200 }}
-              />
-              <button onClick={refreshUsers} disabled={usersLoading}>
-                {usersLoading ? "Loading..." : "Refresh"}
-              </button>
-            </div>
-
-            {userActionError && <div className="errorText" style={{ marginBottom: 8 }}>{userActionError}</div>}
-            {usersError && <div className="errorText" style={{ marginBottom: 8 }}>{usersError}</div>}
-
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {userRecords
-                  .filter((u) => {
-                    if (!userSearch.trim()) return true;
-                    const q = userSearch.toLowerCase().trim();
-                    return (
-                      u.name.toLowerCase().includes(q) ||
-                      (u.email && u.email.toLowerCase().includes(q)) ||
-                      (u.phone && u.phone.includes(q))
-                    );
-                  })
-                  .map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.name}</td>
-                      <td>{user.email ?? "-"}</td>
-                      <td>{user.phone ?? "-"}</td>
-                      <td>
-                        <span className="badge">{user.actor_type}</span>
-                      </td>
-                      <td>
-                        <span className={`badge ${user.status === "active" ? "badgeOk" : user.status === "suspended" ? "badgeErr" : "badgeWarn"}`}>
-                          {user.status}
-                        </span>
-                      </td>
-                      <td>{new Date(user.created_at).toLocaleDateString()}</td>
-                      <td>
-                        <select
-                          value={user.status}
-                          onChange={(e) => requestUserStatusChange(user.id, e.target.value as "active" | "inactive" | "suspended")}
-                          disabled={userStatusSaving[user.id]}
-                          style={{ minWidth: 100 }}
-                        >
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="suspended">Suspended</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                {userRecords.length === 0 && !usersLoading && (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: "center", color: "#888" }}>
-                      No users found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <UsersTab
+          userRecords={userRecords}
+          usersLoading={usersLoading}
+          usersError={usersError}
+          userSearch={userSearch}
+          userStatusSaving={userStatusSaving}
+          userActionError={userActionError}
+          showCreateUser={showCreateUser}
+          createUserForm={createUserForm}
+          createUserLoading={createUserLoading}
+          createUserError={createUserError}
+          createUserSuccess={createUserSuccess}
+          setUserSearch={setUserSearch}
+          setShowCreateUser={setShowCreateUser}
+          setCreateUserForm={setCreateUserForm}
+          refreshUsers={refreshUsers}
+          requestUserStatusChange={requestUserStatusChange}
+          requestCreateUser={requestCreateUser}
+        />
       )}
 
-      {/* ADM-SCR-003: Settings Tab */}
       {tab === "settings" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">System Settings</div>
-            <div className="muted">Platform configuration and statistics</div>
-          </div>
-
-          <div className="tableWrap">
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-              <button onClick={refreshSettings} disabled={settingsLoading}>
-                {settingsLoading ? "Loading..." : "Refresh"}
-              </button>
-            </div>
-
-            {settingsError && <div className="errorText" style={{ marginBottom: 8 }}>{settingsError}</div>}
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 16 }}>
-              {/* System Info Card */}
-              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
-                <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>System Information</h4>
-                {systemSettings ? (
-                  <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Version:</span>
-                      <span className="mono">{systemSettings.version}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Environment:</span>
-                      <span className={`badge ${systemSettings.environment === "production" ? "badgeOk" : "badgeWarn"}`}>
-                        {systemSettings.environment}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Database:</span>
-                      <span className={`badge ${systemSettings.database.connected ? "badgeOk" : "badgeErr"}`}>
-                        {systemSettings.database.connected ? "Connected" : "Disconnected"}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
-                )}
-              </div>
-
-              {/* Features Card */}
-              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
-                <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>Features</h4>
-                {systemSettings ? (
-                  <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>AI Assistant:</span>
-                      <span className={`badge ${systemSettings.features.aiEnabled ? "badgeOk" : "badgeWarn"}`}>
-                        {systemSettings.features.aiEnabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Analytics:</span>
-                      <span className={`badge ${systemSettings.features.analyticsEnabled ? "badgeOk" : "badgeWarn"}`}>
-                        {systemSettings.features.analyticsEnabled ? "Enabled" : "Disabled"}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
-                )}
-              </div>
-
-              {/* Statistics Card */}
-              <div style={{ background: "#f5f5f5", borderRadius: 8, padding: 16 }}>
-                <h4 style={{ margin: "0 0 12px 0", fontSize: 14 }}>Platform Statistics</h4>
-                {systemStats ? (
-                  <div style={{ display: "grid", gap: 8, fontSize: 13 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Total Stores:</span>
-                      <span style={{ fontWeight: 600 }}>{systemStats.totalStores.toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Total Devices:</span>
-                      <span style={{ fontWeight: 600 }}>{systemStats.totalDevices.toLocaleString()}</span>
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{ color: "#666" }}>Total Users:</span>
-                      <span style={{ fontWeight: 600 }}>{systemStats.totalUsers.toLocaleString()}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: "#888", fontSize: 13 }}>Loading...</div>
-                )}
-              </div>
-            </div>
-
-            {/* SA-P0-005: Feature Kill Switch Panel */}
-            <div style={{ marginTop: 24 }}>
-              <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>Feature Kill Switch</h3>
-              <div className="muted" style={{ marginBottom: 12 }}>
-                Disable features globally. POS respects changes on next ui-status fetch.
-              </div>
-
-              <button onClick={refreshFeatureFlags} disabled={featureFlagsLoading} style={{ marginBottom: 12 }}>
-                {featureFlagsLoading ? "Loading..." : "Refresh Flags"}
-              </button>
-
-              {featureFlagsError && <div className="banner" style={{ marginBottom: 8 }}>{featureFlagsError}</div>}
-
-              <div className="tableWrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Feature</th>
-                      <th>Description</th>
-                      <th>Status</th>
-                      <th>Config</th>
-                      <th>Action</th>
-                      <th>Last Changed</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {featureFlags.map((flag) => (
-                      <tr key={flag.flag_key}>
-                        <td><span className="mono">{flag.flag_key}</span></td>
-                        <td style={{ fontSize: 12, color: "#666" }}>{flag.description || "\u2014"}</td>
-                        <td>
-                          <span className={`badge ${flag.enabled ? "badgeOk" : "badgeErr"}`}>
-                            {flag.enabled ? "ENABLED" : "DISABLED"}
-                          </span>
-                        </td>
-                        {/* SA-P2-003-AUTO: Config column — version auto-detected from build */}
-                        <td>
-                          {flag.flag_key === "minAppVersion" ? (
-                            <span style={{ fontSize: 12, color: "#666" }}>
-                              Auto (from build)
-                            </span>
-                          ) : (
-                            <span style={{ color: "#999", fontSize: 11 }}>{"\u2014"}</span>
-                          )}
-                        </td>
-                        <td>
-                          <button
-                            onClick={() => handleToggleGlobalFlag(flag.flag_key, !flag.enabled)}
-                            disabled={featureFlagSaving[flag.flag_key]}
-                            style={{
-                              background: flag.enabled ? "#ef4444" : "#22c55e",
-                              color: "#fff",
-                              border: "none",
-                              borderRadius: 4,
-                              padding: "4px 12px",
-                              cursor: "pointer",
-                              fontSize: 12,
-                            }}
-                          >
-                            {featureFlagSaving[flag.flag_key]
-                              ? "Saving..."
-                              : flag.enabled
-                              ? "KILL"
-                              : "Enable"}
-                          </button>
-                        </td>
-                        <td style={{ fontSize: 11, color: "#888" }}>
-                          {flag.updated_at ? formatDateTime(flag.updated_at) : "\u2014"}
-                        </td>
-                      </tr>
-                    ))}
-                    {featureFlags.length === 0 && !featureFlagsLoading && (
-                      <tr>
-                        <td colSpan={6} style={{ textAlign: "center", color: "#888" }}>
-                          No feature flags found. Migration may be pending.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
+        <SettingsTab
+          systemSettings={systemSettings}
+          systemStats={systemStats}
+          settingsLoading={settingsLoading}
+          settingsError={settingsError}
+          featureFlags={featureFlags}
+          featureFlagsLoading={featureFlagsLoading}
+          featureFlagSaving={featureFlagSaving}
+          featureFlagsError={featureFlagsError}
+          refreshSettings={refreshSettings}
+          refreshFeatureFlags={refreshFeatureFlags}
+          handleToggleGlobalFlag={handleToggleGlobalFlag}
+        />
       )}
 
-      {/* DOCS-001: Documents Verification Tab */}
       {tab === "documents" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Document Verification Queue</div>
-            <div className="muted">Review and approve/reject KYC documents ({pendingDocsTotal} pending)</div>
-          </div>
-
-          <div className="tableWrap">
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-              <button onClick={() => refreshDocuments()} disabled={documentsLoading}>
-                {documentsLoading ? "Loading..." : "Refresh"}
-              </button>
-
-              <select
-                value={documentsEntityFilter}
-                onChange={(e) => {
-                  setDocumentsEntityFilter(e.target.value as "" | "store" | "supplier");
-                  setDocumentsPage(0);
-                }}
-                style={{ padding: "6px 10px" }}
-              >
-                <option value="">All Entities</option>
-                <option value="store">Stores</option>
-                <option value="supplier">Suppliers</option>
-              </select>
-
-              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-                <button
-                  disabled={documentsPage === 0}
-                  onClick={() => setDocumentsPage(prev => Math.max(0, prev - 1))}
-                >
-                  ← Prev
-                </button>
-                <span className="muted">Page {documentsPage + 1} of {Math.max(1, Math.ceil(pendingDocsTotal / 50))}</span>
-                <button
-                  disabled={(documentsPage + 1) * 50 >= pendingDocsTotal}
-                  onClick={() => setDocumentsPage(prev => prev + 1)}
-                >
-                  Next →
-                </button>
-              </div>
-            </div>
-
-            {documentsError && <div className="errorText" style={{ marginBottom: 8 }}>{documentsError}</div>}
-
-            {pendingDocuments.length === 0 ? (
-              <div className="empty">No pending documents to review.</div>
-            ) : (
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Entity</th>
-                    <th>Document Type</th>
-                    <th>File</th>
-                    <th>Uploaded</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingDocuments.map((doc) => (
-                    <tr key={doc.id}>
-                      <td>
-                        <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase" }}>{doc.entity_type}</div>
-                        <div className="mono" style={{ fontSize: 11 }}>{doc.entity_name || doc.entity_id.slice(0, 8)}</div>
-                        {doc.owner_name && <div style={{ fontSize: 11, color: "#666" }}>{doc.owner_name}</div>}
-                      </td>
-                      <td>{doc.document_type}</td>
-                      <td>
-                        <div>{doc.file_name}</div>
-                        <div className="muted" style={{ fontSize: 11 }}>{(doc.file_size / 1024).toFixed(1)} KB • {doc.content_type}</div>
-                      </td>
-                      <td className="mono" style={{ fontSize: 11 }}>{formatDateTime(doc.uploaded_at)}</td>
-                      <td>
-                        <span className={`badge ${doc.status === "pending" ? "badgeWarn" : doc.status === "approved" ? "badgeGood" : "badgeBad"}`}>
-                          {doc.status}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => setSelectedDocument(doc)}
-                          style={{ padding: "4px 8px", fontSize: 12 }}
-                        >
-                          Review
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          {/* Document Review Modal */}
-          {selectedDocument && (
-            <div
-              style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "rgba(0,0,0,0.7)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 1000,
-              }}
-              onClick={() => setSelectedDocument(null)}
-            >
-              <div
-                style={{
-                  backgroundColor: "#1a1a2e",
-                  borderRadius: 8,
-                  padding: 24,
-                  maxWidth: "90vw",
-                  maxHeight: "90vh",
-                  overflow: "auto",
-                  minWidth: 400,
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <h3 style={{ margin: 0 }}>Review Document</h3>
-                  <button onClick={() => setSelectedDocument(null)} style={{ padding: "4px 8px" }}>✕</button>
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Entity:</strong> {selectedDocument.entity_type} - {selectedDocument.entity_name || selectedDocument.entity_id}
-                  </div>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Document Type:</strong> {selectedDocument.document_type}
-                  </div>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>File:</strong> {selectedDocument.file_name} ({(selectedDocument.file_size / 1024).toFixed(1)} KB)
-                  </div>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}
-                  </div>
-                </div>
-
-                {/* Document Preview */}
-                <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#0f0f23", padding: 16, borderRadius: 4 }}>
-                  {selectedDocument.content_type.startsWith("image/") ? (
-                    <img
-                      src={selectedDocument.view_url}
-                      alt={selectedDocument.file_name}
-                      style={{ maxWidth: "100%", maxHeight: 400 }}
-                    />
-                  ) : selectedDocument.content_type === "application/pdf" ? (
-                    <iframe
-                      src={selectedDocument.view_url}
-                      title={selectedDocument.file_name}
-                      style={{ width: "100%", height: 400, border: "none" }}
-                    />
-                  ) : (
-                    <div>
-                      <a href={selectedDocument.view_url} target="_blank" rel="noopener noreferrer" style={{ color: "#7c3aed" }}>
-                        Download {selectedDocument.file_name}
-                      </a>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-                  <button
-                    onClick={() => handleApproveDocument(selectedDocument.id)}
-                    disabled={documentActionLoading === selectedDocument.id}
-                    style={{
-                      padding: "10px 20px",
-                      backgroundColor: "#22c55e",
-                      color: "white",
-                      border: "none",
-                      borderRadius: 4,
-                      cursor: documentActionLoading ? "wait" : "pointer",
-                    }}
-                  >
-                    {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
-                  </button>
-
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <input
-                      type="text"
-                      placeholder="Rejection reason (required)"
-                      value={docRejectReason}
-                      onChange={(e) => setDocRejectReason(e.target.value)}
-                      style={{ flex: 1, padding: "8px 12px" }}
-                    />
-                    <button
-                      onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)}
-                      disabled={documentActionLoading === selectedDocument.id || !docRejectReason.trim()}
-                      style={{
-                        padding: "10px 20px",
-                        backgroundColor: "#ef4444",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 4,
-                        cursor: documentActionLoading || !docRejectReason.trim() ? "not-allowed" : "pointer",
-                        opacity: !docRejectReason.trim() ? 0.5 : 1,
-                      }}
-                    >
-                      ✕ Reject
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </section>
+        <DocumentsTab
+          pendingDocuments={pendingDocuments}
+          pendingDocsTotal={pendingDocsTotal}
+          documentsLoading={documentsLoading}
+          documentsError={documentsError}
+          documentsPage={documentsPage}
+          documentsEntityFilter={documentsEntityFilter}
+          selectedDocument={selectedDocument}
+          docRejectReason={docRejectReason}
+          documentActionLoading={documentActionLoading}
+          setDocumentsPage={setDocumentsPage}
+          setDocumentsEntityFilter={setDocumentsEntityFilter}
+          setSelectedDocument={setSelectedDocument}
+          setDocRejectReason={setDocRejectReason}
+          refreshDocuments={refreshDocuments}
+          handleApproveDocument={handleApproveDocument}
+          handleRejectDocument={handleRejectDocument}
+        />
       )}
 
-      {/* GO-LIVE-011: Audit Logs Tab */}
       {tab === "audit" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Audit Logs</div>
-            <div className="muted">System activity and admin actions ({auditLogsTotal} total)</div>
-          </div>
-
-          <div className="tableWrap">
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-              <button onClick={() => refreshAuditLogs()} disabled={auditLogsLoading}>
-                {auditLogsLoading ? "Loading..." : "Refresh"}
-              </button>
-
-              <select
-                value={auditLogsFilter.action || ""}
-                onChange={(e) => {
-                  setAuditLogsFilter(prev => ({ ...prev, action: e.target.value || undefined }));
-                  setAuditLogsPage(0);
-                }}
-                style={{ padding: "6px 10px" }}
-              >
-                <option value="">All Actions</option>
-                <option value="create">Create</option>
-                <option value="update">Update</option>
-                <option value="delete">Delete</option>
-                <option value="approve">Approve</option>
-                <option value="reject">Reject</option>
-                <option value="login">Login</option>
-              </select>
-
-              <select
-                value={auditLogsFilter.resource_type || ""}
-                onChange={(e) => {
-                  setAuditLogsFilter(prev => ({ ...prev, resource_type: e.target.value || undefined }));
-                  setAuditLogsPage(0);
-                }}
-                style={{ padding: "6px 10px" }}
-              >
-                <option value="">All Resources</option>
-                <option value="store">Store</option>
-                <option value="device">Device</option>
-                <option value="user">User</option>
-                <option value="supplier">Supplier</option>
-                <option value="product">Product</option>
-              </select>
-
-              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-                <button
-                  disabled={auditLogsPage === 0}
-                  onClick={() => setAuditLogsPage(prev => Math.max(0, prev - 1))}
-                >
-                  ← Prev
-                </button>
-                <span className="muted">Page {auditLogsPage + 1} of {Math.max(1, Math.ceil(auditLogsTotal / 50))}</span>
-                <button
-                  disabled={(auditLogsPage + 1) * 50 >= auditLogsTotal}
-                  onClick={() => setAuditLogsPage(prev => prev + 1)}
-                >
-                  Next →
-                </button>
-              </div>
-            </div>
-
-            {auditLogsError && <div className="errorText" style={{ marginBottom: 8 }}>{auditLogsError}</div>}
-
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Action</th>
-                  <th>Resource</th>
-                  <th>Resource ID</th>
-                  <th>Actor</th>
-                  <th>Status</th>
-                  <th>Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td className="mono" style={{ fontSize: 12 }}>
-                      {formatDateTime(log.created_at)}
-                    </td>
-                    <td>
-                      <span style={{
-                        padding: "2px 6px",
-                        borderRadius: 4,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: log.action === "delete" ? "#ffebee" :
-                                   log.action === "create" ? "#e8f5e9" :
-                                   log.action === "approve" ? "#e3f2fd" :
-                                   log.action === "reject" ? "#fff3e0" : "#f5f5f5",
-                        color: log.action === "delete" ? "#c62828" :
-                               log.action === "create" ? "#2e7d32" :
-                               log.action === "approve" ? "#1565c0" :
-                               log.action === "reject" ? "#e65100" : "#666"
-                      }}>
-                        {log.action.toUpperCase()}
-                      </span>
-                    </td>
-                    <td>{log.resource_type}</td>
-                    <td className="mono" style={{ fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {log.resource_id || "-"}
-                    </td>
-                    <td className="mono" style={{ fontSize: 11, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {log.actor_user_id || log.actor_ip || "system"}
-                    </td>
-                    <td>
-                      {log.response_status ? (
-                        <span style={{
-                          color: log.response_status >= 400 ? "#c62828" : "#2e7d32"
-                        }}>
-                          {log.response_status}
-                        </span>
-                      ) : "-"}
-                    </td>
-                    <td>
-                      {log.error_message && (
-                        <span style={{ color: "#c62828", fontSize: 12 }}>{log.error_message}</span>
-                      )}
-                      {log.request_body && !log.error_message && (
-                        <PayloadDetails payload={log.request_body} />
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {auditLogs.length === 0 && !auditLogsLoading && (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: "center", color: "#888", padding: 24 }}>
-                      No audit logs found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <AuditTab
+          auditLogs={auditLogs}
+          auditLogsTotal={auditLogsTotal}
+          auditLogsLoading={auditLogsLoading}
+          auditLogsError={auditLogsError}
+          auditLogsPage={auditLogsPage}
+          auditLogsFilter={auditLogsFilter}
+          setAuditLogsPage={setAuditLogsPage}
+          setAuditLogsFilter={setAuditLogsFilter}
+          refreshAuditLogs={refreshAuditLogs}
+        />
       )}
 
-      {/* STAGING-FIX-014: Applications Approval Tab */}
-      {tab === "applications" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div>
-              <div className="cardTitle">Registration Applications</div>
-              <div className="muted">Review and approve/reject retailer and supplier registration applications</div>
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <select
-                className="selectSmall"
-                value={appEntityFilter}
-                onChange={(e) => { setAppEntityFilter(e.target.value); setTimeout(() => refreshApplications(), 50); }}
-              >
-                <option value="">All Types</option>
-                <option value="retailer">Retailer</option>
-                <option value="supplier">Supplier</option>
-              </select>
-              <button onClick={refreshApplications} disabled={applicationsLoading}>
-                {applicationsLoading ? "Refreshing..." : "Refresh"}
-              </button>
-            </div>
-          </div>
-
-          {applicationsError && <div className="banner" style={{ margin: "0 16px 12px" }}>{applicationsError}</div>}
-
-          {applications.length === 0 ? (
-            <div className="empty">
-              {applicationsLoading ? "Loading applications..." : "No pending applications."}
-            </div>
-          ) : (
-            <div className="tableWrap">
-              <div className="deviceGrid">
-                {applications.map((app) => (
-                  <div className="deviceCard" key={app.id}>
-                    <div className="deviceHeader">
-                      <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
-                        {app.businessName || "Unknown Business"}
-                      </div>
-                      <div className="badgeRow">
-                        <span className={`badge ${app.entityType === 'retailer' ? 'badgeOk' : 'badgeInfo'}`} style={{ textTransform: "capitalize" }}>
-                          {app.entityType}
-                        </span>
-                        <span className={`badge ${app.status === 'KYC_SUBMITTED' ? 'badgeWarn' : app.status === 'NEEDS_FIX' ? 'badgeError' : 'badgeOk'}`}>
-                          {app.status.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="deviceMetaGrid">
-                      <div>
-                        <strong>Owner:</strong> <span>{app.ownerName}</span>
-                      </div>
-                      <div>
-                        <strong>Phone:</strong> <span className="mono">{app.phone}</span>
-                      </div>
-                      <div>
-                        <strong>GSTIN:</strong> <span className="mono">{app.gstin}</span>
-                      </div>
-                      {app.email && (
-                        <div>
-                          <strong>Email:</strong> <span className="mono">{app.email}</span>
-                        </div>
-                      )}
-                      {app.city && (
-                        <div>
-                          <strong>Location:</strong> <span>{app.city}{app.state ? `, ${app.state}` : ''}{app.pincode ? ` - ${app.pincode}` : ''}</span>
-                        </div>
-                      )}
-                      <div>
-                        <strong>Applied:</strong> <span className="mono">{formatDateTime(app.createdAt)}</span>
-                      </div>
-                      {app.submittedAt && (
-                        <div>
-                          <strong>KYC Submitted:</strong> <span className="mono">{formatDateTime(app.submittedAt)}</span>
-                        </div>
-                      )}
-                      {app.documentUrls && Object.keys(app.documentUrls).length > 0 && (
-                        <div>
-                          <strong>Documents:</strong> <span>{Object.keys(app.documentUrls).length} uploaded</span>
-                        </div>
-                      )}
-                      {app.rejectionReason && (
-                        <div style={{ gridColumn: "1 / -1", color: "#dc2626" }}>
-                          <strong>Previous Rejection:</strong> <span>{app.rejectionReason}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ marginTop: 8 }}>
-                      <label style={{ display: "block", marginBottom: 4, fontSize: 12 }}>Rejection Reason (required for reject):</label>
-                      <input
-                        className="tableInput"
-                        style={{ width: "100%", marginBottom: 8 }}
-                        placeholder="Reason for rejection (min 5 chars)..."
-                        value={appRejectReason[app.id] || ""}
-                        onChange={(e) => setAppRejectReason((prev) => ({ ...prev, [app.id]: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
-                      <button
-                        onClick={() => handleApproveApplication(app.id)}
-                        disabled={appActionLoading[app.id]}
-                        style={{ background: "#22c55e", color: "white" }}
-                        title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
-                      >
-                        {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
-                      </button>
-                      <button
-                        className="btnGhost"
-                        onClick={() => handleRejectApplication(app.id)}
-                        disabled={appActionLoading[app.id]}
-                        style={{ color: "#ef4444" }}
-                      >
-                        {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ padding: "12px 16px", fontSize: 12, color: "#666" }}>
-            Showing {applications.length} of {applicationsTotal} pending applications
-          </div>
-        </section>
-      )}
-
-      {/* RO-007: Registration Events Tab */}
       {tab === "registrations" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Registration Events</div>
-            <div className="muted">Store registrations across all surfaces ({regEventsTotal} total)</div>
-          </div>
-
-          <div className="tableWrap">
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-              <button onClick={() => refreshRegEvents()} disabled={regEventsLoading}>
-                {regEventsLoading ? "Loading..." : "Refresh"}
-              </button>
-
-              <select
-                value={regEventsSourceFilter}
-                onChange={(e) => { setRegEventsSourceFilter(e.target.value); setRegEventsPage(0); }}
-                style={{ padding: "6px 10px" }}
-              >
-                <option value="">All Sources</option>
-                <option value="PORTAL">Portal</option>
-                <option value="POS_DEVICE">POS Device</option>
-                <option value="POS_MOBILE">POS Mobile</option>
-                <option value="ADMIN">Admin</option>
-              </select>
-
-              <select
-                value={regEventsOutcomeFilter}
-                onChange={(e) => { setRegEventsOutcomeFilter(e.target.value); setRegEventsPage(0); }}
-                style={{ padding: "6px 10px" }}
-              >
-                <option value="">All Outcomes</option>
-                <option value="SUCCESS">Success</option>
-                <option value="IDEMPOTENT">Idempotent</option>
-                <option value="BLOCKED">Blocked</option>
-                <option value="ERROR">Error</option>
-              </select>
-
-              <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
-                <button
-                  disabled={regEventsPage === 0}
-                  onClick={() => setRegEventsPage(prev => Math.max(0, prev - 1))}
-                >
-                  &larr; Prev
-                </button>
-                <span className="muted">Page {regEventsPage + 1} of {Math.max(1, Math.ceil(regEventsTotal / 50))}</span>
-                <button
-                  disabled={(regEventsPage + 1) * 50 >= regEventsTotal}
-                  onClick={() => setRegEventsPage(prev => prev + 1)}
-                >
-                  Next &rarr;
-                </button>
-              </div>
-            </div>
-
-            {regEventsError && <div className="errorText" style={{ marginBottom: 8 }}>{regEventsError}</div>}
-
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Source</th>
-                  <th>Outcome</th>
-                  <th>Phone</th>
-                  <th>Business Name</th>
-                  <th>Store</th>
-                  <th>GSTIN</th>
-                  <th>IP</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regEvents.map((evt) => (
-                  <tr key={evt.id}>
-                    <td className="mono" style={{ fontSize: 11, whiteSpace: "nowrap" }}>
-                      {new Date(evt.createdAt).toLocaleString()}
-                    </td>
-                    <td>
-                      <span style={{
-                        display: "inline-block",
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: evt.source === "PORTAL" ? "#eff6ff" : evt.source === "POS_MOBILE" ? "#ecfdf5" : "#f5f3ff",
-                        color: evt.source === "PORTAL" ? "#1d4ed8" : evt.source === "POS_MOBILE" ? "#16a34a" : "#7c3aed",
-                      }}>
-                        {evt.source}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{
-                        display: "inline-block",
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        background: evt.outcome === "SUCCESS" ? "#dcfce7" : evt.outcome === "IDEMPOTENT" ? "#fef9c3" : evt.outcome === "ERROR" ? "#fecaca" : "#fee2e2",
-                        color: evt.outcome === "SUCCESS" ? "#166534" : evt.outcome === "IDEMPOTENT" ? "#854d0e" : "#991b1b",
-                      }}>
-                        {evt.outcome}
-                      </span>
-                    </td>
-                    <td className="mono" style={{ fontSize: 12 }}>{evt.phone}</td>
-                    <td>{evt.businessName}</td>
-                    <td>
-                      {evt.storeName ? (
-                        <span>
-                          {evt.storeName}
-                          {evt.storeCode && <span className="muted" style={{ fontSize: 11, marginLeft: 4 }}>({evt.storeCode})</span>}
-                        </span>
-                      ) : (
-                        <span className="muted">-</span>
-                      )}
-                    </td>
-                    <td className="mono" style={{ fontSize: 11 }}>{evt.gstin || "-"}</td>
-                    <td className="mono" style={{ fontSize: 11 }}>{evt.ipAddress || "-"}</td>
-                    <td>
-                      {evt.storeId && (evt.outcome === "SUCCESS" || evt.outcome === "IDEMPOTENT") ? (
-                        <button
-                          style={{
-                            fontSize: 11,
-                            padding: "3px 10px",
-                            borderRadius: 4,
-                            border: "1px solid #10b981",
-                            background: sendingEnrollment === evt.storeId ? "#d1fae5" : "#ecfdf5",
-                            color: "#059669",
-                            cursor: sendingEnrollment === evt.storeId ? "wait" : "pointer",
-                            fontWeight: 600,
-                          }}
-                          disabled={!!sendingEnrollment}
-                          onClick={async () => {
-                            setSendingEnrollment(evt.storeId!);
-                            try {
-                              const resp = await sendEnrollmentCodeToStore(evt.storeId!);
-                              alert(`Enrollment code: ${resp.enrollmentCode}\nExpires: ${new Date(resp.expiresAt).toLocaleTimeString()}\nSMS: ${resp.notification.smsSent ? "Sent" : "Skipped"}\nEmail: ${resp.notification.emailSent ? "Sent" : "Skipped"}`);
-                            } catch (err: any) {
-                              alert(`Failed: ${err?.message || "Unknown error"}`);
-                            } finally {
-                              setSendingEnrollment("");
-                            }
-                          }}
-                        >
-                          {sendingEnrollment === evt.storeId ? "Sending..." : "Send Code"}
-                        </button>
-                      ) : (
-                        <span className="muted" style={{ fontSize: 11 }}>-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {regEvents.length === 0 && !regEventsLoading && (
-                  <tr>
-                    <td colSpan={9} style={{ textAlign: "center", color: "#888", padding: 24 }}>
-                      No registration events found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <RegistrationsTab
+          regEvents={regEvents}
+          regEventsTotal={regEventsTotal}
+          regEventsLoading={regEventsLoading}
+          regEventsError={regEventsError}
+          regEventsPage={regEventsPage}
+          regEventsSourceFilter={regEventsSourceFilter}
+          regEventsOutcomeFilter={regEventsOutcomeFilter}
+          sendingEnrollment={sendingEnrollment}
+          setRegEventsPage={setRegEventsPage}
+          setRegEventsSourceFilter={setRegEventsSourceFilter}
+          setRegEventsOutcomeFilter={setRegEventsOutcomeFilter}
+          setSendingEnrollment={setSendingEnrollment}
+          refreshRegEvents={refreshRegEvents}
+        />
       )}
 
-      {/* SA-P1-001: Staff Management Tab */}
       {tab === "staff" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">Store Staff Management</div>
-            <div className="muted">Add, edit, and manage POS staff per store</div>
-          </div>
-
-          {/* Store selector */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-            <select
-              value={staffStoreId}
-              onChange={(e) => { setStaffStoreId(e.target.value); setStaffList([]); }}
-              style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
-            >
-              <option value="">Select a store...</option>
-              {storeDirectory.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} ({s.id.slice(0, 8)})</option>
-              ))}
-            </select>
-            <button className="btn" onClick={() => refreshStaff()} disabled={!staffStoreId || staffLoading}>
-              {staffLoading ? "Loading..." : "Load Staff"}
-            </button>
-            {staffStoreId && (
-              <button className="btnSuccess" onClick={() => setShowAddStaff(true)}>
-                + Add Staff
-              </button>
-            )}
-          </div>
-
-          {staffError && <div className="alertDanger" style={{ marginBottom: 12 }}>{staffError}</div>}
-
-          {/* Add Staff Form */}
-          {showAddStaff && (
-            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 16, marginBottom: 16 }}>
-              <div style={{ fontWeight: 600, marginBottom: 12 }}>Add New Staff Member</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Name</label>
-                  <input
-                    type="text"
-                    value={newStaffName}
-                    onChange={(e) => setNewStaffName(e.target.value)}
-                    placeholder="Staff name"
-                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Phone (10 digits)</label>
-                  <input
-                    type="text"
-                    value={newStaffPhone}
-                    onChange={(e) => setNewStaffPhone(e.target.value)}
-                    placeholder="9876543210"
-                    maxLength={10}
-                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>PIN (4-6 digits)</label>
-                  <input
-                    type="password"
-                    value={newStaffPin}
-                    onChange={(e) => setNewStaffPin(e.target.value)}
-                    placeholder="1234"
-                    maxLength={6}
-                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Role</label>
-                  <select
-                    value={newStaffRole}
-                    onChange={(e) => setNewStaffRole(e.target.value as any)}
-                    style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
-                  >
-                    <option value="CASHIER">CASHIER (sell only)</option>
-                    <option value="STOCK_MANAGER">STOCK_MANAGER (sell + stock-in)</option>
-                    <option value="MANAGER">MANAGER (all operations)</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button className="btnSuccess" onClick={handleAddStaff} disabled={staffActionLoading === "add"}>
-                  {staffActionLoading === "add" ? "Adding..." : "Add Staff"}
-                </button>
-                <button className="btnGhost" onClick={() => setShowAddStaff(false)}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-          {/* Staff List */}
-          {staffList.length > 0 && (
-            <div className="tableWrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Sales</th>
-                    <th>Stock-Ins</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffList.map((s) => (
-                    <tr key={s.id}>
-                      <td style={{ fontWeight: 600 }}>{s.name}</td>
-                      <td>{s.phone}</td>
-                      <td>
-                        <span style={{
-                          padding: "2px 8px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "#f1f5f9",
-                          color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "#475569",
-                        }}>
-                          {s.role}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{
-                          padding: "2px 8px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: s.is_active ? "#dcfce7" : "#fee2e2",
-                          color: s.is_active ? "#166534" : "#991b1b",
-                        }}>
-                          {s.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td>{s.sales_count}</td>
-                      <td>{s.stock_in_count}</td>
-                      <td style={{ fontSize: 12 }}>{formatDateTime(s.created_at)}</td>
-                      <td>
-                        <div style={{ display: "flex", gap: 6 }}>
-                          <button
-                            className={s.is_active ? "btnDanger btnSm" : "btnSuccess btnSm"}
-                            onClick={() => handleToggleStaffActive(s.id, s.is_active)}
-                            disabled={staffActionLoading === s.id}
-                            style={{ fontSize: 11, padding: "2px 8px" }}
-                          >
-                            {s.is_active ? "Deactivate" : "Activate"}
-                          </button>
-                          <button
-                            className="btn btnSm"
-                            onClick={() => { setResetPinStaffId(s.id); setResetPinValue(""); }}
-                            disabled={staffActionLoading === s.id}
-                            style={{ fontSize: 11, padding: "2px 8px" }}
-                          >
-                            Reset PIN
-                          </button>
-                        </div>
-                        {resetPinStaffId === s.id && (
-                          <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                            <input
-                              type="password"
-                              value={resetPinValue}
-                              onChange={(e) => setResetPinValue(e.target.value)}
-                              placeholder="New PIN"
-                              maxLength={6}
-                              style={{ width: 80, padding: "2px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 12 }}
-                            />
-                            <button className="btnSuccess btnSm" onClick={handleResetPin} style={{ fontSize: 11, padding: "2px 6px" }}>
-                              Save
-                            </button>
-                            <button className="btnGhost btnSm" onClick={() => setResetPinStaffId(null)} style={{ fontSize: 11, padding: "2px 6px" }}>
-                              Cancel
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {staffStoreId && !staffLoading && staffList.length === 0 && !staffError && (
-            <div className="muted" style={{ textAlign: "center", padding: 32 }}>
-              No staff members found for this store. Click "Add Staff" to create one.
-            </div>
-          )}
-        </section>
+        <StaffTab
+          staffList={staffList}
+          staffLoading={staffLoading}
+          staffError={staffError}
+          staffStoreId={staffStoreId}
+          staffActionLoading={staffActionLoading}
+          showAddStaff={showAddStaff}
+          newStaffName={newStaffName}
+          newStaffPhone={newStaffPhone}
+          newStaffPin={newStaffPin}
+          newStaffRole={newStaffRole}
+          resetPinStaffId={resetPinStaffId}
+          resetPinValue={resetPinValue}
+          storeDirectory={storeDirectory}
+          setStaffStoreId={setStaffStoreId}
+          setStaffList={setStaffList}
+          setShowAddStaff={setShowAddStaff}
+          setNewStaffName={setNewStaffName}
+          setNewStaffPhone={setNewStaffPhone}
+          setNewStaffPin={setNewStaffPin}
+          setNewStaffRole={setNewStaffRole}
+          setResetPinStaffId={setResetPinStaffId}
+          setResetPinValue={setResetPinValue}
+          refreshStaff={refreshStaff}
+          handleAddStaff={handleAddStaff}
+          handleToggleStaffActive={handleToggleStaffActive}
+          handleResetPin={handleResetPin}
+        />
       )}
 
-      {/* SA-P1-004: GRN Excess Alerts Tab */}
       {tab === "grn-alerts" && (
-        <section className="card">
-          <div className="cardHeader">
-            <div className="cardTitle">GRN Excess Receipt Alerts</div>
-            <div className="muted">Items received in quantities exceeding purchase order amounts</div>
-          </div>
-
-          {/* Filters */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-            <select
-              value={grnAlertsFilter}
-              onChange={(e) => { setGrnAlertsFilter(e.target.value as any); setGrnAlertsOffset(0); }}
-              style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }}
-            >
-              <option value="">All Statuses</option>
-              <option value="OPEN">Open</option>
-              <option value="ACKNOWLEDGED">Acknowledged</option>
-              <option value="DISMISSED">Dismissed</option>
-            </select>
-            <button className="btn" onClick={() => refreshGrnAlerts()} disabled={grnAlertsLoading}>
-              {grnAlertsLoading ? "Loading..." : "Refresh"}
-            </button>
-            <span className="muted" style={{ marginLeft: "auto", fontSize: 12 }}>
-              {grnAlertsTotal} alert{grnAlertsTotal !== 1 ? "s" : ""} total
-              {grnAlertsOpenCount > 0 && (
-                <span style={{ marginLeft: 6, color: "#f59e0b", fontWeight: 600 }}>
-                  ({grnAlertsOpenCount} open)
-                </span>
-              )}
-            </span>
-          </div>
-
-          {grnAlertsError && <div className="alertDanger" style={{ marginBottom: 12 }}>{grnAlertsError}</div>}
-
-          {/* Alerts Table */}
-          {grnAlerts.length > 0 && (
-            <div className="tableWrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Store</th>
-                    <th>Order #</th>
-                    <th>Product</th>
-                    <th>Ordered</th>
-                    <th>Received</th>
-                    <th>Excess</th>
-                    <th>%</th>
-                    <th>Status</th>
-                    <th>Date</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {grnAlerts.map((a) => (
-                    <tr key={a.id}>
-                      <td style={{ fontSize: 12 }}>{a.store_name || a.store_id.slice(0, 8)}</td>
-                      <td style={{ fontSize: 12 }}>{a.order_number || a.purchase_order_id.slice(0, 8)}</td>
-                      <td style={{ fontWeight: 600, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {a.product_name}
-                      </td>
-                      <td>{a.ordered_qty}</td>
-                      <td style={{ fontWeight: 600 }}>{a.total_received_qty}</td>
-                      <td style={{ color: "#dc2626", fontWeight: 600 }}>+{a.excess_qty}</td>
-                      <td style={{ color: "#f59e0b", fontWeight: 600 }}>{a.excess_pct}%</td>
-                      <td>
-                        <span style={{
-                          padding: "2px 8px",
-                          borderRadius: 6,
-                          fontSize: 11,
-                          fontWeight: 600,
-                          background: a.status === "OPEN" ? "#fef3c7" : a.status === "ACKNOWLEDGED" ? "#dbeafe" : "#f1f5f9",
-                          color: a.status === "OPEN" ? "#92400e" : a.status === "ACKNOWLEDGED" ? "#1e40af" : "#475569",
-                        }}>
-                          {a.status}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: 12 }}>{formatDateTime(a.created_at)}</td>
-                      <td>
-                        {a.status === "OPEN" && (
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button
-                              className="btn btnSm"
-                              onClick={() => handleGrnAlertAction(a.id, "ACKNOWLEDGED")}
-                              disabled={grnAlertActionLoading === a.id}
-                              style={{ fontSize: 11, padding: "2px 8px" }}
-                            >
-                              Acknowledge
-                            </button>
-                            <button
-                              className="btnGhost btnSm"
-                              onClick={() => handleGrnAlertAction(a.id, "DISMISSED")}
-                              disabled={grnAlertActionLoading === a.id}
-                              style={{ fontSize: 11, padding: "2px 8px" }}
-                            >
-                              Dismiss
-                            </button>
-                          </div>
-                        )}
-                        {a.status !== "OPEN" && a.acknowledged_at && (
-                          <span className="muted" style={{ fontSize: 11 }}>
-                            {formatDateTime(a.acknowledged_at)}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {grnAlertsTotal > 50 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 12 }}>
-              <button
-                className="btn btnSm"
-                disabled={grnAlertsOffset === 0}
-                onClick={() => { setGrnAlertsOffset(Math.max(0, grnAlertsOffset - 50)); }}
-              >
-                Previous
-              </button>
-              <span className="muted" style={{ fontSize: 12, alignSelf: "center" }}>
-                {grnAlertsOffset + 1}–{Math.min(grnAlertsOffset + 50, grnAlertsTotal)} of {grnAlertsTotal}
-              </span>
-              <button
-                className="btn btnSm"
-                disabled={grnAlertsOffset + 50 >= grnAlertsTotal}
-                onClick={() => { setGrnAlertsOffset(grnAlertsOffset + 50); }}
-              >
-                Next
-              </button>
-            </div>
-          )}
-
-          {!grnAlertsLoading && grnAlerts.length === 0 && !grnAlertsError && (
-            <div className="muted" style={{ textAlign: "center", padding: 32 }}>
-              No GRN excess alerts found.
-            </div>
-          )}
-        </section>
+        <GrnAlertsTab
+          grnAlerts={grnAlerts}
+          grnAlertsLoading={grnAlertsLoading}
+          grnAlertsError={grnAlertsError}
+          grnAlertsFilter={grnAlertsFilter}
+          grnAlertsTotal={grnAlertsTotal}
+          grnAlertsOpenCount={grnAlertsOpenCount}
+          grnAlertsOffset={grnAlertsOffset}
+          grnAlertActionLoading={grnAlertActionLoading}
+          setGrnAlertsFilter={setGrnAlertsFilter}
+          setGrnAlertsOffset={setGrnAlertsOffset}
+          refreshGrnAlerts={refreshGrnAlerts}
+          handleGrnAlertAction={handleGrnAlertAction}
+        />
       )}
 
-      {/* GL-CRIT-0021: User Suspension Confirmation Modal */}
-      {pendingStatusChange && pendingStatusChange.newStatus === "suspended" && (
-        <div className="modalOverlay" onClick={() => setPendingStatusChange(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3>Confirm User Suspension</h3>
-            </div>
-            <div className="modalBody">
-              <p>Are you sure you want to suspend user <strong>{pendingStatusChange.userName || pendingStatusChange.userId}</strong>?</p>
-              <p className="muted">This action will prevent the user from accessing the system.</p>
-            </div>
-            <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setPendingStatusChange(null)}>Cancel</button>
-              <button
-                className="btnDanger"
-                onClick={() => executeUserStatusChange(pendingStatusChange.userId, pendingStatusChange.newStatus)}
-              >
-                Suspend User
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* SA-001: Confirmation modals — extracted to components/ConfirmationModals */}
+      <ConfirmationModals
+        pendingStatusChange={pendingStatusChange}
+        setPendingStatusChange={setPendingStatusChange}
+        executeUserStatusChange={executeUserStatusChange}
+        pendingDeviceAction={pendingDeviceAction}
+        setPendingDeviceAction={setPendingDeviceAction}
+        executeDeviceSave={executeDeviceSave}
+        executeDeviceReset={executeDeviceReset}
+        pendingAdminUser={pendingAdminUser}
+        adminVerificationReason={adminVerificationReason}
+        createUserError={createUserError}
+        createUserLoading={createUserLoading}
+        setPendingAdminUser={setPendingAdminUser}
+        setAdminVerificationReason={setAdminVerificationReason}
+        setCreateUserError={setCreateUserError}
+        confirmAdminUserCreation={confirmAdminUserCreation}
+        pendingSupplierSuspend={pendingSupplierSuspend}
+        suspendReason={suspendReason}
+        supplierSuspendLoading={supplierSuspendLoading}
+        supplierActionError={supplierActionError}
+        setPendingSupplierSuspend={setPendingSupplierSuspend}
+        setSuspendReason={setSuspendReason}
+        executeSupplierStatusChange={executeSupplierStatusChange}
+        pendingStoreSuspend={pendingStoreSuspend}
+        storeSuspendReason={storeSuspendReason}
+        storeSuspendLoading={storeSuspendLoading}
+        storeSuspendError={storeSuspendError}
+        setPendingStoreSuspend={setPendingStoreSuspend}
+        setStoreSuspendReason={setStoreSuspendReason}
+        executeStoreStatusChange={executeStoreStatusChange}
+      />
 
-      {/* GL-CRIT-0022 & GL-CRIT-0052: Device Action Confirmation Modal */}
-      {pendingDeviceAction && (
-        <div className="modalOverlay" onClick={() => setPendingDeviceAction(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3>
-                {pendingDeviceAction.action === "deactivate"
-                  ? "Confirm Device Deactivation"
-                  : "Confirm Token Reset"}
-              </h3>
-            </div>
-            <div className="modalBody">
-              {pendingDeviceAction.action === "deactivate" ? (
-                <>
-                  <p>Are you sure you want to deactivate device <strong>{pendingDeviceAction.deviceLabel}</strong>?</p>
-                  <p className="muted">This will prevent the device from accessing the system until reactivated.</p>
-                </>
-              ) : (
-                <>
-                  <p>Are you sure you want to reset the token for device <strong>{pendingDeviceAction.deviceLabel}</strong>?</p>
-                  <p className="muted">The device will need to be re-enrolled with a new QR code.</p>
-                </>
-              )}
-            </div>
-            <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setPendingDeviceAction(null)}>Cancel</button>
-              <button
-                className="btnDanger"
-                onClick={() => {
-                  if (pendingDeviceAction.action === "deactivate") {
-                    executeDeviceSave(pendingDeviceAction.deviceId);
-                  } else {
-                    executeDeviceReset(pendingDeviceAction.deviceId);
-                  }
-                }}
-              >
-                {pendingDeviceAction.action === "deactivate" ? "Deactivate Device" : "Reset Token"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* GL-CRIT-0053: Admin User Verification Modal */}
-      {pendingAdminUser && (
-        <div className="modalOverlay" onClick={() => setPendingAdminUser(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3>Confirm Platform Admin Creation</h3>
-            </div>
-            <div className="modalBody">
-              <p>You are about to create a <strong>Platform Admin</strong> user:</p>
-              <ul style={{ margin: "12px 0", paddingLeft: 20 }}>
-                <li><strong>Name:</strong> {pendingAdminUser.name}</li>
-                {pendingAdminUser.email && <li><strong>Email:</strong> {pendingAdminUser.email}</li>}
-                {pendingAdminUser.phone && <li><strong>Phone:</strong> {pendingAdminUser.phone}</li>}
-              </ul>
-              <p className="muted" style={{ color: "#b45309" }}>
-                Platform admins have full system access. This action is logged for audit compliance.
-              </p>
-              <div className="control" style={{ marginTop: 12 }}>
-                <label>Reason for creating this admin user *</label>
-                <textarea
-                  value={adminVerificationReason}
-                  onChange={(e) => setAdminVerificationReason(e.target.value)}
-                  placeholder="Enter reason (minimum 10 characters)..."
-                  rows={3}
-                  style={{ width: "100%", resize: "vertical" }}
-                />
-              </div>
-              {createUserError && <p className="errorText" style={{ marginTop: 8 }}>{createUserError}</p>}
-            </div>
-            <div className="modalFooter">
-              <button className="btnGhost" onClick={() => { setPendingAdminUser(null); setCreateUserError(""); }}>Cancel</button>
-              <button
-                className="btnDanger"
-                onClick={confirmAdminUserCreation}
-                disabled={createUserLoading || adminVerificationReason.trim().length < 10}
-              >
-                {createUserLoading ? "Creating..." : "Confirm & Create Admin"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SA-P1-005: Supplier Suspension/Reactivation Confirmation Modal */}
-      {pendingSupplierSuspend && (
-        <div className="modalOverlay" onClick={() => { if (!supplierSuspendLoading) setPendingSupplierSuspend(null); }}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3>{pendingSupplierSuspend.action === "suspend" ? "Confirm Supplier Suspension" : "Confirm Supplier Reactivation"}</h3>
-            </div>
-            <div className="modalBody">
-              {pendingSupplierSuspend.action === "suspend" ? (
-                <>
-                  <p>Are you sure you want to suspend <strong>{pendingSupplierSuspend.businessName}</strong>?</p>
-                  <p className="muted" style={{ color: "#b45309" }}>This will block supplier login, revoke active sessions, and hide them from retailer/POS lists.</p>
-                  <div className="control" style={{ marginTop: 12 }}>
-                    <label>Reason for suspension (required)</label>
-                    <textarea
-                      value={suspendReason}
-                      onChange={(e) => setSuspendReason(e.target.value)}
-                      placeholder="Enter reason (minimum 10 characters)..."
-                      rows={3}
-                      style={{ width: "100%", resize: "vertical" }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p>Are you sure you want to reactivate <strong>{pendingSupplierSuspend.businessName}</strong>?</p>
-                  <p className="muted">This will restore supplier login access and visibility in retailer/POS lists.</p>
-                </>
-              )}
-              {supplierActionError && <p className="errorText" style={{ marginTop: 8 }}>{supplierActionError}</p>}
-            </div>
-            <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setPendingSupplierSuspend(null)} disabled={supplierSuspendLoading}>Cancel</button>
-              {pendingSupplierSuspend.action === "suspend" ? (
-                <button
-                  className="btnDanger"
-                  onClick={executeSupplierStatusChange}
-                  disabled={supplierSuspendLoading || suspendReason.trim().length < 10}
-                >
-                  {supplierSuspendLoading ? "Suspending..." : "Suspend Supplier"}
-                </button>
-              ) : (
-                <button
-                  style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
-                  onClick={executeSupplierStatusChange}
-                  disabled={supplierSuspendLoading}
-                >
-                  {supplierSuspendLoading ? "Reactivating..." : "Reactivate Supplier"}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SA-P0-001: Store Suspension/Reactivation Confirmation Modal */}
-      {pendingStoreSuspend && (
-        <div className="modalOverlay" onClick={() => { if (!storeSuspendLoading) setPendingStoreSuspend(null); }}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <h3>{pendingStoreSuspend.action === "suspend" ? "Confirm Store Suspension" : "Confirm Store Reactivation"}</h3>
-            </div>
-            <div className="modalBody">
-              {pendingStoreSuspend.action === "suspend" ? (
-                <>
-                  <p>Are you sure you want to suspend <strong>{pendingStoreSuspend.storeName}</strong>?</p>
-                  <p className="muted" style={{ color: "#b45309" }}>This will immediately block all POS transactions for this store. The store's devices will show a "Suspended" screen.</p>
-                  <div className="control" style={{ marginTop: 12 }}>
-                    <label>Reason for suspension (required)</label>
-                    <textarea
-                      value={storeSuspendReason}
-                      onChange={(e) => setStoreSuspendReason(e.target.value)}
-                      placeholder="Enter reason (minimum 10 characters)..."
-                      rows={3}
-                      style={{ width: "100%", resize: "vertical" }}
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p>Are you sure you want to reactivate <strong>{pendingStoreSuspend.storeName}</strong>?</p>
-                  <p className="muted">This will restore POS transactions and normal operations for this store.</p>
-                </>
-              )}
-              {storeSuspendError && <p className="errorText" style={{ marginTop: 8 }}>{storeSuspendError}</p>}
-            </div>
-            <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setPendingStoreSuspend(null)} disabled={storeSuspendLoading}>Cancel</button>
-              {pendingStoreSuspend.action === "suspend" ? (
-                <button
-                  className="btnDanger"
-                  onClick={executeStoreStatusChange}
-                  disabled={storeSuspendLoading || storeSuspendReason.trim().length < 10}
-                >
-                  {storeSuspendLoading ? "Suspending..." : "Suspend Store"}
-                </button>
-              ) : (
-                <button
-                  style={{ background: "#16a34a", color: "white", border: "none", borderRadius: 6, padding: "8px 16px", cursor: "pointer" }}
-                  onClick={executeStoreStatusChange}
-                  disabled={storeSuspendLoading}
-                >
-                  {storeSuspendLoading ? "Reactivating..." : "Reactivate Store"}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AI Floating Button */}
-      {!aiPanelOpen && (
-        <button
-          className={`aiPanelToggle ${aiAnswer ? "hasAnswer" : ""}`}
-          onClick={() => setAiPanelOpen(true)}
-          title="Open AI Assistant"
-        >
-          🤖
-        </button>
-      )}
-
-      {/* AI Side Panel */}
-      <div className={`aiPanel ${aiPanelOpen ? "open" : ""}`}>
-        <div className="aiPanelHeader">
-          <div className="aiPanelTitle">
-            <span className="brandPill">SuperMandi</span>
-            AI Copilot
-          </div>
-          <button className="aiPanelClose" onClick={() => setAiPanelOpen(false)} title="Close">
-            ✕
-          </button>
-        </div>
-
-        <div className="aiPanelBody" onClick={resetAiIdleTimer}>
-          <div className="badgeRow">
-            <span className={`badge ${aiConfigured ? "badgeOk" : "badgeWarn"}`}>
-              {aiConfigured ? "AI configured" : "AI not configured"}
-            </span>
-          </div>
-
-          <div className="aiQuickActions">
-            <button
-              className="aiQuickBtn"
-              onClick={() => {
-                setAiQuestion("Explain the last hour of POS activity. Focus on issues and anomalies.");
-                resetAiIdleTimer();
-              }}
-            >
-              📊 Explain last hour
-            </button>
-            <button
-              className="aiQuickBtn"
-              onClick={() => {
-                setAiQuestion("Why did payments fail? List likely causes from events and next steps.");
-                resetAiIdleTimer();
-              }}
-            >
-              💳 Payment issues?
-            </button>
-            <button
-              className="aiQuickBtn"
-              onClick={() => {
-                setAiQuestion("Summarize today: devices active, stores active, and any printer/network problems.");
-                resetAiIdleTimer();
-              }}
-            >
-              📋 Summarize today
-            </button>
-          </div>
-
-          <textarea
-            className="aiTextarea"
-            value={aiQuestion}
-            onChange={(e) => {
-              setAiQuestion(e.target.value);
-              resetAiIdleTimer();
-            }}
-            placeholder="Ask about POS activity, devices, payments..."
-            rows={3}
-          />
-
-          <div className="aiActions">
-            <button
-              className="aiAskBtn"
-              onClick={async () => {
-                resetAiIdleTimer();
-                setAiLoading(true);
-                setAiError("");
-                setAiAnswer("");
-                try {
-                  const res = await askAi(aiQuestion);
-                  setAiAnswer(res.answer);
-                } catch (e: any) {
-                  setAiError(e?.message ? String(e.message) : "AI request failed");
-                } finally {
-                  setAiLoading(false);
-                }
-              }}
-              disabled={aiLoading || !aiQuestion.trim()}
-            >
-              {aiLoading ? "Thinking..." : "Ask AI"}
-            </button>
-            <button
-              className="aiClearBtn"
-              onClick={() => {
-                setAiQuestion("");
-                setAiAnswer("");
-                setAiError("");
-                resetAiIdleTimer();
-              }}
-            >
-              Clear
-            </button>
-            {aiError && <span className="errorText" style={{ fontSize: 12 }}>{aiError}</span>}
-          </div>
-
-          {aiAnswer && (
-            <div className="aiResponse">
-              <div className="aiResponseContent">{aiAnswer}</div>
-            </div>
-          )}
-        </div>
-
-        {aiPanelOpen && (
-          <div className="aiIdleTimer">
-            Auto-closes in {AI_AUTO_COLLAPSE_SECONDS - aiIdleSeconds}s of inactivity
-          </div>
-        )}
-      </div>
+      {/* SA-001: AI panel — extracted to components/AiPanel */}
+      <AiPanel
+        aiQuestion={aiQuestion}
+        aiAnswer={aiAnswer}
+        aiError={aiError}
+        aiLoading={aiLoading}
+        aiConfigured={aiConfigured}
+        aiPanelOpen={aiPanelOpen}
+        aiIdleSeconds={aiIdleSeconds}
+        AI_AUTO_COLLAPSE_SECONDS={AI_AUTO_COLLAPSE_SECONDS}
+        setAiQuestion={setAiQuestion}
+        setAiAnswer={setAiAnswer}
+        setAiError={setAiError}
+        setAiLoading={setAiLoading}
+        setAiPanelOpen={setAiPanelOpen}
+        resetAiIdleTimer={resetAiIdleTimer}
+      />
 
       <footer className="footer muted">
         {import.meta.env.DEV && <>Tip: this dashboard is static-deployable. Set <span className="mono">VITE_API_BASE_URL</span> in hosting env. </>}
