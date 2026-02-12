@@ -1,13 +1,13 @@
 # Audit Ticket Ledger
 
 > **Purpose**: Maps every implemented audit ticket to its PR, merge SHA, prestage tag, and CI status.
-> **Updated**: 2026-02-13
+> **Updated**: 2026-02-13 (post-merge consolidation)
 > **Total tickets in AUDIT_BACKLOG.md**: 140 (of 320 raw findings)
-> **Implemented**: 86 unique tickets across 30 PRs
+> **Implemented**: 86 unique tickets across 31 PRs (all merged)
 
 ---
 
-## Merged PRs (27 PRs, 62 tickets on main)
+## Merged PRs (31 PRs, 86 tickets on main)
 
 | PR# | Tickets | Merge SHA | Prestage Tag | CI Status |
 |-----|---------|-----------|-------------|-----------|
@@ -38,30 +38,28 @@
 | #47 | SA-001 | `dac0214` | `prestage-AUDIT-SA-001-2026-02-12_1520IST` | Green |
 | #48 | _(backlog doc only)_ | `045ceec` | — | Green |
 | #50 | API-017 _(rework)_ | `e472425` | `prestage-AUDIT-API-017-rework-2026-02-12_1535IST` | Green |
+| #51 | SA-005, SA-014, SA-022, SA-028 | `08c0c9a` | `prestage-AUDIT-SA-005-014-022-028-2026-02-13_0902IST` | Green |
+| #52 | SUP-021, SUP-022, API-035 | `6fd58ee` | `prestage-AUDIT-SUP-021-022-API-035-2026-02-13_0904IST` | Green |
+| #53 | API-007(rw), API-037-039, API-041, API-054, API-063, POS-001(rw), POS-010, POS-027, POS-044, RET-004, RET-008, RET-041(rw), RET-044, RET-049, SA-009, SA-010, SA-053, SUP-017, SUP-041, SUP-043 | `a1c0ddb` | `prestage-AUDIT-P2-hardening-2026-02-13_0906IST` | Green |
+| #54 | _(governance ledger)_ | `b522280` | `prestage-AUDIT-ledger-2026-02-13_0900IST` | Green |
 
 ---
 
-## Open PRs (3 PRs, 24 tickets pending merge)
-
-| PR# | Branch | Tickets | Typecheck | Build | Status |
-|-----|--------|---------|-----------|-------|--------|
-| #51 | `fix/AUDIT-SA-batch-validation-ux` | SA-005, SA-014, SA-022, SA-028 | PASS | PASS | Ready to merge |
-| #52 | `fix/AUDIT-multi-portal-p1-batch` | SUP-021, SUP-022, API-035 | PASS | PASS | Ready to merge |
-| #53 | `fix/AUDIT-P2-backend-hardening` | API-007(rework), API-037, API-038, API-039, API-041, API-054, API-063, POS-001(rework), POS-010, POS-027, POS-044, RET-004, RET-008, RET-041(rework), RET-044, RET-049, SA-009, SA-010, SA-053, SUP-017, SUP-041, SUP-043 | PASS | PASS | Ready to merge |
+## Open PRs (0 PRs — all merged)
 
 ---
 
 ## Coverage by Platform
 
-| Platform | Backlog | Merged | Pending | Total Impl | Gap |
-|----------|---------|--------|---------|------------|-----|
-| API | 40 | 16 | 7 | 23 | 17 |
-| RET | 21 | 15 | 4 | 19 | 2 |
-| SUP | 30 | 11 | 5 | 16 | 14 |
-| SA | 26 | 9 | 5 | 14 | 12 |
-| POS | 21 | 11 | 3 | 14 | 7 |
-| XC | 2 | 0 | 0 | 0 | 2 |
-| **Total** | **140** | **62** | **24** | **86** | **54** |
+| Platform | Backlog | Merged | Gap |
+|----------|---------|--------|-----|
+| API | 40 | 23 | 17 |
+| RET | 21 | 19 | 2 |
+| SUP | 30 | 16 | 14 |
+| SA | 26 | 14 | 12 |
+| POS | 21 | 14 | 7 |
+| XC | 2 | 0 | 2 |
+| **Total** | **140** | **86** | **54** |
 
 ---
 
@@ -92,11 +90,11 @@
 
 When ready to deploy to staging:
 
-1. [ ] Merge PR #51 → tag `prestage-AUDIT-SA-022-028-YYYY-MM-DD`
-2. [ ] Merge PR #52 → tag `prestage-AUDIT-SUP-021-022-API-035-YYYY-MM-DD`
-3. [ ] Merge PR #53 → tag `prestage-AUDIT-P2-hardening-YYYY-MM-DD`
-4. [ ] Full gates on main: `pnpm -r typecheck` + all builds
-5. [ ] Tag: `prestage-AUDIT-complete-YYYY-MM-DD`
+1. [x] Merge PR #51 → `prestage-AUDIT-SA-005-014-022-028-2026-02-13_0902IST`
+2. [x] Merge PR #52 → `prestage-AUDIT-SUP-021-022-API-035-2026-02-13_0904IST`
+3. [x] Merge PR #53 → `prestage-AUDIT-P2-hardening-2026-02-13_0906IST`
+4. [x] Full gates on main: typecheck (4/4 PASS) + builds (4/4 PASS) — verified 2026-02-13
+5. [ ] Tag: `rc-AUDIT-complete-2026-02-13`
 6. [ ] CI green on tag
 7. [ ] Deploy staging from tag (NOT HEAD)
 8. [ ] 8-gate staging verification
