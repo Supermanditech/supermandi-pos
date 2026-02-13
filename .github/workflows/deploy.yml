@@ -547,7 +547,6 @@ jobs:
           gcloud run deploy "$SERVICE_NAME" \
             --image="$IMAGE" \
             --region="${{ env.GCP_REGION }}" \
-            --platform=managed \
             --memory=512Mi \
             --cpu=1 \
             --min-instances=0 \
@@ -613,7 +612,6 @@ jobs:
           gcloud run deploy "$SERVICE_NAME" \
             --image="$IMAGE" \
             --region="${{ env.GCP_REGION }}" \
-            --platform=managed \
             --memory=512Mi \
             --cpu=1 \
             --min-instances=0 \
@@ -651,7 +649,6 @@ jobs:
             if ! gcloud run deploy "$SERVICE_NAME" \
               --image="$IMAGE" \
               --region="${{ env.GCP_REGION }}" \
-              --platform=managed \
               --memory=256Mi \
               --cpu=1 \
               --min-instances=0 \
