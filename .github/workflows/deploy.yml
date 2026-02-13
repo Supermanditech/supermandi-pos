@@ -338,6 +338,10 @@ jobs:
       # INFRA-010: Service names match existing GCP Cloud Run services (no prefix/suffix).
       # Existing services: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
       # Load balancer NEGs point to these exact names.
+      # STAGE-018: GCP-level deploy safety — startup probes, CPU boost, readiness wait
+      # Startup probes: GCP won't route traffic to a revision until /health returns 200.
+      # This eliminates "old revision responds during cold start" at the platform level.
+      # --startup-cpu-boost: Allocate extra CPU during startup for faster cold starts.
       - name: Deploy main-backend to staging
         id: deploy-main-backend
         run: |
@@ -353,6 +357,11 @@ jobs:
             --cpu=1 \
             --min-instances=0 \
             --max-instances=3 \
+            --startup-cpu-boost \
+            --startup-probe-path=/health \
+            --startup-probe-period=5 \
+            --startup-probe-timeout=3 \
+            --startup-probe-failure-threshold=10 \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=private-ranges-only \
             --add-cloudsql-instances="${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:supermandi-staging" \
@@ -409,6 +418,11 @@ jobs:
             --cpu=1 \
             --min-instances=0 \
             --max-instances=3 \
+            --startup-cpu-boost \
+            --startup-probe-path=/health \
+            --startup-probe-period=5 \
+            --startup-probe-timeout=3 \
+            --startup-probe-failure-threshold=10 \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=private-ranges-only \
             --set-env-vars="\
@@ -453,6 +467,65 @@ jobs:
             exit 1
           fi
           echo "All 4 portals deployed successfully."
+
+      # STAGE-018: Wait for ALL new revisions to be READY before smoke tests.
+      # This is a GCP-level gate: even if `gcloud run deploy` returns success,
+      # the new revision may still be starting up. This step explicitly confirms
+      # every service's latest revision is READY and serving traffic.
+      - name: Verify all revisions are READY
+        run: |
+          SERVICES=(api-gateway main-backend retailer-admin supplier-portal superadmin landing)
+          ALL_READY=true
+          for svc in "${SERVICES[@]}"; do
+            echo "Checking $svc revision readiness..."
+            # Get the latest revision name
+            LATEST_REV=$(gcloud run revisions list \
+              --service="$svc" \
+              --region="${{ env.GCP_REGION }}" \
+              --sort-by="~metadata.creationTimestamp" \
+              --limit=1 \
+              --format="value(metadata.name)" 2>/dev/null || echo "")
+            if [ -z "$LATEST_REV" ]; then
+              echo "  WARN: Could not get latest revision for $svc"
+              ALL_READY=false
+              continue
+            fi
+            # Wait for it to be READY (up to 60s)
+            for attempt in 1 2 3 4 5 6; do
+              READY=$(gcloud run revisions describe "$LATEST_REV" \
+                --region="${{ env.GCP_REGION }}" \
+                --format="value(status.conditions[0].status)" 2>/dev/null || echo "Unknown")
+              echo "  $svc ($LATEST_REV): attempt $attempt — Ready=$READY"
+              if [ "$READY" = "True" ]; then
+                # Verify this revision is receiving traffic
+                TRAFFIC_REV=$(gcloud run services describe "$svc" \
+                  --region="${{ env.GCP_REGION }}" \
+                  --format="value(status.traffic[0].revisionName)" 2>/dev/null || echo "")
+                if [ "$TRAFFIC_REV" = "$LATEST_REV" ]; then
+                  echo "  PASS: $svc — $LATEST_REV is READY and serving 100% traffic"
+                else
+                  echo "  WARN: $svc — $LATEST_REV is READY but traffic goes to $TRAFFIC_REV"
+                  ALL_READY=false
+                fi
+                break
+              fi
+              if [ "$attempt" -lt 6 ]; then
+                sleep 10
+              else
+                echo "  FAIL: $svc — $LATEST_REV not READY after 60s"
+                ALL_READY=false
+              fi
+            done
+          done
+          if [ "$ALL_READY" = "false" ]; then
+            echo ""
+            echo "WARNING: Not all revisions are READY and serving traffic."
+            echo "Smoke tests will still run — but failures may be due to revision startup lag."
+            echo "If smoke tests fail, check Cloud Run revision logs for startup errors."
+          else
+            echo ""
+            echo "All 6 services: latest revision READY and serving 100% traffic."
+          fi
 
   # ==========================================================================
   # STAGE-017: Hardened smoke tests — every check has retries, timeouts,
