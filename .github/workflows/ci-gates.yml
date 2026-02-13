@@ -561,13 +561,93 @@ jobs:
           bash scripts/gates/dockerfile-lint.sh
 
   # ==========================================================================
+  # JOB 10: ZRP License Policy, Coverage Floor, Flaky Detection
+  # ==========================================================================
+  license-coverage:
+    name: "ZRP: License & Coverage"
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: |
+            retailer-admin/pnpm-lock.yaml
+            supermandi-superadmin/pnpm-lock.yaml
+            supplier-portal/pnpm-lock.yaml
+            backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: |
+          cd backend && pnpm install --frozen-lockfile && cd ..
+          cd retailer-admin && pnpm install --frozen-lockfile && cd ..
+          cd supplier-portal && pnpm install --frozen-lockfile && cd ..
+          cd supermandi-superadmin && pnpm install --frozen-lockfile && cd ..
+
+      - name: Run license & coverage gate
+        run: |
+          chmod +x scripts/gates/license-coverage.sh
+          bash scripts/gates/license-coverage.sh
+
+  # ==========================================================================
+  # JOB 11: ZRP DB Advanced Safety + Auth Hardening
+  # ==========================================================================
+  db-auth-scan:
+    name: "ZRP: DB Safety & Auth Hardening"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run DB advanced safety gate
+        run: |
+          chmod +x scripts/gates/db-advanced-safety.sh
+          bash scripts/gates/db-advanced-safety.sh
+
+      - name: Run auth hardening gate
+        run: |
+          chmod +x scripts/gates/auth-hardening.sh
+          bash scripts/gates/auth-hardening.sh
+
+  # ==========================================================================
+  # JOB 12: ZRP Scalability Scan + Observability Docs
+  # ==========================================================================
+  scalability-observability:
+    name: "ZRP: Scalability & Observability"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run scalability scan gate
+        run: |
+          chmod +x scripts/gates/scalability-scan.sh
+          bash scripts/gates/scalability-scan.sh
+
+      - name: Run observability docs gate
+        run: |
+          chmod +x scripts/gates/observability-docs.sh
+          bash scripts/gates/observability-docs.sh
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
     name: All Gates Passed
     runs-on: ubuntu-latest
     needs: [typecheck, lint, test, build-verify, local-smoke,
-            git-discipline, security-audit, migration-safety, config-parity]
+            git-discipline, security-audit, migration-safety, config-parity,
+            license-coverage, db-auth-scan, scalability-observability]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -603,12 +683,15 @@ jobs:
             ZRP_FAILED=$((ZRP_FAILED + 1))
           fi
 
-          for job in security-audit migration-safety config-parity; do
+          for job in security-audit migration-safety config-parity license-coverage db-auth-scan scalability-observability; do
             RESULT=""
             case "$job" in
-              security-audit)    RESULT="${{ needs.security-audit.result }}" ;;
-              migration-safety)  RESULT="${{ needs.migration-safety.result }}" ;;
-              config-parity)     RESULT="${{ needs.config-parity.result }}" ;;
+              security-audit)            RESULT="${{ needs.security-audit.result }}" ;;
+              migration-safety)          RESULT="${{ needs.migration-safety.result }}" ;;
+              config-parity)             RESULT="${{ needs.config-parity.result }}" ;;
+              license-coverage)          RESULT="${{ needs.license-coverage.result }}" ;;
+              db-auth-scan)              RESULT="${{ needs.db-auth-scan.result }}" ;;
+              scalability-observability)  RESULT="${{ needs.scalability-observability.result }}" ;;
             esac
             if [ "$RESULT" != "success" ]; then
               echo "FAIL: $job = $RESULT"
@@ -628,7 +711,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (5 core + 4 ZRP)"
+          echo "ALL CI GATES PASSED (5 core + 7 ZRP)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

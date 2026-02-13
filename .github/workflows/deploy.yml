@@ -325,6 +325,16 @@ jobs:
             exit 1
           fi
 
+      # ZRP-F-076/G-086/G-087: Cloud security posture (WARNING — non-blocking)
+      - name: "ZRP: Cloud posture check (WARNING)"
+        continue-on-error: true
+        env:
+          GCP_PROJECT: ${{ env.GCP_PROJECT }}
+          GCP_REGION: ${{ env.GCP_REGION }}
+        run: |
+          chmod +x scripts/gates/cloud-posture.sh
+          bash scripts/gates/cloud-posture.sh
+
   # ==========================================================================
   # Deploy to staging Cloud Run
   # ==========================================================================
@@ -749,13 +759,54 @@ jobs:
           echo ""
 
   # ==========================================================================
+  # ZRP-C-033/034/035/036/037/038: Artifact Integrity & Hygiene
+  # ==========================================================================
+  artifact-verification:
+    name: "ZRP: Artifact Verification"
+    needs: [gate, deploy-staging]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DEPLOY_SHA: ${{ needs.gate.outputs.sha_short }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: "ZRP-C-033/034: Artifact integrity (BLOCKING)"
+        env:
+          GCP_PROJECT: ${{ env.GCP_PROJECT }}
+          GCP_REGION: ${{ env.GCP_REGION }}
+          AR_REPO: ${{ env.AR_REPO }}
+          DEPLOY_SHA: ${{ env.DEPLOY_SHA }}
+        run: |
+          chmod +x scripts/gates/artifact-integrity.sh
+          bash scripts/gates/artifact-integrity.sh
+
+      - name: "ZRP-C-035/036/037/038: Artifact hygiene (WARNING)"
+        continue-on-error: true
+        env:
+          GCP_PROJECT: ${{ env.GCP_PROJECT }}
+          GCP_REGION: ${{ env.GCP_REGION }}
+        run: |
+          chmod +x scripts/gates/artifact-hygiene.sh
+          bash scripts/gates/artifact-hygiene.sh
+
+  # ==========================================================================
   # STAGE-017: Hardened smoke tests — every check has retries, timeouts,
   # body validation, and explicit BLOCKING behavior. No silent WARNs.
   # Learned from 3 pipeline failures: cold-start, redirects, SHA lag.
   # ==========================================================================
   smoke-test:
     name: Staging Smoke Test
-    needs: [gate, deploy-staging]
+    needs: [gate, deploy-staging, artifact-verification]
     runs-on: ubuntu-latest
     permissions:
       contents: read
