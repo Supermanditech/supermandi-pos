@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import { execSync } from "child_process";
 import { apiRouter } from "./routes";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
@@ -35,13 +34,9 @@ if (firebaseEnabled && (firebaseServiceAccountPath || firebaseProjectId)) {
 }
 
 // DEV-071: Capture build info at startup for /health endpoint
-let GIT_SHA = "unknown";
-const BUILD_TIME = new Date().toISOString();
-try {
-  GIT_SHA = execSync("git rev-parse --short HEAD", { encoding: "utf-8" }).trim();
-} catch {
-  GIT_SHA = process.env.GIT_SHA || "unknown";
-}
+// INFRA-003: Use env var baked at Docker build time (execSync fails in containers without .git)
+const GIT_SHA = process.env.GIT_SHA || "unknown";
+const BUILD_TIME = process.env.BUILD_TIME || new Date().toISOString();
 
 const app = express();
 

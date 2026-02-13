@@ -114,8 +114,13 @@ COMMIT_STATUS_SUMMARY.txt
 # Claude temp files/folders (cover both patterns)
 tmpclaude-*-cwd
 tmpclaude-*-cwd/
+tmpclaude-*/
 backend/tmpclaude-*-cwd
 backend/tmpclaude-*-cwd/
+# Stale one-off scripts and backup files
+.tmp-*.py
+*.bak
+*tmp-login.json
 
 # Vite temp files (generated during dev server startup)
 *.timestamp-*.mjs
