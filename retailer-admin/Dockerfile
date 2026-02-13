@@ -20,8 +20,8 @@ ENV VITE_BUILD_TIME=$VITE_BUILD_TIME
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (npm install: no lockfile in pnpm-managed project)
+RUN npm install
 
 # Copy source
 COPY . .

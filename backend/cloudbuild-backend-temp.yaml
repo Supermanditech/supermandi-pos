@@ -1,0 +1,4 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'Dockerfile.main', '-t', 'asia-south1-docker.pkg.dev/supermandi-backend/supermandi/main-backend:614b717', '.']
+images: ['asia-south1-docker.pkg.dev/supermandi-backend/supermandi/main-backend:614b717']
