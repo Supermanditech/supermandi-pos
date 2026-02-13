@@ -4,10 +4,9 @@ name: Uptime Probe (External Monitoring)
 # Creates GitHub issue on failure for alerting
 
 on:
-  # INFRA-007: Cron disabled until staging is redeployed with current code.
-  # Re-enable after INFRA-006 staging deploy is verified.
-  # schedule:
-  #   - cron: '*/5 * * * *'
+  # ZRP-H-004: Re-enabled after staging LIVE at b3dd56b (STAGE-024)
+  schedule:
+    - cron: '*/5 * * * *'
   workflow_dispatch:
     # Allow manual trigger
     inputs:
@@ -142,6 +141,18 @@ jobs:
           fi
 
           echo "✅ All portals are healthy with valid fingerprints"
+
+      # ZRP-H-008: Health endpoint latency check
+      - name: "ZRP-H-008: Health Latency Check"
+        if: success()
+        run: |
+          echo "Checking API health latency..."
+          LATENCY=$(curl -sf --max-time 10 -o /dev/null -w "%{time_total}" "https://${{ env.DOMAIN }}/api/v1/pos/health" 2>/dev/null || echo "99")
+          LATENCY_MS=$(echo "$LATENCY" | awk '{printf "%.0f", $1 * 1000}')
+          echo "Health endpoint latency: ${LATENCY}s (${LATENCY_MS}ms)"
+          if [ "$LATENCY_MS" -gt 5000 ]; then
+            echo "::warning::Health endpoint latency is high: ${LATENCY_MS}ms (>5000ms)"
+          fi
 
       - name: Create Alert Issue
         if: failure() && github.event.inputs.alert_on_failure != 'false'

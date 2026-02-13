@@ -1,0 +1,197 @@
+# =============================================================================
+# ZRP Categories J+K: Chaos Testing & 10K Store Readiness (Scheduled)
+# =============================================================================
+# These gates require staging infrastructure and cannot run in the CI/CD
+# critical path. They run weekly and on manual dispatch.
+#
+# Category J: Failure Injection (10 gates) — resilience under failure
+# Category K: 10K Store Readiness (10 gates) — performance at scale
+# =============================================================================
+
+name: "ZRP: Chaos & Load Testing (Scheduled)"
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly: Monday 2:00 AM UTC
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'Test category to run'
+        required: false
+        type: choice
+        options:
+          - all
+          - chaos
+          - load
+        default: 'all'
+
+env:
+  STAGING_URL: https://staging.supermandi.tech
+  GCP_PROJECT: supermandi-backend
+  GCP_REGION: asia-south1
+
+jobs:
+  # ===========================================================================
+  # Category J: Failure Injection (Chaos Testing)
+  # ===========================================================================
+  chaos-tests:
+    name: "ZRP-J: Failure Injection"
+    runs-on: ubuntu-latest
+    if: >
+      github.event.inputs.category == 'all' ||
+      github.event.inputs.category == 'chaos' ||
+      github.event_name == 'schedule'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ZRP-J-007: Malformed request resilience
+      - name: "ZRP-J-007: Malformed request handling"
+        run: |
+          echo "=== ZRP-J-007: Malformed Request Resilience ==="
+          URL="${{ env.STAGING_URL }}"
+          FAIL=0
+
+          # Test 1: Empty body on POST
+          STATUS=$(curl -s -X POST --max-time 10 -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" -d '' \
+            "$URL/api/v1/auth/login" 2>/dev/null || echo "000")
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+            echo "  PASS: Empty POST body → HTTP $STATUS (handled gracefully)"
+          else
+            echo "  FAIL: Empty POST body → HTTP $STATUS (server error)"
+            FAIL=$((FAIL + 1))
+          fi
+
+          # Test 2: Invalid JSON body
+          STATUS=$(curl -s -X POST --max-time 10 -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" -d '{invalid json' \
+            "$URL/api/v1/auth/login" 2>/dev/null || echo "000")
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+            echo "  PASS: Invalid JSON → HTTP $STATUS (handled gracefully)"
+          else
+            echo "  FAIL: Invalid JSON → HTTP $STATUS (server error)"
+            FAIL=$((FAIL + 1))
+          fi
+
+          # Test 3: Oversized body (1MB)
+          LARGE_BODY=$(python3 -c "print('{\"data\":\"' + 'x'*1000000 + '\"}')")
+          STATUS=$(curl -s -X POST --max-time 15 -o /dev/null -w "%{http_code}" \
+            -H "Content-Type: application/json" -d "$LARGE_BODY" \
+            "$URL/api/v1/auth/login" 2>/dev/null || echo "000")
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+            echo "  PASS: Oversized body → HTTP $STATUS (handled gracefully)"
+          elif [ "$STATUS" = "413" ]; then
+            echo "  PASS: Oversized body → HTTP 413 (payload too large — correct)"
+          else
+            echo "  WARN: Oversized body → HTTP $STATUS"
+          fi
+
+          # Test 4: SQL injection attempt
+          STATUS=$(curl -s --max-time 10 -o /dev/null -w "%{http_code}" \
+            "$URL/api/v1/admin/stores?search='; DROP TABLE stores; --" 2>/dev/null || echo "000")
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ] || [ "$STATUS" = "400" ]; then
+            echo "  PASS: SQL injection attempt → HTTP $STATUS (rejected)"
+          elif [ "$STATUS" -ge 500 ]; then
+            echo "  FAIL: SQL injection attempt → HTTP $STATUS (server error)"
+            FAIL=$((FAIL + 1))
+          else
+            echo "  OK: SQL injection attempt → HTTP $STATUS"
+          fi
+
+          echo ""
+          if [ $FAIL -gt 0 ]; then
+            echo "WARN: $FAIL malformed request test(s) caused server errors"
+          else
+            echo "PASS: All malformed requests handled gracefully"
+          fi
+
+      # ZRP-J-005: Cold start under load
+      - name: "ZRP-J-005: Cold start verification"
+        run: |
+          echo "=== ZRP-J-005: Cold Start Verification ==="
+          URL="${{ env.STAGING_URL }}"
+
+          # Send 5 rapid requests to test cold start behavior
+          echo "Sending 5 rapid requests to /api/v1/pos/health..."
+          TOTAL_MS=0
+          MAX_MS=0
+          for i in 1 2 3 4 5; do
+            LATENCY=$(curl -sf --max-time 30 -o /dev/null -w "%{time_total}" \
+              "$URL/api/v1/pos/health" 2>/dev/null || echo "30")
+            LATENCY_MS=$(echo "$LATENCY" | awk '{printf "%.0f", $1 * 1000}')
+            TOTAL_MS=$((TOTAL_MS + LATENCY_MS))
+            if [ "$LATENCY_MS" -gt "$MAX_MS" ]; then
+              MAX_MS=$LATENCY_MS
+            fi
+            echo "  Request $i: ${LATENCY_MS}ms"
+          done
+          AVG_MS=$((TOTAL_MS / 5))
+          echo ""
+          echo "  Average: ${AVG_MS}ms, Max: ${MAX_MS}ms"
+          if [ "$MAX_MS" -gt 10000 ]; then
+            echo "WARN: Cold start may be slow (max ${MAX_MS}ms > 10s)"
+          else
+            echo "PASS: Response times acceptable"
+          fi
+
+      - name: Generate chaos test summary
+        if: always()
+        run: |
+          echo "## ZRP-J: Chaos Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Gate | Description | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ZRP-J-005 | Cold start verification | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ZRP-J-007 | Malformed request handling | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "*Remaining J gates (J-001 to J-004, J-006, J-008 to J-010) require k6 load testing infrastructure.*" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # Category K: 10K Store Readiness (Load Testing) — Scaffold
+  # ===========================================================================
+  load-tests:
+    name: "ZRP-K: 10K Store Readiness"
+    runs-on: ubuntu-latest
+    if: >
+      github.event.inputs.category == 'all' ||
+      github.event.inputs.category == 'load' ||
+      github.event_name == 'schedule'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ZRP-K: Scaffold — actual load tests require k6 + seed data
+      - name: "ZRP-K: Load test scaffold"
+        run: |
+          echo "=== ZRP Category K: 10K Store Readiness ==="
+          echo ""
+          echo "Load testing requires:"
+          echo "  1. k6 or artillery installed"
+          echo "  2. Staging database seeded with 10K stores"
+          echo "  3. Test user tokens for authenticated endpoints"
+          echo ""
+          echo "Pending gates:"
+          echo "  ZRP-K-001: 10K concurrent store sessions"
+          echo "  ZRP-K-002: Pagination on large datasets"
+          echo "  ZRP-K-003: Search performance at scale"
+          echo "  ZRP-K-004: Bulk operations (batch sync)"
+          echo "  ZRP-K-005: Database query performance"
+          echo "  ZRP-K-006: Connection pool exhaustion"
+          echo "  ZRP-K-007: Cache hit ratio under load"
+          echo "  ZRP-K-008: Memory usage growth"
+          echo "  ZRP-K-009: API rate limiting at scale"
+          echo "  ZRP-K-010: Concurrent migration safety"
+          echo ""
+          echo "STATUS: SCAFFOLD — implement when staging has test data"
+
+      - name: Generate load test summary
+        if: always()
+        run: |
+          echo "## ZRP-K: Load Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** SCAFFOLD — awaiting k6 setup and test data seeding" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Gate | Description | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ZRP-K-001 to K-010 | 10K Store Readiness | PENDING |" >> $GITHUB_STEP_SUMMARY

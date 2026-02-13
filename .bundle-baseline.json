@@ -1,0 +1,10 @@
+{
+  "description": "Frontend portal build size baselines. CI fails if any portal exceeds maxMB + 20% tolerance.",
+  "updated": "2026-02-14",
+  "portals": {
+    "retailer-admin": { "maxMB": 5, "buildDir": "retailer-admin/dist" },
+    "supermandi-superadmin": { "maxMB": 5, "buildDir": "supermandi-superadmin/dist" },
+    "supplier-portal": { "maxMB": 10, "buildDir": "supplier-portal/.next" },
+    "supermandi-landing": { "maxMB": 2, "buildDir": "supermandi-landing" }
+  }
+}

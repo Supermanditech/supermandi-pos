@@ -426,32 +426,209 @@ jobs:
           echo "Local smoke test PASSED"
 
   # ==========================================================================
+  # JOB 6: ZRP Category A — Git & Ticket Discipline (PR events only)
+  # ==========================================================================
+  git-discipline:
+    name: "ZRP: Git & Ticket Discipline"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run git discipline gate
+        env:
+          IS_PR: "true"
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BRANCH: ${{ github.head_ref }}
+          BASE_REF: origin/${{ github.base_ref }}
+        run: |
+          chmod +x scripts/gates/git-discipline.sh
+          bash scripts/gates/git-discipline.sh
+
+  # ==========================================================================
+  # JOB 7: ZRP Categories B+F — Security Audit
+  # ==========================================================================
+  security-audit:
+    name: "ZRP: Security Audit"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: |
+            retailer-admin/pnpm-lock.yaml
+            supermandi-superadmin/pnpm-lock.yaml
+            supplier-portal/pnpm-lock.yaml
+            backend/pnpm-lock.yaml
+
+      - name: Install dependencies (for audit)
+        run: |
+          cd backend && pnpm install --frozen-lockfile && cd ..
+          cd retailer-admin && pnpm install --frozen-lockfile && cd ..
+          cd supplier-portal && pnpm install --frozen-lockfile && cd ..
+          cd supermandi-superadmin && pnpm install --frozen-lockfile && cd ..
+
+      - name: Run security audit gate
+        run: |
+          chmod +x scripts/gates/security-audit.sh
+          bash scripts/gates/security-audit.sh
+
+  # ==========================================================================
+  # JOB 8: ZRP Category E — Migration Safety
+  # ==========================================================================
+  migration-safety:
+    name: "ZRP: Migration Safety"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run migration safety gate
+        env:
+          BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}
+        run: |
+          chmod +x scripts/gates/migration-safety.sh
+          bash scripts/gates/migration-safety.sh
+
+  # ==========================================================================
+  # JOB 9: ZRP Category D — Config Parity + Bundle Size + Dockerfile Lint
+  # ==========================================================================
+  config-parity:
+    name: "ZRP: Config Parity & Build Quality"
+    runs-on: ubuntu-latest
+    needs: [build-verify]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: |
+            retailer-admin/pnpm-lock.yaml
+            supermandi-superadmin/pnpm-lock.yaml
+            supplier-portal/pnpm-lock.yaml
+
+      # Rebuild portals for bundle size measurement
+      - name: Build retailer-admin
+        working-directory: retailer-admin
+        run: pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Build supermandi-superadmin
+        working-directory: supermandi-superadmin
+        run: pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Build supplier-portal
+        working-directory: supplier-portal
+        run: pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Run config parity gate
+        run: |
+          chmod +x scripts/gates/config-parity.sh
+          bash scripts/gates/config-parity.sh
+
+      - name: Run bundle size gate
+        run: |
+          chmod +x scripts/gates/bundle-size.sh
+          bash scripts/gates/bundle-size.sh
+
+      - name: Run Dockerfile lint gate
+        run: |
+          chmod +x scripts/gates/dockerfile-lint.sh
+          bash scripts/gates/dockerfile-lint.sh
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
     name: All Gates Passed
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, test, build-verify, local-smoke]
+    needs: [typecheck, lint, test, build-verify, local-smoke,
+            git-discipline, security-audit, migration-safety, config-parity]
     if: always()
     steps:
       - name: Check all jobs passed
         run: |
-          if [ "${{ needs.typecheck.result }}" != "success" ] || \
-             [ "${{ needs.lint.result }}" != "success" ] || \
-             [ "${{ needs.test.result }}" != "success" ] || \
-             [ "${{ needs.build-verify.result }}" != "success" ] || \
-             [ "${{ needs.local-smoke.result }}" != "success" ]; then
-            echo "❌ One or more gates failed"
-            echo "  typecheck: ${{ needs.typecheck.result }}"
-            echo "  lint: ${{ needs.lint.result }}"
-            echo "  test: ${{ needs.test.result }}"
-            echo "  build-verify: ${{ needs.build-verify.result }}"
-            echo "  local-smoke: ${{ needs.local-smoke.result }}"
+          # Core CI gates (must pass)
+          CORE_FAILED=0
+          for job in typecheck lint test build-verify local-smoke; do
+            RESULT=""
+            case "$job" in
+              typecheck)     RESULT="${{ needs.typecheck.result }}" ;;
+              lint)          RESULT="${{ needs.lint.result }}" ;;
+              test)          RESULT="${{ needs.test.result }}" ;;
+              build-verify)  RESULT="${{ needs.build-verify.result }}" ;;
+              local-smoke)   RESULT="${{ needs.local-smoke.result }}" ;;
+            esac
+            if [ "$RESULT" != "success" ]; then
+              echo "FAIL: $job = $RESULT"
+              CORE_FAILED=$((CORE_FAILED + 1))
+            else
+              echo "PASS: $job"
+            fi
+          done
+
+          # ZRP gates (must pass, except git-discipline which is skipped on push)
+          ZRP_FAILED=0
+
+          # git-discipline: required on PRs, skipped on push-to-main
+          GD_RESULT="${{ needs.git-discipline.result }}"
+          if [ "$GD_RESULT" = "success" ] || [ "$GD_RESULT" = "skipped" ]; then
+            echo "PASS: git-discipline ($GD_RESULT)"
+          else
+            echo "FAIL: git-discipline = $GD_RESULT"
+            ZRP_FAILED=$((ZRP_FAILED + 1))
+          fi
+
+          for job in security-audit migration-safety config-parity; do
+            RESULT=""
+            case "$job" in
+              security-audit)    RESULT="${{ needs.security-audit.result }}" ;;
+              migration-safety)  RESULT="${{ needs.migration-safety.result }}" ;;
+              config-parity)     RESULT="${{ needs.config-parity.result }}" ;;
+            esac
+            if [ "$RESULT" != "success" ]; then
+              echo "FAIL: $job = $RESULT"
+              ZRP_FAILED=$((ZRP_FAILED + 1))
+            else
+              echo "PASS: $job"
+            fi
+          done
+
+          TOTAL_FAILED=$((CORE_FAILED + ZRP_FAILED))
+          echo ""
+          if [ "$TOTAL_FAILED" -gt 0 ]; then
+            echo "════════════════════════════════════════════════════════════"
+            echo "BLOCKED: $TOTAL_FAILED gate(s) failed ($CORE_FAILED core + $ZRP_FAILED ZRP)"
+            echo "════════════════════════════════════════════════════════════"
             exit 1
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "✅ ALL CI GATES PASSED"
+          echo "ALL CI GATES PASSED (5 core + 4 ZRP)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."
