@@ -150,7 +150,7 @@ CORE_TABLES=("stores" "store_products" "inventory_ledger" "sales" "sale_items" "
 UNDER_INDEXED=0
 
 for table in "${CORE_TABLES[@]}"; do
-  IDX_COUNT=$(grep -icE "CREATE\s+(UNIQUE\s+)?INDEX.*\b${table}\b" "$MIGRATION_DIR"/*.sql 2>/dev/null | \
+  IDX_COUNT=$({ grep -icE "CREATE\s+(UNIQUE\s+)?INDEX.*\b${table}\b" "$MIGRATION_DIR"/*.sql 2>/dev/null || true; } | \
     awk -F: '{sum += $NF} END {print sum+0}')
   if [ "$IDX_COUNT" -lt 2 ]; then
     echo "  WARN: $table has only $IDX_COUNT index(es) (recommend >= 2)"

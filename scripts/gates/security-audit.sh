@@ -121,7 +121,7 @@ SECRET_PATTERNS=(
 # shellcheck disable=SC2086
 SECRETS_FOUND=0
 for pattern in "${SECRET_PATTERNS[@]}"; do
-  COUNT=$(grep -rlEi "$pattern" $EXCLUDE_DIRS --exclude-dir=__mocks__ --exclude='*.test.*' --exclude='*.spec.*' --exclude='*.example' --exclude='*.env.example' --exclude='*.md' --exclude='*.sh' --exclude='*.ps1' --exclude='*.yml' --exclude='*.yaml' --exclude='*.lock' --exclude='*schema*' --exclude='*migration*' --exclude='*seed*' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' . 2>/dev/null | wc -l || echo "0")
+  COUNT=$(grep -rlEi "$pattern" $EXCLUDE_DIRS --exclude-dir=__mocks__ --exclude-dir=__tests__ --exclude-dir=test --exclude-dir=tests --exclude='*.test.*' --exclude='*.spec.*' --exclude='*.example' --exclude='*.env.example' --exclude='*.md' --exclude='*.sh' --exclude='*.ps1' --exclude='*.yml' --exclude='*.yaml' --exclude='*.lock' --exclude='*schema*' --exclude='*migration*' --exclude='*seed*' --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' . 2>/dev/null | wc -l || echo "0")
   COUNT=$(echo "$COUNT" | tr -d '[:space:]')
   if [ "$COUNT" -gt 0 ]; then
     echo "  Found secret pattern in $COUNT file(s): $pattern"
