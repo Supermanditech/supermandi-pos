@@ -52,20 +52,21 @@ const app = express();
 // Trust proxy when behind nginx/load balancer (reads X-Forwarded-For correctly)
 // Set TRUST_PROXY_HOPS to the number of proxies in front (default: 1 for single nginx)
 const trustProxyHops = parseInt(process.env.TRUST_PROXY_HOPS || "1", 10);
-if (process.env.NODE_ENV === "production" || process.env.TRUST_PROXY === "true") {
+// STAGE-005: Enable trust proxy in staging too (Cloud Run + LB)
+if (process.env.NODE_ENV !== "development" || process.env.TRUST_PROXY === "true") {
   app.set("trust proxy", trustProxyHops);
   console.log(`[App] Trust proxy enabled (hops: ${trustProxyHops})`);
 }
 
 // ITER3-P0-001: Configure CORS with explicit allowed origins
-// ENV-FAILFAST-001: ALLOWED_ORIGINS required in production — no hardcoded domains
+// ENV-FAILFAST-001 + STAGE-005: ALLOWED_ORIGINS required in non-development
 const corsOptions: cors.CorsOptions = {
   origin: (() => {
     if (process.env.ALLOWED_ORIGINS) {
       return process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
     }
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[config] FATAL: ALLOWED_ORIGINS is required in production but not set');
+    if (process.env.NODE_ENV !== 'development') {
+      console.error(`[config] FATAL: ALLOWED_ORIGINS is required in ${process.env.NODE_ENV} but not set`);
       process.exit(1);
     }
     return true; // Allow all in development

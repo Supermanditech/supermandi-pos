@@ -1,11 +1,11 @@
 import app from "./app";
-import { ensureCoreSchema } from "./db/ensureSchema";
 import { logGcpValidationResults } from "./startup/validateGcp";
 import { startSyncCleanupScheduler } from "./services/syncCleanupScheduler";
 import { loadOnboardingConfig } from "./config/onboardingConfig";
 import { logger } from "./lib/logger";
 
-const PORT = process.env.PORT || 3001;
+// STAGE-012: Align PORT fallback with Dockerfile.main (ENV PORT=3010)
+const PORT = process.env.PORT || 3010;
 const HOST = process.env.HOST || "0.0.0.0";
 
 async function start(): Promise<void> {
@@ -19,21 +19,20 @@ async function start(): Promise<void> {
   // This catches configuration issues before services start accepting requests
   logGcpValidationResults();
 
-  // RO-009: Validate onboarding config (fail-fast in production)
+  // RO-009 + STAGE-005: Validate onboarding config (fail-fast in non-development)
   try {
     loadOnboardingConfig();
   } catch (err) {
     logger.error("Onboarding config validation failed", { error: String(err) });
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV !== "development") {
       process.exit(1);
     }
   }
 
-  try {
-    await ensureCoreSchema();
-  } catch (error) {
-    logger.error("Failed to ensure DB schema", { error: String(error) });
-  }
+  // STAGE-004: ensureCoreSchema() REMOVED — rely solely on migrate-prod.js
+  // The legacy 660-line DDL script conflicted with the migration system
+  // (different advisory lock IDs: 839201 vs 839271, concurrent table creation on scale-up).
+  // All schema changes MUST go through backend/migrations/*.sql files.
 
   const server = app.listen(Number(PORT), HOST, () => {
     logger.info(`SuperMandi backend listening on http://${HOST}:${PORT}`, { port: Number(PORT) });

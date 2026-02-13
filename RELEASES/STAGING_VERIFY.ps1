@@ -159,9 +159,9 @@ if ($urls["api-gateway"]) {
 Write-Host ""
 
 # =============================================================================
-# PHASE 5: Cloud SQL Connectivity (via backend health)
+# PHASE 5: Database Connectivity + Migration Verification (STAGE-006)
 # =============================================================================
-Write-Host "--- Phase 5: Database Connectivity ---" -ForegroundColor Yellow
+Write-Host "--- Phase 5: Database Connectivity + Migration Count ---" -ForegroundColor Yellow
 Write-Host ""
 
 if ($urls["main-backend"]) {
@@ -169,6 +169,27 @@ if ($urls["main-backend"]) {
     Write-Host "  (DB connectivity verified via main-backend /health)" -ForegroundColor Gray
     $PASS++
     $Results += [PSCustomObject]@{Test="DB connectivity"; Status="PASS"; Detail="Implied by main-backend health"}
+}
+
+# STAGE-006: Count expected migration files vs deployed migration count
+$migrationDir = Join-Path $PSScriptRoot ".." "backend" "migrations"
+$expectedFiles = @(Get-ChildItem -Path $migrationDir -Filter "*.sql" -ErrorAction SilentlyContinue)
+$expectedCount = $expectedFiles.Count
+
+if ($expectedCount -gt 0) {
+    Write-Host "  Migration files in repo: $expectedCount" -ForegroundColor Cyan
+
+    # Check migration count via main-backend endpoint (if /health exposes it)
+    # For now, log the expected count for operator verification
+    Write-Host "  IMPORTANT: Verify applied migrations match expected count ($expectedCount)" -ForegroundColor Yellow
+    Write-Host "  To verify: Connect to Cloud SQL and run:" -ForegroundColor Gray
+    Write-Host "    SELECT COUNT(*) FROM _migrations;" -ForegroundColor Gray
+    Write-Host "  Expected: $expectedCount" -ForegroundColor Gray
+    $WARN++
+    $Results += [PSCustomObject]@{Test="Migration count"; Status="WARN"; Detail="$expectedCount files in repo - verify against DB"}
+} else {
+    Write-Host "  WARN: Could not count migration files" -ForegroundColor Yellow
+    $WARN++
 }
 
 Write-Host ""
@@ -179,7 +200,8 @@ Write-Host ""
 Write-Host "--- Phase 6: Secret Manager ---" -ForegroundColor Yellow
 Write-Host ""
 
-foreach ($secret in @("postgres-password", "jwt-secret", "admin-token")) {
+# STAGE-006: Verify all 5 secrets (not just 3)
+foreach ($secret in @("postgres-password", "jwt-secret", "admin-token", "smtp-password", "database-url")) {
     try {
         $ver = gcloud secrets versions list $secret --project=$PROJECT --limit=1 --format="value(name)" 2>$null
         if ($ver) {

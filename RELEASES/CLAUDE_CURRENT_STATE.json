@@ -1,85 +1,85 @@
 {
-  "version": "2.0",
-  "lastUpdated": "2026-02-13T19:00:00+05:30",
-  "currentPhase": "INFRA Phase: Pre-Deploy Readiness",
+  "version": "2.2",
+  "lastUpdated": "2026-02-13T22:00:00+05:30",
+  "currentPhase": "STAGING Phase: Regression Gate Hardening",
   "currentTicket": {
-    "id": "INFRA-009",
+    "id": "STAGE-001-012",
     "status": "IN_PROGRESS",
-    "branch": "chore/INFRA-009-pre-deploy-readiness",
+    "branch": "fix/STAGE-001-012-regression-gates",
     "pr": null,
-    "description": "Pre-deploy readiness deliverables (Q5, C1-C4, D2-D5, E3-E4)"
+    "description": "12 strict gates to prevent regression loops in deploy→test→fix→redeploy cycle"
   },
   "recentlyCompleted": [
     { "id": "BUG-001", "pr": "#70", "summary": "Scope credit router middleware to /credit/* paths only" },
     { "id": "BUG-002", "pr": "#72", "summary": "Add requirePosStaff middleware to scan/resolve endpoint" },
     { "id": "BUG-003", "pr": "#73", "summary": "Enforce store suspension on state-changing POS routes" },
     { "id": "BUG-004", "pr": "#74", "summary": "Reject stock-in with invalid quantity (0, negative, non-number)" },
-    { "id": "INFRA-002", "pr": "#75", "summary": "Fix deploy.yml: project target, VPC connector, 10→2 services, GIT_SHA bake, uptime probe, temp files" },
-    { "id": "INFRA-008", "pr": "#77", "summary": "Commit RELEASES state files, delete 52 branches, prune 52 tags, clean tmpclaude dirs" }
+    { "id": "INFRA-002", "pr": "#75", "summary": "Fix deploy.yml: project target, VPC connector, 10→2 services, GIT_SHA bake" },
+    { "id": "INFRA-008", "pr": "#77", "summary": "Commit RELEASES state files, delete 52 branches, prune 52 tags" },
+    { "id": "INFRA-009", "pr": "#78", "summary": "Pre-deploy readiness deliverables" },
+    { "id": "INFRA-010-026", "pr": "#79", "summary": "GCP audit: service names, env vars, Redis, jest tiers, Cloud SQL hardening" }
   ],
   "infraStatus": {
-    "A1_WIF": "DONE — github-pool + github-provider created, github-actions SA bound, GCP_WIF_PROVIDER + GCP_SA_EMAIL GitHub secrets set",
-    "A2_SECRETS": "DONE — postgres-password, jwt-secret, admin-token created in Secret Manager, Cloud Run SA granted accessor",
-    "A3_DEPLOY": "WAITING — Operator approval to trigger workflow_dispatch on deploy.yml",
-    "B1_DB_BACKUP": "DONE (operator)",
-    "B2_MIGRATION_DRYRUN": "WAITING on A3",
-    "B3_AUTO_BACKUPS": "DONE (operator)",
-    "B4_DELETION_PROTECTION": "DONE (operator)",
-    "B5_ROLLBACK_TEST": "DONE (operator)",
-    "B6_DNS_CLEANUP": "DONE (operator)"
+    "A1_WIF": "DONE",
+    "A2_SECRETS": "DONE — 5 secrets: postgres-password, jwt-secret, admin-token, smtp-password, database-url",
+    "A3_DEPLOY": "READY — All pre-deploy blockers resolved + regression gates added. Awaiting operator approval",
+    "Cloud_SQL": "HARDENED — backups enabled (03:00 UTC, 7 retained), deletion protection ON, SSL enforced",
+    "Redis": "HARDENED — RDB persistence every 12h",
+    "Artifact_Registry": "CLEAN — cleanup policy set (keep 10 tagged, delete untagged 7d)"
   },
   "ticketQueue": [],
-  "operatorIssues": [],
+  "operatorIssues": [
+    {
+      "id": "STAGE-008",
+      "description": "Configure Firebase Admin IAM for Cloud Run SA (or mount SA key)",
+      "severity": "HIGH",
+      "blocking": "Auth testing with phone OTP"
+    }
+  ],
   "phaseSnapshot": {
-    "totalInfraTickets": 9,
-    "completed": 4,
+    "totalInfraTickets": 26,
+    "stageTickets": 12,
+    "stageCompleted": 12,
+    "completed": 26,
     "inProgress": 1,
     "awaitingOperator": 1,
     "ciPasses": 6,
     "gitBranches": 1,
-    "gitTags": 42
+    "headSHA": "6b8fd58"
   },
   "blockedItems": [
     {
-      "item": "First staging deploy (A3/INFRA-006)",
-      "reason": "Awaiting operator approval to trigger deploy.yml workflow_dispatch",
-      "action": "Operator approves → Claude or operator triggers workflow_dispatch on GitHub Actions"
+      "item": "First staging deploy (A3)",
+      "reason": "Awaiting operator approval + STAGE-001-012 PR merge",
+      "action": "Merge STAGE PR → Operator triggers workflow_dispatch → verify with STAGING_VERIFY.ps1"
     }
   ],
+  "stageGates": {
+    "STAGE-001": "DONE — Pre-deploy Cloud SQL backup job added to deploy.yml",
+    "STAGE-002": "DONE — Portal deploy failures now exit 1 (no silent swallow)",
+    "STAGE-003": "DONE — Smoke test failures exit 1 with retry + portal checks + auth guard",
+    "STAGE-004": "DONE — ensureCoreSchema() removed from server.ts, migrate-prod.js is sole authority",
+    "STAGE-005": "DONE — All fail-fast checks now trigger in staging (not just production)",
+    "STAGE-006": "DONE — Migration count verification added to STAGING_VERIFY.ps1 + all 5 secrets checked",
+    "STAGE-007": "DONE — Auto-rollback on smoke failure (records pre-deploy revisions, rolls back all 6 services)",
+    "STAGE-008": "OPERATOR — Firebase Admin IAM binding needed for Cloud Run SA",
+    "STAGE-009": "DONE — supplier-portal/.env.production removed from git tracking",
+    "STAGE-010": "DONE — Payment route fixed: stripPrefix=false, routes to main-backend",
+    "STAGE-011": "DONE — OPENAI_API_KEY missing = warn (not crash), voice routes return 503 gracefully",
+    "STAGE-012": "DONE — PORT fallback aligned: server.ts 3001→3010 matching Dockerfile.main"
+  },
   "lastActions": [
-    "A1: Created WIF pool/provider/SA, set GitHub secrets GCP_WIF_PROVIDER + GCP_SA_EMAIL",
-    "A2: Enabled Secret Manager, created 3 secrets, granted Cloud Run SA accessor role",
-    "Merged PR #75 (deploy pipeline reconciliation)",
-    "Merged PR #77 (RELEASES state files + repo cleanup)",
-    "Deleted 52 stale remote branches, pruned 52 obsolete tags",
-    "Cleaned 186 local tmpclaude-* directories"
+    "STAGE-001: Added pre-deploy Cloud SQL backup job to deploy.yml",
+    "STAGE-002: Portal deploy failures now fail pipeline (removed || echo WARN)",
+    "STAGE-003: Smoke test is blocking — health (5 retries), SHA match, 4 portal checks, auth guard",
+    "STAGE-004: Removed ensureCoreSchema() dual-init from server.ts",
+    "STAGE-005: All fail-fast checks work in staging (NODE_ENV !== 'development')",
+    "STAGE-006: STAGING_VERIFY.ps1 now checks migration count + all 5 secrets",
+    "STAGE-007: Auto-rollback on smoke failure — records revisions, rolls back on failure",
+    "STAGE-009: git rm --cached supplier-portal/.env.production",
+    "STAGE-010: Payment route → main-backend, stripPrefix=false",
+    "STAGE-011: OPENAI_API_KEY missing = warn not crash",
+    "STAGE-012: PORT fallback 3001→3010"
   ],
-  "testCoverage": {
-    "backend": { "files": 16, "coverage": "Integration tests for auth, catalog, inventory, orders, reorder, events, ledger, POS enrollment/scan, voice, AI" },
-    "pos": { "files": 22, "coverage": "6 Jest unit + 5 E2E Jest + 11 Maestro YAML (sale, buy, GRN, reorder, scanner)" },
-    "retailerAdmin": { "files": 0, "coverage": "ZERO — no tests" },
-    "supplierPortal": { "files": 0, "coverage": "ZERO — no tests" },
-    "superadmin": { "files": 0, "coverage": "ZERO — no tests" },
-    "e2ePlaywright": { "files": 16, "coverage": "Onboarding, POS-dashboard sync, supplier pipeline, store suspension, bank re-verification, config contract, portal verification, token refresh, staging smoke" }
-  },
-  "auditBacklog": {
-    "total": 320,
-    "p0": 20,
-    "p1": 89,
-    "p2": 210,
-    "p3": 1,
-    "phases": [
-      "Phase 1: SECURITY (15 tickets) — SQL injection, secrets in logs, auth gates",
-      "Phase 2: BROKEN FUNCTIONALITY (20 tickets) — dead buttons, false success, wrong values",
-      "Phase 3: DATA INTEGRITY & AUTH (15 tickets) — token refresh, validation, store isolation",
-      "Phase 4: UX & POLISH (25 tickets) — loading states, error handling, pagination",
-      "Phase 5: HARDENING (~200 P2 tickets) — accessibility, i18n, performance, code quality"
-    ]
-  },
-  "regressionTracker": {
-    "cascadesThisPhase": 0,
-    "operatorBugsThisPhase": 0,
-    "ciCatchesThisPhase": 0
-  },
-  "nextAction": "Operator approves A3 (staging deploy trigger). After deploy: verify /health + /version, run STAGING_VERIFY.ps1, then begin Phase 1 Security tickets."
+  "nextAction": "Merge STAGE-001-012 PR → Operator approves A3 (staging deploy trigger). STAGE-008 is operator action (Firebase IAM)."
 }

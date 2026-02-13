@@ -31,20 +31,6 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
 }
 
 /**
- * CR-SVCURL-001: Fail-fast in production if required service URLs are missing.
- * In development, falls back to localhost defaults for convenience.
- */
-function requireServiceUrl(envKey: string, localDefault: string): string {
-  const url = process.env[envKey];
-  if (url) return url;
-  if (process.env['NODE_ENV'] === 'production') {
-    console.error(`[config] FATAL: ${envKey} is required in production but not set`);
-    process.exit(1);
-  }
-  return localDefault;
-}
-
-/**
  * RCAT-DEPLOY-001: Get main backend URL with proper fallback chain
  * 1. ADMIN_SERVICE_URL (primary)
  * 2. POS_SERVICE_URL (alias)
@@ -56,19 +42,12 @@ function getMainBackendUrl(): string {
     || process.env['POS_SERVICE_URL']
     || process.env['BACKEND_SERVICE_URL'];
   if (url) return url;
-  if (process.env['NODE_ENV'] === 'production') {
-    console.error('[config] FATAL: ADMIN_SERVICE_URL is required in production but not set');
+  // STAGE-005: Fail-fast in staging AND production (not just production)
+  if (process.env['NODE_ENV'] !== 'development') {
+    console.error(`[config] FATAL: ADMIN_SERVICE_URL is required in ${process.env['NODE_ENV']} but not set`);
     process.exit(1);
   }
   return 'http://localhost:3010';
-}
-
-/**
- * SM-004: Get payment service URL
- * CR-SVCURL-001: Fail-fast in production
- */
-function getPaymentServiceUrl(): string {
-  return requireServiceUrl('PAYMENT_SERVICE_URL', 'http://localhost:3011');
 }
 
 
@@ -363,13 +342,15 @@ export const config: GatewayConfig = {
     // 1. Health checks via /api/v1/payments/health
     // 2. Future microservice migration
     //
-    // SM-004: Payment service routes -> payment-service microservice (FUTURE USE)
+    // SM-004 + STAGE-010: Payment routes -> main-backend (future microservice extraction)
+    // stripPrefix: false — main-backend expects the full /api/v1/payments/* path.
+    // Using getMainBackendUrl() since payment-service is not deployed (scaffolded only).
     // ==========================================================================
     {
       name: 'payments',
-      url: getPaymentServiceUrl(),
+      url: getMainBackendUrl(),
       pathPrefix: '/api/v1/payments',
-      stripPrefix: true,
+      stripPrefix: false,
     },
   ],
 };

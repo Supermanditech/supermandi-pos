@@ -26,9 +26,9 @@ function loadOpenAIApiKey(): string {
     console.log('[OpenAI] API key loaded from environment variable');
     return envKey;
   }
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[OpenAI] FATAL: OPENAI_API_KEY is required in production but not set');
-    process.exit(1);
+  // STAGE-011: Warn in staging (don't crash — voice is not core to staging testing)
+  if (process.env.NODE_ENV !== 'development') {
+    console.warn(`[OpenAI] WARN: OPENAI_API_KEY not set in ${process.env.NODE_ENV}. Voice/AI features will return 503.`);
   }
   return '';
 }
