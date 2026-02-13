@@ -13,7 +13,10 @@ export const posCreditRouter = Router();
 // Must remain disabled until real KYC integration is ready.
 const CREDIT_ENABLED = process.env.CREDIT_ENABLED === "true";
 
-posCreditRouter.use((_req: Request, res: Response, next) => {
+// BUG-001: Scope gate to /credit/* paths only.
+// Previously this was a blanket .use() that blocked ALL POS routes
+// mounted after posCreditRouter in index.ts (dues, staff, tokens, translations).
+posCreditRouter.use("/credit", (_req: Request, res: Response, next) => {
   if (!CREDIT_ENABLED) {
     return res.status(403).json({
       success: false,
