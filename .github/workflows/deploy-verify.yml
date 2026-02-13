@@ -123,6 +123,8 @@ jobs:
         working-directory: e2e-tests
         env:
           BASE_URL: ${{ env.TARGET_URL }}
+          API_BASE_URL: ${{ env.TARGET_URL }}
+          STAGING: 'true'
         run: |
           npx playwright test --project=chromium --reporter=html,json
 
