@@ -505,19 +505,28 @@ jobs:
           echo "BLOCKED: Staging is unhealthy. Deploy has failed."
           exit 1
 
+      # STAGE-016: Retry version check — new revision needs cold-start time after deploy
       - name: Version SHA check (BLOCKING)
         if: steps.url.outputs.gateway_url != ''
         run: |
           URL="${{ steps.url.outputs.gateway_url }}"
-          VERSION=$(curl -sf "$URL/version" 2>/dev/null || echo "{}")
-          echo "Version response: $VERSION"
-          if echo "$VERSION" | grep -q "${{ env.SHA }}"; then
-            echo "PASS: SHA matches deployed version"
-          else
-            echo "FATAL: SHA mismatch — expected ${{ env.SHA }} in /version response"
-            echo "BLOCKED: Deployed code does not match expected SHA. Possible stale revision."
-            exit 1
-          fi
+          EXPECTED="${{ env.SHA }}"
+          echo "Checking version SHA at $URL/version (expecting $EXPECTED)..."
+          for attempt in 1 2 3 4 5; do
+            VERSION=$(curl -sf "$URL/version" 2>/dev/null || echo "{}")
+            echo "  Attempt $attempt: $VERSION"
+            if echo "$VERSION" | grep -q "$EXPECTED"; then
+              echo "PASS: SHA matches deployed version"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "  SHA not yet matching (cold-start lag). Retrying in 10s..."
+              sleep 10
+            fi
+          done
+          echo "FATAL: SHA mismatch after 5 attempts — expected $EXPECTED in /version response"
+          echo "BLOCKED: Deployed code does not match expected SHA. Possible stale revision."
+          exit 1
 
       # STAGE-015: Follow redirects (-L) because SPA portals redirect / → base path
       # retailer-admin → /retailer/, superadmin → /admin/, supplier-portal → Next.js redirect
