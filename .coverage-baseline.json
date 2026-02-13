@@ -1,0 +1,7 @@
+{
+  "description": "Minimum line coverage floors for critical backend packages",
+  "thresholds": {
+    "global": 20
+  },
+  "note": "Start conservative at 20%. Increase as coverage improves. Gate warns if coverage report not found."
+}
