@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { getPool } from "../../../db/client";
 import {
   createStoreProductFromDigitisation,
@@ -97,7 +98,8 @@ function isConflictResult(result: CreateStoreProductResult): result is ConflictR
  *   "message": "Sell price must be positive"
  * }
  */
-posStoreProductsRouter.post("/store-products", requireDeviceToken, async (req, res) => {
+// BUG-003: Enforce store must be ACTIVE for product creation
+posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
 
   // AUD-073-A FIX: Extract variant and packSize from request body
@@ -679,7 +681,7 @@ posStoreProductsRouter.get("/store-products/freshness", requireDeviceToken, asyn
  * Update sell price for a store product (by barcode or productId)
  * Used when POS user edits price inline
  */
-posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async (req, res) => {
+posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   // ITER3-001: Accept storeProductId in addition to barcode/productId
   const { barcode, productId, storeProductId, sellPrice } = req.body as {
@@ -792,7 +794,7 @@ posStoreProductsRouter.patch("/store-products/price", requireDeviceToken, async 
  * Sets absolute stock level with ledger audit trail
  * Used when POS user updates stock from product detail view
  */
-posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async (req, res) => {
+posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   // ITER3-001: Accept storeProductId in addition to productId/barcode
   // RET-POS-SYNC-012: Accept stockUpdatedAt for LWW conflict detection
@@ -923,7 +925,7 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, async 
  * Uses barcode/productId fallback when storeProductId is unavailable (offline-first, last-write-wins).
  * IMPORTANT: This literal route MUST be defined BEFORE the parametric /:storeProductId/metadata route.
  */
-posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, async (req, res) => {
+posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   const { barcode, productId, storeProductId, displayName, purchasePrice, sellPrice, brand, mode, metadataUpdatedAt } = req.body as {
     barcode?: string;
@@ -1151,7 +1153,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, asy
  * SYNC-PRD-001: Update product metadata (display name) from POS (legacy path-param endpoint)
  * Last-write-wins: server sets metadata_updated_at = NOW() on every write
  */
-posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, async (req, res) => {
+posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", requireDeviceToken, requireActiveStore, async (req, res) => {
   const { storeId } = (req as any).posDevice as { storeId: string };
   const { storeProductId } = req.params;
   const { displayName, purchasePrice, brand, metadataUpdatedAt } = req.body as {

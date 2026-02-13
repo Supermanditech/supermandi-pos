@@ -8,6 +8,7 @@ import {
 } from "../../../services/posScanStore";
 import { resolveScanForDigitisation } from "../../../services/storeProductDigitisationService";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { requirePosStaff } from "../../../middleware/posStaff";
 
 export const posScanRouter = Router();
@@ -97,7 +98,8 @@ function validateBarcodeFormat(barcode: string): { valid: boolean; error?: strin
  * GO-LIVE-041: Barcode format validation applied
  */
 // BUG-002: Added requirePosStaff to validate x-staff-id header against platform.store_staff
-posScanRouter.post("/scan/resolve", requireDeviceToken, requirePosStaff, scanRateLimiter, async (req, res) => {
+// BUG-003: Added requireActiveStore to enforce store suspension
+posScanRouter.post("/scan/resolve", requireDeviceToken, requireActiveStore, requirePosStaff, scanRateLimiter, async (req, res) => {
   const { storeId, deviceId } = (req as any).posDevice as { storeId: string; deviceId: string };
 
   // Detect request format
@@ -157,7 +159,8 @@ posScanRouter.post("/scan/resolve", requireDeviceToken, requirePosStaff, scanRat
 
 // POST /api/v1/pos/products/price
 // GO-LIVE-040: Rate limited
-posScanRouter.post("/products/price", requireDeviceToken, scanRateLimiter, async (req, res) => {
+// BUG-003: Added requireActiveStore to enforce store suspension
+posScanRouter.post("/products/price", requireDeviceToken, requireActiveStore, scanRateLimiter, async (req, res) => {
   const { productId, priceMinor } = req.body as {
     productId?: string;
     priceMinor?: number;

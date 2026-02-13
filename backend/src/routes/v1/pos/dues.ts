@@ -4,6 +4,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 
 export const posDuesRouter = Router();
 
@@ -89,7 +90,8 @@ posDuesRouter.get("/dues", requireDeviceToken, async (req: Request, res: Respons
  * Record a partial or full payment on a due.
  * Body: { amountMinor: number }
  */
-posDuesRouter.post("/dues/:dueId/pay", requireDeviceToken, async (req: Request, res: Response) => {
+// BUG-003: Enforce store must be ACTIVE for due payments
+posDuesRouter.post("/dues/:dueId/pay", requireDeviceToken, requireActiveStore, async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 

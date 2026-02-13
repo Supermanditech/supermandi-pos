@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { createPurchase, type PurchaseItemInput } from "../../../services/purchaseService";
 
 export const posPurchasesRouter = Router();
 
-posPurchasesRouter.post("/purchases", requireDeviceToken, async (req, res) => {
+// BUG-003: Enforce store must be ACTIVE for purchases
+posPurchasesRouter.post("/purchases", requireDeviceToken, requireActiveStore, async (req, res) => {
   // SA-P0-004: Accept supplierGstin for GSTIN tracking
   const { items, supplierName, supplierGstin, currency, purchaseId } = req.body as {
     items?: Array<{
