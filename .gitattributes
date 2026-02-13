@@ -1,0 +1,8 @@
+# Force LF line endings for shell scripts (critical for CI on Linux)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Force LF for other CI/script files
+Dockerfile* text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
