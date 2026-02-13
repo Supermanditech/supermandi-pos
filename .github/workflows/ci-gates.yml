@@ -256,8 +256,12 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
         run: pnpm run migrate:up
 
-      # INFRA-013: Run ALL backend tests, not just one file.
-      # Previous: --testPathPattern='categoryAutoAssignment' (only 1 of 16 test files)
+      # INFRA-013: Run all CI-compatible backend tests.
+      # jest.config.ts auto-detects infrastructure:
+      #   - Tier 2 (CI): DB + Redis available, no running server → runs unit + DB tests
+      #   - Tier 3 (local-prod): API_GATEWAY_URL set → runs ALL tests incl. E2E
+      # E2E tests (goldenPath, auth, catalog, etc.) need a running API gateway
+      # and are verified via staging deploy verification, not CI.
       - name: Test backend (with Postgres + Redis)
         working-directory: backend
         env:
