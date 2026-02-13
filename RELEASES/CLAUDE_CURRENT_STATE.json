@@ -1,14 +1,8 @@
 {
-  "version": "2.2",
-  "lastUpdated": "2026-02-13T22:00:00+05:30",
-  "currentPhase": "STAGING Phase: Regression Gate Hardening",
-  "currentTicket": {
-    "id": "STAGE-001-012",
-    "status": "IN_PROGRESS",
-    "branch": "fix/STAGE-001-012-regression-gates",
-    "pr": null,
-    "description": "12 strict gates to prevent regression loops in deploy→test→fix→redeploy cycle"
-  },
+  "version": "2.3",
+  "lastUpdated": "2026-02-14T03:00:00+05:30",
+  "currentPhase": "STAGING Phase: Pre-Deploy Parity Audit Complete",
+  "currentTicket": null,
   "recentlyCompleted": [
     { "id": "BUG-001", "pr": "#70", "summary": "Scope credit router middleware to /credit/* paths only" },
     { "id": "BUG-002", "pr": "#72", "summary": "Add requirePosStaff middleware to scan/resolve endpoint" },
@@ -17,69 +11,80 @@
     { "id": "INFRA-002", "pr": "#75", "summary": "Fix deploy.yml: project target, VPC connector, 10→2 services, GIT_SHA bake" },
     { "id": "INFRA-008", "pr": "#77", "summary": "Commit RELEASES state files, delete 52 branches, prune 52 tags" },
     { "id": "INFRA-009", "pr": "#78", "summary": "Pre-deploy readiness deliverables" },
-    { "id": "INFRA-010-026", "pr": "#79", "summary": "GCP audit: service names, env vars, Redis, jest tiers, Cloud SQL hardening" }
+    { "id": "INFRA-010-026", "pr": "#79", "summary": "GCP audit: service names, env vars, Redis, jest tiers, Cloud SQL hardening" },
+    { "id": "STAGE-001-012", "pr": "#80", "summary": "12 strict gates enforced: backup, fail-fast, smoke, rollback, secrets, CORS" },
+    { "id": "INFRA-027", "pr": null, "summary": "Deleted 58 stale Cloud Run revisions (kept last 3 per service)" }
   ],
   "infraStatus": {
     "A1_WIF": "DONE",
-    "A2_SECRETS": "DONE — 5 secrets: postgres-password, jwt-secret, admin-token, smtp-password, database-url",
-    "A3_DEPLOY": "READY — All pre-deploy blockers resolved + regression gates added. Awaiting operator approval",
+    "A2_SECRETS": "DONE — 5 secrets exist in Secret Manager (NOT mounted to current deployment — plain-text env vars)",
+    "A3_DEPLOY": "READY — PR #80 merged. Pipeline will mount secrets + fix CORS + set NODE_ENV=staging on first deploy",
     "Cloud_SQL": "HARDENED — backups enabled (03:00 UTC, 7 retained), deletion protection ON, SSL enforced",
     "Redis": "HARDENED — RDB persistence every 12h",
-    "Artifact_Registry": "CLEAN — cleanup policy set (keep 10 tagged, delete untagged 7d)"
+    "Artifact_Registry": "CLEAN — cleanup policy set (keep 10 tagged, delete untagged 7d)",
+    "Revisions": "CLEANED — 58 stale revisions deleted, 17 kept (3 per service)"
   },
-  "ticketQueue": [],
+  "parityAudit": {
+    "status": "COMPLETE — ZERO PARITY with new rules",
+    "findings": [
+      "All 6 services are 45-54 commits behind HEAD (a8ac1f5)",
+      "All secrets are plain-text env vars (Secret Manager exists but not mounted)",
+      "CORS/ALLOWED_ORIGINS = * (wildcard) on both api-gateway and main-backend",
+      "NODE_ENV = production (should be staging)",
+      "api-gateway has no VPC connector",
+      "api-gateway GIT_SHA env (01ffbc0) doesn't match image tag (88d6dc2)",
+      "Firebase cross-project IAM: compute SA has ZERO permissions on supermandi-pos project"
+    ],
+    "recommendation": "Full redeploy via CI/CD. DO NOT patch existing deployment."
+  },
   "operatorIssues": [
     {
-      "id": "STAGE-008",
-      "description": "Configure Firebase Admin IAM for Cloud Run SA (or mount SA key)",
+      "id": "STAGE-008 / INFRA-028",
+      "description": "Firebase cross-project IAM: grant supermandi-backend compute SA access to supermandi-pos Firebase",
       "severity": "HIGH",
-      "blocking": "Auth testing with phone OTP"
+      "blocking": "Phone OTP auth on staging",
+      "fix": "gcloud projects add-iam-policy-binding supermandi-pos --member=serviceAccount:807429885586-compute@developer.gserviceaccount.com --role=roles/firebaseauth.admin"
     }
   ],
+  "ticketQueue": [],
   "phaseSnapshot": {
-    "totalInfraTickets": 26,
+    "totalInfraTickets": 28,
     "stageTickets": 12,
     "stageCompleted": 12,
-    "completed": 26,
-    "inProgress": 1,
+    "completed": 28,
+    "inProgress": 0,
     "awaitingOperator": 1,
-    "ciPasses": 6,
-    "gitBranches": 1,
-    "headSHA": "6b8fd58"
+    "ciPasses": 7,
+    "gitBranches": 0,
+    "headSHA": "a8ac1f5"
   },
   "blockedItems": [
     {
       "item": "First staging deploy (A3)",
-      "reason": "Awaiting operator approval + STAGE-001-012 PR merge",
-      "action": "Merge STAGE PR → Operator triggers workflow_dispatch → verify with STAGING_VERIFY.ps1"
+      "reason": "Awaiting operator trigger (workflow_dispatch). STAGE-008 blocks OTP testing only.",
+      "action": "Operator triggers deploy.yml workflow_dispatch on main → verify with STAGING_VERIFY.ps1"
     }
   ],
   "stageGates": {
-    "STAGE-001": "DONE — Pre-deploy Cloud SQL backup job added to deploy.yml",
-    "STAGE-002": "DONE — Portal deploy failures now exit 1 (no silent swallow)",
-    "STAGE-003": "DONE — Smoke test failures exit 1 with retry + portal checks + auth guard",
-    "STAGE-004": "DONE — ensureCoreSchema() removed from server.ts, migrate-prod.js is sole authority",
-    "STAGE-005": "DONE — All fail-fast checks now trigger in staging (not just production)",
-    "STAGE-006": "DONE — Migration count verification added to STAGING_VERIFY.ps1 + all 5 secrets checked",
-    "STAGE-007": "DONE — Auto-rollback on smoke failure (records pre-deploy revisions, rolls back all 6 services)",
-    "STAGE-008": "OPERATOR — Firebase Admin IAM binding needed for Cloud Run SA",
-    "STAGE-009": "DONE — supplier-portal/.env.production removed from git tracking",
-    "STAGE-010": "DONE — Payment route fixed: stripPrefix=false, routes to main-backend",
-    "STAGE-011": "DONE — OPENAI_API_KEY missing = warn (not crash), voice routes return 503 gracefully",
-    "STAGE-012": "DONE — PORT fallback aligned: server.ts 3001→3010 matching Dockerfile.main"
+    "STAGE-001": "MERGED — Pre-deploy Cloud SQL backup job in deploy.yml",
+    "STAGE-002": "MERGED — Portal deploy failures now exit 1",
+    "STAGE-003": "MERGED — Smoke test failures exit 1 with retry + portal checks + auth guard",
+    "STAGE-004": "MERGED — ensureCoreSchema() removed, migrate-prod.js is sole authority",
+    "STAGE-005": "MERGED — All fail-fast checks trigger in staging (NODE_ENV !== development)",
+    "STAGE-006": "MERGED — Migration count + 5-secret verification in STAGING_VERIFY.ps1",
+    "STAGE-007": "MERGED — Auto-rollback on smoke failure",
+    "STAGE-008": "OPERATOR — Firebase cross-project IAM needed (supermandi-backend SA → supermandi-pos)",
+    "STAGE-009": "MERGED — supplier-portal/.env.production removed from git tracking",
+    "STAGE-010": "MERGED — Payment route fixed: stripPrefix=false, routes to main-backend",
+    "STAGE-011": "MERGED — OPENAI_API_KEY missing = warn not crash",
+    "STAGE-012": "MERGED — PORT fallback 3001→3010"
   },
   "lastActions": [
-    "STAGE-001: Added pre-deploy Cloud SQL backup job to deploy.yml",
-    "STAGE-002: Portal deploy failures now fail pipeline (removed || echo WARN)",
-    "STAGE-003: Smoke test is blocking — health (5 retries), SHA match, 4 portal checks, auth guard",
-    "STAGE-004: Removed ensureCoreSchema() dual-init from server.ts",
-    "STAGE-005: All fail-fast checks work in staging (NODE_ENV !== 'development')",
-    "STAGE-006: STAGING_VERIFY.ps1 now checks migration count + all 5 secrets",
-    "STAGE-007: Auto-rollback on smoke failure — records revisions, rolls back on failure",
-    "STAGE-009: git rm --cached supplier-portal/.env.production",
-    "STAGE-010: Payment route → main-backend, stripPrefix=false",
-    "STAGE-011: OPENAI_API_KEY missing = warn not crash",
-    "STAGE-012: PORT fallback 3001→3010"
+    "PR #80 merged (a8ac1f5): 12 strict staging gates enforced",
+    "Parity audit: existing deployment has ZERO parity (7 critical gaps)",
+    "INFRA-027: 58 stale Cloud Run revisions deleted (kept 3 per service)",
+    "INFRA-028: Confirmed compute SA has no cross-project Firebase IAM",
+    "State file updated to v2.3"
   ],
-  "nextAction": "Merge STAGE-001-012 PR → Operator approves A3 (staging deploy trigger). STAGE-008 is operator action (Firebase IAM)."
+  "nextAction": "Operator: (1) Run STAGE-008 fix command for Firebase IAM, (2) Trigger workflow_dispatch to deploy. Claude will verify with STAGING_VERIFY.ps1 after deploy."
 }
