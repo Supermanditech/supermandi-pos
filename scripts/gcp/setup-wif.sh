@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 GITHUB_ORG="${GITHUB_ORG:-}"
 GITHUB_REPO="${GITHUB_REPO:-supermandi-pos}"
 POOL_NAME="github-pool"

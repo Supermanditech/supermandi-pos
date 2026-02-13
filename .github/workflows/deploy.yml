@@ -18,9 +18,9 @@ on:
         type: string
 
 env:
-  GCP_PROJECT: supermandi-pos
+  GCP_PROJECT: supermandi-backend
   GCP_REGION: asia-south1
-  AR_REPO: asia-south1-docker.pkg.dev/supermandi-pos/supermandi
+  AR_REPO: asia-south1-docker.pkg.dev/supermandi-backend/supermandi
 
 concurrency:
   group: deploy-staging
@@ -64,7 +64,8 @@ jobs:
           echo "App version: $APP_VERSION"
 
   # ==========================================================================
-  # Build all 14 Docker images and push to Artifact Registry
+  # Build all 6 Docker images and push to Artifact Registry
+  # (2 backend: api-gateway + main-backend, 4 frontends)
   # ==========================================================================
   build-push:
     name: Build & Push Images
@@ -94,24 +95,28 @@ jobs:
       - name: Set build time
         run: echo "BUILD_TIME=$(date -Iseconds)" >> "$GITHUB_ENV"
 
-      # --- Backend services (10 images) ---
-      - name: Build backend images
+      # --- Backend services (2 images: api-gateway + main-backend) ---
+      - name: Build api-gateway
         run: |
-          SERVICES=(
-            api-gateway auth-service catalog-service inventory-service
-            order-service payment-service platform-service reorder-service
-            supplier-service voice-service
-          )
-          for svc in "${SERVICES[@]}"; do
-            echo "--- Building: $svc"
-            docker build \
-              -t "${{ env.AR_REPO }}/${svc}:${{ env.SHA }}" \
-              -f "backend/services/${svc}/Dockerfile" \
-              --build-arg GIT_SHA="${{ env.SHA }}" \
-              --build-arg BUILD_TIME="${{ env.BUILD_TIME }}" \
-              backend/
-            echo "    OK: $svc"
-          done
+          echo "--- Building: api-gateway"
+          docker build \
+            -t "${{ env.AR_REPO }}/api-gateway:${{ env.SHA }}" \
+            -f "backend/services/api-gateway/Dockerfile" \
+            --build-arg GIT_SHA="${{ env.SHA }}" \
+            --build-arg BUILD_TIME="${{ env.BUILD_TIME }}" \
+            backend/
+          echo "    OK: api-gateway"
+
+      - name: Build main-backend
+        run: |
+          echo "--- Building: main-backend"
+          docker build \
+            -t "${{ env.AR_REPO }}/main-backend:${{ env.SHA }}" \
+            -f "backend/Dockerfile.main" \
+            --build-arg GIT_SHA="${{ env.SHA }}" \
+            --build-arg BUILD_TIME="${{ env.BUILD_TIME }}" \
+            backend/
+          echo "    OK: main-backend"
 
       # --- Frontend portals (4 images) ---
       # STAGING-FIREBASE-001: Firebase config injected at build time for phone OTP
@@ -158,13 +163,11 @@ jobs:
             -f supermandi-landing/Dockerfile \
             supermandi-landing/
 
-      # --- Push all images ---
+      # --- Push all 6 images ---
       - name: Push all images to AR
         run: |
           IMAGES=(
-            api-gateway auth-service catalog-service inventory-service
-            order-service payment-service platform-service reorder-service
-            supplier-service voice-service
+            api-gateway main-backend
             retailer-admin supplier-portal superadmin landing
           )
           PASSED=0
@@ -188,9 +191,7 @@ jobs:
       - name: Capture image digests
         run: |
           IMAGES=(
-            api-gateway auth-service catalog-service inventory-service
-            order-service payment-service platform-service reorder-service
-            supplier-service voice-service
+            api-gateway main-backend
             retailer-admin supplier-portal superadmin landing
           )
           echo "IMAGE DIGESTS — SHA: ${{ env.SHA }}" > /tmp/digests.txt
@@ -235,11 +236,9 @@ jobs:
       # ISSUE-MICRO-038: Verify all images exist in AR before deploying
       - name: Verify image digests in Artifact Registry
         run: |
-          echo "Verifying all 14 images exist in AR before deploy..."
+          echo "Verifying all 6 images exist in AR before deploy..."
           IMAGES=(
-            api-gateway auth-service catalog-service inventory-service
-            order-service payment-service platform-service reorder-service
-            supplier-service voice-service
+            api-gateway main-backend
             retailer-admin supplier-portal superadmin landing
           )
           FAILED=0
@@ -258,37 +257,61 @@ jobs:
             echo "BLOCKED: $FAILED images missing from AR. Cannot deploy."
             exit 1
           fi
-          echo "All 14 images verified in Artifact Registry."
+          echo "All 6 images verified in Artifact Registry."
 
-      - name: Deploy backend services to staging
+      - name: Deploy main-backend to staging
+        id: deploy-main-backend
         run: |
-          BACKEND_SERVICES=(
-            api-gateway auth-service catalog-service inventory-service
-            order-service payment-service platform-service reorder-service
-            supplier-service voice-service
-          )
-          VPC_CONNECTOR="projects/${{ env.GCP_PROJECT }}/locations/${{ env.GCP_REGION }}/connectors/supermandi-vpc"
+          VPC_CONNECTOR="projects/${{ env.GCP_PROJECT }}/locations/${{ env.GCP_REGION }}/connectors/supermandi-connector"
+          SERVICE_NAME="supermandi-main-backend-staging"
+          IMAGE="${{ env.AR_REPO }}/main-backend:${{ env.SHA }}"
+          echo "--- Deploying: $SERVICE_NAME"
+          gcloud run deploy "$SERVICE_NAME" \
+            --image="$IMAGE" \
+            --region="${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --vpc-connector="$VPC_CONNECTOR" \
+            --vpc-egress=private-ranges-only \
+            --set-env-vars="NODE_ENV=staging,GIT_SHA=${{ env.SHA }},MIN_APP_VERSION=${{ env.APP_VERSION }}" \
+            --set-secrets="DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
+            --no-allow-unauthenticated \
+            --quiet
+          echo "    OK: $SERVICE_NAME"
 
-          for svc in "${BACKEND_SERVICES[@]}"; do
-            SERVICE_NAME="supermandi-${svc}-staging"
-            IMAGE="${{ env.AR_REPO }}/${svc}:${{ env.SHA }}"
-            echo "--- Deploying: $SERVICE_NAME"
-            gcloud run deploy "$SERVICE_NAME" \
-              --image="$IMAGE" \
-              --region="${{ env.GCP_REGION }}" \
-              --platform=managed \
-              --memory=512Mi \
-              --cpu=1 \
-              --min-instances=0 \
-              --max-instances=3 \
-              --vpc-connector="$VPC_CONNECTOR" \
-              --vpc-egress=private-ranges-only \
-              --set-env-vars="NODE_ENV=staging,GIT_SHA=${{ env.SHA }},MIN_APP_VERSION=${{ env.APP_VERSION }}" \
-              --set-secrets="DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
-              --no-allow-unauthenticated \
-              --quiet || echo "WARN: $svc deploy failed"
-            echo "    OK: $SERVICE_NAME"
-          done
+          # Capture main-backend URL for api-gateway config
+          MB_URL=$(gcloud run services describe "$SERVICE_NAME" \
+            --region="${{ env.GCP_REGION }}" \
+            --format="value(status.url)")
+          echo "main_backend_url=$MB_URL" >> "$GITHUB_OUTPUT"
+          echo "  main-backend URL: $MB_URL"
+
+      - name: Deploy api-gateway to staging
+        run: |
+          VPC_CONNECTOR="projects/${{ env.GCP_PROJECT }}/locations/${{ env.GCP_REGION }}/connectors/supermandi-connector"
+          SERVICE_NAME="supermandi-api-gateway-staging"
+          IMAGE="${{ env.AR_REPO }}/api-gateway:${{ env.SHA }}"
+          MB_URL="${{ steps.deploy-main-backend.outputs.main_backend_url }}"
+          echo "--- Deploying: $SERVICE_NAME"
+          echo "    ADMIN_SERVICE_URL=$MB_URL"
+          gcloud run deploy "$SERVICE_NAME" \
+            --image="$IMAGE" \
+            --region="${{ env.GCP_REGION }}" \
+            --platform=managed \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --vpc-connector="$VPC_CONNECTOR" \
+            --vpc-egress=private-ranges-only \
+            --set-env-vars="NODE_ENV=staging,GIT_SHA=${{ env.SHA }},MIN_APP_VERSION=${{ env.APP_VERSION }},ADMIN_SERVICE_URL=$MB_URL" \
+            --set-secrets="JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
+            --allow-unauthenticated \
+            --quiet
+          echo "    OK: $SERVICE_NAME"
 
       - name: Deploy frontend portals to staging
         run: |

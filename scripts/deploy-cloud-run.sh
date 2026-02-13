@@ -4,7 +4,7 @@
 #   ./scripts/deploy-cloud-run.sh --env staging --sha abc1234
 #   ./scripts/deploy-cloud-run.sh --env production --sha abc1234 --confirm
 #
-# Deploys all 14 services (10 backend + 4 frontend) from Artifact Registry.
+# Deploys all 6 services (2 backend + 4 frontend) from Artifact Registry.
 # Production requires --confirm flag.
 
 set -euo pipefail
@@ -14,10 +14,10 @@ ENV=""
 SHA=""
 CONFIRM=""
 DRY_RUN=""
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 REGION="${GCP_REGION:-asia-south1}"
 AR_REPO="${REGION}-docker.pkg.dev/${PROJECT}/supermandi"
-VPC_CONNECTOR="projects/${PROJECT}/locations/${REGION}/connectors/supermandi-vpc"
+VPC_CONNECTOR="projects/${PROJECT}/locations/${REGION}/connectors/supermandi-connector"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -121,21 +121,25 @@ run_deploy() {
 }
 
 # =============================================================================
-# Backend services (10)
+# Backend services (2: api-gateway + main-backend)
 # =============================================================================
 echo "=== Backend Services ==="
 
-BACKEND_SERVICES=(
-  api-gateway auth-service catalog-service inventory-service
-  order-service payment-service platform-service reorder-service
-  supplier-service voice-service
-)
+MAIN_BACKEND_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-only --set-secrets=DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest"
 
-BACKEND_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-only --set-secrets=DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest"
+# Deploy main-backend first (api-gateway depends on its URL)
+run_deploy "main-backend" "${AR_REPO}/main-backend:${SHA}" "512Mi" "false" "$MAIN_BACKEND_FLAGS"
 
-for svc in "${BACKEND_SERVICES[@]}"; do
-  run_deploy "$svc" "${AR_REPO}/${svc}:${SHA}" "512Mi" "false" "$BACKEND_FLAGS"
-done
+# Get main-backend URL for api-gateway
+MB_URL=$(gcloud run services describe "supermandi-main-backend${ENV_SUFFIX}" \
+  --region="$REGION" --format="value(status.url)" 2>/dev/null || echo "")
+
+GW_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-only --set-secrets=JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest"
+if [ -n "$MB_URL" ]; then
+  GW_FLAGS="$GW_FLAGS --set-env-vars=ADMIN_SERVICE_URL=$MB_URL"
+fi
+
+run_deploy "api-gateway" "${AR_REPO}/api-gateway:${SHA}" "512Mi" "true" "$GW_FLAGS"
 
 # =============================================================================
 # Frontend portals (4)
@@ -164,7 +168,7 @@ if [ $FAILED -gt 0 ]; then
   exit 1
 else
   echo ""
-  echo "  ALL 14 SERVICES DEPLOYED TO $ENV"
+  echo "  ALL 6 SERVICES DEPLOYED TO $ENV"
   echo ""
   if [ "$ENV" = "staging" ]; then
     echo "  Next: Test staging, then promote:"

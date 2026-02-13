@@ -15,7 +15,7 @@ set -euo pipefail
 SHA=""
 CONFIRM=""
 DRY_RUN=""
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 REGION="${GCP_REGION:-asia-south1}"
 AR_REPO="${REGION}-docker.pkg.dev/${PROJECT}/supermandi"
 
@@ -104,9 +104,7 @@ echo ""
 echo "--- Step 2: Verify images exist in AR..."
 
 IMAGES=(
-  api-gateway auth-service catalog-service inventory-service
-  order-service payment-service platform-service reorder-service
-  supplier-service voice-service
+  api-gateway main-backend
   retailer-admin supplier-portal superadmin landing
 )
 
@@ -133,7 +131,7 @@ if [ $MISSING -gt 0 ]; then
   echo "  Push images first: ./scripts/build-all-images.sh --sha $SHA"
   exit 1
 fi
-echo "  All 14 images verified in AR"
+echo "  All 6 images verified in AR"
 
 # =============================================================================
 # STEP 3: Deploy to production

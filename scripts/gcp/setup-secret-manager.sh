@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 
 while [[ $# -gt 0 ]]; do
   case $1 in

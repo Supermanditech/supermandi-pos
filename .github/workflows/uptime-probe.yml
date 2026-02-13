@@ -4,9 +4,10 @@ name: Uptime Probe (External Monitoring)
 # Creates GitHub issue on failure for alerting
 
 on:
-  schedule:
-    # Run every 5 minutes
-    - cron: '*/5 * * * *'
+  # INFRA-007: Cron disabled until staging is redeployed with current code.
+  # Re-enable after INFRA-006 staging deploy is verified.
+  # schedule:
+  #   - cron: '*/5 * * * *'
   workflow_dispatch:
     # Allow manual trigger
     inputs:
@@ -163,15 +164,10 @@ jobs:
             ### Version Fingerprint Issues
             ${{ steps.versions.outputs.fingerprint_failures || 'None' }}
 
-            ### Action Required
-            1. Check VM status: \`ssh claude@34.14.220.171\`
-            2. Run smoke gate: \`./scripts/smoke-gate.sh\`
-            3. Check nginx: \`sudo nginx -t && sudo systemctl status nginx\`
-            4. Check PM2: \`pm2 list\`
-
-            ### Logs
-            - Nginx error: \`sudo tail -50 /var/log/nginx/supermandi.error.log\`
-            - Deploy log: \`cat /var/log/supermandi/deploy.log\`
+            ### Action Required (Cloud Run)
+            1. Check Cloud Run logs: \`gcloud run services logs read supermandi-api-gateway-staging --region=asia-south1 --project=supermandi-backend --limit=50\`
+            2. Check service status: \`gcloud run services describe supermandi-api-gateway-staging --region=asia-south1 --project=supermandi-backend\`
+            3. Check /version: \`curl <GATEWAY_URL>/version\`
 
             ---
             *This issue was automatically created by the uptime probe workflow.*

@@ -27,15 +27,16 @@ on:
         type: boolean
         default: true
 
-  # Run after deploy workflows
+  # INFRA-007: Trigger after staging deploy (was "Deploy to Production" which doesn't exist)
   workflow_run:
-    workflows: ["Deploy to Production"]
+    workflows: ["CD — Build & Deploy Staging"]
     types:
       - completed
 
-  # Daily health check
-  schedule:
-    - cron: '0 6 * * *'  # 6 AM UTC daily
+  # INFRA-007: Daily health check disabled until staging is redeployed.
+  # Re-enable after INFRA-006.
+  # schedule:
+  #   - cron: '0 6 * * *'  # 6 AM UTC daily
 
 env:
   TARGET_URL: ${{ github.event.inputs.target_url || 'https://supermandi.tech' }}

@@ -5,9 +5,9 @@
 
 set -euo pipefail
 
-PROJECT="${GCP_PROJECT:-supermandi-pos}"
+PROJECT="${GCP_PROJECT:-supermandi-backend}"
 REGION="${GCP_REGION:-asia-south1}"
-CONNECTOR_NAME="supermandi-vpc"
+CONNECTOR_NAME="supermandi-connector"
 NETWORK="default"
 IP_RANGE="10.8.0.0/28"  # /28 = 16 IPs, required minimum for VPC connector
 
