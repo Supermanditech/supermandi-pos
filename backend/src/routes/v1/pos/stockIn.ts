@@ -156,6 +156,18 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
     return res.status(400).json({ success: false, error: "items array is required" });
   }
 
+  // BUG-004: Validate all item quantities upfront before processing
+  for (let i = 0; i < items.length; i++) {
+    const qty = items[i]?.quantity;
+    if (qty === undefined || qty === null || typeof qty !== "number" || !Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "INVALID_QUANTITY",
+        message: `Item ${i}: quantity must be a positive number, got: ${qty}`,
+      });
+    }
+  }
+
   // AUDIT-API-011: Use client-provided idempotency key as ledger reference for dedup
   const ledgerEntryId = (idempotencyKey && typeof idempotencyKey === "string") ? idempotencyKey : randomUUID();
   const client = await pool.connect();
@@ -168,7 +180,7 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
     for (const item of items) {
       const { barcode, quantity, buyPrice } = item;
 
-      if (!quantity || quantity <= 0) continue;
+      // BUG-004: quantity validated upfront — always positive here
 
       // Look up product by barcode in store_product_barcodes + store_products
       const productResult = await client.query(
