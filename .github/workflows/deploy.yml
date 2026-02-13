@@ -319,6 +319,59 @@ jobs:
           fi
           echo "All 6 images verified in Artifact Registry."
 
+      # STAGE-020: GCP CLI Parity Gate — validate gcloud run deploy flags
+      # BEFORE any deploy. Prevents pipeline failures from invalid flag syntax.
+      # Learned from STAGE-018/019: gcloud CLI uses --cpu-boost (not --startup-cpu-boost)
+      # and --startup-probe=KEY=VALUE (not individual --startup-probe-* flags).
+      # Extracts flags from gcloud run deploy command blocks in deploy.yml,
+      # then validates each against `gcloud run deploy --help`.
+      - name: "GCP CLI parity gate (BLOCKING)"
+        run: |
+          echo "=== STAGE-020: GCP CLI Parity Gate ==="
+          echo "Validating gcloud run deploy flags against installed gcloud CLI..."
+          echo ""
+
+          # Step 1: Build valid flag set from gcloud run deploy --help
+          HELP_OUTPUT=$(gcloud run deploy --help 2>&1)
+          VALID_FLAG_NAMES=$(echo "$HELP_OUTPUT" | grep -oE '\-\-[a-z][a-z0-9-]*' | sort -u)
+          VALID_COUNT=$(echo "$VALID_FLAG_NAMES" | wc -l)
+          echo "gcloud run deploy accepts $VALID_COUNT flags."
+
+          # Step 2: Extract flags ONLY from gcloud run deploy command blocks.
+          # These blocks start with 'gcloud run deploy' and end at a line without '\'.
+          # Use awk to isolate these blocks, then extract --flag patterns.
+          DEPLOY_FLAGS=$(awk '
+            /gcloud run deploy/ { in_block=1 }
+            in_block && /--[a-z]/ { print }
+            in_block && !/\\$/ { in_block=0 }
+          ' .github/workflows/deploy.yml \
+            | grep -oE '\-\-[a-z][a-z0-9-]*' \
+            | sort -u)
+
+          echo ""
+          echo "Flags used in gcloud run deploy blocks:"
+          INVALID=0
+          CHECKED=0
+          for flag in $DEPLOY_FLAGS; do
+            CHECKED=$((CHECKED + 1))
+            if echo "$VALID_FLAG_NAMES" | grep -qx "$flag"; then
+              echo "  OK: $flag"
+            else
+              echo "  FAIL: $flag — NOT a valid gcloud run deploy flag"
+              INVALID=$((INVALID + 1))
+            fi
+          done
+
+          echo ""
+          echo "Checked $CHECKED flags."
+          if [ $INVALID -gt 0 ]; then
+            echo "BLOCKED: $INVALID invalid gcloud run deploy flag(s) detected."
+            echo "Fix deploy.yml before deploying. Reference: gcloud run deploy --help"
+            exit 1
+          fi
+          echo "PASS: All $CHECKED gcloud run deploy flags are valid. GCP parity confirmed."
+          echo ""
+
       # STAGE-007: Record current serving revisions BEFORE deploy (for rollback)
       - name: Record pre-deploy revisions
         id: pre-revisions
