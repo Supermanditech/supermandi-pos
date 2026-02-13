@@ -1,0 +1,1251 @@
+---
+name: supermandi-operating-system
+description: The definitive operating system for Claude working on SuperMandi POS. Contains all rules, disciplines, architecture, testing protocols, deployment procedures, and navigation guidelines. Supersedes all previous rule files.
+---
+
+# CLAUDE STATE: The Definitive Operating System
+
+> **Version**: 1.1 | **Date**: 2026-02-13
+> **Status**: ACTIVE — This is the ONLY file Claude reads for rules, discipline, and navigation.
+> **Scope**: SuperMandi POS — all platforms (Retailer, Supplier, SuperAdmin, POS App, Backend, Gateway)
+
+---
+
+## SUPERSEDES NOTICE
+
+This file **replaces and supersedes** ALL of the following. Claude MUST NOT follow them independently:
+
+| Superseded File | Was |
+|----------------|-----|
+| `memory/GO_LIVE_OPERATING_SYSTEM.md` | Go-Live OS |
+| `memory/REAL_PRODUCTION_TESTING_RULES.md` | Testing Rules A-I |
+| `memory/PRODUCTION_TEST_RUNBOOK.md` | 10-Step Runbook |
+| `memory/TICKET_EXECUTION_RULES.md` | 12 Audit Fix Rules |
+| `memory/CLAUDE_PRODUCTION_RULES.md` | Claude Execution Rules |
+| `memory/DOCKER_GCP_STAGING_RULEBOOK.md` | Docker/GCP Staging Rulebook |
+| `RELEASES/ZERO_REGRESSION_RULES.md` | Zero Regression Rules |
+| `RELEASES/CLAUDE_PRODUCTION_RULES.md` | Claude Production Rules |
+| `RELEASES/RELEASE_POLICY.md` | Release Policy |
+| `RELEASES/ROLLBACK_PLAYBOOK.md` | Rollback Playbook |
+
+**Everything Claude needs is in THIS file. No other file is authoritative for Claude's behavior.**
+
+---
+
+# PART 0: BOOT SEQUENCE (MANDATORY — Before ANY Operator Interaction)
+
+## 0.1 Claude's First Actions (Every Session, No Exceptions)
+
+```
+BEFORE Claude responds to ANY operator message, Claude MUST:
+
+  1. READ this file fully (RELEASES/CLAUDE_STATE.md)
+     → Internalize all 15 parts + appendices
+     → Keep all rules in active context
+
+  2. READ the live state (RELEASES/CLAUDE_CURRENT_STATE.json)
+     → Know current ticket, phase, queue, blocked items
+     → Know last 5 actions
+
+  3. RUN: git log --oneline -10 && git status
+     → Verify git matches state file
+     → If mismatch → reconcile (git is truth)
+
+  4. ANNOUNCE resumption:
+     "Session started. Current: [ticket] at [step]. Phase: [N], Progress: [X/Y]."
+
+  5. ONLY THEN respond to operator's message or begin work
+```
+
+**Claude NEVER skips this boot sequence.**
+**Claude NEVER responds to operator before completing it.**
+**Claude NEVER starts coding without knowing current state.**
+
+## 0.2 Prime Directive (Absolute, Every Action)
+
+```
+- Execute ONLY what is in the ticket
+- No refactor, cleanup, rename, optimize unless explicitly required
+- No reinterpretation of requirements
+- Ambiguous → STOP and ask operator
+- Not required for acceptance criteria → DO NOT DO IT
+- ZERO REGRESSION > SPEED (always)
+```
+
+## 0.3 Store Isolation (Security — Non-Negotiable)
+
+```
+- Server derives storeId ONLY from JWT token
+- Client-sent storeId is NEVER trusted
+- Every data query MUST include WHERE store_id = $token.storeId
+- No endpoint may accept storeId from request body/params for auth purposes
+- Violation = P0 security ticket, immediate fix
+```
+
+## 0.4 API Contract Safety (Backward Compatibility)
+
+```
+FORBIDDEN:
+  - Rename fields in API responses
+  - Remove fields from API responses
+  - Change response shapes (object → array, etc.)
+  - Repurpose existing endpoints for different behavior
+
+ALLOWED:
+  - Add new optional fields to responses
+  - Add new endpoints
+  - Add optional parameters to requests
+
+Rule: POS and Retailer APIs MUST remain backward compatible at all times.
+Any shape change requires:
+  1. Contract test update
+  2. ALL consumer portals verified
+  3. Operator approval
+```
+
+---
+
+# PART 1: THE ARCHITECTURE (Q1, Q2, Q5 — No Local Dependencies)
+
+## 1.1 The Straight Solution
+
+Production-grade development across all platforms uses a **3-layer cloud-only architecture**:
+
+```
+Layer 1: Git (Claude's workspace)
+   Claude writes code → commits → pushes branches → opens PRs
+
+Layer 2: GitHub Actions (CI — the gatekeeper)
+   Builds Docker images → runs ALL tests → validates everything
+
+Layer 3: GCP (staging + production)
+   Cloud Run serves all services → same artifact everywhere
+```
+
+**There is NO Layer 0 (local development dependencies).**
+- No local Docker builds
+- No local `pnpm dev` testing
+- No local database
+- No local anything except code editing and `git push`
+
+Claude edits code. CI builds and tests it. GCP runs it. That's it.
+
+## 1.2 Build Once, Deploy Everywhere
+
+```
+Git SHA abc123 → CI builds Docker images → tags with abc123
+   → Deploy to staging (image abc123)
+   → Promote to production (SAME image abc123)
+   → No rebuild between environments. Ever.
+```
+
+The SAME container image digest passes through: **CI → Staging → Production**.
+If the digest differs at any stage → **BLOCKED**.
+
+## 1.3 What CI Does (Not Claude, Not Operator)
+
+| Step | Who | Where |
+|------|-----|-------|
+| Write code | Claude | Local (VS Code) |
+| Build Docker images (14 services) | CI | GitHub Actions cloud runner |
+| Run typecheck | CI | GitHub Actions cloud runner |
+| Run lint | CI | GitHub Actions cloud runner |
+| Run unit tests | CI | GitHub Actions cloud runner |
+| Run integration tests | CI | GitHub Actions cloud runner |
+| Run E2E tests | CI | GitHub Actions cloud runner |
+| Deploy to staging | CI | GCP Cloud Run |
+| Run staging smoke tests | CI | GitHub Actions → GCP |
+| Health checks (every 5 min) | CI | GitHub Actions scheduled |
+
+**Claude never builds. Operator never builds. CI builds.**
+
+## 1.4 The Complete Development Cycle (Git ↔ GCP Only)
+
+No local tools. No local Docker. No local database. Everything happens between Git and GCP:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                  DEVELOPMENT CYCLE                       │
+│                                                          │
+│  Claude writes code (VS Code)                            │
+│       ↓                                                  │
+│  git push branch                                         │
+│       ↓                                                  │
+│  GitHub Actions CI:                                      │
+│    • Builds 14 Docker images                             │
+│    • Runs typecheck, lint, unit, integration, E2E        │
+│    • All green → merge to main                           │
+│       ↓                                                  │
+│  [At phase boundary]                                     │
+│  CI deploys to GCP Cloud Run staging                     │
+│       ↓                                                  │
+│  Operator tests NEW behavior on staging                  │
+│       ↓                                                  │
+│  Issues found? → Create tickets → Loop back to top       │
+│  All green? → Promote to production (same artifact)      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**There is NO step that requires local Docker, local builds, or local testing infrastructure.**
+**The operator's machine only needs: VS Code + Git + a browser (for staging testing).**
+
+## 1.5 "Fix on Staging" Workflow (No Back-and-Forth)
+
+When issues are found on staging, there is NO repeated deploy-test-fix-deploy cycle per ticket:
+
+```
+WRONG (old way — endless back-and-forth):
+  Deploy → Test → Find bug → Fix → Deploy → Test → Find bug → Fix → Deploy → ...
+
+RIGHT (phase-boundary approach):
+  1. Deploy phase N to staging (one deploy)
+  2. Operator tests all new features (one session)
+  3. ALL issues logged as tickets (batch)
+  4. Claude fixes ALL tickets on Git (one at a time, CI validates each)
+  5. After ALL fixes merged: ONE re-deploy to staging
+  6. Operator re-tests ONLY the reported issues
+  7. If new issues → repeat from step 3 (but shrinking each round)
+  8. Zero issues → promote to production
+```
+
+**Key: Staging deploys happen at phase boundaries and after fix batches. NOT per-ticket.**
+**This means 5-10 staging deploys total, not 1000.**
+
+## 1.6 Locked Test Suites on GCP (Q2 — "Lock and Never Change")
+
+Once a phase of tickets passes CI and deploys to staging:
+- Those tests are **locked** — they become permanent regression tests
+- Every future PR runs ALL locked tests from ALL previous phases
+- Tests accumulate: Phase 1 (70) → Phase 2 (220) → Phase 3 (530) → Phase 4 (800+)
+- A locked test can NEVER be deleted without operator approval + replacement test
+
+---
+
+# PART 2: THE TICKET SYSTEM (Q6 — Tracking 1000+ Tickets)
+
+## 2.1 Ticket Graph on GitHub
+
+```
+GitHub Issues:
+  - Labels: phase/1-security, phase/2-broken-func, phase/3-data-integrity,
+            phase/4-ux, phase/5-hardening
+  - Labels: layer/schema, layer/backend, layer/gateway, layer/frontend, layer/pos
+  - Labels: risk/A, risk/B, risk/C, risk/D, risk/E, risk/F
+  - Labels: platform/retailer, platform/supplier, platform/superadmin, platform/pos,
+            platform/backend, platform/cross-platform
+  - Labels: priority/P0, priority/P1, priority/P2
+  - Milestones: Phase 1, Phase 2, Phase 3, Phase 4, Phase 5A, Phase 5B, ...
+  - Sub-issues: parent-child tracking for spawned tickets
+```
+
+## 2.2 One Ticket = One Branch = One PR = One Tag
+
+For EVERY ticket (no exceptions):
+
+```
+1. git checkout main && git pull
+2. git checkout -b fix/TICKET-ID-slug
+3. Write failing test FIRST (must fail on current main)
+4. Write fix (minimal scope)
+5. Push branch → CI runs ALL gates
+6. All green → open PR
+7. Merge → tag prestage-TICKET-ID-YYYY-MM-DD_HHMMIST
+8. Next ticket
+```
+
+**Never:**
+- Bundle multiple tickets into one PR
+- Start next ticket before current is merged + tagged
+- Push directly to main
+- Create a second PR under the same ticket ID after first is merged
+
+## 2.3 Sub-Ticket Spawning Protocol
+
+When Claude discovers a new issue while fixing ticket X:
+
+```
+1. STOP fixing X
+2. Classify: Is the new issue BLOCKING X or NON-BLOCKING?
+
+IF BLOCKING:
+   → Create issue immediately with spawned-from/TICKET-X label
+   → Create reg/CASCADE-NNN branch
+   → Fix cascade, merge, return to X
+
+IF NON-BLOCKING:
+   → Create issue with spawned-from/TICKET-X label
+   → Add to backlog with correct phase/priority
+   → Continue with X (do NOT fix inline)
+```
+
+## 2.4 Phase Execution Order
+
+| Phase | Scope | Deploy to Staging? |
+|-------|-------|--------------------|
+| **Phase 1** | Security (P0+P1) | YES — after ALL green |
+| **Phase 2** | Broken Functionality (P0+P1) | YES — after ALL green |
+| **Phase 3** | Data Integrity & Auth (P1) | YES — after ALL green |
+| **Phase 4** | UX & Polish (P1 + top P2) | YES — after ALL green |
+| **Phase 5** | Hardening (P2s) | Batched deploys (5A, 5B, etc.) |
+
+**Staging deploys happen at phase boundaries, not per-ticket.**
+
+## 2.5 Layer Ordering Within Each Phase (Bottom-Up)
+
+```
+Layer 1: DB Migrations / Schema    (always first)
+Layer 2: Backend Core (routes, middleware, services)
+Layer 3: API Gateway (routing, auth)
+Layer 4: Frontend Portals (Retailer → Supplier → SuperAdmin)
+Layer 5: POS Mobile App
+```
+
+**Rule**: Never start a higher layer if a lower layer has failing gates.
+
+## 2.6 High-Contention Files (Sequence These)
+
+These files have 3+ tickets touching them. Fix ALL tickets for each file consecutively:
+
+- `supermandi-superadmin/src/App.tsx` — ~15 tickets
+- `backend/src/routes/v1/pos/bnpl.ts` — 3 tickets
+- `supplier-portal/src/lib/api.ts` — 3 tickets
+- `retailer-admin/src/lib/api.ts` — 3 tickets
+- `src/services/api/apiClient.ts` — 3 tickets
+
+---
+
+# PART 3: OPERATOR-CLAUDE ROLES (Q7 — Breaking the Regression Trap)
+
+## 3.1 The Problem This Solves
+
+Old cycle (broken):
+```
+Operator tests → finds bugs → Claude fixes → introduces regressions →
+Operator retests → finds more bugs → Claude fixes → more regressions →
+∞ (never ends)
+```
+
+## 3.2 The Three Roles
+
+| Role | Responsibility | Does NOT Do |
+|------|---------------|-------------|
+| **Claude** | Writes code, writes tests, runs local checks, pushes | Deploy, approve, sign off |
+| **CI Pipeline** | Builds, tests EVERYTHING, deploys to staging | Write code, make decisions |
+| **Operator** | Reviews evidence, tests NEW behavior only, approves | Write tests, fix bugs, debug |
+
+**Key principle: If the operator finds a bug, the process already failed.**
+The bug should have been caught by Claude's tests or CI. Finding it at operator review means Claude missed it.
+
+## 3.3 Operator's Actual Workflow
+
+**During fix cycles (Phase work):** Operator does NOTHING. Claude works. CI validates.
+
+**At phase boundaries:** Operator reviews evidence pack (~1 minute per ticket):
+
+```
+Per-ticket operator checklist:
+  [ ] CI green? (check GitHub Actions badge)
+  [ ] PR description has evidence? (screenshot / curl / SQL)
+  [ ] Risk assessment honest? (not "should work")
+  [ ] Rollback noted? (revert commit hash)
+  → APPROVE or REJECT with specific reason
+```
+
+**At staging deploy:** Operator does focused acceptance testing:
+- Tests only NEW behavior from this phase
+- Regression testing is CI's job (operator never retests old features)
+- Any bug found → ticket with P0/P1/P2 → Claude fixes → CI re-validates
+
+**At production promotion:** Single click. Same artifact. No rebuild.
+
+## 3.4 When Operator Reports Issues
+
+When operator reports N issues after staging:
+
+```
+1. Claude TRIAGES ALL N issues first (classify, prioritize, group)
+2. Claude identifies which are duplicates, which are related, which are independent
+3. Claude fixes ONE at a time (one ticket = one PR)
+4. After each fix: CI runs ALL tests (including all previous locked tests)
+5. After ALL N fixes merged: full regression pass on main
+6. Redeploy to staging from new tag
+7. Operator re-tests ONLY the N reported issues (not everything)
+```
+
+**Claude NEVER fixes operator issues blindly.** Triage first, then fix one by one.
+
+---
+
+# PART 4: CLAUDE'S 7 LAWS (Q3, Q8 — Zero Regression Discipline)
+
+## 4.1 The 7 Laws (Inviolable)
+
+| # | Law | Violation = |
+|---|-----|-------------|
+| **1** | No code without a test | Cannot push |
+| **2** | No push without all local checks green | Cannot open PR |
+| **3** | No merge without CI green | PR stays open |
+| **4** | No staging deploy without immutable tag | Deploy blocked |
+| **5** | No production without staging pass | Promote blocked |
+| **6** | No skip on any failure (even "minor") | Create ticket |
+| **7** | No "works on my machine" — only CI results matter | CI overrides local |
+
+## 4.2 Per-Ticket Discipline (8 Steps)
+
+For EVERY ticket Claude works on:
+
+```
+STEP 1: ANNOUNCE
+   "Starting TICKET-ID: [description]
+    Risk Class: [A-F]
+    Files in scope: [list]
+    Cross-platform impact: [analysis]"
+
+STEP 2: WRITE FAILING TEST FIRST
+   - Write a test that PROVES the bug exists (must fail on current main)
+   - If it passes on main → the test doesn't test what you think
+
+STEP 3: WRITE THE FIX
+   - Minimal scope — fix ONLY what the ticket describes
+   - No refactoring, no cleanup, no "while I'm here"
+   - Production-grade from the start (no temp fixes)
+
+STEP 4: RUN ALL GATES LOCALLY
+   pnpm -r typecheck    → must pass
+   pnpm -r build        → must pass
+   pnpm test            → must pass (including new test)
+
+   If ANY fails → fix → re-run ALL from typecheck (not just the failed one)
+
+STEP 5: PUSH BRANCH
+   git push -u origin fix/TICKET-ID-slug
+
+STEP 6: CI VALIDATES
+   - Wait for CI to complete (all 6 gates)
+   - If CI fails → fix locally → push → repeat
+   - NEVER merge with failing CI
+
+STEP 7: MERGE
+   - All CI green → merge PR to main
+   - Tag: prestage-TICKET-ID-YYYY-MM-DD_HHMMIST
+
+STEP 8: PER-TICKET REPORT
+   "TICKET-ID DONE:
+    - Fix: [one-line summary]
+    - Test added: [test file + what it validates]
+    - Evidence: [CI link / screenshot / curl]
+    - Risk: [what could break if this is wrong]
+    - Cross-platform: [which portals affected]"
+```
+
+## 4.3 Failure Scenarios (Claude MUST Follow These)
+
+| Scenario | WRONG Response | RIGHT Response |
+|----------|---------------|----------------|
+| Test passes but you're not sure it tests the right thing | "Test passes, moving on" | Verify test fails when fix is reverted |
+| CI fails on unrelated test | Skip it, merge anyway | Fix the unrelated failure FIRST (cascade) |
+| Fix works but breaks another portal | "Will fix in next ticket" | STOP. Fix now. Same PR or cascade ticket. |
+| Operator says "just ship it" | Ship it | "I cannot ship with failing tests. Here's what needs fixing." |
+| You find an issue not in the ticket | Fix it inline | Create new ticket. Continue current ticket. |
+
+---
+
+# PART 5: 8 GUARDRAILS (Q4, Q9 — Preventing Claude Mistakes)
+
+## 5.1 Guardrail 1: Cross-Platform Impact Matrix (Automated in CI)
+
+CI automatically determines test scope based on changed files:
+
+```
+IF changed: backend/src/middleware/*
+   → Run ALL tests (middleware affects everything)
+
+IF changed: backend/src/routes/v1/pos/*
+   → Run POS tests + Retailer tests (POS routes used by both)
+
+IF changed: retailer-admin/src/*
+   → Run Retailer E2E + Retailer unit tests
+
+IF changed: backend/src/routes/v1/supplier/*
+   → Run Supplier tests + SuperAdmin tests (admin manages suppliers)
+
+IF changed: backend/migrations/*
+   → Run ALL tests + verify backward compatibility
+
+IF changed: api-gateway/*
+   → Run ALL tests (gateway routes everything)
+```
+
+**If a file matches no pattern → Claude MUST explicitly state and manually determine tests.**
+
+## 5.2 Guardrail 2: Pre-Code Checklist (Every PR)
+
+Before writing any code, Claude answers these 5 questions:
+
+```
+1. Which portals does this touch? [Retailer / Supplier / SuperAdmin / POS / Backend]
+2. Does it change an API response shape? [Yes → contract test required]
+3. Does it change middleware order? [Yes → ALL portal tests required]
+4. Does it change auth/session logic? [Yes → security test + ALL portal login tests]
+5. Does it change DB schema? [Yes → migration test + backward compatibility check]
+```
+
+**If any answer is "I'm not sure" → research before coding. Never guess.**
+
+## 5.3 Guardrail 3: Architecture Tests (Enforced by CI)
+
+Automated tests that enforce project rules:
+
+```
+Rule: No storeId from client
+   → Test: grep all routes for req.body.storeId usage (must be 0)
+
+Rule: All mutation routes have auth middleware
+   → Test: parse route files, verify auth middleware on POST/PUT/DELETE
+
+Rule: No hardcoded URLs
+   → Test: grep for http://localhost or hardcoded IPs in source (must be 0)
+
+Rule: No test.skip()
+   → Test: grep for test.skip / it.skip / describe.skip (must be 0)
+
+Rule: All routes have tests
+   → Test: compare registered routes vs test coverage
+
+Rule: Portals use env vars for API URLs
+   → Test: grep portal source for hardcoded API URLs (must be 0)
+```
+
+## 5.4 Guardrail 4: Contract Tests (API Shape Lock)
+
+Every API endpoint has a contract test that locks its response shape:
+
+```
+Example: GET /api/v1/pos/dues
+   Response MUST contain: { data: { dues: [{ id, amount, customer, ... }] } }
+
+   If Claude changes the shape → contract test fails → CI blocks merge
+   If shape change is intentional → update contract + update ALL consumers
+```
+
+**Contract tests prevent Claude from accidentally breaking portal-to-backend integration.**
+
+## 5.5 Guardrail 5: Cross-Platform E2E Matrix
+
+| Flow | Retailer | Supplier | SuperAdmin | POS |
+|------|----------|----------|------------|-----|
+| Login | Test | Test | Test | Test |
+| Registration | Test | Test | N/A | N/A |
+| Product CRUD | Test | Test | Test (view) | Test (scan) |
+| Order flow | Test | Test (receive) | Test (view) | Test (create) |
+| Payment | Test | N/A | Test (view) | Test (collect) |
+| Stock | Test (view) | N/A | Test (view) | Test (adjust) |
+| User mgmt | N/A | N/A | Test | N/A |
+
+**Every cell marked "Test" has at least one automated E2E test in CI.**
+
+## 5.6 Guardrail 6: Root Cause Enforcement (No Band-Aids)
+
+Claude is forbidden from:
+- TODO/FIXME/HACK comments (fix it now or create ticket)
+- Empty catch blocks (`catch (e) {}`)
+- `any` type in TypeScript (type it properly)
+- `console.log` in production code (use proper logger)
+- `// eslint-disable` without inline justification
+- Wrapping errors in try-catch just to silence them
+- Adding `?` optional chaining as a fix for null errors (fix the source)
+
+**If Claude writes a band-aid → CI architecture test catches it → PR blocked.**
+
+## 5.7 Guardrail 7: Regression Snapshot Lock
+
+At each phase boundary:
+```
+1. All tests from Phase N are "snapshotted" (locked)
+2. These locked tests run on EVERY PR from Phase N+1 onward
+3. If a Phase N+1 ticket breaks a Phase N test → PR blocked
+4. Claude must fix the regression before proceeding
+
+Test accumulation:
+  Phase 1 complete: 70 locked tests
+  Phase 2 complete: 70 + 150 = 220 locked tests
+  Phase 3 complete: 220 + 310 = 530 locked tests
+  Phase 4 complete: 530 + 270 = 800 locked tests
+  Phase 5: 800+ locked tests guard everything
+```
+
+**Result: Operator finds fewer bugs each phase (trending toward 0).**
+
+## 5.8 Guardrail 8: Scoreboard (Visible to Operator)
+
+CI maintains a quality dashboard:
+
+```
+Phase 1 Progress:
+  Tickets completed: 12/15
+  Tests added: 68
+  CI passes: 12/12 (100%)
+  Regressions caught by CI: 3 (all fixed)
+  Regressions found by operator: 0
+
+  Current ticket: SEC-013
+  Last merge: 2h ago
+  Next phase boundary: ~3 tickets away
+```
+
+**Operator can see progress at any time without asking Claude.**
+
+---
+
+# PART 6: CLAUDE'S STATE MACHINE (Q10 — Persistent Context)
+
+## 6.1 Purpose
+
+Claude loses context between sessions. This state machine ensures Claude always knows:
+- Where it is in the overall plan
+- What it was doing when context was lost
+- What to do next
+- What NOT to do
+
+## 6.2 State File Structure
+
+Claude maintains this state in `RELEASES/CLAUDE_CURRENT_STATE.json`:
+
+```json
+{
+  "currentPhase": "Phase 1: Security",
+  "currentTicket": {
+    "id": "SEC-007",
+    "status": "IN_PROGRESS",
+    "branch": "fix/SEC-007-xss-sanitize",
+    "step": "STEP 4: Running gates",
+    "startedAt": "2026-02-13T10:00:00Z"
+  },
+  "ticketQueue": [
+    { "id": "SEC-008", "priority": "P0", "layer": "backend" },
+    { "id": "SEC-009", "priority": "P1", "layer": "frontend" }
+  ],
+  "operatorIssues": [],
+  "phaseSnapshot": {
+    "totalTickets": 15,
+    "completed": 6,
+    "inProgress": 1,
+    "testsLocked": 42,
+    "ciPasses": 6,
+    "operatorBugsFound": 0
+  },
+  "blockedItems": [],
+  "lastActions": [
+    "Merged SEC-006 → main (tag prestage-SEC-006-2026-02-13)",
+    "Started SEC-007",
+    "Wrote failing test for XSS in supplier name field",
+    "Implementing sanitization in backend/src/middleware/sanitize.ts"
+  ],
+  "regressionTracker": {
+    "cascadesThisPhase": 0,
+    "operatorBugsThisPhase": 0,
+    "ciCatchesThisPhase": 3
+  }
+}
+```
+
+## 6.3 Context Recovery Protocol
+
+When Claude starts a new session (or loses context):
+
+```
+1. Read RELEASES/CLAUDE_STATE.md (this file — rules)
+2. Read RELEASES/CLAUDE_CURRENT_STATE.json (live state)
+3. Run: git log --oneline -10 && git status
+4. Compare git state with CLAUDE_CURRENT_STATE.json
+5. If mismatch → reconcile (git is truth, update state file)
+6. Announce: "Resuming [ticket] at [step]. Phase progress: [X/Y]."
+7. Continue from where state file says
+```
+
+**Claude NEVER starts from scratch. Always resumes from state.**
+
+## 6.4 State Update Rules
+
+Claude updates `CLAUDE_CURRENT_STATE.json` at these moments:
+- Starting a new ticket (update currentTicket)
+- Completing a step within a ticket (update step)
+- Merging a PR (move ticket to completed, advance queue)
+- Discovering a blocking issue (add to blockedItems)
+- Receiving operator issues (add to operatorIssues with triage)
+- Completing a phase (update phaseSnapshot, archive)
+
+---
+
+# PART 7: 10 NAVIGATION RULES (Q10 — Dynamic Decision-Making)
+
+## Rule 1: One Thing At a Time
+
+```
+ALWAYS: Work on exactly ONE ticket
+NEVER:  Start ticket B while ticket A is in progress
+NEVER:  "I'll fix this other thing while I'm here"
+```
+
+## Rule 2: Never Start Next While Current Is Pending
+
+```
+IF currentTicket.status == "IN_PROGRESS" OR "WAITING_CI" OR "WAITING_REVIEW":
+   → Continue working on current ticket
+   → Do NOT pick up next ticket
+   → Do NOT explore other issues
+```
+
+## Rule 3: Operator Issues Are Triaged, Not Blindly Fixed
+
+```
+When operator reports issues:
+  1. STOP current work (save state)
+  2. Triage ALL reported issues:
+     - Classify: P0 (blocker) / P1 (critical) / P2 (important)
+     - Group: Which are related? Which are duplicates?
+     - Order: Fix P0s first, then P1s, then P2s
+  3. Present triage to operator for confirmation
+  4. Fix ONE at a time (one ticket = one PR)
+  5. After ALL fixed: full regression on main
+```
+
+## Rule 4: Regression Fix Gets Root Cause Analysis
+
+```
+When a regression is found (by CI or operator):
+  1. STOP
+  2. Identify: Which commit introduced it? (git bisect)
+  3. Classify: Is it a real regression or a pre-existing bug?
+  4. If regression: Fix the ROOT CAUSE, not the symptom
+  5. Add test that catches this specific regression pattern
+  6. Verify fix doesn't introduce new regressions
+```
+
+**NO band-aid fixes. NO "just add a null check." Find WHY it broke.**
+
+## Rule 5: Context Recovery Is Automatic
+
+```
+At session start:
+  1. Read this file (rules)
+  2. Read CLAUDE_CURRENT_STATE.json (live state)
+  3. git log + git status (verify)
+  4. Resume from state
+
+Claude NEVER asks operator "where were we?"
+Claude NEVER re-reads the entire codebase.
+Claude ALWAYS knows exactly where it left off.
+```
+
+## Rule 6: 10-Issue Batch Protocol
+
+When operator reports 10+ issues at once:
+
+```
+1. Create all 10 as GitHub Issues (with labels, priority, platform)
+2. Triage: group by root cause (10 symptoms might be 3 root causes)
+3. Order by dependency: fix backends before frontends
+4. Present summary to operator:
+   "10 issues reported → 7 unique (3 duplicates)
+    3 backend, 2 retailer, 2 POS
+    Estimated: 7 PRs, fix order: B-001, B-002, B-003, R-001, R-002, P-001, P-002"
+5. Fix ONE at a time
+6. After each fix: CI runs ALL tests (including locked phase tests)
+7. After ALL 7 fixed: full regression on main
+8. Redeploy to staging
+9. Operator re-tests ONLY the 10 reported issues
+```
+
+## Rule 7: Scope Lock
+
+```
+During a ticket fix:
+  - Fix ONLY what the ticket describes
+  - If you see a bug → create new ticket, do NOT fix inline
+  - If you see ugly code → leave it, do NOT refactor
+  - If you see a missing test → create ticket for it, do NOT write it now
+
+  EXCEPTION: Cascade regression (blocking current ticket)
+  → Fix in separate branch, merge, return to current ticket
+```
+
+## Rule 8: Cross-Platform Awareness Check
+
+Before EVERY commit, Claude asks itself these 5 questions:
+
+```
+1. Does this change affect the API response shape?
+   → If yes: check all 4 portal consumers
+
+2. Does this change affect middleware execution order?
+   → If yes: run ALL portal tests
+
+3. Does this change affect auth/session/token logic?
+   → If yes: test login on ALL 4 portals
+
+4. Does this change affect database schema?
+   → If yes: verify backward compatibility with all services
+
+5. Does this change affect shared utilities (lib/, utils/)?
+   → If yes: trace all importers, test each
+```
+
+## Rule 9: Never Guess, Always Verify
+
+```
+BANNED: "This should work"        → Prove it with a test
+BANNED: "I think this is fine"    → Run the gate
+BANNED: "Probably won't break"    → Check cross-platform matrix
+BANNED: "Seems correct"           → Show evidence
+BANNED: "I assume"                → Verify assumption
+
+IF you cannot verify → mark as BLOCKED → create ticket
+```
+
+## Rule 10: State File Updated in Real Time
+
+```
+After EVERY significant action:
+  - Update CLAUDE_CURRENT_STATE.json
+  - Update lastActions array
+  - Update counters (completed, tests, etc.)
+
+Claude's state file is ALWAYS current.
+If Claude crashes → next session reads state file → resumes exactly.
+```
+
+---
+
+# PART 8: TESTING RULES (Consolidated from Q2, Q3, Q8)
+
+## 8.1 Evidence Triplet (Every Test Claim)
+
+| Evidence Type | Required Content |
+|---------------|-----------------|
+| **UI Evidence** | Screenshot or Playwright screenshot |
+| **API Evidence** | Method + endpoint + status code + response shape |
+| **DB Evidence** (if data changes) | SQL query + result proving the change |
+
+**No evidence → no PASS. No exceptions.**
+
+## 8.2 Banned Phrases in Test Results
+
+These phrases are FORBIDDEN in any Claude output about test results:
+- "should work"
+- "looks fine"
+- "seems"
+- "likely"
+- "probably"
+- "I assume"
+- "I think it's okay"
+
+**If Claude cannot verify → BLOCKED → create ticket.**
+
+## 8.3 Evidence Per Risk Class
+
+| Risk Class | Fix Type | Required Evidence |
+|------------|----------|-------------------|
+| A | UI/copy only | Screenshot before + after |
+| B | API/logic | Screenshot + API response JSON |
+| C | Auth/OTP | Video + console logs + network tab |
+| D | Routing | curl with headers showing correct routing |
+| E | DB/schema | SQL query + result proof |
+| F | Infra/Docker | Build logs + container health |
+
+## 8.4 Failure Injection (Mandatory)
+
+For each portal's primary flow, these MUST be tested:
+
+| Failure | Expected UX | If Unsafe → |
+|---------|-------------|-------------|
+| Invalid/expired token (401) | Redirect to login + message | P0 ticket |
+| Backend 500 | Error boundary, safe UI | P1 ticket |
+| Network drop mid-submit | No double-write, retry safe | P0 ticket |
+| Duplicate click/submit | Idempotency holds | P1 ticket |
+| Timeout | Loading state → timeout message | P2 ticket |
+
+## 8.5 10,000 Store Readiness (P0 if Missing)
+
+| Requirement | Check |
+|-------------|-------|
+| Pagination everywhere | No unbounded list fetches |
+| Search debounce | Search inputs debounced, results capped |
+| List virtualization | Large lists use virtual scroll |
+| No "load all rows" | Every list query has LIMIT/OFFSET |
+| API timeouts | Timeouts set, retries idempotent |
+| Store isolation | Store A cannot see Store B data (storeId from JWT only) |
+
+---
+
+# PART 9: GCP DEPLOYMENT RULES (Consolidated from Q2, Q3, Q5)
+
+## 9.1 Artifact Rules
+
+```
+- Build container image from RC SHA in CI
+- Tag with: :<GIT_SHA> AND store digest @sha256:...
+- PROHIBITED: deploying :latest, rebuilding "same SHA" with different contents
+- /version endpoint MUST return the deployed SHA
+```
+
+## 9.2 Database Migration Rules
+
+```
+Policy: Expand → Deploy → Contract
+  1. Expand: add columns/tables/indexes (no breaking changes)
+  2. Deploy: new code reads/writes new + supports old
+  3. Contract: remove old columns AFTER everything upgraded (separate ticket)
+
+Mandatory:
+  - Migration is idempotent (safe to re-run)
+  - Rollback strategy exists
+  - No long locks
+  - Forward-only in production (no ALTER COLUMN TYPE in peak hours)
+
+FORBIDDEN:
+  - DROP/RENAME columns used by current services in same deploy
+  - Breaking enum changes without compatibility layer
+```
+
+## 9.3 Config Drift Prevention
+
+Claude maintains env var parity between environments:
+- Every new env var → documented in PR + set in staging before deploy
+- Secret values → GCP Secret Manager (never in code)
+- Feature flags → documented with expected state per environment
+- URLs → env vars (never hardcoded)
+
+## 9.4 Staging Deploy Protocol
+
+At phase boundary (all tickets green on main):
+
+```
+1. Tag: git tag phase-N-complete-YYYY-MM-DD on main
+2. Push tag: git push origin --tags
+3. CI builds from tag (NOT from HEAD)
+4. CI deploys to staging from built artifact
+5. CI runs staging smoke tests
+6. Operator reviews evidence + tests NEW behavior
+7. Operator sign-off → ready for production promotion
+
+IF staging fails:
+  → Create fix ticket(s)
+  → Fix using same one-ticket-one-PR flow
+  → Re-tag, re-deploy, re-verify
+  → NEVER hot-patch staging directly
+```
+
+## 9.5 Production Promotion
+
+```
+1. Same artifact from staging (no rebuild)
+2. Single traffic shift (Cloud Run revision)
+3. Post-deploy health checks (automated)
+4. Rollback available: single action (shift back to previous revision)
+5. Monitor for 15 minutes after promotion
+```
+
+## 9.6 CI Trigger Health Check
+
+After pushing a branch / opening a PR:
+```
+1. Confirm CI check-suites appear within 2-3 minutes
+2. If NO checks after 3 minutes → STOP + label as INFRA-CI-BLOCKED
+3. Never merge a PR that has zero CI runs without operator sign-off
+```
+
+---
+
+# PART 10: EMERGENCY PROCEDURES
+
+## 10.1 Emergency Rule
+
+```
+IF something breaks under pressure:
+  1. STOP immediately
+  2. Revert to last green tag (Cloud Run → shift traffic to previous revision)
+  3. Do NOT hot-patch production
+  4. Do NOT "quick fix" and redeploy
+  5. Create ticket, fix properly, go through full CI cycle
+```
+
+## 10.2 Rollback Protocol
+
+```
+Staging rollback:
+  gcloud run services update-traffic <service> --to-revisions=<previous>=100
+
+Production rollback:
+  gcloud run services update-traffic <service> --to-revisions=<previous>=100
+
+Time target: < 5 minutes from decision to rollback complete
+```
+
+## 10.3 When Claude MUST Stop and Ask Operator
+
+- Any P0 blocker discovered
+- CI infrastructure not triggering (INFRA-CI-BLOCKED)
+- Merge conflict on main that requires human judgment
+- Ticket requirements are ambiguous
+- Operator-reported issue doesn't reproduce
+- Fix would require breaking an API contract
+
+---
+
+# PART 11: FORBIDDEN ACTIONS (Absolute)
+
+Claude MUST NEVER:
+
+| Category | Forbidden Action |
+|----------|-----------------|
+| **Deploy** | Deploy without all CI gates green |
+| **Deploy** | Skip staging → go direct to production |
+| **Deploy** | Deploy from HEAD instead of immutable tag |
+| **Deploy** | Use `:latest` tag for any deployment |
+| **Code** | Fix things not in an approved ticket |
+| **Code** | Make "quick fixes" without ticket ID |
+| **Code** | Hardcode URLs, IPs, or secrets in source code |
+| **Code** | Use `test.skip()`, `it.skip()`, `describe.skip()` |
+| **Code** | Add TODO/FIXME/HACK comments instead of fixing |
+| **Code** | Use `any` type as a fix |
+| **Code** | Silence errors with empty catch blocks |
+| **Process** | Auto-advance past a sign-off boundary |
+| **Process** | Expand scope during a fix cycle |
+| **Process** | Bundle multiple tickets into one PR |
+| **Process** | Start next ticket before current is merged |
+| **Process** | Merge PR with zero CI runs |
+| **Process** | Declare "done" without CI green |
+| **Database** | Modify production database directly |
+| **Database** | Drop/rename columns in same deploy as code change |
+| **Testing** | Claim PASS without Evidence Triplet |
+| **Testing** | Use banned phrases in test results |
+| **Testing** | Skip failure injection tests |
+| **Testing** | Delete locked phase tests without operator approval |
+| **Git** | Push directly to main |
+| **Git** | Force push to any shared branch |
+| **Git** | Create second PR under same ticket ID |
+
+---
+
+# PART 12: DECISION ALGORITHM (Claude's Flowchart)
+
+At every decision point, Claude follows this algorithm:
+
+```
+START
+  │
+  ├─ Am I in the middle of a ticket?
+  │   YES → Continue that ticket (go to current step)
+  │   NO  → ▼
+  │
+  ├─ Are there operator-reported issues?
+  │   YES → Triage ALL first → Fix highest priority → One at a time
+  │   NO  → ▼
+  │
+  ├─ Are there blocked items?
+  │   YES → Can I unblock? → YES: unblock → NO: ask operator
+  │   NO  → ▼
+  │
+  ├─ Am I at a phase boundary?
+  │   YES → Full regression on main → Deploy to staging → STOP (wait for operator)
+  │   NO  → ▼
+  │
+  ├─ What's the next ticket in the queue?
+  │   → Pick it → Announce → Start from Step 1
+  │
+  └─ Queue empty?
+      → Phase complete → Run completion checklist → STOP (wait for operator)
+```
+
+---
+
+# PART 13: COMMUNICATION PROTOCOL
+
+## 13.1 Starting a Ticket
+
+```
+Starting TICKET-ID: [description]
+Risk Class: [A-F]
+Phase: [1-5]
+Layer: [schema/backend/gateway/frontend/pos]
+Files in scope: [list]
+Cross-platform impact: [which portals affected]
+```
+
+## 13.2 When Blocked
+
+```
+BLOCKED: [specific reason]
+Affected ticket: TICKET-ID
+Options:
+  1. [option with pros/cons]
+  2. [option with pros/cons]
+Recommended: [which option and why]
+```
+
+## 13.3 When Done
+
+```
+TICKET-ID DONE:
+- Fix: [one-line summary]
+- Test: [test file + what it validates]
+- Evidence: [CI link / screenshot / curl]
+- Risk: [what could break]
+- Cross-platform: [portals affected/tested]
+- Rollback: git revert <hash>
+```
+
+## 13.4 Phase Boundary Report
+
+```
+PHASE N COMPLETE:
+- Tickets: [X/Y completed]
+- Tests locked: [count]
+- CI passes: [X/X]
+- Regressions caught by CI: [count]
+- Regressions found by operator: [count]
+- Ready for staging deploy: [YES/NO]
+```
+
+---
+
+# PART 14: SESSION STARTUP CHECKLIST
+
+Every new Claude session, EXACTLY this sequence:
+
+```
+1. Read RELEASES/CLAUDE_STATE.md           (this file — rules)
+2. Read RELEASES/CLAUDE_CURRENT_STATE.json (live state)
+3. git log --oneline -10 && git status     (verify git matches state)
+4. Reconcile any differences (git is truth)
+5. Announce: "Resuming [ticket] at [step]. Phase: [N], Progress: [X/Y]"
+6. Continue work
+```
+
+**Claude NEVER asks "what should I work on?" — the state file tells it.**
+**Claude NEVER re-reads the entire codebase — it knows exactly where it was.**
+
+---
+
+# PART 15: DEFINITION OF DONE
+
+## 15.1 Per-Ticket Done
+
+- [ ] Failing test written (proves the bug)
+- [ ] Fix implemented (minimal scope)
+- [ ] All gates green (typecheck + build + test)
+- [ ] CI green (all 6 gates on GitHub Actions)
+- [ ] PR merged to main
+- [ ] Tag created on main
+- [ ] State file updated
+- [ ] Per-ticket report posted
+
+## 15.2 Per-Phase Done
+
+- [ ] All tickets in phase merged + tagged
+- [ ] Full gate suite green on main HEAD
+- [ ] Phase tag on main
+- [ ] Staging deployed from tag
+- [ ] CI staging smoke tests pass
+- [ ] Operator reviews evidence
+- [ ] Operator sign-off recorded
+- [ ] Phase tests locked (snapshot)
+
+## 15.3 Project Done (Go-Live)
+
+- [ ] All phases complete (1-5)
+- [ ] All portals pass acceptance testing (Retailer, Supplier, SuperAdmin, POS)
+- [ ] POS money flow verified (scan → sell → bill → payment)
+- [ ] 800+ locked tests all green
+- [ ] Production promotion: same artifact as staging
+- [ ] Post-deploy health checks pass
+- [ ] Operator sign-off on production
+- [ ] Rollback plan documented and tested
+
+---
+
+# APPENDIX A: CROSS-PLATFORM TEST MATRIX
+
+| Portal | Device | Method | Login Test | CRUD Test | Flow Test |
+|--------|--------|--------|------------|-----------|-----------|
+| Retailer Web | PC | Chrome Incognito | Yes | Yes | Yes |
+| Supplier Web | PC | Chrome Incognito | Yes | Yes | Yes |
+| SuperAdmin | PC | Chrome Incognito | Yes | Yes | Yes |
+| POS App | Mobile | Expo Go | Yes | Yes | Yes |
+
+## Business Logic Registry (10 Functions)
+
+| # | Function | Portals Affected | Test Required |
+|---|----------|-----------------|---------------|
+| 1 | Barcode scan/resolve | POS, Retailer | Scan E2E |
+| 2 | Product search | POS, Retailer, Supplier | Search E2E |
+| 3 | Checkout/billing | POS | Checkout E2E |
+| 4 | Stock-in/adjustment | POS, Retailer | Stock E2E |
+| 5 | Store provisioning | SuperAdmin, Retailer | Provision E2E |
+| 6 | Auth/login/OTP | ALL portals | Auth E2E |
+| 7 | Supplier product catalog | Supplier, POS | Catalog E2E |
+| 8 | Retailer SKU management | Retailer, POS | SKU E2E |
+| 9 | Ledger/dues tracking | POS, Retailer | Ledger E2E |
+| 10 | Pricing (MRP/selling) | POS, Retailer, Supplier | Price E2E |
+
+---
+
+# APPENDIX B: GCP INFRASTRUCTURE
+
+| Service | GCP Resource |
+|---------|-------------|
+| API Gateway | Cloud Run `api-gateway` |
+| Backend | Cloud Run `backend` |
+| Retailer Portal | Cloud Run `retailer-admin` |
+| Supplier Portal | Cloud Run `supplier-portal` |
+| SuperAdmin Portal | Cloud Run `supermandi-superadmin` |
+| Landing Page | Cloud Run `supermandi-landing` |
+| POS App | Expo/EAS Build → App Store/Play Store |
+| Database | Cloud SQL (PostgreSQL) |
+| Secrets | Secret Manager |
+| Images | Artifact Registry `asia-south1-docker.pkg.dev/supermandi-pos/supermandi` |
+| CI/CD | GitHub Actions |
+| Monitoring | Cloud Run metrics + uptime probes |
+
+---
+
+# APPENDIX C: QUICK REFERENCE
+
+## Gate Commands (Local)
+```powershell
+pnpm -r typecheck
+pnpm -r build
+pnpm test
+```
+
+## Git Flow (Per Ticket)
+```bash
+git checkout main && git pull
+git checkout -b fix/TICKET-ID-slug
+# ... implement ...
+git push -u origin fix/TICKET-ID-slug
+# ... CI passes ...
+# ... merge PR ...
+git tag prestage-TICKET-ID-YYYY-MM-DD_HHMMIST
+git push origin --tags
+```
+
+## Staging Deploy (Phase Boundary)
+```bash
+git tag phase-N-complete-YYYY-MM-DD
+git push origin --tags
+# CI builds and deploys automatically
+```
+
+## Rollback
+```bash
+gcloud run services update-traffic <service> --to-revisions=<previous>=100
+```
+
+---
+
+**END OF CLAUDE STATE OPERATING SYSTEM**
+
+*This file is the single source of truth. All other rule files are historical reference only.*
+*Claude reads this file first, follows only this file, and updates CLAUDE_CURRENT_STATE.json as it works.*
