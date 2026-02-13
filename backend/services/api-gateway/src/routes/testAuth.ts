@@ -1,13 +1,14 @@
 /**
  * TEST AUTH ROUTES - For automated testing only
  *
- * SECURITY: These routes are ONLY available when NODE_ENV !== 'production'
+ * SECURITY + STAGE-005: These routes are ONLY available in development.
+ * Disabled in both production AND staging to prevent public test token minting.
  *
  * Provides:
  * - POST /api/test/mint-token - Mint a short-lived test token
  * - GET /api/test/verify-token - Verify a token and return payload
  *
- * Usage:
+ * Usage (development only):
  *   curl -X POST $GATEWAY_URL/api/test/mint-token \
  *     -H "Content-Type: application/json" \
  *     -d '{"ttl": 30, "userId": "test-user", "storeId": "test-store"}'
@@ -16,12 +17,12 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
-// AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
+// AUDIT-API-007 + STAGE-005: Fail-fast in non-development if secrets missing
 const TEST_JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'];
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[FATAL] JWT_SECRET must be set in production');
+    if (process.env.NODE_ENV !== 'development') {
+      console.error(`[FATAL] JWT_SECRET must be set in ${process.env.NODE_ENV}`);
       process.exit(1);
     }
     return 'dev-secret-change-in-prod';
@@ -48,16 +49,16 @@ interface MintTokenRequest {
 export function createTestAuthRouter(): Router {
   const router = Router();
 
-  // Only enable in non-production environments
-  const isProduction = process.env.NODE_ENV === 'production';
+  // STAGE-005: Only enable in development (disabled in staging AND production)
+  const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 
-  if (isProduction) {
+  if (!isDevelopment) {
     // Return router with no routes - all requests will 404
-    console.log('[TEST-AUTH] Test auth routes DISABLED in production');
+    console.log(`[TEST-AUTH] Test auth routes DISABLED in ${process.env.NODE_ENV}`);
     return router;
   }
 
-  console.log('[TEST-AUTH] Test auth routes ENABLED (non-production environment)');
+  console.log('[TEST-AUTH] Test auth routes ENABLED (development environment)');
 
   /**
    * POST /api/test/mint-token

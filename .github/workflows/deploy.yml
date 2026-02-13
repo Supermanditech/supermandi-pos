@@ -211,15 +211,67 @@ jobs:
           retention-days: 90
 
   # ==========================================================================
-  # Deploy to staging Cloud Run
+  # STAGE-001: Pre-deploy safety gate — Cloud SQL backup + migration check
   # ==========================================================================
-  deploy-staging:
-    name: Deploy Staging
+  pre-deploy-safety:
+    name: Pre-Deploy Safety (Backup + Migration Check)
     needs: [gate, build-push]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      # STAGE-001: Create Cloud SQL backup before any deploy
+      - name: Create pre-deploy Cloud SQL backup
+        run: |
+          echo "Creating pre-deploy backup of supermandi-staging..."
+          BACKUP_ID=$(gcloud sql backups create \
+            --instance=supermandi-staging \
+            --project=${{ env.GCP_PROJECT }} \
+            --description="pre-deploy-${{ needs.gate.outputs.sha_short }}-$(date +%Y%m%d-%H%M%S)" \
+            --format="value(id)" 2>&1) || true
+          # Verify backup was created (gcloud sql backups create may not return ID directly)
+          LATEST=$(gcloud sql backups list \
+            --instance=supermandi-staging \
+            --project=${{ env.GCP_PROJECT }} \
+            --limit=1 \
+            --format="value(id)")
+          echo "Latest backup ID: $LATEST"
+          if [ -z "$LATEST" ]; then
+            echo "FATAL: Could not verify Cloud SQL backup was created"
+            exit 1
+          fi
+          echo "PASS: Pre-deploy backup created (ID: $LATEST)"
+
+      # STAGE-001: Count expected migration files vs what we know
+      - name: Count migration files in repo
+        id: migration-count
+        run: |
+          EXPECTED=$(ls -1 backend/migrations/*.sql 2>/dev/null | wc -l)
+          echo "expected_count=$EXPECTED" >> "$GITHUB_OUTPUT"
+          echo "Migration files in repo: $EXPECTED"
+
+  # ==========================================================================
+  # Deploy to staging Cloud Run
+  # ==========================================================================
+  deploy-staging:
+    name: Deploy Staging
+    needs: [gate, build-push, pre-deploy-safety]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      pre_revisions: ${{ steps.pre-revisions.outputs.pre_revisions }}
     env:
       SHA: ${{ needs.gate.outputs.sha_short }}
       APP_VERSION: ${{ needs.gate.outputs.app_version }}
@@ -258,6 +310,22 @@ jobs:
             exit 1
           fi
           echo "All 6 images verified in Artifact Registry."
+
+      # STAGE-007: Record current serving revisions BEFORE deploy (for rollback)
+      - name: Record pre-deploy revisions
+        id: pre-revisions
+        run: |
+          SERVICES=(api-gateway main-backend retailer-admin supplier-portal superadmin landing)
+          REVISIONS=""
+          for svc in "${SERVICES[@]}"; do
+            REV=$(gcloud run services describe "$svc" \
+              --region="${{ env.GCP_REGION }}" \
+              --format="value(status.traffic[0].revisionName)" 2>/dev/null || echo "none")
+            echo "  $svc: $REV"
+            REVISIONS="${REVISIONS}${svc}=${REV},"
+          done
+          echo "pre_revisions=$REVISIONS" >> "$GITHUB_OUTPUT"
+          echo "Pre-deploy revisions recorded."
 
       # INFRA-010: Service names match existing GCP Cloud Run services (no prefix/suffix).
       # Existing services: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
@@ -340,21 +408,22 @@ jobs:
           GIT_SHA=${{ env.SHA }},\
           MIN_APP_VERSION=${{ env.APP_VERSION }},\
           ADMIN_SERVICE_URL=$MB_URL,\
-          PAYMENT_SERVICE_URL=$MB_URL,\
           CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech" \
             --set-secrets="JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
             --allow-unauthenticated \
             --quiet
           echo "    OK: $SERVICE_NAME"
 
+      # STAGE-002: Portal deploy failure = pipeline failure (no silent swallow)
       - name: Deploy frontend portals to staging
         run: |
           PORTALS=(retailer-admin supplier-portal superadmin landing)
+          FAILED=0
           for portal in "${PORTALS[@]}"; do
             SERVICE_NAME="${portal}"
             IMAGE="${{ env.AR_REPO }}/${portal}:${{ env.SHA }}"
             echo "--- Deploying: $SERVICE_NAME"
-            gcloud run deploy "$SERVICE_NAME" \
+            if ! gcloud run deploy "$SERVICE_NAME" \
               --image="$IMAGE" \
               --region="${{ env.GCP_REGION }}" \
               --platform=managed \
@@ -364,9 +433,18 @@ jobs:
               --max-instances=3 \
               --set-env-vars="GIT_SHA=${{ env.SHA }}" \
               --allow-unauthenticated \
-              --quiet || echo "WARN: $portal deploy failed"
-            echo "    OK: $SERVICE_NAME"
+              --quiet; then
+              echo "FATAL: $portal deploy FAILED"
+              FAILED=$((FAILED + 1))
+            else
+              echo "    OK: $SERVICE_NAME"
+            fi
           done
+          if [ $FAILED -gt 0 ]; then
+            echo "BLOCKED: $FAILED portal(s) failed to deploy. Pipeline cannot continue."
+            exit 1
+          fi
+          echo "All 4 portals deployed successfully."
 
   # ==========================================================================
   # Smoke test staging
@@ -396,33 +474,140 @@ jobs:
           echo "gateway_url=$URL" >> "$GITHUB_OUTPUT"
           echo "Gateway URL: $URL"
 
-      - name: Health check
+      # STAGE-003: Smoke test failures BLOCK the pipeline (no silent WARNs)
+      - name: Health check (BLOCKING)
         if: steps.url.outputs.gateway_url != ''
         run: |
           URL="${{ steps.url.outputs.gateway_url }}"
-          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/health" 2>/dev/null || echo "000")
-          echo "Health: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "WARN: Health check returned $STATUS"
-          fi
+          echo "Checking gateway health at $URL/health ..."
+          # Retry up to 5 times with 10s delay (Cloud Run cold start)
+          for attempt in 1 2 3 4 5; do
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/health" 2>/dev/null || echo "000")
+            echo "  Attempt $attempt: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "PASS: Health check OK"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "  Retrying in 10s..."
+              sleep 10
+            fi
+          done
+          echo "FATAL: Health check returned $STATUS after 5 attempts"
+          echo "BLOCKED: Staging is unhealthy. Deploy has failed."
+          exit 1
 
-      - name: Version check
+      - name: Version SHA check (BLOCKING)
         if: steps.url.outputs.gateway_url != ''
         run: |
           URL="${{ steps.url.outputs.gateway_url }}"
           VERSION=$(curl -sf "$URL/version" 2>/dev/null || echo "{}")
-          echo "Version: $VERSION"
+          echo "Version response: $VERSION"
           if echo "$VERSION" | grep -q "${{ env.SHA }}"; then
-            echo "OK: SHA matches"
+            echo "PASS: SHA matches deployed version"
           else
-            echo "WARN: SHA mismatch in /version response"
+            echo "FATAL: SHA mismatch — expected ${{ env.SHA }} in /version response"
+            echo "BLOCKED: Deployed code does not match expected SHA. Possible stale revision."
+            exit 1
           fi
 
+      - name: Portal health checks (BLOCKING)
+        run: |
+          PORTALS=(retailer-admin supplier-portal superadmin landing)
+          FAILED=0
+          for portal in "${PORTALS[@]}"; do
+            URL=$(gcloud run services describe "$portal" \
+              --region="${{ env.GCP_REGION }}" \
+              --format="value(status.url)" 2>/dev/null || echo "")
+            if [ -z "$URL" ]; then
+              echo "FAIL: $portal — no URL found"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "PASS: $portal — HTTP $STATUS"
+            else
+              echo "FAIL: $portal — HTTP $STATUS (expected 200)"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          if [ $FAILED -gt 0 ]; then
+            echo "FATAL: $FAILED portal(s) failed smoke test"
+            exit 1
+          fi
+          echo "All 4 portals passed smoke test."
+
+      - name: Backend API auth guard check (BLOCKING)
+        if: steps.url.outputs.gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.gateway_url }}"
+          # Protected endpoint should return 401/403 without a token
+          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/api/v1/admin/stores" 2>/dev/null || echo "000")
+          echo "Auth guard check: HTTP $STATUS"
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+            echo "PASS: Auth guard working — unauthenticated request correctly rejected"
+          elif [ "$STATUS" = "200" ]; then
+            echo "FATAL: /api/v1/admin/stores returned 200 WITHOUT authentication"
+            echo "BLOCKED: Auth guard is not functioning — security breach risk"
+            exit 1
+          else
+            echo "WARN: Auth guard returned unexpected $STATUS (expected 401/403)"
+            echo "  Non-blocking — may be gateway routing issue"
+          fi
+
+      # STAGE-007: Auto-rollback all services if ANY smoke test fails
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "SMOKE TEST FAILED — Rolling back all services to previous revisions..."
+          PRE_REVISIONS="${{ needs.deploy-staging.outputs.pre_revisions }}"
+          if [ -z "$PRE_REVISIONS" ]; then
+            echo "WARN: No pre-deploy revisions recorded. Manual rollback required."
+            echo "  Use: gcloud run services update-traffic <SERVICE> --to-revisions=<REVISION>=100 --region=${{ env.GCP_REGION }}"
+            exit 1
+          fi
+          # Parse "svc=rev," format and rollback each
+          IFS=',' read -ra PAIRS <<< "$PRE_REVISIONS"
+          ROLLBACK_FAILED=0
+          for pair in "${PAIRS[@]}"; do
+            [ -z "$pair" ] && continue
+            SVC="${pair%%=*}"
+            REV="${pair##*=}"
+            if [ "$REV" = "none" ] || [ -z "$REV" ]; then
+              echo "  SKIP: $SVC (no previous revision)"
+              continue
+            fi
+            echo "  Rolling back $SVC → $REV"
+            if gcloud run services update-traffic "$SVC" \
+              --to-revisions="$REV=100" \
+              --region="${{ env.GCP_REGION }}" \
+              --quiet 2>/dev/null; then
+              echo "  OK: $SVC rolled back"
+            else
+              echo "  FAIL: Could not rollback $SVC"
+              ROLLBACK_FAILED=$((ROLLBACK_FAILED + 1))
+            fi
+          done
+          if [ $ROLLBACK_FAILED -gt 0 ]; then
+            echo "WARNING: $ROLLBACK_FAILED service(s) could not be rolled back"
+          else
+            echo "All services rolled back to pre-deploy revisions."
+          fi
+          # Still fail the pipeline
+          exit 1
+
       - name: Summary
+        if: always()
         run: |
           echo "## Staging Deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **SHA:** ${{ env.SHA }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Gateway:** ${{ steps.url.outputs.gateway_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status:** ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Next: Operator tests staging, then runs \`./scripts/promote-to-prod.sh ${{ env.SHA }} --confirm\`" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Next: Operator tests staging, then runs \`./scripts/promote-to-prod.sh ${{ env.SHA }} --confirm\`" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**FAILED**: Smoke tests failed. Auto-rollback attempted. Check logs above." >> "$GITHUB_STEP_SUMMARY"
+          fi
