@@ -372,6 +372,45 @@ jobs:
           echo "PASS: All $CHECKED gcloud run deploy flags are valid. GCP parity confirmed."
           echo ""
 
+      # STAGE-022: Pre-deploy GCP state gate — comprehensive check BEFORE deploying.
+      # Collects each service's current state (traffic revision, latest revision,
+      # Active status) so we can detect issues early and have rollback context.
+      - name: "Pre-deploy GCP state check"
+        run: |
+          echo "=== STAGE-022: Pre-Deploy GCP State ==="
+          echo "Collecting current state of all 6 Cloud Run services..."
+          echo ""
+          SERVICES=(api-gateway main-backend retailer-admin supplier-portal superadmin landing)
+          ISSUES=0
+          for svc in "${SERVICES[@]}"; do
+            STATE=$(gcloud run services describe "$svc" \
+              --region="${{ env.GCP_REGION }}" \
+              --format="json(status.traffic[0].revisionName,status.traffic[0].percent,status.latestCreatedRevisionName,status.latestReadyRevisionName)" 2>/dev/null || echo "{}")
+            TRAFFIC_REV=$(echo "$STATE" | grep -oP '"revisionName":\s*"\K[^"]+' || echo "none")
+            TRAFFIC_PCT=$(echo "$STATE" | grep -oP '"percent":\s*\K[0-9]+' || echo "0")
+            LATEST_CREATED=$(echo "$STATE" | grep -oP '"latestCreatedRevisionName":\s*"\K[^"]+' || echo "none")
+            LATEST_READY=$(echo "$STATE" | grep -oP '"latestReadyRevisionName":\s*"\K[^"]+' || echo "none")
+
+            echo "  $svc:"
+            echo "    Traffic: $TRAFFIC_REV ($TRAFFIC_PCT%)"
+            echo "    Latest created: $LATEST_CREATED"
+            echo "    Latest ready: $LATEST_READY"
+
+            # Warn if latest created != traffic revision (stale revisions exist)
+            if [ "$LATEST_CREATED" != "$TRAFFIC_REV" ]; then
+              echo "    WARN: Latest created revision differs from traffic revision (stale revisions may exist)"
+              ISSUES=$((ISSUES + 1))
+            fi
+          done
+          echo ""
+          if [ $ISSUES -gt 0 ]; then
+            echo "INFO: $ISSUES service(s) have stale revisions from previous deploys."
+            echo "Proceeding with deploy — new revision will replace them."
+          else
+            echo "All services in clean state."
+          fi
+          echo ""
+
       # STAGE-007: Record current serving revisions BEFORE deploy (for rollback)
       - name: Record pre-deploy revisions
         id: pre-revisions
@@ -391,10 +430,12 @@ jobs:
       # INFRA-010: Service names match existing GCP Cloud Run services (no prefix/suffix).
       # Existing services: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
       # Load balancer NEGs point to these exact names.
-      # STAGE-018: GCP-level deploy safety — startup probes, CPU boost, readiness wait
-      # Startup probes: GCP won't route traffic to a revision until /health returns 200.
-      # This eliminates "old revision responds during cold start" at the platform level.
-      # --cpu-boost: Allocate extra CPU during startup for faster cold starts.
+      # STAGE-022: Removed --startup-probe and --cpu-boost (caused 0% traffic bug).
+      # gcloud run deploy with startup probes exits 0 before probe completes,
+      # leaving new revision with 0% traffic. Probes are "sticky" on Cloud Run
+      # services — must explicitly clear with --startup-probe="" to remove
+      # the probe set by STAGE-018. Without a probe, gcloud routes traffic
+      # immediately and --deploy-health-check (default) uses TCP readiness.
       - name: Deploy main-backend to staging
         id: deploy-main-backend
         run: |
@@ -410,8 +451,7 @@ jobs:
             --cpu=1 \
             --min-instances=0 \
             --max-instances=3 \
-            --cpu-boost \
-            --startup-probe=httpGet.path=/health,periodSeconds=5,timeoutSeconds=3,failureThreshold=10 \
+            --startup-probe="" \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=private-ranges-only \
             --add-cloudsql-instances="${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:supermandi-staging" \
@@ -468,8 +508,7 @@ jobs:
             --cpu=1 \
             --min-instances=0 \
             --max-instances=3 \
-            --cpu-boost \
-            --startup-probe=httpGet.path=/health,periodSeconds=5,timeoutSeconds=3,failureThreshold=10 \
+            --startup-probe="" \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=private-ranges-only \
             --set-env-vars="\
@@ -500,6 +539,7 @@ jobs:
               --cpu=1 \
               --min-instances=0 \
               --max-instances=3 \
+              --startup-probe="" \
               --set-env-vars="GIT_SHA=${{ env.SHA }}" \
               --allow-unauthenticated \
               --quiet; then
@@ -515,64 +555,71 @@ jobs:
           fi
           echo "All 4 portals deployed successfully."
 
-      # STAGE-018: Wait for ALL new revisions to be READY before smoke tests.
-      # This is a GCP-level gate: even if `gcloud run deploy` returns success,
-      # the new revision may still be starting up. This step explicitly confirms
-      # every service's latest revision is READY and serving traffic.
-      - name: Verify all revisions are READY
+      # STAGE-022: Post-deploy traffic routing verification (BLOCKING).
+      # gcloud run deploy exits 0 before traffic is routed to the new revision.
+      # This step polls until each service's traffic revision is DIFFERENT from
+      # the pre-deploy revision (i.e., traffic shifted to the newly deployed one).
+      # Without this gate, smoke tests hit old revisions with stale SHAs.
+      - name: "Verify traffic routed to new revisions (BLOCKING)"
         run: |
+          echo "=== STAGE-022: Post-Deploy Traffic Routing Verification ==="
+          echo "Waiting for all services to route traffic to new revisions..."
+          echo ""
+
           SERVICES=(api-gateway main-backend retailer-admin supplier-portal superadmin landing)
-          ALL_READY=true
+          PRE_REVISIONS="${{ steps.pre-revisions.outputs.pre_revisions }}"
+          MAX_WAIT=180  # 3 minutes (generous for cold starts)
+          POLL_INTERVAL=10
+          FAIL=0
+
           for svc in "${SERVICES[@]}"; do
-            echo "Checking $svc revision readiness..."
-            # Get the latest revision name
-            LATEST_REV=$(gcloud run revisions list \
-              --service="$svc" \
-              --region="${{ env.GCP_REGION }}" \
-              --sort-by="~metadata.creationTimestamp" \
-              --limit=1 \
-              --format="value(metadata.name)" 2>/dev/null || echo "")
-            if [ -z "$LATEST_REV" ]; then
-              echo "  WARN: Could not get latest revision for $svc"
-              ALL_READY=false
-              continue
-            fi
-            # Wait for it to be READY (up to 60s)
-            for attempt in 1 2 3 4 5 6; do
-              READY=$(gcloud run revisions describe "$LATEST_REV" \
+            # Extract pre-deploy revision for this service
+            PRE_REV=$(echo "$PRE_REVISIONS" | grep -oP "${svc}=\K[^,]+" || echo "unknown")
+            echo "--- $svc (pre-deploy: $PRE_REV)"
+
+            ROUTED=false
+            ELAPSED=0
+            while [ $ELAPSED -lt $MAX_WAIT ]; do
+              TRAFFIC_REV=$(gcloud run services describe "$svc" \
                 --region="${{ env.GCP_REGION }}" \
-                --format="value(status.conditions[0].status)" 2>/dev/null || echo "Unknown")
-              echo "  $svc ($LATEST_REV): attempt $attempt — Ready=$READY"
-              if [ "$READY" = "True" ]; then
-                # Verify this revision is receiving traffic
-                TRAFFIC_REV=$(gcloud run services describe "$svc" \
+                --format="value(status.traffic[0].revisionName)" 2>/dev/null || echo "")
+
+              if [ -n "$TRAFFIC_REV" ] && [ "$TRAFFIC_REV" != "$PRE_REV" ]; then
+                # Verify the new revision is Active (not just Ready with reason=Retired)
+                ACTIVE=$(gcloud run revisions describe "$TRAFFIC_REV" \
                   --region="${{ env.GCP_REGION }}" \
-                  --format="value(status.traffic[0].revisionName)" 2>/dev/null || echo "")
-                if [ "$TRAFFIC_REV" = "$LATEST_REV" ]; then
-                  echo "  PASS: $svc — $LATEST_REV is READY and serving 100% traffic"
-                else
-                  echo "  WARN: $svc — $LATEST_REV is READY but traffic goes to $TRAFFIC_REV"
-                  ALL_READY=false
-                fi
+                  --format="value(status.conditions.filter(type=Active).status)" 2>/dev/null || echo "")
+                echo "  PASS: $svc → $TRAFFIC_REV (Active=$ACTIVE) [${ELAPSED}s]"
+                ROUTED=true
                 break
               fi
-              if [ "$attempt" -lt 6 ]; then
-                sleep 10
-              else
-                echo "  FAIL: $svc — $LATEST_REV not READY after 60s"
-                ALL_READY=false
-              fi
+
+              ELAPSED=$((ELAPSED + POLL_INTERVAL))
+              echo "  Waiting... traffic still on $TRAFFIC_REV [${ELAPSED}s / ${MAX_WAIT}s]"
+              sleep $POLL_INTERVAL
             done
+
+            if [ "$ROUTED" = "false" ]; then
+              echo "  FATAL: $svc — traffic NOT routed to new revision after ${MAX_WAIT}s"
+              echo "    Still on: $TRAFFIC_REV (pre-deploy: $PRE_REV)"
+              # Dump diagnostics
+              echo "    --- Diagnostics ---"
+              LATEST=$(gcloud run services describe "$svc" \
+                --region="${{ env.GCP_REGION }}" \
+                --format="json(status.latestCreatedRevisionName,status.latestReadyRevisionName,status.traffic)" 2>/dev/null || echo "{}")
+              echo "    $LATEST"
+              FAIL=$((FAIL + 1))
+            fi
           done
-          if [ "$ALL_READY" = "false" ]; then
-            echo ""
-            echo "FATAL: Not all revisions are READY and serving traffic."
-            echo "Deploy did not fully propagate. Failing pipeline."
+
+          echo ""
+          if [ $FAIL -gt 0 ]; then
+            echo "BLOCKED: $FAIL service(s) did not route traffic to new revisions."
+            echo "This means gcloud run deploy created revisions but Cloud Run did not"
+            echo "activate them. Check service logs and revision conditions."
             exit 1
-          else
-            echo ""
-            echo "All 6 services: latest revision READY and serving 100% traffic."
           fi
+          echo "PASS: All 6 services routed traffic to new revisions."
 
       # STAGE-021: GCP-Git Image Parity Gate (BLOCKING)
       # Verify each service's serving revision uses the Docker image tagged with
