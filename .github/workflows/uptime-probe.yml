@@ -17,7 +17,8 @@ on:
         default: 'true'
 
 env:
-  DOMAIN: supermandi.tech
+  # INFRA-017: Use staging domain (load balancer routes to Cloud Run services)
+  DOMAIN: staging.supermandi.tech
 
 jobs:
   uptime-check:
@@ -165,8 +166,8 @@ jobs:
             ${{ steps.versions.outputs.fingerprint_failures || 'None' }}
 
             ### Action Required (Cloud Run)
-            1. Check Cloud Run logs: \`gcloud run services logs read supermandi-api-gateway-staging --region=asia-south1 --project=supermandi-backend --limit=50\`
-            2. Check service status: \`gcloud run services describe supermandi-api-gateway-staging --region=asia-south1 --project=supermandi-backend\`
+            1. Check Cloud Run logs: \`gcloud run services logs read api-gateway --region=asia-south1 --project=supermandi-backend --limit=50\`
+            2. Check service status: \`gcloud run services describe api-gateway --region=asia-south1 --project=supermandi-backend\`
             3. Check /version: \`curl <GATEWAY_URL>/version\`
 
             ---

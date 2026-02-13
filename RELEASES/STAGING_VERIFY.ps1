@@ -66,7 +66,8 @@ $services = @("api-gateway", "main-backend", "retailer-admin", "supplier-portal"
 $urls = @{}
 
 foreach ($svc in $services) {
-    $crName = "supermandi-$svc-staging"
+    # INFRA-010/014: Service names match existing GCP Cloud Run services (no prefix/suffix)
+    $crName = $svc
     try {
         $url = gcloud run services describe $crName --region=$REGION --project=$PROJECT --format="value(status.url)" 2>$null
         if ($url) {

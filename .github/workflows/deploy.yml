@@ -259,11 +259,14 @@ jobs:
           fi
           echo "All 6 images verified in Artifact Registry."
 
+      # INFRA-010: Service names match existing GCP Cloud Run services (no prefix/suffix).
+      # Existing services: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
+      # Load balancer NEGs point to these exact names.
       - name: Deploy main-backend to staging
         id: deploy-main-backend
         run: |
           VPC_CONNECTOR="projects/${{ env.GCP_PROJECT }}/locations/${{ env.GCP_REGION }}/connectors/supermandi-connector"
-          SERVICE_NAME="supermandi-main-backend-staging"
+          SERVICE_NAME="main-backend"
           IMAGE="${{ env.AR_REPO }}/main-backend:${{ env.SHA }}"
           echo "--- Deploying: $SERVICE_NAME"
           gcloud run deploy "$SERVICE_NAME" \
@@ -276,9 +279,34 @@ jobs:
             --max-instances=3 \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=private-ranges-only \
-            --set-env-vars="NODE_ENV=staging,GIT_SHA=${{ env.SHA }},MIN_APP_VERSION=${{ env.APP_VERSION }}" \
-            --set-secrets="DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
-            --no-allow-unauthenticated \
+            --add-cloudsql-instances="${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:supermandi-staging" \
+            --set-env-vars="\
+          NODE_ENV=staging,\
+          GIT_SHA=${{ env.SHA }},\
+          MIN_APP_VERSION=${{ env.APP_VERSION }},\
+          DB_HOST=/cloudsql/${{ env.GCP_PROJECT }}:${{ env.GCP_REGION }}:supermandi-staging,\
+          DB_PORT=5432,\
+          DB_NAME=supermandi,\
+          DB_USER=postgres,\
+          REDIS_HOST=10.107.71.27,\
+          REDIS_PORT=6379,\
+          REDIS_URL=redis://10.107.71.27:6379,\
+          FIREBASE_ENABLED=true,\
+          FIREBASE_PROJECT_ID=supermandi-pos,\
+          SMS_DISABLED=true,\
+          RATE_LIMIT_MULTIPLIER=100,\
+          SMTP_HOST=smtp.gmail.com,\
+          SMTP_PORT=587,\
+          SMTP_USER=supermanditech@gmail.com,\
+          EMAIL_FROM=SuperMandi <supermanditech@gmail.com>,\
+          PORTAL_BASE_URL=https://staging.supermandi.tech,\
+          POS_APP_DOWNLOAD_URL=https://staging.supermandi.tech/pos,\
+          ADMIN_EMAIL_ALLOWLIST=supermanditech@gmail.com,\
+          ALLOWED_ORIGINS=https://staging.supermandi.tech,\
+          CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech,\
+          DOCUMENT_STORAGE_DIR=/tmp/documents" \
+            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest" \
+            --allow-unauthenticated \
             --quiet
           echo "    OK: $SERVICE_NAME"
 
@@ -292,7 +320,7 @@ jobs:
       - name: Deploy api-gateway to staging
         run: |
           VPC_CONNECTOR="projects/${{ env.GCP_PROJECT }}/locations/${{ env.GCP_REGION }}/connectors/supermandi-connector"
-          SERVICE_NAME="supermandi-api-gateway-staging"
+          SERVICE_NAME="api-gateway"
           IMAGE="${{ env.AR_REPO }}/api-gateway:${{ env.SHA }}"
           MB_URL="${{ steps.deploy-main-backend.outputs.main_backend_url }}"
           echo "--- Deploying: $SERVICE_NAME"
@@ -307,7 +335,13 @@ jobs:
             --max-instances=3 \
             --vpc-connector="$VPC_CONNECTOR" \
             --vpc-egress=private-ranges-only \
-            --set-env-vars="NODE_ENV=staging,GIT_SHA=${{ env.SHA }},MIN_APP_VERSION=${{ env.APP_VERSION }},ADMIN_SERVICE_URL=$MB_URL" \
+            --set-env-vars="\
+          NODE_ENV=staging,\
+          GIT_SHA=${{ env.SHA }},\
+          MIN_APP_VERSION=${{ env.APP_VERSION }},\
+          ADMIN_SERVICE_URL=$MB_URL,\
+          PAYMENT_SERVICE_URL=$MB_URL,\
+          CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech" \
             --set-secrets="JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
             --allow-unauthenticated \
             --quiet
@@ -317,7 +351,7 @@ jobs:
         run: |
           PORTALS=(retailer-admin supplier-portal superadmin landing)
           for portal in "${PORTALS[@]}"; do
-            SERVICE_NAME="supermandi-${portal}-staging"
+            SERVICE_NAME="${portal}"
             IMAGE="${{ env.AR_REPO }}/${portal}:${{ env.SHA }}"
             echo "--- Deploying: $SERVICE_NAME"
             gcloud run deploy "$SERVICE_NAME" \
@@ -356,7 +390,7 @@ jobs:
       - name: Get staging API Gateway URL
         id: url
         run: |
-          URL=$(gcloud run services describe supermandi-api-gateway-staging \
+          URL=$(gcloud run services describe api-gateway \
             --region="${{ env.GCP_REGION }}" \
             --format="value(status.url)" 2>/dev/null || echo "")
           echo "gateway_url=$URL" >> "$GITHUB_OUTPUT"

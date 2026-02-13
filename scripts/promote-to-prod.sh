@@ -70,7 +70,8 @@ echo ""
 # =============================================================================
 echo "--- Step 1: Verify staging SHA..."
 
-STAGING_GW_URL=$(gcloud run services describe "supermandi-api-gateway-staging" \
+# INFRA-010: Service names match existing GCP Cloud Run services (no prefix)
+STAGING_GW_URL=$(gcloud run services describe "api-gateway" \
   --region="$REGION" \
   --format="value(status.url)" 2>/dev/null || echo "")
 
@@ -176,7 +177,7 @@ fi
 echo ""
 echo "--- Step 5: Post-deploy verification..."
 
-PROD_GW_URL=$(gcloud run services describe "supermandi-api-gateway" \
+PROD_GW_URL=$(gcloud run services describe "api-gateway" \
   --region="$REGION" \
   --format="value(status.url)" 2>/dev/null || echo "")
 
@@ -204,6 +205,6 @@ echo "    2. Verify: curl https://supermandi.tech/api/v1/version"
 echo "    3. Monitor for 15 minutes (GOLIVE-MONITOR-001)"
 echo ""
 echo "  Rollback (if needed):"
-echo "    gcloud run services update-traffic supermandi-api-gateway \\"
+echo "    gcloud run services update-traffic api-gateway \\"
 echo "      --to-revisions=PREVIOUS=100 --region=$REGION"
 echo ""

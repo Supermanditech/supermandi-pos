@@ -76,7 +76,9 @@ run_deploy() {
   local allow_unauth=${4:-false}
   local extra_flags=${5:-}
 
-  local cr_name="supermandi-${service_name}${ENV_SUFFIX}"
+  # INFRA-010: Service names match existing GCP Cloud Run services (no prefix).
+  # Existing: api-gateway, main-backend, retailer-admin, supplier-portal, superadmin, landing
+  local cr_name="${service_name}"
 
   echo "--- Deploying: $cr_name"
   echo "    Image: $image"
@@ -131,7 +133,7 @@ MAIN_BACKEND_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-o
 run_deploy "main-backend" "${AR_REPO}/main-backend:${SHA}" "512Mi" "false" "$MAIN_BACKEND_FLAGS"
 
 # Get main-backend URL for api-gateway
-MB_URL=$(gcloud run services describe "supermandi-main-backend${ENV_SUFFIX}" \
+MB_URL=$(gcloud run services describe "main-backend" \
   --region="$REGION" --format="value(status.url)" 2>/dev/null || echo "")
 
 GW_FLAGS="--vpc-connector=$VPC_CONNECTOR --vpc-egress=private-ranges-only --set-secrets=JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest"

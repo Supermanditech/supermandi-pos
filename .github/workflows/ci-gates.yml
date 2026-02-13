@@ -247,6 +247,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
         run: pnpm run migrate:up
 
+      # INFRA-013: Run ALL backend tests, not just one file.
+      # Previous: --testPathPattern='categoryAutoAssignment' (only 1 of 16 test files)
       - name: Test backend (with Postgres)
         working-directory: backend
         env:
@@ -254,7 +256,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
           NODE_ENV: test
         run: |
-          pnpm test -- --testPathPattern='categoryAutoAssignment'
+          pnpm test
 
   # ==========================================================================
   # JOB 4: Build all portals and verify outputs (CRITICAL)
