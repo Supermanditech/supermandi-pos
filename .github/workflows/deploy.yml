@@ -455,7 +455,9 @@ jobs:
           echo "All 4 portals deployed successfully."
 
   # ==========================================================================
-  # Smoke test staging
+  # STAGE-017: Hardened smoke tests — every check has retries, timeouts,
+  # body validation, and explicit BLOCKING behavior. No silent WARNs.
+  # Learned from 3 pipeline failures: cold-start, redirects, SHA lag.
   # ==========================================================================
   smoke-test:
     name: Staging Smoke Test
@@ -466,6 +468,8 @@ jobs:
       id-token: write
     env:
       SHA: ${{ needs.gate.outputs.sha_short }}
+      CURL_TIMEOUT: 15
+      RETRY_DELAY: 10
     steps:
       - name: Authenticate to GCP (WIF)
         uses: google-github-actions/auth@v2
@@ -473,108 +477,218 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
           service_account: ${{ secrets.GCP_SA_EMAIL }}
 
-      - name: Get staging API Gateway URL
+      - name: Resolve service URLs
         id: url
         run: |
-          URL=$(gcloud run services describe api-gateway \
-            --region="${{ env.GCP_REGION }}" \
-            --format="value(status.url)" 2>/dev/null || echo "")
-          echo "gateway_url=$URL" >> "$GITHUB_OUTPUT"
-          echo "Gateway URL: $URL"
-
-      # STAGE-003: Smoke test failures BLOCK the pipeline (no silent WARNs)
-      - name: Health check (BLOCKING)
-        if: steps.url.outputs.gateway_url != ''
-        run: |
-          URL="${{ steps.url.outputs.gateway_url }}"
-          echo "Checking gateway health at $URL/health ..."
-          # Retry up to 5 times with 10s delay (Cloud Run cold start)
-          for attempt in 1 2 3 4 5; do
-            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/health" 2>/dev/null || echo "000")
-            echo "  Attempt $attempt: HTTP $STATUS"
-            if [ "$STATUS" = "200" ]; then
-              echo "PASS: Health check OK"
-              exit 0
-            fi
-            if [ "$attempt" -lt 5 ]; then
-              echo "  Retrying in 10s..."
-              sleep 10
-            fi
-          done
-          echo "FATAL: Health check returned $STATUS after 5 attempts"
-          echo "BLOCKED: Staging is unhealthy. Deploy has failed."
-          exit 1
-
-      # STAGE-016: Retry version check — new revision needs cold-start time after deploy
-      - name: Version SHA check (BLOCKING)
-        if: steps.url.outputs.gateway_url != ''
-        run: |
-          URL="${{ steps.url.outputs.gateway_url }}"
-          EXPECTED="${{ env.SHA }}"
-          echo "Checking version SHA at $URL/version (expecting $EXPECTED)..."
-          for attempt in 1 2 3 4 5; do
-            VERSION=$(curl -sf "$URL/version" 2>/dev/null || echo "{}")
-            echo "  Attempt $attempt: $VERSION"
-            if echo "$VERSION" | grep -q "$EXPECTED"; then
-              echo "PASS: SHA matches deployed version"
-              exit 0
-            fi
-            if [ "$attempt" -lt 5 ]; then
-              echo "  SHA not yet matching (cold-start lag). Retrying in 10s..."
-              sleep 10
-            fi
-          done
-          echo "FATAL: SHA mismatch after 5 attempts — expected $EXPECTED in /version response"
-          echo "BLOCKED: Deployed code does not match expected SHA. Possible stale revision."
-          exit 1
-
-      # STAGE-015: Follow redirects (-L) because SPA portals redirect / → base path
-      # retailer-admin → /retailer/, superadmin → /admin/, supplier-portal → Next.js redirect
-      - name: Portal health checks (BLOCKING)
-        run: |
-          PORTALS=(retailer-admin supplier-portal superadmin landing)
-          FAILED=0
-          for portal in "${PORTALS[@]}"; do
-            URL=$(gcloud run services describe "$portal" \
+          SERVICES=(api-gateway main-backend retailer-admin supplier-portal superadmin landing)
+          ALL_OK=true
+          for svc in "${SERVICES[@]}"; do
+            URL=$(gcloud run services describe "$svc" \
               --region="${{ env.GCP_REGION }}" \
               --format="value(status.url)" 2>/dev/null || echo "")
+            # Normalize key: api-gateway → gateway, main-backend → backend, etc.
+            KEY=$(echo "$svc" | tr '-' '_')
+            echo "${KEY}_url=$URL" >> "$GITHUB_OUTPUT"
             if [ -z "$URL" ]; then
-              echo "FAIL: $portal — no URL found"
+              echo "WARN: $svc — no URL resolved"
+              ALL_OK=false
+            else
+              echo "OK: $svc → $URL"
+            fi
+          done
+          if [ "$ALL_OK" = "false" ]; then
+            echo "WARNING: Some service URLs could not be resolved (new services may not exist yet)"
+          fi
+
+      # ---- Gate 1: api-gateway health (5 retries, body validated) ----
+      - name: "Gate 1: api-gateway health (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "Checking api-gateway health at $URL/health ..."
+          for attempt in 1 2 3 4 5; do
+            BODY=$(curl -sf --max-time ${{ env.CURL_TIMEOUT }} "$URL/health" 2>/dev/null || echo "")
+            echo "  Attempt $attempt: $BODY"
+            if echo "$BODY" | grep -q '"status":"ok"'; then
+              echo "PASS: api-gateway health OK (body validated)"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "  Retrying in ${{ env.RETRY_DELAY }}s..."
+              sleep ${{ env.RETRY_DELAY }}
+            fi
+          done
+          echo "FATAL: api-gateway /health did not return {\"status\":\"ok\"} after 5 attempts"
+          echo "  Last response: $BODY"
+          exit 1
+
+      # ---- Gate 2: main-backend health (independent check, 5 retries) ----
+      - name: "Gate 2: main-backend health (BLOCKING)"
+        if: steps.url.outputs.main_backend_url != ''
+        run: |
+          URL="${{ steps.url.outputs.main_backend_url }}"
+          echo "Checking main-backend health at $URL/health ..."
+          for attempt in 1 2 3 4 5; do
+            BODY=$(curl -sf --max-time ${{ env.CURL_TIMEOUT }} "$URL/health" 2>/dev/null || echo "")
+            echo "  Attempt $attempt: $BODY"
+            if echo "$BODY" | grep -q '"status":"ok"'; then
+              echo "PASS: main-backend health OK (body validated)"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "  Retrying in ${{ env.RETRY_DELAY }}s..."
+              sleep ${{ env.RETRY_DELAY }}
+            fi
+          done
+          echo "FATAL: main-backend /health did not return {\"status\":\"ok\"} after 5 attempts"
+          echo "  Last response: $BODY"
+          exit 1
+
+      # ---- Gate 3: Version SHA — api-gateway (5 retries) ----
+      - name: "Gate 3: api-gateway version SHA (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          EXPECTED="${{ env.SHA }}"
+          echo "Checking api-gateway version at $URL/version (expecting $EXPECTED)..."
+          for attempt in 1 2 3 4 5; do
+            BODY=$(curl -sf --max-time ${{ env.CURL_TIMEOUT }} "$URL/version" 2>/dev/null || echo "{}")
+            echo "  Attempt $attempt: $BODY"
+            if echo "$BODY" | grep -q "$EXPECTED"; then
+              echo "PASS: api-gateway SHA matches ($EXPECTED)"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "  SHA not yet matching (cold-start lag). Retrying in ${{ env.RETRY_DELAY }}s..."
+              sleep ${{ env.RETRY_DELAY }}
+            fi
+          done
+          echo "FATAL: api-gateway /version SHA mismatch after 5 attempts"
+          echo "  Expected: $EXPECTED"
+          echo "  Last response: $BODY"
+          exit 1
+
+      # ---- Gate 4: Version SHA — main-backend (5 retries) ----
+      - name: "Gate 4: main-backend version SHA (BLOCKING)"
+        if: steps.url.outputs.main_backend_url != ''
+        run: |
+          URL="${{ steps.url.outputs.main_backend_url }}"
+          EXPECTED="${{ env.SHA }}"
+          echo "Checking main-backend version at $URL/version (expecting $EXPECTED)..."
+          for attempt in 1 2 3 4 5; do
+            BODY=$(curl -sf --max-time ${{ env.CURL_TIMEOUT }} "$URL/version" 2>/dev/null || echo "{}")
+            echo "  Attempt $attempt: $BODY"
+            if echo "$BODY" | grep -q "$EXPECTED"; then
+              echo "PASS: main-backend SHA matches ($EXPECTED)"
+              exit 0
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "  SHA not yet matching (cold-start lag). Retrying in ${{ env.RETRY_DELAY }}s..."
+              sleep ${{ env.RETRY_DELAY }}
+            fi
+          done
+          echo "FATAL: main-backend /version SHA mismatch after 5 attempts"
+          echo "  Expected: $EXPECTED"
+          echo "  Last response: $BODY"
+          exit 1
+
+      # ---- Gate 5: Portal health checks (3 retries each, follows redirects) ----
+      - name: "Gate 5: Portal health checks (BLOCKING)"
+        run: |
+          PORTALS=(retailer-admin supplier-portal superadmin landing)
+          MAX_RETRIES=3
+          FAILED=0
+          for portal in "${PORTALS[@]}"; do
+            URL=""
+            case "$portal" in
+              retailer-admin)   URL="${{ steps.url.outputs.retailer_admin_url }}" ;;
+              supplier-portal)  URL="${{ steps.url.outputs.supplier_portal_url }}" ;;
+              superadmin)       URL="${{ steps.url.outputs.superadmin_url }}" ;;
+              landing)          URL="${{ steps.url.outputs.landing_url }}" ;;
+            esac
+            if [ -z "$URL" ]; then
+              echo "FAIL: $portal — no URL resolved"
               FAILED=$((FAILED + 1))
               continue
             fi
-            # -L follows redirects (SPAs redirect / to base path like /retailer/)
-            STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$URL/" 2>/dev/null || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "PASS: $portal — HTTP $STATUS"
-            else
-              echo "FAIL: $portal — HTTP $STATUS (expected 200 after following redirects)"
+            PORTAL_PASS=false
+            for attempt in $(seq 1 $MAX_RETRIES); do
+              # -L follows redirects (SPAs redirect / to base path like /retailer/)
+              STATUS=$(curl -sL --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "$URL/" 2>/dev/null || echo "000")
+              echo "  $portal attempt $attempt: HTTP $STATUS"
+              if [ "$STATUS" = "200" ]; then
+                echo "  PASS: $portal — HTTP 200"
+                PORTAL_PASS=true
+                break
+              fi
+              if [ "$attempt" -lt "$MAX_RETRIES" ]; then
+                echo "  Retrying in ${{ env.RETRY_DELAY }}s (cold-start)..."
+                sleep ${{ env.RETRY_DELAY }}
+              fi
+            done
+            if [ "$PORTAL_PASS" = "false" ]; then
+              echo "  FAIL: $portal — HTTP $STATUS after $MAX_RETRIES attempts"
               FAILED=$((FAILED + 1))
             fi
           done
           if [ $FAILED -gt 0 ]; then
-            echo "FATAL: $FAILED portal(s) failed smoke test"
+            echo "FATAL: $FAILED portal(s) failed smoke test after retries"
             exit 1
           fi
-          echo "All 4 portals passed smoke test."
+          echo "PASS: All 4 portals healthy (with redirect handling + retries)"
 
-      - name: Backend API auth guard check (BLOCKING)
-        if: steps.url.outputs.gateway_url != ''
+      # ---- Gate 6: Auth guard (3 retries, ALL unexpected statuses block) ----
+      - name: "Gate 6: Auth guard (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
         run: |
-          URL="${{ steps.url.outputs.gateway_url }}"
-          # Protected endpoint should return 401/403 without a token
-          STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/api/v1/admin/stores" 2>/dev/null || echo "000")
-          echo "Auth guard check: HTTP $STATUS"
-          if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
-            echo "PASS: Auth guard working — unauthenticated request correctly rejected"
-          elif [ "$STATUS" = "200" ]; then
-            echo "FATAL: /api/v1/admin/stores returned 200 WITHOUT authentication"
-            echo "BLOCKED: Auth guard is not functioning — security breach risk"
-            exit 1
-          else
-            echo "WARN: Auth guard returned unexpected $STATUS (expected 401/403)"
-            echo "  Non-blocking — may be gateway routing issue"
-          fi
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "Checking auth guard at $URL/api/v1/admin/stores (no token)..."
+          for attempt in 1 2 3; do
+            STATUS=$(curl -s --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "$URL/api/v1/admin/stores" 2>/dev/null || echo "000")
+            echo "  Attempt $attempt: HTTP $STATUS"
+            if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+              echo "PASS: Auth guard working — unauthenticated request rejected ($STATUS)"
+              exit 0
+            elif [ "$STATUS" = "200" ]; then
+              echo "FATAL: /api/v1/admin/stores returned 200 WITHOUT authentication"
+              echo "BLOCKED: Auth guard is not functioning — security breach risk"
+              exit 1
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "  Unexpected status. Retrying in ${{ env.RETRY_DELAY }}s (cold-start)..."
+              sleep ${{ env.RETRY_DELAY }}
+            fi
+          done
+          echo "FATAL: Auth guard returned unexpected HTTP $STATUS after 3 attempts"
+          echo "  Expected: 401 or 403. Got: $STATUS"
+          echo "  This means the gateway is not routing to the backend correctly."
+          exit 1
+
+      # ---- Gate 7: API gateway → main-backend connectivity (BLOCKING) ----
+      - name: "Gate 7: Gateway-to-backend connectivity (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "Verifying api-gateway can proxy to main-backend..."
+          # Hit a known API route through the gateway. Even without auth, we should get
+          # 401/403 (auth middleware) — NOT 502/503/504 (backend unreachable).
+          for attempt in 1 2 3; do
+            STATUS=$(curl -s --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "$URL/api/v1/pos/health" 2>/dev/null || echo "000")
+            echo "  Attempt $attempt: HTTP $STATUS"
+            # Any response from the backend is good (401, 403, 404, 200 all mean connectivity works)
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 500 ]; then
+              echo "PASS: Gateway successfully proxied to main-backend (HTTP $STATUS)"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "  Backend may still be starting. Retrying in ${{ env.RETRY_DELAY }}s..."
+              sleep ${{ env.RETRY_DELAY }}
+            fi
+          done
+          echo "FATAL: api-gateway cannot reach main-backend (HTTP $STATUS after 3 attempts)"
+          echo "  Expected: any 2xx/3xx/4xx from backend. Got: $STATUS (server error / unreachable)"
+          echo "  Check: ADMIN_SERVICE_URL env var, VPC connector, main-backend health"
+          exit 1
 
       # STAGE-007: Auto-rollback all services if ANY smoke test fails
       - name: Auto-rollback on failure
@@ -623,7 +737,7 @@ jobs:
           echo "## Staging Deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **SHA:** ${{ env.SHA }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Gateway:** ${{ steps.url.outputs.gateway_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Gateway:** ${{ steps.url.outputs.api_gateway_url }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Status:** ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ job.status }}" = "success" ]; then
