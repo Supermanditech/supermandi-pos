@@ -3,6 +3,7 @@ import { Router } from "express";
 import type { PoolClient } from "pg";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 // AUDIT-API-039: Rate limit sync endpoint
 import { salesRateLimiter } from "../../../middleware/posRateLimiter";
 import {
@@ -574,7 +575,8 @@ async function clearFailedEvent(
 }
 
 // POST /api/v1/pos/sync
-posSyncRouter.post("/sync", requireDeviceToken, salesRateLimiter, async (req, res) => {
+// BUG-003: Enforce store must be ACTIVE for offline sync replay
+posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLimiter, async (req, res) => {
   const batchStartTime = Date.now();
 
   const pendingRaw = asNumber(req.body?.pendingOutboxCount);

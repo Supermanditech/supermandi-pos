@@ -5,6 +5,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { requireDeviceToken } from "../../../middleware/deviceToken";
+import { requireActiveStore } from "../../../middleware/storeStatusGate";
 import { requirePosStaff, requireRole } from "../../../middleware/posStaff";
 import type { PosStaffContext } from "../../../middleware/posStaff";
 import { randomUUID } from "crypto";
@@ -113,7 +114,8 @@ posStockInRouter.get("/stock-in", requireDeviceToken, async (req: Request, res: 
 // Submit a stock-in batch (products received from supplier).
 // =============================================================================
 
-posStockInRouter.post("/stock-in", requireDeviceToken, requirePosStaff, requireRole("STOCK_MANAGER", "MANAGER"), async (req: Request, res: Response) => {
+// BUG-003: Enforce store must be ACTIVE for stock-in
+posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requirePosStaff, requireRole("STOCK_MANAGER", "MANAGER"), async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ success: false, error: "database unavailable" });
 
