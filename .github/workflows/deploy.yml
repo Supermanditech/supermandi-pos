@@ -519,6 +519,8 @@ jobs:
             exit 1
           fi
 
+      # STAGE-015: Follow redirects (-L) because SPA portals redirect / → base path
+      # retailer-admin → /retailer/, superadmin → /admin/, supplier-portal → Next.js redirect
       - name: Portal health checks (BLOCKING)
         run: |
           PORTALS=(retailer-admin supplier-portal superadmin landing)
@@ -532,11 +534,12 @@ jobs:
               FAILED=$((FAILED + 1))
               continue
             fi
-            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$URL/" 2>/dev/null || echo "000")
+            # -L follows redirects (SPAs redirect / to base path like /retailer/)
+            STATUS=$(curl -sL -o /dev/null -w "%{http_code}" "$URL/" 2>/dev/null || echo "000")
             if [ "$STATUS" = "200" ]; then
               echo "PASS: $portal — HTTP $STATUS"
             else
-              echo "FAIL: $portal — HTTP $STATUS (expected 200)"
+              echo "FAIL: $portal — HTTP $STATUS (expected 200 after following redirects)"
               FAILED=$((FAILED + 1))
             fi
           done
