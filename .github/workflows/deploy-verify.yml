@@ -51,6 +51,10 @@ jobs:
     name: API & Asset Verification
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Only run when CD succeeded or manually triggered — don't verify a failed deploy
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: Checkout code
@@ -94,7 +98,10 @@ jobs:
     name: E2E Browser Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: ${{ github.event.inputs.run_e2e != 'false' }}
+    # Only run when CD succeeded (or manual) AND E2E not explicitly disabled
+    if: >
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') &&
+      github.event.inputs.run_e2e != 'false'
 
     steps:
       - name: Checkout code
@@ -108,7 +115,7 @@ jobs:
       - name: Install E2E dependencies
         working-directory: e2e-tests
         run: |
-          npm ci
+          npm install
           npx playwright install --with-deps chromium
 
       # ZRP: Removed continue-on-error — E2E failures must block
@@ -153,8 +160,10 @@ jobs:
     name: Token Refresh Test
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Only run against staging/test environments
-    if: ${{ contains(github.event.inputs.target_url, 'staging') || contains(github.event.inputs.target_url, 'localhost') || github.event_name == 'workflow_dispatch' }}
+    # Only run when CD succeeded (or manual) and targeting staging/test environments
+    if: >
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') &&
+      (contains(github.event.inputs.target_url || 'staging', 'staging') || contains(github.event.inputs.target_url || '', 'localhost'))
 
     steps:
       - name: Checkout code
