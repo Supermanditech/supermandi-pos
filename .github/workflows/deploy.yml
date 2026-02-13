@@ -483,7 +483,16 @@ jobs:
             --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest" \
             --allow-unauthenticated \
             --quiet
-          echo "    OK: $SERVICE_NAME"
+          echo "    OK: $SERVICE_NAME deployed"
+
+          # STAGE-023: Ensure traffic routes to latest revision.
+          # Rollbacks pin traffic to a specific revision via --to-revisions.
+          # Without --to-latest, all future deploys create revisions with 0% traffic.
+          gcloud run services update-traffic "$SERVICE_NAME" \
+            --to-latest \
+            --region="${{ env.GCP_REGION }}" \
+            --quiet
+          echo "    OK: $SERVICE_NAME traffic → LATEST"
 
           # Capture main-backend URL for api-gateway config
           MB_URL=$(gcloud run services describe "$SERVICE_NAME" \
@@ -520,7 +529,14 @@ jobs:
             --set-secrets="JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest" \
             --allow-unauthenticated \
             --quiet
-          echo "    OK: $SERVICE_NAME"
+          echo "    OK: $SERVICE_NAME deployed"
+
+          # STAGE-023: Ensure traffic routes to latest revision (prevent rollback pinning)
+          gcloud run services update-traffic "$SERVICE_NAME" \
+            --to-latest \
+            --region="${{ env.GCP_REGION }}" \
+            --quiet
+          echo "    OK: $SERVICE_NAME traffic → LATEST"
 
       # STAGE-002: Portal deploy failure = pipeline failure (no silent swallow)
       - name: Deploy frontend portals to staging
@@ -546,7 +562,13 @@ jobs:
               echo "FATAL: $portal deploy FAILED"
               FAILED=$((FAILED + 1))
             else
-              echo "    OK: $SERVICE_NAME"
+              echo "    OK: $SERVICE_NAME deployed"
+              # STAGE-023: Ensure traffic routes to latest revision
+              gcloud run services update-traffic "$SERVICE_NAME" \
+                --to-latest \
+                --region="${{ env.GCP_REGION }}" \
+                --quiet
+              echo "    OK: $SERVICE_NAME traffic → LATEST"
             fi
           done
           if [ $FAILED -gt 0 ]; then
@@ -621,14 +643,14 @@ jobs:
           fi
           echo "PASS: All 6 services routed traffic to new revisions."
 
-      # STAGE-021: GCP-Git Image Parity Gate (BLOCKING)
-      # Verify each service's serving revision uses the Docker image tagged with
-      # the expected Git SHA. If ANY service has a mismatched image, the deploy
-      # is broken (wrong code running). Fail BEFORE smoke tests.
-      - name: "GCP-Git image parity gate (BLOCKING)"
+      # STAGE-021 + STAGE-023: GCP-Git Parity Gate (BLOCKING)
+      # Verify each service's serving revision has GIT_SHA env var matching
+      # the deployed SHA. Cloud Run stores images by digest (sha256:...) not
+      # tag, so we check the GIT_SHA env var which we set during deploy.
+      - name: "GCP-Git parity gate (BLOCKING)"
         run: |
-          echo "=== STAGE-021: GCP-Git Image Parity Gate ==="
-          echo "Verifying serving revisions use images tagged with SHA: ${{ env.SHA }}"
+          echo "=== GCP-Git Parity Gate ==="
+          echo "Verifying serving revisions have GIT_SHA=${{ env.SHA }}"
           echo ""
 
           SERVICES=(api-gateway main-backend retailer-admin supplier-portal superadmin landing)
@@ -644,29 +666,26 @@ jobs:
               continue
             fi
 
-            # Get the image used by that revision
-            IMAGE=$(gcloud run revisions describe "$TRAFFIC_REV" \
+            # Check GIT_SHA env var in the serving revision
+            GIT_SHA_VAL=$(gcloud run revisions describe "$TRAFFIC_REV" \
               --region="${{ env.GCP_REGION }}" \
-              --format="value(spec.containers[0].image)" 2>/dev/null || echo "")
+              --format="value(spec.containers[0].env.filter(name=GIT_SHA).value)" 2>/dev/null || echo "")
 
-            # Check the image tag contains our SHA
-            if echo "$IMAGE" | grep -q "${{ env.SHA }}"; then
-              echo "  PASS: $svc ($TRAFFIC_REV) → $IMAGE"
+            if [ "$GIT_SHA_VAL" = "${{ env.SHA }}" ]; then
+              echo "  PASS: $svc ($TRAFFIC_REV) GIT_SHA=$GIT_SHA_VAL"
             else
-              echo "  FAIL: $svc ($TRAFFIC_REV) → $IMAGE"
-              echo "    Expected tag: ${{ env.SHA }} — got different image!"
+              echo "  FAIL: $svc ($TRAFFIC_REV) GIT_SHA=$GIT_SHA_VAL (expected ${{ env.SHA }})"
               MISMATCH=$((MISMATCH + 1))
             fi
           done
 
           echo ""
           if [ $MISMATCH -gt 0 ]; then
-            echo "BLOCKED: $MISMATCH service(s) have image-SHA mismatch."
+            echo "BLOCKED: $MISMATCH service(s) have GIT_SHA mismatch."
             echo "GCP is NOT running the code from git SHA ${{ env.SHA }}."
-            echo "Deploy may have silently failed or reverted to old revision."
             exit 1
           fi
-          echo "PASS: All 6 services running images tagged ${{ env.SHA }}. GCP-Git parity confirmed."
+          echo "PASS: All 6 services have GIT_SHA=${{ env.SHA }}. GCP-Git parity confirmed."
           echo ""
 
   # ==========================================================================
@@ -952,6 +971,20 @@ jobs:
           else
             echo "All services rolled back to pre-deploy revisions."
           fi
+
+          # STAGE-023: Restore --to-latest on all services after rollback.
+          # Without this, --to-revisions pins traffic permanently and ALL
+          # future deploys create revisions with 0% traffic.
+          echo ""
+          echo "Phase 1b: Restoring --to-latest routing..."
+          for pair in "${PAIRS[@]}"; do
+            [ -z "$pair" ] && continue
+            SVC="${pair%%=*}"
+            gcloud run services update-traffic "$SVC" \
+              --to-latest \
+              --region="${{ env.GCP_REGION }}" \
+              --quiet 2>/dev/null && echo "  OK: $SVC → LATEST restored" || echo "  WARN: $SVC → could not restore LATEST"
+          done
 
           # --- Phase 2: Delete stale revisions (keep only traffic revision) ---
           echo ""
