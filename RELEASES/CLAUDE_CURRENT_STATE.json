@@ -1,49 +1,85 @@
 {
-  "version": "1.0",
-  "lastUpdated": "2026-02-13T12:00:00Z",
-  "currentPhase": "Pre-Phase: Bug Fix Cycle (BUG-001 through BUG-004)",
+  "version": "2.0",
+  "lastUpdated": "2026-02-13T19:00:00+05:30",
+  "currentPhase": "INFRA Phase: Pre-Deploy Readiness",
   "currentTicket": {
-    "id": "BUG-001",
-    "status": "MERGED",
-    "branch": "fix/BUG-001-credit-router-scope",
-    "pr": "#70",
-    "mergedAt": "2026-02-13"
+    "id": "INFRA-009",
+    "status": "IN_PROGRESS",
+    "branch": "chore/INFRA-009-pre-deploy-readiness",
+    "pr": null,
+    "description": "Pre-deploy readiness deliverables (Q5, C1-C4, D2-D5, E3-E4)"
   },
   "recentlyCompleted": [
     { "id": "BUG-001", "pr": "#70", "summary": "Scope credit router middleware to /credit/* paths only" },
     { "id": "BUG-002", "pr": "#72", "summary": "Add requirePosStaff middleware to scan/resolve endpoint" },
     { "id": "BUG-003", "pr": "#73", "summary": "Enforce store suspension on state-changing POS routes" },
-    { "id": "BUG-004", "pr": "#74", "summary": "Reject stock-in with invalid quantity (0, negative, non-number)" }
+    { "id": "BUG-004", "pr": "#74", "summary": "Reject stock-in with invalid quantity (0, negative, non-number)" },
+    { "id": "INFRA-002", "pr": "#75", "summary": "Fix deploy.yml: project target, VPC connector, 10→2 services, GIT_SHA bake, uptime probe, temp files" },
+    { "id": "INFRA-008", "pr": "#77", "summary": "Commit RELEASES state files, delete 52 branches, prune 52 tags, clean tmpclaude dirs" }
   ],
+  "infraStatus": {
+    "A1_WIF": "DONE — github-pool + github-provider created, github-actions SA bound, GCP_WIF_PROVIDER + GCP_SA_EMAIL GitHub secrets set",
+    "A2_SECRETS": "DONE — postgres-password, jwt-secret, admin-token created in Secret Manager, Cloud Run SA granted accessor",
+    "A3_DEPLOY": "WAITING — Operator approval to trigger workflow_dispatch on deploy.yml",
+    "B1_DB_BACKUP": "DONE (operator)",
+    "B2_MIGRATION_DRYRUN": "WAITING on A3",
+    "B3_AUTO_BACKUPS": "DONE (operator)",
+    "B4_DELETION_PROTECTION": "DONE (operator)",
+    "B5_ROLLBACK_TEST": "DONE (operator)",
+    "B6_DNS_CLEANUP": "DONE (operator)"
+  },
   "ticketQueue": [],
   "operatorIssues": [],
   "phaseSnapshot": {
-    "totalTickets": 4,
+    "totalInfraTickets": 9,
     "completed": 4,
-    "inProgress": 0,
-    "testsLocked": 0,
-    "ciPasses": 4,
-    "operatorBugsFound": 0
+    "inProgress": 1,
+    "awaitingOperator": 1,
+    "ciPasses": 6,
+    "gitBranches": 1,
+    "gitTags": 42
   },
   "blockedItems": [
     {
-      "item": "E2E verification of BUG-001 through BUG-004",
-      "reason": "Docker local-prod stack not running; E2E script ready at RELEASES/E2E_BUG_FIXES_001-004.ps1",
-      "action": "Operator runs Docker stack + E2E script, or skip to CI-based verification"
+      "item": "First staging deploy (A3/INFRA-006)",
+      "reason": "Awaiting operator approval to trigger deploy.yml workflow_dispatch",
+      "action": "Operator approves → Claude or operator triggers workflow_dispatch on GitHub Actions"
     }
   ],
   "lastActions": [
-    "Merged BUG-001 → main (PR #70)",
-    "Merged BUG-002 → main (PR #72)",
-    "Merged BUG-003 → main (PR #73)",
-    "Merged BUG-004 → main (PR #74)",
-    "Created E2E verification script: RELEASES/E2E_BUG_FIXES_001-004.ps1",
-    "Created CLAUDE_STATE.md (definitive operating system)"
+    "A1: Created WIF pool/provider/SA, set GitHub secrets GCP_WIF_PROVIDER + GCP_SA_EMAIL",
+    "A2: Enabled Secret Manager, created 3 secrets, granted Cloud Run SA accessor role",
+    "Merged PR #75 (deploy pipeline reconciliation)",
+    "Merged PR #77 (RELEASES state files + repo cleanup)",
+    "Deleted 52 stale remote branches, pruned 52 obsolete tags",
+    "Cleaned 186 local tmpclaude-* directories"
   ],
+  "testCoverage": {
+    "backend": { "files": 16, "coverage": "Integration tests for auth, catalog, inventory, orders, reorder, events, ledger, POS enrollment/scan, voice, AI" },
+    "pos": { "files": 22, "coverage": "6 Jest unit + 5 E2E Jest + 11 Maestro YAML (sale, buy, GRN, reorder, scanner)" },
+    "retailerAdmin": { "files": 0, "coverage": "ZERO — no tests" },
+    "supplierPortal": { "files": 0, "coverage": "ZERO — no tests" },
+    "superadmin": { "files": 0, "coverage": "ZERO — no tests" },
+    "e2ePlaywright": { "files": 16, "coverage": "Onboarding, POS-dashboard sync, supplier pipeline, store suspension, bank re-verification, config contract, portal verification, token refresh, staging smoke" }
+  },
+  "auditBacklog": {
+    "total": 320,
+    "p0": 20,
+    "p1": 89,
+    "p2": 210,
+    "p3": 1,
+    "phases": [
+      "Phase 1: SECURITY (15 tickets) — SQL injection, secrets in logs, auth gates",
+      "Phase 2: BROKEN FUNCTIONALITY (20 tickets) — dead buttons, false success, wrong values",
+      "Phase 3: DATA INTEGRITY & AUTH (15 tickets) — token refresh, validation, store isolation",
+      "Phase 4: UX & POLISH (25 tickets) — loading states, error handling, pagination",
+      "Phase 5: HARDENING (~200 P2 tickets) — accessibility, i18n, performance, code quality"
+    ]
+  },
   "regressionTracker": {
     "cascadesThisPhase": 0,
     "operatorBugsThisPhase": 0,
     "ciCatchesThisPhase": 0
   },
-  "nextAction": "Await operator direction: (a) Run E2E script against Docker, (b) Begin Phase 1 audit tickets, (c) Build CI pipeline infrastructure"
+  "nextAction": "Operator approves A3 (staging deploy trigger). After deploy: verify /health + /version, run STAGING_VERIFY.ps1, then begin Phase 1 Security tickets."
 }
