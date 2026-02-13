@@ -20,7 +20,7 @@ on:
       target_url:
         description: 'Target URL to verify'
         required: false
-        default: 'https://supermandi.tech'
+        default: 'https://staging.supermandi.tech'
       run_e2e:
         description: 'Run E2E tests'
         required: false
@@ -39,7 +39,8 @@ on:
   #   - cron: '0 6 * * *'  # 6 AM UTC daily
 
 env:
-  TARGET_URL: ${{ github.event.inputs.target_url || 'https://supermandi.tech' }}
+  # INFRA-018: Default to staging domain
+  TARGET_URL: ${{ github.event.inputs.target_url || 'https://staging.supermandi.tech' }}
   NODE_VERSION: '20'
 
 jobs:
