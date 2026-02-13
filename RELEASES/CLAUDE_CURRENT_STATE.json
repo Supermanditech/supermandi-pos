@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2026-02-13T12:00:00Z",
+  "currentPhase": "Pre-Phase: Bug Fix Cycle (BUG-001 through BUG-004)",
+  "currentTicket": {
+    "id": "BUG-001",
+    "status": "MERGED",
+    "branch": "fix/BUG-001-credit-router-scope",
+    "pr": "#70",
+    "mergedAt": "2026-02-13"
+  },
+  "recentlyCompleted": [
+    { "id": "BUG-001", "pr": "#70", "summary": "Scope credit router middleware to /credit/* paths only" },
+    { "id": "BUG-002", "pr": "#72", "summary": "Add requirePosStaff middleware to scan/resolve endpoint" },
+    { "id": "BUG-003", "pr": "#73", "summary": "Enforce store suspension on state-changing POS routes" },
+    { "id": "BUG-004", "pr": "#74", "summary": "Reject stock-in with invalid quantity (0, negative, non-number)" }
+  ],
+  "ticketQueue": [],
+  "operatorIssues": [],
+  "phaseSnapshot": {
+    "totalTickets": 4,
+    "completed": 4,
+    "inProgress": 0,
+    "testsLocked": 0,
+    "ciPasses": 4,
+    "operatorBugsFound": 0
+  },
+  "blockedItems": [
+    {
+      "item": "E2E verification of BUG-001 through BUG-004",
+      "reason": "Docker local-prod stack not running; E2E script ready at RELEASES/E2E_BUG_FIXES_001-004.ps1",
+      "action": "Operator runs Docker stack + E2E script, or skip to CI-based verification"
+    }
+  ],
+  "lastActions": [
+    "Merged BUG-001 → main (PR #70)",
+    "Merged BUG-002 → main (PR #72)",
+    "Merged BUG-003 → main (PR #73)",
+    "Merged BUG-004 → main (PR #74)",
+    "Created E2E verification script: RELEASES/E2E_BUG_FIXES_001-004.ps1",
+    "Created CLAUDE_STATE.md (definitive operating system)"
+  ],
+  "regressionTracker": {
+    "cascadesThisPhase": 0,
+    "operatorBugsThisPhase": 0,
+    "ciCatchesThisPhase": 0
+  },
+  "nextAction": "Await operator direction: (a) Run E2E script against Docker, (b) Begin Phase 1 audit tickets, (c) Build CI pipeline infrastructure"
+}
