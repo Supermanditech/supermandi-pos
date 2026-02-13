@@ -269,6 +269,7 @@ jobs:
           echo "Migration files in repo: $EXPECTED"
 
       # ZRP-D-003: Secret freshness check — verify all secrets exist and are accessible
+      # Requires roles/secretmanager.viewer on WIF SA (granted 2026-02-14)
       - name: "ZRP-D-003: Secret freshness check (BLOCKING)"
         run: |
           echo "=== ZRP-D-003: Secret Freshness Check ==="
@@ -276,15 +277,28 @@ jobs:
           FAIL=0
           for secret in "${SECRETS[@]}"; do
             # Check secret exists and has an enabled version
+            # Capture stderr to distinguish permission-denied from missing secret
+            ERR_FILE=$(mktemp)
             VERSION=$(gcloud secrets versions list "$secret" \
               --project=${{ env.GCP_PROJECT }} \
               --filter="state=ENABLED" \
               --format="value(name)" \
-              --limit=1 2>/dev/null || echo "")
+              --limit=1 2>"$ERR_FILE" || true)
+            ERR_MSG=$(cat "$ERR_FILE")
+            rm -f "$ERR_FILE"
             if [ -n "$VERSION" ]; then
-              echo "  OK: $secret (latest enabled version exists)"
+              echo "  OK: $secret (latest enabled version: $VERSION)"
+            elif echo "$ERR_MSG" | grep -qi "permission"; then
+              echo "  FAIL: $secret — permission denied (WIF SA needs roles/secretmanager.viewer)"
+              FAIL=$((FAIL + 1))
+            elif echo "$ERR_MSG" | grep -qi "NOT_FOUND\|not found"; then
+              echo "  FAIL: $secret — secret does not exist in Secret Manager"
+              FAIL=$((FAIL + 1))
             else
               echo "  FAIL: $secret — no enabled version found"
+              if [ -n "$ERR_MSG" ]; then
+                echo "    Error: $ERR_MSG"
+              fi
               FAIL=$((FAIL + 1))
             fi
           done
