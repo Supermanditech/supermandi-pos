@@ -309,33 +309,53 @@ jobs:
           echo "PASS: All 5 secrets verified in Secret Manager."
 
       # ZRP-D-007: VPC connector verification — must be READY before deploy
+      # Requires roles/vpcaccess.viewer on WIF SA (granted 2026-02-14)
       - name: "ZRP-D-007: VPC connector check (BLOCKING)"
         run: |
           echo "=== ZRP-D-007: VPC Connector Verification ==="
+          ERR_FILE=$(mktemp)
           STATE=$(gcloud compute networks vpc-access connectors describe supermandi-connector \
             --region=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT }} \
-            --format="value(state)" 2>/dev/null || echo "NOT_FOUND")
-          echo "  VPC connector state: $STATE"
-          if [ "$STATE" = "READY" ]; then
+            --format="value(state)" 2>"$ERR_FILE" || true)
+          ERR_MSG=$(cat "$ERR_FILE")
+          rm -f "$ERR_FILE"
+          if [ -n "$STATE" ] && [ "$STATE" = "READY" ]; then
+            echo "  VPC connector state: READY"
             echo "PASS: VPC connector is READY."
+          elif echo "$ERR_MSG" | grep -qi "permission"; then
+            echo "  FAIL: Permission denied — WIF SA needs roles/vpcaccess.viewer"
+            echo "  Error: $ERR_MSG"
+            exit 1
           else
-            echo "BLOCKED: VPC connector state is '$STATE' (expected READY)."
+            echo "  VPC connector state: ${STATE:-NOT_FOUND}"
+            if [ -n "$ERR_MSG" ]; then echo "  Error: $ERR_MSG"; fi
+            echo "BLOCKED: VPC connector state is '${STATE:-NOT_FOUND}' (expected READY)."
             exit 1
           fi
 
       # ZRP-G-008: Cloud SQL instance must be RUNNABLE
+      # Requires roles/cloudsql.viewer on WIF SA (granted 2026-02-14)
       - name: "ZRP-G-008: Cloud SQL connectivity check (BLOCKING)"
         run: |
           echo "=== ZRP-G-008: Cloud SQL Connectivity ==="
+          ERR_FILE=$(mktemp)
           STATE=$(gcloud sql instances describe supermandi-staging \
             --project=${{ env.GCP_PROJECT }} \
-            --format="value(state)" 2>/dev/null || echo "NOT_FOUND")
-          echo "  Cloud SQL instance state: $STATE"
-          if [ "$STATE" = "RUNNABLE" ]; then
+            --format="value(state)" 2>"$ERR_FILE" || true)
+          ERR_MSG=$(cat "$ERR_FILE")
+          rm -f "$ERR_FILE"
+          if [ -n "$STATE" ] && [ "$STATE" = "RUNNABLE" ]; then
+            echo "  Cloud SQL instance state: RUNNABLE"
             echo "PASS: Cloud SQL instance is RUNNABLE."
+          elif echo "$ERR_MSG" | grep -qi "permission"; then
+            echo "  FAIL: Permission denied — WIF SA needs roles/cloudsql.viewer"
+            echo "  Error: $ERR_MSG"
+            exit 1
           else
-            echo "BLOCKED: Cloud SQL instance state is '$STATE' (expected RUNNABLE)."
+            echo "  Cloud SQL instance state: ${STATE:-NOT_FOUND}"
+            if [ -n "$ERR_MSG" ]; then echo "  Error: $ERR_MSG"; fi
+            echo "BLOCKED: Cloud SQL instance state is '${STATE:-NOT_FOUND}' (expected RUNNABLE)."
             exit 1
           fi
 
