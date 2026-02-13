@@ -455,7 +455,7 @@ jobs:
           CHECKED=0
           for flag in $DEPLOY_FLAGS; do
             CHECKED=$((CHECKED + 1))
-            if echo "$VALID_FLAG_NAMES" | grep -qx "$flag"; then
+            if echo "$VALID_FLAG_NAMES" | grep -qxF -- "$flag"; then
               echo "  OK: $flag"
             else
               echo "  FAIL: $flag — NOT a valid gcloud run deploy flag"
