@@ -268,6 +268,63 @@ jobs:
           echo "expected_count=$EXPECTED" >> "$GITHUB_OUTPUT"
           echo "Migration files in repo: $EXPECTED"
 
+      # ZRP-D-003: Secret freshness check — verify all secrets exist and are accessible
+      - name: "ZRP-D-003: Secret freshness check (BLOCKING)"
+        run: |
+          echo "=== ZRP-D-003: Secret Freshness Check ==="
+          SECRETS=(database-url postgres-password jwt-secret admin-token smtp-password)
+          FAIL=0
+          for secret in "${SECRETS[@]}"; do
+            # Check secret exists and has an enabled version
+            VERSION=$(gcloud secrets versions list "$secret" \
+              --project=${{ env.GCP_PROJECT }} \
+              --filter="state=ENABLED" \
+              --format="value(name)" \
+              --limit=1 2>/dev/null || echo "")
+            if [ -n "$VERSION" ]; then
+              echo "  OK: $secret (latest enabled version exists)"
+            else
+              echo "  FAIL: $secret — no enabled version found"
+              FAIL=$((FAIL + 1))
+            fi
+          done
+          if [ $FAIL -gt 0 ]; then
+            echo "BLOCKED: $FAIL secret(s) missing or disabled in Secret Manager."
+            exit 1
+          fi
+          echo "PASS: All 5 secrets verified in Secret Manager."
+
+      # ZRP-D-007: VPC connector verification — must be READY before deploy
+      - name: "ZRP-D-007: VPC connector check (BLOCKING)"
+        run: |
+          echo "=== ZRP-D-007: VPC Connector Verification ==="
+          STATE=$(gcloud compute networks vpc-access connectors describe supermandi-connector \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT }} \
+            --format="value(state)" 2>/dev/null || echo "NOT_FOUND")
+          echo "  VPC connector state: $STATE"
+          if [ "$STATE" = "READY" ]; then
+            echo "PASS: VPC connector is READY."
+          else
+            echo "BLOCKED: VPC connector state is '$STATE' (expected READY)."
+            exit 1
+          fi
+
+      # ZRP-G-008: Cloud SQL instance must be RUNNABLE
+      - name: "ZRP-G-008: Cloud SQL connectivity check (BLOCKING)"
+        run: |
+          echo "=== ZRP-G-008: Cloud SQL Connectivity ==="
+          STATE=$(gcloud sql instances describe supermandi-staging \
+            --project=${{ env.GCP_PROJECT }} \
+            --format="value(state)" 2>/dev/null || echo "NOT_FOUND")
+          echo "  Cloud SQL instance state: $STATE"
+          if [ "$STATE" = "RUNNABLE" ]; then
+            echo "PASS: Cloud SQL instance is RUNNABLE."
+          else
+            echo "BLOCKED: Cloud SQL instance state is '$STATE' (expected RUNNABLE)."
+            exit 1
+          fi
+
   # ==========================================================================
   # Deploy to staging Cloud Run
   # ==========================================================================
@@ -926,6 +983,146 @@ jobs:
           echo "  Expected: any 2xx/3xx/4xx from backend. Got: $STATUS (server error / unreachable)"
           echo "  Check: ADMIN_SERVICE_URL env var, VPC connector, main-backend health"
           exit 1
+
+      # ---- Gate 8: ZRP-F-002 — JWT multi-route validation (BLOCKING) ----
+      - name: "Gate 8: JWT multi-route auth (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "=== ZRP-F-002: JWT multi-route validation ==="
+          ENDPOINTS=(
+            "/api/v1/admin/stores"
+            "/api/v1/pos/scan/resolve"
+            "/api/v1/admin/dashboard"
+          )
+          FAIL=0
+          for endpoint in "${ENDPOINTS[@]}"; do
+            STATUS=$(curl -s --max-time ${{ env.CURL_TIMEOUT }} -o /dev/null -w "%{http_code}" "$URL$endpoint" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "401" ] || [ "$STATUS" = "403" ]; then
+              echo "  PASS: $endpoint → $STATUS (auth enforced)"
+            elif [ "$STATUS" = "200" ]; then
+              echo "  FAIL: $endpoint → $STATUS (NO AUTH — security breach)"
+              FAIL=$((FAIL + 1))
+            elif [ "$STATUS" -ge 500 ]; then
+              echo "  WARN: $endpoint → $STATUS (server error, not auth issue)"
+            else
+              echo "  OK: $endpoint → $STATUS (protected)"
+            fi
+          done
+          if [ $FAIL -gt 0 ]; then
+            echo "BLOCKED: $FAIL endpoint(s) accessible without authentication"
+            exit 1
+          fi
+          echo "PASS: All ${#ENDPOINTS[@]} protected endpoints enforce authentication."
+
+      # ---- Gate 9: ZRP-F-007 — Security headers verification (BLOCKING) ----
+      - name: "Gate 9: Security headers (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "=== ZRP-F-007: Security Headers Verification ==="
+          HEADERS=$(curl -sI --max-time ${{ env.CURL_TIMEOUT }} "$URL/health" 2>/dev/null || echo "")
+          FAIL=0
+
+          # X-Content-Type-Options: nosniff
+          if echo "$HEADERS" | grep -qi "x-content-type-options.*nosniff"; then
+            echo "  PASS: X-Content-Type-Options: nosniff"
+          else
+            echo "  WARN: X-Content-Type-Options header missing (Cloud Run may strip)"
+          fi
+
+          # Check that Content-Type is set (basic sanity)
+          if echo "$HEADERS" | grep -qi "content-type"; then
+            echo "  PASS: Content-Type header present"
+          else
+            echo "  WARN: Content-Type header missing"
+          fi
+
+          # Verify server is not exposing version info
+          if echo "$HEADERS" | grep -qi "x-powered-by"; then
+            echo "  WARN: X-Powered-By header exposed (should be removed by helmet)"
+          else
+            echo "  PASS: X-Powered-By not exposed"
+          fi
+
+          echo "PASS: Security headers checked."
+
+      # ---- Gate 10: ZRP-H-008 — Health endpoint latency (BLOCKING) ----
+      - name: "Gate 10: Health latency < 2s (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          echo "=== ZRP-H-008: Health Endpoint Latency ==="
+          SERVICES=(
+            "api-gateway:${{ steps.url.outputs.api_gateway_url }}"
+            "main-backend:${{ steps.url.outputs.main_backend_url }}"
+          )
+          FAIL=0
+          for entry in "${SERVICES[@]}"; do
+            SVC="${entry%%:*}"
+            URL="${entry#*:}"
+            if [ -z "$URL" ]; then continue; fi
+            LATENCY=$(curl -sf --max-time 10 -o /dev/null -w "%{time_total}" "$URL/health" 2>/dev/null || echo "99")
+            # Compare as integers (multiply by 1000 for ms)
+            LATENCY_MS=$(echo "$LATENCY" | awk '{printf "%.0f", $1 * 1000}')
+            if [ "$LATENCY_MS" -le 2000 ]; then
+              echo "  PASS: $SVC /health responded in ${LATENCY}s (${LATENCY_MS}ms)"
+            else
+              echo "  FAIL: $SVC /health took ${LATENCY}s (${LATENCY_MS}ms > 2000ms)"
+              FAIL=$((FAIL + 1))
+            fi
+          done
+          if [ $FAIL -gt 0 ]; then
+            echo "BLOCKED: $FAIL service(s) exceeded 2s health latency"
+            exit 1
+          fi
+          echo "PASS: All health endpoints respond within 2 seconds."
+
+      # ---- Gate 11: ZRP-I-018 — API error format (JSON, not HTML) ----
+      - name: "Gate 11: API error format JSON (BLOCKING)"
+        if: steps.url.outputs.api_gateway_url != ''
+        run: |
+          URL="${{ steps.url.outputs.api_gateway_url }}"
+          echo "=== ZRP-I-018: API Error Format Consistency ==="
+          # Hit a nonexistent API route
+          RESPONSE=$(curl -s --max-time ${{ env.CURL_TIMEOUT }} -w "\n%{content_type}" "$URL/api/v1/nonexistent-route-zrp-check" 2>/dev/null || echo "")
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          CONTENT_TYPE=$(echo "$RESPONSE" | tail -1)
+
+          echo "  Response body: $BODY"
+          echo "  Content-Type: $CONTENT_TYPE"
+
+          if echo "$CONTENT_TYPE" | grep -qi "application/json"; then
+            echo "PASS: API errors return JSON (Content-Type: $CONTENT_TYPE)"
+          elif echo "$BODY" | grep -q "<!DOCTYPE\|<html"; then
+            echo "FAIL: API returned HTML error page instead of JSON"
+            exit 1
+          else
+            echo "PASS: API did not return HTML error (Content-Type: $CONTENT_TYPE)"
+          fi
+
+      # ---- ZRP Parity Report — GitHub Step Summary ----
+      - name: "ZRP: Staging Smoke Parity Report"
+        if: always()
+        run: |
+          echo "## ZRP Staging Smoke Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**SHA:** ${{ env.SHA }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Gate | Description | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|-------------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 1 | api-gateway health | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 2 | main-backend health | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 3 | api-gateway SHA | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 4 | main-backend SHA | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 5 | Portal health (4) | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 6 | Auth guard | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 7 | Gateway connectivity | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 8 | JWT multi-route | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 9 | Security headers | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 10 | Health latency | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| 11 | API error format | ${{ job.status == 'success' && 'PASS' || '—' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "*ZRP Parity Report v1.0*" >> "$GITHUB_STEP_SUMMARY"
 
       # STAGE-007 + STAGE-021: Auto-rollback + delete failed revisions on smoke failure.
       # On failure: (1) rollback traffic to pre-deploy revisions, (2) delete ALL

@@ -60,11 +60,11 @@ jobs:
         run: |
           mkdir -p evidence/api evidence/headers evidence/routing evidence/assets evidence/security
 
+      # ZRP: Removed continue-on-error — verification failures must block
       - name: Run deploy verification script
         run: |
           chmod +x scripts/verification/deploy-verify.sh
           ./scripts/verification/deploy-verify.sh --target ${{ env.TARGET_URL }} --output evidence
-        continue-on-error: true
 
       - name: Upload API evidence
         uses: actions/upload-artifact@v4
@@ -111,13 +111,13 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium
 
+      # ZRP: Removed continue-on-error — E2E failures must block
       - name: Run Playwright tests
         working-directory: e2e-tests
         env:
           BASE_URL: ${{ env.TARGET_URL }}
         run: |
           npx playwright test --project=chromium --reporter=html,json
-        continue-on-error: true
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -243,40 +243,67 @@ jobs:
           fi
 
   # ===========================================================================
-  # Job 4: Summary & Notification
+  # Job 4: ZRP Gatekeeper — ALL verification jobs must pass
   # ===========================================================================
-  summary:
-    name: Generate Summary
+  zrp-gatekeeper:
+    name: "ZRP: Deploy Verification Gatekeeper"
     runs-on: ubuntu-latest
-    needs: [api-verification, e2e-tests]
+    needs: [api-verification, e2e-tests, token-refresh-test]
     if: always()
 
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Generate final summary
+      - name: Aggregate verification results
         run: |
-          echo "# Deploy Verification Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# ZRP Deploy Verification Report" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Run:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "**Target:** ${{ env.TARGET_URL }}" >> $GITHUB_STEP_SUMMARY
           echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          echo "## Job Status" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| API Verification | ${{ needs.api-verification.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Token Refresh | ${{ needs.token-refresh-test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Determine overall verdict
-          if [ "${{ needs.api-verification.result }}" == "success" ] && [ "${{ needs.e2e-tests.result }}" == "success" ]; then
-            echo "## Verdict: ✅ GO" >> $GITHUB_STEP_SUMMARY
+          FAIL=0
+
+          # API verification must pass
+          if [ "${{ needs.api-verification.result }}" != "success" ]; then
+            echo "FAIL: api-verification = ${{ needs.api-verification.result }}"
+            FAIL=$((FAIL + 1))
           else
-            echo "## Verdict: ❌ NO-GO" >> $GITHUB_STEP_SUMMARY
+            echo "PASS: api-verification"
           fi
+
+          # E2E tests must pass (or be skipped if explicitly disabled)
+          E2E_RESULT="${{ needs.e2e-tests.result }}"
+          if [ "$E2E_RESULT" = "success" ] || [ "$E2E_RESULT" = "skipped" ]; then
+            echo "PASS: e2e-tests ($E2E_RESULT)"
+          else
+            echo "FAIL: e2e-tests = $E2E_RESULT"
+            FAIL=$((FAIL + 1))
+          fi
+
+          # Token refresh: pass or skip (only runs against staging)
+          TR_RESULT="${{ needs.token-refresh-test.result }}"
+          if [ "$TR_RESULT" = "success" ] || [ "$TR_RESULT" = "skipped" ]; then
+            echo "PASS: token-refresh-test ($TR_RESULT)"
+          else
+            echo "FAIL: token-refresh-test = $TR_RESULT"
+            FAIL=$((FAIL + 1))
+          fi
+
+          echo ""
+          if [ $FAIL -gt 0 ]; then
+            echo "## Verdict: NO-GO — $FAIL verification(s) failed" >> $GITHUB_STEP_SUMMARY
+            echo "BLOCKED: $FAIL deploy verification job(s) failed."
+            exit 1
+          fi
+
+          echo "## Verdict: GO — All verifications passed" >> $GITHUB_STEP_SUMMARY
+          echo ""
+          echo "ZRP Gatekeeper: ALL deploy verifications PASSED."
+          echo "*ZRP Parity Report v1.0*" >> $GITHUB_STEP_SUMMARY
