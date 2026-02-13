@@ -667,9 +667,12 @@ jobs:
             fi
 
             # Check GIT_SHA env var in the serving revision
+            # NOTE: gcloud --format doesn't support .filter() on env arrays.
+            # Use --format=json + jq to extract the value reliably.
             GIT_SHA_VAL=$(gcloud run revisions describe "$TRAFFIC_REV" \
               --region="${{ env.GCP_REGION }}" \
-              --format="value(spec.containers[0].env.filter(name=GIT_SHA).value)" 2>/dev/null || echo "")
+              --format=json 2>/dev/null \
+              | jq -r '.spec.containers[0].env[]? | select(.name=="GIT_SHA") | .value // empty' 2>/dev/null || echo "")
 
             if [ "$GIT_SHA_VAL" = "${{ env.SHA }}" ]; then
               echo "  PASS: $svc ($TRAFFIC_REV) GIT_SHA=$GIT_SHA_VAL"
