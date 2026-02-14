@@ -9,6 +9,8 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { getPool } from "../../../db/client";
 import { logLoginSuccess } from "../../../services/authAuditService";
+// AUTH-SESSION-169: Cookie utility for auth session persistence
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from "../../../utils/authCookies";
 // GO-LIVE-189: Import rate limiter to prevent store code enumeration
 import { authRateLimiter } from "../../../middleware/posRateLimiter";
 // GO-LIVE-195: Enhanced auth protection with per-store-code limiting and progressive lockout
@@ -577,6 +579,10 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
 
     console.log(`[RetailerAuth] GO-LIVE-RET-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}, ${stores.length} stores`);
 
+    // AUTH-SESSION-169: Set HttpOnly cookies for session persistence across page refreshes
+    // Access token: 24h (matches JWT expiresIn), Refresh token: 7d
+    setAuthCookies(res, accessToken, refreshToken, 86400, 7 * 86400);
+
     res.json({
       success: true,
       token: accessToken,
@@ -1097,7 +1103,8 @@ router.post("/auth/forgot-password/reset", authRateLimiter, async (req: Request,
  */
 router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { refreshToken } = req.body;
+    // AUTH-SESSION-169: Read refresh token from cookie or body (backward compat with POS app)
+    const refreshToken = getRefreshTokenFromRequest(req);
 
     if (!refreshToken) {
       res.status(400).json({ error: "Refresh token is required" });
@@ -1194,6 +1201,9 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
       issuer: JWT_ISSUER,
       expiresIn: JWT_EXPIRES_IN,
     });
+
+    // AUTH-SESSION-169: Refresh cookies on token refresh (new access token, same refresh token)
+    setAuthCookies(res, accessToken, refreshToken, 86400, 7 * 86400);
 
     res.json({
       success: true,
@@ -1357,6 +1367,9 @@ router.post("/auth/logout", async (req: Request, res: Response, next: NextFuncti
       // Log but don't fail
       console.warn('[RetailerAuth] GO-LIVE-137: Failed to record token revocation:', dbError);
     }
+
+    // AUTH-SESSION-169: Clear auth cookies on logout
+    clearAuthCookies(res);
 
     res.json({
       data: {

@@ -11,6 +11,8 @@ import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
 import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../../../services/ipBlockingService";
 import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../services/authAuditService";
+// AUTH-SESSION-169: Cookie utility for auth session persistence
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from "../../../utils/authCookies";
 
 // GO-LIVE-LOGIN: Import Firebase verification for phone-based auth
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -630,6 +632,18 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
       expiresIn: JWT_EXPIRES_IN,
     });
 
+    // AUTH-SESSION-169: Generate refresh token for email/password login
+    const refreshJti = randomUUID();
+    const refreshPayload = {
+      sub: supplier.id,
+      type: 'refresh',
+      jti: refreshJti,
+    };
+    const refreshToken = jwt.sign(refreshPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: '7d',
+    });
+
     // GO-LIVE-144: Log successful login
     logLoginSuccess({
       actorType: 'supplier',
@@ -639,9 +653,13 @@ router.post("/auth/login", checkIpBlockMiddleware, loginRateLimiter, async (req:
       userAgent: req.get('user-agent'),
     }).catch(() => {}); // Non-blocking
 
+    // AUTH-SESSION-169: Set HttpOnly cookies for session persistence
+    setAuthCookies(res, token, refreshToken, 86400, 7 * 86400);
+
     res.json({
       data: {
         token,
+        refreshToken,
         supplier: {
           id: supplier.id,
           email: supplier.primary_email,
@@ -1204,6 +1222,9 @@ router.post("/auth/logout", requireSupplierAuth, async (req: SupplierAuthRequest
       console.warn('[SupplierAuth] Failed to record token revocation:', dbError);
     }
 
+    // AUTH-SESSION-169: Clear auth cookies on logout
+    clearAuthCookies(res);
+
     res.json({
       data: {
         success: true,
@@ -1623,6 +1644,9 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
 
     console.log(`[SupplierAuth] GO-LIVE-SUP-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}`);
 
+    // AUTH-SESSION-169: Set HttpOnly cookies for session persistence across page refreshes
+    setAuthCookies(res, token, refreshToken, 86400, 7 * 86400);
+
     res.json({
       success: true,
       status: 'active',
@@ -1637,6 +1661,105 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
         businessName: supplier.business_name,
         gstin: supplier.gstin,
         verificationStatus: supplier.verification_status,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/auth/refresh
+ * AUTH-SESSION-169: Refresh an expired access token using a valid refresh token (cookie or body)
+ */
+router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+
+    if (!refreshToken) {
+      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Refresh token is required' } });
+      return;
+    }
+
+    // Verify refresh token
+    let decoded: { sub: string; type: string; jti?: string; iat?: number };
+    try {
+      decoded = jwt.verify(refreshToken, JWT_SECRET, {
+        issuer: JWT_ISSUER,
+      }) as { sub: string; type: string; jti?: string; iat?: number };
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        res.status(401).json({ error: { code: 'TOKEN_EXPIRED', message: 'Refresh token expired. Please login again.' } });
+        return;
+      }
+      res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid refresh token' } });
+      return;
+    }
+
+    if (decoded.type !== 'refresh') {
+      res.status(401).json({ error: { code: 'INVALID_TOKEN', message: 'Invalid token type' } });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Check if refresh token has been revoked
+    if (decoded.jti) {
+      const revocationCheck = await pool.query(
+        `SELECT 1 FROM auth.token_revocations WHERE jti = $1 LIMIT 1`,
+        [decoded.jti]
+      );
+      if (revocationCheck.rows.length > 0) {
+        res.status(401).json({ error: { code: 'TOKEN_REVOKED', message: 'Session has been logged out. Please login again.' } });
+        return;
+      }
+    }
+
+    // Get supplier info
+    const supplierResult = await pool.query(
+      `SELECT id, primary_email, primary_phone, business_name, status
+       FROM supplier.suppliers
+       WHERE id = $1 AND status = 'active'`,
+      [decoded.sub]
+    );
+
+    if (!supplierResult.rows[0]) {
+      res.status(401).json({ error: { code: 'USER_NOT_FOUND', message: 'Supplier not found or inactive' } });
+      return;
+    }
+
+    const supplier = supplierResult.rows[0];
+
+    // Generate new access token
+    const newJti = randomUUID();
+    const jwtPayload = {
+      sub: supplier.id,
+      actorType: 'SUPPLIER',
+      actorId: supplier.id,
+      email: supplier.primary_email,
+      phone: supplier.primary_phone,
+      permissions: ['supplier:read', 'supplier:write', 'products:read', 'products:write'],
+      jti: newJti,
+    };
+
+    const accessToken = jwt.sign(jwtPayload, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    // AUTH-SESSION-169: Refresh cookies
+    setAuthCookies(res, accessToken, refreshToken, 86400, 7 * 86400);
+
+    res.json({
+      success: true,
+      data: {
+        accessToken,
+        expiresIn: 86400,
+        tokenType: 'Bearer',
       },
     });
   } catch (error) {
