@@ -18,20 +18,11 @@ export const retailerAdminInventoryRouter = Router();
 
 /**
  * GET /api/v1/retailer-admin/health
- * Health check endpoint for gateway routing verification
- * Returns version info and git SHA for deployment verification
- * This endpoint is public (no JWT required)
+ * URL-004: Minimal health check — no version/env leak
+ * Public (no JWT required) — used by Cloud Run readiness probes
  */
 retailerAdminInventoryRouter.get("/health", (_req: Request, res: Response) => {
-  res.json({
-    status: "ok",
-    service: "retailer-admin-api",
-    version: "3.0.10",
-    gitSha: GIT_SHA,
-    buildTime: BUILD_TIME,
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || "development",
-  });
+  res.json({ status: "ok" });
 });
 
 /**

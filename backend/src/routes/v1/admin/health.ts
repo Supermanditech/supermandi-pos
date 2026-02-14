@@ -35,12 +35,9 @@ function requireAdminToken(req: Request, res: Response, next: NextFunction): voi
  * GL-CRIT-0048: Basic health check endpoint (PUBLIC)
  * Returns minimal status for load balancers and basic monitoring
  */
+// URL-004: Public health returns ONLY status — no config details
 adminHealthRouter.get("/health", (_req: Request, res: Response) => {
-  const emailInfo = getEmailProviderInfo();
-  res.json({
-    status: "ok",
-    email_provider_configured: emailInfo.configured,
-  });
+  res.json({ status: "ok" });
 });
 
 /**
