@@ -37,10 +37,12 @@ adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, requirePermiss
   const offset = Math.max(parseInt(String(req.query.offset)) || 0, 0);
 
   try {
-    const [countResult, result] = await Promise.all([
-      pool.query(`SELECT COUNT(*)::int as total FROM supplier.supplier_requests WHERE status = 'pending'`),
-      pool.query(
-        `SELECT
+    // STBT-190.3: UNION both sources — retailer-requested (supplier_requests)
+    // AND self-registered (auth.applications where entity_type='supplier')
+    // Self-registered suppliers were invisible to SuperAdmin before this fix
+    const combinedQuery = `
+      SELECT * FROM (
+        SELECT
           sr.id,
           sr.store_id as "storeId",
           st.name as "storeName",
@@ -51,14 +53,47 @@ adminSuppliersRouter.get("/pending-suppliers", requireAdminToken, requirePermiss
           sr.status,
           sr.review_notes as "reviewNotes",
           sr.created_at as "createdAt",
-          sr.reviewed_at as "reviewedAt"
+          sr.reviewed_at as "reviewedAt",
+          'supplier_request' as "source"
         FROM supplier.supplier_requests sr
         LEFT JOIN platform.stores st ON st.id = sr.store_id
         WHERE sr.status = 'pending'
-        ORDER BY sr.created_at DESC
-        LIMIT $1 OFFSET $2`,
-        [limit, offset]
-      ),
+
+        UNION ALL
+
+        SELECT
+          a.id,
+          NULL as "storeId",
+          NULL as "storeName",
+          a.gstin as "requestedGstin",
+          a.business_name as "requestedName",
+          a.phone as "requestedPhone",
+          a.email as "requestedEmail",
+          a.status,
+          a.admin_notes as "reviewNotes",
+          a.created_at as "createdAt",
+          a.reviewed_at as "reviewedAt",
+          'self_registered' as "source"
+        FROM auth.applications a
+        WHERE a.entity_type = 'supplier'
+          AND a.status IN ('KYC_SUBMITTED', 'PAYMENTS_SUBMITTED')
+          AND a.approved_supplier_id IS NULL
+      ) combined
+      ORDER BY "createdAt" DESC
+      LIMIT $1 OFFSET $2`;
+
+    const countQuery = `
+      SELECT (
+        (SELECT COUNT(*) FROM supplier.supplier_requests WHERE status = 'pending') +
+        (SELECT COUNT(*) FROM auth.applications
+         WHERE entity_type = 'supplier'
+           AND status IN ('KYC_SUBMITTED', 'PAYMENTS_SUBMITTED')
+           AND approved_supplier_id IS NULL)
+      )::int as total`;
+
+    const [countResult, result] = await Promise.all([
+      pool.query(countQuery),
+      pool.query(combinedQuery, [limit, offset]),
     ]);
 
     const total = countResult.rows[0]?.total ?? 0;
