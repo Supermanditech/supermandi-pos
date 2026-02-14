@@ -20,6 +20,20 @@ export default function ProtectedLayout() {
   // GL-WF-053: Logout confirmation state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // #184.25: Escape key handler for session warning and logout modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showLogoutConfirm) setShowLogoutConfirm(false);
+        else if (showSessionWarning) dismissSessionWarning();
+      }
+    };
+    if (showSessionWarning || showLogoutConfirm) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [showSessionWarning, showLogoutConfirm, dismissSessionWarning]);
+
   // GL-WF-033: Check if user has admin role
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'owner';
 
@@ -350,6 +364,7 @@ export default function ProtectedLayout() {
       </div>
 
       {/* GL-WF-028: Session Expiry Warning Modal */}
+      {/* #184.25: Click-outside dismisses modal */}
       {showSessionWarning && (
         <div style={{
           position: 'fixed',
@@ -359,14 +374,14 @@ export default function ProtectedLayout() {
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 10000,
-        }}>
+        }} onClick={dismissSessionWarning}>
           <div style={{
             background: 'white',
             borderRadius: '16px',
             padding: '2rem',
             maxWidth: '400px',
             boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-          }}>
+          }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>⏰</div>
             <h3 style={{ margin: '0 0 1rem', textAlign: 'center', color: '#1e293b' }}>Session Expiring Soon</h3>
             <p style={{ margin: '0 0 1.5rem', color: '#64748b', textAlign: 'center' }}>

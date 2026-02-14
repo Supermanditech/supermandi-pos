@@ -84,18 +84,28 @@ export default function DeviceActivationPage() {
   };
 
   // Load devices for this store
+  // #184.19: Handle 401 and show error messages
   const loadDevices = useCallback(async () => {
     if (!accessToken) return;
 
     setLoadingDevices(true);
+    setError(null);
     try {
       const response = await authFetch('/api/v1/retailer-admin/devices', accessToken);
       if (response.ok) {
         const data = await safeJson(response);
         setDevices(data.devices || []);
+      } else if (response.status === 401) {
+        setError('Session expired. Please log in again.');
+      } else {
+        const data = await safeJson(response);
+        setError(data?.error?.message || `Failed to load devices (${response.status})`);
       }
     } catch (err) {
       console.error('Failed to load devices:', err);
+      setError(err instanceof Error && err.name === 'AbortError'
+        ? 'Request timed out. Please try again.'
+        : 'Network error loading devices. Please check your connection.');
     } finally {
       setLoadingDevices(false);
       setDevicesLoaded(true);

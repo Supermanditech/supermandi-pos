@@ -76,6 +76,7 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
 
     // GL-WF-036: Include rejection_reason in product list
     // GL-WF-063: Add LIMIT and OFFSET for pagination
+    // STBT-190.6: Include admin-edited fields so supplier sees platform overrides
     const result = await pool.query(
       `SELECT
         id,
@@ -93,6 +94,10 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         is_active,
         approval_status,
         rejection_reason,
+        edited_name,
+        edited_category,
+        supermandi_margin_minor,
+        bnpl_eligible,
         created_at,
         updated_at
       FROM catalog.supplier_products
@@ -119,6 +124,11 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         isActive: p.is_active,
         approvalStatus: p.approval_status || 'pending',
         rejectionReason: p.rejection_reason, // GL-WF-036
+        // STBT-190.6: Admin overrides visible to supplier
+        editedName: p.edited_name || null,
+        editedCategory: p.edited_category || null,
+        superMandiMarginMinor: p.supermandi_margin_minor || 0,
+        bnplEligible: p.bnpl_eligible || false,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),

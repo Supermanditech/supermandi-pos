@@ -49,7 +49,7 @@ function StatCard({
 export default function DashboardPage() {
   const { supplier } = useAuth();
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: getDashboardStats,
   });
@@ -112,6 +112,19 @@ export default function DashboardPage() {
               View pending products →
             </Link>
           </div>
+        </div>
+      )}
+
+      {/* STBT-185.6: Dashboard stats error state with retry */}
+      {statsError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-red-800">Failed to load dashboard stats</p>
+            <p className="text-sm text-red-600 mt-1">Please check your connection and try again.</p>
+          </div>
+          <button onClick={() => refetchStats()} className="btn btn-secondary text-sm">
+            Retry
+          </button>
         </div>
       )}
 
