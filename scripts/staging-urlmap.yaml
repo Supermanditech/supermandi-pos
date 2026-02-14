@@ -17,11 +17,14 @@ pathMatchers:
     - /version
     service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/api-gateway-backend
   - paths:
+    - /retailer
     - /retailer/*
     service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/retailer-backend
   - paths:
+    - /admin
     - /admin/*
     service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/superadmin-backend
   - paths:
+    - /supplier
     - /supplier/*
     service: https://www.googleapis.com/compute/v1/projects/supermandi-backend/global/backendServices/supplier-backend
