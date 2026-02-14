@@ -279,12 +279,21 @@ export async function uploadDocument(
   formData.append('entity_id', entityId);
 
   // AUDIT-RET-051: Include credentials for cookie-based auth
-  const response = await fetch(`${DOCUMENTS_BASE}/upload`, {
-    method: 'POST',
-    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    credentials: 'include',
-    body: formData,
-  });
+  // STBT-187.8: Add 60s timeout for FormData uploads
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  let response: Response;
+  try {
+    response = await fetch(`${DOCUMENTS_BASE}/upload`, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'include',
+      body: formData,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   // AUDIT-RET-041/052: Use safeJson + throw proper Error
   const json = await safeJson(response);
   if (!response.ok) {
@@ -338,9 +347,10 @@ export interface LookupResponse {
 }
 
 export async function lookupRetailerRegistration(phone: string): Promise<LookupResponse> {
+  // STBT-187.9: Use POST to avoid PII (phone) in URL/query string/logs/history
   const response = await fetch(
-    `${REGISTRATION_BASE}/lookup?phone=${encodeURIComponent(phone)}`,
-    { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
+    `${REGISTRATION_BASE}/lookup`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }), credentials: 'include' }
   );
   // AUDIT-RET-041/052: Use safeJson + throw proper Error
   const json = await safeJson(response);

@@ -142,9 +142,10 @@ function isValidUpiVpa(vpa: string): boolean {
  * - status: Application status
  * - nextStep: What the user should do next
  */
-router.get("/lookup", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+// STBT-187.9: Accept both GET (backward compat) and POST (PII-safe)
+router.all("/lookup", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phone } = req.query as { phone?: string };
+    const phone = (req.body?.phone || req.query.phone) as string | undefined;
 
     if (!phone) {
       res.status(400).json({
