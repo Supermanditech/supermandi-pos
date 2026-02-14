@@ -3,6 +3,7 @@ import { logGcpValidationResults } from "./startup/validateGcp";
 import { startSyncCleanupScheduler } from "./services/syncCleanupScheduler";
 import { loadOnboardingConfig } from "./config/onboardingConfig";
 import { logger } from "./lib/logger";
+import { initializeGcs } from "@supermandi/common";
 
 // STAGE-012: Align PORT fallback with Dockerfile.main (ENV PORT=3010)
 const PORT = process.env.PORT || 3010;
@@ -18,6 +19,19 @@ async function start(): Promise<void> {
   // GO-LIVE-180: Validate GCP credentials early
   // This catches configuration issues before services start accepting requests
   logGcpValidationResults();
+
+  // STBT-179: Initialize GCS for document storage (Cloud Run has ephemeral filesystem)
+  const gcsBucket = process.env.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents';
+  try {
+    initializeGcs({
+      projectId: process.env.GCP_PROJECT_ID || 'supermandi-pos',
+      complianceBucket: gcsBucket,
+      importsBucket: gcsBucket,
+    });
+    logger.info(`[GCS] Document storage initialized: ${gcsBucket}`);
+  } catch (err) {
+    logger.warn("[GCS] Failed to initialize — document uploads will fail", { error: String(err) });
+  }
 
   // RO-009 + STAGE-005: Validate onboarding config (fail-fast in non-development)
   try {

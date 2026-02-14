@@ -1,43 +1,28 @@
 // GL-WF-018: KYC Document Upload Routes
 // GL-WF-008: Bank Verification via IFSC lookup
+// STBT-179: Migrated from /tmp disk storage to GCS for Cloud Run compatibility
 
 import { Router, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
+import crypto from "crypto";
+import {
+  uploadBuffer,
+  deleteFile as gcsDeleteFile,
+} from "@supermandi/common";
 
 const router = Router();
 
 // =============================================================================
-// FILE UPLOAD CONFIGURATION
+// FILE UPLOAD CONFIGURATION — STBT-179: GCS instead of /tmp
 // =============================================================================
-const UPLOAD_DIR = process.env.KYC_UPLOAD_DIR || '/tmp/kyc-uploads';
+const GCS_DOCUMENTS_BUCKET = process.env.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per document
 
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const supplierDir = path.join(UPLOAD_DIR, (req as SupplierAuthRequest).supplierId || 'unknown');
-    if (!fs.existsSync(supplierDir)) {
-      fs.mkdirSync(supplierDir, { recursive: true });
-    }
-    cb(null, supplierDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
@@ -65,28 +50,65 @@ interface IFSCData {
   IFSC: string;
 }
 
+// STBT-183: Timeout for external IFSC API calls
+const IFSC_API_TIMEOUT_MS = 5_000; // 5 seconds max
+
 /**
  * Validate IFSC code format and lookup bank details
- * Uses Razorpay's public IFSC API
+ * Uses Razorpay's public IFSC API with timeout + format-based fallback
+ * STBT-183: Added AbortController timeout and basic fallback for known banks
  */
 async function lookupIFSC(ifscCode: string): Promise<IFSCData | null> {
-  try {
-    // Validate format first
-    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-    if (!ifscRegex.test(ifscCode)) {
-      return null;
-    }
+  // Validate format first
+  const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+  if (!ifscRegex.test(ifscCode)) {
+    return null;
+  }
 
-    // Use Razorpay's public IFSC API
-    const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`);
+  try {
+    // STBT-183: Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), IFSC_API_TIMEOUT_MS);
+
+    const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       return null;
     }
 
     const data = await response.json() as IFSCData;
     return data;
-  } catch (error) {
-    console.error('IFSC lookup error:', error);
+  } catch (error: any) {
+    // STBT-183: On timeout/network error, derive bank name from IFSC prefix
+    // First 4 chars of IFSC = bank code (e.g., SBIN = State Bank of India)
+    const bankPrefix = ifscCode.substring(0, 4);
+    const knownBanks: Record<string, string> = {
+      SBIN: 'State Bank of India', HDFC: 'HDFC Bank', ICIC: 'ICICI Bank',
+      UTIB: 'Axis Bank', KKBK: 'Kotak Mahindra Bank', PUNB: 'Punjab National Bank',
+      BARB: 'Bank of Baroda', CNRB: 'Canara Bank', UBIN: 'Union Bank of India',
+      IOBA: 'Indian Overseas Bank', BKID: 'Bank of India', IDIB: 'Indian Bank',
+      ALLA: 'Allahabad Bank', MAHB: 'Bank of Maharashtra', CBIN: 'Central Bank of India',
+      UCBA: 'UCO Bank', YESB: 'Yes Bank', FDRL: 'Federal Bank',
+      SIBL: 'South Indian Bank', KARB: 'Karnataka Bank',
+    };
+
+    const bankName = knownBanks[bankPrefix];
+    if (bankName) {
+      console.warn(`[IFSC] External API failed, using fallback for ${bankPrefix}: ${error?.name || error?.message}`);
+      return {
+        BANK: bankName,
+        BRANCH: 'Branch lookup unavailable',
+        ADDRESS: '',
+        CITY: '',
+        STATE: '',
+        IFSC: ifscCode,
+      };
+    }
+
+    console.error('[IFSC] Lookup failed, no fallback available:', error?.message);
     return null;
   }
 }
@@ -280,6 +302,12 @@ router.post("/documents/:type", requireSupplierAuth, upload.single('document'), 
       return;
     }
 
+    // STBT-179: Upload to GCS instead of /tmp
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const gcsObjectKey = `kyc/${req.supplierId}/${type}_${uniqueSuffix}${ext}`;
+    await uploadBuffer(GCS_DOCUMENTS_BUCKET, gcsObjectKey, req.file.buffer, req.file.mimetype);
+
     // Upsert document (replace existing if same type)
     const result = await pool.query(
       `INSERT INTO supplier.kyc_documents (
@@ -295,7 +323,7 @@ router.post("/documents/:type", requireSupplierAuth, upload.single('document'), 
         rejection_reason = NULL,
         updated_at = NOW()
       RETURNING id, document_type, file_name, file_size, mime_type, status, created_at`,
-      [req.supplierId, type, req.file.originalname, req.file.path, req.file.size, req.file.mimetype]
+      [req.supplierId, type, req.file.originalname, gcsObjectKey, req.file.size, req.file.mimetype]
     );
 
     const doc = result.rows[0];
@@ -344,17 +372,20 @@ router.delete("/documents/:id", requireSupplierAuth, async (req: SupplierAuthReq
       return;
     }
 
+    // STBT-179: Delete file from GCS
+    const filePath = docResult.rows[0].file_path;
+    try {
+      await gcsDeleteFile(GCS_DOCUMENTS_BUCKET, filePath);
+    } catch (err) {
+      // Non-fatal: file may already be gone
+      console.warn('[KYC] GCS delete failed (non-fatal):', err);
+    }
+
     // Delete from database
     await pool.query(
       `DELETE FROM supplier.kyc_documents WHERE id = $1 AND supplier_id = $2`,
       [id, req.supplierId]
     );
-
-    // Delete file from disk
-    const filePath = docResult.rows[0].file_path;
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
 
     res.json({
       data: { success: true, message: 'Document deleted successfully' }

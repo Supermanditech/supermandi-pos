@@ -12,8 +12,10 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
+import { randomUUID } from "crypto";
 import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import { getPool } from "../../../db/client";
+import { generateStoreCode } from "../../../services/storeCodeService";
 import rateLimit from "express-rate-limit";
 
 export const adminApplicationsRouter = Router();
@@ -299,18 +301,37 @@ adminApplicationsRouter.post(
       let entityTable: string;
 
       if (app.entity_type === 'retailer') {
-        // Create a store in platform.stores
+        // STBT-172: Create a store in platform.stores with correct column names
+        // platform.stores requires: id (UUID), name (NOT NULL), code (NOT NULL), status
+        const storeId = randomUUID();
+        let storeCode: string;
+        try {
+          storeCode = await generateStoreCode(app.business_name);
+        } catch (codeErr: any) {
+          await client.query('ROLLBACK');
+          console.error("[admin/applications] Store code generation failed:", codeErr?.message);
+          return res.status(500).json({
+            error: { code: "STORE_CODE_FAILED", message: "Could not generate store code. Please try again." }
+          });
+        }
+
         const storeResult = await client.query(
           `INSERT INTO platform.stores (
-            store_name, owner_name, gstin, phone, email,
+            id, name, code, phone, email,
             address_line1, address_line2, city, state, pincode,
-            upi_vpa, document_urls, application_id, status, created_via
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'ACTIVE', 'ADMIN')
+            gst_number, upi_vpa, contact_name, contact_phone, contact_email,
+            status, created_at, updated_at
+          ) VALUES (
+            $1::uuid, $2, $3, $4, $5,
+            $6, $7, $8, $9, $10,
+            $11, $12, $13, $14, $15,
+            'ACTIVE', NOW(), NOW()
+          )
           RETURNING id`,
           [
+            storeId,
             app.business_name,
-            app.owner_name,
-            app.gstin,
+            storeCode,
             app.phone,
             app.email,
             app.address_line1,
@@ -318,28 +339,33 @@ adminApplicationsRouter.post(
             app.city,
             app.state,
             app.pincode,
+            app.gstin,
             app.upi_vpa,
-            JSON.stringify(app.document_urls || {}),
-            id,
+            app.owner_name,
+            app.phone,
+            app.email,
           ]
         );
         approvedEntityId = storeResult.rows[0].id;
         entityTable = 'approved_store_id';
       } else {
-        // Create a supplier in supplier.suppliers
+        // STBT-174: Create a supplier with correct field mapping
+        // verification_status must be 'verified' (not 'ACTIVE') per supplier verification flow
+        // bank_account_name from owner_name (closest available), bank_name from app.bank_name
         const supplierResult = await client.query(
           `INSERT INTO supplier.suppliers (
             business_name, gstin, primary_phone, primary_email,
-            address_line1, address_line2, city, state, pincode,
-            bank_account_number, bank_ifsc, bank_account_name,
-            verification_status, status, application_id
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'ACTIVE', 'active', $13)
+            primary_contact_name, address_line1, address_line2, city, state, pincode,
+            bank_account_number, bank_ifsc, bank_account_name, bank_name,
+            document_urls, verification_status, status, application_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'verified', 'active', $16)
           RETURNING id`,
           [
             app.business_name,
             app.gstin,
             app.phone,
             app.email,
+            app.owner_name,
             app.address_line1,
             app.address_line2,
             app.city,
@@ -348,6 +374,8 @@ adminApplicationsRouter.post(
             app.bank_account_number,
             app.bank_ifsc,
             app.owner_name,
+            app.bank_name,
+            JSON.stringify(app.document_urls || {}),
             id,
           ]
         );
