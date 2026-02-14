@@ -181,8 +181,12 @@ router.post("/orders/mark-read", requireSupplierAuth, requireRegisteredSupplier,
  * IMPORTANT: Must be defined BEFORE /orders/:id to avoid Express param matching
  */
 router.get("/orders/stream", async (req: Request, res: Response) => {
-  // SUP-POS-012: Manual JWT auth from query param (EventSource limitation)
-  const token = req.query.token as string | undefined;
+  // STBT-176: Prefer HttpOnly cookie over query param (JWT in URL visible in logs/history)
+  // sm_access_token cookie has path=/api, so EventSource sends it automatically for same-origin
+  const cookieHeader = req.headers.cookie || '';
+  const cookieMatch = cookieHeader.match(/(?:^|;\s*)sm_access_token=([^;]*)/);
+  const token = (cookieMatch?.[1] ? decodeURIComponent(cookieMatch[1]) : null)
+    || (req.query.token as string | undefined); // Fallback for backward compat
   if (!token) {
     res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Token required' } });
     return;

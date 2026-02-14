@@ -1176,10 +1176,13 @@ export async function uploadSupplierDocument(
 
 /**
  * Get the SSE stream URL for real-time order events.
- * Includes auth token as query param (EventSource can't set headers).
+ * STBT-176: No longer passes JWT in URL — HttpOnly cookie sm_access_token
+ * is sent automatically by EventSource for same-origin /api requests.
  */
 export function getOrderStreamUrl(): string | null {
-  const token = getAuthToken();
-  if (!token) return null;
-  return `${API_BASE_URL}/api/v1/supplier/orders/stream?token=${encodeURIComponent(token)}`;
+  // Check auth via sm_auth indicator cookie (non-HttpOnly, readable by JS)
+  if (typeof document !== 'undefined' && !document.cookie.includes('sm_auth=')) {
+    return null;
+  }
+  return `${API_BASE_URL}/api/v1/supplier/orders/stream`;
 }
