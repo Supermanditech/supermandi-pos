@@ -32,7 +32,7 @@ BASE_REF="${BASE_REF:-main}"
 if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "unknown" ]; then
   gate_skip "ZRP-A-001" "Branch naming" "On main or unknown branch"
 else
-  if echo "$BRANCH" | grep -qE '^(feat|fix|reg|chore|test|docs|hotfix)/[A-Za-z0-9]'; then
+  if echo "$BRANCH" | grep -qE '^(feat|fix|reg|chore|test|docs|hotfix|batch)/[A-Za-z0-9]'; then
     gate_pass "ZRP-A-001" "Branch naming"
   else
     gate_fail "ZRP-A-001" "Branch naming" "Branch '$BRANCH' does not match pattern: (feat|fix|reg|chore|test|docs|hotfix)/<id>"
@@ -97,7 +97,8 @@ if [ -n "$DIFF_OUTPUT" ]; then
     [ -z "$file" ] && continue
     [ ! -f "$file" ] && continue
     # Search for markers (exclude comments with ticket IDs like // TODO(STAGE-025))
-    MATCHES=$(grep -nE '\b(TODO|FIXME|HACK|XXX)\b' "$file" 2>/dev/null | grep -cvE '(TODO\([A-Z]+-[A-Z0-9]|FIXME\([A-Z]+-[A-Z0-9])' 2>/dev/null || echo "0")
+    MATCHES=$(grep -nE '\b(TODO|FIXME|HACK|XXX)\b' "$file" 2>/dev/null | grep -cvE '(TODO\([A-Z]+-[A-Z0-9]|FIXME\([A-Z]+-[A-Z0-9])' 2>/dev/null || true)
+    MATCHES=${MATCHES:-0}
     if [ "$MATCHES" -gt 0 ]; then
       WIP_COUNT=$((WIP_COUNT + MATCHES))
       WIP_FILES="${WIP_FILES}  ${file} (${MATCHES} markers)\n"
@@ -120,7 +121,8 @@ if [ -n "$DIFF_OUTPUT" ]; then
     [ -z "$file" ] && continue
     [ ! -f "$file" ] && continue
     if echo "$file" | grep -qE '\.(test|spec)\.(ts|tsx|js|jsx)$'; then
-      MATCHES=$(grep -cE '\b(test|it|describe)\.(only|skip)\b' "$file" 2>/dev/null || echo "0")
+      MATCHES=$(grep -cE '\b(test|it|describe)\.(only|skip)\b' "$file" 2>/dev/null || true)
+      MATCHES=${MATCHES:-0}
       ONLY_SKIP_COUNT=$((ONLY_SKIP_COUNT + MATCHES))
     fi
   done <<< "$DIFF_OUTPUT"
@@ -156,7 +158,8 @@ if [ -n "$DIFF_OUTPUT" ]; then
     # Skip non-runtime directories
     if echo "$file" | grep -qE '^(docs/|scripts/|e2e-tests/|RELEASES/)'; then continue; fi
     # Count console.log/debug/info (excluding commented lines)
-    MATCHES=$(grep -nE 'console\.(log|debug|info)\(' "$file" 2>/dev/null | grep -cv '^\s*//' 2>/dev/null || echo "0")
+    MATCHES=$(grep -nE 'console\.(log|debug|info)\(' "$file" 2>/dev/null | grep -cv '^\s*//' 2>/dev/null || true)
+    MATCHES=${MATCHES:-0}
     CONSOLE_COUNT=$((CONSOLE_COUNT + MATCHES))
   done <<< "$DIFF_OUTPUT"
 fi
