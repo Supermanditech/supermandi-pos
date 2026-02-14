@@ -23,10 +23,11 @@ adminStaffRouter.get(
     const { storeId } = req.params;
     const { active } = req.query; // ?active=true|false
 
+    // XPORT-002: Add store_id to subqueries for store isolation
     let query = `
       SELECT s.id, s.name, s.phone, s.role, s.is_active, s.created_at,
-        (SELECT COUNT(*)::int FROM sales WHERE staff_id = s.id) AS sales_count,
-        (SELECT COUNT(*)::int FROM inventory.inventory_ledger WHERE source = 'POS_STOCK_IN' AND notes LIKE '%' || s.id::text || '%') AS stock_in_count
+        (SELECT COUNT(*)::int FROM sales WHERE staff_id = s.id AND store_id = s.store_id) AS sales_count,
+        (SELECT COUNT(*)::int FROM inventory.inventory_ledger WHERE source = 'POS_STOCK_IN' AND notes LIKE '%' || s.id::text || '%' AND store_id = s.store_id) AS stock_in_count
       FROM platform.store_staff s
       WHERE s.store_id = $1::uuid
     `;

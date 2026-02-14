@@ -80,13 +80,28 @@ function clearSessionToken(): void {
  * Refresh the current session token
  * GO-LIVE-175: Enhanced error handling to log refresh failures
  * POST-BATCH-018-FIX-002: Only clears token on confirmed 401, not transient errors
+ * XPORT-001: Dedup mutex prevents concurrent refresh races
  */
+let _isRefreshing = false;
+let _refreshPromise: Promise<boolean> | null = null;
+
 export async function refreshSession(): Promise<boolean> {
+  // XPORT-001: Deduplicate concurrent refresh calls (same pattern as supplier portal)
+  if (_isRefreshing && _refreshPromise) {
+    return _refreshPromise;
+  }
+
   const currentToken = getSessionToken();
   if (!currentToken) {
     return false;
   }
 
+  _isRefreshing = true;
+  _refreshPromise = _doRefreshSession(currentToken);
+  return _refreshPromise;
+}
+
+async function _doRefreshSession(currentToken: string): Promise<boolean> {
   try {
     // STAGING-FIX-006: Use fetchWithTimeout (30s) instead of raw fetch to prevent hanging
     const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/auth/refresh`, {
@@ -125,6 +140,10 @@ export async function refreshSession(): Promise<boolean> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[GO-LIVE-175] Session refresh error: ${errorMessage}`);
     return false;
+  } finally {
+    // XPORT-001: Release mutex
+    _isRefreshing = false;
+    _refreshPromise = null;
   }
 }
 

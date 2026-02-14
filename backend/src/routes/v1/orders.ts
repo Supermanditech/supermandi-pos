@@ -1326,9 +1326,10 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
     );
 
     // GO-LIVE-118: Fetch order total for reconciliation verification
+    // XPORT-002: Add store_id filter for store isolation
     const orderResult = await client.query(
-      `SELECT total_amount FROM orders.purchase_orders WHERE id = $1`,
-      [orderId]
+      `SELECT total_amount FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
+      [orderId, storeId]
     );
     const orderTotal = orderResult.rows[0]?.total_amount;
 
