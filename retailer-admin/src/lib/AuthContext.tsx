@@ -334,12 +334,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAndRefresh = async () => {
       const expiresAt = tokenExpiresAtRef.current;
 
-      // If no known expiry (e.g., page refresh), refresh immediately to get fresh token
+      // AUTH-SESSION-169: If no known expiry (e.g., page refresh), try refresh but don't
+      // immediately logout on failure — the user may have just logged in and the expiry
+      // ref hasn't been set yet. Only logout if we also don't have an auth cookie.
       if (!expiresAt || expiresAt === 0) {
         console.log('[Auth] No known token expiry, refreshing to get fresh token...');
         const success = await refreshAccessToken();
-        if (!success) {
-          console.warn('[Auth] Initial token refresh failed');
+        if (!success && !hasAuthCookie()) {
+          console.warn('[Auth] Token refresh failed and no auth cookie — logging out');
           logout();
         }
         return;

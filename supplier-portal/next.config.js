@@ -1,14 +1,20 @@
 /** @type {import('next').NextConfig} */
 
 // GO-LIVE-SOP: Get build info for cache-proof deployment verification
+// AUTH-SESSION-169: Check NEXT_PUBLIC_GIT_SHA env var first (set by CI), fallback to git
 function getBuildInfo() {
   try {
+    const envSha = process.env.NEXT_PUBLIC_GIT_SHA;
+    if (envSha && envSha !== 'unknown') {
+      const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }).replace(',', '');
+      return { sha: envSha, time };
+    }
     const { execSync } = require('child_process');
     const sha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
     const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }).replace(',', '');
     return { sha, time };
   } catch {
-    return { sha: 'unknown', time: new Date().toISOString() };
+    return { sha: process.env.NEXT_PUBLIC_GIT_SHA || 'unknown', time: new Date().toISOString() };
   }
 }
 
