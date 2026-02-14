@@ -19,6 +19,8 @@ import { getPool } from "../db/client";
 const SYNC_LOCKS_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;        // 5 minutes
 const PROCESSED_EVENTS_CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const FAILED_EVENTS_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;    // 1 hour
+// STBT-177: Statement timeout to prevent cleanup queries from hanging DB connections
+const CLEANUP_QUERY_TIMEOUT_MS = 30_000; // 30 seconds max per cleanup query
 
 // Track cleanup stats
 interface CleanupStats {
@@ -47,8 +49,11 @@ async function cleanupStaleSyncLocks(): Promise<number> {
   const pool = getPool();
   if (!pool) return 0;
 
+  // STBT-177: Use a dedicated client with statement_timeout to prevent hangs
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query(`SET statement_timeout = ${CLEANUP_QUERY_TIMEOUT_MS}`);
+    const result = await client.query(
       "SELECT cleanup_stale_sync_locks() AS count"
     );
     const count = result.rows[0]?.count ?? 0;
@@ -65,6 +70,8 @@ async function cleanupStaleSyncLocks(): Promise<number> {
     stats.sync_locks.errors++;
     console.error("[SyncCleanup] Error cleaning sync locks:", error?.message);
     return 0;
+  } finally {
+    client.release();
   }
 }
 
@@ -76,8 +83,10 @@ async function cleanupOldProcessedEvents(): Promise<number> {
   const pool = getPool();
   if (!pool) return 0;
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query(`SET statement_timeout = ${CLEANUP_QUERY_TIMEOUT_MS}`);
+    const result = await client.query(
       "SELECT cleanup_old_processed_events() AS count"
     );
     const count = result.rows[0]?.count ?? 0;
@@ -94,6 +103,8 @@ async function cleanupOldProcessedEvents(): Promise<number> {
     stats.processed_events.errors++;
     console.error("[SyncCleanup] Error cleaning processed events:", error?.message);
     return 0;
+  } finally {
+    client.release();
   }
 }
 
@@ -105,8 +116,10 @@ async function cleanupOldFailedEvents(): Promise<number> {
   const pool = getPool();
   if (!pool) return 0;
 
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
+    await client.query(`SET statement_timeout = ${CLEANUP_QUERY_TIMEOUT_MS}`);
+    const result = await client.query(
       "SELECT cleanup_old_failed_sync_events() AS count"
     );
     const count = result.rows[0]?.count ?? 0;
@@ -123,6 +136,8 @@ async function cleanupOldFailedEvents(): Promise<number> {
     stats.failed_events.errors++;
     console.error("[SyncCleanup] Error cleaning failed events:", error?.message);
     return 0;
+  } finally {
+    client.release();
   }
 }
 
