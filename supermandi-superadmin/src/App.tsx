@@ -578,8 +578,9 @@ export default function App() {
   // SA-P1-008: Handle bank detail verification
   async function handleBankVerify(supplierId: string, action: "approve" | "reject") {
     const reason = action === "reject" ? bankRejectReason[supplierId] : undefined;
-    if (action === "reject" && (!reason || reason.trim().length < 5)) {
-      setSuppliersError("Rejection reason must be at least 5 characters");
+    // ADM-003: Consistent minimum rejection reason (10 chars, matching document rejection)
+    if (action === "reject" && (!reason || reason.trim().length < 10)) {
+      setSuppliersError("Rejection reason must be at least 10 characters");
       return;
     }
     setBankVerifyLoading((prev) => ({ ...prev, [supplierId]: true }));
