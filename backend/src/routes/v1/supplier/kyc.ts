@@ -50,28 +50,65 @@ interface IFSCData {
   IFSC: string;
 }
 
+// STBT-183: Timeout for external IFSC API calls
+const IFSC_API_TIMEOUT_MS = 5_000; // 5 seconds max
+
 /**
  * Validate IFSC code format and lookup bank details
- * Uses Razorpay's public IFSC API
+ * Uses Razorpay's public IFSC API with timeout + format-based fallback
+ * STBT-183: Added AbortController timeout and basic fallback for known banks
  */
 async function lookupIFSC(ifscCode: string): Promise<IFSCData | null> {
-  try {
-    // Validate format first
-    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-    if (!ifscRegex.test(ifscCode)) {
-      return null;
-    }
+  // Validate format first
+  const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+  if (!ifscRegex.test(ifscCode)) {
+    return null;
+  }
 
-    // Use Razorpay's public IFSC API
-    const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`);
+  try {
+    // STBT-183: Use AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), IFSC_API_TIMEOUT_MS);
+
+    const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       return null;
     }
 
     const data = await response.json() as IFSCData;
     return data;
-  } catch (error) {
-    console.error('IFSC lookup error:', error);
+  } catch (error: any) {
+    // STBT-183: On timeout/network error, derive bank name from IFSC prefix
+    // First 4 chars of IFSC = bank code (e.g., SBIN = State Bank of India)
+    const bankPrefix = ifscCode.substring(0, 4);
+    const knownBanks: Record<string, string> = {
+      SBIN: 'State Bank of India', HDFC: 'HDFC Bank', ICIC: 'ICICI Bank',
+      UTIB: 'Axis Bank', KKBK: 'Kotak Mahindra Bank', PUNB: 'Punjab National Bank',
+      BARB: 'Bank of Baroda', CNRB: 'Canara Bank', UBIN: 'Union Bank of India',
+      IOBA: 'Indian Overseas Bank', BKID: 'Bank of India', IDIB: 'Indian Bank',
+      ALLA: 'Allahabad Bank', MAHB: 'Bank of Maharashtra', CBIN: 'Central Bank of India',
+      UCBA: 'UCO Bank', YESB: 'Yes Bank', FDRL: 'Federal Bank',
+      SIBL: 'South Indian Bank', KARB: 'Karnataka Bank',
+    };
+
+    const bankName = knownBanks[bankPrefix];
+    if (bankName) {
+      console.warn(`[IFSC] External API failed, using fallback for ${bankPrefix}: ${error?.name || error?.message}`);
+      return {
+        BANK: bankName,
+        BRANCH: 'Branch lookup unavailable',
+        ADDRESS: '',
+        CITY: '',
+        STATE: '',
+        IFSC: ifscCode,
+      };
+    }
+
+    console.error('[IFSC] Lookup failed, no fallback available:', error?.message);
     return null;
   }
 }
