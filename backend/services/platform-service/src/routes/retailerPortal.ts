@@ -246,8 +246,8 @@ router.get(
       : new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
     const dateStr = targetDate.toISOString().split('T')[0];
 
-    // Get sales summary for the date
-    // FIX: Use retailers.sales instead of pos.bills, items_count instead of total_items
+    // STBT-190.1: Query public.sales (retailers schema does not exist)
+    // Column fixes: total_amount→total_minor, items_count→subquery, bill_date→created_at
     const salesResult = await query<{
       total_sales: string;
       total_bills: string;
@@ -258,15 +258,23 @@ router.get(
       credit_total: string;
     }>(
       `SELECT
-        COALESCE(SUM(total_amount), 0) as total_sales,
+        COALESCE(SUM(s.total_minor), 0) as total_sales,
         COUNT(*) as total_bills,
-        COALESCE(SUM(items_count), 0) as items_sold,
-        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_amount ELSE 0 END), 0) as cash_total,
-        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_amount ELSE 0 END), 0) as upi_total,
-        COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_amount ELSE 0 END), 0) as card_total,
-        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_amount ELSE 0 END), 0) as credit_total
-       FROM retailers.sales
-       WHERE store_id = $1 AND DATE(bill_date AT TIME ZONE 'Asia/Kolkata') = $2`,
+        (SELECT COALESCE(SUM(si.quantity), 0)
+         FROM public.sale_items si
+         JOIN public.sales s2 ON si.sale_id = s2.id
+         WHERE s2.store_id = $1
+           AND DATE(s2.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+           AND s2.status NOT IN ('cancelled', 'voided')
+        ) as items_sold,
+        COALESCE(SUM(CASE WHEN s.payment_mode = 'CASH' THEN s.total_minor ELSE 0 END), 0) as cash_total,
+        COALESCE(SUM(CASE WHEN s.payment_mode = 'UPI' THEN s.total_minor ELSE 0 END), 0) as upi_total,
+        COALESCE(SUM(CASE WHEN s.payment_mode = 'CARD' THEN s.total_minor ELSE 0 END), 0) as card_total,
+        COALESCE(SUM(CASE WHEN s.payment_mode = 'DUE' THEN s.total_minor ELSE 0 END), 0) as credit_total
+       FROM public.sales s
+       WHERE s.store_id = $1
+         AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+         AND s.status NOT IN ('cancelled', 'voided')`,
       [storeId, dateStr]
     );
 
@@ -275,8 +283,8 @@ router.get(
     const totalBills = parseInt(summary?.total_bills || '0', 10);
     const itemsSold = parseInt(summary?.items_sold || '0', 10);
 
-    // Get top selling items
-    // FIX: Use retailers.sale_items and retailers.sales instead of pos.bill_items/pos.bills
+    // STBT-190.1: Top selling items from public.sale_items + public.sales
+    // Column fixes: si.product_name→si.name, si.total_amount→si.line_total_minor
     const topItemsResult = await query<{
       product_id: string;
       product_name: string;
@@ -285,15 +293,17 @@ router.get(
     }>(
       `SELECT
         si.product_id,
-        COALESCE(p.name, si.product_name, 'Unknown Product') as product_name,
+        COALESCE(p.name, si.name, 'Unknown Product') as product_name,
         SUM(si.quantity) as quantity_sold,
-        SUM(si.total_amount) as total_amount
-       FROM retailers.sale_items si
-       JOIN retailers.sales s ON si.sale_id = s.id
+        SUM(si.line_total_minor) as total_amount
+       FROM public.sale_items si
+       JOIN public.sales s ON si.sale_id = s.id
        LEFT JOIN catalog.products p ON si.product_id = p.id
-       WHERE s.store_id = $1 AND DATE(s.bill_date AT TIME ZONE 'Asia/Kolkata') = $2
-       GROUP BY si.product_id, p.name, si.product_name
-       ORDER BY SUM(si.total_amount) DESC
+       WHERE s.store_id = $1
+         AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2
+         AND s.status NOT IN ('cancelled', 'voided')
+       GROUP BY si.product_id, p.name, si.name
+       ORDER BY SUM(si.line_total_minor) DESC
        LIMIT 5`,
       [storeId, dateStr]
     );
