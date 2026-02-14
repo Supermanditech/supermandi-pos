@@ -113,7 +113,8 @@ export default function DashboardLayout({
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            // SUP-006: Use startsWith for sub-route active state (e.g. /orders/123 highlights /orders)
+            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
               <Link
                 key={item.href}
@@ -200,8 +201,8 @@ export default function DashboardLayout({
         )}
 
         {/* GL-WF-034: Email Verification Banner */}
-        {/* GL-WF-034: Email Verification Banner - GO-LIVE: Honest about email delivery */}
-        {supplier && !supplier.emailVerified && (
+        {/* SUP-006: Only show email verification banner when LimitedModeBanner is NOT showing (no duplicate banners) */}
+        {supplier && !supplier.emailVerified && supplier.verificationStatus === 'verified' && (
           <div className="bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
             <p className="text-blue-800 text-sm">
               <span className="font-medium">Email Not Verified:</span>{' '}
