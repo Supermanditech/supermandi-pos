@@ -1241,7 +1241,7 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reset-password", requireAdminT
       console.warn(`[GO-LIVE-145] Email service is disabled - admin must share reset link manually`);
     }
 
-    console.log(`[GO-LIVE-145] Admin ${adminEmail} triggered password reset for supplier ${supplier.business_name} (${supplier.primary_email})`);
+    console.log(`[GO-LIVE-145] Admin ***@${adminEmail?.split('@')[1] || '***'} triggered password reset for supplier ${supplier.business_name} (***@${supplier.primary_email?.split('@')[1] || '***'})`);
 
     return res.json({
       success: true,

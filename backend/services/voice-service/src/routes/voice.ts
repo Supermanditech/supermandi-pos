@@ -105,16 +105,17 @@ router.post(
         return;
       }
 
-      const storeId = req.body.storeId as string;
+      // SEC-005: Derive storeId from gateway JWT headers, NOT from request body
+      const storeId = req.headers['x-actor-id'] as string;
       if (!storeId) {
-        res.status(400).json({
+        res.status(401).json({
           success: false,
-          error: 'storeId is required',
+          error: 'Authentication required (missing store context)',
         });
         return;
       }
 
-      console.log(`[VOICE] Processing audio: ${audioFile.path}, size: ${audioFile.size}`);
+      console.log(`[VOICE] Processing audio for store: ${storeId.substring(0, 8)}...`);
 
       // Step 1: Transcribe audio
       const transcription = await transcribeAudio(audioFile.path);
@@ -182,13 +183,22 @@ router.post(
   '/execute',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { requestId, storeId } = req.body;
+      const { requestId } = req.body;
+      // SEC-005: Derive storeId from gateway JWT headers, NOT from request body
+      const storeId = req.headers['x-actor-id'] as string;
 
       // Validate request
-      if (!requestId || !storeId) {
+      if (!requestId) {
         res.status(400).json({
           success: false,
-          error: 'requestId and storeId are required',
+          error: 'requestId is required',
+        });
+        return;
+      }
+      if (!storeId) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required (missing store context)',
         });
         return;
       }
@@ -203,7 +213,7 @@ router.post(
         return;
       }
 
-      // Validate store matches
+      // Validate store matches (JWT store must match the store from interpret step)
       if (voiceRequest.storeId !== storeId) {
         res.status(403).json({
           success: false,

@@ -10,6 +10,18 @@ import { query, queryOne } from '../db/pool';
 import type { DomainEvent } from './types';
 import type { PoolClient } from 'pg';
 
+// SEC-001: Schema allowlist to prevent SQL injection via schema interpolation
+const ALLOWED_SCHEMAS = new Set([
+  'public', 'catalog', 'inventory', 'pos', 'supplier', 'platform', 'auth', 'reorder', 'analytics',
+]);
+
+function validateSchema(schema: string): string {
+  if (!ALLOWED_SCHEMAS.has(schema) && !/^[a-z_][a-z0-9_]*$/.test(schema)) {
+    throw new Error(`Invalid schema name: ${schema}`);
+  }
+  return schema;
+}
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -64,8 +76,9 @@ export async function checkInbox(
   sourceQueue: string,
   maxRetries: number = 3
 ): Promise<CheckInboxResult> {
+  const s = validateSchema(schema);
   const row = await queryOne<InboxRow>(
-    `SELECT * FROM ${schema}.event_inbox
+    `SELECT * FROM ${s}.event_inbox
      WHERE event_id = $1 AND source_queue = $2`,
     [eventId, sourceQueue]
   );
@@ -114,19 +127,20 @@ export async function recordInboxEvent(
   event: DomainEvent,
   sourceQueue: string
 ): Promise<InboxEntry> {
+  const s = validateSchema(schema);
   // Try to insert or update to 'processing' status
   const result = await client.query<InboxRow>(
-    `INSERT INTO ${schema}.event_inbox (
+    `INSERT INTO ${s}.event_inbox (
       event_id, event_type, source_queue, status, retry_count, payload
     ) VALUES ($1, $2, $3, 'processing', 0, $4)
     ON CONFLICT (event_id, source_queue) DO UPDATE
     SET status = CASE
-      WHEN ${schema}.event_inbox.status = 'failed' THEN 'processing'
-      ELSE ${schema}.event_inbox.status
+      WHEN ${s}.event_inbox.status = 'failed' THEN 'processing'
+      ELSE ${s}.event_inbox.status
     END,
     retry_count = CASE
-      WHEN ${schema}.event_inbox.status = 'failed' THEN ${schema}.event_inbox.retry_count + 1
-      ELSE ${schema}.event_inbox.retry_count
+      WHEN ${s}.event_inbox.status = 'failed' THEN ${s}.event_inbox.retry_count + 1
+      ELSE ${s}.event_inbox.retry_count
     END,
     updated_at = NOW()
     RETURNING *`,
@@ -145,8 +159,9 @@ export async function markInboxProcessed(
   eventId: string,
   sourceQueue: string
 ): Promise<void> {
+  const s = validateSchema(schema);
   await client.query(
-    `UPDATE ${schema}.event_inbox
+    `UPDATE ${s}.event_inbox
      SET status = 'processed', processed_at = NOW(), updated_at = NOW()
      WHERE event_id = $1 AND source_queue = $2`,
     [eventId, sourceQueue]
@@ -163,8 +178,9 @@ export async function markInboxFailed(
   sourceQueue: string,
   errorMessage: string
 ): Promise<void> {
+  const s = validateSchema(schema);
   await client.query(
-    `UPDATE ${schema}.event_inbox
+    `UPDATE ${s}.event_inbox
      SET status = 'failed', error_message = $3, updated_at = NOW()
      WHERE event_id = $1 AND source_queue = $2`,
     [eventId, sourceQueue, errorMessage]
@@ -179,8 +195,9 @@ export async function getInboxEntry(
   eventId: string,
   sourceQueue: string
 ): Promise<InboxEntry | null> {
+  const s = validateSchema(schema);
   const row = await queryOne<InboxRow>(
-    `SELECT * FROM ${schema}.event_inbox
+    `SELECT * FROM ${s}.event_inbox
      WHERE event_id = $1 AND source_queue = $2`,
     [eventId, sourceQueue]
   );
@@ -192,7 +209,7 @@ export async function getInboxEntry(
  * Get failed inbox entries for retry or manual review
  */
 export async function getFailedInboxEntries(
-  schema: string,
+  schema_raw: string,
   options: {
     sourceQueue?: string;
     limit?: number;
@@ -200,6 +217,7 @@ export async function getFailedInboxEntries(
     maxRetries?: number;
   } = {}
 ): Promise<{ entries: InboxEntry[]; total: number }> {
+  const s = validateSchema(schema_raw);
   const { sourceQueue, limit = 50, offset = 0, maxRetries = 3 } = options;
 
   const whereClauses: string[] = ['status = $1'];
@@ -219,14 +237,14 @@ export async function getFailedInboxEntries(
 
   // Count
   const countRow = await queryOne<{ count: string }>(
-    `SELECT COUNT(*) as count FROM ${schema}.event_inbox WHERE ${whereClause}`,
+    `SELECT COUNT(*) as count FROM ${s}.event_inbox WHERE ${whereClause}`,
     params
   );
   const total = parseInt(countRow?.count ?? '0', 10);
 
   // Fetch
   const rows = await query<InboxRow>(
-    `SELECT * FROM ${schema}.event_inbox
+    `SELECT * FROM ${s}.event_inbox
      WHERE ${whereClause}
      ORDER BY updated_at DESC
      LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
@@ -246,11 +264,13 @@ export async function cleanupProcessedInbox(
   schema: string,
   olderThanDays: number = 7
 ): Promise<number> {
+  const s = validateSchema(schema);
   const result = await query<{ id: string }>(
-    `DELETE FROM ${schema}.event_inbox
+    `DELETE FROM ${s}.event_inbox
      WHERE status = 'processed'
-       AND processed_at < NOW() - INTERVAL '${olderThanDays} days'
-     RETURNING id`
+       AND processed_at < NOW() - ($1 * INTERVAL '1 day')
+     RETURNING id`,
+    [olderThanDays]
   );
 
   return result.length;

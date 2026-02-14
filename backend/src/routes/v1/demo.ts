@@ -14,13 +14,15 @@ export const demoRouter = Router();
 // GO-LIVE-139: Demo Token Configuration
 // =============================================================================
 
+// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
 const JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'];
   if (!secret || secret.length < 32) {
-    if (isProduction()) {
-      throw new Error('JWT_SECRET must be set and at least 32 characters in production');
+    const env = (process.env.NODE_ENV || '').toLowerCase();
+    if (env === 'development' || env === 'test') {
+      return 'dev-secret-change-in-prod';
     }
-    return 'dev-secret-change-in-prod';
+    throw new Error('JWT_SECRET must be set and at least 32 characters');
   }
   return secret;
 })();
@@ -240,7 +242,8 @@ demoRouter.post("/seed", devOnlyMiddleware(), async (req: Request, res: Response
   } catch (error: any) {
     await client.query("ROLLBACK");
     console.error("[Demo Seed] Error:", error.message);
-    return res.status(500).json({ error: { code: "SEED_FAILED", message: error.message } });
+    // SEC-004: Never leak SQL error details (table/column names) to client
+    return res.status(500).json({ error: { code: "SEED_FAILED", message: "Demo seed failed. Check server logs." } });
   } finally {
     client.release();
   }
