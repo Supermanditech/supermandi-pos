@@ -570,6 +570,7 @@ jobs:
           FIREBASE_PROJECT_ID=supermandi-pos,\
           SMS_DISABLED=true,\
           RATE_LIMIT_MULTIPLIER=100,\
+          EMAIL_PROVIDER=smtp,\
           SMTP_HOST=smtp.gmail.com,\
           SMTP_PORT=587,\
           SMTP_USER=supermanditech@gmail.com,\
