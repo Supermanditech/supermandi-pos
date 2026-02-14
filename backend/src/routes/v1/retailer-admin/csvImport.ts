@@ -580,16 +580,15 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
     }
 
     // Update progress after each chunk so polling can see it
-    const progressClient = await pool.connect();
+    // DATA-001: Use pool.query() instead of manual connect/release for single query
     try {
-      await progressClient.query(
+      await pool.query(
         `UPDATE platform.csv_imports SET
           products_created = $2, updated_at = NOW()
         WHERE id = $1`,
         [jobId, created]
       );
     } catch { /* progress update is non-critical */ }
-    finally { progressClient.release(); }
   }
 
   // Final status update

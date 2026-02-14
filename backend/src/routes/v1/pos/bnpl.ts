@@ -181,6 +181,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
     await client.query("BEGIN");
 
     // Get drawdown details
+    // DATA-003: Include paid_amount_minor to calculate remaining balance
     const drawdownResult = await client.query(`
       SELECT
         bd.id,
@@ -188,6 +189,7 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
         bd.supplier_id,
         bd.purchase_order_id,
         bd.principal_minor,
+        COALESCE(bd.paid_amount_minor, 0) as paid_amount_minor,
         bd.status,
         bd.due_date,
         COALESCE(s.business_name, s.trade_name, 'SuperMandi') as supplier_name,
@@ -215,13 +217,16 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
       });
     }
 
-    const payAmount = amountMinor || drawdown.principal_minor;
+    // DATA-003: Calculate remaining balance for partial payment support
+    const remainingBalance = drawdown.principal_minor - drawdown.paid_amount_minor;
+    const payAmount = amountMinor || remainingBalance;
 
-    if (payAmount > drawdown.principal_minor) {
+    if (payAmount > remainingBalance) {
       await client.query("ROLLBACK");
       return res.status(400).json({
         success: false,
         error: "Amount exceeds outstanding balance",
+        remainingBalance,
         principalMinor: drawdown.principal_minor
       });
     }
@@ -275,14 +280,21 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
 
     // For CASH mode, mark as paid immediately (cashier confirms)
     if (mode === 'CASH') {
-      // AUDIT-API-010: Distinguish partial vs full payment
-      const isFullPayment = payAmount >= drawdown.principal_minor;
+      // DATA-003: Distinguish partial vs full payment using remaining balance
+      const isFullPayment = payAmount >= remainingBalance;
 
       // Update drawdown — only mark 'paid' if fully covered
+      // DATA-003: Use 'partial' status for partial payments instead of keeping original status
       await client.query(`
         UPDATE payments.bnpl_drawdowns
-        SET status = CASE WHEN $1 >= principal_minor THEN 'paid' ELSE status END,
-            paid_at = CASE WHEN $1 >= principal_minor THEN NOW() ELSE paid_at END,
+        SET status = CASE
+              WHEN COALESCE(paid_amount_minor, 0) + $1 >= principal_minor THEN 'paid'
+              ELSE 'partial'
+            END,
+            paid_at = CASE
+              WHEN COALESCE(paid_amount_minor, 0) + $1 >= principal_minor THEN NOW()
+              ELSE paid_at
+            END,
             paid_amount_minor = COALESCE(paid_amount_minor, 0) + $1
         WHERE id = $2 AND store_id = $3
       `, [payAmount, drawdownId, storeId]);
@@ -314,16 +326,19 @@ posBnplRouter.post("/bnpl/:drawdownId/pay", requireDeviceToken, requireActiveSto
 
       await client.query("COMMIT");
 
-      console.log(`[SM-019] BNPL cash repayment completed: drawdownId=${drawdownId}`);
+      // DATA-003: Log with actual status
+      const actualStatus = isFullPayment ? 'paid' : 'partial';
+      console.log(`[SM-019] BNPL cash repayment ${actualStatus}: drawdownId=${drawdownId}, amount=${payAmount}, remaining=${remainingBalance - payAmount}`);
 
       return res.json({
         success: true,
-        status: 'paid',
+        status: actualStatus,
         repaymentId,
         drawdownId,
         amountMinor: payAmount,
+        remainingBalance: remainingBalance - payAmount,
         mode: 'CASH',
-        paidAt: new Date().toISOString()
+        paidAt: isFullPayment ? new Date().toISOString() : undefined,
       });
     }
 

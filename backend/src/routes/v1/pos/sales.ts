@@ -900,6 +900,15 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
   const saleId = requestedSaleId ?? randomUUID();
   let billRef = buildBillRef();
 
+  // DATA-005: Server-side retry for SERIALIZABLE transaction conflicts (max 3 retries with backoff)
+  const MAX_SERIALIZATION_RETRIES = 3;
+  let serializationRetryDelay = 0;
+  for (let serializationAttempt = 0; serializationAttempt <= MAX_SERIALIZATION_RETRIES; serializationAttempt++) {
+    if (serializationRetryDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, serializationRetryDelay));
+    }
+    serializationRetryDelay = 0;
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -1152,12 +1161,17 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     if (error instanceof Error && error.message === "sale_id_conflict") {
       return res.status(409).json({ error: "sale_id_conflict" });
     }
-    // AUDIT-API-020: Handle SERIALIZABLE transaction conflicts with retryable error
+    // DATA-005: Server-side retry for SERIALIZABLE transaction conflicts
     if ((error as any)?.code === "40001") {
-      console.warn("[POS/sales] Serialization conflict — client should retry:", (error as Error).message);
+      if (serializationAttempt < MAX_SERIALIZATION_RETRIES) {
+        serializationRetryDelay = (serializationAttempt + 1) * 50; // 50ms, 100ms, 150ms backoff
+        console.warn(`[POS/sales] Serialization conflict, attempt ${serializationAttempt + 1}/${MAX_SERIALIZATION_RETRIES} — retrying in ${serializationRetryDelay}ms`);
+        continue; // finally releases client, loop retries with backoff
+      }
+      console.warn("[POS/sales] Serialization conflict — all retries exhausted:", (error as Error).message);
       return res.status(409).json({
         error: "serialization_conflict",
-        message: "Transaction conflict — please retry",
+        message: "Transaction conflict after retries — please retry",
         retryable: true
       });
     }
@@ -1176,6 +1190,10 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       totalMinor: total,
     }
   });
+
+  } // end DATA-005 serialization retry loop
+  // Should not reach here — all paths return inside the loop
+  return res.status(500).json({ error: "failed to create sale" });
 });
 
 // Confirm payment and deduct stock (two-phase commit)
@@ -1290,6 +1308,15 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
       storeId,
       items
     });
+
+    // DATA-004: Validate customer_phone for DUE payments — unrecoverable without it
+    if (paymentMode === "DUE" && !sale.customer_phone) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: "customer_phone_required",
+        message: "Customer phone is required for DUE payments"
+      });
+    }
 
     // GO-LIVE-069: Update sale status and payment_status based on payment mode
     const newStatus = paymentMode === "CASH" ? "PAID_CASH" : paymentMode === "UPI" ? "PAID_UPI" : "DUE";
@@ -1945,6 +1972,15 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
       return res.status(409).json({
         error: "sale_not_pending",
         message: `Sale is in ${sale.status} status and cannot accept payment`
+      });
+    }
+
+    // DATA-004: Validate customer_phone for DUE payments — unrecoverable without it
+    if (!sale.customer_phone) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        error: "customer_phone_required",
+        message: "Customer phone is required for DUE payments"
       });
     }
 

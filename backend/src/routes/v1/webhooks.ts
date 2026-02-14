@@ -94,8 +94,9 @@ async function handleSellPaymentWebhook(
     await client.query("BEGIN");
 
     // Find sell_payment by upi_order_id
+    // DATA-002: Include store_id in SELECT for propagation to subsequent queries
     const findResult = await client.query(
-      `SELECT id, sale_id, status FROM payments.sell_payments
+      `SELECT id, sale_id, store_id, status FROM payments.sell_payments
        WHERE upi_order_id = $1
        ORDER BY created_at DESC
        LIMIT 1`,
@@ -133,26 +134,28 @@ async function handleSellPaymentWebhook(
     }
 
     // Update sell_payment status
+    // DATA-002: Add store_id filter for store isolation
     await client.query(
       `UPDATE payments.sell_payments
        SET status = $1,
            upi_payment_id = $2,
            failure_reason = $3,
            completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END,
-           webhook_payload = $5::jsonb
-       WHERE id = $4`,
-      [newStatus, razorpayPaymentId, failureReason, sellPayment.id, JSON.stringify(payload)]
+           webhook_payload = $6::jsonb
+       WHERE id = $4 AND store_id = $5`,
+      [newStatus, razorpayPaymentId, failureReason, sellPayment.id, sellPayment.store_id, JSON.stringify(payload)]
     );
 
     // If payment completed, update the sale status
+    // DATA-002: Add store_id filter for store isolation
     if (newStatus === 'completed' && sellPayment.sale_id) {
       await client.query(
         `UPDATE public.sales
          SET payment_mode = 'UPI',
              status = 'completed',
              updated_at = NOW()
-         WHERE id = $1 AND status != 'completed'`,
-        [sellPayment.sale_id]
+         WHERE id = $1 AND store_id = $2 AND status != 'completed'`,
+        [sellPayment.sale_id, sellPayment.store_id]
       );
     }
 

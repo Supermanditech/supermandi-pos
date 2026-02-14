@@ -986,11 +986,12 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
     }
 
     // Check for existing pending payment
+    // DATA-002: Add store_id filter for store isolation
     const existingPayment = await client.query(
       `SELECT id, status, created_at FROM payments.buy_payments
-       WHERE purchase_order_id = $1 AND status IN ('pending', 'initiated')
+       WHERE purchase_order_id = $1 AND store_id = $2 AND status IN ('pending', 'initiated')
        ORDER BY created_at DESC LIMIT 1`,
-      [orderId]
+      [orderId, storeId]
     );
 
     if (existingPayment.rows.length > 0) {
@@ -1008,9 +1009,10 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay", requireDeviceToken, as
       }
 
       // Mark expired payment as failed
+      // DATA-002: Add store_id filter for store isolation
       await client.query(
-        `UPDATE payments.buy_payments SET status = 'failed', failure_reason = 'expired' WHERE id = $1`,
-        [existing.id]
+        `UPDATE payments.buy_payments SET status = 'failed', failure_reason = 'expired' WHERE id = $1 AND store_id = $2`,
+        [existing.id, storeId]
       );
     }
 
@@ -1308,17 +1310,19 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/pay/confirm", requireDeviceT
     }
 
     // Update payment to completed
+    // DATA-002: Add store_id filter for store isolation
     await client.query(
       `UPDATE payments.buy_payments
        SET status = 'completed', upi_payer_ref = $1, completed_at = NOW()
-       WHERE id = $2`,
-      [upiTxnRef, paymentId]
+       WHERE id = $2 AND store_id = $3`,
+      [upiTxnRef, paymentId, storeId]
     );
 
     // Update order payment status
+    // DATA-002: Add store_id filter for store isolation
     await client.query(
-      `UPDATE orders.purchase_orders SET payment_status = 'paid' WHERE id = $1`,
-      [orderId]
+      `UPDATE orders.purchase_orders SET payment_status = 'paid' WHERE id = $1 AND store_id = $2`,
+      [orderId, storeId]
     );
 
     // GO-LIVE-118: Fetch order total for reconciliation verification
