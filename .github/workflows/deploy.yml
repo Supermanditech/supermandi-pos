@@ -585,7 +585,9 @@ jobs:
           ADMIN_EMAIL_ALLOWLIST=supermanditech@gmail.com,\
           ALLOWED_ORIGINS=https://staging.supermandi.tech,\
           CORS_ALLOWED_ORIGINS=https://staging.supermandi.tech,\
-          DOCUMENT_STORAGE_DIR=/tmp/documents" \
+          DOCUMENT_STORAGE_DIR=/tmp/documents,\
+          GCS_DOCUMENTS_BUCKET=supermandi-pos-documents,\
+          GCP_PROJECT_ID=${{ env.GCP_PROJECT }}" \
             --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest" \
             --allow-unauthenticated \
             --quiet

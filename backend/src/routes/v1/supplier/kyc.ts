@@ -1,43 +1,28 @@
 // GL-WF-018: KYC Document Upload Routes
 // GL-WF-008: Bank Verification via IFSC lookup
+// STBT-179: Migrated from /tmp disk storage to GCS for Cloud Run compatibility
 
 import { Router, Response, NextFunction } from "express";
 import { getPool } from "../../../db/client";
 import { requireSupplierAuth, SupplierAuthRequest } from "./auth";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
+import crypto from "crypto";
+import {
+  uploadBuffer,
+  deleteFile as gcsDeleteFile,
+} from "@supermandi/common";
 
 const router = Router();
 
 // =============================================================================
-// FILE UPLOAD CONFIGURATION
+// FILE UPLOAD CONFIGURATION — STBT-179: GCS instead of /tmp
 // =============================================================================
-const UPLOAD_DIR = process.env.KYC_UPLOAD_DIR || '/tmp/kyc-uploads';
+const GCS_DOCUMENTS_BUCKET = process.env.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per document
 
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const supplierDir = path.join(UPLOAD_DIR, (req as SupplierAuthRequest).supplierId || 'unknown');
-    if (!fs.existsSync(supplierDir)) {
-      fs.mkdirSync(supplierDir, { recursive: true });
-    }
-    cb(null, supplierDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
@@ -280,6 +265,12 @@ router.post("/documents/:type", requireSupplierAuth, upload.single('document'), 
       return;
     }
 
+    // STBT-179: Upload to GCS instead of /tmp
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const gcsObjectKey = `kyc/${req.supplierId}/${type}_${uniqueSuffix}${ext}`;
+    await uploadBuffer(GCS_DOCUMENTS_BUCKET, gcsObjectKey, req.file.buffer, req.file.mimetype);
+
     // Upsert document (replace existing if same type)
     const result = await pool.query(
       `INSERT INTO supplier.kyc_documents (
@@ -295,7 +286,7 @@ router.post("/documents/:type", requireSupplierAuth, upload.single('document'), 
         rejection_reason = NULL,
         updated_at = NOW()
       RETURNING id, document_type, file_name, file_size, mime_type, status, created_at`,
-      [req.supplierId, type, req.file.originalname, req.file.path, req.file.size, req.file.mimetype]
+      [req.supplierId, type, req.file.originalname, gcsObjectKey, req.file.size, req.file.mimetype]
     );
 
     const doc = result.rows[0];
@@ -344,17 +335,20 @@ router.delete("/documents/:id", requireSupplierAuth, async (req: SupplierAuthReq
       return;
     }
 
+    // STBT-179: Delete file from GCS
+    const filePath = docResult.rows[0].file_path;
+    try {
+      await gcsDeleteFile(GCS_DOCUMENTS_BUCKET, filePath);
+    } catch (err) {
+      // Non-fatal: file may already be gone
+      console.warn('[KYC] GCS delete failed (non-fatal):', err);
+    }
+
     // Delete from database
     await pool.query(
       `DELETE FROM supplier.kyc_documents WHERE id = $1 AND supplier_id = $2`,
       [id, req.supplierId]
     );
-
-    // Delete file from disk
-    const filePath = docResult.rows[0].file_path;
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
 
     res.json({
       data: { success: true, message: 'Document deleted successfully' }

@@ -157,7 +157,43 @@ export async function generateSignedDownloadUrl(
 }
 
 // =============================================================================
-// FILE OPERATIONS
+// SERVER-SIDE FILE OPERATIONS
+// =============================================================================
+
+/**
+ * Upload a buffer directly to GCS (server-side upload via multer memoryStorage)
+ * STBT-179: Replaces disk storage for Cloud Run ephemeral filesystem
+ */
+export async function uploadBuffer(
+  bucket: string,
+  objectKey: string,
+  buffer: Buffer,
+  contentType: string
+): Promise<{ bucket: string; objectKey: string; size: number }> {
+  const gcs = getStorage();
+  const file = gcs.bucket(bucket).file(objectKey);
+  await file.save(buffer, {
+    contentType,
+    resumable: false, // small files, no need for resumable
+    metadata: { contentType },
+  });
+  return { bucket, objectKey, size: buffer.length };
+}
+
+/**
+ * Stream a file from GCS as a readable stream (for download proxying)
+ * STBT-179: Replaces fs.createReadStream for Cloud Run
+ */
+export function streamFile(
+  bucket: string,
+  objectKey: string
+): NodeJS.ReadableStream {
+  const gcs = getStorage();
+  return gcs.bucket(bucket).file(objectKey).createReadStream();
+}
+
+// =============================================================================
+// FILE METADATA OPERATIONS
 // =============================================================================
 
 /**

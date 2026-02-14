@@ -1,4 +1,5 @@
 // DOCS-001: Unified Document Storage Routes
+// STBT-179: Migrated from disk storage to GCS for Cloud Run compatibility
 // Provides upload, download, and management for all entity types
 
 import { Router, Request, Response, NextFunction } from "express";
@@ -7,6 +8,10 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
+import {
+  uploadBuffer,
+  streamFile,
+} from "@supermandi/common";
 
 // CR-SECRET-001: Load admin token — env var first (Cloud Run), file fallback (Docker Compose)
 function loadAdminTokenForValidation(): string | undefined {
@@ -38,8 +43,8 @@ const router = Router();
 // CONFIGURATION
 // =============================================================================
 
-// Document storage directory - should be mounted as persistent volume
-const DOCUMENT_STORAGE_DIR = process.env.DOCUMENT_STORAGE_DIR || '/var/supermandi/documents';
+// STBT-179: GCS bucket for document storage (Cloud Run has ephemeral filesystem)
+const GCS_DOCUMENTS_BUCKET = process.env.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per document
 
 // Valid document types by entity
@@ -88,36 +93,12 @@ const ALLOWED_MIME_TYPES = [
   'application/pdf',
 ];
 
-// Ensure storage directory exists
-if (!fs.existsSync(DOCUMENT_STORAGE_DIR)) {
-  fs.mkdirSync(DOCUMENT_STORAGE_DIR, { recursive: true });
-}
-
 // =============================================================================
-// MULTER CONFIGURATION
+// MULTER CONFIGURATION — STBT-179: memoryStorage for GCS upload
 // =============================================================================
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const entityType = req.body.entity_type || 'unknown';
-    const entityId = req.body.entity_id || 'unknown';
-    const entityDir = path.join(DOCUMENT_STORAGE_DIR, entityType, entityId);
-
-    if (!fs.existsSync(entityDir)) {
-      fs.mkdirSync(entityDir, { recursive: true });
-    }
-    cb(null, entityDir);
-  },
-  filename: (req, file, cb) => {
-    const documentType = req.body.document_type || 'document';
-    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${documentType}_${uniqueSuffix}${ext}`);
-  }
-});
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
@@ -144,17 +125,12 @@ function getValidDocTypes(entityType: string): string[] {
 }
 
 /**
- * Build relative file path from absolute path
+ * STBT-179: Build GCS object key for a document
  */
-function getRelativePath(absolutePath: string): string {
-  return path.relative(DOCUMENT_STORAGE_DIR, absolutePath);
-}
-
-/**
- * Build absolute file path from relative path
- */
-function getAbsolutePath(relativePath: string): string {
-  return path.join(DOCUMENT_STORAGE_DIR, relativePath);
+function buildGcsObjectKey(entityType: string, entityId: string, documentType: string, originalName: string): string {
+  const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
+  const ext = path.extname(originalName).toLowerCase();
+  return `${entityType}/${entityId}/${documentType}_${uniqueSuffix}${ext}`;
 }
 
 // =============================================================================
@@ -243,10 +219,6 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
     }
 
     if (!entityExists) {
-      // Clean up uploaded file
-      if (req.file && fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
       res.status(404).json({
         error: 'ENTITY_NOT_FOUND',
         message: `${entity_type} not found`,
@@ -254,8 +226,9 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
       return;
     }
 
-    // Get relative path for storage
-    const relativePath = getRelativePath(req.file.path);
+    // STBT-179: Upload file buffer to GCS
+    const gcsObjectKey = buildGcsObjectKey(entity_type, entity_id, document_type, req.file.originalname);
+    await uploadBuffer(GCS_DOCUMENTS_BUCKET, gcsObjectKey, req.file.buffer, req.file.mimetype);
 
     // Get uploaded_by from auth context
     const uploadedBy = (req as any).userId || (req as any).storeId || (req as any).supplierId || null;
@@ -292,7 +265,7 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
         entity_type,
         entity_id,
         document_type,
-        relativePath,
+        gcsObjectKey,
         req.file.originalname,
         req.file.size,
         req.file.mimetype,
@@ -386,25 +359,23 @@ router.get("/:id", async (req: Request, res: Response, next: NextFunction) => {
       return;
     }
 
-    // Build absolute file path
-    const absolutePath = getAbsolutePath(doc.file_path);
+    // STBT-179: Stream file from GCS (or generate signed URL)
+    try {
+      res.setHeader('Content-Type', doc.content_type);
+      res.setHeader('Content-Disposition', `inline; filename="${doc.file_name}"`);
 
-    // Check file exists
-    if (!fs.existsSync(absolutePath)) {
-      res.status(404).json({
-        error: 'FILE_NOT_FOUND',
-        message: 'Document file not found on storage',
+      const gcsStream = streamFile(GCS_DOCUMENTS_BUCKET, doc.file_path);
+      gcsStream.on('error', (err: any) => {
+        if (err.code === 404) {
+          res.status(404).json({ error: 'FILE_NOT_FOUND', message: 'Document file not found on storage' });
+        } else {
+          next(err);
+        }
       });
-      return;
+      gcsStream.pipe(res);
+    } catch (err) {
+      next(err);
     }
-
-    // Set headers and stream file
-    res.setHeader('Content-Type', doc.content_type);
-    res.setHeader('Content-Disposition', `inline; filename="${doc.file_name}"`);
-    res.setHeader('Content-Length', doc.file_size);
-
-    const fileStream = fs.createReadStream(absolutePath);
-    fileStream.pipe(res);
   } catch (error) {
     next(error);
   }
