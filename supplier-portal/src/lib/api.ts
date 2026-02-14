@@ -629,14 +629,29 @@ export async function uploadProductsCsv(file: File, options?: { signal?: AbortSi
   formData.append('file', file);
 
   // AUTH-STORAGE-001: Use credentials: 'include' for cookie auth + optional Authorization header
+  // STBT-185.1: Add X-Requested-With for CSRF protection on FormData uploads
+  // STBT-185.3: Add 60s timeout for FormData uploads (apiFetch timeout doesn't apply here)
   const token = getAuthToken();
-  const response = await fetch(`${API_BASE_URL}/api/v1/supplier/products/csv-upload`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-    credentials: 'include',
-    signal: options?.signal, // ISSUE-MICRO-006: Allow caller to cancel upload
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  if (options?.signal) {
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/supplier/products/csv-upload`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   // GL-WF-046: Handle 401 responses
   if (response.status === 401) {
@@ -744,14 +759,29 @@ export async function uploadKycDocument(
   formData.append('document', file);
 
   // AUTH-STORAGE-001: Use credentials: 'include' for cookie auth
+  // STBT-185.2: Add X-Requested-With for CSRF protection on FormData uploads
+  // STBT-185.3: Add 60s timeout for FormData uploads
   const token = getAuthToken();
-  const response = await fetch(`${API_BASE_URL}/api/v1/supplier/kyc/documents/${type}`, {
-    method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    body: formData,
-    credentials: 'include',
-    signal: options?.signal, // ISSUE-MICRO-006: Allow caller to cancel upload
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  if (options?.signal) {
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/supplier/kyc/documents/${type}`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   if (response.status === 401) {
     handle401Response();
@@ -1115,12 +1145,21 @@ export async function uploadSupplierDocument(
   formData.append('entityId', applicationId);
 
   // AUTH-STORAGE-001: credentials: 'include' for cookie auth
-  const response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
-    method: 'POST',
-    headers: { 'X-Requested-With': 'XMLHttpRequest' },
-    body: formData,
-    credentials: 'include',
-  });
+  // STBT-185.3: Add 60s timeout for FormData uploads
+  const uploadController = new AbortController();
+  const uploadTimeout = setTimeout(() => uploadController.abort(), 60_000);
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: formData,
+      credentials: 'include',
+      signal: uploadController.signal,
+    });
+  } finally {
+    clearTimeout(uploadTimeout);
+  }
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
