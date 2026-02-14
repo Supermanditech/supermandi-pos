@@ -219,6 +219,19 @@ export default function OrdersPage() {
   // ISSUE-MICRO-004: Track any pending mutation to prevent modal close during operations
   const isAnyMutationPending = updateStatusMutation.isPending || shipmentMutation.isPending || itemStatusMutation.isPending || addNoteMutation.isPending;
 
+  // STBT-185.7: Force-close escape after mutation hangs >15s
+  const [mutationStartTime, setMutationStartTime] = useState<number | null>(null);
+  const [showForceClose, setShowForceClose] = useState(false);
+  useEffect(() => {
+    if (isAnyMutationPending) {
+      if (!mutationStartTime) setMutationStartTime(Date.now());
+      const timer = setTimeout(() => setShowForceClose(true), 15_000);
+      return () => clearTimeout(timer);
+    }
+    setMutationStartTime(null);
+    setShowForceClose(false);
+  }, [isAnyMutationPending, mutationStartTime]);
+
   // ISSUE-MICRO-022: Lock body scroll when order details modal is open
   useEffect(() => {
     if (selectedOrder) {
@@ -403,19 +416,30 @@ export default function OrdersPage() {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold">Order Details</h2>
-              <button
-                onClick={() => {
-                  // ISSUE-MICRO-004: Prevent modal close during in-flight mutations
-                  if (isAnyMutationPending) return;
-                  setSelectedOrder(null);
-                  setShowNotesSection(false);
-                  setNewNoteText('');
-                }}
-                className="text-slate-400 hover:text-slate-600"
-                aria-label="Close order details"
-              >
+              <div className="flex items-center gap-2">
+                {/* STBT-185.7: Force-close after mutation hang */}
+                {showForceClose && (
+                  <button
+                    onClick={() => { setSelectedOrder(null); setShowNotesSection(false); setNewNoteText(''); setShowForceClose(false); }}
+                    className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                  >
+                    Force Close
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    // ISSUE-MICRO-004: Prevent modal close during in-flight mutations
+                    if (isAnyMutationPending && !showForceClose) return;
+                    setSelectedOrder(null);
+                    setShowNotesSection(false);
+                    setNewNoteText('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Close order details"
+                >
                 ✕
               </button>
+              </div>
             </div>
 
             {/* Order Info — SUP-POS-008: Enhanced with store contact + order number */}
@@ -639,6 +663,7 @@ export default function OrdersPage() {
                     <input
                       type="date"
                       value={shipmentData.shipmentDate}
+                      min={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setShipmentData({ ...shipmentData, shipmentDate: e.target.value })}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />

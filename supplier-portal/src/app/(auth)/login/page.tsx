@@ -192,6 +192,8 @@ export default function LoginPage() {
           setError('Your account is not active. Please contact support.');
         } else if (err.code === 'USER_NOT_FOUND') {
           setError('No account found with this phone number. Please register first.');
+        } else if (err.status >= 500) {
+          setError('Server error. Please try again later or contact support.');
         } else {
           setError(err.message);
         }

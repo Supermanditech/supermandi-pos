@@ -15,7 +15,7 @@ export default function EarningsPage() {
   const [selectedPayoutId, setSelectedPayoutId] = useState<string | null>(null);
 
   // Fetch payout summary
-  const { data: summary, isLoading: summaryLoading } = useQuery({
+  const { data: summary, isLoading: summaryLoading, isError: summaryError, refetch: refetchSummary } = useQuery({
     queryKey: ['payout-summary'],
     queryFn: getPayoutSummary,
   });
@@ -83,6 +83,19 @@ export default function EarningsPage() {
               </Link>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* STBT-185.8: Summary error state with retry */}
+      {summaryError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-red-800">Failed to load earnings summary</p>
+            <p className="text-sm text-red-600 mt-1">Please check your connection and try again.</p>
+          </div>
+          <button onClick={() => refetchSummary()} className="btn btn-secondary text-sm">
+            Retry
+          </button>
         </div>
       )}
 
