@@ -338,9 +338,10 @@ export interface LookupResponse {
 }
 
 export async function lookupRetailerRegistration(phone: string): Promise<LookupResponse> {
+  // STBT-187.9: Use POST to avoid PII (phone) in URL/query string/logs/history
   const response = await fetch(
-    `${REGISTRATION_BASE}/lookup?phone=${encodeURIComponent(phone)}`,
-    { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
+    `${REGISTRATION_BASE}/lookup`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }), credentials: 'include' }
   );
   // AUDIT-RET-041/052: Use safeJson + throw proper Error
   const json = await safeJson(response);

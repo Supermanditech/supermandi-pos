@@ -119,9 +119,11 @@ function validateGSTIN(gstin: string): boolean {
  * - action: LOGIN_ALLOWED | REGISTER_REQUIRED | PENDING_APPROVAL | ...
  * - message: Human-readable guidance
  */
-router.get("/lookup", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+// STBT-187.9: Accept both GET (backward compat) and POST (PII-safe)
+router.all("/lookup", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { phone } = req.query as { phone?: string };
+    // STBT-187.9: Read phone from body (POST) or query (GET, backward compat)
+    const phone = (req.body?.phone || req.query.phone) as string | undefined;
 
     if (!phone) {
       res.status(400).json({

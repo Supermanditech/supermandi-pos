@@ -339,9 +339,10 @@ export default function LoginPage() {
 
       // GO-LIVE-UI-REG-004: Call lookup endpoint
       // RET-001: Include credentials for cookie-based auth consistency
+      // STBT-187.9: Use POST to avoid phone in URL/logs
       const response = await fetch(
-        `${API_GATEWAY_BASE}/api/v1/retailer-admin/registration/lookup?phone=${encodeURIComponent(normalizedPhone)}`,
-        { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' }
+        `${API_GATEWAY_BASE}/api/v1/retailer-admin/registration/lookup`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: normalizedPhone }), credentials: 'include' }
       );
 
       const data = await safeJson(response) as LookupResponse;

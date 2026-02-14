@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
@@ -82,6 +82,19 @@ export default function ProtectedLayout() {
     ? navItems.filter((item) => limitedAllowedPaths.has(item.path))
     : navItems;
   const visibleAdminItems = isLimitedMode ? [] : adminNavItems;
+
+  // STBT-187.6: Route guard — redirect limited-mode users who navigate directly to restricted URLs
+  useEffect(() => {
+    if (!isLimitedMode || !storeCode) return;
+    const basePath = `/s/${storeCode}`;
+    const relativePath = location.pathname.replace(basePath, '').replace(/^\//, '');
+    // Allow empty (dashboard), 'settings', 'settings/*', 'devices'
+    const isAllowed = relativePath === '' || relativePath === 'settings' ||
+      relativePath.startsWith('settings/') || relativePath === 'devices';
+    if (!isAllowed) {
+      navigate(basePath, { replace: true });
+    }
+  }, [isLimitedMode, location.pathname, storeCode, navigate]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
