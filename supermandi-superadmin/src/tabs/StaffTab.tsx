@@ -30,6 +30,7 @@ interface StaffTabProps {
   handleAddStaff: () => void;
   handleToggleStaffActive: (staffId: string, currentlyActive: boolean) => void;
   handleResetPin: () => void;
+  handleStaffRoleChange: (staffId: string, newRole: "CASHIER" | "STOCK_MANAGER" | "MANAGER") => void;
   staffSuccess: string;
 }
 
@@ -41,7 +42,7 @@ export function StaffTab({
   setNewStaffName, setNewStaffPhone, setNewStaffPin, setNewStaffRole,
   setResetPinStaffId, setResetPinValue,
   refreshStaff, handleAddStaff, handleToggleStaffActive, handleResetPin,
-  staffSuccess,
+  handleStaffRoleChange, staffSuccess,
 }: StaffTabProps) {
   return (
     <section className="card">
@@ -122,9 +123,17 @@ export function StaffTab({
                   <td style={{ fontWeight: 600 }}>{s.name}</td>
                   <td>{s.phone}</td>
                   <td>
-                    <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "#f1f5f9", color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "#475569" }}>
-                      {s.role}
-                    </span>
+                    {/* #186.15: Inline role change dropdown */}
+                    <select
+                      value={s.role}
+                      onChange={(e) => handleStaffRoleChange(s.id, e.target.value as "CASHIER" | "STOCK_MANAGER" | "MANAGER")}
+                      disabled={staffActionLoading === s.id}
+                      style={{ padding: "2px 6px", borderRadius: 6, fontSize: 11, fontWeight: 600, border: "1px solid #d1d5db", background: s.role === "MANAGER" ? "#dbeafe" : s.role === "STOCK_MANAGER" ? "#fef3c7" : "#f1f5f9", color: s.role === "MANAGER" ? "#1e40af" : s.role === "STOCK_MANAGER" ? "#92400e" : "#475569", cursor: "pointer" }}
+                    >
+                      <option value="CASHIER">CASHIER</option>
+                      <option value="STOCK_MANAGER">STOCK_MANAGER</option>
+                      <option value="MANAGER">MANAGER</option>
+                    </select>
                   </td>
                   <td>
                     <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 600, background: s.is_active ? "#dcfce7" : "#fee2e2", color: s.is_active ? "#166534" : "#991b1b" }}>

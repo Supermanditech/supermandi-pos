@@ -3,15 +3,38 @@ import type { AuditLogRecord } from "../api/audit";
 import { PayloadDetails } from "../components/PayloadDetails";
 import { formatDateTime } from "../lib/formatters";
 
+// #186.11: CSV export helper
+function exportAuditCsv(logs: AuditLogRecord[]) {
+  const header = "Time,Action,Resource,ResourceID,Actor,Status,Error\n";
+  const rows = logs.map(l =>
+    [
+      l.created_at,
+      l.action,
+      l.resource_type,
+      l.resource_id || "",
+      l.actor_user_id || l.actor_ip || "system",
+      l.response_status ?? "",
+      (l.error_message || "").replace(/"/g, '""'),
+    ].map(v => `"${v}"`).join(",")
+  ).join("\n");
+  const blob = new Blob([header + rows], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 interface AuditTabProps {
   auditLogs: AuditLogRecord[];
   auditLogsTotal: number;
   auditLogsLoading: boolean;
   auditLogsError: string;
   auditLogsPage: number;
-  auditLogsFilter: { action?: string; resource_type?: string };
+  auditLogsFilter: { action?: string; resource_type?: string; from_date?: string; to_date?: string };
   setAuditLogsPage: (fn: (p: number) => number) => void;
-  setAuditLogsFilter: (fn: (f: { action?: string; resource_type?: string }) => { action?: string; resource_type?: string }) => void;
+  setAuditLogsFilter: (fn: (f: { action?: string; resource_type?: string; from_date?: string; to_date?: string }) => { action?: string; resource_type?: string; from_date?: string; to_date?: string }) => void;
   refreshAuditLogs: () => void;
 }
 
@@ -71,6 +94,39 @@ export function AuditTab({
             <option value="supplier">Supplier</option>
             <option value="product">Product</option>
           </select>
+
+          {/* #186.10: Date range filter */}
+          <input
+            type="date"
+            value={auditLogsFilter.from_date || ""}
+            onChange={(e) => {
+              setAuditLogsFilter(prev => ({ ...prev, from_date: e.target.value || undefined }));
+              setAuditLogsPage(() => 0);
+            }}
+            style={{ padding: "5px 8px" }}
+            title="From date"
+          />
+          <span className="muted">to</span>
+          <input
+            type="date"
+            value={auditLogsFilter.to_date || ""}
+            onChange={(e) => {
+              setAuditLogsFilter(prev => ({ ...prev, to_date: e.target.value || undefined }));
+              setAuditLogsPage(() => 0);
+            }}
+            style={{ padding: "5px 8px" }}
+            title="To date"
+          />
+
+          {/* #186.11: CSV export */}
+          <button
+            onClick={() => exportAuditCsv(auditLogs)}
+            disabled={auditLogs.length === 0}
+            title="Export current page as CSV"
+            style={{ padding: "6px 12px" }}
+          >
+            Export CSV
+          </button>
 
           <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
             <button

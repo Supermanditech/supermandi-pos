@@ -376,6 +376,8 @@ export default function App() {
   const [auditLogsFilter, setAuditLogsFilter] = useState<{
     action?: string;
     resource_type?: string;
+    from_date?: string;
+    to_date?: string;
   }>({});
   const auditLogsInFlightRef = useRef(false);
 
@@ -469,6 +471,9 @@ export default function App() {
   const [deviceIdFilter, setDeviceIdFilter] = useState<string>("");
   const [storeIdFilter, setStoreIdFilter] = useState<string>("");
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("");
+  // #186.16: Date range filter for events (client-side)
+  const [eventDateFrom, setEventDateFrom] = useState<string>("");
+  const [eventDateTo, setEventDateTo] = useState<string>("");
   const [limit, setLimit] = useState<number>(200); // fetch window
 
   // View options
@@ -1043,6 +1048,8 @@ export default function App() {
         offset: auditLogsPage * 50,
         action: auditLogsFilter.action,
         resource_type: auditLogsFilter.resource_type,
+        from_date: auditLogsFilter.from_date ? toIsoStart(auditLogsFilter.from_date) : undefined,
+        to_date: auditLogsFilter.to_date ? toIsoEnd(auditLogsFilter.to_date) : undefined,
       });
       setAuditLogs(res.logs);
       setAuditLogsTotal(res.total);
@@ -1185,6 +1192,22 @@ export default function App() {
       refreshStaff();
     } catch (e: any) {
       setStaffError(e?.message || "Failed to update staff");
+    } finally {
+      setStaffActionLoading(null);
+    }
+  }
+
+  // #186.15: Staff role change
+  async function handleStaffRoleChange(staffId: string, newRole: "CASHIER" | "STOCK_MANAGER" | "MANAGER") {
+    if (!staffStoreId) return;
+    setStaffError("");
+    setStaffActionLoading(staffId);
+    try {
+      await updateStaff(staffStoreId, staffId, { role: newRole });
+      setStaffSuccess("Role updated successfully");
+      refreshStaff();
+    } catch (e: any) {
+      setStaffError(e?.message || "Failed to change role");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1597,13 +1620,18 @@ export default function App() {
     const d = deviceIdFilter.trim();
     const s = storeIdFilter.trim();
     const t = eventTypeFilter.trim();
+    // #186.16: Client-side date range filtering
+    const fromIso = eventDateFrom ? toIsoStart(eventDateFrom) : undefined;
+    const toIso = eventDateTo ? toIsoEnd(eventDateTo) : undefined;
     return events.filter((e) => {
       if (d && !includesInsensitive(e.deviceId, d)) return false;
       if (s && !includesInsensitive(e.storeId, s)) return false;
       if (t && !includesInsensitive(e.eventType, t)) return false;
+      if (fromIso && e.createdAt < fromIso) return false;
+      if (toIso && e.createdAt > toIso) return false;
       return true;
     });
-  }, [events, deviceIdFilter, storeIdFilter, eventTypeFilter]);
+  }, [events, deviceIdFilter, storeIdFilter, eventTypeFilter, eventDateFrom, eventDateTo]);
 
   // Device filtering is now server-side; deviceRecords is already filtered
   const filteredDeviceRecords = deviceRecords;
@@ -2339,6 +2367,16 @@ export default function App() {
           </select>
         </div>
 
+        {/* #186.16: Date range filter for events */}
+        <div className="control">
+          <label>From date</label>
+          <input type="date" value={eventDateFrom} onChange={(e) => setEventDateFrom(e.target.value)} />
+        </div>
+        <div className="control">
+          <label>To date</label>
+          <input type="date" value={eventDateTo} onChange={(e) => setEventDateTo(e.target.value)} />
+        </div>
+
         <div className="control">
           <label>&nbsp;</label>
           <button onClick={() => {
@@ -2671,6 +2709,7 @@ export default function App() {
           handleAddStaff={handleAddStaff}
           handleToggleStaffActive={confirmedToggleStaffActive}
           handleResetPin={confirmedResetPin}
+          handleStaffRoleChange={handleStaffRoleChange}
           staffSuccess={staffSuccess}
         />
       )}

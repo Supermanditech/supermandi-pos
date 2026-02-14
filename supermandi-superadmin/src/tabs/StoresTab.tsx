@@ -257,6 +257,10 @@ export function StoresTab({
 
       {storeDirectoryError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeDirectoryError}</div>}
       {storeNameError && <div className="banner" style={{ margin: "0 16px 12px" }}>{storeNameError}</div>}
+      {/* #186.12: Loading indicator when refreshing with existing data */}
+      {storeDirectoryLoading && storeDirectory.length > 0 && (
+        <div className="muted" style={{ margin: "0 16px 8px", fontSize: 12 }}>Refreshing stores...</div>
+      )}
 
       {/* SA-P1-007: Bulk feature flag toolbar */}
       {selectedStoreIds.size > 0 && (

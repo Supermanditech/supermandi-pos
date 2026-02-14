@@ -179,7 +179,7 @@ export function DevicesTab({
                 pendingOutboxCount: pending
               });
               return (
-                <div className="deviceCard" key={d.id}>
+                <div className="deviceCard" key={d.id} style={!d.active ? { opacity: 0.55, borderColor: '#e5e7eb', background: '#f9fafb' } : undefined}>
                   <div className="deviceHeader">
                     <input
                       className="deviceLabelInput"
