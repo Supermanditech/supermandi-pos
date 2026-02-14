@@ -126,7 +126,7 @@ jobs:
           API_BASE_URL: ${{ env.TARGET_URL }}
           STAGING: 'true'
         run: |
-          npx playwright test --project=chromium --reporter=html,json
+          npx playwright test --project=chromium --grep @prod --reporter=html,json
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

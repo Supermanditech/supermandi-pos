@@ -272,8 +272,8 @@ verify_asset_caching() {
     local js_hash=""
     local css_hash=""
     if [ -f "$EVIDENCE_DIR/assets/retailer_html.body" ]; then
-        js_hash=$(grep -oE 'index-[A-Za-z0-9]+\.js' "$EVIDENCE_DIR/assets/retailer_html.body" | head -1)
-        css_hash=$(grep -oE 'index-[A-Za-z0-9]+\.css' "$EVIDENCE_DIR/assets/retailer_html.body" | head -1)
+        js_hash=$(grep -oE 'index-[A-Za-z0-9]+\.js' "$EVIDENCE_DIR/assets/retailer_html.body" | head -1 || true)
+        css_hash=$(grep -oE 'index-[A-Za-z0-9]+\.css' "$EVIDENCE_DIR/assets/retailer_html.body" | head -1 || true)
     fi
 
     # Verify JS asset accessible and has immutable cache
