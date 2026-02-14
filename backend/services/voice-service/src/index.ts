@@ -17,8 +17,16 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS
-app.use(cors());
+// SEC-006: Restrict CORS to allowed origins (was: default cors() allowing all)
+const voiceCorsOrigins = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+app.use(cors({
+  origin: voiceCorsOrigins.length > 0
+    ? voiceCorsOrigins
+    : config.env === 'development'
+      ? true
+      : false,
+  credentials: true,
+}));
 
 // Parse JSON bodies
 app.use(express.json());

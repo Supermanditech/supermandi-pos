@@ -235,8 +235,17 @@ export default function ProductsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // SUP-004: Product name validation — min 2 chars, max 200
     if (!formData.name.trim()) {
       toast.error('Product name is required');
+      return;
+    }
+    if (formData.name.trim().length < 2) {
+      toast.error('Product name must be at least 2 characters');
+      return;
+    }
+    if (formData.name.trim().length > 200) {
+      toast.error('Product name cannot exceed 200 characters');
       return;
     }
     if (!formData.purchasePrice || formData.purchasePrice <= 0) {

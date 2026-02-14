@@ -33,13 +33,28 @@ export default function ProtectedLayout() {
     navigate('/retailer/login');  // STAGING-FIX-008: Route to public login page
   };
 
-  // AUDIT-RET-066: Exact segment match to prevent double-highlight (settings vs settings/payments)
+  // RET-003: Exact segment match — prevent double-highlight (settings vs settings/payments)
+  // Check if a more-specific sibling nav path matches before highlighting parent
+  const allPaths = [
+    '', 'products', 'inventory', 'suppliers', 'supplier-catalog', 'import',
+    'compliance', 'settings', 'settings/payments', 'devices',
+    'admin/suppliers', 'admin/products',
+  ];
   const isActive = (path: string) => {
     if (path === '') {
       return location.pathname === `/s/${storeCode}` || location.pathname === `/s/${storeCode}/`;
     }
     const full = `/s/${storeCode}/${path}`;
-    return location.pathname === full || location.pathname.startsWith(full + '/');
+    if (location.pathname === full) return true;
+    // Only allow startsWith match if no longer (more-specific) sibling path also matches
+    if (location.pathname.startsWith(full + '/')) {
+      const hasMoreSpecific = allPaths.some(
+        p => p !== path && p.startsWith(path + '/') &&
+          (location.pathname === `/s/${storeCode}/${p}` || location.pathname.startsWith(`/s/${storeCode}/${p}/`))
+      );
+      return !hasMoreSpecific;
+    }
+    return false;
   };
 
   const navItems = [
@@ -297,26 +312,28 @@ export default function ProtectedLayout() {
           <Outlet />
         </main>
 
-        {/* Debug Footer - Fixed at bottom */}
-        <footer style={{
-          padding: '0.6rem 2rem',
-          background: '#0f172a',
-          color: '#64748b',
-          fontSize: '0.7rem',
-          display: 'flex',
-          gap: '2rem',
-          borderTop: '1px solid #1e293b',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <div style={{ display: 'flex', gap: '2rem' }}>
-            <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
-            <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
-            <span>API: <strong style={{ color: '#38bdf8' }}>{import.meta.env.VITE_API_BASE_URL || window.location.origin}</strong></span>
-          </div>
-          {/* RET-AUD-005: Build fingerprint for deployment verification */}
-          <BuildStamp />
-        </footer>
+        {/* RET-002: Debug footer only in development — no store/API info leak in production */}
+        {import.meta.env.DEV && (
+          <footer style={{
+            padding: '0.6rem 2rem',
+            background: '#0f172a',
+            color: '#64748b',
+            fontSize: '0.7rem',
+            display: 'flex',
+            gap: '2rem',
+            borderTop: '1px solid #1e293b',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <div style={{ display: 'flex', gap: '2rem' }}>
+              <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
+              <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
+              <span>API: <strong style={{ color: '#38bdf8' }}>{import.meta.env.VITE_API_BASE_URL || window.location.origin}</strong></span>
+            </div>
+            {/* RET-AUD-005: Build fingerprint for deployment verification */}
+            <BuildStamp />
+          </footer>
+        )}
       </div>
 
       {/* GL-WF-028: Session Expiry Warning Modal */}

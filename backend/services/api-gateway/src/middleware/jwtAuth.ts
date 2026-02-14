@@ -45,14 +45,16 @@ declare global {
 
 // STAGING-FIX-005: Align fallback chain with backend's adminAuth.ts to prevent secret mismatches
 // AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
+// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
 const JWT_SECRET = (() => {
   const secret = process.env['JWT_SECRET'] || process.env['ADMIN_TOKEN'];
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[FATAL] JWT_SECRET must be set in production');
-      process.exit(1);
+    const env = (process.env.NODE_ENV || '').toLowerCase();
+    if (env === 'development' || env === 'test') {
+      return 'dev-secret-change-in-prod';
     }
-    return 'dev-secret-change-in-prod';
+    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    process.exit(1);
   }
   return secret;
 })();
@@ -161,10 +163,7 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     token = getCookieValue(req, 'sm_access_token');
   }
 
-  console.log(`[JWT-DEBUG] ${req.method} ${req.path} - Token source: ${authHeader ? 'header' : token ? 'cookie' : 'MISSING'}`);
-
   if (!token) {
-    console.log(`[JWT-DEBUG] Rejecting: No valid Bearer token or auth cookie`);
     res.status(401).json({
       error: {
         code: 'UNAUTHORIZED',
@@ -176,8 +175,6 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
   }
 
   try {
-    console.log(`[JWT-DEBUG] Verifying token (len=${token.length}), issuer: ${JWT_ISSUER}`);
-
     // Verify and decode the token
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
@@ -218,17 +215,9 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     req.headers['x-actor-type'] = decoded.actorType;
     req.headers['x-permissions'] = JSON.stringify(decoded.permissions);
 
-    // Log authenticated request
-    console.log(
-      `[AUTH] ${req.method} ${req.path} - User: ${decoded.sub}, Actor: ${decoded.actorId}`
-    );
-
     next();
   } catch (error) {
-    console.log(`[JWT-DEBUG] Verification FAILED: ${error instanceof Error ? error.message : 'Unknown error'}`);
-
     if (error instanceof jwt.TokenExpiredError) {
-      console.log(`[JWT-DEBUG] Token expired at: ${error.expiredAt}`);
       res.status(401).json({
         error: {
           code: 'TOKEN_EXPIRED',
@@ -240,7 +229,6 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
     }
 
     if (error instanceof jwt.JsonWebTokenError) {
-      console.log(`[JWT-DEBUG] JsonWebTokenError: ${error.message}`);
       res.status(401).json({
         error: {
           code: 'INVALID_TOKEN',

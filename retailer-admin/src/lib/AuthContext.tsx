@@ -223,6 +223,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Also clear any legacy keys that might exist
     clearLegacyAuth();
 
+    // RET-008: Clear ALL retailer-related localStorage keys (any store prefix)
+    // This prevents stale data from other stores lingering after full logout
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('retailer_') || key.startsWith('store_'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
     // Clear idle check interval
     if (idleCheckRef.current) {
       clearInterval(idleCheckRef.current);

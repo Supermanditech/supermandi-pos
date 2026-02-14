@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// RET-005: Import shared UPI validation (single source of truth)
+import { validateUpiVpa } from '../components/UpiInput';
 
 interface StoreSettings {
   upiVpa: string;
@@ -81,18 +83,7 @@ export default function SettingsPage() {
     loadSettings();
   }, [accessToken, store?.name]);
 
-  // AUDIT-RET-046: Unified UPI VPA validation (matches UpiInput component)
-  const validateUpiVpa = (vpa: string): string | undefined => {
-    if (!vpa) return undefined; // Optional
-    const trimmed = vpa.trim();
-    if (trimmed.length < 6) return 'UPI VPA must be at least 6 characters';
-    if (trimmed.length > 100) return 'UPI VPA cannot exceed 100 characters';
-    const upiRegex = /^[a-zA-Z0-9._-]{3,}@[a-zA-Z0-9]{2,}$/;
-    if (!upiRegex.test(trimmed)) {
-      return 'Invalid UPI VPA format. Use: name@bank (e.g., store@ybl)';
-    }
-    return undefined;
-  };
+  // RET-005: validateUpiVpa imported from UpiInput (single source of truth)
 
   // Validate tax rate
   const validateTaxRate = (rate: number): string | undefined => {

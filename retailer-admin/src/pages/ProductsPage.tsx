@@ -437,6 +437,19 @@ export default function ProductsPage() {
         throw new Error('Valid purchase price is required for ledger tracking');
       }
 
+      // RET-005: Name length sanity check
+      if (formData.name.trim().length > 200) {
+        throw new Error('Product name cannot exceed 200 characters');
+      }
+
+      // RET-005: Sell price >= purchase price sanity warning (not blocking, common in retail)
+      const sellPriceNum = parseFloat(formData.sellPrice);
+      const purchasePriceNum = parseFloat(formData.purchasePrice);
+      if (sellPriceNum < purchasePriceNum) {
+        // Allow it but this is a data integrity signal; backend handles margin calculations
+        console.warn('[RET-005] Sell price is below purchase price — negative margin');
+      }
+
       // GL-CRIT-0035: Validate barcode format
       if (formData.mode === 'PACKAGED' && formData.barcode) {
         const barcodeError = validateBarcode(formData.barcode);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 
 type ImportStep = 'upload' | 'validate' | 'review' | 'commit' | 'done';
 
@@ -125,10 +125,10 @@ export default function ImportPage() {
         body: JSON.stringify({ csvContent, fileName: file.name }),
       });
       if (!uploadResp.ok) {
-        const data = await uploadResp.json();
-        throw new Error(data.error?.message || 'Upload failed');
+        const data = await safeJson(uploadResp) as any;
+        throw new Error(data?.error?.message || 'Upload failed');
       }
-      const uploadData = await uploadResp.json();
+      const uploadData = await safeJson(uploadResp) as any;
       const newJobId = uploadData.data.jobId;
       setJobId(newJobId);
 
@@ -139,7 +139,7 @@ export default function ImportPage() {
         { method: 'POST' }
       );
       if (!validateResp.ok) {
-        const data = await validateResp.json();
+        const data = await safeJson(validateResp) as any;
         // GL-CRIT-0102: Show specific error type and row number if available
         const errorDetails = data.error;
         if (errorDetails?.row !== undefined) {
@@ -154,7 +154,7 @@ export default function ImportPage() {
         }
         throw new Error(errorDetails?.message || 'Validation failed. Please check your file format.');
       }
-      const validateData = await validateResp.json();
+      const validateData = await safeJson(validateResp) as any;
       setValidation(validateData.data);
       setStep('review');
     } catch (err) {
@@ -183,7 +183,8 @@ export default function ImportPage() {
           accessToken
         );
         if (!resp.ok) return;
-        const data = await resp.json();
+        const data = await safeJson(resp) as any;
+        if (!data?.data) return;
         const { status, progress, commitResult: result } = data.data;
         setCommitProgress(progress);
 
@@ -220,7 +221,7 @@ export default function ImportPage() {
         accessToken,
         { method: 'POST' }
       );
-      const data = await resp.json();
+      const data = await safeJson(resp) as any;
 
       if (resp.status === 202) {
         // Async commit started — poll for progress

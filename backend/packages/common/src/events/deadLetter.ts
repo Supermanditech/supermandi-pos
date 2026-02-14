@@ -4,6 +4,18 @@
 import { query, queryOne } from '../db/pool';
 import type { DomainEvent } from './types';
 
+// SEC-001: Schema allowlist to prevent SQL injection via schema interpolation
+const ALLOWED_SCHEMAS = new Set([
+  'public', 'catalog', 'inventory', 'pos', 'supplier', 'platform', 'auth', 'reorder', 'analytics',
+]);
+
+function validateSchema(schema: string): string {
+  if (!ALLOWED_SCHEMAS.has(schema) && !/^[a-z_][a-z0-9_]*$/.test(schema)) {
+    throw new Error(`Invalid schema name: ${schema}`);
+  }
+  return schema;
+}
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -57,9 +69,10 @@ export async function addToDeadLetter(
   error: Error,
   attemptCount: number
 ): Promise<string> {
+  const s = validateSchema(schema);
   // Check if this event is already in the dead letter queue
   const existing = await queryOne<{ id: string; attempt_count: number }>(
-    `SELECT id, attempt_count FROM ${schema}.dead_letter_events
+    `SELECT id, attempt_count FROM ${s}.dead_letter_events
      WHERE event_id = $1 AND target_queue = $2 AND resolved_at IS NULL`,
     [event.eventId, targetQueue]
   );
@@ -67,7 +80,7 @@ export async function addToDeadLetter(
   if (existing) {
     // Update existing entry
     await query(
-      `UPDATE ${schema}.dead_letter_events
+      `UPDATE ${s}.dead_letter_events
        SET error_message = $1,
            error_stack = $2,
            attempt_count = $3,
@@ -80,7 +93,7 @@ export async function addToDeadLetter(
 
   // Insert new entry
   const result = await queryOne<{ id: string }>(
-    `INSERT INTO ${schema}.dead_letter_events (
+    `INSERT INTO ${s}.dead_letter_events (
       event_id, event_type, target_queue, payload,
       error_message, error_stack, attempt_count,
       first_failed_at, last_failed_at
@@ -116,6 +129,7 @@ export async function getUnresolvedDeadLetters(
     targetQueue?: string;
   } = {}
 ): Promise<{ entries: DeadLetterEntry[]; total: number }> {
+  const s = validateSchema(schema);
   const { limit = 50, offset = 0, eventType, targetQueue } = options;
 
   const whereClauses: string[] = ['resolved_at IS NULL'];
@@ -136,14 +150,14 @@ export async function getUnresolvedDeadLetters(
 
   // Count
   const countRow = await queryOne<{ count: string }>(
-    `SELECT COUNT(*) as count FROM ${schema}.dead_letter_events WHERE ${whereClause}`,
+    `SELECT COUNT(*) as count FROM ${s}.dead_letter_events WHERE ${whereClause}`,
     params
   );
   const total = parseInt(countRow?.count ?? '0', 10);
 
   // Fetch entries
   const rows = await query<DeadLetterRow>(
-    `SELECT * FROM ${schema}.dead_letter_events
+    `SELECT * FROM ${s}.dead_letter_events
      WHERE ${whereClause}
      ORDER BY last_failed_at DESC
      LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
@@ -164,8 +178,9 @@ export async function resolveDeadLetter(
   resolution: 'reprocessed' | 'discarded' | 'manual',
   resolvedBy?: string
 ): Promise<void> {
+  const s = validateSchema(schema);
   await query(
-    `UPDATE ${schema}.dead_letter_events
+    `UPDATE ${s}.dead_letter_events
      SET resolved_at = NOW(),
          resolved_by = $2,
          resolution = $3
@@ -185,8 +200,9 @@ export async function getDeadLetterById(
   schema: string,
   deadLetterId: string
 ): Promise<DeadLetterEntry | null> {
+  const s = validateSchema(schema);
   const row = await queryOne<DeadLetterRow>(
-    `SELECT * FROM ${schema}.dead_letter_events WHERE id = $1`,
+    `SELECT * FROM ${s}.dead_letter_events WHERE id = $1`,
     [deadLetterId]
   );
 

@@ -72,23 +72,28 @@ const allowedOrigins: string[] = corsEnvOrigins.length > 0
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+  let originAllowed = false;
 
   // Check if the origin is allowed
   // STAGING-FIX-005: Support '*' wildcard in CORS_ALLOWED_ORIGINS
   if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
     res.header('Access-Control-Allow-Origin', origin);
+    originAllowed = true;
   } else if ((config.env === 'development' || allowedOrigins.includes('*')) && !origin) {
     // Allow requests without origin header in development or wildcard mode (curl, Postman, etc.)
     res.header('Access-Control-Allow-Origin', '*');
+    originAllowed = true;
   }
-  // Note: If origin not in allowedOrigins, we don't set the header (browser will block)
 
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
+  // SEC-006: Only send CORS headers when origin is allowed — prevents leaking config to unauthorized origins
+  if (originAllowed) {
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Device-Token, X-Correlation-Id, x-actor-id, x-user-id, x-admin-token, X-Admin-Token, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
 
   if (req.method === 'OPTIONS') {
-    res.sendStatus(204);
+    res.sendStatus(originAllowed ? 204 : 403);
     return;
   }
   next();

@@ -153,6 +153,46 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// RET-004: Limited mode route guard — blocks access to restricted routes when application not ACTIVE
+// Allowed paths in limited mode: dashboard (index), settings, devices
+function LimitedModeGuard({ children }: { children: React.ReactNode }) {
+  const { isLimitedMode, store } = useAuth();
+  const location = useLocation();
+
+  if (!isLimitedMode) return <>{children}</>;
+
+  // Extract the sub-path after /s/:storeCode/
+  const match = location.pathname.match(/^\/s\/[^/]+\/(.+)/);
+  const subPath = match?.[1] || '';
+
+  // Allowed sub-paths in limited mode
+  const limitedAllowed = new Set(['', 'settings', 'devices']);
+  if (!limitedAllowed.has(subPath)) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        alignItems: 'center', height: '100%', padding: '2rem', textAlign: 'center',
+      }}>
+        <div style={{
+          background: '#fffbeb', border: '1px solid #fde68a',
+          borderRadius: '12px', padding: '2rem', maxWidth: '400px',
+        }}>
+          <h2 style={{ color: '#92400e', marginBottom: '0.5rem' }}>Feature Unavailable</h2>
+          <p style={{ color: '#a16207', marginBottom: '1.5rem' }}>
+            This feature is not available until your store application is approved.
+          </p>
+          <a href={`/s/${store?.code || ''}`} style={{
+            display: 'inline-block', padding: '0.75rem 1.5rem', background: '#3b82f6',
+            color: 'white', borderRadius: '8px', textDecoration: 'none', fontWeight: '500',
+          }}>Go to Dashboard</a>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 // GO-LIVE-RET-AUTH-001: Removed StoreLandingPage - now using direct /retailer/login with OTP first
 
 function AppRoutes() {
@@ -185,24 +225,25 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         >
+          {/* RET-004: All child routes wrapped with LimitedModeGuard — blocks restricted routes when not ACTIVE */}
           <Route index element={<Suspense fallback={<PageLoadingFallback />}><DashboardPage /></Suspense>} />
-          <Route path="products" element={<Suspense fallback={<PageLoadingFallback />}><ProductsPage /></Suspense>} />
-          <Route path="import" element={<Suspense fallback={<PageLoadingFallback />}><ImportPage /></Suspense>} />
-          <Route path="inventory" element={<Suspense fallback={<PageLoadingFallback />}><InventoryPage /></Suspense>} />
-          <Route path="suppliers" element={<Suspense fallback={<PageLoadingFallback />}><SuppliersPage /></Suspense>} />
+          <Route path="products" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ProductsPage /></Suspense></LimitedModeGuard>} />
+          <Route path="import" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ImportPage /></Suspense></LimitedModeGuard>} />
+          <Route path="inventory" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><InventoryPage /></Suspense></LimitedModeGuard>} />
+          <Route path="suppliers" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><SuppliersPage /></Suspense></LimitedModeGuard>} />
           {/* CA-1.4-001: Supplier Catalog - browse and add approved products */}
-          <Route path="supplier-catalog" element={<Suspense fallback={<PageLoadingFallback />}><SupplierCatalogPage /></Suspense>} />
-          <Route path="compliance" element={<Suspense fallback={<PageLoadingFallback />}><CompliancePage /></Suspense>} />
-          {/* GL-RJ-005: Store Settings page */}
+          <Route path="supplier-catalog" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><SupplierCatalogPage /></Suspense></LimitedModeGuard>} />
+          <Route path="compliance" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><CompliancePage /></Suspense></LimitedModeGuard>} />
+          {/* GL-RJ-005: Store Settings page — allowed in limited mode */}
           <Route path="settings" element={<Suspense fallback={<PageLoadingFallback />}><SettingsPage /></Suspense>} />
           {/* RET-WEB-003: Payments Setup page */}
-          <Route path="settings/payments" element={<Suspense fallback={<PageLoadingFallback />}><PaymentsPage /></Suspense>} />
-          {/* RET-WEB-002: Device Activation page */}
+          <Route path="settings/payments" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><PaymentsPage /></Suspense></LimitedModeGuard>} />
+          {/* RET-WEB-002: Device Activation page — allowed in limited mode */}
           <Route path="devices" element={<Suspense fallback={<PageLoadingFallback />}><DeviceActivationPage /></Suspense>} />
           {/* SM-024: SuperAdmin approval queue pages */}
-          {/* GL-WF-033: Wrap admin routes with role check */}
-          <Route path="admin/suppliers" element={<AdminRoute><Suspense fallback={<PageLoadingFallback />}><SupplierQueuePage /></Suspense></AdminRoute>} />
-          <Route path="admin/products" element={<AdminRoute><Suspense fallback={<PageLoadingFallback />}><ProductQueuePage /></Suspense></AdminRoute>} />
+          {/* GL-WF-033: Wrap admin routes with role check + RET-004: limited mode guard */}
+          <Route path="admin/suppliers" element={<LimitedModeGuard><AdminRoute><Suspense fallback={<PageLoadingFallback />}><SupplierQueuePage /></Suspense></AdminRoute></LimitedModeGuard>} />
+          <Route path="admin/products" element={<LimitedModeGuard><AdminRoute><Suspense fallback={<PageLoadingFallback />}><ProductQueuePage /></Suspense></AdminRoute></LimitedModeGuard>} />
           {/* P2-RD-002: QA page hidden in production */}
           {import.meta.env.DEV && <Route path="_pages" element={<Suspense fallback={<PageLoadingFallback />}><AllPagesPage /></Suspense>} />}
         </Route>

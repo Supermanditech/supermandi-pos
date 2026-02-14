@@ -160,13 +160,14 @@ posPaymentsRouter.post(
       }
 
       // 3. Check for existing pending UPI payment for this sale
+      // DATA-002: Add store_id filter for store isolation
       const existingPayment = await client.query(
         `SELECT id, upi_order_id, upi_qr_data, status, created_at
          FROM payments.sell_payments
-         WHERE sale_id = $1 AND mode = 'UPI' AND status IN ('pending', 'initiated')
+         WHERE sale_id = $1 AND store_id = $2 AND mode = 'UPI' AND status IN ('pending', 'initiated')
          ORDER BY created_at DESC
          LIMIT 1`,
-        [saleId]
+        [saleId, storeId]
       );
 
       // If there's an existing pending payment less than 15 mins old, return it
@@ -187,9 +188,10 @@ posPaymentsRouter.post(
         }
 
         // Mark expired payment as failed
+        // DATA-002: Add store_id filter for store isolation
         await client.query(
-          `UPDATE payments.sell_payments SET status = 'failed', failure_reason = 'expired' WHERE id = $1`,
-          [existing.id]
+          `UPDATE payments.sell_payments SET status = 'failed', failure_reason = 'expired' WHERE id = $1 AND store_id = $2`,
+          [existing.id, storeId]
         );
       }
 
@@ -303,9 +305,10 @@ posPaymentsRouter.get(
 
       if (payment.status === 'initiated' && expiresAt < new Date()) {
         // Mark as expired
+        // DATA-002: Add store_id filter for store isolation
         await pool.query(
-          `UPDATE payments.sell_payments SET status = 'failed', failure_reason = 'expired' WHERE id = $1`,
-          [paymentId]
+          `UPDATE payments.sell_payments SET status = 'failed', failure_reason = 'expired' WHERE id = $1 AND store_id = $2`,
+          [paymentId, storeId]
         );
         return res.json({
           status: 'failed',

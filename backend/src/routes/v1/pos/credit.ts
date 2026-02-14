@@ -433,9 +433,10 @@ posCreditRouter.post("/credit/apply", requireDeviceToken, async (req: Request, r
     `, [applicationId, storeId, offerId, requestedAmountMinor]);
 
     // Update offer status
+    // DATA-002: Add store_id filter for store isolation
     await client.query(`
-      UPDATE payments.credit_offers SET status = 'applied' WHERE id = $1
-    `, [offerId]);
+      UPDATE payments.credit_offers SET status = 'applied' WHERE id = $1 AND store_id = $2
+    `, [offerId, storeId]);
 
     await client.query("COMMIT");
 
@@ -516,11 +517,12 @@ posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, async (re
     const isKycValid = panNumber.length === 10 && aadhaarLast4.length === 4;
 
     if (!isKycValid) {
+      // DATA-002: Add store_id filter for store isolation
       await client.query(`
         UPDATE payments.credit_applications
         SET kyc_status = 'rejected', status = 'rejected'
-        WHERE id = $1
-      `, [applicationId]);
+        WHERE id = $1 AND store_id = $2
+      `, [applicationId, storeId]);
 
       await client.query("COMMIT");
 
@@ -535,17 +537,19 @@ posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, async (re
     // KYC passed - approve application
     const approvedAmount = app.requested_amount_minor;
 
+    // DATA-002: Add store_id filter for store isolation
     await client.query(`
       UPDATE payments.credit_applications
       SET kyc_status = 'verified', status = 'approved',
           pan_number = $1, aadhaar_last4 = $2, approved_amount_minor = $3
-      WHERE id = $4
-    `, [panNumber, aadhaarLast4, approvedAmount, applicationId]);
+      WHERE id = $4 AND store_id = $5
+    `, [panNumber, aadhaarLast4, approvedAmount, applicationId, storeId]);
 
     // Update offer status
+    // DATA-002: Add store_id filter for store isolation
     await client.query(`
-      UPDATE payments.credit_offers SET status = 'approved' WHERE id = $1
-    `, [app.offer_id]);
+      UPDATE payments.credit_offers SET status = 'approved' WHERE id = $1 AND store_id = $2
+    `, [app.offer_id, storeId]);
 
     await client.query("COMMIT");
 

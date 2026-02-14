@@ -32,15 +32,16 @@ const ADMIN_EMAIL_ALLOWLIST = (process.env.ADMIN_EMAIL_ALLOWLIST || '')
 
 // OTP configuration
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-// AUDIT-API-007: Fail-fast in production if secrets missing; consistent dev fallback
+// SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
 const JWT_SECRET = (() => {
   const secret = process.env.JWT_SECRET || process.env.ADMIN_TOKEN;
   if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[GO-LIVE-LOGIN-004] FATAL: JWT_SECRET must be set in production');
-      process.exit(1);
+    const env = (process.env.NODE_ENV || '').toLowerCase();
+    if (env === 'development' || env === 'test') {
+      return 'dev-secret-change-in-prod';
     }
-    return 'dev-secret-change-in-prod';
+    console.error('[FATAL] JWT_SECRET must be set (NODE_ENV is not development/test)');
+    process.exit(1);
   }
   return secret;
 })();

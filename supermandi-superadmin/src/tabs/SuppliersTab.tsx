@@ -249,7 +249,7 @@ export function SuppliersTab({
                   </button>
                   <input
                     type="text"
-                    placeholder="Rejection reason (min 5 chars)"
+                    placeholder="Rejection reason (min 10 chars)"
                     value={bankRejectReason[bc.id] || ""}
                     onChange={(e) => setBankRejectReason((prev) => ({ ...prev, [bc.id]: e.target.value }))}
                     style={{ flex: 1, fontSize: 12, padding: "4px 8px", border: "1px solid #ddd", borderRadius: 4 }}
