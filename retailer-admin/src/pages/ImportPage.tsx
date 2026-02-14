@@ -173,10 +173,30 @@ export default function ImportPage() {
     };
   }, []);
 
+  // STBT-184.12: Warn user before closing tab during import
+  useEffect(() => {
+    if (!isProcessing) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isProcessing]);
+
   // RET-POS-SYNC-003: Poll commit status
+  // STBT-184.11: Max polling timeout (10 minutes) to prevent infinite spinner
+  const POLLING_TIMEOUT_MS = 10 * 60 * 1000;
   const startPolling = (pollJobId: string) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
+    const startedAt = Date.now();
     pollingRef.current = setInterval(async () => {
+      // STBT-184.11: Timeout guard
+      if (Date.now() - startedAt > POLLING_TIMEOUT_MS) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        setError('Import is taking longer than expected. Please check back later or contact support.');
+        setIsProcessing(false);
+        setStep('review');
+        return;
+      }
       try {
         const resp = await authFetch(
           `/api/v1/retailer-admin/products/import/status?jobId=${pollJobId}`,

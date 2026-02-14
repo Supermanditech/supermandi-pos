@@ -357,6 +357,16 @@ export default function RetailerOnboardingPage() {
     };
   }, [step]);
 
+  // STBT-184.16: Resume incomplete registration from localStorage
+  useEffect(() => {
+    const savedAppId = localStorage.getItem('retailer_application_id');
+    const savedStatus = localStorage.getItem('retailer_application_status');
+    if (savedAppId && savedStatus !== 'KYC_SUBMITTED') {
+      setApplicationId(savedAppId);
+      setStep('documents');
+    }
+  }, []);
+
   // Resend cooldown timer
   useEffect(() => {
     if (resendCooldown > 0) {
