@@ -2131,7 +2131,7 @@ export default function App() {
   };
   const confirmedApproveApplication = (appId: string) => {
     const app = applications.find(x => x.id === appId);
-    showConfirm('Approve Application', `Are you sure you want to approve the application from "${app?.business_name || app?.owner_name || appId}"?`, 'Approve', 'warning', () => handleApproveApplication(appId), 'This will create the store or supplier account.');
+    showConfirm('Approve Application', `Are you sure you want to approve the application from "${app?.businessName || app?.ownerName || appId}"?`, 'Approve', 'warning', () => handleApproveApplication(appId), 'This will create the store or supplier account.');
   };
   const confirmedRejectApplication = (appId: string) => {
     const reason = appRejectReason[appId];
@@ -2164,11 +2164,11 @@ export default function App() {
   };
   const confirmedVerifySupplier = (requestId: string) => {
     const req = pendingSuppliers.find(x => x.id === requestId);
-    showConfirm('Verify Supplier', `Verify "${req?.businessName || requestId}" and link to existing supplier?`, 'Verify', 'warning', () => handleVerifySupplier(requestId), 'This will activate the supplier account.');
+    showConfirm('Verify Supplier', `Verify "${req?.requestedName || requestId}" and link to existing supplier?`, 'Verify', 'warning', () => handleVerifySupplier(requestId), 'This will activate the supplier account.');
   };
   const confirmedVerifySupplierDirectly = (requestId: string) => {
     const req = pendingSuppliers.find(x => x.id === requestId);
-    showConfirm('Verify Supplier Directly', `Verify "${req?.businessName || requestId}" as a new supplier?`, 'Verify', 'warning', () => handleVerifySupplierDirectly(requestId), 'This will create and activate a new supplier account.');
+    showConfirm('Verify Supplier Directly', `Verify "${req?.requestedName || requestId}" as a new supplier?`, 'Verify', 'warning', () => handleVerifySupplierDirectly(requestId), 'This will create and activate a new supplier account.');
   };
   const confirmedBankApprove = (supplierId: string) => {
     const bank = bankChanges.find(x => x.id === supplierId);
