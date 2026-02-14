@@ -13,7 +13,7 @@
       { "phase": 1, "name": "Backend Security", "issues": "#104-#110", "count": 7, "priority": "P0", "status": "complete", "commit": "88bf023" },
       { "phase": 2, "name": "Backend Data Integrity", "issues": "#111-#116", "count": 6, "priority": "P1", "status": "complete", "commit": "75aec1e" },
       { "phase": 3, "name": "Cross-Portal", "issues": "#148-#150", "count": 3, "priority": "P0-P1", "status": "complete", "commit": "5309261" },
-      { "phase": 4, "name": "URL Routing", "issues": "#117-#120", "count": 4, "priority": "P1-P2", "status": "pending" },
+      { "phase": 4, "name": "URL Routing", "issues": "#117-#120", "count": 4, "priority": "P1-P2", "status": "complete", "commit": "afade2e" },
       { "phase": 5, "name": "Retailer Portal", "issues": "#121-#128", "count": 8, "priority": "P0-P1", "status": "pending" },
       { "phase": 6, "name": "Supplier Portal", "issues": "#129-#135", "count": 7, "priority": "P0-P1", "status": "pending" },
       { "phase": 7, "name": "SuperAdmin Portal", "issues": "#136-#141", "count": 6, "priority": "P0-P1", "status": "pending" },
@@ -21,8 +21,8 @@
     ],
     "auditCoverage": {
       "p0Fixed": "8/20",
-      "p1Fixed": "8/89",
-      "p2CriticalFixed": "0/15",
+      "p1Fixed": "10/89",
+      "p2CriticalFixed": "2/15",
       "totalCovered": "134/136"
     }
   },
@@ -69,10 +69,11 @@
     "zrpGatesDeferred": 0
   },
   "lastActions": [
-    "Phase 3 COMPLETE: Cross-Portal #148-#150 (3/3 tickets, 4 files, commit 5309261)",
-    "XPORT-001: SuperAdmin refreshSession() dedup mutex — prevents concurrent refresh races",
-    "XPORT-002: 3 remaining store isolation gaps fixed (orders reconciliation, staff subqueries)",
-    "XPORT-003: Analytics error responses sanitized — 8 catch blocks no longer leak e.message"
+    "Phase 4 COMPLETE: URL Routing #117-#120 (4/4 tickets, 9 files, commit afade2e)",
+    "URL-001: Security headers added to all 4 portals (nginx + next.config.js + Dockerfile)",
+    "URL-002: Retailer favicon created, static file 404s fixed (no more SPA catch-all for .svg/.png)",
+    "URL-003: Cache-Control no-cache on HTML, supplier trailingSlash=false, landing 404 for unknowns",
+    "URL-004: Health endpoints stripped to minimal {status:ok} — no version/env/config leak"
   ],
-  "nextAction": "Start Phase 4: URL Routing (#117-#120) on batch/audit-fixes branch"
+  "nextAction": "Start Phase 5: Retailer Portal (#121-#128) on batch/audit-fixes branch"
 }
