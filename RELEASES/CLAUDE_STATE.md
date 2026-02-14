@@ -1165,6 +1165,241 @@ Every new Claude session, EXACTLY this sequence:
 
 ---
 
+# PART 16: MCP INFERENCE PROTOCOL (Gather Before Code — Never Guess)
+
+> **Rule:** Before writing ANY code for a ticket, Claude MUST query live infrastructure via MCP tools to understand the ACTUAL state. No assumptions. No guessing. Code only what the evidence proves is needed.
+
+## 16.1 The Three MCP Sources
+
+Claude has three MCP interfaces for gathering live state:
+
+| MCP Tool | What It Queries | When to Use |
+|----------|----------------|-------------|
+| `mcp__gcloud__run_gcloud_command` | GCP Cloud Run, Cloud SQL, Secrets, IAM, Load Balancer | Service config, env vars, deployed state, infra |
+| `mcp__staging-db__query` | Staging PostgreSQL database directly | Schema, constraints, indexes, sample data |
+| `mcp__github__*` | GitHub issues, PRs, code, reviews | Ticket details, existing fixes, PR status |
+
+## 16.2 Pre-Ticket Inference Checklist
+
+**Before writing the FIRST line of code for any ticket, Claude MUST complete:**
+
+### Step 1: Read the GitHub Issue
+```
+→ mcp__github__issue_read (method: "get", issue_number: N)
+→ Extract: files to modify, GCP parity aspects, ZRP gates, acceptance criteria
+```
+
+### Step 2: Query GCP for Affected Services
+For backend tickets:
+```
+→ gcloud run services describe main-backend --region=asia-south1 --format=json(spec.template.spec.containers[0].env)
+→ Extract: current env vars, secrets, resource limits
+```
+For portal tickets:
+```
+→ gcloud run services describe <service-name> --region=asia-south1 --format=json
+→ Extract: image digest, env vars, resource config
+```
+For routing/CORS tickets:
+```
+→ gcloud compute url-maps describe supermandi-staging-urlmap --format=json
+→ gcloud compute backend-services list --format=json(name,backends)
+→ Extract: current routing rules, backend mappings
+```
+
+### Step 3: Query Staging DB for Schema (if data/query ticket)
+```
+→ mcp__staging-db__query: SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name = '<table>'
+→ mcp__staging-db__query: SELECT indexname, indexdef FROM pg_indexes WHERE tablename = '<table>'
+→ mcp__staging-db__query: SELECT conname, contype, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = '<table>'::regclass
+→ Extract: actual columns, types, indexes, constraints
+```
+
+### Step 4: Read the Actual Source Files
+```
+→ Read each file listed in the ticket
+→ Find the exact lines referenced
+→ Understand the current code before changing it
+```
+
+### Step 5: Cross-Reference GCP vs Code
+```
+→ Compare: env vars in GCP vs env vars referenced in code
+→ Compare: secrets in Secret Manager vs secret references in code
+→ Compare: routing rules in URL map vs routes in code
+→ Flag any mismatches as additional fixes
+```
+
+## 16.3 Per-Category Inference Queries
+
+### Security Tickets (#104-#110)
+```bash
+# What secrets exist in GCP?
+gcloud secrets list --format=json(name)
+
+# What env vars does the service actually have?
+gcloud run services describe main-backend --region=asia-south1 --format=json(spec.template.spec.containers[0].env)
+
+# Is CORS configured at LB level or app level?
+gcloud compute backend-services describe api-gateway-backend --global --format=json(securityPolicy,customResponseHeaders)
+```
+
+### Store Isolation Tickets (#108, #112, #149)
+```sql
+-- What tables are store-scoped?
+SELECT table_name FROM information_schema.columns WHERE column_name = 'store_id';
+
+-- Do store-scoped tables have store_id indexes?
+SELECT tablename, indexdef FROM pg_indexes WHERE indexdef LIKE '%store_id%';
+
+-- What constraints exist on store_id?
+SELECT conname, conrelid::regclass, pg_get_constraintdef(oid)
+FROM pg_constraint WHERE pg_get_constraintdef(oid) LIKE '%store_id%';
+```
+
+### Connection / DB Tickets (#111, #115)
+```sql
+-- Current connection pool state
+SELECT count(*) as active_connections FROM pg_stat_activity WHERE datname = 'supermandi';
+
+-- Table sizes for pagination decisions
+SELECT relname, n_live_tup FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 20;
+
+-- Check for missing indexes on frequently queried columns
+SELECT schemaname, tablename, attname, n_distinct, correlation
+FROM pg_stats WHERE tablename IN ('stores','store_products','inventory_ledger','sales','bnpl_transactions');
+```
+
+### Portal Tickets (#117-#141)
+```bash
+# What does the portal actually serve? (check Dockerfile/server config)
+gcloud run services describe <portal> --region=asia-south1 --format=json(spec.template.spec.containers[0])
+
+# What headers does the portal return?
+curl -sI https://staging.supermandi.tech/<portal-path>/ | grep -iE '(x-frame|content-security|strict-transport|cache-control)'
+
+# Is the portal returning the latest build?
+curl -s https://staging.supermandi.tech/<portal-path>/ | grep -oE 'index-[A-Za-z0-9]+\.(js|css)'
+```
+
+### Auth Tickets (#121, #129, #137, #148)
+```bash
+# Test current auth flow
+curl -sI https://staging.supermandi.tech/api/v1/auth/me -H "Authorization: Bearer <expired-token>"
+# → Should return 401 with JSON body
+
+# Test CORS on auth endpoints
+curl -sI -X OPTIONS https://staging.supermandi.tech/api/v1/auth/login -H "Origin: https://staging.supermandi.tech"
+```
+
+```sql
+-- Auth-related tables and their structure
+SELECT column_name, data_type FROM information_schema.columns
+WHERE table_name IN ('users','sessions','refresh_tokens','devices') ORDER BY table_name, ordinal_position;
+```
+
+## 16.4 Inference-to-Code Contract
+
+After gathering MCP evidence, Claude MUST produce:
+
+```
+TICKET: #NNN
+MCP EVIDENCE GATHERED:
+  - GCP: [what was queried, key findings]
+  - DB:  [schema/data findings, or "N/A — no DB changes"]
+  - GitHub: [issue details, related PRs]
+  - Live test: [curl/endpoint test results]
+
+INFERRED FIX:
+  - File: path/to/file.ts
+  - Change: [precise description based on evidence]
+  - Why: [evidence proves this change is needed]
+
+GCP ALIGNMENT:
+  - Env var X = Y in GCP ✓ (matches code reference)
+  - Secret Z configured ✓ (matches code reference)
+  - Route /path → service ✓ (matches URL map)
+
+RISKS:
+  - [What could break, based on actual deployed state]
+```
+
+## 16.5 Forbidden Actions (Never Do Without MCP Check)
+
+| Action | MUST Query First |
+|--------|-----------------|
+| Change env var reference | `gcloud run services describe` → verify var exists |
+| Change SQL query | `mcp__staging-db__query` → verify table/column exists |
+| Change API route | `gcloud compute url-maps describe` → verify routing |
+| Change secret reference | `gcloud secrets list` → verify secret exists |
+| Change CORS config | `curl -X OPTIONS` → verify current CORS behavior |
+| Change auth middleware | `curl -H "Authorization: Bearer ..."` → verify current auth |
+| Add pagination | `SELECT count(*) FROM <table>` → verify row counts justify it |
+| Add index | `SELECT * FROM pg_indexes WHERE tablename = ...` → verify doesn't exist |
+| Change error format | `curl <endpoint>` → verify current error format |
+
+## 16.6 GCP Quick-Reference (Actual Values)
+
+```
+PROJECT:           supermandi-backend
+REGION:            asia-south1
+STAGING_URL:       https://staging.supermandi.tech
+AR_REPO:           asia-south1-docker.pkg.dev/supermandi-backend/supermandi
+
+CLOUD RUN SERVICES:
+  api-gateway      — API routing, JWT auth, CORS
+  main-backend     — All 10 microservices (single container)
+  retailer-admin   — Vite SPA (port 8080)
+  supplier-portal  — Next.js (port 3000)
+  superadmin       — Vite SPA (port 8080)
+  landing          — Static HTML (port 8080)
+
+CLOUD SQL:
+  Instance:        supermandi-staging
+  DB:              supermandi
+  User:            postgres
+  Connection:      /cloudsql/supermandi-backend:asia-south1:supermandi-staging
+
+REDIS:
+  Host:            10.107.71.27
+  Port:            6379
+
+SECRETS (Secret Manager):
+  jwt-secret, database-url, postgres-password, admin-token, smtp-password
+
+LOAD BALANCER:
+  URL Map:         supermandi-staging-urlmap
+  SSL Cert:        supermandi-staging-cert (staging.supermandi.tech, ACTIVE)
+  Routes:
+    /api/*, /health, /version → api-gateway-backend
+    /retailer/*              → retailer-backend
+    /supplier/*              → supplier-backend
+    /admin/*                 → superadmin-backend
+    / (default)              → landing-backend
+```
+
+## 16.7 Batch Execution MCP Cadence
+
+During the batch audit fix sprint (#104-#150):
+
+```
+FOR EACH TICKET:
+  1. Read GitHub issue (#N)
+  2. Run category-specific MCP queries (16.3)
+  3. Read affected source files
+  4. Produce inference-to-code contract (16.4)
+  5. Implement fix
+  6. Verify fix aligns with GCP state
+  7. Commit with message: "fix(#N): <description>"
+  8. Move to next ticket
+
+NO TICKET STARTS WITHOUT MCP EVIDENCE.
+NO CODE CHANGES WITHOUT READING THE FILE FIRST.
+NO ASSUMPTIONS ABOUT GCP STATE — QUERY IT.
+```
+
+---
+
 # APPENDIX A: CROSS-PLATFORM TEST MATRIX
 
 | Portal | Device | Method | Login Test | CRUD Test | Flow Test |
@@ -1193,20 +1428,23 @@ Every new Claude session, EXACTLY this sequence:
 
 # APPENDIX B: GCP INFRASTRUCTURE
 
-| Service | GCP Resource |
-|---------|-------------|
-| API Gateway | Cloud Run `api-gateway` |
-| Backend | Cloud Run `backend` |
-| Retailer Portal | Cloud Run `retailer-admin` |
-| Supplier Portal | Cloud Run `supplier-portal` |
-| SuperAdmin Portal | Cloud Run `supermandi-superadmin` |
-| Landing Page | Cloud Run `supermandi-landing` |
-| POS App | Expo/EAS Build → App Store/Play Store |
-| Database | Cloud SQL (PostgreSQL) |
-| Secrets | Secret Manager |
-| Images | Artifact Registry `asia-south1-docker.pkg.dev/supermandi-pos/supermandi` |
-| CI/CD | GitHub Actions |
-| Monitoring | Cloud Run metrics + uptime probes |
+| Service | GCP Resource | MCP Query |
+|---------|-------------|-----------|
+| API Gateway | Cloud Run `api-gateway` | `gcloud run services describe api-gateway --region=asia-south1` |
+| Backend | Cloud Run `main-backend` | `gcloud run services describe main-backend --region=asia-south1` |
+| Retailer Portal | Cloud Run `retailer-admin` | `gcloud run services describe retailer-admin --region=asia-south1` |
+| Supplier Portal | Cloud Run `supplier-portal` | `gcloud run services describe supplier-portal --region=asia-south1` |
+| SuperAdmin Portal | Cloud Run `superadmin` | `gcloud run services describe superadmin --region=asia-south1` |
+| Landing Page | Cloud Run `landing` | `gcloud run services describe landing --region=asia-south1` |
+| POS App | Expo/EAS Build → App Store/Play Store | N/A (mobile) |
+| Database | Cloud SQL `supermandi-staging` | `mcp__staging-db__query` or `gcloud sql instances describe supermandi-staging` |
+| Redis | Memorystore `supermandi-redis-staging` (10.107.71.27:6379) | `gcloud redis instances describe supermandi-redis-staging --region=asia-south1` |
+| Secrets | Secret Manager (5 secrets) | `gcloud secrets list` |
+| Images | Artifact Registry `asia-south1-docker.pkg.dev/supermandi-backend/supermandi` | `gcloud artifacts docker images list` |
+| Load Balancer | URL Map `supermandi-staging-urlmap` | `gcloud compute url-maps describe supermandi-staging-urlmap` |
+| SSL | Managed cert `supermandi-staging-cert` | `gcloud compute ssl-certificates describe supermandi-staging-cert` |
+| CI/CD | GitHub Actions | `mcp__github__list_pull_requests` |
+| Monitoring | Cloud Run metrics + uptime probes | `gcloud monitoring uptime list-configs` |
 
 ---
 
