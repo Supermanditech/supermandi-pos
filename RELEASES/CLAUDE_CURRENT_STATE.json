@@ -1,6 +1,6 @@
 {
   "version": "6.0",
-  "lastUpdated": "2026-02-15T01:00:00+05:30",
+  "lastUpdated": "2026-02-15T01:30:00+05:30",
   "currentPhase": "AUDIT FIX SPRINT — 47 tickets (#104-#150), batch deploy strategy",
   "currentTicket": null,
   "batchSprint": {
@@ -15,13 +15,13 @@
       { "phase": 3, "name": "Cross-Portal", "issues": "#148-#150", "count": 3, "priority": "P0-P1", "status": "complete", "commit": "5309261" },
       { "phase": 4, "name": "URL Routing", "issues": "#117-#120", "count": 4, "priority": "P1-P2", "status": "complete", "commit": "afade2e" },
       { "phase": 5, "name": "Retailer Portal", "issues": "#121-#128", "count": 8, "priority": "P0-P1", "status": "complete", "commit": "2df04af" },
-      { "phase": 6, "name": "Supplier Portal", "issues": "#129-#135", "count": 7, "priority": "P0-P1", "status": "pending" },
+      { "phase": 6, "name": "Supplier Portal", "issues": "#129-#135", "count": 7, "priority": "P0-P1", "status": "complete", "commit": "c3d3c48" },
       { "phase": 7, "name": "SuperAdmin Portal", "issues": "#136-#141", "count": 6, "priority": "P0-P1", "status": "pending" },
       { "phase": 8, "name": "POS Mobile", "issues": "#142-#147", "count": 6, "priority": "P0-P1", "status": "pending" }
     ],
     "auditCoverage": {
-      "p0Fixed": "10/20",
-      "p1Fixed": "16/89",
+      "p0Fixed": "12/20",
+      "p1Fixed": "21/89",
       "p2CriticalFixed": "2/15",
       "totalCovered": "134/136"
     }
@@ -69,14 +69,12 @@
     "zrpGatesDeferred": 0
   },
   "lastActions": [
-    "Phase 5 COMPLETE: Retailer Portal #121-#128 (8/8 tickets, 7 files, commit 2df04af)",
-    "RET-001: credentials:'include' on lookup fetch for cookie auth consistency",
-    "RET-002: Debug footer gated behind import.meta.env.DEV — no info leak in production",
-    "RET-003: Fixed isActive() double-highlight (settings vs settings/payments)",
-    "RET-004: LimitedModeGuard added — route-level blocks when application not ACTIVE",
-    "RET-005: DRY UPI validation, product name/price sanity checks",
-    "RET-007: 6x bare response.json() replaced with safeJson() in ImportPage",
-    "RET-008: Logout clears ALL retailer_/store_ localStorage keys"
+    "Phase 6 COMPLETE: Supplier Portal #129-#135 (7/7 tickets, 2 files, commit c3d3c48)",
+    "SUP-001-003: Verified — onboard auth redirect, root basePath, 401 fix, error pages, forgot-pw all already done",
+    "SUP-004: Product name min 2 / max 200 char validation added",
+    "SUP-005: Verified — profile refresh, formatCurrency(0) correct, pagination URL-synced",
+    "SUP-006: Sidebar active state fixed (startsWith), banners deduplicated (one at a time)",
+    "SUP-007: Verified — order debounce 500ms, KYC retry, formatters consolidated"
   ],
-  "nextAction": "Start Phase 6: Supplier Portal (#129-#135) on batch/audit-fixes branch"
+  "nextAction": "Start Phase 7: SuperAdmin Portal (#136-#141) on batch/audit-fixes branch"
 }
