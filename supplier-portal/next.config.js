@@ -25,8 +25,9 @@ const nextConfig = {
   // Production deployment with /supplier base path
   // GO-LIVE-B9: Server mode for nginx reverse proxy (basePath handles asset prefix)
   basePath: '/supplier',
-  // URL-003: Disable trailingSlash to prevent 308 redirects on every route
-  trailingSlash: false,
+  // URL-003: Enable trailingSlash so /supplier/ serves directly without 308→/supplier
+  // GCP URL map path rule /supplier/* matches trailing-slash paths correctly
+  trailingSlash: true,
   // SUP-ROOT-001: Redirect bare root to /supplier so http://host:port/ doesn't 404
   async redirects() {
     return [
