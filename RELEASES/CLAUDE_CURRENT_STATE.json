@@ -1,6 +1,6 @@
 {
   "version": "6.0",
-  "lastUpdated": "2026-02-14T23:30:00+05:30",
+  "lastUpdated": "2026-02-15T01:00:00+05:30",
   "currentPhase": "AUDIT FIX SPRINT — 47 tickets (#104-#150), batch deploy strategy",
   "currentTicket": null,
   "batchSprint": {
@@ -14,14 +14,14 @@
       { "phase": 2, "name": "Backend Data Integrity", "issues": "#111-#116", "count": 6, "priority": "P1", "status": "complete", "commit": "75aec1e" },
       { "phase": 3, "name": "Cross-Portal", "issues": "#148-#150", "count": 3, "priority": "P0-P1", "status": "complete", "commit": "5309261" },
       { "phase": 4, "name": "URL Routing", "issues": "#117-#120", "count": 4, "priority": "P1-P2", "status": "complete", "commit": "afade2e" },
-      { "phase": 5, "name": "Retailer Portal", "issues": "#121-#128", "count": 8, "priority": "P0-P1", "status": "pending" },
+      { "phase": 5, "name": "Retailer Portal", "issues": "#121-#128", "count": 8, "priority": "P0-P1", "status": "complete", "commit": "2df04af" },
       { "phase": 6, "name": "Supplier Portal", "issues": "#129-#135", "count": 7, "priority": "P0-P1", "status": "pending" },
       { "phase": 7, "name": "SuperAdmin Portal", "issues": "#136-#141", "count": 6, "priority": "P0-P1", "status": "pending" },
       { "phase": 8, "name": "POS Mobile", "issues": "#142-#147", "count": 6, "priority": "P0-P1", "status": "pending" }
     ],
     "auditCoverage": {
-      "p0Fixed": "8/20",
-      "p1Fixed": "10/89",
+      "p0Fixed": "10/20",
+      "p1Fixed": "16/89",
       "p2CriticalFixed": "2/15",
       "totalCovered": "134/136"
     }
@@ -69,11 +69,14 @@
     "zrpGatesDeferred": 0
   },
   "lastActions": [
-    "Phase 4 COMPLETE: URL Routing #117-#120 (4/4 tickets, 9 files, commit afade2e)",
-    "URL-001: Security headers added to all 4 portals (nginx + next.config.js + Dockerfile)",
-    "URL-002: Retailer favicon created, static file 404s fixed (no more SPA catch-all for .svg/.png)",
-    "URL-003: Cache-Control no-cache on HTML, supplier trailingSlash=false, landing 404 for unknowns",
-    "URL-004: Health endpoints stripped to minimal {status:ok} — no version/env/config leak"
+    "Phase 5 COMPLETE: Retailer Portal #121-#128 (8/8 tickets, 7 files, commit 2df04af)",
+    "RET-001: credentials:'include' on lookup fetch for cookie auth consistency",
+    "RET-002: Debug footer gated behind import.meta.env.DEV — no info leak in production",
+    "RET-003: Fixed isActive() double-highlight (settings vs settings/payments)",
+    "RET-004: LimitedModeGuard added — route-level blocks when application not ACTIVE",
+    "RET-005: DRY UPI validation, product name/price sanity checks",
+    "RET-007: 6x bare response.json() replaced with safeJson() in ImportPage",
+    "RET-008: Logout clears ALL retailer_/store_ localStorage keys"
   ],
-  "nextAction": "Start Phase 5: Retailer Portal (#121-#128) on batch/audit-fixes branch"
+  "nextAction": "Start Phase 6: Supplier Portal (#129-#135) on batch/audit-fixes branch"
 }
