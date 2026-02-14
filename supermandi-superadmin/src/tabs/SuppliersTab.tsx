@@ -23,6 +23,7 @@ interface SuppliersTabProps {
   bankRejectReason: Record<string, string>;
   setBankRejectReason: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   handleBankVerify: (supplierId: string, action: "approve" | "reject") => void;
+  confirmedBankApprove: (supplierId: string) => void;
   // Verified suppliers
   supplierSearch: string;
   setSupplierSearch: (v: string) => void;
@@ -74,6 +75,7 @@ export function SuppliersTab({
   bankRejectReason,
   setBankRejectReason,
   handleBankVerify,
+  confirmedBankApprove,
   supplierSearch,
   setSupplierSearch,
   requestSupplierStatusChange,
@@ -241,7 +243,7 @@ export function SuppliersTab({
                 <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 10 }}>
                   <button
                     className="btnPrimary"
-                    onClick={() => { if (window.confirm(`Approve bank details for ${bc.businessName}? This action cannot be undone.`)) handleBankVerify(bc.id, "approve"); }}
+                    onClick={() => confirmedBankApprove(bc.id)}
                     disabled={bankVerifyLoading[bc.id]}
                     style={{ fontSize: 12, padding: "4px 12px" }}
                   >

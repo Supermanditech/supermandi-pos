@@ -30,6 +30,7 @@ interface StaffTabProps {
   handleAddStaff: () => void;
   handleToggleStaffActive: (staffId: string, currentlyActive: boolean) => void;
   handleResetPin: () => void;
+  staffSuccess: string;
 }
 
 export function StaffTab({
@@ -40,6 +41,7 @@ export function StaffTab({
   setNewStaffName, setNewStaffPhone, setNewStaffPin, setNewStaffRole,
   setResetPinStaffId, setResetPinValue,
   refreshStaff, handleAddStaff, handleToggleStaffActive, handleResetPin,
+  staffSuccess,
 }: StaffTabProps) {
   return (
     <section className="card">
@@ -70,6 +72,7 @@ export function StaffTab({
       </div>
 
       {staffError && <div className="alertDanger" style={{ marginBottom: 12 }}>{staffError}</div>}
+      {staffSuccess && <div style={{ color: '#16a34a', background: '#f0fdf4', padding: '8px 12px', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>{staffSuccess}</div>}
 
       {showAddStaff && (
         <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: 16, marginBottom: 16 }}>
@@ -81,11 +84,11 @@ export function StaffTab({
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Phone (10 digits)</label>
-              <input type="text" value={newStaffPhone} onChange={(e) => setNewStaffPhone(e.target.value)} placeholder="9876543210" maxLength={10} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+              <input type="tel" inputMode="numeric" pattern="\d{10}" value={newStaffPhone} onChange={(e) => setNewStaffPhone(e.target.value.replace(/\D/g, ''))} placeholder="9876543210" maxLength={10} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>PIN (4-6 digits)</label>
-              <input type="password" value={newStaffPin} onChange={(e) => setNewStaffPin(e.target.value)} placeholder="1234" maxLength={6} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+              <input type="password" inputMode="numeric" pattern="\d{4,6}" value={newStaffPin} onChange={(e) => setNewStaffPin(e.target.value.replace(/\D/g, ''))} placeholder="1234" maxLength={6} style={{ width: "100%", padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
             </div>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: "#64748b" }}>Role</label>
@@ -142,7 +145,7 @@ export function StaffTab({
                     </div>
                     {resetPinStaffId === s.id && (
                       <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                        <input type="password" value={resetPinValue} onChange={(e) => setResetPinValue(e.target.value)} placeholder="New PIN" maxLength={6} style={{ width: 80, padding: "2px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 12 }} />
+                        <input type="password" inputMode="numeric" pattern="\d{4,6}" value={resetPinValue} onChange={(e) => setResetPinValue(e.target.value.replace(/\D/g, ''))} placeholder="New PIN" maxLength={6} style={{ width: 80, padding: "2px 6px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 12 }} />
                         <button className="btnSuccess btnSm" onClick={handleResetPin} style={{ fontSize: 11, padding: "2px 6px" }}>Save</button>
                         <button className="btnGhost btnSm" onClick={() => setResetPinStaffId(null)} style={{ fontSize: 11, padding: "2px 6px" }}>Cancel</button>
                       </div>

@@ -1,6 +1,8 @@
 // SA-001: Registration events tab extracted from App.tsx
+import { useState } from "react";
 import type { RegistrationEvent } from "../api/registrationEvents";
 import { sendEnrollmentCodeToStore } from "../api/registrationEvents";
+import { EnrollmentResultModal, type EnrollmentResult } from "../components/ConfirmDialog";
 
 interface RegistrationsTabProps {
   regEvents: RegistrationEvent[];
@@ -33,6 +35,10 @@ export function RegistrationsTab({
   setSendingEnrollment,
   refreshRegEvents,
 }: RegistrationsTabProps) {
+  // STBT-186.4: Enrollment code result modal state (replaces alert())
+  const [enrollmentResult, setEnrollmentResult] = useState<EnrollmentResult | null>(null);
+  const [enrollmentError, setEnrollmentError] = useState("");
+
   return (
     <section className="card">
       <div className="cardHeader">
@@ -165,11 +171,17 @@ export function RegistrationsTab({
                       disabled={!!sendingEnrollment}
                       onClick={async () => {
                         setSendingEnrollment(evt.storeId!);
+                        setEnrollmentError("");
                         try {
                           const resp = await sendEnrollmentCodeToStore(evt.storeId!);
-                          alert(`Enrollment code: ${resp.enrollmentCode}\nExpires: ${new Date(resp.expiresAt).toLocaleTimeString()}\nSMS: ${resp.notification.smsSent ? "Sent" : "Skipped"}\nEmail: ${resp.notification.emailSent ? "Sent" : "Skipped"}`);
+                          setEnrollmentResult({
+                            enrollmentCode: resp.enrollmentCode,
+                            expiresAt: resp.expiresAt,
+                            smsSent: resp.notification.smsSent,
+                            emailSent: resp.notification.emailSent,
+                          });
                         } catch (err: any) {
-                          alert(`Failed: ${err?.message || "Unknown error"}`);
+                          setEnrollmentError(err?.message || "Failed to send enrollment code");
                         } finally {
                           setSendingEnrollment("");
                         }
@@ -193,6 +205,18 @@ export function RegistrationsTab({
           </tbody>
         </table>
       </div>
+
+      {/* STBT-186.4: Enrollment error banner */}
+      {enrollmentError && (
+        <div style={{ color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginTop: 8, fontSize: 13 }}>
+          {enrollmentError}
+        </div>
+      )}
+
+      {/* STBT-186.4: Enrollment code result modal */}
+      {enrollmentResult && (
+        <EnrollmentResultModal result={enrollmentResult} onClose={() => setEnrollmentResult(null)} />
+      )}
     </section>
   );
 }

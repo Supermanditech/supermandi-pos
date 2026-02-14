@@ -69,6 +69,7 @@ import { type TabKey, type GroupKey, type AnalyticsTabKey, type DeviceType, ADMI
 // SA-001: Extracted components
 import { LoginGate } from "./components/LoginGate";
 import { ConfirmationModals } from "./components/ConfirmationModals";
+import { ConfirmDialog, type ConfirmDialogConfig } from "./components/ConfirmDialog";
 import { AiPanel } from "./components/AiPanel";
 // SA-001: Extracted tab components
 import { EventsTab } from "./tabs/EventsTab";
@@ -105,6 +106,7 @@ export default function App() {
       setCreateUserError(""); setSettingsError(""); setAuditLogsError("");
       setRegEventsError(""); setDocumentsError(""); setStaffError("");
       setGrnAlertsError(""); setFeatureFlagsError(""); setApplicationsError("");
+      setStaffSuccess(""); setConfirmDialog(null);
     }
     setTabRaw(newTab);
   };
@@ -443,6 +445,15 @@ export default function App() {
   const [bulkFlagAction, setBulkFlagAction] = useState<"enable" | "disable">("enable");
   const [bulkFlagLoading, setBulkFlagLoading] = useState(false);
   const [bulkFlagResult, setBulkFlagResult] = useState("");
+
+  // STBT-186.1: Generic confirmation dialog state (replaces alert/window.confirm)
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  function showConfirm(title: string, message: string, confirmLabel: string, variant: ConfirmDialogConfig['variant'], onConfirm: () => void, detail?: string) {
+    setConfirmDialog({ title, message, detail, confirmLabel, variant, onConfirm: () => { setConfirmDialog(null); onConfirm(); } });
+  }
+
+  // STBT-186.14: Staff success state (replaces alert("PIN reset successfully"))
+  const [staffSuccess, setStaffSuccess] = useState("");
 
   // STAGING-FIX-014: Application approval state
   const [applications, setApplications] = useState<Application[]>([]);
@@ -1093,7 +1104,7 @@ export default function App() {
       refreshDocuments();
     } catch (e: any) {
       await logAdminActionError("approve", "document", docId, e?.message || "Unknown error");
-      alert(e?.message || "Failed to approve document");
+      setDocumentsError(e?.message || "Failed to approve document");
     } finally {
       setDocumentActionLoading(null);
     }
@@ -1103,7 +1114,7 @@ export default function App() {
   async function handleRejectDocument(docId: string, reason: string) {
     // AUDIT-SA-014: Require meaningful rejection reason (min 10 chars)
     if (reason.trim().length < 10) {
-      alert("Please provide a detailed rejection reason (at least 10 characters)");
+      setDocumentsError("Please provide a detailed rejection reason (at least 10 characters)");
       return;
     }
     setDocumentActionLoading(docId);
@@ -1115,7 +1126,7 @@ export default function App() {
       refreshDocuments();
     } catch (e: any) {
       await logAdminActionError("reject", "document", docId, e?.message || "Unknown error");
-      alert(e?.message || "Failed to reject document");
+      setDocumentsError(e?.message || "Failed to reject document");
     } finally {
       setDocumentActionLoading(null);
     }
@@ -1138,6 +1149,12 @@ export default function App() {
 
   async function handleAddStaff() {
     if (!staffStoreId) return;
+    // STBT-186.14: Validate phone and PIN before submit
+    if (!newStaffName.trim()) { setStaffError("Staff name is required"); return; }
+    if (!/^\d{10}$/.test(newStaffPhone.trim())) { setStaffError("Phone must be exactly 10 digits"); return; }
+    if (!/^\d{4,6}$/.test(newStaffPin)) { setStaffError("PIN must be 4-6 digits"); return; }
+    setStaffError("");
+    setStaffSuccess("");
     setStaffActionLoading("add");
     try {
       await createStaff(staffStoreId, {
@@ -1153,7 +1170,7 @@ export default function App() {
       setNewStaffRole("CASHIER");
       refreshStaff();
     } catch (e: any) {
-      alert(e?.message || "Failed to add staff");
+      setStaffError(e?.message || "Failed to add staff");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1161,12 +1178,13 @@ export default function App() {
 
   async function handleToggleStaffActive(staffId: string, currentlyActive: boolean) {
     if (!staffStoreId) return;
+    setStaffError("");
     setStaffActionLoading(staffId);
     try {
       await updateStaff(staffStoreId, staffId, { is_active: !currentlyActive });
       refreshStaff();
     } catch (e: any) {
-      alert(e?.message || "Failed to update staff");
+      setStaffError(e?.message || "Failed to update staff");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1174,17 +1192,19 @@ export default function App() {
 
   async function handleResetPin() {
     if (!staffStoreId || !resetPinStaffId || !/^\d{4,6}$/.test(resetPinValue)) {
-      alert("PIN must be 4-6 digits");
+      setStaffError("PIN must be 4-6 digits");
       return;
     }
+    setStaffError("");
+    setStaffSuccess("");
     setStaffActionLoading(resetPinStaffId);
     try {
       await resetStaffPin(staffStoreId, resetPinStaffId, resetPinValue);
       setResetPinStaffId(null);
       setResetPinValue("");
-      alert("PIN reset successfully");
+      setStaffSuccess("PIN reset successfully");
     } catch (e: any) {
-      alert(e?.message || "Failed to reset PIN");
+      setStaffError(e?.message || "Failed to reset PIN");
     } finally {
       setStaffActionLoading(null);
     }
@@ -1307,7 +1327,7 @@ export default function App() {
       await updateGrnAlert(alertId, { status });
       refreshGrnAlerts();
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Failed to update alert");
+      setGrnAlertsError(e instanceof Error ? e.message : "Failed to update alert");
     } finally {
       setGrnAlertActionLoading(null);
     }
@@ -2001,7 +2021,25 @@ export default function App() {
     }
   }
 
-  async function handleStoreSave() {
+  async function executeStoreSave(vpa: string) {
+    const id = storeAdminId.trim();
+    setStoreError("");
+    setStoreSuccess("");
+    setStoreLoading(true);
+    try {
+      const record = await updateStore(id, { upiVpa: vpa });
+      setStoreRecord(record);
+      setStoreUpiInput(record.upi_vpa ?? "");
+      setStoreSuccess(record.active ? "Store activated." : "Store deactivated.");
+      void refreshStores();
+    } catch (e: any) {
+      setStoreError(e?.message ? String(e.message) : "Failed to update store");
+    } finally {
+      setStoreLoading(false);
+    }
+  }
+
+  function handleStoreSave() {
     const id = storeAdminId.trim();
     if (!id) {
       setStoreError("Store ID is required.");
@@ -2015,26 +2053,15 @@ export default function App() {
         setStoreError("UPI VPA is required to activate the store.");
         return;
       }
-      const ok = window.confirm("Clear UPI VPA and deactivate this store?");
-      if (!ok) return;
-    } else if (!UPI_VPA_PATTERN.test(trimmedVpa)) {
+      // STBT-186.1: Replace window.confirm with proper modal
+      showConfirm('Deactivate Store', 'Clear UPI VPA and deactivate this store?', 'Deactivate', 'danger', () => executeStoreSave(trimmedVpa), 'The store will stop accepting payments until reactivated.');
+      return;
+    }
+    if (!UPI_VPA_PATTERN.test(trimmedVpa)) {
       setStoreError("UPI VPA format is invalid.");
       return;
     }
-    setStoreError("");
-    setStoreSuccess("");
-    setStoreLoading(true);
-    try {
-      const record = await updateStore(id, { upiVpa: trimmedVpa });
-      setStoreRecord(record);
-      setStoreUpiInput(record.upi_vpa ?? "");
-      setStoreSuccess(record.active ? "Store activated." : "Store deactivated.");
-      void refreshStores();
-    } catch (e: any) {
-      setStoreError(e?.message ? String(e.message) : "Failed to update store");
-    } finally {
-      setStoreLoading(false);
-    }
+    executeStoreSave(trimmedVpa);
   }
 
   async function handleCreateEnrollment() {
@@ -2057,6 +2084,69 @@ export default function App() {
   }
 
   // ISSUE-MICRO-086: enrollmentCountdown useMemo removed — rendered by EnrollmentCountdown component
+
+  // =========================================================================
+  // STBT-186.1: Confirmed wrappers for destructive actions
+  // Each wrapper shows a ConfirmDialog before executing the actual handler.
+  // =========================================================================
+  const confirmedApproveProduct = (productId: string) => {
+    const p = pendingProducts.find(x => x.id === productId);
+    showConfirm('Approve Product', `Are you sure you want to approve "${p?.productName || productId}" for sale?`, 'Approve', 'warning', () => handleApproveProduct(productId), 'This product will become available to all linked retailers.');
+  };
+  const confirmedApproveDocument = (docId: string) => {
+    const doc = pendingDocuments.find(x => x.id === docId);
+    showConfirm('Approve Document', `Are you sure you want to approve this ${doc?.document_type || 'document'}?`, 'Approve', 'warning', () => handleApproveDocument(docId), 'This may activate the associated account.');
+  };
+  const confirmedRejectDocument = (docId: string, reason: string) => {
+    if (reason.trim().length < 10) { setDocumentsError("Rejection reason must be at least 10 characters"); return; }
+    showConfirm('Reject Document', 'Are you sure you want to reject this document?', 'Reject', 'danger', () => handleRejectDocument(docId, reason), `Reason: "${reason.substring(0, 60)}${reason.length > 60 ? '...' : ''}"`);
+  };
+  const confirmedApproveApplication = (appId: string) => {
+    const app = applications.find(x => x.id === appId);
+    showConfirm('Approve Application', `Are you sure you want to approve the application from "${app?.business_name || app?.owner_name || appId}"?`, 'Approve', 'warning', () => handleApproveApplication(appId), 'This will create the store or supplier account.');
+  };
+  const confirmedRejectApplication = (appId: string) => {
+    const reason = appRejectReason[appId];
+    if (!reason || reason.trim().length < 5) { setApplicationsError("Rejection reason must be at least 5 characters"); return; }
+    showConfirm('Reject Application', `Are you sure you want to reject this application?`, 'Reject', 'danger', () => handleRejectApplication(appId), `Reason: "${reason.substring(0, 60)}${reason.length > 60 ? '...' : ''}"`);
+  };
+  const confirmedToggleStaffActive = (staffId: string, currentlyActive: boolean) => {
+    const staff = staffList.find(x => x.id === staffId);
+    const action = currentlyActive ? 'deactivate' : 'reactivate';
+    showConfirm(currentlyActive ? 'Deactivate Staff' : 'Reactivate Staff', `Are you sure you want to ${action} "${staff?.name || staffId}"?`, currentlyActive ? 'Deactivate' : 'Reactivate', currentlyActive ? 'danger' : 'info', () => handleToggleStaffActive(staffId, currentlyActive), currentlyActive ? 'This staff member will be locked out immediately.' : 'This staff member will regain POS access.');
+  };
+  const confirmedResetPin = () => {
+    if (!resetPinStaffId || !/^\d{4,6}$/.test(resetPinValue)) { setStaffError("PIN must be 4-6 digits"); return; }
+    const staff = staffList.find(x => x.id === resetPinStaffId);
+    showConfirm('Reset Staff PIN', `Reset PIN for "${staff?.name || resetPinStaffId}"?`, 'Reset PIN', 'warning', () => handleResetPin(), 'The staff member will need the new PIN to log in.');
+  };
+  const confirmedToggleGlobalFlag = (key: string, enabled: boolean) => {
+    showConfirm(enabled ? 'Enable Feature Flag' : 'Disable Feature Flag', `${enabled ? 'Enable' : 'Disable'} the "${key}" flag globally?`, enabled ? 'Enable' : 'Disable', enabled ? 'info' : 'danger', () => handleToggleGlobalFlag(key, enabled), enabled ? 'This feature will be activated for all users.' : 'This feature will be disabled for all users.');
+  };
+  const confirmedGrnAlertAction = (alertId: string, status: "ACKNOWLEDGED" | "DISMISSED") => {
+    if (status === "DISMISSED") {
+      showConfirm('Dismiss GRN Alert', 'Dismiss this excess receipt alert?', 'Dismiss', 'warning', () => handleGrnAlertAction(alertId, status), 'Dismissed alerts will not appear in the active queue.');
+    } else {
+      handleGrnAlertAction(alertId, status);
+    }
+  };
+  const confirmedBulkFF = () => {
+    if (!selectedStoreIds.size || !bulkFlagKey) return;
+    showConfirm('Bulk Feature Flag Update', `${bulkFlagAction === 'enable' ? 'Enable' : 'Disable'} "${bulkFlagKey}" for ${selectedStoreIds.size} store(s)?`, 'Apply', 'warning', () => handleBulkFF());
+  };
+  const confirmedVerifySupplier = (requestId: string) => {
+    const req = pendingSuppliers.find(x => x.id === requestId);
+    showConfirm('Verify Supplier', `Verify "${req?.businessName || requestId}" and link to existing supplier?`, 'Verify', 'warning', () => handleVerifySupplier(requestId), 'This will activate the supplier account.');
+  };
+  const confirmedVerifySupplierDirectly = (requestId: string) => {
+    const req = pendingSuppliers.find(x => x.id === requestId);
+    showConfirm('Verify Supplier Directly', `Verify "${req?.businessName || requestId}" as a new supplier?`, 'Verify', 'warning', () => handleVerifySupplierDirectly(requestId), 'This will create and activate a new supplier account.');
+  };
+  const confirmedBankApprove = (supplierId: string) => {
+    const bank = bankChanges.find(x => x.id === supplierId);
+    showConfirm('Approve Bank Details', `Approve bank details for "${bank?.businessName || supplierId}"?`, 'Approve', 'warning', () => handleBankVerify(supplierId, "approve"), 'This action cannot be undone.');
+  };
+  // =========================================================================
 
   // ITER4-CRIT-001: Show login gate if not authenticated
   if (!isAuthenticated) {
@@ -2354,7 +2444,7 @@ export default function App() {
           setBulkFlagKey={setBulkFlagKey}
           bulkFlagAction={bulkFlagAction}
           setBulkFlagAction={setBulkFlagAction}
-          handleBulkFF={handleBulkFF}
+          handleBulkFF={confirmedBulkFF}
           bulkFlagLoading={bulkFlagLoading}
           bulkFlagResult={bulkFlagResult}
           featureFlags={featureFlags}
@@ -2385,14 +2475,15 @@ export default function App() {
           rejectReason={rejectReason}
           setRejectReason={setRejectReason}
           supplierActionLoading={supplierActionLoading}
-          handleVerifySupplierDirectly={handleVerifySupplierDirectly}
-          handleVerifySupplier={handleVerifySupplier}
+          handleVerifySupplierDirectly={confirmedVerifySupplierDirectly}
+          handleVerifySupplier={confirmedVerifySupplier}
           handleRejectSupplier={handleRejectSupplier}
           bankChanges={bankChanges}
           bankVerifyLoading={bankVerifyLoading}
           bankRejectReason={bankRejectReason}
           setBankRejectReason={setBankRejectReason}
           handleBankVerify={handleBankVerify}
+          confirmedBankApprove={confirmedBankApprove}
           supplierSearch={supplierSearch}
           setSupplierSearch={setSupplierSearch}
           requestSupplierStatusChange={requestSupplierStatusChange}
@@ -2402,7 +2493,7 @@ export default function App() {
           setProductRejectReason={setProductRejectReason}
           productActionLoading={productActionLoading}
           handleOpenEditProduct={handleOpenEditProduct}
-          handleApproveProduct={handleApproveProduct}
+          handleApproveProduct={confirmedApproveProduct}
           handleRejectProduct={handleRejectProduct}
           editingProduct={editingProduct}
           setEditingProduct={setEditingProduct}
@@ -2427,8 +2518,8 @@ export default function App() {
           appRejectReason={appRejectReason}
           setAppRejectReason={setAppRejectReason}
           refreshApplications={refreshApplications}
-          handleApproveApplication={handleApproveApplication}
-          handleRejectApplication={handleRejectApplication}
+          handleApproveApplication={confirmedApproveApplication}
+          handleRejectApplication={confirmedRejectApplication}
         />
       )}
 
@@ -2495,7 +2586,7 @@ export default function App() {
           featureFlagsError={featureFlagsError}
           refreshSettings={refreshSettings}
           refreshFeatureFlags={refreshFeatureFlags}
-          handleToggleGlobalFlag={handleToggleGlobalFlag}
+          handleToggleGlobalFlag={confirmedToggleGlobalFlag}
         />
       )}
 
@@ -2515,8 +2606,8 @@ export default function App() {
           setSelectedDocument={setSelectedDocument}
           setDocRejectReason={setDocRejectReason}
           refreshDocuments={refreshDocuments}
-          handleApproveDocument={handleApproveDocument}
-          handleRejectDocument={handleRejectDocument}
+          handleApproveDocument={confirmedApproveDocument}
+          handleRejectDocument={confirmedRejectDocument}
         />
       )}
 
@@ -2578,8 +2669,9 @@ export default function App() {
           setResetPinValue={setResetPinValue}
           refreshStaff={refreshStaff}
           handleAddStaff={handleAddStaff}
-          handleToggleStaffActive={handleToggleStaffActive}
-          handleResetPin={handleResetPin}
+          handleToggleStaffActive={confirmedToggleStaffActive}
+          handleResetPin={confirmedResetPin}
+          staffSuccess={staffSuccess}
         />
       )}
 
@@ -2596,7 +2688,7 @@ export default function App() {
           setGrnAlertsFilter={setGrnAlertsFilter}
           setGrnAlertsOffset={setGrnAlertsOffset}
           refreshGrnAlerts={refreshGrnAlerts}
-          handleGrnAlertAction={handleGrnAlertAction}
+          handleGrnAlertAction={confirmedGrnAlertAction}
         />
       )}
 
@@ -2632,6 +2724,11 @@ export default function App() {
         setStoreSuspendReason={setStoreSuspendReason}
         executeStoreStatusChange={executeStoreStatusChange}
       />
+
+      {/* STBT-186.1: Generic confirmation dialog */}
+      {confirmDialog && (
+        <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />
+      )}
 
       {/* SA-001: AI panel — extracted to components/AiPanel */}
       <AiPanel
