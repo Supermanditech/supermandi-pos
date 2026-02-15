@@ -541,6 +541,7 @@ export default function LoginPage() {
   };
 
   // Reset to initial state
+  // T-009: Clear registration sessionStorage when switching phone
   const handleChangePhone = () => {
     setStep('phone');
     setOtp('');
@@ -549,6 +550,7 @@ export default function LoginPage() {
     setStoreCode('');
     setLookupComplete(false);
     recaptchaInitialized.current = false;
+    sessionStorage.removeItem('supermandi_retailer_reg_state');
   };
 
   return (
