@@ -1286,6 +1286,96 @@ router.get("/auth/me", async (req: Request, res: Response, next: NextFunction) =
 });
 
 // =============================================================================
+// T-004: Change Password (requires current password)
+// =============================================================================
+
+/**
+ * POST /api/v1/retailer-admin/auth/change-password
+ * T-004: Change password for authenticated retailer user
+ * Requires valid JWT + current password verification
+ */
+router.post("/auth/change-password", authRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.headers['x-user-id'] as string;
+    const storeId = req.headers['x-actor-id'] as string;
+
+    if (!userId || !storeId) {
+      res.status(401).json({ error: { code: "UNAUTHORIZED", message: "Authentication required" } });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "Current password and new password are required" }
+      });
+      return;
+    }
+
+    // Validate new password
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      res.status(400).json({
+        error: { code: "INVALID_PASSWORD", message: passwordError }
+      });
+      return;
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+      return;
+    }
+
+    // Get current password hash
+    const userResult = await pool.query(
+      `SELECT id, password_hash FROM auth.users WHERE id = $1 AND status = 'active'`,
+      [userId]
+    );
+
+    if (!userResult.rows[0]) {
+      res.status(404).json({ error: { code: "USER_NOT_FOUND", message: "User not found" } });
+      return;
+    }
+
+    const user = userResult.rows[0];
+
+    if (!user.password_hash) {
+      res.status(400).json({
+        error: { code: "NO_PASSWORD", message: "No password set for this account. Use 'Forgot Password' to set one." }
+      });
+      return;
+    }
+
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      res.status(401).json({
+        error: { code: "INVALID_PASSWORD", message: "Current password is incorrect" }
+      });
+      return;
+    }
+
+    // Hash and update new password
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+    await pool.query(
+      `UPDATE auth.users SET password_hash = $1 WHERE id = $2`,
+      [newHash, userId]
+    );
+
+    console.log(`[RetailerAuth] T-004: Password changed for user ${userId}`);
+
+    res.json({ data: { success: true, message: "Password changed successfully" } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============================================================================
 // GO-LIVE-137: Server-side session invalidation (Logout)
 // =============================================================================
 

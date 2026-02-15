@@ -47,6 +47,14 @@ export default function SettingsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
 
+  // T-004: Change Password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
   // Load settings on mount
   useEffect(() => {
     if (!accessToken) return;
@@ -173,6 +181,53 @@ export default function SettingsPage() {
       setSaveError(err.message || 'Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // T-004: Change Password handler
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    if (!currentPassword) {
+      setPasswordError('Please enter your current password');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+      setPasswordError('Password must contain at least one uppercase letter, one lowercase letter, and one number');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    setPasswordSaving(true);
+    try {
+      const response = await authFetch('/api/v1/retailer-admin/auth/change-password', accessToken!, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (response.ok) {
+        setPasswordSuccess(true);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setPasswordSuccess(false), 3000);
+      } else {
+        const data = await safeJson(response);
+        setPasswordError(data.error?.message || 'Failed to change password');
+      }
+    } catch (err: any) {
+      setPasswordError(err.message || 'Failed to change password');
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -623,6 +678,155 @@ export default function SettingsPage() {
               <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
                 This message will appear at the bottom of printed receipts ({settings.receiptFooter?.length || 0}/200 characters)
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* T-004: Change Password */}
+        <section style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          border: '1px solid #e2e8f0',
+        }}>
+          <h2 style={{
+            margin: '0 0 1.25rem',
+            fontSize: '1rem',
+            fontWeight: '600',
+            color: '#334155',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>🔒</span>
+            Change Password
+          </h2>
+
+          {passwordSuccess && (
+            <div style={{
+              padding: '0.75rem 1rem',
+              background: '#dcfce7',
+              borderRadius: '8px',
+              border: '1px solid #22c55e',
+              color: '#166534',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}>
+              Password changed successfully!
+            </div>
+          )}
+
+          {passwordError && (
+            <div style={{
+              padding: '0.75rem 1rem',
+              background: '#fee2e2',
+              borderRadius: '8px',
+              border: '1px solid #ef4444',
+              color: '#dc2626',
+              marginBottom: '1rem',
+              fontSize: '0.875rem',
+            }}>
+              {passwordError}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gap: '1rem', maxWidth: '400px' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}>
+                Current Password
+              </label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError(null); }}
+                placeholder="Enter current password"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.95rem',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}>
+                New Password
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); setPasswordError(null); }}
+                placeholder="Min 8 chars, 1 upper, 1 lower, 1 number"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.95rem',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}>
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(null); }}
+                placeholder="Re-enter new password"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.95rem',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div>
+              <button
+                onClick={handleChangePassword}
+                disabled={passwordSaving}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: passwordSaving ? '#94a3b8' : '#1e293b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '0.9rem',
+                  fontWeight: '600',
+                  cursor: passwordSaving ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {passwordSaving ? 'Changing...' : 'Change Password'}
+              </button>
             </div>
           </div>
         </section>
