@@ -1,19 +1,19 @@
 export const colors = {
-  // Brand palette
-  primary: "#1D4ED8",
-  primaryDark: "#1E3A8A",
-  primaryLight: "#3B82F6",
+  // Brand palette — T-076: aligned to DESIGN_TOKENS.md
+  primary: "#2563EB",
+  primaryDark: "#1D4ED8",
+  primaryLight: "#EFF6FF",
   accent: "#14B8A6",
-  accentDark: "#0F766E",
-  accentLight: "#5EEAD4",
+  accentDark: "#0D9488",
+  accentLight: "#F0FDFA",
   secondary: "#14B8A6",
-  secondaryDark: "#0F766E",
-  secondaryLight: "#5EEAD4",
+  secondaryDark: "#0D9488",
+  secondaryLight: "#F0FDFA",
 
-  // Surfaces
-  bg: "#F4F6FB",
-  background: "#F4F6FB",
-  backgroundSecondary: "#EEF2F6",
+  // Surfaces — T-076: aligned to DESIGN_TOKENS.md
+  bg: "#F7F9FC",
+  background: "#F7F9FC",
+  backgroundSecondary: "#F1F5F9",
   backgroundTertiary: "#E2E8F0",
   surface: "#FFFFFF",
   surfaceAlt: "#F8FAFC",

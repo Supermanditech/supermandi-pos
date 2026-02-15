@@ -1,4 +1,12 @@
-# SuperMandi Cross-Platform Audit Backlog
+# SUPERSEDED
+
+> **This file is superseded by [`RELEASES/STAGING_TICKETS.md`](RELEASES/STAGING_TICKETS.md).**
+> All actionable items from this backlog have been triaged into T-001 → T-073 + 28 CL audit tickets.
+> Do NOT use this file for ticket planning.
+
+---
+
+# SuperMandi Cross-Platform Audit Backlog (HISTORICAL)
 
 > **Generated:** 2026-02-12 | **Total Issues:** 320 | **Audited by:** 5 parallel agents
 > **Scope:** Retailer Admin + Supplier Portal + SuperAdmin + POS Mobile + Backend API

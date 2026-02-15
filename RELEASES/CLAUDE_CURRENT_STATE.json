@@ -1,71 +1,69 @@
 {
-  "version": "11.0",
-  "lastUpdated": "2026-02-15T18:00:00+05:30",
-  "currentPhase": "E2E PRODUCTION-GRADE IMPLEMENTATION — 20 tickets (T-054 → T-073)",
-  "currentTicket": "T-054",
+  "version": "13.1",
+  "lastUpdated": "2026-02-16T01:00:00+05:30",
+  "currentPhase": "Phase 3+4: UI/UX Professional Polish + Wiring & Navigation",
+  "currentTicket": null,
   "ticketQueue": [
-    "T-054", "T-055",
-    "T-056", "T-057", "T-058", "T-059", "T-060", "T-061",
-    "T-062", "T-063", "T-064", "T-065", "T-066", "T-067", "T-068",
-    "T-069", "T-070", "T-071", "T-072", "T-073"
+    "T-075","T-077","T-078","T-079","T-080",
+    "T-081","T-082","T-083","T-084","T-085","T-086","T-087","T-088",
+    "T-089","T-090","T-091","T-092","T-093","T-094","T-095","T-096","T-097","T-098",
+    "T-099","T-100","T-101","T-102","T-103",
+    "T-104","T-105","T-106",
+    "T-107","T-108","T-109",
+    "T-110","T-111",
+    "T-112","T-113","T-114",
+    "T-115","T-116","T-117",
+    "T-118","T-119","T-120","T-121",
+    "T-122","T-123","T-124","T-125","T-126","T-127"
   ],
   "ticketStatus": {
-    "T-054": "QUEUED",
-    "T-055": "QUEUED",
-    "T-056": "QUEUED",
-    "T-057": "QUEUED",
-    "T-058": "QUEUED",
-    "T-059": "QUEUED",
-    "T-060": "QUEUED",
-    "T-061": "QUEUED",
-    "T-062": "QUEUED",
-    "T-063": "QUEUED",
-    "T-064": "QUEUED",
-    "T-065": "QUEUED",
-    "T-066": "QUEUED",
-    "T-067": "QUEUED",
-    "T-068": "QUEUED",
-    "T-069": "QUEUED",
-    "T-070": "QUEUED",
-    "T-071": "QUEUED",
-    "T-072": "QUEUED",
-    "T-073": "QUEUED"
+    "T-054": "DONE", "T-055": "DONE",
+    "T-056": "DONE", "T-057": "DONE", "T-058": "DONE", "T-059": "DONE", "T-060": "DONE", "T-061": "DONE",
+    "T-062": "DONE", "T-063": "DONE", "T-064": "DONE", "T-065": "DONE", "T-066": "DONE", "T-067": "DONE", "T-068": "DONE",
+    "T-069": "DONE", "T-070": "DONE", "T-071": "DONE", "T-072": "DONE", "T-073": "DONE",
+    "T-074": "DONE", "T-075": "QUEUED", "T-076": "DONE", "T-077": "QUEUED", "T-078": "QUEUED", "T-079": "QUEUED", "T-080": "QUEUED",
+    "T-081": "QUEUED", "T-082": "QUEUED", "T-083": "QUEUED", "T-084": "QUEUED", "T-085": "QUEUED", "T-086": "QUEUED", "T-087": "QUEUED", "T-088": "QUEUED",
+    "T-089": "QUEUED", "T-090": "QUEUED", "T-091": "QUEUED", "T-092": "QUEUED", "T-093": "QUEUED", "T-094": "QUEUED", "T-095": "QUEUED", "T-096": "QUEUED", "T-097": "QUEUED", "T-098": "QUEUED",
+    "T-099": "QUEUED", "T-100": "QUEUED", "T-101": "QUEUED", "T-102": "QUEUED", "T-103": "QUEUED",
+    "T-104": "QUEUED", "T-105": "QUEUED", "T-106": "QUEUED",
+    "T-107": "QUEUED", "T-108": "QUEUED", "T-109": "QUEUED",
+    "T-110": "QUEUED", "T-111": "QUEUED",
+    "T-112": "QUEUED", "T-113": "QUEUED", "T-114": "QUEUED",
+    "T-115": "QUEUED", "T-116": "QUEUED", "T-117": "QUEUED",
+    "T-118": "QUEUED", "T-119": "QUEUED", "T-120": "QUEUED", "T-121": "QUEUED",
+    "T-122": "QUEUED", "T-123": "QUEUED", "T-124": "QUEUED", "T-125": "QUEUED", "T-126": "QUEUED", "T-127": "QUEUED"
+  },
+  "clAudit": {
+    "status": "COMPLETE",
+    "total": 28,
+    "pass": 15,
+    "fail": 13,
+    "allFailsFixed": true,
+    "commit": "57a649f",
+    "summary": "28-ticket cross-logic audit: double stock deduction fix, fractional qty migration, sale status alignment, column name fixes, supplier verification, purchase price cascade, invoice field gaps, retailer reorder/BNPL endpoints, admin credit approval, voice/import bug fixes"
   },
   "executionPhases": [
-    { "phase": 1, "name": "Retailer → POS Sync", "tickets": ["T-054", "T-055"], "count": 2, "priority": "P0", "status": "QUEUED" },
-    { "phase": 2, "name": "Loose Product Retail Variants", "tickets": ["T-056", "T-057", "T-058", "T-059", "T-060", "T-061"], "count": 6, "priority": "P0", "status": "QUEUED" },
-    { "phase": 3, "name": "Supply Chain E2E & Scalability", "tickets": ["T-062", "T-063", "T-064", "T-065", "T-066", "T-067", "T-068"], "count": 7, "priority": "P0-P1", "status": "QUEUED" },
-    { "phase": 4, "name": "Invoicing System", "tickets": ["T-069", "T-070", "T-071", "T-072", "T-073"], "count": 5, "priority": "P0", "status": "QUEUED" }
+    { "phase": 1, "name": "Retailer → POS Sync", "tickets": ["T-054", "T-055"], "status": "DONE" },
+    { "phase": 2, "name": "Loose Product Retail Variants", "tickets": ["T-056", "T-057", "T-058", "T-059", "T-060", "T-061"], "status": "DONE" },
+    { "phase": 3, "name": "Supply Chain E2E & Scalability", "tickets": ["T-062", "T-063", "T-064", "T-065", "T-066", "T-067", "T-068"], "status": "DONE" },
+    { "phase": 4, "name": "Invoicing System", "tickets": ["T-069", "T-070", "T-071", "T-072", "T-073"], "status": "DONE" },
+    { "phase": 5, "name": "Brand Foundation", "tickets": ["T-074", "T-075", "T-076", "T-077", "T-078", "T-079", "T-080"], "status": "QUEUED" },
+    { "phase": 6, "name": "Navigation & Layout", "tickets": ["T-081", "T-082", "T-083", "T-084", "T-085", "T-086", "T-087", "T-088"], "status": "QUEUED" },
+    { "phase": 7, "name": "Component Consistency", "tickets": ["T-089", "T-090", "T-091", "T-092", "T-093", "T-094", "T-095", "T-096", "T-097", "T-098"], "status": "QUEUED" },
+    { "phase": 8, "name": "Loading States & Feedback", "tickets": ["T-099", "T-100", "T-101", "T-102", "T-103"], "status": "QUEUED" },
+    { "phase": 9, "name": "Landing + POS + Verification", "tickets": ["T-104", "T-105", "T-106", "T-107", "T-108", "T-109", "T-110", "T-111"], "status": "QUEUED" },
+    { "phase": 10, "name": "Breadcrumbs + 404 Pages", "tickets": ["T-112", "T-113", "T-114", "T-115", "T-116", "T-117"], "status": "QUEUED" },
+    { "phase": 11, "name": "Deep Linking + POS Nav", "tickets": ["T-118", "T-119", "T-120", "T-121", "T-122", "T-123", "T-124", "T-125", "T-126", "T-127"], "status": "QUEUED" }
   ],
   "completedPhase1": {
     "range": "T-001 → T-053",
     "count": 53,
-    "commits": "08568af → 8ab4f4c (10 commits)",
-    "status": "ALL DONE — not yet pushed to origin"
+    "status": "DONE — pushed to origin"
   },
-  "zeroRegressionInvariants": [
-    "stock_balances.quantity = SUM(inventory_ledger.delta_qty) — ALWAYS",
-    "All prices in minor units (paise). No floating point math on money.",
-    "store_id from JWT only. Never trust client-sent store_id.",
-    "POS catalog: approved + verified + active link + mapping exists.",
-    "Invoice totals = SUM(line items). CGST+SGST or IGST, never both.",
-    "Every variant has parent product. Every invoice has purchase order. Every ledger entry has reference."
-  ],
-  "batchSprint": {
-    "masterIssue": "#103",
-    "totalTickets": 47,
-    "issueRange": "#104-#150",
-    "pr": "#151",
-    "mergeCommit": "8c217e0",
-    "status": "MERGED + DEPLOYED TO STAGING"
-  },
-  "goLiveHardening": {
-    "prs": {
-      "#191": { "title": "Phase 1: Backend blockers", "sha": "d46f065", "status": "MERGED + DEPLOYED" },
-      "#192": { "title": "Phase 2: Security hardening", "sha": "df306ec", "status": "MERGED + DEPLOYED" },
-      "#193": { "title": "Phase 3-6: Portal hardening", "sha": "f61a3b2", "status": "MERGED + DEPLOYED" }
-    },
-    "status": "ALL 3 PRs MERGED + DEPLOYED TO STAGING"
+  "completedPhase2": {
+    "range": "T-054 → T-073",
+    "count": 20,
+    "status": "DONE — code on main, 2 commits ahead of origin"
   },
   "infraStatus": {
     "A1_WIF": "DONE",
@@ -77,21 +75,22 @@
     "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
   },
   "phaseSnapshot": {
-    "totalTickets": 73,
-    "completed": 53,
-    "queued": 20,
+    "totalTickets": 127,
+    "completed": 75,
+    "queued": 52,
     "inProgress": 0,
-    "headSHA": "8ab4f4c",
+    "headSHA": "57a649f",
     "stagingLive": true,
     "stagingSHA": "f61a3b2",
-    "unpushedCommits": "10 commits (08568af → 8ab4f4c) for T-001 to T-053"
+    "unpushedCommits": "2 commits (bbf45a4, 57a649f) — gap fixes + CL audit"
   },
+  "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "Awaiting operator approval to start T-054. On go: push T-001-T-053 commits first, then execute T-054 → T-073 sequentially.",
+  "nextAction": "VS Code Claude agent executes T-075 → T-127 (T-074, T-076 already done). This session (Claude Code) manages tickets and state files only.",
   "lastActions": [
-    "STAGING_TICKETS.md updated: 53 DONE + 20 QUEUED = 73 total tickets",
-    "CLAUDE_CURRENT_STATE.json updated to v11.0 with full ticket queue",
-    "20 E2E production-grade tickets curated from operator input",
-    "Zero regression invariants defined for Phase 2 execution"
+    "T-074 DONE: Created RELEASES/DESIGN_TOKENS.md — brand spec (colors, typography, spacing, badges, locale)",
+    "T-076 DONE: Aligned src/theme/colors.ts POS mobile colors to DESIGN_TOKENS.md",
+    "AUDIT_BACKLOG.md marked superseded by STAGING_TICKETS.md",
+    "State file updated to v13.1 — 75 done, 52 queued"
   ]
 }
