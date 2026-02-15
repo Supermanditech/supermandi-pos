@@ -1272,6 +1272,258 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
 });
 
 // =============================================================================
+// T-068: SuperAdmin Publish Product → POS Visibility
+// Publish an approved product to all linked stores (auto-add to store catalogs)
+// =============================================================================
+
+/**
+ * POST /api/v1/admin/products/:productId/publish
+ * T-068: Publish an approved product to all stores linked to its supplier
+ * Creates store_products entries for each linked store that doesn't already have it
+ */
+adminSuppliersRouter.post("/products/:productId/publish", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const { productId } = req.params;
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Verify product is approved
+    const productCheck = await client.query(
+      `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.unit,
+              sp.purchase_price, sp.supermandi_margin_minor, sp.margin_percent,
+              sp.supplier_id, s.business_name as supplier_name
+       FROM catalog.supplier_products sp
+       JOIN supplier.suppliers s ON s.id = sp.supplier_id
+       WHERE sp.id = $1::uuid AND sp.approval_status = 'approved'`,
+      [productId]
+    );
+
+    if (productCheck.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Product not found or not approved" });
+    }
+
+    const product = productCheck.rows[0];
+
+    // Resolve the catalog product_id via supplier_product_map
+    let catalogProductId: string = productId;
+    const mapResult = await client.query(
+      `SELECT product_id FROM catalog.supplier_product_map
+       WHERE supplier_product_id = $1::uuid LIMIT 1`,
+      [productId]
+    );
+    if (mapResult.rows.length > 0) {
+      catalogProductId = mapResult.rows[0].product_id;
+    } else {
+      // No mapping — ensure catalog.products entry exists
+      await client.query(
+        `INSERT INTO catalog.products (id, name, primary_barcode, category, unit)
+         VALUES ($1::uuid, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+        [productId, product.name, product.barcode, product.category, product.unit]
+      );
+    }
+
+    // Calculate retailer price
+    let marginAmount = 0;
+    if (product.supermandi_margin_minor && product.supermandi_margin_minor > 0) {
+      marginAmount = product.supermandi_margin_minor;
+    } else if (product.margin_percent && product.margin_percent > 0) {
+      marginAmount = Math.round(product.purchase_price * product.margin_percent / 100);
+    }
+    const retailerPrice = product.purchase_price + marginAmount;
+
+    // Find all stores linked to this supplier that don't already have the product
+    const linkedStores = await client.query(
+      `SELECT ssl.store_id
+       FROM supplier.supplier_store_links ssl
+       WHERE ssl.supplier_id = $1::uuid AND ssl.status = 'active'
+         AND ssl.store_id NOT IN (
+           SELECT store_id FROM catalog.store_products
+           WHERE product_id = $2::uuid
+         )`,
+      [product.supplier_id, catalogProductId]
+    );
+
+    let publishedCount = 0;
+    for (const store of linkedStores.rows) {
+      // Add product to store catalog
+      const insertResult = await client.query(
+        `INSERT INTO catalog.store_products (
+          store_id, product_id, display_name, sell_price, purchase_price,
+          current_stock, is_active, supplier_id
+        ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid)
+        RETURNING id`,
+        [store.store_id, catalogProductId, product.name, retailerPrice,
+         product.purchase_price, product.supplier_id]
+      );
+
+      // Add barcode mapping
+      if (product.barcode) {
+        await client.query(
+          `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+           VALUES ($1, $2, $3, 'admin_publish')
+           ON CONFLICT (store_id, barcode) DO NOTHING`,
+          [store.store_id, insertResult.rows[0].id, product.barcode]
+        );
+      }
+
+      publishedCount++;
+    }
+
+    // Audit log
+    await client.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
+       VALUES ('product_publish', $1::uuid, 'publish', 'approved', 'published', $2::uuid)`,
+      [productId, adminId]
+    );
+
+    await client.query("COMMIT");
+
+    console.log(`[T-068] Published product ${product.name} to ${publishedCount} stores by admin ${adminId}`);
+
+    return res.json({
+      productId,
+      productName: product.name,
+      supplierName: product.supplier_name,
+      publishedToStores: publishedCount,
+      alreadyInStores: linkedStores.rows.length === 0 ? 'all' : undefined,
+    });
+  } catch (err: any) {
+    await client.query("ROLLBACK");
+    console.error("[admin/products/publish] Error:", err);
+    return res.status(500).json({ error: "Failed to publish product" });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * POST /api/v1/admin/products/publish-bulk
+ * T-068: Publish all approved products from a supplier to linked stores
+ */
+adminSuppliersRouter.post("/products/publish-bulk", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const { supplierId } = req.body;
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    return res.status(401).json({ error: "Admin ID required" });
+  }
+  if (!supplierId) {
+    return res.status(400).json({ error: "supplierId is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Get all approved products from this supplier
+    const products = await pool.query(
+      `SELECT id FROM catalog.supplier_products
+       WHERE supplier_id = $1::uuid AND approval_status = 'approved'`,
+      [supplierId]
+    );
+
+    let totalPublished = 0;
+    let productsProcessed = 0;
+
+    // Publish each product (reuses the single publish logic via internal fetch)
+    for (const product of products.rows) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+
+        // Get product details
+        const pResult = await client.query(
+          `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.unit,
+                  sp.purchase_price, sp.supermandi_margin_minor, sp.margin_percent,
+                  sp.supplier_id
+           FROM catalog.supplier_products sp WHERE sp.id = $1`,
+          [product.id]
+        );
+        if (pResult.rows.length === 0) { await client.query("ROLLBACK"); continue; }
+        const p = pResult.rows[0];
+
+        // Resolve catalog product_id
+        let catalogProductId: string = product.id;
+        const mapResult = await client.query(
+          `SELECT product_id FROM catalog.supplier_product_map WHERE supplier_product_id = $1::uuid LIMIT 1`,
+          [product.id]
+        );
+        if (mapResult.rows.length > 0) {
+          catalogProductId = mapResult.rows[0].product_id;
+        } else {
+          await client.query(
+            `INSERT INTO catalog.products (id, name, primary_barcode, category, unit)
+             VALUES ($1::uuid, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+            [product.id, p.name, p.barcode, p.category, p.unit]
+          );
+        }
+
+        // Calculate price
+        let margin = 0;
+        if (p.supermandi_margin_minor > 0) margin = p.supermandi_margin_minor;
+        else if (p.margin_percent > 0) margin = Math.round(p.purchase_price * p.margin_percent / 100);
+
+        // Find stores that don't have it yet
+        const stores = await client.query(
+          `SELECT ssl.store_id FROM supplier.supplier_store_links ssl
+           WHERE ssl.supplier_id = $1::uuid AND ssl.status = 'active'
+             AND ssl.store_id NOT IN (
+               SELECT store_id FROM catalog.store_products WHERE product_id = $2::uuid
+             )`,
+          [supplierId, catalogProductId]
+        );
+
+        for (const store of stores.rows) {
+          const ins = await client.query(
+            `INSERT INTO catalog.store_products (
+              store_id, product_id, display_name, sell_price, purchase_price,
+              current_stock, is_active, supplier_id
+            ) VALUES ($1, $2::uuid, $3, $4, $5, 0, true, $6::uuid) RETURNING id`,
+            [store.store_id, catalogProductId, p.name, p.purchase_price + margin,
+             p.purchase_price, p.supplier_id]
+          );
+          if (p.barcode) {
+            await client.query(
+              `INSERT INTO catalog.store_product_barcodes (store_id, store_product_id, barcode, source)
+               VALUES ($1, $2, $3, 'admin_publish') ON CONFLICT (store_id, barcode) DO NOTHING`,
+              [store.store_id, ins.rows[0].id, p.barcode]
+            );
+          }
+          totalPublished++;
+        }
+
+        await client.query("COMMIT");
+        productsProcessed++;
+      } catch (err) {
+        await client.query("ROLLBACK");
+        console.warn(`[T-068] Bulk publish error for product ${product.id}:`, err);
+      } finally {
+        client.release();
+      }
+    }
+
+    return res.json({
+      supplierId,
+      productsProcessed,
+      totalPublishedToStores: totalPublished,
+    });
+  } catch (err: any) {
+    console.error("[admin/products/publish-bulk] Error:", err);
+    return res.status(500).json({ error: "Failed to bulk publish products" });
+  }
+});
+
+// =============================================================================
 // GO-LIVE-145: Admin-Triggered Password Reset for Suppliers
 // =============================================================================
 

@@ -258,6 +258,65 @@ export async function rejectProduct(productId: string, reason: string): Promise<
 }
 
 // =============================================================================
+// T-068: Product Publishing
+// =============================================================================
+
+/**
+ * T-068: Publish an approved product to all linked stores
+ */
+export async function publishProduct(productId: string): Promise<{
+  productId: string;
+  productName: string;
+  supplierName: string;
+  publishedToStores: number;
+}> {
+  const base = requireApiBase();
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/${encodeURIComponent(productId)}/publish`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+/**
+ * T-068: Bulk publish all approved products from a supplier to linked stores
+ */
+export async function publishBulkProducts(supplierId: string): Promise<{
+  supplierId: string;
+  productsProcessed: number;
+  totalPublishedToStores: number;
+}> {
+  const base = requireApiBase();
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/products/publish-bulk`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ supplierId })
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+/**
+ * T-066: Toggle auto-approval for a supplier's products
+ */
+export async function toggleAutoApproval(supplierId: string, enabled: boolean): Promise<{
+  supplierId: string;
+  autoApproveProducts: boolean;
+  message: string;
+}> {
+  const base = requireApiBase();
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/suppliers/${encodeURIComponent(supplierId)}/auto-approve`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ enabled })
+  });
+  if (!res.ok) throw new Error(await parseError(res));
+  return res.json();
+}
+
+// =============================================================================
 // SA-P1-005: Supplier Suspension / Reactivation
 // =============================================================================
 
