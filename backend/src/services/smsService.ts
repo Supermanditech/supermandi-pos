@@ -23,10 +23,13 @@ export interface SendSmsResult {
 
 const smsRateLimits = new Map<string, number[]>();
 const SMS_RATE_LIMIT_PER_MINUTE = 2;
+// T-208: Add per-hour limit to prevent abuse over longer windows
+const SMS_RATE_LIMIT_PER_HOUR = 5;
 
 function checkSmsRateLimit(phone: string): string | null {
   const now = Date.now();
   const oneMinuteAgo = now - 60 * 1000;
+  const oneHourAgo = now - 60 * 60 * 1000;
 
   let timestamps = smsRateLimits.get(phone);
   if (!timestamps) {
@@ -34,13 +37,21 @@ function checkSmsRateLimit(phone: string): string | null {
     smsRateLimits.set(phone, timestamps);
   }
 
-  // Clean old entries
-  timestamps = timestamps.filter((t) => t > oneMinuteAgo);
+  // Clean entries older than 1 hour
+  timestamps = timestamps.filter((t) => t > oneHourAgo);
   smsRateLimits.set(phone, timestamps);
 
-  if (timestamps.length >= SMS_RATE_LIMIT_PER_MINUTE) {
-    const waitSeconds = Math.ceil((timestamps[0] + 60 * 1000 - now) / 1000);
+  // Check per-minute limit
+  const recentMinute = timestamps.filter((t) => t > oneMinuteAgo);
+  if (recentMinute.length >= SMS_RATE_LIMIT_PER_MINUTE) {
+    const waitSeconds = Math.ceil((recentMinute[0] + 60 * 1000 - now) / 1000);
     return `SMS rate limited. Wait ${waitSeconds}s.`;
+  }
+
+  // T-208: Check per-hour limit
+  if (timestamps.length >= SMS_RATE_LIMIT_PER_HOUR) {
+    const waitMinutes = Math.ceil((timestamps[0] + 60 * 60 * 1000 - now) / 60000);
+    return `Too many SMS sent. Wait ${waitMinutes} minute(s).`;
   }
 
   return null;
@@ -55,18 +66,18 @@ function recordSmsSend(phone: string): void {
   timestamps.push(Date.now());
 }
 
-// Cleanup every 5 minutes
+// Cleanup every 10 minutes (T-208: extended window to match hourly limit)
 setInterval(() => {
-  const oneMinuteAgo = Date.now() - 60 * 1000;
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
   for (const [phone, timestamps] of smsRateLimits.entries()) {
-    const filtered = timestamps.filter((t) => t > oneMinuteAgo);
+    const filtered = timestamps.filter((t) => t > oneHourAgo);
     if (filtered.length === 0) {
       smsRateLimits.delete(phone);
     } else {
       smsRateLimits.set(phone, filtered);
     }
   }
-}, 5 * 60 * 1000);
+}, 10 * 60 * 1000);
 
 // =============================================================================
 // PUBLIC API

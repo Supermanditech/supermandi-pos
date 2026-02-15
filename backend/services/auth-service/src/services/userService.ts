@@ -27,6 +27,34 @@ import {
 } from '../db/queries';
 
 // =============================================================================
+// T-214: Password strength validation
+// Min 8 chars, at least 1 letter + 1 number. Common password blocklist.
+// =============================================================================
+
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', '12345678', '123456789', '1234567890',
+  'qwerty12', 'qwertyui', 'letmein1', 'welcome1', 'monkey12',
+  'dragon12', 'master12', 'abc12345', 'abcd1234', 'football',
+  'baseball', 'iloveyou', 'trustno1', 'sunshine', 'princess',
+  'admin123', 'passw0rd', 'shadow12', 'michael1', 'jennifer',
+]);
+
+const PASSWORD_STRENGTH_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+
+function validatePasswordStrength(password: string): string | null {
+  if (!password || password.length < config.passwordMinLength) {
+    return `Password must be at least ${config.passwordMinLength} characters`;
+  }
+  if (!PASSWORD_STRENGTH_REGEX.test(password)) {
+    return 'Password must contain at least one letter and one number';
+  }
+  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+    return 'This password is too common. Please choose a stronger password.';
+  }
+  return null;
+}
+
+// =============================================================================
 // USER CREATION
 // =============================================================================
 
@@ -62,14 +90,12 @@ export async function createUserWithPassword(input: CreateUserInput): Promise<Us
     }
   }
 
-  // Validate password if provided
+  // T-214: Validate password strength if provided
   let passwordHash: string | undefined;
   if (input.password) {
-    if (input.password.length < config.passwordMinLength) {
-      throw ApiError.badRequest(
-        `Password must be at least ${config.passwordMinLength} characters`,
-        'password'
-      );
+    const passwordError = validatePasswordStrength(input.password);
+    if (passwordError) {
+      throw ApiError.badRequest(passwordError, 'password');
     }
     passwordHash = await bcrypt.hash(input.password, config.bcryptRounds);
   }
@@ -166,14 +192,12 @@ export async function updateUserDetails(id: UUID, input: UpdateUserInput): Promi
     throw ApiError.badRequest('User must have either email or phone');
   }
 
-  // Hash password if provided
+  // T-214: Validate password strength if provided
   let passwordHash: string | undefined;
   if (input.password) {
-    if (input.password.length < config.passwordMinLength) {
-      throw ApiError.badRequest(
-        `Password must be at least ${config.passwordMinLength} characters`,
-        'password'
-      );
+    const passwordError = validatePasswordStrength(input.password);
+    if (passwordError) {
+      throw ApiError.badRequest(passwordError, 'password');
     }
     passwordHash = await bcrypt.hash(input.password, config.bcryptRounds);
   }

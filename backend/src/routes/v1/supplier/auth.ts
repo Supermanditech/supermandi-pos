@@ -132,6 +132,88 @@ const passwordChangeRateLimiter = rateLimit({
 });
 
 // =============================================================================
+// T-208: Per-phone rate limiting for Firebase login
+// 5 attempts per phone per 15 min + 30-minute lockout
+// =============================================================================
+
+const phoneLoginAttempts = new Map<string, { timestamps: number[]; lockedUntil: number }>();
+const PHONE_LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const PHONE_LOGIN_MAX_ATTEMPTS = 5;
+const PHONE_LOGIN_LOCKOUT_MS = 30 * 60 * 1000;
+
+function checkPhoneLoginRateLimit(phone: string): string | null {
+  const now = Date.now();
+  const entry = phoneLoginAttempts.get(phone);
+  if (!entry) return null;
+
+  if (entry.lockedUntil > now) {
+    const waitMinutes = Math.ceil((entry.lockedUntil - now) / 60000);
+    return `Too many login attempts for this phone. Try again in ${waitMinutes} minute(s).`;
+  }
+
+  const recent = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
+  if (recent.length >= PHONE_LOGIN_MAX_ATTEMPTS) {
+    entry.lockedUntil = now + PHONE_LOGIN_LOCKOUT_MS;
+    return `Too many login attempts. Account locked for 30 minutes.`;
+  }
+
+  return null;
+}
+
+function recordPhoneLoginAttempt(phone: string): void {
+  const now = Date.now();
+  let entry = phoneLoginAttempts.get(phone);
+  if (!entry) {
+    entry = { timestamps: [], lockedUntil: 0 };
+    phoneLoginAttempts.set(phone, entry);
+  }
+  entry.timestamps = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
+  entry.timestamps.push(now);
+}
+
+function clearPhoneLoginAttempts(phone: string): void {
+  phoneLoginAttempts.delete(phone);
+}
+
+// Cleanup stale entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [phone, entry] of phoneLoginAttempts.entries()) {
+    const recent = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
+    if (recent.length === 0 && entry.lockedUntil <= now) {
+      phoneLoginAttempts.delete(phone);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// =============================================================================
+// T-214: Password Strength Validation
+// =============================================================================
+
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', '12345678', '123456789', '1234567890',
+  'qwerty12', 'qwertyui', 'letmein1', 'welcome1', 'monkey12',
+  'dragon12', 'master12', 'abc12345', 'abcd1234', 'football',
+  'baseball', 'iloveyou', 'trustno1', 'sunshine', 'princess',
+  'admin123', 'passw0rd', 'shadow12', 'michael1', 'jennifer',
+]);
+
+const PASSWORD_STRENGTH_REGEX = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+
+function validatePasswordStrength(password: string): string | null {
+  if (!password || password.length < 8) {
+    return 'Password must be at least 8 characters';
+  }
+  if (!PASSWORD_STRENGTH_REGEX.test(password)) {
+    return 'Password must contain at least one letter and one number';
+  }
+  if (COMMON_PASSWORDS.has(password.toLowerCase())) {
+    return 'This password is too common. Please choose a stronger password.';
+  }
+  return null;
+}
+
+// =============================================================================
 // GL-AUD-008: Bank Detail Validation Functions
 // =============================================================================
 
@@ -305,9 +387,11 @@ router.post("/auth/register", async (req: Request, res: Response, next: NextFunc
       return;
     }
 
-    if (password.length < 8) {
+    // T-214: Password strength validation
+    const passwordError = validatePasswordStrength(password);
+    if (passwordError) {
       res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 8 characters' }
+        error: { code: 'VALIDATION_ERROR', message: passwordError }
       });
       return;
     }
@@ -692,9 +776,11 @@ router.post("/auth/change-password", requireSupplierAuth, passwordChangeRateLimi
       return;
     }
 
-    if (newPassword.length < 8) {
+    // T-214: Password strength validation
+    const newPwError = validatePasswordStrength(newPassword);
+    if (newPwError) {
       res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: 'New password must be at least 8 characters' }
+        error: { code: 'VALIDATION_ERROR', message: newPwError }
       });
       return;
     }
@@ -849,9 +935,11 @@ router.post("/auth/reset-password", async (req: Request, res: Response, next: Ne
       return;
     }
 
-    if (newPassword.length < 8) {
+    // T-214: Password strength validation
+    const resetPwError = validatePasswordStrength(newPassword);
+    if (resetPwError) {
       res.status(400).json({
-        error: { code: 'VALIDATION_ERROR', message: 'New password must be at least 8 characters' }
+        error: { code: 'VALIDATION_ERROR', message: resetPwError }
       });
       return;
     }
@@ -1536,6 +1624,16 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
 
     const phoneNormalized = normalizePhoneNumber(verifyResult.payload.phone_number);
 
+    // T-208: Per-phone rate limiting
+    const phoneRateLimitMsg = checkPhoneLoginRateLimit(phoneNormalized);
+    if (phoneRateLimitMsg) {
+      res.status(429).json({
+        error: { code: 'RATE_LIMITED', message: phoneRateLimitMsg }
+      });
+      return;
+    }
+    recordPhoneLoginAttempt(phoneNormalized);
+
     const pool = getPool();
     if (!pool) {
       res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
@@ -1651,6 +1749,9 @@ router.post("/auth/firebase-login", checkIpBlockMiddleware, loginRateLimiter, as
     }).catch(() => {});
 
     console.log(`[SupplierAuth] GO-LIVE-SUP-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}`);
+
+    // T-208: Clear phone rate limit on success
+    clearPhoneLoginAttempts(phoneNormalized);
 
     // AUTH-SESSION-169: Set HttpOnly cookies for session persistence across page refreshes
     setAuthCookies(res, token, refreshToken, 86400, 7 * 86400);

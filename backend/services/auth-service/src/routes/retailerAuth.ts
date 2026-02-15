@@ -14,6 +14,66 @@ import { setAuthCookies } from '../utils/cookies';
 const router: Router = Router();
 
 // =============================================================================
+// T-208: Per-phone rate limiting for Firebase login
+// 5 attempts per phone per 15 minutes + 30-minute lockout
+// =============================================================================
+
+const phoneLoginAttempts = new Map<string, { timestamps: number[]; failCount: number; lockedUntil: number }>();
+const PHONE_LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const PHONE_LOGIN_MAX_ATTEMPTS = 5;
+const PHONE_LOGIN_LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+function checkPhoneLoginRateLimit(phone: string): string | null {
+  const now = Date.now();
+  const entry = phoneLoginAttempts.get(phone);
+  if (!entry) return null;
+
+  // Check lockout
+  if (entry.lockedUntil > now) {
+    const waitMinutes = Math.ceil((entry.lockedUntil - now) / 60000);
+    return `Too many login attempts. Try again in ${waitMinutes} minute(s).`;
+  }
+
+  // Check window
+  const recent = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
+  if (recent.length >= PHONE_LOGIN_MAX_ATTEMPTS) {
+    // Lock the phone
+    entry.lockedUntil = now + PHONE_LOGIN_LOCKOUT_MS;
+    const waitMinutes = Math.ceil(PHONE_LOGIN_LOCKOUT_MS / 60000);
+    return `Too many login attempts. Account locked for ${waitMinutes} minutes.`;
+  }
+
+  return null;
+}
+
+function recordPhoneLoginAttempt(phone: string): void {
+  const now = Date.now();
+  let entry = phoneLoginAttempts.get(phone);
+  if (!entry) {
+    entry = { timestamps: [], failCount: 0, lockedUntil: 0 };
+    phoneLoginAttempts.set(phone, entry);
+  }
+  entry.timestamps = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
+  entry.timestamps.push(now);
+  entry.failCount++;
+}
+
+function clearPhoneLoginAttempts(phone: string): void {
+  phoneLoginAttempts.delete(phone);
+}
+
+// Cleanup stale entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [phone, entry] of phoneLoginAttempts.entries()) {
+    const recent = entry.timestamps.filter((t) => t > now - PHONE_LOGIN_WINDOW_MS);
+    if (recent.length === 0 && entry.lockedUntil <= now) {
+      phoneLoginAttempts.delete(phone);
+    }
+  }
+}, 10 * 60 * 1000);
+
+// =============================================================================
 // ASYNC HANDLER
 // =============================================================================
 
@@ -198,6 +258,13 @@ router.post(
 
     const phoneFromToken = normalizePhoneNumber(payload.phone_number);
 
+    // T-208: Per-phone rate limiting
+    const phoneRateLimitMsg = checkPhoneLoginRateLimit(phoneFromToken);
+    if (phoneRateLimitMsg) {
+      throw ApiError.forbidden(phoneRateLimitMsg);
+    }
+    recordPhoneLoginAttempt(phoneFromToken);
+
     // 3. Get store and verify portal is enabled
     const store = await getStoreByCode(storeCode.toUpperCase());
     if (!store) {
@@ -241,6 +308,9 @@ router.post(
       store.id, // actorId (storeId)
       permissions
     );
+
+    // T-208: Clear rate limit on successful login
+    clearPhoneLoginAttempts(phoneFromToken);
 
     // AUTH-STORAGE-001: Set HttpOnly cookies for web clients
     const refreshTokenExpirySeconds = config.jwt.refreshTokenExpiresInDays * 86400;

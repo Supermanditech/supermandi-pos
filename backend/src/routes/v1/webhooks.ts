@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
+import { getRedis } from "../../db/redis";
 import {
   verifyWebhookSignature,
   handlePayoutWebhook,
@@ -15,37 +16,56 @@ import {
 } from "../../services/supplierPayoutService";
 
 // =============================================================================
-// ITER4-P0-007: Webhook Idempotency Tracking
+// T-211: Redis-backed Webhook Idempotency (cluster-safe)
+// Falls back to in-memory Map when Redis is unavailable
 // =============================================================================
 
-// In-memory cache for processed webhook event IDs (with TTL)
-// In production, this should be moved to Redis for cluster-wide deduplication
-const processedWebhookEvents = new Map<string, number>();
-const WEBHOOK_IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const REDIS_WEBHOOK_PREFIX = "webhook:idempotency:";
+const WEBHOOK_IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
-// Clean up old entries every hour
+// Fallback in-memory store when Redis is unavailable
+const processedWebhookEventsFallback = new Map<string, number>();
+
+// Cleanup fallback store every hour (only used when Redis is down)
 setInterval(() => {
-  const now = Date.now();
-  for (const [eventId, timestamp] of processedWebhookEvents.entries()) {
-    if (now - timestamp > WEBHOOK_IDEMPOTENCY_TTL_MS) {
-      processedWebhookEvents.delete(eventId);
+  const cutoff = Date.now() - WEBHOOK_IDEMPOTENCY_TTL_SECONDS * 1000;
+  for (const [eventId, timestamp] of processedWebhookEventsFallback.entries()) {
+    if (timestamp < cutoff) {
+      processedWebhookEventsFallback.delete(eventId);
     }
   }
 }, 60 * 60 * 1000);
 
 /**
- * Check if webhook event was already processed (idempotency check)
- * Returns true if event should be skipped (already processed)
+ * T-211: Check if webhook event was already processed (Redis-first, fallback to Map)
  */
-function isWebhookEventProcessed(eventId: string): boolean {
-  return processedWebhookEvents.has(eventId);
+async function isWebhookEventProcessed(eventId: string): Promise<boolean> {
+  try {
+    const redis = getRedis();
+    if (redis) {
+      const result = await redis.get(REDIS_WEBHOOK_PREFIX + eventId);
+      return result !== null;
+    }
+  } catch (err) {
+    console.warn("[T-211] Redis idempotency check failed, using fallback:", err instanceof Error ? err.message : err);
+  }
+  return processedWebhookEventsFallback.has(eventId);
 }
 
 /**
- * Mark webhook event as processed
+ * T-211: Mark webhook event as processed (Redis with TTL, fallback to Map)
  */
-function markWebhookEventProcessed(eventId: string): void {
-  processedWebhookEvents.set(eventId, Date.now());
+async function markWebhookEventProcessed(eventId: string): Promise<void> {
+  try {
+    const redis = getRedis();
+    if (redis) {
+      await redis.setex(REDIS_WEBHOOK_PREFIX + eventId, WEBHOOK_IDEMPOTENCY_TTL_SECONDS, "1");
+      return;
+    }
+  } catch (err) {
+    console.warn("[T-211] Redis idempotency mark failed, using fallback:", err instanceof Error ? err.message : err);
+  }
+  processedWebhookEventsFallback.set(eventId, Date.now());
 }
 
 // =============================================================================
@@ -217,8 +237,8 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   const razorpayEventId = payoutEntity?.id || paymentEntity?.id || `${event}-${account_id}-${Date.now()}`;
   const idempotencyKey = `razorpay:${razorpayEventId}:${event}`;
 
-  // ITER4-P0-007: Check idempotency - skip if already processed
-  if (isWebhookEventProcessed(idempotencyKey)) {
+  // T-211: Check idempotency - skip if already processed (Redis-backed)
+  if (await isWebhookEventProcessed(idempotencyKey)) {
     console.log(`[SM-018] Duplicate webhook ignored: ${idempotencyKey}`);
     return res.json({ status: "ok", event, duplicate: true });
   }
@@ -231,7 +251,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
     const success = await handlePayoutWebhook(pool, event, payload);
     if (success) {
       // ITER4-P0-007: Mark as processed after successful handling
-      markWebhookEventProcessed(idempotencyKey);
+      await markWebhookEventProcessed(idempotencyKey);
       return res.json({ status: "ok", event });
     } else {
       return res.status(422).json({ error: "Failed to process webhook" });
@@ -244,7 +264,7 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
     const result = await handleSellPaymentWebhook(pool, event, payload);
     if (result.success) {
       // ITER4-P0-007: Mark as processed after successful handling
-      markWebhookEventProcessed(idempotencyKey);
+      await markWebhookEventProcessed(idempotencyKey);
       return res.json({ status: "ok", event, paymentId: result.paymentId });
     } else {
       return res.status(422).json({ error: result.error || "Failed to process payment webhook" });
@@ -252,8 +272,8 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
   }
 
   // Acknowledge other events without processing
-  // ITER4-P0-007: Mark ignored events as processed too to prevent retries
-  markWebhookEventProcessed(idempotencyKey);
+  // T-211: Mark ignored events as processed too to prevent retries
+  await markWebhookEventProcessed(idempotencyKey);
   console.log(`[SM-018] Ignoring webhook event: ${event}`);
   return res.json({ status: "ignored", event });
 });
