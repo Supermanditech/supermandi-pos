@@ -46,8 +46,8 @@ export default function PaymentsPage() {
           const data = await safeJson(response);
           setSettings({
             upiVpa: data.settings?.upiVpa || '',
-            bankAccount: '', // Not stored in backend yet
-            ifscCode: '', // Not stored in backend yet
+            bankAccount: data.settings?.bankAccount || '',
+            ifscCode: data.settings?.ifscCode || '',
           });
         }
       } catch (err) {
@@ -106,26 +106,49 @@ export default function PaymentsPage() {
     setStatusTransitioned(false);
 
     try {
-      const response = await authFetch('/api/v1/retailer-admin/settings/upi', accessToken, {
+      // Save UPI via dedicated endpoint (handles status transitions)
+      const upiResponse = await authFetch('/api/v1/retailer-admin/settings/upi', accessToken, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ upiVpa: settings.upiVpa.trim().toLowerCase() }),
       });
 
-      if (response.ok) {
-        const data = await safeJson(response);
-        setSaveSuccess(true);
-        setStatusTransitioned(data.statusTransitioned || false);
-
-        // Auto-hide success message after 5 seconds
-        setTimeout(() => {
-          setSaveSuccess(false);
-          setStatusTransitioned(false);
-        }, 5000);
-      } else {
-        const data = await safeJson(response);
-        setSaveError(data.error?.message || 'Failed to save payment settings');
+      if (!upiResponse.ok) {
+        const data = await safeJson(upiResponse);
+        setSaveError(data.error?.message || 'Failed to save UPI settings');
+        setSaving(false);
+        return;
       }
+
+      const upiData = await safeJson(upiResponse);
+
+      // T-202: Save bank account fields via PATCH (only if provided)
+      if (settings.bankAccount || settings.ifscCode) {
+        const bankResponse = await authFetch('/api/v1/retailer-admin/settings', accessToken, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bankAccount: settings.bankAccount.trim() || null,
+            ifscCode: settings.ifscCode.trim().toUpperCase() || null,
+          }),
+        });
+
+        if (!bankResponse.ok) {
+          const data = await safeJson(bankResponse);
+          const errMsg = data.error?.errors?.bankAccount || data.error?.errors?.ifscCode || data.error?.message || 'Failed to save bank details';
+          setSaveError(errMsg);
+          setSaving(false);
+          return;
+        }
+      }
+
+      setSaveSuccess(true);
+      setStatusTransitioned(upiData.statusTransitioned || false);
+
+      setTimeout(() => {
+        setSaveSuccess(false);
+        setStatusTransitioned(false);
+      }, 5000);
     } catch (err: any) {
       console.error('Failed to save payment settings:', err);
       setSaveError(err.message || 'Failed to save payment settings');
@@ -345,7 +368,7 @@ export default function PaymentsPage() {
           </div>
 
           <p style={{ margin: '1rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
-            Note: Bank account details are saved locally and will be used for future settlement features.
+            Bank details are used for NEFT/IMPS settlement processing.
           </p>
         </section>
 

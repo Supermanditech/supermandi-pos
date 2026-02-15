@@ -50,6 +50,8 @@ import {
 } from "../services/api/catalogApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
+// T-200: Wire Place Order to purchases API
+import { createOrder } from "../services/api/orderApi";
 import { CatalogProductCard } from "../components/buy/CatalogProductCard";
 // POS-BUY-002: Grouped supplier product view modal
 import { ProductDetailModal } from "../components/buy/ProductDetailModal";
@@ -149,6 +151,9 @@ export default function PurchaseScreen({
 
   // POS-BUY-002: Selected product for supplier detail modal
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
+
+  // T-200: Place Order loading state
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   // Legacy local cart state (kept for backward compat with Quick Purchase cart actions)
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -911,9 +916,10 @@ export default function PurchaseScreen({
                     </Text>
                     <Text style={styles.actionTotal}>{formatMoney(purchaseCartTotals.grandTotal)}</Text>
                   </View>
-                  {/* AUDIT-POS-002: Wire Review Order button with cart summary */}
+                  {/* T-200: Wire Review Order → Place Order via orderApi */}
                   <Pressable
-                    style={styles.actionBtn}
+                    style={[styles.actionBtn, placingOrder && { opacity: 0.6 }]}
+                    disabled={placingOrder}
                     onPress={() => {
                       const items = purchaseCart.items;
                       const summary = items
@@ -926,15 +932,49 @@ export default function PurchaseScreen({
                           { text: "Continue Shopping", style: "cancel" },
                           {
                             text: "Place Order",
-                            onPress: () => {
-                              Alert.alert("Coming Soon", "Order placement will be available after supplier integration is complete.");
+                            onPress: async () => {
+                              const storeId = getDeviceStoreId();
+                              if (!storeId) {
+                                Alert.alert("Error", "Store not configured. Please re-enroll this device.");
+                                return;
+                              }
+                              setPlacingOrder(true);
+                              try {
+                                const supplierGroups = purchaseCart.getItemsBySupplier();
+                                const results: string[] = [];
+                                for (const group of supplierGroups) {
+                                  const order = await createOrder(storeId, {
+                                    supplierId: group.supplierId,
+                                    orderType: "manual",
+                                    items: group.items.map((ci) => ({
+                                      supplierProductId: ci.supplierProductId,
+                                      quantity: ci.quantity,
+                                      unitPrice: ci.unitPrice,
+                                    })),
+                                  });
+                                  results.push(`${group.supplierName}: ${order.orderNumber}`);
+                                }
+                                purchaseCart.clear();
+                                Alert.alert(
+                                  "Orders Placed",
+                                  `${results.length} order(s) created successfully:\n\n${results.join("\n")}`,
+                                  [{ text: "OK" }]
+                                );
+                              } catch (err: any) {
+                                const msg = err?.message || "Failed to place order";
+                                Alert.alert("Order Failed", msg);
+                              } finally {
+                                setPlacingOrder(false);
+                              }
                             },
                           },
                         ]
                       );
                     }}
                   >
-                    <Text style={styles.actionBtnText}>Review Order</Text>
+                    <Text style={styles.actionBtnText}>
+                      {placingOrder ? "Placing Order..." : "Review Order"}
+                    </Text>
                   </Pressable>
                 </View>
               )}

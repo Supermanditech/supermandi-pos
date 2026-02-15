@@ -77,7 +77,7 @@ export async function createSale(input: {
 export async function initUpiPayment(input: {
   saleId: string;
   transactionId?: string;
-}): Promise<{ paymentId: string; billRef: string; amountMinor: number; storeName: string | null; upiVpa: string }> {
+}): Promise<{ paymentId: string; billRef: string; amountMinor: number; storeName: string | null; upiVpa: string; expiresAt?: string }> {
   if (!(await isOnline())) {
     // GL-CRIT-0041: Clear error message explaining why UPI is unavailable offline
     throw new ApiError(

@@ -151,6 +151,9 @@ const PaymentScreen = () => {
   const [storeActive, setStoreActive] = useState<boolean | null>(null);
   const [upiStatusLoading, setUpiStatusLoading] = useState(true);
   const [showSplitModal, setShowSplitModal] = useState(false);
+  // T-204: UPI QR expiry countdown
+  const [qrExpiresAt, setQrExpiresAt] = useState<number | null>(null);
+  const [qrSecondsLeft, setQrSecondsLeft] = useState<number | null>(null);
   // SA-P1-006: Allowed payment methods from store settings
   const [allowedMethods, setAllowedMethods] = useState<string[]>(["CASH", "UPI", "DUE"]);
 
@@ -483,6 +486,10 @@ const PaymentScreen = () => {
         setPaymentId(res.paymentId);
         setUpiVpa(res.upiVpa ?? null);
         setUpiStoreName(res.storeName ?? null);
+        // T-204: Store QR expiry for countdown timer
+        if (res.expiresAt) {
+          setQrExpiresAt(new Date(res.expiresAt).getTime());
+        }
         void logPaymentEvent("PAYMENT_QR_CREATED", {
           transactionId,
           billId: res.billRef,
@@ -556,6 +563,29 @@ const PaymentScreen = () => {
     handleDeviceAuthError,
     navigation
   ]);
+
+  // T-204: QR expiry countdown timer
+  useEffect(() => {
+    if (!qrExpiresAt || selectedMode !== "UPI") {
+      setQrSecondsLeft(null);
+      return;
+    }
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((qrExpiresAt - Date.now()) / 1000));
+      setQrSecondsLeft(remaining);
+      if (remaining <= 0) {
+        // QR expired — clear it so user sees "Tap to regenerate"
+        setUpiIntent(null);
+        setQrExpiresAt(null);
+        setQrSecondsLeft(null);
+      }
+    };
+
+    tick(); // immediate first tick
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [qrExpiresAt, selectedMode]);
 
   useEffect(() => {
     return () => {
@@ -923,9 +953,25 @@ const PaymentScreen = () => {
               ) : upiIntent ? (
                 <QRCode value={upiIntent} size={220} />
               ) : (
-                <Text style={styles.qrHint}>{loadingUpi ? "Generating QR..." : "QR not ready"}</Text>
+                <TouchableOpacity onPress={() => { /* reset to trigger re-generate */ setLoadingUpi(false); }}>
+                  <Text style={styles.qrHint}>
+                    {loadingUpi ? "Generating QR..." : "QR expired. Tap to regenerate."}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
+            {/* T-204: QR expiry countdown */}
+            {upiIntent && qrSecondsLeft !== null && qrSecondsLeft > 0 && (
+              <Text style={{
+                fontSize: 13,
+                color: qrSecondsLeft <= 60 ? "#DC2626" : "#64748B",
+                fontWeight: qrSecondsLeft <= 60 ? "700" : "500",
+                marginTop: 8,
+                textAlign: "center",
+              }}>
+                QR expires in {Math.floor(qrSecondsLeft / 60)}:{String(qrSecondsLeft % 60).padStart(2, "0")}
+              </Text>
+            )}
             {formattedStoreName && (
               <Text style={styles.storeName}>{formattedStoreName}</Text>
             )}

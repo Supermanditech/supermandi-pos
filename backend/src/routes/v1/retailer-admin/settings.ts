@@ -64,7 +64,9 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         gst_number as "gstNumber",
         tax_rate as "taxRate",
         operating_hours as "operatingHours",
-        receipt_settings as "receiptSettings"
+        receipt_settings as "receiptSettings",
+        bank_account_number as "bankAccount",
+        bank_ifsc as "bankIfsc"
       FROM platform.stores
       WHERE id = $1`,
       [storeId]
@@ -93,8 +95,10 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         gstNumber: store.gstNumber || '',
         taxRate: store.taxRate ?? 18.0,
         operatingHours: store.operatingHours || { open: '09:00', close: '21:00' },
-        // T-156: Receipt customization JSONB
         receiptSettings: store.receiptSettings || {},
+        // T-202: Bank account fields
+        bankAccount: store.bankAccount || '',
+        ifscCode: store.bankIfsc || '',
       }
     });
 
@@ -209,11 +213,28 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
 
   const {
     storeName, upiVpa, receiptFooter, address, phone, gstNumber,
-    taxRate, operatingHours, receiptSettings
+    taxRate, operatingHours, receiptSettings,
+    bankAccount, ifscCode, // T-202: Bank account fields
   } = req.body;
 
   // GO-LIVE-251: Collect all validation errors as field-mapped
   const fieldErrors: Record<string, string> = {};
+
+  // T-202: Validate IFSC code format if provided
+  if (ifscCode !== undefined && ifscCode !== null && ifscCode !== '') {
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+    if (!ifscRegex.test(ifscCode.toUpperCase())) {
+      fieldErrors.ifscCode = "Invalid IFSC code format. Expected format: SBIN0001234";
+    }
+  }
+
+  // T-202: Validate bank account number (9-18 digits)
+  if (bankAccount !== undefined && bankAccount !== null && bankAccount !== '') {
+    const acctRegex = /^\d{9,18}$/;
+    if (!acctRegex.test(bankAccount)) {
+      fieldErrors.bankAccount = "Bank account number must be 9-18 digits";
+    }
+  }
 
   // GO-LIVE-016: Receipt footer max length validation
   const MAX_RECEIPT_FOOTER = 200;
@@ -299,6 +320,15 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
       updates.push(`receipt_settings = $${paramIndex++}`);
       values.push(JSON.stringify(receiptSettings || {}));
     }
+    // T-202: Bank account fields
+    if (bankAccount !== undefined) {
+      updates.push(`bank_account_number = $${paramIndex++}`);
+      values.push(bankAccount || null);
+    }
+    if (ifscCode !== undefined) {
+      updates.push(`bank_ifsc = $${paramIndex++}`);
+      values.push(ifscCode ? ifscCode.toUpperCase() : null);
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({
@@ -322,7 +352,9 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
          gst_number as "gstNumber",
          tax_rate as "taxRate",
          operating_hours as "operatingHours",
-         receipt_settings as "receiptSettings"`,
+         receipt_settings as "receiptSettings",
+         bank_account_number as "bankAccount",
+         bank_ifsc as "ifscCode"`,
       values
     );
 

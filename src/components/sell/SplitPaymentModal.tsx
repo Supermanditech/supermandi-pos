@@ -76,6 +76,8 @@ export function SplitPaymentModal({
   const [manualUtrVisible, setManualUtrVisible] = useState(false);
   const [manualUtr, setManualUtr] = useState("");
   const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  // T-204: QR expiry countdown for split UPI
+  const [splitQrSecondsLeft, setSplitQrSecondsLeft] = useState<number | null>(null);
 
   // T-152: Toggle a payment method on/off
   const toggleMethod = (method: SplitMethod) => {
@@ -124,6 +126,23 @@ export function SplitPaymentModal({
       }
     };
   }, [visible]);
+
+  // T-204: QR expiry countdown for split UPI
+  useEffect(() => {
+    const expiresAt = splitResponse?.upiPayment?.expiresAt;
+    if (!expiresAt || step !== "upi-waiting") {
+      setSplitQrSecondsLeft(null);
+      return;
+    }
+    const expiryMs = new Date(expiresAt).getTime();
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((expiryMs - Date.now()) / 1000));
+      setSplitQrSecondsLeft(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [splitResponse?.upiPayment?.expiresAt, step]);
 
   // GL-RJ-001: Auto-poll for UPI payment status when in upi-waiting step
   useEffect(() => {
@@ -586,6 +605,19 @@ export function SplitPaymentModal({
           <Text style={styles.qrPlaceholder}>QR not available</Text>
         )}
       </View>
+
+      {/* T-204: QR expiry countdown */}
+      {splitQrSecondsLeft !== null && splitQrSecondsLeft > 0 && (
+        <Text style={{
+          fontSize: 13,
+          color: splitQrSecondsLeft <= 60 ? "#DC2626" : "#64748B",
+          fontWeight: splitQrSecondsLeft <= 60 ? "700" : "500",
+          marginBottom: 8,
+          textAlign: "center",
+        }}>
+          QR expires in {Math.floor(splitQrSecondsLeft / 60)}:{String(splitQrSecondsLeft % 60).padStart(2, "0")}
+        </Text>
+      )}
 
       <Text style={styles.waitingText}>
         {verifyingUpi

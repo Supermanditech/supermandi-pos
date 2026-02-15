@@ -48,6 +48,7 @@ export interface LedgerEntry {
   referenceId?: string;
   stockBefore: number;
   stockAfter: number;
+  unitCost?: number; // T-201: unit cost from inventory_ledger (paise)
   createdAt: string;
 }
 

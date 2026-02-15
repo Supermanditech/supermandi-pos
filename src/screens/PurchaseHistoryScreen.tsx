@@ -43,15 +43,15 @@ function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
     if (existing) {
       existing.entries.push(entry);
       existing.totalQty += entry.deltaQty;
-      // Estimate value: deltaQty * some default price (we don't have unitCost in ledger response)
-      existing.totalValue += 0; // AUDIT-POS-001: Removed placeholder calculation — real unit cost not available from ledger
+      // T-201: Use unitCost from ledger API (paise). deltaQty * unitCost = total value in paise.
+      existing.totalValue += Math.abs(entry.deltaQty) * (entry.unitCost ?? 0);
     } else {
       groups.set(refId, {
         date: entry.createdAt,
         referenceId: refId,
         entries: [entry],
         totalQty: entry.deltaQty,
-        totalValue: 0, // AUDIT-POS-001: No unit cost available from ledger API
+        totalValue: Math.abs(entry.deltaQty) * (entry.unitCost ?? 0),
       });
     }
   }
@@ -96,10 +96,16 @@ function PurchaseCard({ purchase }: { purchase: GroupedPurchase }) {
           <Text style={styles.cardStatLabel}>Total Qty</Text>
           <Text style={styles.cardStatValue}>{purchase.totalQty}</Text>
         </View>
+        {/* T-201: Show total value from unitCost */}
+        <View style={styles.cardStat}>
+          <Text style={styles.cardStatLabel}>Value</Text>
+          <Text style={[styles.cardStatValue, { color: theme.colors.primary }]}>
+            {formatMoney(purchase.totalValue)}
+          </Text>
+        </View>
         <View style={[styles.cardStat, styles.cardStatRight]}>
           <Text style={styles.cardStatLabel}>Products</Text>
-          <Text style={styles.cardStatValue}>
-            {/* AUDIT-POS-025: Show product names instead of truncated UUIDs */}
+          <Text style={styles.cardStatValue} numberOfLines={2}>
             {purchase.entries.map((e) => {
               const p = products.find((prod) => prod.id === e.productId);
               return p?.name || e.productId.slice(0, 8);
