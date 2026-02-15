@@ -66,6 +66,7 @@ import { retailerAdminVariantsRouter } from "./retailer-admin/variants";  // T-0
 import { retailerInvoicesRouter } from "./retailer-admin/invoices";  // T-073: Retailer invoice views
 import { retailerReorderRouter } from "./retailer-admin/reorder";  // CL-017: Retailer reorder
 import { retailerBnplRouter } from "./retailer-admin/bnpl";  // CL-019: Retailer BNPL view
+import { retailerAdminCustomersRouter } from "./retailer-admin/customers";  // T-218: Customer CRM
 import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
@@ -205,6 +206,7 @@ v1Router.use("/retailer-admin", retailerAdminVariantsRouter);  // T-057: Retail 
 v1Router.use("/retailer-admin", retailerInvoicesRouter);  // T-073: Retailer invoice views
 v1Router.use("/retailer-admin", retailerReorderRouter);  // CL-017: Retailer reorder
 v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL view
+v1Router.use("/retailer-admin", retailerAdminCustomersRouter);  // T-218: Customer CRM
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs

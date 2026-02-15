@@ -1,6 +1,10 @@
 // SA-001: Settings tab extracted from App.tsx
+// T-234: Per-store feature flag overrides UI
+import { useState, useCallback } from "react";
 import type { SystemSettings, SystemStats } from "../api/settings";
-import type { GlobalFeatureFlag } from "../api/featureFlags";
+import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
+import { fetchStoreFeatureFlags, setStoreOverride, removeStoreOverride } from "../api/featureFlags";
+import type { StoreRecord } from "../api/stores";
 import { formatDateTime } from "../lib/formatters";
 
 interface SettingsTabProps {
@@ -15,13 +19,66 @@ interface SettingsTabProps {
   refreshSettings: () => void;
   refreshFeatureFlags: () => void;
   handleToggleGlobalFlag: (key: string, enabled: boolean) => void;
+  storeDirectory: StoreRecord[];
 }
 
 export function SettingsTab({
   systemSettings, systemStats, settingsLoading, settingsError,
   featureFlags, featureFlagsLoading, featureFlagSaving, featureFlagsError,
   refreshSettings, refreshFeatureFlags, handleToggleGlobalFlag,
+  storeDirectory,
 }: SettingsTabProps) {
+  // T-234: Per-store feature flag override state
+  const [selectedStoreId, setSelectedStoreId] = useState("");
+  const [storeFlags, setStoreFlags] = useState<StoreFeatureFlag[]>([]);
+  const [storeFlagsLoading, setStoreFlagsLoading] = useState(false);
+  const [storeFlagsError, setStoreFlagsError] = useState("");
+  const [storeFlagSaving, setStoreFlagSaving] = useState<Record<string, boolean>>({});
+
+  const loadStoreFlags = useCallback(async (storeId: string) => {
+    if (!storeId) { setStoreFlags([]); return; }
+    setStoreFlagsLoading(true);
+    setStoreFlagsError("");
+    try {
+      const flags = await fetchStoreFeatureFlags(storeId);
+      setStoreFlags(flags);
+    } catch (e: any) {
+      setStoreFlagsError(e?.message || "Failed to load store flags");
+    } finally {
+      setStoreFlagsLoading(false);
+    }
+  }, []);
+
+  const handleStoreSelect = useCallback((storeId: string) => {
+    setSelectedStoreId(storeId);
+    loadStoreFlags(storeId);
+  }, [loadStoreFlags]);
+
+  const handleSetOverride = useCallback(async (flagKey: string, enabled: boolean) => {
+    if (!selectedStoreId) return;
+    setStoreFlagSaving((p) => ({ ...p, [flagKey]: true }));
+    try {
+      await setStoreOverride(selectedStoreId, flagKey, enabled);
+      await loadStoreFlags(selectedStoreId);
+    } catch (e: any) {
+      setStoreFlagsError(e?.message || "Failed to set override");
+    } finally {
+      setStoreFlagSaving((p) => ({ ...p, [flagKey]: false }));
+    }
+  }, [selectedStoreId, loadStoreFlags]);
+
+  const handleRemoveOverride = useCallback(async (flagKey: string) => {
+    if (!selectedStoreId) return;
+    setStoreFlagSaving((p) => ({ ...p, [flagKey]: true }));
+    try {
+      await removeStoreOverride(selectedStoreId, flagKey);
+      await loadStoreFlags(selectedStoreId);
+    } catch (e: any) {
+      setStoreFlagsError(e?.message || "Failed to remove override");
+    } finally {
+      setStoreFlagSaving((p) => ({ ...p, [flagKey]: false }));
+    }
+  }, [selectedStoreId, loadStoreFlags]);
   return (
     <section className="card">
       <div className="cardHeader">
@@ -97,6 +154,80 @@ export function SettingsTab({
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* T-234: Per-Store Feature Flag Overrides */}
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ margin: "0 0 12px 0", fontSize: 16 }}>Per-Store Feature Overrides</h3>
+          <div className="muted" style={{ marginBottom: 12 }}>Override global flags for a specific store. Overrides take precedence over the global setting.</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+            <select
+              value={selectedStoreId}
+              onChange={(e) => handleStoreSelect(e.target.value)}
+              style={{ padding: "6px 10px", borderRadius: 4, border: "1px solid #ddd", fontSize: 13, minWidth: 260 }}
+            >
+              <option value="">-- Select a store --</option>
+              {storeDirectory.map((s) => (
+                <option key={s.id} value={s.id}>{s.name || s.storeName || s.id}</option>
+              ))}
+            </select>
+            {selectedStoreId && (
+              <button onClick={() => loadStoreFlags(selectedStoreId)} disabled={storeFlagsLoading} style={{ fontSize: 12 }}>
+                {storeFlagsLoading ? "Loading..." : "Refresh"}
+              </button>
+            )}
+          </div>
+          {storeFlagsError && <div className="banner" style={{ marginBottom: 8 }}>{storeFlagsError}</div>}
+          {selectedStoreId && storeFlags.length > 0 && (
+            <div className="tableWrap">
+              <table className="table">
+                <thead>
+                  <tr><th>Feature</th><th>Global</th><th>Store Override</th><th>Effective</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {storeFlags.map((flag) => (
+                    <tr key={flag.flag_key}>
+                      <td><span className="mono">{flag.flag_key}</span></td>
+                      <td><span className={`badge ${flag.global_enabled ? "badgeOk" : "badgeErr"}`}>{flag.global_enabled ? "ON" : "OFF"}</span></td>
+                      <td>
+                        {flag.store_override === null
+                          ? <span style={{ color: "#999", fontSize: 11 }}>No override</span>
+                          : <span className={`badge ${flag.store_override ? "badgeOk" : "badgeErr"}`}>{flag.store_override ? "ON" : "OFF"}</span>
+                        }
+                      </td>
+                      <td><span className={`badge ${flag.effective ? "badgeOk" : "badgeErr"}`}>{flag.effective ? "ENABLED" : "DISABLED"}</span></td>
+                      <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        {flag.store_override !== true && (
+                          <button
+                            onClick={() => handleSetOverride(flag.flag_key, true)}
+                            disabled={storeFlagSaving[flag.flag_key]}
+                            style={{ background: "#22c55e", color: "#fff", border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}
+                          >Enable</button>
+                        )}
+                        {flag.store_override !== false && (
+                          <button
+                            onClick={() => handleSetOverride(flag.flag_key, false)}
+                            disabled={storeFlagSaving[flag.flag_key]}
+                            style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}
+                          >Disable</button>
+                        )}
+                        {flag.store_override !== null && (
+                          <button
+                            onClick={() => handleRemoveOverride(flag.flag_key)}
+                            disabled={storeFlagSaving[flag.flag_key]}
+                            style={{ background: "#6b7280", color: "#fff", border: "none", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}
+                          >Revert</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {selectedStoreId && storeFlags.length === 0 && !storeFlagsLoading && (
+            <div style={{ color: "#888", fontSize: 13 }}>No flags found for this store.</div>
+          )}
         </div>
       </div>
     </section>

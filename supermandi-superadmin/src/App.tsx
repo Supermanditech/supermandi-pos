@@ -1742,7 +1742,8 @@ export default function App() {
     const shouldRefreshEvents = tab === "events" || tab === "devices" || tab === "payments"; // P0-DEPLOY-002: Include payments
     const shouldRefreshDevices = tab === "devices";
     // AUDIT-SA-033: Also load storeDirectory on staff tab (depends on store data)
-    const shouldRefreshStores = tab === "stores" || tab === "staff";
+    // T-234: Also load storeDirectory on settings tab (per-store flag overrides need store list)
+    const shouldRefreshStores = tab === "stores" || tab === "staff" || tab === "settings";
     const shouldRefreshSuppliers = tab === "suppliers";
     const shouldRefreshUsers = tab === "users";
     const shouldRefreshSettings = tab === "settings";
@@ -3011,6 +3012,7 @@ export default function App() {
           refreshSettings={refreshSettings}
           refreshFeatureFlags={refreshFeatureFlags}
           handleToggleGlobalFlag={confirmedToggleGlobalFlag}
+          storeDirectory={storeDirectory}
         />
       )}
 
