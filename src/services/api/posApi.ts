@@ -13,6 +13,8 @@ export type SaleItemInput = {
   productId: string;
   globalProductId?: string;
   global_product_id?: string;
+  store_product_id?: string;
+  retail_variant_id?: string;
   barcode?: string;
   name?: string;
   quantity: number;

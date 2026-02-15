@@ -35,6 +35,8 @@ type SaleItemInput = {
   store_product_id?: string; // snake_case alias
   retailerVariantId?: string;
   retailer_variant_id?: string;
+  retailVariantId?: string;   // T-060: catalog.product_retail_variants.id
+  retail_variant_id?: string; // snake_case alias
   variantId?: string;
   globalProductId?: string;
   global_product_id?: string;
@@ -189,6 +191,24 @@ async function resolveVariantFromCatalogProduct(params: {
     );
     if (res.rows[0]) {
       catalogProduct = res.rows[0];
+    }
+  }
+
+  // T-060: If not found via standard lookup, check retail variant barcodes (prefix 3)
+  if (!catalogProduct && barcode) {
+    const rvRes = await client.query(
+      `SELECT sp.id as store_product_id, sp.product_id,
+              COALESCE(sp.display_name, p.name) as display_name,
+              p.primary_barcode, p.unit
+       FROM catalog.product_retail_variants prv
+       JOIN catalog.store_products sp ON sp.id = prv.store_product_id
+       JOIN catalog.products p ON p.id = sp.product_id
+       WHERE prv.barcode = $1 AND sp.store_id = $2 AND prv.is_active = true AND sp.is_active = true
+       LIMIT 1`,
+      [barcode, storeId]
+    );
+    if (rvRes.rows[0]) {
+      catalogProduct = rvRes.rows[0];
     }
   }
 
@@ -488,6 +508,61 @@ async function resolveVariantByBarcode(
   }
 
   return null;
+}
+
+/**
+ * T-060: Convert variant units to parent product units for stock deduction.
+ * When a retail variant (e.g., 500 GM of a KG-tracked product) is sold,
+ * the stock deduction must be in the parent's unit (0.5 KG per pack).
+ *
+ * Returns the multiplier: sale_qty * multiplier = effective stock deduction.
+ * Returns 1 if no conversion needed or if variant not found.
+ */
+async function getRetailVariantStockMultiplier(
+  client: PoolClient,
+  retailVariantId: string,
+  storeId: string
+): Promise<number> {
+  if (!retailVariantId || !isValidUUID(retailVariantId)) return 1;
+
+  const res = await client.query(
+    `SELECT prv.variant_qty, prv.base_unit, p.unit AS parent_unit
+     FROM catalog.product_retail_variants prv
+     JOIN catalog.store_products sp ON sp.id = prv.store_product_id
+     JOIN catalog.products p ON p.id = sp.product_id
+     WHERE prv.id = $1 AND sp.store_id = $2 AND prv.is_active = true`,
+    [retailVariantId, storeId]
+  );
+
+  if (!res.rows[0]) return 1;
+
+  const { variant_qty, base_unit, parent_unit } = res.rows[0];
+  const qty = Number(variant_qty);
+  if (!Number.isFinite(qty) || qty <= 0) return 1;
+
+  const variantUnit = (base_unit || "").toUpperCase();
+  const parentUnit = (parent_unit || "").toUpperCase();
+
+  if (!variantUnit || !parentUnit) return qty;
+  if (variantUnit === parentUnit) return qty;
+
+  // Unit conversion: normalize variant to parent unit
+  const conversionFactors: Record<string, Record<string, number>> = {
+    GM:    { KG: 0.001 },
+    KG:    { GM: 1000 },
+    ML:    { LTR: 0.001 },
+    LTR:   { ML: 1000 },
+    PCS:   { DOZEN: 1 / 12 },
+    DOZEN: { PCS: 12 },
+  };
+
+  const factor = conversionFactors[variantUnit]?.[parentUnit];
+  if (factor !== undefined) {
+    return qty * factor;
+  }
+
+  // No known conversion — use variant_qty directly (best effort)
+  return qty;
 }
 
 async function getStore(storeId: string): Promise<{ id: string; name: string; upi_vpa: string | null; active: boolean } | null> {
@@ -791,6 +866,9 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       asTrimmedString(item.storeProductId) ?? asTrimmedString(item.store_product_id);
     const globalProductId =
       asTrimmedString(item.globalProductId) ?? asTrimmedString(item.global_product_id);
+    // T-060: Retail variant ID for stock quantity conversion
+    const retailVariantId =
+      asTrimmedString(item.retailVariantId) ?? asTrimmedString(item.retail_variant_id);
     const quantity =
       typeof item.quantity === "number" && Number.isFinite(item.quantity)
         ? Math.round(item.quantity)
@@ -804,6 +882,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       productId,
       storeProductId,
       globalProductId,
+      retailVariantId,
       name: asTrimmedString(item.name) ?? undefined,
       barcode: asTrimmedString(item.barcode) ?? undefined,
       quantity,
@@ -918,6 +997,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     const resolvedItems: Array<{
       variantId: string;
       quantity: number;
+      stockQuantity: number; // T-060: effective quantity for stock deduction (may differ for retail variants)
       priceMinor: number;
       name?: string;
       barcode?: string;
@@ -993,9 +1073,19 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
         throw new Error("product_not_found");
       }
 
+      // T-060: Compute effective stock quantity for retail variant sales
+      // For variant "500 GM" of a KG-tracked product, multiplier = 0.5
+      // So selling qty 2 → stockQuantity = 2 * 0.5 = 1 KG deducted from parent
+      let stockQuantity = item.quantity;
+      if (item.retailVariantId) {
+        const multiplier = await getRetailVariantStockMultiplier(client, item.retailVariantId, storeId);
+        stockQuantity = Math.max(0.001, item.quantity * multiplier);
+      }
+
       resolvedItems.push({
         variantId,
         quantity: item.quantity,
+        stockQuantity,
         priceMinor: item.priceMinor,
         name: item.name,
         barcode: item.barcode,
@@ -1003,12 +1093,13 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
       });
     }
 
+    // T-060: Use stockQuantity for availability checks (converted for retail variants)
     await ensureStoreInventoryAvailability({
       client,
       storeId,
       items: resolvedItems.map((item) => ({
         variantId: item.variantId,
-        quantity: item.quantity,
+        quantity: item.stockQuantity,
         globalProductId: item.globalProductId ?? undefined,
         name: item.name ?? null
       }))
@@ -1017,7 +1108,7 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
     await ensureSaleAvailability({
       client,
       storeId,
-      items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.quantity }))
+      items: resolvedItems.map((item) => ({ variantId: item.variantId, quantity: item.stockQuantity }))
     });
 
     const variantRes = await client.query(
@@ -1099,10 +1190,12 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
           : fallback?.barcode ?? null;
       const lineTotal = item.priceMinor * item.quantity;
       const itemProductId = fallback?.productId ?? item.globalProductId ?? item.variantId;
+      // T-060: Store stock_quantity for confirm endpoint to use correct deduction
+      const stockQty = item.stockQuantity !== item.quantity ? item.stockQuantity : null;
       await client.query(
         `
-        INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode)
-        VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9)
+        INSERT INTO sale_items (id, sale_id, product_id, variant_id, quantity, price_minor, line_total_minor, item_name, barcode, stock_quantity)
+        VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10)
         `,
         [
           randomUUID(),
@@ -1113,18 +1206,20 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
           item.priceMinor,
           lineTotal,
           itemName,
-          itemBarcode
+          itemBarcode,
+          stockQty
         ]
       );
     }
 
+    // T-060: Use stockQuantity for inventory movements (converted for retail variants)
     await recordSaleInventoryMovements({
       client,
       storeId,
       saleId,
       items: resolvedItems.map((item) => ({
         variantId: item.variantId,
-        quantity: item.quantity,
+        quantity: item.stockQuantity,
         unitSellMinor: item.priceMinor,
         name: item.name ?? null,
         globalProductId: item.globalProductId ?? null
@@ -1273,19 +1368,25 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
     }
 
     // Get sale items
+    // T-060: Include stock_quantity for retail variant deduction
     const itemsRes = await client.query(
       `
-      SELECT variant_id, quantity
+      SELECT variant_id, quantity, stock_quantity
       FROM sale_items
       WHERE sale_id = $1
       `,
       [saleId]
     );
 
-    const items = itemsRes.rows.map((row) => ({
-      variantId: String(row.variant_id),
-      quantity: Number(row.quantity ?? 0)
-    }));
+    const items = itemsRes.rows.map((row) => {
+      const billingQty = Number(row.quantity ?? 0);
+      // T-060: Use stock_quantity if present (retail variant), otherwise billing quantity
+      const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+      return {
+        variantId: String(row.variant_id),
+        quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty
+      };
+    });
 
     // GO-LIVE-117: Re-verify stock availability - CRITICAL for overselling prevention
     // Stock is NOT reserved during PENDING state - another sale could consume it
@@ -1488,21 +1589,27 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
     }
 
     // Get sale items
+    // T-060: Include stock_quantity for retail variant stock reversal
     const itemsRes = await client.query(
-      `SELECT si.variant_id, si.quantity, si.price_minor, v.product_id
+      `SELECT si.variant_id, si.quantity, si.stock_quantity, si.price_minor, v.product_id
        FROM sale_items si
        LEFT JOIN variants v ON v.id = si.variant_id
        WHERE si.sale_id = $1`,
       [saleId]
     );
 
-    const items = itemsRes.rows.map((row) => ({
-      variantId: String(row.variant_id),
-      quantity: Number(row.quantity ?? 0),
-      unitSellMinor: Number(row.price_minor ?? 0),
-      globalProductId: row.product_id ? String(row.product_id) : null,
-      name: null
-    }));
+    const items = itemsRes.rows.map((row) => {
+      const billingQty = Number(row.quantity ?? 0);
+      // T-060: Use stock_quantity if present (retail variant), otherwise billing quantity
+      const stockQty = row.stock_quantity != null ? Number(row.stock_quantity) : billingQty;
+      return {
+        variantId: String(row.variant_id),
+        quantity: Number.isFinite(stockQty) && stockQty > 0 ? stockQty : billingQty,
+        unitSellMinor: Number(row.price_minor ?? 0),
+        globalProductId: row.product_id ? String(row.product_id) : null,
+        name: null
+      };
+    });
 
     // Generate return ID
     const returnId = randomUUID();

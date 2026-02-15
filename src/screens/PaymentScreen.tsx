@@ -370,6 +370,15 @@ const PaymentScreen = () => {
             typeof metadata.globalProductId === "string" && metadata.globalProductId.trim()
               ? metadata.globalProductId.trim()
               : undefined;
+          // T-060: Pass retail variant metadata for stock quantity conversion
+          const storeProductId =
+            typeof metadata.storeProductId === "string" && metadata.storeProductId.trim()
+              ? metadata.storeProductId.trim()
+              : undefined;
+          const retailVariantId =
+            typeof metadata.variantId === "string" && metadata.variantId.trim()
+              ? metadata.variantId.trim()
+              : undefined;
 
           return {
             productId: item.id,
@@ -378,7 +387,9 @@ const PaymentScreen = () => {
             quantity: item.quantity,
             priceMinor: item.priceMinor,
             itemDiscount: item.itemDiscount ?? null,
-            global_product_id: globalProductId
+            global_product_id: globalProductId,
+            store_product_id: storeProductId,
+            retail_variant_id: retailVariantId,
           };
         }),
         discountMinor,
