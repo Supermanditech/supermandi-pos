@@ -74,6 +74,15 @@ export function PolicyRow({
               <Text style={styles.stockLabel}>Target</Text>
               <Text style={styles.stockValue}>{policy.targetStock}</Text>
             </View>
+            {policy.maxReorderQty != null && (
+              <>
+                <View style={styles.stockDivider} />
+                <View style={styles.stockItem}>
+                  <Text style={styles.stockLabel}>Max</Text>
+                  <Text style={styles.stockValue}>{policy.maxReorderQty}</Text>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Preferred Supplier */}

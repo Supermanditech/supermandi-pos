@@ -262,7 +262,13 @@
     "suggestedQty": "Suggested Qty",
     "supplier": "Supplier",
     "unitPrice": "Unit Price",
-    "estTotal": "Est. Total"
+    "estTotal": "Est. Total",
+    "paymentTerms": "Payment",
+    "maxQty": "Max Qty",
+    "quickReorder": "Quick Reorder",
+    "quickReorderConfirm": "Re-order {{count}} item(s) from {{supplier}}?",
+    "quickReorderSuccess": "Added {{count}} item(s) to purchase cart",
+    "quickReorderFailed": "Failed to create quick reorder"
   },
   "inward": {
     "title": "Stock Inward",

@@ -304,6 +304,7 @@ export interface PendingReorder {
   suggestedSupplierName: string | null;
   suggestedUnitPrice: number | null;
   supplierProductId: string | null;
+  paymentTerms: string | null;
   status: PendingReorderStatus;
   dismissedReason: string | null;
   purchaseOrderId: string | null;
@@ -326,6 +327,7 @@ interface PendingReorderRow {
   suggested_supplier_name: string | null;
   suggested_unit_price: number | null;
   supplier_product_id: string | null;
+  payment_terms: string | null;
   status: string;
   dismissed_reason: string | null;
   purchase_order_id: string | null;
@@ -342,7 +344,11 @@ export async function getPendingReorderById(
   pendingId: string
 ): Promise<PendingReorder | null> {
   const row = await queryOne<PendingReorderRow>(
-    `SELECT * FROM reorder.pending_reorders WHERE id = $1`,
+    `SELECT pr.*, ssl.payment_terms
+     FROM reorder.pending_reorders pr
+     LEFT JOIN supplier.supplier_store_links ssl
+       ON ssl.supplier_id = pr.suggested_supplier_id AND ssl.store_id = pr.store_id
+     WHERE pr.id = $1`,
     [pendingId]
   );
 
@@ -359,24 +365,24 @@ export async function listPendingReorders(
 ): Promise<{ pendingReorders: PendingReorder[]; total: number }> {
   const { status = 'pending', limit = 50, offset = 0 } = options;
 
-  const whereClauses: string[] = ['store_id = $1', 'status = $2'];
   const params: unknown[] = [storeId, status];
   let paramIndex = 3;
 
-  const whereClause = whereClauses.join(' AND ');
-
-  // Count
+  // Count (simple table query)
   const countRow = await queryOne<{ count: string }>(
-    `SELECT COUNT(*) as count FROM reorder.pending_reorders WHERE ${whereClause}`,
+    `SELECT COUNT(*) as count FROM reorder.pending_reorders WHERE store_id = $1 AND status = $2`,
     params
   );
   const total = parseInt(countRow?.count ?? '0', 10);
 
-  // Fetch
+  // Fetch with supplier payment terms (T-240)
   const rows = await query<PendingReorderRow>(
-    `SELECT * FROM reorder.pending_reorders
-     WHERE ${whereClause}
-     ORDER BY created_at DESC
+    `SELECT pr.*, ssl.payment_terms
+     FROM reorder.pending_reorders pr
+     LEFT JOIN supplier.supplier_store_links ssl
+       ON ssl.supplier_id = pr.suggested_supplier_id AND ssl.store_id = pr.store_id
+     WHERE pr.store_id = $1 AND pr.status = $2
+     ORDER BY pr.created_at DESC
      LIMIT $${paramIndex++} OFFSET $${paramIndex}`,
     [...params, limit, offset]
   );
@@ -394,7 +400,11 @@ export async function getPendingReordersByIds(
 
   const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
   const rows = await query<PendingReorderRow>(
-    `SELECT * FROM reorder.pending_reorders WHERE id IN (${placeholders})`,
+    `SELECT pr.*, ssl.payment_terms
+     FROM reorder.pending_reorders pr
+     LEFT JOIN supplier.supplier_store_links ssl
+       ON ssl.supplier_id = pr.suggested_supplier_id AND ssl.store_id = pr.store_id
+     WHERE pr.id IN (${placeholders})`,
     ids
   );
 
@@ -601,6 +611,7 @@ function mapPendingReorderRow(row: PendingReorderRow): PendingReorder {
     suggestedSupplierName: row.suggested_supplier_name,
     suggestedUnitPrice: row.suggested_unit_price,
     supplierProductId: row.supplier_product_id,
+    paymentTerms: row.payment_terms,
     status: row.status as PendingReorderStatus,
     dismissedReason: row.dismissed_reason,
     purchaseOrderId: row.purchase_order_id,

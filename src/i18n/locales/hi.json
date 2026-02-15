@@ -262,7 +262,13 @@
     "suggestedQty": "सुझावित मात्रा",
     "supplier": "आपूर्तिकर्ता",
     "unitPrice": "इकाई मूल्य",
-    "estTotal": "अनुमानित कुल"
+    "estTotal": "अनुमानित कुल",
+    "paymentTerms": "भुगतान",
+    "maxQty": "अधिकतम मात्रा",
+    "quickReorder": "त्वरित पुनः ऑर्डर",
+    "quickReorderConfirm": "{{supplier}} से {{count}} आइटम पुनः ऑर्डर करें?",
+    "quickReorderSuccess": "{{count}} आइटम खरीद कार्ट में जोड़े गए",
+    "quickReorderFailed": "त्वरित पुनः ऑर्डर विफल रहा"
   },
   "inward": {
     "title": "स्टॉक इनवार्ड",

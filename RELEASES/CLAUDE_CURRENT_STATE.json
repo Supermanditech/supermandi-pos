@@ -1,6 +1,6 @@
 {
-  "version": "19.0",
-  "lastUpdated": "2026-02-16T06:00:00+05:30",
+  "version": "19.1",
+  "lastUpdated": "2026-02-16T07:00:00+05:30",
   "currentPhase": "Phase 6 (finishing) + Phase 7: B2B Reorder System",
   "currentTicket": null,
   "ticketQueue": [
@@ -55,7 +55,7 @@
     "T-231": "DEFERRED-POSTLAUNCH", "T-232": "DEFERRED-POSTLAUNCH", "T-233": "DONE-FALSE-POSITIVE", "T-234": "DONE",
     "T-235": "DEFERRED-POSTLAUNCH",
     "T-236": "DONE", "T-237": "DONE", "T-238": "DONE", "T-239": "DONE",
-    "T-240": "QUEUED", "T-241": "QUEUED", "T-242": "QUEUED", "T-243": "DONE",
+    "T-240": "DONE", "T-241": "DONE", "T-242": "DONE", "T-243": "DONE",
     "T-244": "QUEUED", "T-245": "QUEUED", "T-246": "QUEUED", "T-247": "QUEUED",
     "T-248": "QUEUED", "T-249": "QUEUED", "T-250": "QUEUED", "T-251": "QUEUED",
     "T-252": "QUEUED"
@@ -90,7 +90,7 @@
     { "phase": 27, "name": "6G: P2 Large (Post-Launch)", "tickets": ["T-216", "T-217", "T-221", "T-222"], "status": "DONE" },
     { "phase": 28, "name": "7A: Reorder Schema Foundation", "tickets": ["T-236", "T-237"], "status": "DONE" },
     { "phase": 29, "name": "7B: Suggestion Engine + Backend Fixes", "tickets": ["T-238", "T-243", "T-239"], "status": "DONE" },
-    { "phase": 30, "name": "7C: POS Reorder Enhancements", "tickets": ["T-240", "T-241", "T-242"], "status": "QUEUED" },
+    { "phase": 30, "name": "7C: POS Reorder Enhancements", "tickets": ["T-240", "T-241", "T-242"], "status": "DONE" },
     { "phase": 31, "name": "7D: Portal Build-Out", "tickets": ["T-244", "T-245", "T-246", "T-247"], "status": "QUEUED" },
     { "phase": 32, "name": "7E: GRN Unification", "tickets": ["T-249", "T-250"], "status": "QUEUED" },
     { "phase": 33, "name": "7F: Integration & Cleanup", "tickets": ["T-248", "T-252", "T-251"], "status": "QUEUED" }
@@ -142,7 +142,7 @@
   "phase7_B2BReorder": {
     "range": "T-236 → T-252",
     "count": 17,
-    "status": "IN PROGRESS — Waves 1+2 DONE (5/17 tickets), Wave 3 next",
+    "status": "IN PROGRESS — Waves 1-3 DONE (8/17 tickets), Wave 4 next",
     "auditMethod": "3 parallel deep-audit agents (backend+DB, POS+web frontend, purchase+GRN flow) + 1 plan agent",
     "breakdown": {
       "P0_mustHave": 10,
@@ -153,8 +153,8 @@
   },
   "phaseSnapshot": {
     "totalTickets": 252,
-    "completed": 235,
-    "queued": 17,
+    "completed": 238,
+    "queued": 14,
     "inProgress": 0,
     "headSHA": "7f4da20",
     "stagingLive": true,
@@ -202,10 +202,10 @@
   },
   "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "Phase 7 Wave 3: T-240 (POS reorder dashboard) + T-241 (POS approval flow) + T-242 (POS notifications)",
+  "nextAction": "Phase 7 Wave 4: T-244 (retailer reorder dashboard) + T-245 (supplier reorder view) + T-246 (supplier delivery confirmation) + T-247 (superadmin reorder overview)",
   "lastActions": [
+    "Wave 3 complete — T-240 (payment terms display), T-241 (quick reorder from history), T-242 (max qty in policy edit)",
     "Wave 1+2 complete — T-236 (schema unification), T-237 (payment terms), T-238 (stock monitor fix), T-239 (max qty cap), T-243 (retailer admin route fix)",
-    "Phase 6 CTO Audit DONE — 31/36 tickets (5 deferred post-launch)",
-    "235 total tickets completed, 17 remaining (12 Phase 7 + 5 deferred)"
+    "238 total tickets completed, 14 remaining (9 Phase 7 + 5 deferred)"
   ]
 }

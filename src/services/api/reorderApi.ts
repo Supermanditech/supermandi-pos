@@ -23,6 +23,7 @@ export interface PendingReorder {
   suggestedSupplierName: string | null;
   suggestedUnitPrice: number | null;
   supplierProductId: string | null;
+  paymentTerms: string | null;
   status: PendingReorderStatus;
   dismissedReason: string | null;
   purchaseOrderId: string | null;
@@ -116,6 +117,7 @@ export interface ReorderPolicy {
   barcode: string | null;
   minThreshold: number;
   targetStock: number;
+  maxReorderQty: number | null;
   preferredSupplierId: string | null;
   preferredSupplierName: string | null;
   isEnabled: boolean;
@@ -143,6 +145,7 @@ export interface GetPolicyResponse {
 export interface UpdatePolicyRequest {
   minThreshold?: number;
   targetStock?: number;
+  maxReorderQty?: number | null;
   preferredSupplierId?: string | null;
   isEnabled?: boolean;
 }
@@ -158,6 +161,7 @@ export interface BulkUpdatePoliciesRequest {
     productId: string;
     minThreshold?: number;
     targetStock?: number;
+    maxReorderQty?: number | null;
     preferredSupplierId?: string | null;
     isEnabled?: boolean;
   }>;

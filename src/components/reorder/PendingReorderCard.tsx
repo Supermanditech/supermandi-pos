@@ -146,6 +146,20 @@ export function PendingReorderCard({
           )}
         </View>
 
+        {/* Payment Terms (T-240) */}
+        {item.paymentTerms && (
+          <View style={styles.paymentTermsRow}>
+            <MaterialCommunityIcons
+              name="credit-card-outline"
+              size={14}
+              color={theme.colors.textTertiary}
+            />
+            <Text style={styles.paymentTermsText}>
+              {t("reorder.paymentTerms")}: {item.paymentTerms}
+            </Text>
+          </View>
+        )}
+
         {/* Total and Actions */}
         <View style={styles.footerRow}>
           <View style={styles.totalSection}>
@@ -297,7 +311,17 @@ const styles = StyleSheet.create({
   suggestionRow: {
     flexDirection: "row",
     gap: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
+  },
+  paymentTermsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     marginBottom: theme.spacing.sm,
+  },
+  paymentTermsText: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
   },
   suggestionItem: {
     flex: 1,

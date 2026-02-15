@@ -19,10 +19,13 @@ import { getPurchaseHistory, type LedgerEntry } from "../services/api/inventoryA
 import { formatMoney } from "../utils/money";
 import { formatDate, formatTime } from "../i18n/formatters";
 import { theme } from "../theme";
+import { usePurchaseCartStore, type DraftPOItem } from "../stores/purchaseCartStore";
+import { useTranslation } from "react-i18next";
 
 interface PurchaseHistoryScreenProps {
   onBack: () => void;
   onNavigateToInward?: () => void;
+  onNavigateToBuy?: () => void;
 }
 
 interface GroupedPurchase {
@@ -62,9 +65,10 @@ function groupEntriesByReference(entries: LedgerEntry[]): GroupedPurchase[] {
   );
 }
 
-function PurchaseCard({ purchase }: { purchase: GroupedPurchase }) {
+function PurchaseCard({ purchase, onQuickReorder }: { purchase: GroupedPurchase; onQuickReorder?: (purchase: GroupedPurchase) => void }) {
   // AUDIT-POS-025: Look up product names from store instead of showing truncated UUIDs
   const products = useProductsStore((s) => s.products);
+  const { t } = useTranslation();
   const isManual = purchase.referenceId.startsWith("INWARD-") || purchase.referenceId.startsWith("OPEN-");
   const referenceLabel = isManual ? "Manual Inward" : purchase.referenceId;
 
@@ -113,12 +117,26 @@ function PurchaseCard({ purchase }: { purchase: GroupedPurchase }) {
           </Text>
         </View>
       </View>
+
+      {/* T-241: Quick Reorder Button */}
+      {onQuickReorder && (
+        <Pressable
+          style={styles.quickReorderButton}
+          onPress={() => onQuickReorder(purchase)}
+        >
+          <MaterialCommunityIcons name="cart-plus" size={16} color={theme.colors.primary} />
+          <Text style={styles.quickReorderText}>{t("reorder.quickReorder")}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
-export default function PurchaseHistoryScreen({ onBack, onNavigateToInward }: PurchaseHistoryScreenProps) {
+export default function PurchaseHistoryScreen({ onBack, onNavigateToInward, onNavigateToBuy }: PurchaseHistoryScreenProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const products = useProductsStore((s) => s.products);
+  const loadDraftPOs = usePurchaseCartStore((s) => s.loadDraftPOs);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [purchases, setPurchases] = useState<GroupedPurchase[]>([]);
@@ -148,6 +166,30 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward }: Pu
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // T-241: Quick Reorder handler
+  const handleQuickReorder = useCallback((purchase: GroupedPurchase) => {
+    const draftItems: DraftPOItem[] = purchase.entries
+      .filter((e) => e.deltaQty > 0) // Only positive (inward) entries
+      .map((e) => {
+        const product = products.find((p) => p.id === e.productId);
+        return {
+          supplierProductId: e.productId,
+          productId: e.productId,
+          supplierId: "reorder",
+          supplierName: "From Purchase History",
+          productName: product?.name || e.productId.slice(0, 8),
+          suggestedQuantity: Math.abs(e.deltaQty),
+          unitPrice: e.unitCost ?? 0,
+          moq: 1,
+        };
+      });
+
+    if (draftItems.length === 0) return;
+
+    loadDraftPOs(draftItems);
+    onNavigateToBuy?.();
+  }, [products, loadDraftPOs, onNavigateToBuy]);
 
   const totalPurchases = purchases.length;
   const totalItems = purchases.reduce((sum, p) => sum + p.entries.length, 0);
@@ -209,7 +251,7 @@ export default function PurchaseHistoryScreen({ onBack, onNavigateToInward }: Pu
         <FlatList
           data={purchases}
           keyExtractor={(item) => item.referenceId}
-          renderItem={({ item }) => <PurchaseCard purchase={item} />}
+          renderItem={({ item }) => <PurchaseCard purchase={item} onQuickReorder={onNavigateToBuy ? handleQuickReorder : undefined} />}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -399,5 +441,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: theme.colors.textPrimary,
+  },
+  quickReorderButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  quickReorderText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
   },
 });

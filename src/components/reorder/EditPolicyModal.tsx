@@ -53,6 +53,7 @@ export function EditPolicyModal({
   const [storeId, setStoreId] = useState<string | null>(null);
   const [minThreshold, setMinThreshold] = useState("");
   const [targetStock, setTargetStock] = useState("");
+  const [maxReorderQty, setMaxReorderQty] = useState("");
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [availableSuppliers, setAvailableSuppliers] = useState<CatalogSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(false);
@@ -69,6 +70,7 @@ export function EditPolicyModal({
     if (visible && policy) {
       setMinThreshold(String(policy.minThreshold));
       setTargetStock(String(policy.targetStock));
+      setMaxReorderQty(policy.maxReorderQty ? String(policy.maxReorderQty) : "");
       setSelectedSupplierId(policy.preferredSupplierId);
       setError(null);
       loadSuppliers();
@@ -105,6 +107,7 @@ export function EditPolicyModal({
 
     const min = parseInt(minThreshold, 10);
     const target = parseInt(targetStock, 10);
+    const maxQty = maxReorderQty ? parseInt(maxReorderQty, 10) : null;
 
     if (isNaN(min) || min < 0) {
       errors.push("Min threshold must be a positive number");
@@ -115,9 +118,12 @@ export function EditPolicyModal({
     if (!isNaN(min) && !isNaN(target) && target < min) {
       errors.push("Target stock must be greater than min threshold");
     }
+    if (maxQty !== null && (isNaN(maxQty) || maxQty <= 0)) {
+      errors.push("Max reorder qty must be a positive number");
+    }
 
     return errors;
-  }, [minThreshold, targetStock]);
+  }, [minThreshold, targetStock, maxReorderQty]);
 
   const isValid = validationErrors.length === 0;
 
@@ -128,12 +134,15 @@ export function EditPolicyModal({
     const min = parseInt(minThreshold, 10);
     const target = parseInt(targetStock, 10);
 
+    const maxQty = maxReorderQty ? parseInt(maxReorderQty, 10) : null;
+
     const minChanged = min !== policy.minThreshold;
     const targetChanged = target !== policy.targetStock;
+    const maxQtyChanged = maxQty !== policy.maxReorderQty;
     const supplierChanged = selectedSupplierId !== policy.preferredSupplierId;
 
-    return minChanged || targetChanged || supplierChanged;
-  }, [policy, minThreshold, targetStock, selectedSupplierId]);
+    return minChanged || targetChanged || maxQtyChanged || supplierChanged;
+  }, [policy, minThreshold, targetStock, maxReorderQty, selectedSupplierId]);
 
   // Get selected supplier name
   const selectedSupplierName = useMemo(() => {
@@ -153,6 +162,7 @@ export function EditPolicyModal({
       const updates: UpdatePolicyRequest = {
         minThreshold: parseInt(minThreshold, 10),
         targetStock: parseInt(targetStock, 10),
+        maxReorderQty: maxReorderQty ? parseInt(maxReorderQty, 10) : null,
         preferredSupplierId: selectedSupplierId,
       };
 
@@ -256,6 +266,25 @@ export function EditPolicyModal({
                   onChangeText={setTargetStock}
                   keyboardType="number-pad"
                   placeholder="0"
+                  placeholderTextColor={theme.colors.textTertiary}
+                />
+                <Text style={styles.inputUnit}>units</Text>
+              </View>
+            </View>
+
+            {/* Max Reorder Qty Input (T-242) */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Max Reorder Quantity</Text>
+              <Text style={styles.inputDescription}>
+                Cap suggested quantity at this limit (leave blank for no limit)
+              </Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  value={maxReorderQty}
+                  onChangeText={setMaxReorderQty}
+                  keyboardType="number-pad"
+                  placeholder="No limit"
                   placeholderTextColor={theme.colors.textTertiary}
                 />
                 <Text style={styles.inputUnit}>units</Text>
