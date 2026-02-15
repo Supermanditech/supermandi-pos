@@ -126,7 +126,8 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
 
   // AUD-074-A FIX: Accept supplierId for proper FK tracking
   // SA-P0-004: Accept supplierGstin for GSTIN tracking on stock-in
-  const { items, supplierId, supplierName, supplierGstin, notes, totalAmount, idempotencyKey } = req.body;
+  // T-207: Accept optional orderId for PO validation
+  const { items, supplierId, supplierName, supplierGstin, notes, totalAmount, idempotencyKey, orderId } = req.body;
 
   // AUDIT-API-011: Idempotency check — prevent duplicate stock-in on double-submit
   if (idempotencyKey && typeof idempotencyKey === "string") {
@@ -164,6 +165,29 @@ posStockInRouter.post("/stock-in", requireDeviceToken, requireActiveStore, requi
         success: false,
         error: "INVALID_QUANTITY",
         message: `Item ${i}: quantity must be a positive number, got: ${qty}`,
+      });
+    }
+  }
+
+  // T-207: Validate PO exists if orderId is provided (backward compatible — orderId is optional)
+  if (orderId && typeof orderId === "string") {
+    const poCheck = await pool.query(
+      `SELECT id, status FROM orders.purchase_orders WHERE id = $1 AND store_id = $2 LIMIT 1`,
+      [orderId, storeId]
+    );
+    if (poCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "PO_NOT_FOUND",
+        message: "Purchase order not found for this store",
+      });
+    }
+    const poStatus = poCheck.rows[0].status;
+    if (poStatus === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        error: "PO_CANCELLED",
+        message: "Cannot receive stock against a cancelled purchase order",
       });
     }
   }

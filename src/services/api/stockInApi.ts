@@ -20,6 +20,7 @@ export interface StockInPayload {
   supplierId?: string;    // Optional - may be walk-in/unknown supplier
   supplierName?: string;  // For display/reference
   supplierGstin?: string; // SA-P0-004: Optional GSTIN for walk-in suppliers
+  orderId?: string;       // T-207: Optional PO reference for validation
   items: StockInItem[];
   notes?: string;
   totalAmount: number;    // Sum of (qty * buyPrice) for all items

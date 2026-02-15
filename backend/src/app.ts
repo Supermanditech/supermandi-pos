@@ -7,8 +7,10 @@ import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 import { noCacheHeaders } from "./middleware/noCache";
 import { perEndpointBodyLimit } from "./middleware/bodySizeLimit";
+import { correlationIdMiddleware } from "./middleware/correlationId";
 import { getTranslationHealth } from "./services/translationService";
 import { initializeFirebase } from "@supermandi/common";
+import { logger } from "./lib/logger";
 
 // Always load backend env from `backend/.env` (not repo root `/.env`).
 // This prevents Prisma errors like missing DATABASE_URL when the process is started with a different CWD (e.g. pm2/systemd).
@@ -25,12 +27,12 @@ if (firebaseEnabled && (firebaseServiceAccountPath || firebaseProjectId)) {
       serviceAccountPath: firebaseServiceAccountPath,
       projectId: firebaseProjectId,
     });
-    console.log('[App] Firebase Admin SDK initialized for server-side token verification');
+    logger.info('[App] Firebase Admin SDK initialized for server-side token verification');
   } catch (error) {
-    console.warn('[App] Firebase initialization failed (retailer portal will use fallback mode):', error);
+    logger.warn('[App] Firebase initialization failed (retailer portal will use fallback mode)', { error: String(error) });
   }
 } else {
-  console.warn('[App] Firebase not configured - retailer portal login will use client-side verification only');
+  logger.warn('[App] Firebase not configured - retailer portal login will use client-side verification only');
 }
 
 // DEV-071: Capture build info at startup for /health endpoint
@@ -55,7 +57,7 @@ const trustProxyHops = parseInt(process.env.TRUST_PROXY_HOPS || "1", 10);
 // STAGE-005: Enable trust proxy in staging too (Cloud Run + LB)
 if (process.env.NODE_ENV !== "development" || process.env.TRUST_PROXY === "true") {
   app.set("trust proxy", trustProxyHops);
-  console.log(`[App] Trust proxy enabled (hops: ${trustProxyHops})`);
+  logger.info(`[App] Trust proxy enabled`, { trustProxyHops });
 }
 
 // ITER3-P0-001: Configure CORS with explicit allowed origins
@@ -66,7 +68,7 @@ const corsOptions: cors.CorsOptions = {
       return process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim());
     }
     if (process.env.NODE_ENV !== 'development') {
-      console.error(`[config] FATAL: ALLOWED_ORIGINS is required in ${process.env.NODE_ENV} but not set`);
+      logger.error(`[config] FATAL: ALLOWED_ORIGINS is required in ${process.env.NODE_ENV} but not set`);
       process.exit(1);
     }
     return true; // Allow all in development
@@ -77,6 +79,8 @@ const corsOptions: cors.CorsOptions = {
   maxAge: 86400, // CORS-MAXAGE-001: Cache preflight for 24h (reduces OPTIONS requests)
 };
 app.use(cors(corsOptions));
+// T-210: Attach correlation ID to every request (from X-Request-Id or X-Cloud-Trace-Context)
+app.use(correlationIdMiddleware);
 // GO-LIVE-194: Per-endpoint body size limits (replaces global 1MB limit)
 // ITER4-P1-012: Now using perEndpointBodyLimit which applies different limits per endpoint
 app.use("/api", perEndpointBodyLimit());

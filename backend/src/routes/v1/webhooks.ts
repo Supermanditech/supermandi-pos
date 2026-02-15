@@ -6,6 +6,7 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
 import { getRedis } from "../../db/redis";
+import { logger } from "../../lib/logger";
 import {
   verifyWebhookSignature,
   handlePayoutWebhook,

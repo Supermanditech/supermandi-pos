@@ -1,10 +1,9 @@
 {
-  "version": "17.1",
-  "lastUpdated": "2026-02-16T01:00:00+05:30",
+  "version": "17.2",
+  "lastUpdated": "2026-02-16T02:30:00+05:30",
   "currentPhase": "Phase 6: 360° CTO Production Readiness Audit",
   "currentTicket": null,
   "ticketQueue": [
-    "T-208", "T-214", "T-209", "T-211",
     "T-210", "T-207",
     "T-205", "T-206", "T-212", "T-213",
     "T-215", "T-228", "T-233",
@@ -44,9 +43,9 @@
     "T-191": "DONE", "T-192": "DONE", "T-193": "DONE", "T-194": "DONE", "T-195": "DONE",
     "T-196": "DONE", "T-197": "DONE", "T-198": "DONE", "T-199": "DONE",
     "T-200": "DONE", "T-201": "DONE", "T-202": "DONE", "T-204": "DONE",
-    "T-205": "QUEUED", "T-206": "QUEUED", "T-207": "QUEUED", "T-208": "QUEUED",
-    "T-209": "QUEUED", "T-210": "QUEUED", "T-211": "QUEUED", "T-212": "QUEUED",
-    "T-213": "QUEUED", "T-214": "QUEUED",
+    "T-205": "QUEUED", "T-206": "QUEUED", "T-207": "QUEUED", "T-208": "DONE",
+    "T-209": "DONE", "T-210": "QUEUED", "T-211": "DONE", "T-212": "QUEUED",
+    "T-213": "QUEUED", "T-214": "DONE",
     "T-215": "QUEUED", "T-216": "QUEUED", "T-217": "QUEUED", "T-218": "QUEUED",
     "T-219": "QUEUED", "T-220": "QUEUED", "T-221": "QUEUED", "T-222": "QUEUED",
     "T-223": "QUEUED", "T-224": "QUEUED", "T-225": "QUEUED", "T-226": "QUEUED",
@@ -76,7 +75,7 @@
     { "phase": 19, "name": "5H: Advanced Features", "tickets": ["T-152", "T-156", "T-158", "T-164", "T-165", "T-189", "T-190", "T-195", "T-197"], "status": "DONE" },
     { "phase": 20, "name": "5I: Barcode Improvements", "tickets": ["T-166", "T-167", "T-168", "T-169", "T-170", "T-171", "T-172"], "status": "DONE" },
     { "phase": 21, "name": "6A: P0 Go-Live Blockers", "tickets": ["T-200", "T-201", "T-202", "T-204"], "status": "DONE" },
-    { "phase": 22, "name": "6B: P1 Security Hardening", "tickets": ["T-208", "T-214", "T-209", "T-211"], "status": "QUEUED" },
+    { "phase": 22, "name": "6B: P1 Security Hardening", "tickets": ["T-208", "T-214", "T-209", "T-211"], "status": "DONE" },
     { "phase": 23, "name": "6C: P1 Infrastructure", "tickets": ["T-210", "T-207"], "status": "QUEUED" },
     { "phase": 24, "name": "6D: P1 Features & UX", "tickets": ["T-205", "T-206", "T-212", "T-213"], "status": "QUEUED" },
     { "phase": 25, "name": "6E: P2 Quick Wins", "tickets": ["T-215", "T-228", "T-233"], "status": "QUEUED" },
@@ -108,7 +107,7 @@
   "phase6_CTOAudit": {
     "range": "T-200 → T-235",
     "count": 36,
-    "status": "QUEUED — 36 tickets from 360° CTO production readiness audit",
+    "status": "IN PROGRESS — 8/36 DONE (P0 blockers + P1 security)",
     "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
     "falsePositivesDropped": 9,
     "breakdown": {
@@ -129,13 +128,13 @@
   },
   "phaseSnapshot": {
     "totalTickets": 235,
-    "completed": 203,
-    "queued": 32,
+    "completed": 207,
+    "queued": 28,
     "inProgress": 0,
-    "headSHA": "a46ae13",
+    "headSHA": "338c558",
     "stagingLive": true,
-    "stagingSHA": "f61a3b2",
-    "unpushedCommits": "0 — all pushed to origin"
+    "stagingSHA": "a46ae13",
+    "unpushedCommits": "2 — state v17.1 + Wave 2 security (NOT pushed per operator instruction)"
   },
   "goLiveAudit": {
     "status": "COMPLETE",
@@ -178,12 +177,12 @@
   },
   "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "Wave 2 — P1 Security Hardening: T-208 (OTP rate limit), T-214 (password strength), T-209 (npm audit), T-211 (webhook idempotency)",
+  "nextAction": "Wave 3 — P1 Infrastructure: T-210 (structured logging), T-207 (stock-in PO validation)",
   "lastActions": [
-    "Wave 1 P0 Blockers DONE — T-200, T-201, T-202, T-204 (commit a46ae13)",
-    "T-200: Wired POS Place Order to createOrder API (grouped by supplier)",
-    "T-201: Fixed purchase history Rs.0 — unitCost from ledger API now used",
-    "T-202: Bank account/IFSC persisted to platform.stores (migration 148)",
-    "T-204: UPI QR countdown timer (PaymentScreen + SplitPaymentModal)"
+    "Wave 2 P1 Security DONE — T-208, T-214, T-209, T-211 (commit 338c558, NOT PUSHED)",
+    "T-208: Per-phone rate limiting on firebase-login (5/15min + 30min lockout) + SMS hourly limit",
+    "T-214: Password strength validation (letter+number+blocklist) on auth-service + supplier auth",
+    "T-209: nodemailer 6.9.16, bullmq 4.18.3, pnpm override qs >= 6.14.2",
+    "T-211: Webhook idempotency migrated to Redis (async, TTL, fallback to in-memory)"
   ]
 }
