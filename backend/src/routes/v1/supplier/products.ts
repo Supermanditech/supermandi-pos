@@ -567,6 +567,9 @@ router.post(
         errors: [] as { row: number; error: string }[],
       };
 
+      // T-063: Track barcodes within this CSV to detect intra-file duplicates
+      const seenBarcodes = new Set<string>();
+
       // Process each row
       for (let i = 0; i < records.length; i++) {
         const row = records[i];
@@ -607,34 +610,84 @@ router.post(
           const moq = moqStr ? parseInt(moqStr) || 1 : 1;
           const unit = row['unit'] || row['Unit'] || 'PCS';
 
-          await pool.query(
-            `INSERT INTO catalog.supplier_products (
-              supplier_id,
-              name,
-              category,
-              brand,
-              barcode,
-              supplier_sku,
-              purchase_price,
-              mrp,
-              moq,
-              unit,
-              approval_status,
-              is_active
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true)`,
-            [
-              req.supplierId,
-              name,
-              category,
-              brand,
-              barcode,
-              supplierSku,
-              purchasePrice,
-              mrp,
-              moq,
-              unit,
-            ]
-          );
+          // T-063: Validate barcode format (GTIN: 8, 12, 13, or 14 digits) — GL-WF-056
+          if (barcode && !/^\d{8}$|^\d{12,14}$/.test(barcode)) {
+            results.errors.push({ row: rowNum, error: 'Invalid barcode format (must be 8, 12, 13, or 14 digits)' });
+            results.skipped++;
+            continue;
+          }
+
+          // T-063: Validate category against FMCG taxonomy — GL-WF-057
+          if (category && !VALID_CATEGORIES.includes(category)) {
+            results.errors.push({ row: rowNum, error: `Invalid category "${category}". Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+            results.skipped++;
+            continue;
+          }
+
+          // T-063: Validate MRP >= purchase price — GL-WF-017
+          if (mrp !== null && mrp < purchasePrice) {
+            results.errors.push({ row: rowNum, error: 'MRP must be >= purchase price' });
+            results.skipped++;
+            continue;
+          }
+
+          // T-063: Validate MOQ bounds — GO-LIVE-163
+          if (moq < 1 || moq > 10000) {
+            results.errors.push({ row: rowNum, error: 'MOQ must be between 1 and 10000' });
+            results.skipped++;
+            continue;
+          }
+
+          // T-063: Dedup — skip if barcode already seen in this CSV
+          if (barcode) {
+            if (seenBarcodes.has(barcode)) {
+              results.errors.push({ row: rowNum, error: `Duplicate barcode "${barcode}" in CSV` });
+              results.skipped++;
+              continue;
+            }
+            seenBarcodes.add(barcode);
+          }
+
+          // T-063: Dedup — check if barcode already exists for this supplier, update if so
+          if (barcode) {
+            const existing = await pool.query(
+              `SELECT id, approval_status FROM catalog.supplier_products
+               WHERE supplier_id = $1 AND barcode = $2`,
+              [req.supplierId, barcode]
+            );
+            if (existing.rows.length > 0) {
+              // Update existing product (only if still pending — don't overwrite approved products)
+              if (existing.rows[0].approval_status === 'pending') {
+                await pool.query(
+                  `UPDATE catalog.supplier_products SET
+                    name = $2, category = $3, brand = $4, supplier_sku = $5,
+                    purchase_price = $6, mrp = $7, moq = $8, unit = $9, updated_at = NOW()
+                   WHERE id = $1`,
+                  [existing.rows[0].id, name, category, brand, supplierSku,
+                   purchasePrice, mrp, moq, unit]
+                );
+              }
+              // else: approved/rejected — skip silently (don't reset approval)
+            } else {
+              await pool.query(
+                `INSERT INTO catalog.supplier_products (
+                  supplier_id, name, category, brand, barcode, supplier_sku,
+                  purchase_price, mrp, moq, unit, approval_status, is_active
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true)`,
+                [req.supplierId, name, category, brand, barcode, supplierSku,
+                 purchasePrice, mrp, moq, unit]
+              );
+            }
+          } else {
+            await pool.query(
+              `INSERT INTO catalog.supplier_products (
+                supplier_id, name, category, brand, barcode, supplier_sku,
+                purchase_price, mrp, moq, unit, approval_status, is_active
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true)`,
+              [req.supplierId, name, category, brand, barcode, supplierSku,
+               purchasePrice, mrp, moq, unit]
+            );
+          }
 
           results.imported++;
         } catch (rowError) {

@@ -828,15 +828,25 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
       [...params, limitNum, offsetNum]
     );
 
-    // CA-1.4-001: Mark products already in store catalog
-    const productIds = result.rows.map(r => r.productId);
-    const existingResult = productIds.length > 0 ? await pool.query(
-      `SELECT DISTINCT sp.product_id
-       FROM catalog.store_products sp
-       WHERE sp.store_id = $1 AND sp.product_id = ANY($2::uuid[])`,
-      [storeId, productIds]
-    ) : { rows: [] };
-    const existingProductIds = new Set(existingResult.rows.map(r => String(r.product_id)));
+    // T-063: Mark products already in store catalog
+    // Must resolve through supplier_product_map to find the correct catalog product_id
+    const supplierProductIds = result.rows.map(r => r.productId);
+    let existingSupplierProductIds = new Set<string>();
+    if (supplierProductIds.length > 0) {
+      // Check both: direct match (supplier_product.id used as product_id) AND mapped match
+      const existingResult = await pool.query(
+        `SELECT spm.supplier_product_id
+         FROM catalog.supplier_product_map spm
+         JOIN catalog.store_products sp ON sp.product_id = spm.product_id
+         WHERE sp.store_id = $1 AND spm.supplier_product_id = ANY($2::uuid[])
+         UNION
+         SELECT sp2.product_id AS supplier_product_id
+         FROM catalog.store_products sp2
+         WHERE sp2.store_id = $1 AND sp2.product_id = ANY($2::uuid[])`,
+        [storeId, supplierProductIds]
+      );
+      existingSupplierProductIds = new Set(existingResult.rows.map(r => String(r.supplier_product_id)));
+    }
 
     const products = result.rows.map(row => ({
       ...row,
@@ -846,7 +856,7 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
       mrpMinor: Number(row.mrpMinor) || 0,
       bnplEligible: row.bnplEligible === true,
       bnplMaxDays: Number(row.bnplMaxDays) || 0,
-      inStoreCatalog: existingProductIds.has(row.productId),
+      inStoreCatalog: existingSupplierProductIds.has(row.productId),
     }));
 
     return res.json({
@@ -923,10 +933,31 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
     const retailerPrice = sellPrice ||
       (product.purchase_price + (product.supermandi_margin_minor || 0));
 
-    // Check if already in store catalog
+    // T-063: Resolve the master catalog product_id via supplier_product_map
+    // The approval flow creates a catalog.products entry and maps it via supplier_product_map.
+    // We must use THAT product_id (not the supplier_product.id) to avoid duplicate catalog entries.
+    let catalogProductId: string = productId; // fallback to supplier_product.id
+    const mapResult = await client.query(
+      `SELECT product_id FROM catalog.supplier_product_map
+       WHERE supplier_product_id = $1::uuid LIMIT 1`,
+      [productId]
+    );
+    if (mapResult.rows.length > 0) {
+      catalogProductId = mapResult.rows[0].product_id;
+    } else {
+      // No mapping exists — create catalog.products entry with supplier_product.id
+      await client.query(
+        `INSERT INTO catalog.products (id, name, primary_barcode, category, unit)
+         VALUES ($1::uuid, $2, $3, $4, $5)
+         ON CONFLICT DO NOTHING`,
+        [productId, product.name, product.barcode, product.category, product.unit]
+      );
+    }
+
+    // Check if already in store catalog (using resolved catalog product_id)
     const existingCheck = await client.query(
       `SELECT id FROM catalog.store_products WHERE store_id = $1 AND product_id = $2::uuid`,
-      [storeId, productId]
+      [storeId, catalogProductId]
     );
 
     if (existingCheck.rows.length > 0) {
@@ -936,16 +967,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
       });
     }
 
-    // First ensure the product exists in catalog.products (master catalog)
-    // Handle both id and barcode conflicts gracefully
-    await client.query(
-      `INSERT INTO catalog.products (id, name, primary_barcode, category, unit)
-       VALUES ($1::uuid, $2, $3, $4, $5)
-       ON CONFLICT DO NOTHING`,
-      [productId, product.name, product.barcode, product.category, product.unit]
-    );
-
-    // Add to store catalog
+    // Add to store catalog using the resolved catalog product_id
     const insertResult = await client.query(
       `INSERT INTO catalog.store_products (
         store_id, product_id, display_name, sell_price, purchase_price,
@@ -954,7 +976,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
       RETURNING id`,
       [
         storeId,
-        productId,
+        catalogProductId,
         product.name,
         retailerPrice,
         product.purchase_price,
@@ -973,7 +995,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
       );
     }
 
-    // Initialize stock balance
+    // Initialize stock balance using resolved catalog product_id
     if (initialStock > 0) {
       await client.query(
         `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, updated_at)
@@ -981,7 +1003,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
          ON CONFLICT (store_id, product_id) DO UPDATE SET
            current_qty = $3,
            updated_at = NOW()`,
-        [storeId, productId, initialStock]
+        [storeId, catalogProductId, initialStock]
       );
     }
 
