@@ -637,18 +637,26 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
   }
 
   try {
+    // T-064: Enhanced pending products query with category, unit, brand, margin info
     const result = await pool.query(
       `SELECT
         sp.id,
         sp.name as "productName",
         sp.supplier_sku as "skuCode",
         sp.barcode,
+        sp.category,
+        sp.brand,
+        sp.unit,
         sp.purchase_price as "purchasePrice",
         sp.mrp,
         sp.moq,
+        sp.supermandi_margin_minor as "marginMinor",
+        sp.edited_name as "editedName",
+        sp.edited_category as "editedCategory",
         sp.created_at as "createdAt",
         s.id as "supplierId",
-        s.business_name as "supplierName"
+        s.business_name as "supplierName",
+        s.verification_status as "supplierStatus"
       FROM catalog.supplier_products sp
       JOIN supplier.suppliers s ON s.id = sp.supplier_id
       WHERE sp.approval_status = 'pending'
@@ -757,6 +765,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
     );
 
     // SUP-POS-005: Auto-map approved product to master catalog
+    let mappingResult: { catalogProductId: string; confidence: number; type: 'auto' } | null = null;
     try {
       const spDetails = await client.query(
         `SELECT name, edited_name, category, edited_category, brand, unit, barcode
@@ -830,6 +839,7 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
               [productId, mappedProductId, mappingConfidence]
             );
             console.log(`[SUP-POS-005] Auto-mapped product ${productId} → ${mappedProductId} (confidence=${mappingConfidence})`);
+            mappingResult = { catalogProductId: mappedProductId, confidence: mappingConfidence, type: 'auto' as const };
           }
         }
       }
@@ -840,10 +850,12 @@ adminSuppliersRouter.post("/products/:productId/approve", requireAdminToken, req
 
     await client.query("COMMIT");
 
+    // T-064: Include mapping result in approval response
     return res.json({
       productId: updateResult.rows[0].id,
       approvalStatus: updateResult.rows[0].approvalStatus,
-      approvedAt: updateResult.rows[0].approvedAt
+      approvedAt: updateResult.rows[0].approvedAt,
+      mapping: mappingResult,
     });
   } catch (err: any) {
     await client.query("ROLLBACK");

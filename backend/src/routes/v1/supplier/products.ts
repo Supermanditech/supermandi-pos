@@ -433,8 +433,11 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       return;
     }
 
-    // If product was approved and is being edited, reset to pending
-    updates.push(`approval_status = CASE WHEN approval_status = 'approved' THEN 'pending' ELSE approval_status END`);
+    // T-064/GL-WF-037: If product was approved or rejected and is being edited, reset to pending
+    // Rejected products should go back to pending for re-review (resubmit flow)
+    updates.push(`approval_status = CASE WHEN approval_status IN ('approved', 'rejected') THEN 'pending' ELSE approval_status END`);
+    // Clear rejection reason when resubmitting
+    updates.push(`rejection_reason = CASE WHEN approval_status = 'rejected' THEN NULL ELSE rejection_reason END`);
 
     values.push(id);
 
