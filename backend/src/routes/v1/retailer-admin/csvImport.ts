@@ -135,12 +135,18 @@ function safeNumber(val: unknown, defaultVal = 0): number {
 }
 
 // CSV Template headers and examples
-const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes
-"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit"
-"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501",""
-"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati"
-"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate"
+// T-061: Added variant_of, variant_label, variant_qty, variant_unit columns for retail variants
+const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes,variant_of,variant_label,variant_qty,variant_unit
+"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit","","","",""
+"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501","","","","",""
+"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati","","","",""
+"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate","","","",""
+"","","","","27.00","","","","","","","","","","","","500gm variant","Loose Rice Basmati","500 gm","500","GM"
+"","","","","240.00","","","","","","","","","","","","5kg variant","Loose Rice Basmati","5 kg","5","KG"
 `;
+
+// T-061: Valid variant base units
+const VALID_VARIANT_UNITS = new Set(['KG', 'GM', 'LTR', 'ML', 'PCS', 'DOZEN']);
 
 // =============================================================================
 // GET /api/v1/retailer-admin/products/import/template
@@ -299,26 +305,48 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
       const row = mapHeadersToRow(headers, fields);
       const rowErrors: string[] = [];
 
-      // Validate required fields
-      if (!row.name || !row.name.trim()) {
-        rowErrors.push('name is required');
-      }
-      if (!row.sell_price || parseFloat(row.sell_price) <= 0) {
-        rowErrors.push('sell_price must be > 0');
-      }
-      if (!row.purchase_price || parseFloat(row.purchase_price) <= 0) {
-        rowErrors.push('purchase_price must be > 0');
+      // T-061: Detect variant rows (variant_of is set)
+      const isVariantRow = !!(row.variant_of && row.variant_of.trim());
+
+      if (isVariantRow) {
+        // Variant row validation
+        if (!row.sell_price || parseFloat(row.sell_price.replace(/[₹,]/g, '')) <= 0) {
+          rowErrors.push('variant sell_price must be > 0');
+        }
+        if (!row.variant_label || !row.variant_label.trim()) {
+          rowErrors.push('variant_label is required for variant rows');
+        }
+        const vQty = parseFloat(row.variant_qty || '');
+        if (!Number.isFinite(vQty) || vQty <= 0) {
+          rowErrors.push('variant_qty must be > 0');
+        }
+        const vUnit = (row.variant_unit || '').toUpperCase();
+        if (!VALID_VARIANT_UNITS.has(vUnit)) {
+          rowErrors.push(`variant_unit must be one of: ${[...VALID_VARIANT_UNITS].join(', ')}`);
+        }
+      } else {
+        // Standard product row validation
+        if (!row.name || !row.name.trim()) {
+          rowErrors.push('name is required');
+        }
+        if (!row.sell_price || parseFloat(row.sell_price) <= 0) {
+          rowErrors.push('sell_price must be > 0');
+        }
+        if (!row.purchase_price || parseFloat(row.purchase_price) <= 0) {
+          rowErrors.push('purchase_price must be > 0');
+        }
       }
 
       // Validate barcode rules
-      const mode = (row.mode || '').toUpperCase() === 'LOOSE_BULK' ? 'LOOSE_BULK' :
+      const mode = isVariantRow ? 'VARIANT' :
+                   (row.mode || '').toUpperCase() === 'LOOSE_BULK' ? 'LOOSE_BULK' :
                    (!row.barcode || !row.barcode.trim()) ? 'LOOSE_BULK' : 'PACKAGED';
 
-      // Validate numeric fields
-      if (row.sell_price && isNaN(parseFloat(row.sell_price.replace(/[₹,]/g, '')))) {
+      // Validate numeric fields (only for non-variant rows that have these)
+      if (!isVariantRow && row.sell_price && isNaN(parseFloat(row.sell_price.replace(/[₹,]/g, '')))) {
         rowErrors.push('sell_price must be numeric');
       }
-      if (row.purchase_price && isNaN(parseFloat(row.purchase_price.replace(/[₹,]/g, '')))) {
+      if (!isVariantRow && row.purchase_price && isNaN(parseFloat(row.purchase_price.replace(/[₹,]/g, '')))) {
         rowErrors.push('purchase_price must be numeric');
       }
 
@@ -330,15 +358,21 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
 
       previewRows.push({
         row: i,
-        name: row.name?.trim() || '',
+        name: isVariantRow ? `↳ ${row.variant_label?.trim() || ''} (variant of ${row.variant_of?.trim()})` : (row.name?.trim() || ''),
         barcode: row.barcode?.trim() || '',
         brand: row.brand?.trim() || '',
-        unit: row.unit?.trim() || 'PCS',
+        unit: isVariantRow ? (row.variant_unit?.trim()?.toUpperCase() || '') : (row.unit?.trim() || 'PCS'),
         sellPrice: parsePrice(row.sell_price),
-        purchasePrice: parsePrice(row.purchase_price),
+        purchasePrice: isVariantRow ? 0 : parsePrice(row.purchase_price),
         mrp: parsePrice(row.mrp),
-        stock: parseInt(row.stock) || 0,
+        stock: isVariantRow ? 0 : (parseInt(row.stock) || 0),
         mode,
+        // T-061: Variant-specific fields
+        isVariant: isVariantRow,
+        variantOf: row.variant_of?.trim() || null,
+        variantLabel: row.variant_label?.trim() || null,
+        variantQty: isVariantRow ? parseFloat(row.variant_qty || '0') : null,
+        variantUnit: isVariantRow ? (row.variant_unit?.trim()?.toUpperCase() || null) : null,
         valid: rowErrors.length === 0,
         errors: rowErrors,
       });
@@ -551,6 +585,104 @@ async function commitSingleRow(
   }
 }
 
+// T-061: Process a variant row — creates a retail variant for an existing LOOSE_BULK store product
+async function commitVariantRow(
+  client: any, storeId: string, row: any
+): Promise<{ action: 'created' | 'updated' | 'skipped'; warning?: CategorizedWarning }> {
+  try {
+    const parentName = (row.variantOf || '').trim();
+    if (!parentName) {
+      return { action: 'skipped', warning: { row: row.row, message: 'variant_of is empty', category: 'validation_error' } };
+    }
+
+    // Find parent store product by name (must be LOOSE_BULK)
+    const parentRes = await client.query(
+      `SELECT sp.id AS store_product_id, sp.store_id
+       FROM catalog.store_products sp
+       JOIN catalog.products p ON p.id = sp.product_id
+       WHERE sp.store_id = $1 AND sp.is_active = true
+         AND LOWER(TRIM(p.name)) = LOWER(TRIM($2))
+         AND sp.product_mode = 'LOOSE_BULK'
+       LIMIT 1`,
+      [storeId, parentName]
+    );
+
+    if (parentRes.rows.length === 0) {
+      return {
+        action: 'skipped',
+        warning: {
+          row: row.row,
+          message: `Parent product "${parentName}" not found or not LOOSE_BULK`,
+          category: 'validation_error'
+        }
+      };
+    }
+
+    const storeProductId = parentRes.rows[0].store_product_id;
+    const variantLabel = (row.variantLabel || '').trim();
+    const variantQty = parseFloat(row.variantQty) || 0;
+    const variantUnit = (row.variantUnit || '').toUpperCase();
+    const sellPricePaise = row.sellPrice || 0;
+
+    if (!variantLabel || variantQty <= 0 || !VALID_VARIANT_UNITS.has(variantUnit) || sellPricePaise <= 0) {
+      return {
+        action: 'skipped',
+        warning: { row: row.row, message: 'Invalid variant data (label/qty/unit/price)', category: 'validation_error' }
+      };
+    }
+
+    // Check for duplicate variant (same label for same parent)
+    const dupRes = await client.query(
+      `SELECT id FROM catalog.product_retail_variants
+       WHERE store_product_id = $1 AND LOWER(TRIM(variant_label)) = LOWER(TRIM($2)) AND is_active = true
+       LIMIT 1`,
+      [storeProductId, variantLabel]
+    );
+
+    if (dupRes.rows.length > 0) {
+      // Update existing variant
+      await client.query(
+        `UPDATE catalog.product_retail_variants SET
+          variant_qty = $2, base_unit = $3, sell_price_minor = $4, updated_at = NOW()
+         WHERE id = $1`,
+        [dupRes.rows[0].id, variantQty, variantUnit, sellPricePaise]
+      );
+      return { action: 'updated' };
+    }
+
+    // Generate barcode for new variant
+    const barcodeRes = await client.query(
+      `SELECT catalog.generate_variant_barcode($1::uuid) AS barcode`,
+      [storeId]
+    );
+    const barcode = barcodeRes.rows[0]?.barcode;
+    if (!barcode) {
+      return { action: 'skipped', warning: { row: row.row, message: 'Failed to generate variant barcode', category: 'db_error' } };
+    }
+
+    // Get max sort order
+    const sortRes = await client.query(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_sort
+       FROM catalog.product_retail_variants
+       WHERE store_product_id = $1 AND is_active = true`,
+      [storeProductId]
+    );
+    const sortOrder = sortRes.rows[0]?.next_sort ?? 0;
+
+    // Insert variant
+    await client.query(
+      `INSERT INTO catalog.product_retail_variants
+        (store_product_id, variant_label, variant_qty, base_unit, sell_price_minor, barcode, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [storeProductId, variantLabel, variantQty, variantUnit, sellPricePaise, barcode, sortOrder]
+    );
+
+    return { action: 'created' };
+  } catch (err: any) {
+    return { action: 'skipped', warning: categorizeDbError(err, row) };
+  }
+}
+
 // RET-POS-SYNC-003: Process rows in chunks of CHUNK_SIZE, each chunk in its own transaction
 const COMMIT_CHUNK_SIZE = 100;
 
@@ -563,9 +695,14 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
   let skipped = 0;
   const allWarnings: CategorizedWarning[] = [];
 
-  // Process in chunks
-  for (let i = 0; i < validRows.length; i += COMMIT_CHUNK_SIZE) {
-    const chunk = validRows.slice(i, i + COMMIT_CHUNK_SIZE);
+  // T-061: Two-pass commit — products first (pass 1), then variants (pass 2)
+  // This ensures parent products exist before variant rows reference them
+  const productRows = validRows.filter((r: any) => !r.isVariant);
+  const variantRows = validRows.filter((r: any) => r.isVariant);
+
+  // Pass 1: Process product rows in chunks
+  for (let i = 0; i < productRows.length; i += COMMIT_CHUNK_SIZE) {
+    const chunk = productRows.slice(i, i + COMMIT_CHUNK_SIZE);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -581,7 +718,6 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
     } catch (chunkErr: any) {
       await client.query("ROLLBACK").catch(() => {});
       console.error(`[CsvImport] Chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
-      // Count entire chunk as skipped on transaction-level failure
       for (const row of chunk) {
         skipped++;
         allWarnings.push(categorizeDbError(chunkErr, row));
@@ -590,8 +726,42 @@ async function processCommitInBackground(jobId: string, storeId: string, validRo
       client.release();
     }
 
-    // Update progress after each chunk so polling can see it
-    // DATA-001: Use pool.query() instead of manual connect/release for single query
+    try {
+      await pool.query(
+        `UPDATE platform.csv_imports SET
+          products_created = $2, updated_at = NOW()
+        WHERE id = $1`,
+        [jobId, created]
+      );
+    } catch { /* progress update is non-critical */ }
+  }
+
+  // Pass 2: Process variant rows in chunks (parents must exist from pass 1)
+  for (let i = 0; i < variantRows.length; i += COMMIT_CHUNK_SIZE) {
+    const chunk = variantRows.slice(i, i + COMMIT_CHUNK_SIZE);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      for (const row of chunk) {
+        const result = await commitVariantRow(client, storeId, row);
+        if (result.action === 'created') created++;
+        else if (result.action === 'updated') updated++;
+        else { skipped++; if (result.warning) allWarnings.push(result.warning); }
+      }
+
+      await client.query("COMMIT");
+    } catch (chunkErr: any) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error(`[CsvImport] Variant chunk ${i}-${i + chunk.length} failed:`, chunkErr.message);
+      for (const row of chunk) {
+        skipped++;
+        allWarnings.push(categorizeDbError(chunkErr, row));
+      }
+    } finally {
+      client.release();
+    }
+
     try {
       await pool.query(
         `UPDATE platform.csv_imports SET
