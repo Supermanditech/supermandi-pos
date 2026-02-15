@@ -93,7 +93,7 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
       interestMinor,
       totalWithInterestMinor,
     };
-    }));
+    });
 
     console.log(`[SM-019] BNPL active: storeId=${storeId}, count=${drawdowns.length}, outstanding=${totalOutstanding}`);
 
