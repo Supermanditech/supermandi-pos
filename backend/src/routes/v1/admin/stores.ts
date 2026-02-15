@@ -24,13 +24,14 @@ export const adminStoresRouter = Router();
 // GO-LIVE-128: All admin store routes require admin token authentication
 adminStoresRouter.use(requireAdminToken);
 
-const UPI_VPA_PATTERN = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+$/;
+// T-215: Canonical UPI VPA pattern — min 3 chars before @, min 2 after, no dots after @
+const UPI_VPA_PATTERN = /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const normalizeUpiVpa = (value: unknown): string | null | undefined => {
   if (value === null) return null;
   if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
+  const trimmed = value.trim().toLowerCase(); // T-215: normalize to lowercase
   if (!trimmed) return null;
   return trimmed;
 };

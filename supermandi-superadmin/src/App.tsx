@@ -2392,7 +2392,7 @@ export default function App() {
       return;
     }
     const rawVpa = storeUpiInputRef.current?.value ?? storeUpiInput;
-    const trimmedVpa = rawVpa.trim();
+    const trimmedVpa = rawVpa.trim().toLowerCase(); // T-215: normalize to lowercase before validation
     setStoreUpiInput(rawVpa);
     if (!trimmedVpa) {
       if (!storeRecord?.upi_vpa) {

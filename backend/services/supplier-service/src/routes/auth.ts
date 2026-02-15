@@ -43,8 +43,8 @@ function isValidIfscCode(ifsc: string): boolean {
  */
 function isValidUpiVpa(vpa: string): boolean {
   const trimmed = vpa.trim().toLowerCase();
-  // Must have @ separator, username and handle both non-empty
-  return /^[a-z0-9._-]+@[a-z0-9]+$/.test(trimmed) && trimmed.length <= 100;
+  // T-215: Canonical UPI VPA pattern — min 3 chars before @, min 2 after @, max 100 total
+  return /^[a-z0-9._-]{3,}@[a-z0-9]{2,}$/.test(trimmed) && trimmed.length >= 6 && trimmed.length <= 100;
 }
 
 // =============================================================================
