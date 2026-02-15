@@ -4,7 +4,11 @@
 > **Phase 2**: T-054 to T-073 — E2E production-grade implementation tickets (ALL DONE)
 > **Phase 3**: T-074 to T-111 — UI/UX Professional Polish (ALL DONE)
 > **Phase 4**: T-112 to T-127 — Wiring & Navigation (ALL DONE)
-> **Phase 5**: T-128 to T-199 — Production Audit: POS + Cross-Platform Gaps (QUEUED)
+> **Phase 5**: T-128 to T-199 — Production Audit: POS + Cross-Platform Gaps (ALL DONE)
+> **Phase 6**: T-200 to T-235 — 360° CTO Audit (ALL DONE)
+> **Phase 7**: T-236 to T-252 — B2B Reorder System (ALL DONE)
+> **Phase 8**: T-219, T-223, T-231, T-232, T-235 — FCM Push + Deferred (ALL DONE)
+> **Phase 9**: T-253 to T-316 — Payments + B2B Finance + WhatsApp + AI Automation (QUEUED)
 > **Launch Geography**: India — INR (₹), +91, IST, DD/MM/YYYY
 > **Zero Regression Rule**: Every ticket must leave the system in a deployable state. Fix micro issues inline.
 
@@ -745,9 +749,11 @@ Wave 7 — P2 Large (post-launch):
 | Phase 3: UI/UX Professional Polish | T-074 → T-111 | 38 | ALL DONE |
 | Phase 4: Wiring & Navigation | T-112 → T-127 | 16 | ALL DONE |
 | Phase 5: Production Audit (POS+Cross) | T-128 → T-199 | 72 | ALL DONE |
-| Phase 6: 360° CTO Audit | T-200 → T-235 | 36 | DONE (31/36, 5 deferred post-launch) |
-| **Phase 7: B2B Reorder System** | **T-236 → T-252** | **17** | **QUEUED** |
-| **GRAND TOTAL** | **T-001 → T-252** | **252** | **230 DONE / 17 QUEUED + 5 DEFERRED** |
+| Phase 6: 360° CTO Audit | T-200 → T-235 | 36 | ALL DONE |
+| Phase 7: B2B Reorder System | T-236 → T-252 | 17 | ALL DONE |
+| Phase 8: FCM Push + Deferred | T-219, T-223, T-231, T-232, T-235 | 5 | ALL DONE |
+| **Phase 9: Payments + Finance + WhatsApp + AI** | **T-253 → T-316** | **64** | **QUEUED** |
+| **GRAND TOTAL** | **T-001 → T-316** | **316** | **252 DONE / 64 QUEUED** |
 
 ---
 
@@ -847,3 +853,221 @@ Wave 6 — Integration & Cleanup:
 6. **No double-counting**: Unified GRN path must be the ONLY stock-in for PO-linked deliveries.
 7. **Payment terms immutable on PO**: Snapshot at creation time, never recalculated.
 8. **India market**: DD/MM/YYYY, INR (₹), +91, Hindi-ready labels on all new screens.
+
+---
+
+## PHASE 9: PAYMENTS + B2B FINANCE + WHATSAPP + AI AUTOMATION (T-253 → T-316)
+
+> 64 tickets across 4 major areas. ~1100 hours estimated effort.
+> **Area 1**: UPI Payment Gateway — Razorpay (10 tickets, P0 launch blocker)
+> **Area 2**: B2B Finance — 14 direct financers across 5 tiers + platform UI (28 tickets, P1)
+> **Area 3**: WhatsApp + In-App Chat — Hybrid model (12 tickets, P1)
+> **Area 4**: AI Automation — Full suite with expo-speech TTS (14 tickets, P1-P2)
+> **External deps**: Razorpay account, Meta WhatsApp Business verification, BNPL provider partnerships
+
+---
+
+### AREA 1: UPI PAYMENT GATEWAY — Razorpay (T-253 → T-262)
+
+> Razorpay SDK is integrated but NOT go-live ready. No API keys, UPI uses plain intent strings, payouts disabled, refund API missing.
+
+| # | Title | Priority | Platform | Effort | What |
+|---|-------|----------|----------|--------|------|
+| T-253 | Wire Razorpay SELL webhook handler | P0 | Backend | M | Handle `payment.captured`/`payment.failed` events → update `sell_payments` status |
+| T-254 | Real UPI order tracking via Razorpay Orders API | P0 | Backend + POS | M | Create Razorpay order → link to sell_payment → poll/webhook for confirmation |
+| T-255 | UTR verification via Razorpay gateway API | P1 | Backend | S | Query Razorpay API to verify UTR against real payment (not just format check) |
+| T-256 | Enable supplier payouts via RazorpayX | P0 | Backend | L | Contact creation → fund account → payout execution → webhook tracking |
+| T-257 | Supplier bank/UPI KYC collection UI | P1 | Supplier Portal + POS | M | UI to enter bank details, POS to enter supplier UPI VPA |
+| T-258 | Payout retry and failure handling | P1 | Backend | M | Retry failed payouts with exponential backoff, alert on 3x failure |
+| T-259 | Refund flow via Razorpay Refund API | P0 | Backend + POS | M | Initiate refund via Razorpay API → track status → update sell_payments |
+| T-260 | Payment reconciliation dashboard | P1 | Retailer Admin | L | Daily settlement, pending, failed payments. Export CSV. INR format |
+| T-261 | Dynamic QR expiry countdown + auto-refresh UI | P0 | POS App | S | Countdown timer on POS, auto-refresh QR after 5-min expiry |
+| T-262 | Payment event outbox processor | P1 | Backend | M | Worker to publish payment events from outbox table to BullMQ consumers |
+
+---
+
+### AREA 2: B2B FINANCE — 14 Direct Financers + Platform (T-263 → T-290)
+
+> **Tier 1 (Trade Credit)**: Rupifi, KredX, Mintifi, Trevex — Pay supplier at PO checkout
+> **Tier 2 (Credit Lines)**: Lendingkart, FlexiLoans, Progcap, NeoGrowth — Working capital
+> **Tier 3 (Rajasthan NBFC)**: Finova Capital (HQ Jaipur, 180 branches)
+> **Tier 4 (LaaS)**: Cashfree Embedded Lending — Single API → multiple NBFCs
+> **Tier 5 (Supplier Invoice Discounting)**: KredX, M1xchange, Vayana, Credlix
+> ALL under SuperMandi umbrella. SuperAdmin monitors ALL applications across ALL providers.
+
+| # | Title | Priority | Platform | Effort | What |
+|---|-------|----------|----------|--------|------|
+| T-263 | Credit provider abstraction layer | P0 | Backend | L | `CreditProvider` interface: TradeCredit + CreditLine modes. `checkEligibility()`, `createDrawdown()`, `getRepaymentSchedule()`, `processRepayment()`, `getBalance()`, `getOffers()` |
+| T-264 | Rupifi integration (Trade Credit, Tier 1) | P1 | Backend | L | OAuth + onboarding + credit check + drawdown + repayment |
+| T-265 | KredX integration (Trade Credit, Tier 1) | P1 | Backend | L | Channel finance — reverse factoring, credit line, drawdown |
+| T-266 | Mintifi integration (Trade Credit, Tier 1) | P1 | Backend | L | Supply chain finance — brand-anchored, invoice financing |
+| T-267 | Trevex integration (Trade Credit, Tier 1) | P1 | Backend | L | White-label BNPL — instant supplier payout |
+| T-268 | Lendingkart integration (Credit Line, Tier 2) | P1 | Backend | L | 2gthr API — working capital credit line, EMI |
+| T-269 | FlexiLoans integration (Credit Line, Tier 2) | P1 | Backend | L | REST API — business loan, disbursement to bank |
+| T-270 | Progcap integration (Credit Line, Tier 2) | P1 | Backend | L | FRCL — fast rotation credit for stock |
+| T-271 | NeoGrowth integration (Credit Line, Tier 2) | P1 | Backend | L | POS-based lending, deduction-based repay |
+| T-272 | Finova Capital integration (Rajasthan NBFC, Tier 3) | P1 | Backend | L | Jaipur HQ, kirana-focused, 30K+ customers |
+| T-273 | Cashfree Embedded Lending (LaaS, Tier 4) | P1 | Backend | L | Single API → multiple additional NBFCs, escrow + disbursement + reconciliation |
+| T-274 | Provider selection UI (POS + Retailer Web) | P1 | POS + Retailer | L | At PO checkout: trade credit offers. On dashboard: credit line offers. Sort by best terms |
+| T-275 | Multi-provider repayment tracking | P1 | Backend | M | Track across all providers, auto paid/overdue, partial payments, EMI schedules |
+| T-276 | KYC routing (provider-specific) | P1 | Backend | L | Route PAN + Aadhaar + GSTIN through each provider's KYC API. Shared where possible |
+| T-277 | Credit dashboard (Retailer Admin) | P1 | Retailer Admin | L | Aggregated: total credit across ALL providers, per-provider breakdown, drawdowns, repayment calendar, credit score |
+| T-278 | Settlement reconciliation (multi-provider) | P1 | Backend + Retailer | L | Match disbursements from each provider to POs/withdrawals, multi-provider reconciliation report |
+| T-279 | Auto-overdue maturation job | P1 | Backend | S | Cron: check all providers' drawdowns/EMIs, mark overdue, push + WhatsApp alerts |
+| T-280 | Supplier-side BNPL visibility | P1 | Supplier Portal | M | Which POs are BNPL-backed, payment guaranteed, which provider, expected payout date |
+| T-281 | Provider health monitoring | P2 | SuperAdmin | M | API health, response times, approval rates, volumes per provider |
+| T-282 | Provider comparison engine | P2 | Backend + POS | M | Side-by-side offers: sort by total cost, show APR, credit limit, tenure |
+| T-283 | KredX invoice discounting (Supplier, Tier 5) | P1 | Backend + Supplier | L | Supplier uploads invoice → KredX API → 80-90% in 24-72h |
+| T-284 | M1xchange TReDS integration (Supplier, Tier 5) | P1 | Backend + Supplier | L | RBI-licensed TReDS — banks bid on invoices → lowest rate → instant funding |
+| T-285 | Vayana trade credit (Supplier, Tier 5) | P1 | Backend + Supplier | L | Supply chain finance API — payables/receivables financing |
+| T-286 | Credlix invoice factoring (Supplier, Tier 5) | P1 | Backend + Supplier | L | 90% of invoice in 24h, PO financing up to 40Cr |
+| T-287 | Supplier financing UI (Supplier Portal) | P1 | Supplier Portal | L | "Get Paid Now" button on invoices, application flow, status tracking, repayment schedule |
+| T-288 | Retailer bulk purchase credit UI (POS + Web) | P1 | POS + Retailer | L | "Finance this purchase" at checkout for large POs. Show available credit offers |
+| T-289 | SuperAdmin finance monitoring dashboard | P1 | SuperAdmin | XL | Real-time: all applications, approvals, disbursements, repayments, provider health across ALL providers (retailer + supplier) |
+| T-290 | SuperAdmin provider management | P2 | SuperAdmin | M | Enable/disable providers per store, set commission rates, configure credit limits |
+
+---
+
+### AREA 3: WHATSAPP + IN-APP CHAT — Hybrid (T-291 → T-302)
+
+> **Option C: Hybrid** — In-app chat (retailer↔supplier via Socket.io) + Meta WhatsApp Cloud API direct (retailer→consumer, BSP fallback if Meta approval difficult)
+
+| # | Title | Priority | Platform | Effort | What |
+|---|-------|----------|----------|--------|------|
+| T-291 | Chat database schema | P0 | Backend | M | `messages`, `conversations`, `conversation_participants` tables with store isolation |
+| T-292 | Chat backend API | P0 | Backend | L | CRUD endpoints: create conversation, send message, list messages, mark read |
+| T-293 | Real-time chat via Socket.io | P0 | Backend | L | WebSocket server alongside Express, auth via JWT, room per conversation |
+| T-294 | POS chat screen (in-app) | P1 | POS App | L | Chat list + conversation view + send messages to suppliers/SuperMandi team |
+| T-295 | Supplier portal chat UI | P1 | Supplier Portal | L | Supplier sees retailer messages, can reply, delivery confirmations |
+| T-296 | WhatsApp Cloud API integration (Meta direct) | P1 | Backend | L | Meta WhatsApp Cloud API directly (no BSP). Setup: Meta Business verification + developer app + webhook |
+| T-297 | WhatsApp order receipt to consumer | P2 | Backend + POS | M | After sale, send receipt via WhatsApp to consumer phone (if provided) |
+| T-298 | WhatsApp reorder alert to supplier | P2 | Backend | M | When reorder PO created, send WhatsApp notification to supplier |
+| T-299 | Push notifications (FCM + Expo) | P1 | Backend + POS | L | Wire firebase-admin for push, expo-notifications for POS app. Extend existing FCM infra |
+| T-300 | SuperMandi support chat channel | P1 | Backend + POS | M | Dedicated channel for retailer↔SuperMandi team communication |
+| T-301 | Chat attachment support (image/PDF) | P2 | Backend + POS | M | Image/PDF upload in chat messages (GCS storage) |
+| T-302 | WhatsApp message template management | P2 | SuperAdmin | M | SuperAdmin portal to create/edit WhatsApp template messages for approval |
+
+---
+
+### AREA 4: AI AUTOMATION — Full Suite (T-303 → T-316)
+
+> expo-speech for TTS (free, built-in, Hindi, offline). NOT ElevenLabs.
+> Voice STT already works (Claude/Anthropic API). Intent parsing already works (GPT-4o-mini).
+> Goal: Make AI feel like a virtual store manager.
+
+| # | Title | Priority | Platform | Effort | What |
+|---|-------|----------|----------|--------|------|
+| T-303 | AI onboarding assistant | P2 | POS App | L | First-time setup: AI walks retailer through store setup, first product add, first sale |
+| T-304 | Hindi NLU expansion (Marathi, Gujarati, Tamil) | P2 | Backend | M | Add support for regional number words and product aliases |
+| T-305 | Voice TTS response (AI speaks back) | P1 | POS App | L | After voice command, AI responds with spoken Hindi/English using expo-speech (free, built-in, offline) |
+| T-306 | Multi-turn voice conversation | P1 | POS App | L | Context-aware: "Add rice" → "Which rice? Basmati or Sona Masoori?" → "Basmati" → done |
+| T-307 | Proactive AI alerts (push) | P1 | POS + Backend | L | Daily alerts: low stock, expiring items, overdue payments, unusual patterns |
+| T-308 | Demand forecasting engine | P2 | Backend | XL | 4-week rolling sales data to predict daily demand per SKU |
+| T-309 | Smart reorder suggestions (forecast-driven) | P1 | Backend | L | Enhance stock monitor: demand forecast + supplier lead time + buffer days |
+| T-310 | Auto daily closing summary | P1 | POS + Backend | M | AI generates end-of-day report: total sales, cash count, UPI collected, dues created |
+| T-311 | Supplier price comparison | P1 | POS + Backend | M | "Supplier B is X cheaper for same SKU" when adding item to PO |
+| T-312 | Customer purchase insights | P2 | POS + Backend | M | "Top 10 customers by value", "Customers who haven't visited in 7 days" |
+| T-313 | Slow mover detection | P2 | Backend | M | Flag items with <2 sales in 30 days, suggest discount or discontinue |
+| T-314 | Expiry tracking alerts | P1 | POS + Backend | L | Scan expiry dates → alert 30/15/7 days before → suggest markdown |
+| T-315 | Voice-driven full workflow | P1 | POS App | L | "Place reorder for all low stock items" → AI shows list → retailer approves → POs created |
+| T-316 | Anomaly detection | P2 | Backend | M | Flag: "Sales dropped 40% vs last Tuesday" or "Unusual 50-item return" |
+
+---
+
+### EXECUTION WAVES (Phase 9)
+
+```
+Wave A — UPI Core (P0 Launch Critical):
+  T-253 (Razorpay SELL webhook) → T-254 (real UPI tracking) → T-255 (UTR verify)
+  T-262 (payment outbox) → T-259 (refund flow) → T-261 (QR expiry UI)
+  → Result: SELL payments fully confirmed via Razorpay gateway
+
+Wave B — BNPL Foundation + First 2 Providers:
+  T-263 (abstraction layer) → T-264 (Rupifi) → T-270 (Progcap)
+  T-274 (provider selection UI) → T-275 (repayment tracking) → T-279 (overdue job)
+  → Result: Retailers can get BNPL + working capital from 2 providers
+
+Wave C — Supplier Payouts + Trade Credit Providers:
+  T-256 (RazorpayX payouts) → T-257 (supplier KYC) → T-258 (retry)
+  T-265 (KredX) → T-266 (Mintifi) → T-267 (Trevex)
+  → Result: Retailer→supplier payouts live + 4 trade credit providers
+
+Wave C2 — Credit Lines + LaaS:
+  T-268 (Lendingkart) → T-269 (FlexiLoans) → T-271 (NeoGrowth)
+  T-272 (Finova Capital) → T-273 (Cashfree Embedded Lending)
+  → Result: ALL 10 direct financers + LaaS pipe active
+
+Wave D — In-App Chat + Push Notifications:
+  T-291 (chat schema) → T-292 (chat API) → T-293 (Socket.io)
+  T-294 (POS chat) → T-295 (supplier chat) → T-299 (push)
+  → Result: Retailer↔Supplier real-time chat working
+
+Wave E — AI Core (Voice + Automation):
+  T-305 (TTS expo-speech) → T-306 (multi-turn voice)
+  T-307 (proactive alerts) → T-310 (auto daily closing)
+  → Result: AI speaks Hindi/English, proactive alerts
+
+Wave F — WhatsApp + Supplier Finance:
+  T-296 (WhatsApp Cloud API) → T-297 (receipts) → T-298 (reorder alerts)
+  T-300 (support channel) → T-301 (attachments) → T-302 (templates)
+  T-283 (KredX invoice) → T-284 (M1xchange) → T-285 (Vayana) → T-286 (Credlix) → T-287 (supplier UI)
+  → Result: Full WhatsApp + supplier invoice discounting
+
+Wave G — Finance Dashboards + Reconciliation:
+  T-276 (KYC routing) → T-277 (credit dashboard) → T-278 (reconciliation)
+  T-280 (supplier BNPL visibility) → T-281 (provider health) → T-282 (comparison engine)
+  T-288 (bulk purchase credit) → T-289 (SuperAdmin monitoring) → T-290 (provider mgmt)
+  T-260 (payment reconciliation)
+  → Result: Full financial visibility across all providers
+
+Wave H — AI Intelligence (Forecasting + Insights):
+  T-308 (demand forecasting) → T-309 (smart reorder)
+  T-311 (supplier price comparison) → T-312 (customer insights) → T-315 (voice workflows)
+  → Result: AI predicts demand, compares suppliers, knows customers
+
+Wave I — AI Polish + Scale:
+  T-313 (slow mover) → T-314 (expiry tracking)
+  T-303 (AI onboarding) → T-316 (anomaly detection) → T-304 (Hindi NLU expansion)
+  → Result: Complete AI retail assistant
+```
+
+### EXTERNAL DEPENDENCIES (Operator Action Required)
+
+| Dependency | For | Action |
+|------------|-----|--------|
+| Razorpay Standard account | UPI SELL | Sign up at razorpay.com, get API keys |
+| RazorpayX account | Supplier payouts | Contact Razorpay sales for business account |
+| Meta Business verification | WhatsApp API | Verify business at business.facebook.com |
+| Rupifi partnership | Trade Credit | Apply at rupifi.com/partners |
+| KredX partnership | Trade Credit + Invoice Discounting | Apply at kredx.com/channel-finance |
+| Mintifi partnership | Trade Credit | Contact mintifi.com |
+| Trevex partnership | Trade Credit | Contact trevex.io |
+| Lendingkart partnership | Credit Line | Contact lendingkart.com (sandbox at gateway-qa.lendingkart.io) |
+| FlexiLoans partnership | Credit Line | Apply at flexiloans.com/partners |
+| Progcap partnership | Credit Line | Contact progcap.com |
+| NeoGrowth partnership | Credit Line | Contact neogrowth.in |
+| Finova Capital partnership | Rajasthan NBFC | Contact Jaipur HQ |
+| Cashfree Embedded Lending | LaaS | Sign up at cashfree.com/embedded-lending |
+| M1xchange partnership | TReDS | Contact M1xchange for API access |
+| Vayana Network partnership | Trade finance | Contact vayana.com |
+| Credlix partnership | Invoice factoring | Contact credlix.com |
+
+### KEY TECHNICAL NOTES
+
+- **TTS**: Using `expo-speech` (React Native built-in, FREE, offline, Hindi supported). NOT ElevenLabs.
+- **WhatsApp**: Meta Cloud API directly (no BSP). BSP (Interakt/AiSensy/Gupshup) as fallback if Meta approval difficult.
+- **Razorpay**: SDK integrated but NOT go-live ready. No API keys configured. UPI uses plain `upi://pay?` intent strings. All payout features behind disabled flags.
+- **BNPL Sandboxes**: Lendingkart confirmed (gateway-qa.lendingkart.io). Cashfree likely. All others require partnership agreements.
+- **All finance under SuperMandi umbrella**: Retailers/suppliers never leave the platform. SuperAdmin monitors ALL providers.
+
+### ZERO REGRESSION RULES FOR PHASE 9
+
+1. **Payment integrity**: All money in minor units (paise). Integer arithmetic only. Never floating point.
+2. **Idempotency**: All payment webhooks (Razorpay + BNPL providers) must be idempotent via Redis/DB dedup.
+3. **Store isolation**: All new endpoints derive store_id from JWT only. Chat/finance/payment all store-scoped.
+4. **Provider abstraction**: Adding a new BNPL provider MUST NOT require changes to POS/web UI code. Only backend adapter.
+5. **Graceful degradation**: If a BNPL provider API is down, other providers still work. No cascade failure.
+6. **Chat security**: Messages only visible to conversation participants. No cross-store leakage.
+7. **WhatsApp rate limits**: Respect Meta rate limits. Queue messages via BullMQ, not direct API calls.
+8. **AI safety**: Voice commands that involve money (reorder, payment) ALWAYS require explicit confirmation.
+9. **India market**: DD/MM/YYYY, INR, +91, Hindi-ready on all new screens.

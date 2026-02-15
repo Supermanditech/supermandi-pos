@@ -1,9 +1,16 @@
 {
-  "version": "20.0",
-  "lastUpdated": "2026-02-16T14:00:00+05:30",
-  "currentPhase": "Phase 8: FCM Push Notifications + Deferred Tickets (COMPLETE)",
+  "version": "21.0",
+  "lastUpdated": "2026-02-16T18:00:00+05:30",
+  "currentPhase": "Phase 9: Payments + B2B Finance + WhatsApp + AI Automation",
   "currentTicket": null,
-  "ticketQueue": [],
+  "ticketQueue": [
+    "T-253","T-254","T-255","T-256","T-257","T-258","T-259","T-260","T-261","T-262",
+    "T-263","T-264","T-265","T-266","T-267","T-268","T-269","T-270","T-271","T-272",
+    "T-273","T-274","T-275","T-276","T-277","T-278","T-279","T-280",
+    "T-281","T-282","T-283","T-284","T-285","T-286","T-287","T-288","T-289","T-290","T-291","T-292",
+    "T-293","T-294","T-295","T-296","T-297","T-298","T-299","T-300","T-301","T-302","T-303","T-304",
+    "T-305","T-306","T-307","T-308","T-309","T-310","T-311","T-312","T-313","T-314","T-315","T-316"
+  ],
   "ticketStatus": {
     "T-054": "DONE", "T-055": "DONE",
     "T-056": "DONE", "T-057": "DONE", "T-058": "DONE", "T-059": "DONE", "T-060": "DONE", "T-061": "DONE",
@@ -50,7 +57,22 @@
     "T-240": "DONE", "T-241": "DONE", "T-242": "DONE", "T-243": "DONE",
     "T-244": "DONE", "T-245": "DONE", "T-246": "DONE", "T-247": "DONE",
     "T-248": "DONE", "T-249": "DONE", "T-250": "DONE", "T-251": "DONE",
-    "T-252": "DONE"
+    "T-252": "DONE",
+    "T-253": "QUEUED", "T-254": "QUEUED", "T-255": "QUEUED", "T-256": "QUEUED", "T-257": "QUEUED",
+    "T-258": "QUEUED", "T-259": "QUEUED", "T-260": "QUEUED", "T-261": "QUEUED", "T-262": "QUEUED",
+    "T-263": "QUEUED", "T-264": "QUEUED", "T-265": "QUEUED", "T-266": "QUEUED", "T-267": "QUEUED",
+    "T-268": "QUEUED", "T-269": "QUEUED", "T-270": "QUEUED", "T-271": "QUEUED", "T-272": "QUEUED",
+    "T-273": "QUEUED", "T-274": "QUEUED", "T-275": "QUEUED", "T-276": "QUEUED", "T-277": "QUEUED",
+    "T-278": "QUEUED", "T-279": "QUEUED", "T-280": "QUEUED",
+    "T-281": "QUEUED", "T-282": "QUEUED", "T-283": "QUEUED", "T-284": "QUEUED", "T-285": "QUEUED",
+    "T-286": "QUEUED", "T-287": "QUEUED", "T-288": "QUEUED", "T-289": "QUEUED", "T-290": "QUEUED",
+    "T-291": "QUEUED", "T-292": "QUEUED",
+    "T-293": "QUEUED", "T-294": "QUEUED", "T-295": "QUEUED", "T-296": "QUEUED", "T-297": "QUEUED",
+    "T-298": "QUEUED", "T-299": "QUEUED", "T-300": "QUEUED", "T-301": "QUEUED", "T-302": "QUEUED",
+    "T-303": "QUEUED", "T-304": "QUEUED",
+    "T-305": "QUEUED", "T-306": "QUEUED", "T-307": "QUEUED", "T-308": "QUEUED", "T-309": "QUEUED",
+    "T-310": "QUEUED", "T-311": "QUEUED", "T-312": "QUEUED", "T-313": "QUEUED", "T-314": "QUEUED",
+    "T-315": "QUEUED", "T-316": "QUEUED"
   },
   "executionPhases": [
     { "phase": 1, "name": "Retailer → POS Sync", "tickets": ["T-054", "T-055"], "status": "DONE" },
@@ -86,7 +108,15 @@
     { "phase": 31, "name": "7D: Portal Build-Out", "tickets": ["T-244", "T-245", "T-246", "T-247"], "status": "DONE" },
     { "phase": 32, "name": "7E: GRN Unification", "tickets": ["T-249", "T-250"], "status": "DONE" },
     { "phase": 33, "name": "7F: Integration & Cleanup", "tickets": ["T-248", "T-252", "T-251"], "status": "DONE" },
-    { "phase": 34, "name": "8A: FCM Push Notifications + Deferred Tickets", "tickets": ["T-219", "T-223", "T-231", "T-232", "T-235"], "status": "DONE" }
+    { "phase": 34, "name": "8A: FCM Push Notifications + Deferred Tickets", "tickets": ["T-219", "T-223", "T-231", "T-232", "T-235"], "status": "DONE" },
+    { "phase": 35, "name": "9A: UPI Payment Gateway (Razorpay)", "tickets": ["T-253","T-254","T-255","T-256","T-257","T-258","T-259","T-260","T-261","T-262"], "status": "QUEUED" },
+    { "phase": 36, "name": "9B: B2B Finance — Abstraction + Trade Credit (Tier 1)", "tickets": ["T-263","T-264","T-265","T-266","T-267"], "status": "QUEUED" },
+    { "phase": 37, "name": "9C: B2B Finance — Credit Lines (Tier 2) + Rajasthan NBFC (Tier 3) + LaaS (Tier 4)", "tickets": ["T-268","T-269","T-270","T-271","T-272","T-273"], "status": "QUEUED" },
+    { "phase": 38, "name": "9D: B2B Finance — Supplier Invoice Discounting (Tier 5)", "tickets": ["T-274","T-275","T-276","T-277"], "status": "QUEUED" },
+    { "phase": 39, "name": "9E: B2B Finance — Platform UI + Dashboards", "tickets": ["T-278","T-279","T-280","T-281","T-282","T-283","T-284","T-285","T-286","T-287","T-288","T-289","T-290"], "status": "QUEUED" },
+    { "phase": 40, "name": "9F: WhatsApp + In-App Chat", "tickets": ["T-291","T-292","T-293","T-294","T-295","T-296","T-297","T-298","T-299","T-300","T-301","T-302"], "status": "QUEUED" },
+    { "phase": 41, "name": "9G: AI Automation — Voice + Core", "tickets": ["T-305","T-306","T-307","T-308","T-309","T-310","T-311"], "status": "QUEUED" },
+    { "phase": 42, "name": "9H: AI Automation — Intelligence + Polish", "tickets": ["T-312","T-313","T-314","T-315","T-316","T-303","T-304"], "status": "QUEUED" }
   ],
   "completedPhase1": {
     "range": "T-001 → T-053",
@@ -113,15 +143,96 @@
   "phase6_CTOAudit": {
     "range": "T-200 → T-235",
     "count": 36,
-    "status": "DONE — 36/36 DONE (all waves complete, 5 deferred tickets now implemented in Phase 8)",
+    "status": "DONE — 36/36 DONE",
     "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
     "falsePositivesDropped": 9,
-    "breakdown": {
-      "P0_blockers": 4,
-      "P1_high": 11,
-      "P2_medium": 21
+    "breakdown": { "P0_blockers": 4, "P1_high": 11, "P2_medium": 21 },
+    "estimatedEffort": "~490 hours total"
+  },
+  "phase7_B2BReorder": {
+    "range": "T-236 → T-252",
+    "count": 17,
+    "status": "DONE — All 6 waves complete (17/17 tickets)",
+    "estimatedEffort": "~180 hours"
+  },
+  "phase8_FCMNotifications": {
+    "range": "T-219, T-223, T-231, T-232, T-235",
+    "count": 5,
+    "status": "DONE — All 5 deferred tickets implemented",
+    "commit": "ecbaf3b"
+  },
+  "phase9_PaymentsFinanceWhatsAppAI": {
+    "range": "T-253 → T-316",
+    "count": 64,
+    "status": "QUEUED — 0/64 tickets started",
+    "areas": {
+      "UPI_Razorpay": {
+        "tickets": "T-253 → T-262 (10 tickets)",
+        "priority": "P0 — Launch Blocker",
+        "effort": "~120h",
+        "description": "Wire Razorpay sell webhook, real UPI order tracking, UTR gateway verification, supplier payouts (RazorpayX), bank/UPI KYC, payout retry, refund flow, reconciliation dashboard, dynamic QR expiry, payment event outbox"
+      },
+      "B2B_Finance": {
+        "tickets": "T-263 → T-290 (28 tickets)",
+        "priority": "P1 — High Value",
+        "effort": "~560h",
+        "description": "14 direct financers across 5 tiers (Rupifi, KredX, Mintifi, Trevex, Lendingkart, FlexiLoans, Progcap, NeoGrowth, Finova Capital, Cashfree, M1xchange, Vayana, Credlix) + abstraction layer + provider UI + repayment tracking + KYC routing + dashboards + reconciliation + SuperAdmin monitoring",
+        "tiers": {
+          "tier1_tradeCredit": ["Rupifi", "KredX", "Mintifi", "Trevex"],
+          "tier2_creditLines": ["Lendingkart", "FlexiLoans", "Progcap", "NeoGrowth"],
+          "tier3_rajasthanNBFC": ["Finova Capital (Jaipur HQ, 180 branches)"],
+          "tier4_LaaS": ["Cashfree Embedded Lending"],
+          "tier5_supplierInvoice": ["KredX invoice discounting", "M1xchange TReDS", "Vayana Network", "Credlix"]
+        }
+      },
+      "WhatsApp_Chat": {
+        "tickets": "T-291 → T-302 (12 tickets)",
+        "priority": "P1 — High Value",
+        "effort": "~200h",
+        "description": "Hybrid: in-app chat (retailer↔supplier via Socket.io) + Meta WhatsApp Cloud API direct (consumer messages, BSP fallback). Chat schema, backend, real-time, POS UI, supplier UI, WhatsApp API, receipts, reorder alerts, FCM push, support channel, attachments, templates"
+      },
+      "AI_Automation": {
+        "tickets": "T-303 → T-316 (14 tickets)",
+        "priority": "P1-P2 — Delight",
+        "effort": "~220h",
+        "description": "Full AI suite: expo-speech TTS (free, offline, Hindi), multi-turn voice, proactive alerts, demand forecasting, smart reorder, auto daily closing, supplier price comparison, customer insights, slow mover detection, expiry tracking, voice-driven workflows, AI onboarding, anomaly detection, Hindi NLU expansion (Marathi, Gujarati, Tamil)"
+      }
     },
-    "estimatedEffort": "~490 hours total (7 S, 15 M, 10 L, 2 XL)"
+    "externalDependencies": [
+      "Razorpay Standard account + RazorpayX account (operator to sign up)",
+      "Meta WhatsApp Cloud API — Business verification at business.facebook.com",
+      "BNPL partnerships — 14 providers to contact for API access",
+      "Lendingkart — sandbox confirmed at gateway-qa.lendingkart.io",
+      "Cashfree — sandbox likely available (cashfree.com developer account)"
+    ],
+    "ticketMapping": {
+      "U-1": "T-253", "U-2": "T-254", "U-3": "T-255", "U-4": "T-256", "U-5": "T-257",
+      "U-6": "T-258", "U-7": "T-259", "U-8": "T-260", "U-9": "T-261", "U-10": "T-262",
+      "B-1": "T-263", "B-2": "T-264", "B-3": "T-265", "B-4": "T-266", "B-5": "T-267",
+      "B-6": "T-268", "B-7": "T-269", "B-8": "T-270", "B-9": "T-271", "B-10": "T-272",
+      "B-11": "T-273", "B-12": "T-274", "B-13": "T-275", "B-14": "T-276", "B-15": "T-277",
+      "B-16": "T-278", "B-17": "T-279", "B-18": "T-280", "B-19": "T-281", "B-20": "T-282",
+      "B-21": "T-283", "B-22": "T-284", "B-23": "T-285", "B-24": "T-286", "B-25": "T-287",
+      "B-26": "T-288", "B-27": "T-289", "B-28": "T-290",
+      "W-1": "T-291", "W-2": "T-292", "W-3": "T-293", "W-4": "T-294", "W-5": "T-295",
+      "W-6": "T-296", "W-7": "T-297", "W-8": "T-298", "W-9": "T-299", "W-10": "T-300",
+      "W-11": "T-301", "W-12": "T-302",
+      "A-1": "T-305", "A-2": "T-306", "A-3": "T-307", "A-4": "T-308", "A-5": "T-309",
+      "A-6": "T-310", "A-7": "T-311", "A-8": "T-312", "A-9": "T-313", "A-10": "T-314",
+      "A-11": "T-315", "A-12": "T-303", "A-13": "T-316", "A-14": "T-304"
+    },
+    "executionWaves": [
+      "Wave A: UPI Core (T-253,T-254,T-255,T-262,T-259,T-261) — SELL payments confirmed via gateway",
+      "Wave B: BNPL Foundation (T-263,T-264,T-270,T-274,T-275,T-279) — 2 providers live",
+      "Wave C: Supplier Payouts + Trade Credit (T-256,T-257,T-258,T-265,T-266,T-267) — 4 trade credit providers",
+      "Wave C2: Credit Lines (T-268,T-269,T-271,T-272,T-273) — ALL 10 financers + LaaS",
+      "Wave D: In-App Chat + Push (T-291,T-292,T-293,T-294,T-295,T-299) — Chat working",
+      "Wave E: AI Core (T-305,T-306,T-307,T-310) — AI speaks + alerts",
+      "Wave F: WhatsApp + Supplier Finance (T-296,T-297,T-298,T-300,T-301,T-302,T-283,T-284,T-285,T-286,T-287) — Full WhatsApp + supplier invoice discounting",
+      "Wave G: Finance Dashboards (T-276,T-277,T-278,T-280,T-281,T-282,T-288,T-289,T-290,T-260) — Full visibility",
+      "Wave H: AI Intelligence (T-308,T-309,T-311,T-312,T-315) — Forecasting + insights",
+      "Wave I: AI Polish (T-313,T-314,T-303,T-316,T-304) — Complete AI assistant"
+    ]
   },
   "infraStatus": {
     "A1_WIF": "DONE",
@@ -132,82 +243,24 @@
     "ZRP_Protocol": "ENFORCED — 185 gates active",
     "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
   },
-  "phase7_B2BReorder": {
-    "range": "T-236 → T-252",
-    "count": 17,
-    "status": "DONE — All 6 waves complete (17/17 tickets)",
-    "auditMethod": "3 parallel deep-audit agents (backend+DB, POS+web frontend, purchase+GRN flow) + 1 plan agent",
-    "breakdown": {
-      "P0_mustHave": 10,
-      "P1_important": 5,
-      "P2_postLaunch": 2
-    },
-    "estimatedEffort": "~180 hours (6 waves)"
-  },
-  "phase8_FCMNotifications": {
-    "range": "T-219, T-223, T-231, T-232, T-235",
-    "count": 5,
-    "status": "DONE — All 5 deferred tickets implemented",
-    "commit": "ecbaf3b",
-    "summary": "FCM push notification infrastructure (migration 152, firebase-admin, expo-notifications), UPI refund management (T-219), Cloud Monitoring alerts (T-223), payment reminder service (T-231), GRN alert push delivery (T-232), GST compliance dashboard + GSTR-1 export (T-235), notification UIs for all 3 portals + POS app"
-  },
-  "phaseSnapshot": {
-    "totalTickets": 252,
-    "completed": 252,
-    "queued": 0,
-    "inProgress": 0,
-    "headSHA": "ecbaf3b",
-    "stagingLive": true,
-    "stagingSHA": "a46ae13",
-    "unpushedCommits": "7 — Waves 2-6 + Phase 8 (NOT pushed per operator instruction)"
-  },
   "goLiveAudit": {
     "status": "COMPLETE",
     "date": "2026-02-16",
-    "method": "8 parallel deep-audit agents, each verifying ticket implementation against spec",
-    "result": "127/127 PASS after 5 gap fixes",
-    "gapsFound": 5,
-    "gapsFixed": 5,
-    "gapDetails": [
-      "GAP-1: Supplier portal favicon missing → added",
-      "GAP-2: Retailer EmptyState dead code → wired into 4 pages",
-      "GAP-3: Supplier EmptyState dead code → wired into 4 pages",
-      "GAP-4: page-animate CSS unused → applied to layout main",
-      "GAP-5: SuperMandi GSTIN/address blank on invoices → env vars added"
-    ],
-    "buildVerification": "All 3 web portals typecheck clean + build clean",
-    "preGoLiveItems": [
-      "GST entity details now hardcoded from official certificate (08ABRCS8282R1ZY)",
-      "Dependabot: 33 npm vulnerabilities (25 high) — review before production"
-    ]
+    "method": "8 parallel deep-audit agents",
+    "result": "127/127 PASS after 5 gap fixes"
   },
   "ctoAudit": {
     "status": "COMPLETE — tickets created",
-    "date": "2026-02-15",
-    "method": "5 parallel deep-dive agents (POS, Retailer+Supplier, Backend+Infra, API Wiring, UI/UX) + 1 reconciliation agent",
-    "rawFindings": "~150+",
-    "falsePositivesDropped": 9,
-    "finalTickets": 36,
-    "falsePositiveDetails": [
-      "POST /api/v1/orders/create 'missing' → Backend has /api/v1/pos/purchases (correct route)",
-      "Webhooks/payments 'missing' → Exists as /razorpay/payments",
-      "Supplier CSV upload 'missing' → Exists at upload/page.tsx with uploadProductsCsv",
-      "Split payment 'not implemented' → Fully implemented (payments.ts:361-606)",
-      "BNPL dispute false success → Already fixed (catch block shows 'Failed')",
-      "Stock cap silent → Toast IS shown (SellScanScreen.tsx:1856-1873)",
-      "Hindi voice NLU missing → Defaults to Hindi (voiceOrderService.ts:386)",
-      "Store isolation 'not enforced' → Middleware + query-level isolation comprehensive (reframed as P2 RLS)",
-      "CSP/Helmet missing → WORKING (api-gateway has Helmet with HSTS, X-Frame-Options)"
-    ]
+    "date": "2026-02-15"
   },
-  "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
+  "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "ALL 252 TICKETS COMPLETE. Ready for operator review + push. No remaining work items.",
+  "nextAction": "VS Code Claude to begin Phase 9 execution. Start with Wave A (UPI Core). Operator must sign up for Razorpay live account.",
   "lastActions": [
-    "Phase 8 COMPLETE — T-219 (UPI refund management + webhook), T-223 (Cloud Monitoring 10 alert policies), T-231 (payment reminder service), T-232 (GRN alert push delivery), T-235 (GST compliance + GSTR-1 export)",
-    "Phase 8 infrastructure — Migration 152 (notifications schema), FCM service (firebase-admin), POS expo-notifications, retailer/supplier/superadmin notification UIs",
-    "Cross-verification audit: 49/49 web portal checks PASS, all backend routes verified, POS integration confirmed, GST API response mapping fixed",
-    "Wave 5+6 complete — T-249 (GRN reorder badge), T-250 (auto-close fulfilled + migration 151), T-248 (deploy.yml FEATURE_REORDER_ENABLED), T-251 (POS reorder routes migrated), T-252 (E2E lifecycle tests)",
-    "252/252 tickets completed — zero remaining"
+    "Phase 9 scoped and approved — 64 tickets across 4 areas: UPI Payments (10), B2B Finance (28), WhatsApp+Chat (12), AI Automation (14)",
+    "14 direct B2B financers identified: Rupifi, KredX, Mintifi, Trevex, Lendingkart, FlexiLoans, Progcap, NeoGrowth, Finova Capital, Cashfree (retailer) + KredX, M1xchange, Vayana, Credlix (supplier)",
+    "Razorpay go-live audit: SDK integrated but NOT configured (no keys, mock payouts, format-only UTR)",
+    "TTS decision: expo-speech (free, built-in, Hindi) — NOT ElevenLabs",
+    "WhatsApp decision: Meta Cloud API direct (no BSP), BSP fallback if Meta approval difficult"
   ]
 }
