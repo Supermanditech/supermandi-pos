@@ -178,8 +178,11 @@ async function processStore(storeId: string): Promise<void> {
         continue;
       }
 
-      // Calculate suggested quantity
-      const suggestedQuantity = Math.max(1, product.targetStock - product.currentStock);
+      // Calculate suggested quantity (T-239: cap at max_reorder_qty if set)
+      let suggestedQuantity = Math.max(1, product.targetStock - product.currentStock);
+      if (product.maxReorderQty && suggestedQuantity > product.maxReorderQty) {
+        suggestedQuantity = product.maxReorderQty;
+      }
 
       // Create pending reorder
       const pendingClient = await getClient();

@@ -781,6 +781,7 @@ export async function getStoreProductsForReorder(
     min_stock: number;
     target_stock: number;
     preferred_supplier_id: string | null;
+    max_reorder_qty: number | null;
     current_stock: number;
   }>(
     `SELECT
@@ -790,7 +791,8 @@ export async function getStoreProductsForReorder(
       rp.min_stock,
       rp.target_stock,
       rp.preferred_supplier_id,
-      COALESCE(sb.qty, 0) as current_stock
+      rp.max_reorder_qty,
+      COALESCE(sb.current_qty, 0) as current_stock
      FROM reorder.reorder_policies rp
      JOIN catalog.products p ON p.id = rp.product_id
      LEFT JOIN inventory.stock_balances sb
@@ -806,6 +808,7 @@ export async function getStoreProductsForReorder(
     minStock: r.min_stock,
     targetStock: r.target_stock,
     preferredSupplierId: r.preferred_supplier_id,
+    maxReorderQty: r.max_reorder_qty,
     currentStock: r.current_stock,
   }));
 }

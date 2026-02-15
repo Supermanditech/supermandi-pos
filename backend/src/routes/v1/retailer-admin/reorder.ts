@@ -1,4 +1,4 @@
-// CL-017: Retailer Admin Reorder Routes
+// T-243: Retailer Admin Reorder Routes (fixed to match 007 canonical schema)
 // Mirrors POS reorder functionality for retailer web dashboard
 // Allows retailers to view reorder suggestions and manage settings
 
@@ -8,6 +8,8 @@ import { getPool } from "../../../db/client";
 export const retailerReorderRouter = Router();
 
 function getStoreId(req: Request): string | null {
+  // x-actor-id is set by API gateway from JWT — this is the canonical
+  // store isolation method for retailer-admin routes
   const actorId = req.headers['x-actor-id'];
   return typeof actorId === 'string' ? actorId : null;
 }
@@ -15,6 +17,7 @@ function getStoreId(req: Request): string | null {
 // =============================================================================
 // GET /api/v1/retailer-admin/reorder/settings
 // Get or initialize reorder settings for the store
+// Schema: reorder.store_reorder_settings (migration 007 + 150)
 // =============================================================================
 retailerReorderRouter.get("/reorder/settings", async (req: Request, res: Response) => {
   const pool = getPool();
@@ -27,11 +30,11 @@ retailerReorderRouter.get("/reorder/settings", async (req: Request, res: Respons
     const result = await pool.query(
       `SELECT
         store_id as "storeId",
-        is_enabled as "isEnabled",
-        low_stock_threshold as "lowStockThreshold",
-        reorder_window_days as "reorderWindowDays",
-        auto_create_po as "autoCreatePo",
-        created_at as "createdAt",
+        reorder_enabled as "reorderEnabled",
+        require_approval as "requireApproval",
+        notify_on_low_stock as "notifyOnLowStock",
+        auto_approve_threshold as "autoApproveThreshold",
+        default_lead_days as "defaultLeadDays",
         updated_at as "updatedAt"
       FROM reorder.store_reorder_settings
       WHERE store_id = $1`,
@@ -39,15 +42,14 @@ retailerReorderRouter.get("/reorder/settings", async (req: Request, res: Respons
     );
 
     if (result.rows.length === 0) {
-      // Return defaults
       return res.json({
         data: {
           storeId,
-          isEnabled: false,
-          lowStockThreshold: 10,
-          reorderWindowDays: 7,
-          autoCreatePo: false,
-          createdAt: null,
+          reorderEnabled: true,
+          requireApproval: true,
+          notifyOnLowStock: true,
+          autoApproveThreshold: null,
+          defaultLeadDays: 3,
           updatedAt: null,
         },
       });
@@ -63,6 +65,7 @@ retailerReorderRouter.get("/reorder/settings", async (req: Request, res: Respons
 // =============================================================================
 // PUT /api/v1/retailer-admin/reorder/settings
 // Update reorder settings for the store
+// Schema: reorder.store_reorder_settings (migration 007 + 150)
 // =============================================================================
 retailerReorderRouter.put("/reorder/settings", async (req: Request, res: Response) => {
   const pool = getPool();
@@ -71,27 +74,35 @@ retailerReorderRouter.put("/reorder/settings", async (req: Request, res: Respons
   const storeId = getStoreId(req);
   if (!storeId) return res.status(401).json({ error: "Store not identified" });
 
-  const { isEnabled, lowStockThreshold, reorderWindowDays, autoCreatePo } = req.body;
+  const {
+    reorderEnabled,
+    requireApproval,
+    notifyOnLowStock,
+    autoApproveThreshold,
+    defaultLeadDays,
+  } = req.body;
 
   try {
     const result = await pool.query(
       `INSERT INTO reorder.store_reorder_settings
-        (store_id, is_enabled, low_stock_threshold, reorder_window_days, auto_create_po)
-       VALUES ($1, $2, $3, $4, $5)
+        (store_id, reorder_enabled, require_approval, notify_on_low_stock, auto_approve_threshold, default_lead_days)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (store_id) DO UPDATE SET
-        is_enabled = COALESCE($2, reorder.store_reorder_settings.is_enabled),
-        low_stock_threshold = COALESCE($3, reorder.store_reorder_settings.low_stock_threshold),
-        reorder_window_days = COALESCE($4, reorder.store_reorder_settings.reorder_window_days),
-        auto_create_po = COALESCE($5, reorder.store_reorder_settings.auto_create_po),
+        reorder_enabled = COALESCE($2, reorder.store_reorder_settings.reorder_enabled),
+        require_approval = COALESCE($3, reorder.store_reorder_settings.require_approval),
+        notify_on_low_stock = COALESCE($4, reorder.store_reorder_settings.notify_on_low_stock),
+        auto_approve_threshold = COALESCE($5, reorder.store_reorder_settings.auto_approve_threshold),
+        default_lead_days = COALESCE($6, reorder.store_reorder_settings.default_lead_days),
         updated_at = NOW()
        RETURNING
         store_id as "storeId",
-        is_enabled as "isEnabled",
-        low_stock_threshold as "lowStockThreshold",
-        reorder_window_days as "reorderWindowDays",
-        auto_create_po as "autoCreatePo",
+        reorder_enabled as "reorderEnabled",
+        require_approval as "requireApproval",
+        notify_on_low_stock as "notifyOnLowStock",
+        auto_approve_threshold as "autoApproveThreshold",
+        default_lead_days as "defaultLeadDays",
         updated_at as "updatedAt"`,
-      [storeId, isEnabled, lowStockThreshold, reorderWindowDays, autoCreatePo]
+      [storeId, reorderEnabled, requireApproval, notifyOnLowStock, autoApproveThreshold, defaultLeadDays]
     );
 
     return res.json({ data: result.rows[0] });
@@ -103,7 +114,8 @@ retailerReorderRouter.put("/reorder/settings", async (req: Request, res: Respons
 
 // =============================================================================
 // GET /api/v1/retailer-admin/reorder/suggestions
-// Get products that need reordering based on current stock vs threshold
+// Get products that need reordering based on reorder policies
+// Uses reorder_policies for per-product thresholds, stock_balances for current stock
 // =============================================================================
 retailerReorderRouter.get("/reorder/suggestions", async (req: Request, res: Response) => {
   const pool = getPool();
@@ -113,15 +125,6 @@ retailerReorderRouter.get("/reorder/suggestions", async (req: Request, res: Resp
   if (!storeId) return res.status(401).json({ error: "Store not identified" });
 
   try {
-    // Get reorder settings
-    const settingsResult = await pool.query(
-      `SELECT low_stock_threshold, is_enabled FROM reorder.store_reorder_settings WHERE store_id = $1`,
-      [storeId]
-    );
-
-    const threshold = settingsResult.rows[0]?.low_stock_threshold ?? 10;
-
-    // Get products below threshold
     const result = await pool.query(
       `SELECT
         sp.id as "storeProductId",
@@ -129,26 +132,28 @@ retailerReorderRouter.get("/reorder/suggestions", async (req: Request, res: Resp
         COALESCE(sp.display_name, p.name) as "productName",
         p.category,
         p.unit,
-        COALESCE(sb.current_qty, sp.current_stock, 0) as "currentStock",
+        COALESCE(sb.current_qty, 0) as "currentStock",
+        rp.min_stock as "minStock",
+        rp.target_stock as "targetStock",
+        rp.max_reorder_qty as "maxReorderQty",
         sp.purchase_price as "purchasePrice",
-        sp.sell_price as "sellPrice",
-        $2::integer as "threshold"
-      FROM catalog.store_products sp
-      JOIN catalog.products p ON p.id = sp.product_id
-      LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
-      WHERE sp.store_id = $1
+        sp.sell_price as "sellPrice"
+      FROM reorder.reorder_policies rp
+      JOIN catalog.store_products sp ON sp.store_id = rp.store_id AND sp.product_id = rp.product_id
+      JOIN catalog.products p ON p.id = rp.product_id
+      LEFT JOIN inventory.stock_balances sb ON sb.store_id = rp.store_id AND sb.product_id = rp.product_id
+      WHERE rp.store_id = $1
+        AND rp.is_enabled = true
         AND sp.is_active = true
-        AND p.is_active = true
-        AND COALESCE(sb.current_qty, sp.current_stock, 0) <= $2
-      ORDER BY COALESCE(sb.current_qty, sp.current_stock, 0) ASC
+        AND COALESCE(sb.current_qty, 0) <= rp.min_stock
+      ORDER BY COALESCE(sb.current_qty, 0) ASC
       LIMIT 100`,
-      [storeId, threshold]
+      [storeId]
     );
 
     return res.json({
       data: result.rows,
       total: result.rows.length,
-      threshold,
     });
   } catch (error: any) {
     console.error("[Retailer Reorder] Suggestions error:", error.message);
@@ -159,6 +164,7 @@ retailerReorderRouter.get("/reorder/suggestions", async (req: Request, res: Resp
 // =============================================================================
 // GET /api/v1/retailer-admin/reorder/pending
 // Get pending reorder records for the store
+// Schema: reorder.pending_reorders (migration 007)
 // =============================================================================
 retailerReorderRouter.get("/reorder/pending", async (req: Request, res: Response) => {
   const pool = getPool();
@@ -176,14 +182,17 @@ retailerReorderRouter.get("/reorder/pending", async (req: Request, res: Response
         pr.id,
         pr.store_id as "storeId",
         pr.product_id as "productId",
-        COALESCE(p.name, 'Unknown') as "productName",
+        pr.product_name as "productName",
         pr.current_stock as "currentStock",
-        pr.threshold,
-        pr.suggested_qty as "suggestedQty",
+        pr.min_threshold as "minThreshold",
+        pr.target_stock as "targetStock",
+        pr.suggested_quantity as "suggestedQuantity",
+        pr.suggested_supplier_name as "supplierName",
+        pr.suggested_unit_price as "unitPrice",
         pr.status,
+        pr.expires_at as "expiresAt",
         pr.created_at as "createdAt"
       FROM reorder.pending_reorders pr
-      JOIN catalog.products p ON p.id = pr.product_id
       WHERE pr.store_id = $1
         AND pr.status = 'pending'
       ORDER BY pr.created_at DESC
