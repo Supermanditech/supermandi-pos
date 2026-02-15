@@ -864,6 +864,11 @@ Wave 6 — Integration & Cleanup:
 > **Area 3**: WhatsApp + In-App Chat — Hybrid model (12 tickets, P1)
 > **Area 4**: AI Automation — Full suite with expo-speech TTS (14 tickets, P1-P2)
 > **External deps**: Razorpay account, Meta WhatsApp Business verification, BNPL provider partnerships
+>
+> **📋 R&D Reference**: See **`RELEASES/PHASE9_INTEGRATION_GUIDE.md`** for per-ticket implementation details including:
+> SDK docs, API endpoints, sandbox URLs, npm packages, environment variables, known bugs, code patterns.
+> **Integration Readiness**: 41 tickets (64%) can start immediately with NO external dependencies.
+> 6 tickets need API keys only. 13 tickets need partnership agreements. 4 tickets fix existing code.
 
 ---
 

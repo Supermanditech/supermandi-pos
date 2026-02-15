@@ -1,6 +1,6 @@
 {
-  "version": "21.0",
-  "lastUpdated": "2026-02-16T18:00:00+05:30",
+  "version": "22.0",
+  "lastUpdated": "2026-02-16T21:30:00+05:30",
   "currentPhase": "Phase 9: Payments + B2B Finance + WhatsApp + AI Automation",
   "currentTicket": null,
   "ticketQueue": [
@@ -164,7 +164,64 @@
   "phase9_PaymentsFinanceWhatsAppAI": {
     "range": "T-253 → T-316",
     "count": 64,
-    "status": "QUEUED — 0/64 tickets started",
+    "status": "QUEUED — 0/64 tickets started. R&D COMPLETE.",
+    "integrationGuide": "RELEASES/PHASE9_INTEGRATION_GUIDE.md",
+    "integrationReadiness": {
+      "canCodeNow": 41,
+      "needApiKeys": 6,
+      "needPartnership": 13,
+      "fixExistingCode": 4,
+      "percentImmediate": 64,
+      "canCodeNowTickets": [
+        "T-253 (Razorpay sell webhook)", "T-254 (UPI order tracking)", "T-255 (UTR verification)",
+        "T-258 (Payout retry)", "T-259 (Refund flow)", "T-260 (Reconciliation dashboard)",
+        "T-261 (QR countdown)", "T-262 (Event outbox)",
+        "T-263 (Credit provider abstraction layer)", "T-274 (Provider selection UI)",
+        "T-275 (Repayment tracking)", "T-276 (KYC routing)", "T-277 (Credit dashboard)",
+        "T-278 (Settlement reconciliation)", "T-279 (Auto-overdue job)", "T-280 (Supplier BNPL visibility)",
+        "T-281 (Provider health monitoring)", "T-282 (Provider comparison engine)",
+        "T-287 (Supplier financing UI)", "T-288 (Retailer bulk purchase UI)",
+        "T-289 (SuperAdmin finance monitoring)", "T-290 (SuperAdmin provider management)",
+        "T-291 (Chat schema)", "T-292 (Chat backend API)", "T-293 (Socket.io real-time)",
+        "T-294 (POS chat screen)", "T-295 (Supplier chat UI)", "T-297 (WhatsApp receipt to consumer)",
+        "T-298 (WhatsApp reorder alert)", "T-299 (FCM push — ALREADY BUILT)",
+        "T-300 (SuperMandi support chat)", "T-301 (Chat attachments)", "T-302 (Template management)",
+        "T-305 (Voice TTS — expo-speech FREE)", "T-306 (Multi-turn voice)",
+        "T-307 (Proactive AI alerts)", "T-308 (Demand forecasting)", "T-309 (Smart reorder)",
+        "T-310 (Auto daily closing)", "T-311 (Supplier price comparison)",
+        "T-312 (Customer purchase insights)", "T-313 (Slow mover detection)"
+      ],
+      "needApiKeysTickets": [
+        "T-256 (RazorpayX payouts — needs RAZORPAY_KEY_ID/SECRET + linked current account)",
+        "T-257 (Supplier bank KYC — needs RazorpayX for fund accounts)",
+        "T-296 (WhatsApp Cloud API — needs META_WHATSAPP_TOKEN + META_PHONE_NUMBER_ID)",
+        "T-314 (Expiry tracking — needs expo-barcode-scanner already installed)",
+        "T-315 (Voice-driven workflows — builds on T-305+T-306)",
+        "T-316 (Anomaly detection — pure backend logic)"
+      ],
+      "needPartnershipTickets": [
+        "T-264 (Rupifi — needs developers.rupifi.com partnership)",
+        "T-265 (KredX — needs kredx.com channel finance partnership)",
+        "T-266 (Mintifi — needs mintifi.com enterprise onboarding)",
+        "T-267 (Trevex — needs trevex.io API access)",
+        "T-268 (Lendingkart — sandbox at gateway-qa.lendingkart.io, needs SPOC)",
+        "T-269 (FlexiLoans — needs fintegrationfs.com API credentials)",
+        "T-270 (Progcap — needs progcap.com API onboarding)",
+        "T-271 (NeoGrowth — needs neogrowth.in API access)",
+        "T-272 (Finova Capital — needs Jaipur HQ partnership)",
+        "T-273 (Cashfree EL — needs cashfree.com developer account)",
+        "T-283 (KredX invoice discounting — same partnership as T-265)",
+        "T-284 (M1xchange TReDS — needs m1xchange.com integration)",
+        "T-285 (Vayana — needs docs.enriched-api.vayana.com access)",
+        "T-286 (Credlix — needs credlix.com partnership)"
+      ],
+      "fixExistingCodeTickets": [
+        "T-253 (Fix razorpayClient.ts timing attack + undefined method calls)",
+        "T-259 (Wire razorpay.payments.refund() — handler exists, API call missing)",
+        "T-299 (FCM push — ALREADY FULLY BUILT in fcmService.ts, just wire to new events)",
+        "T-303 (AI onboarding — voiceOrderService.ts TODO: product search returns empty array)"
+      ]
+    },
     "areas": {
       "UPI_Razorpay": {
         "tickets": "T-253 → T-262 (10 tickets)",
@@ -255,12 +312,13 @@
   },
   "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "VS Code Claude to begin Phase 9 execution. Start with Wave A (UPI Core). Operator must sign up for Razorpay live account.",
+  "nextAction": "VS Code Claude: READ RELEASES/PHASE9_INTEGRATION_GUIDE.md FIRST — contains per-ticket SDK/API/sandbox details. Start with Wave A (UPI Core: T-253→T-262). 41 of 64 tickets need ZERO external deps. Operator: sign up Razorpay live account + RazorpayX.",
   "lastActions": [
-    "Phase 9 scoped and approved — 64 tickets across 4 areas: UPI Payments (10), B2B Finance (28), WhatsApp+Chat (12), AI Automation (14)",
-    "14 direct B2B financers identified: Rupifi, KredX, Mintifi, Trevex, Lendingkart, FlexiLoans, Progcap, NeoGrowth, Finova Capital, Cashfree (retailer) + KredX, M1xchange, Vayana, Credlix (supplier)",
-    "Razorpay go-live audit: SDK integrated but NOT configured (no keys, mock payouts, format-only UTR)",
-    "TTS decision: expo-speech (free, built-in, Hindi) — NOT ElevenLabs",
-    "WhatsApp decision: Meta Cloud API direct (no BSP), BSP fallback if Meta approval difficult"
+    "R&D COMPLETE — PHASE9_INTEGRATION_GUIDE.md created with per-ticket implementation details for all 64 tickets",
+    "Integration readiness: 41 CAN CODE NOW (64%) / 6 NEED API KEYS / 13 NEED PARTNERSHIP / 4 FIX EXISTING CODE",
+    "Key R&D findings: (1) razorpayClient.ts has timing attack bug + undefined method calls to fix, (2) fcmService.ts already complete — T-299 is just wiring, (3) expo-speech is FREE built-in TTS with Hindi support, (4) WhatsApp official Node.js SDK: npm install whatsapp",
+    "BNPL strategy: Build abstraction layer (T-263) with mock providers FIRST, swap real providers as partnerships come",
+    "14 provider APIs researched: Rupifi/KredX/Mintifi/Trevex (trade credit) + Lendingkart/FlexiLoans/Progcap/NeoGrowth/Finova (credit lines) + Cashfree EL (LaaS) + KredX/M1xchange/Vayana/Credlix (supplier invoice)",
+    "State updated to v22.0 with integrationReadiness section"
   ]
 }
