@@ -51,6 +51,28 @@ interface DocumentUpload {
 // API Base URL from environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
+// T-005: SessionStorage key for registration state persistence
+const SUP_REG_STORAGE_KEY = 'supermandi_supplier_reg_state';
+
+function loadSavedSupRegState(): Partial<{
+  step: Step; phone: string; applicationId: string;
+  businessName: string; supplierType: string; supplierTypeOther: string;
+  ownerName: string; gstin: string; email: string;
+  addressLine1: string; addressLine2: string; city: string;
+  state: string; pincode: string;
+  idProofType: 'aadhaar' | 'pan' | 'driving_license';
+  businessProofType: 'shop_license' | 'msme' | 'incorporation' | 'trade_license';
+}> {
+  try {
+    const raw = sessionStorage.getItem(SUP_REG_STORAGE_KEY);
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    // Don't restore 'otp' step — fall back to 'phone'
+    if (data.step === 'otp') data.step = 'phone';
+    return data;
+  } catch { return {}; }
+}
+
 export default function RegisterPageWrapper() {
   return (
     <Suspense fallback={<div className="text-center py-8">Loading...</div>}>
@@ -63,11 +85,14 @@ function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Step state
-  const [step, setStep] = useState<Step>('phone');
+  // T-005: Load saved registration state on mount
+  const saved = useRef(loadSavedSupRegState());
 
-  // Step 1: Phone — pre-fill from login redirect if available
-  const [phone, setPhone] = useState(searchParams.get('phone') || '');
+  // Step state
+  const [step, setStep] = useState<Step>(saved.current.step || 'phone');
+
+  // Step 1: Phone — pre-fill from login redirect, then sessionStorage, then empty
+  const [phone, setPhone] = useState(searchParams.get('phone') || saved.current.phone || '');
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -75,19 +100,19 @@ function RegisterPage() {
   const recaptchaInitialized = useRef(false);
   const [idToken, setIdToken] = useState('');
 
-  // Step 2: Business Details
-  const [applicationId, setApplicationId] = useState('');
-  const [businessName, setBusinessName] = useState('');
-  const [supplierType, setSupplierType] = useState('');
-  const [supplierTypeOther, setSupplierTypeOther] = useState('');
-  const [gstin, setGstin] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [email, setEmail] = useState('');
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [pincode, setPincode] = useState('');
+  // Step 2: Business Details — restore from sessionStorage
+  const [applicationId, setApplicationId] = useState(saved.current.applicationId || '');
+  const [businessName, setBusinessName] = useState(saved.current.businessName || '');
+  const [supplierType, setSupplierType] = useState(saved.current.supplierType || '');
+  const [supplierTypeOther, setSupplierTypeOther] = useState(saved.current.supplierTypeOther || '');
+  const [gstin, setGstin] = useState(saved.current.gstin || '');
+  const [ownerName, setOwnerName] = useState(saved.current.ownerName || '');
+  const [email, setEmail] = useState(saved.current.email || '');
+  const [addressLine1, setAddressLine1] = useState(saved.current.addressLine1 || '');
+  const [addressLine2, setAddressLine2] = useState(saved.current.addressLine2 || '');
+  const [city, setCity] = useState(saved.current.city || '');
+  const [state, setState] = useState(saved.current.state || '');
+  const [pincode, setPincode] = useState(saved.current.pincode || '');
   const [agreement, setAgreement] = useState(false);
 
   // Step 3: Documents
@@ -97,14 +122,30 @@ function RegisterPage() {
     business_license: { file: null, preview: null, status: 'pending' },
     owner_photo: { file: null, preview: null, status: 'pending' },
   });
-  const [idProofType, setIdProofType] = useState<'aadhaar' | 'pan' | 'driving_license'>('aadhaar');
-  const [businessProofType, setBusinessProofType] = useState<'shop_license' | 'msme' | 'incorporation' | 'trade_license'>('shop_license');
+  const [idProofType, setIdProofType] = useState<'aadhaar' | 'pan' | 'driving_license'>(saved.current.idProofType || 'aadhaar');
+  const [businessProofType, setBusinessProofType] = useState<'shop_license' | 'msme' | 'incorporation' | 'trade_license'>(saved.current.businessProofType || 'shop_license');
 
   // Track if component has mounted (for SSR compatibility)
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // T-005: Persist registration state to sessionStorage on key changes
+  useEffect(() => {
+    if (step === 'success') {
+      sessionStorage.removeItem(SUP_REG_STORAGE_KEY);
+      return;
+    }
+    const stateToSave = {
+      step, phone, applicationId, businessName, supplierType, supplierTypeOther,
+      ownerName, gstin, email, addressLine1, addressLine2, city, state, pincode,
+      idProofType, businessProofType,
+    };
+    sessionStorage.setItem(SUP_REG_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [step, phone, applicationId, businessName, supplierType, supplierTypeOther,
+      ownerName, gstin, email, addressLine1, addressLine2, city, state, pincode,
+      idProofType, businessProofType]);
 
   // STAGING-FIX-006: Resume registration flow — when arriving from login with resume=true,
   // look up existing application and skip to the appropriate step

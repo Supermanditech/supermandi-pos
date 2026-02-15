@@ -200,15 +200,38 @@ const styles = {
   },
 };
 
+// T-005: SessionStorage key for registration state persistence
+const REG_STORAGE_KEY = 'supermandi_retailer_reg_state';
+
+function loadSavedRegState(): Partial<{
+  step: Step; phone: string; applicationId: string;
+  businessName: string; businessType: string; businessTypeOther: string;
+  ownerName: string; gstin: string; email: string;
+  addressLine1: string; addressLine2: string; city: string;
+  selectedState: string; pincode: string;
+}> {
+  try {
+    const raw = sessionStorage.getItem(REG_STORAGE_KEY);
+    if (!raw) return {};
+    const data = JSON.parse(raw);
+    // Don't restore 'otp' step — fall back to 'phone' (can't resume OTP verification)
+    if (data.step === 'otp') data.step = 'phone';
+    return data;
+  } catch { return {}; }
+}
+
 export default function RegisterPage() {
   const location = useLocation();
   const locationState = location.state as { phone?: string; resume?: boolean } | null;
 
-  // Step state
-  const [step, setStep] = useState<Step>('phone');
+  // T-005: Load saved registration state on mount
+  const saved = useRef(loadSavedRegState());
 
-  // Phone + OTP — pre-fill from login redirect if available
-  const [phone, setPhone] = useState(locationState?.phone || '');
+  // Step state
+  const [step, setStep] = useState<Step>(saved.current.step || 'phone');
+
+  // Phone + OTP — pre-fill from login redirect, then sessionStorage, then empty
+  const [phone, setPhone] = useState(locationState?.phone || saved.current.phone || '');
   const [otp, setOtp] = useState('');
   const [idToken, setIdToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -217,19 +240,19 @@ export default function RegisterPage() {
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
 
-  // Business Details
-  const [applicationId, setApplicationId] = useState('');
-  const [businessName, setBusinessName] = useState('');
-  const [businessType, setBusinessType] = useState('');
-  const [businessTypeOther, setBusinessTypeOther] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [gstin, setGstin] = useState('');
-  const [email, setEmail] = useState('');
-  const [addressLine1, setAddressLine1] = useState('');
-  const [addressLine2, setAddressLine2] = useState('');
-  const [city, setCity] = useState('');
-  const [selectedState, setSelectedState] = useState('');
-  const [pincode, setPincode] = useState('');
+  // Business Details — restore from sessionStorage
+  const [applicationId, setApplicationId] = useState(saved.current.applicationId || '');
+  const [businessName, setBusinessName] = useState(saved.current.businessName || '');
+  const [businessType, setBusinessType] = useState(saved.current.businessType || '');
+  const [businessTypeOther, setBusinessTypeOther] = useState(saved.current.businessTypeOther || '');
+  const [ownerName, setOwnerName] = useState(saved.current.ownerName || '');
+  const [gstin, setGstin] = useState(saved.current.gstin || '');
+  const [email, setEmail] = useState(saved.current.email || '');
+  const [addressLine1, setAddressLine1] = useState(saved.current.addressLine1 || '');
+  const [addressLine2, setAddressLine2] = useState(saved.current.addressLine2 || '');
+  const [city, setCity] = useState(saved.current.city || '');
+  const [selectedState, setSelectedState] = useState(saved.current.selectedState || '');
+  const [pincode, setPincode] = useState(saved.current.pincode || '');
   const [agreement, setAgreement] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -239,6 +262,20 @@ export default function RegisterPage() {
     gstin_certificate: { file: null, preview: null, status: 'pending' },
     address_proof: { file: null, preview: null, status: 'pending' },
   });
+
+  // T-005: Persist registration state to sessionStorage on key changes
+  useEffect(() => {
+    if (step === 'success') {
+      sessionStorage.removeItem(REG_STORAGE_KEY);
+      return;
+    }
+    const stateToSave = {
+      step, phone, applicationId, businessName, businessType, businessTypeOther,
+      ownerName, gstin, email, addressLine1, addressLine2, city, selectedState, pincode,
+    };
+    sessionStorage.setItem(REG_STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [step, phone, applicationId, businessName, businessType, businessTypeOther,
+      ownerName, gstin, email, addressLine1, addressLine2, city, selectedState, pincode]);
 
   // Setup reCAPTCHA
   useEffect(() => {
