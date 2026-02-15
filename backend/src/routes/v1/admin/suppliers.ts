@@ -161,7 +161,8 @@ adminSuppliersRouter.get("/verified-suppliers", requireAdminToken, requirePermis
           s.state,
           s.verification_status as "verificationStatus",
           s.status,
-          s.rating
+          s.rating,
+          COALESCE(s.auto_approve_products, false) as "autoApproveProducts"
         FROM supplier.suppliers s
         ${whereClause}
         ORDER BY s.verified_at DESC NULLS LAST, s.created_at DESC
@@ -475,6 +476,71 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermiss
       return res.json({ data: [], count: 0 });
     }
     return res.status(500).json({ error: "Failed to fetch pending suppliers" });
+  }
+});
+
+/**
+ * T-066: POST /api/v1/admin/suppliers/:supplierId/auto-approve
+ * Toggle auto-approval for a supplier's products
+ * Only verified suppliers can have auto-approval enabled
+ */
+adminSuppliersRouter.post("/suppliers/:supplierId/auto-approve", requireAdminToken, requirePermission("suppliers", "approve"), async (req, res) => {
+  const { supplierId } = req.params;
+  const { enabled } = req.body;
+  const adminId = (req as any).adminId;
+
+  if (!adminId) {
+    return res.status(401).json({ error: "Admin ID required for audit trail" });
+  }
+
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: "enabled (boolean) is required" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Verify supplier exists and is verified
+    const check = await pool.query(
+      `SELECT id, verification_status, business_name FROM supplier.suppliers WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    if (enabled && check.rows[0].verification_status !== 'verified') {
+      return res.status(400).json({
+        error: "supplier_not_verified",
+        message: "Cannot enable auto-approval for non-verified suppliers"
+      });
+    }
+
+    await pool.query(
+      `UPDATE supplier.suppliers SET auto_approve_products = $2 WHERE id = $1::uuid`,
+      [supplierId, enabled]
+    );
+
+    // Audit log
+    await pool.query(
+      `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
+       VALUES ('supplier_auto_approve', $1::uuid, $2, NULL, $3, $4::uuid)`,
+      [supplierId, enabled ? 'enable_auto_approve' : 'disable_auto_approve',
+       enabled ? 'enabled' : 'disabled', adminId]
+    );
+
+    console.log(`[T-066] Auto-approval ${enabled ? 'enabled' : 'disabled'} for supplier ${check.rows[0].business_name} by admin ${adminId}`);
+
+    return res.json({
+      supplierId,
+      autoApproveProducts: enabled,
+      message: `Auto-approval ${enabled ? 'enabled' : 'disabled'} for ${check.rows[0].business_name}`
+    });
+  } catch (err: any) {
+    console.error("[admin/suppliers/auto-approve] Error:", err);
+    return res.status(500).json({ error: "Failed to update auto-approval setting" });
   }
 });
 

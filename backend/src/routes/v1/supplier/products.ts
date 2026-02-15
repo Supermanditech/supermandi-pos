@@ -10,8 +10,121 @@ import { requireActiveSupplier, requireRegisteredSupplier } from "../../../middl
 import multer from "multer";
 import { parse } from "csv-parse/sync";
 import { validateMoq, validatePrice } from "@supermandi/common";
+import type { Pool } from "pg";
 
 const router = Router();
+
+// =============================================================================
+// T-066: Auto-approval helper
+// When a supplier has auto_approve_products = true, newly created products
+// are automatically approved and mapped to the master catalog
+// =============================================================================
+
+async function checkAndAutoApprove(pool: Pool, supplierId: string, productId: string): Promise<boolean> {
+  try {
+    // Check if supplier has auto-approval enabled
+    const supplierResult = await pool.query(
+      `SELECT auto_approve_products, verification_status FROM supplier.suppliers WHERE id = $1`,
+      [supplierId]
+    );
+    if (supplierResult.rows.length === 0) return false;
+    if (!supplierResult.rows[0].auto_approve_products) return false;
+    if (supplierResult.rows[0].verification_status !== 'verified') return false;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Auto-approve the product
+      await client.query(
+        `UPDATE catalog.supplier_products
+         SET approval_status = 'approved', approved_at = NOW(), auto_approved = true
+         WHERE id = $1::uuid AND approval_status = 'pending'`,
+        [productId]
+      );
+
+      // Auto-map to master catalog (same logic as admin approve)
+      const spDetails = await client.query(
+        `SELECT name, category, brand, unit, barcode
+         FROM catalog.supplier_products WHERE id = $1`,
+        [productId]
+      );
+
+      if (spDetails.rows.length > 0) {
+        const sp = spDetails.rows[0];
+        let mappedProductId: string | null = null;
+        let mappingConfidence = 0;
+
+        // Try barcode match
+        if (sp.barcode) {
+          const barcodeMatch = await client.query(
+            `SELECT id FROM catalog.products WHERE primary_barcode = $1 LIMIT 1`,
+            [sp.barcode]
+          );
+          if (barcodeMatch.rows.length > 0) {
+            mappedProductId = barcodeMatch.rows[0].id;
+            mappingConfidence = 1.0;
+          }
+        }
+
+        // Try name similarity
+        if (!mappedProductId) {
+          try {
+            const nameMatch = await client.query(
+              `SELECT id, similarity(name, $1) as sim FROM catalog.products
+               WHERE similarity(name, $1) > 0.6 ORDER BY sim DESC LIMIT 1`,
+              [sp.name]
+            );
+            if (nameMatch.rows.length > 0) {
+              mappedProductId = nameMatch.rows[0].id;
+              mappingConfidence = parseFloat(nameMatch.rows[0].sim);
+            }
+          } catch { /* pg_trgm not available */ }
+        }
+
+        // Create new master product if no match
+        if (!mappedProductId) {
+          const newProduct = await client.query(
+            `INSERT INTO catalog.products (name, category, brand, unit, primary_barcode)
+             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [sp.name, sp.category, sp.brand, sp.unit, sp.barcode]
+          );
+          mappedProductId = newProduct.rows[0].id;
+          mappingConfidence = 1.0;
+        }
+
+        // Insert mapping
+        if (mappedProductId) {
+          await client.query(
+            `INSERT INTO catalog.supplier_product_map (supplier_product_id, product_id, mapping_type, confidence, is_verified)
+             VALUES ($1::uuid, $2::uuid, 'auto', $3, false)
+             ON CONFLICT (supplier_product_id, product_id) DO NOTHING`,
+            [productId, mappedProductId, mappingConfidence]
+          );
+        }
+      }
+
+      // Audit log
+      await client.query(
+        `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
+         VALUES ('product', $1::uuid, 'auto_approve', 'pending', 'approved', NULL)`,
+        [productId]
+      );
+
+      await client.query("COMMIT");
+      console.log(`[T-066] Auto-approved product ${productId} for supplier ${supplierId}`);
+      return true;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.warn("[T-066] Auto-approval failed (non-blocking):", err);
+      return false;
+    } finally {
+      client.release();
+    }
+  } catch {
+    return false;
+  }
+}
 
 // GL-WF-057: Valid FMCG categories from taxonomy
 const VALID_CATEGORIES = [
@@ -259,6 +372,13 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
 
     const product = result.rows[0];
 
+    // T-066: Check for auto-approval (non-blocking — if it fails, product stays pending)
+    let approvalStatus = product.approval_status;
+    const autoApproved = await checkAndAutoApprove(pool, req.supplierId!, product.id);
+    if (autoApproved) {
+      approvalStatus = 'approved';
+    }
+
     res.status(201).json({
       data: {
         id: product.id,
@@ -271,9 +391,10 @@ router.post("/products", requireSupplierAuth, requireActiveSupplier, async (req:
         mrp: product.mrp,
         moq: product.moq,
         unit: product.unit,
-        approvalStatus: product.approval_status,
+        approvalStatus,
         isActive: product.is_active,
         createdAt: product.created_at,
+        autoApproved,
       },
     });
   } catch (error) {
@@ -702,7 +823,34 @@ router.post(
         }
       }
 
-      res.json({ data: results });
+      // T-066: Batch auto-approve if supplier has auto_approve_products enabled
+      let autoApprovedCount = 0;
+      if (results.imported > 0 && req.supplierId) {
+        try {
+          const supplierCheck = await pool.query(
+            `SELECT auto_approve_products, verification_status FROM supplier.suppliers WHERE id = $1`,
+            [req.supplierId]
+          );
+          if (supplierCheck.rows[0]?.auto_approve_products && supplierCheck.rows[0]?.verification_status === 'verified') {
+            // Get all pending products from this supplier for auto-approval
+            const pendingProducts = await pool.query(
+              `SELECT id FROM catalog.supplier_products
+               WHERE supplier_id = $1 AND approval_status = 'pending'`,
+              [req.supplierId]
+            );
+
+            // Auto-approve each one (includes mapping logic)
+            for (const row of pendingProducts.rows) {
+              const approved = await checkAndAutoApprove(pool, req.supplierId, row.id);
+              if (approved) autoApprovedCount++;
+            }
+          }
+        } catch (aaErr) {
+          console.warn("[T-066] CSV batch auto-approval failed (non-blocking):", aaErr);
+        }
+      }
+
+      res.json({ data: { ...results, autoApprovedCount } });
     } catch (error) {
       next(error);
     }
