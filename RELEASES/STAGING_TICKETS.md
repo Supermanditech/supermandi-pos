@@ -745,5 +745,105 @@ Wave 7 — P2 Large (post-launch):
 | Phase 3: UI/UX Professional Polish | T-074 → T-111 | 38 | ALL DONE |
 | Phase 4: Wiring & Navigation | T-112 → T-127 | 16 | ALL DONE |
 | Phase 5: Production Audit (POS+Cross) | T-128 → T-199 | 72 | ALL DONE |
-| **Phase 6: 360° CTO Audit** | **T-200 → T-235** | **36** | **QUEUED** |
-| **GRAND TOTAL** | **T-001 → T-235** | **235** | **199 DONE / 36 QUEUED** |
+| Phase 6: 360° CTO Audit | T-200 → T-235 | 36 | DONE (31/36, 5 deferred post-launch) |
+| **Phase 7: B2B Reorder System** | **T-236 → T-252** | **17** | **QUEUED** |
+| **GRAND TOTAL** | **T-001 → T-252** | **252** | **230 DONE / 17 QUEUED + 5 DEFERRED** |
+
+---
+
+## PHASE 7: B2B REORDER SYSTEM — Production-Grade (T-236 → T-252)
+
+> 17 tickets from deep reorder system audit. Complete B2B reorder loop: auto-detect low stock → suggest reorder → retailer approves → PO to supplier with payment terms → supplier confirms delivery → scan at counter enters purchase ledger.
+> Audit finding: stock monitor EXISTS but queries wrong tables. POS screens ~80% done. Retailer Admin = zero UI. Supplier Portal = zero reorder awareness.
+> Priority: 10 P0 must-have, 5 P1 important, 2 P2 post-launch. Estimated effort: ~180 hours.
+
+### CATEGORY A: SCHEMA & DATA FOUNDATION
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-236 | Reconcile reorder schema — unify dual table sets (007 vs 044) | P0 | Backend Schema | M | None |
+| T-237 | Add payment terms snapshot to purchase orders | P0 | Backend Schema | S | T-236 |
+
+### CATEGORY B: SUGGESTION ENGINE
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-238 | Wire reorder-service stock monitor to correct schema + startup | P0 | Backend | M | T-236 |
+| T-239 | Add max_reorder_qty enforcement to suggestion engine | P1 | Backend | S | T-236, T-238 |
+
+### CATEGORY C: POS APP ENHANCEMENTS
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-240 | Display payment terms on POS reorder screens | P0 | POS App | M | T-237 |
+| T-241 | One-tap reorder enablement from purchase history | P1 | POS + Backend | L | T-236 |
+| T-242 | POS reorder policy edit — add max qty field | P1 | POS App | S | T-239 |
+
+### CATEGORY D: RETAILER ADMIN PORTAL
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-243 | Fix retailer admin reorder backend routes (column mismatches) | P0 | Backend | S | T-236 |
+| T-244 | Build Retailer Admin reorder dashboard page (Settings + Policies + Pending) | P0 | Retailer Web | L | T-243 |
+
+### CATEGORY E: SUPPLIER PORTAL INTEGRATION
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-245 | Backend — add reorder context + delivery confirmation to supplier order endpoints | P0 | Backend | M | T-237 |
+| T-246 | Supplier Portal — reorder badge, delivery confirmation UI, payment terms | P0 | Supplier Web | L | T-245 |
+| T-247 | Supplier notification for new reorder POs (SSE + badge) | P1 | Backend + Supplier Web | M | T-245 |
+
+### CATEGORY F: PAYMENT TERMS
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-248 | Cross-platform payment terms verification (POS + Retailer + Supplier) | P1 | Cross-Platform | M | T-240, T-244, T-246 |
+
+### CATEGORY G: GRN UNIFICATION
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-249 | Unify POS stock-in with formal PO GRN for reorder deliveries | P0 | Backend + POS | XL | T-236, T-245 |
+| T-250 | Retailer admin PO tracking with receive history | P1 | Retailer Web | M | T-249 |
+
+### CATEGORY H: CLEANUP & TESTING
+
+| # | Title | Priority | Platform | Effort | Dependencies |
+|---|-------|----------|----------|--------|-------------|
+| T-251 | Clean up legacy reorder tables (007) | P2 | Backend Schema | S | T-236, T-238 |
+| T-252 | End-to-end reorder integration tests | P0 | E2E | L | T-238, T-243, T-245, T-249 |
+
+### EXECUTION ORDER (Phase 7)
+
+```
+Wave 1 — Schema Foundation:
+  T-236 (unify dual tables) → T-237 (payment terms columns)
+
+Wave 2 — Engine + Backend Fixes (parallel):
+  T-238 (fix stock monitor) | T-243 (fix retailer admin routes) | T-239 (max qty)
+
+Wave 3 — POS Enhancements (parallel):
+  T-240 (payment terms display) | T-241 (one-tap reorder) | T-242 (max qty UI)
+
+Wave 4 — Portal Build-Out:
+  T-244 (retailer admin page, needs T-243)
+  T-245 (supplier backend) → T-246 (supplier UI) → T-247 (notifications)
+
+Wave 5 — GRN Unification:
+  T-249 (unified receive flow) → T-250 (retailer PO tracking)
+
+Wave 6 — Integration & Cleanup:
+  T-248 (payment terms verify) → T-252 (E2E tests) → T-251 (legacy cleanup)
+```
+
+### ZERO REGRESSION RULES FOR PHASE 7
+
+1. **Schema additive only**: New columns with DEFAULT null, new tables. Never alter existing column types.
+2. **Stock integrity**: `stock_balances.quantity = SUM(inventory_ledger.delta_qty)` must hold after GRN.
+3. **Store isolation**: All new endpoints derive `store_id` from JWT only.
+4. **Price integrity**: All money in minor units (paise). Integer arithmetic only.
+5. **Idempotency**: GRN receive must be idempotent (use idempotency keys per PO+receive batch).
+6. **No double-counting**: Unified GRN path must be the ONLY stock-in for PO-linked deliveries.
+7. **Payment terms immutable on PO**: Snapshot at creation time, never recalculated.
+8. **India market**: DD/MM/YYYY, INR (₹), +91, Hindi-ready labels on all new screens.
