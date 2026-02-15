@@ -61,6 +61,8 @@ import OverdueDuesScreen from "./src/screens/OverdueDuesScreen";
 import ReturnScreen from "./src/screens/ReturnScreen";
 // T-196: Customer Management Screen
 import CustomerManagementScreen from "./src/screens/CustomerManagementScreen";
+// T-195: Printer Settings Screen
+import PrinterSettingsScreen from "./src/screens/PrinterSettingsScreen";
 // T-198: Opening Stock Screen
 import OpeningStockScreen from "./src/screens/OpeningStockScreen";
 // T-199: Daily Report Screen
@@ -259,6 +261,14 @@ function CustomerManagementWrapper() {
   );
 }
 
+// T-195: Printer Settings wrapper
+function PrinterSettingsWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <PrinterSettingsScreen onBack={() => navigation.goBack()} />
+  );
+}
+
 // T-198: Opening Stock wrapper
 function OpeningStockWrapper() {
   const navigation = useNavigation<any>();
@@ -387,6 +397,8 @@ export default function App() {
           <Stack.Screen name="Return" component={ReturnWrapper} />
           {/* T-196: Customer Management Screen */}
           <Stack.Screen name="CustomerManagement" component={CustomerManagementWrapper} />
+          {/* T-195: Printer Settings Screen */}
+          <Stack.Screen name="PrinterSettings" component={PrinterSettingsWrapper} />
           {/* T-198: Opening Stock Screen */}
           <Stack.Screen name="OpeningStock" component={OpeningStockWrapper} />
           {/* T-199: Daily Report Screen */}

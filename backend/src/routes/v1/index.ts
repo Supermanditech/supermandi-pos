@@ -19,8 +19,15 @@ import { posBnplRouter } from "./pos/bnpl";  // SM-019: BNPL drawdowns
 import { posComplianceRouter } from "./pos/compliance";  // T-190: KYC document upload
 import { posCreditRouter } from "./pos/credit";  // SM-021: Credit offers
 import { posDuesRouter } from "./pos/dues";  // POS-DUE-001: Customer dues management
+import { posOpeningStockRouter } from "./pos/openingStock";  // T-198: Opening stock entry
+import { posReportsRouter } from "./pos/reports";  // T-199: Daily sales report
+import { posOverduePaymentsRouter } from "./pos/overduePayments";  // T-193: Overdue DUE payments
 import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: Token security
 import { posStaffRouter } from "./pos/staff";  // SA-P1-001: POS staff login
+import { posShiftsRouter } from "./pos/shifts";  // POS-SHIFT-001: Staff shift management
+import { posDailyClosingRouter } from "./pos/dailyClosing";  // POS-DAILY-001: Daily closing reconciliation
+import { posKhataRouter } from "./pos/khata";  // POS-KHATA-001: Khata credit ledger
+import { posCustomersRouter } from "./pos/customers";  // POS-CUST-001: Customer profiles
 import { adminStaffRouter } from "./admin/staff";  // SA-P1-001: Admin staff CRUD
 import { adminGrnAlertsRouter } from "./admin/grnAlerts";  // SA-P1-004: GRN excess alerts
 import { adminFeatureFlagsRouter } from "./admin/featureFlags";  // SA-P0-005: Feature flags
@@ -105,8 +112,15 @@ v1Router.use("/pos", posBnplRouter);  // SM-019: BNPL drawdowns
 v1Router.use("/pos", posComplianceRouter);  // T-190: KYC document upload
 v1Router.use("/pos", posCreditRouter);  // SM-021: Credit offers
 v1Router.use("/pos", posDuesRouter);  // POS-DUE-001: Customer dues management
+v1Router.use("/pos", posOpeningStockRouter);  // T-198: Opening stock entry
+v1Router.use("/pos", posReportsRouter);  // T-199: Daily sales report
+v1Router.use("/pos", posOverduePaymentsRouter);  // T-193: Overdue DUE payments
 v1Router.use("/pos", tokenManagementRouter);  // GL-WF-045-A: Token security endpoints
 v1Router.use("/pos", posStaffRouter);  // SA-P1-001: POS staff login
+v1Router.use("/pos", posShiftsRouter);  // POS-SHIFT-001: Staff shift management
+v1Router.use("/pos", posDailyClosingRouter);  // POS-DAILY-001: Daily closing reconciliation
+v1Router.use("/pos", posKhataRouter);  // POS-KHATA-001: Khata credit ledger
+v1Router.use("/pos", posCustomersRouter);  // POS-CUST-001: Customer profiles
 v1Router.use("/pos", posSyncEventsRouter);  // T-173: SSE real-time sync
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);

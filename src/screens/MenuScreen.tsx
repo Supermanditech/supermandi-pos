@@ -382,6 +382,7 @@ export default function MenuScreen() {
   const goToCustomerManagement = () => navigation.navigate("CustomerManagement"); // T-196
   const goToOpeningStock = () => navigation.navigate("OpeningStock"); // T-198
   const goToDailyReport = () => navigation.navigate("DailyReport"); // T-199
+  const goToPrinterSettings = () => navigation.navigate("PrinterSettings"); // T-195
 
   return (
     <ScrollView
@@ -921,6 +922,18 @@ export default function MenuScreen() {
           <Text style={styles.menuSubtitle}>
             {staffSession ? `${staffSession.name} (${staffSession.role})` : "Not logged in"}
           </Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-195: Printer Settings */}
+      <Pressable style={styles.menuItem} onPress={goToPrinterSettings}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"printer-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Printer Settings</Text>
+          <Text style={styles.menuSubtitle}>Paper width, auto-print, copies</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>

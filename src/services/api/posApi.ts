@@ -200,7 +200,7 @@ export async function recordCollectionDue(input: {
 // =============================================================================
 
 export type SplitPaymentItem = {
-  mode: "UPI" | "CASH";
+  mode: "UPI" | "CASH" | "DUE";
   amountMinor: number;
 };
 
