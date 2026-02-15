@@ -5,6 +5,8 @@ import { authFetch, safeJson, API_GATEWAY_BASE } from '../lib/api';
 import { fetchCategories, FmcgCategory } from '../api/store';
 // CURRENCY-FORMAT-001: Use shared currency formatters
 import { formatCurrency } from '../lib/formatters';
+// T-058: Variant management for LOOSE_BULK products
+import VariantManager from '../components/VariantManager';
 
 interface Supplier {
   id: string;
@@ -154,6 +156,9 @@ export default function ProductsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [createdProduct, setCreatedProduct] = useState<ProductCreateResponse['data'] | null>(null);
+
+  // T-058: Variant management state
+  const [variantProduct, setVariantProduct] = useState<{ id: string; name: string } | null>(null);
 
   // Bulk upload state
   const [showBulkUpload, setShowBulkUpload] = useState(false);
@@ -1612,6 +1617,15 @@ Loose Rice,, , 45, 40, , KG, 25`}
                         >
                           📄
                         </a>
+                        {product.mode === 'LOOSE_BULK' && (
+                          <button
+                            className="btn"
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', background: '#e0f2fe', color: '#0369a1' }}
+                            onClick={() => setVariantProduct({ id: product.id, name: product.name })}
+                          >
+                            Variants
+                          </button>
+                        )}
                         <button
                           className="btn btn-secondary"
                           style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
@@ -1653,6 +1667,15 @@ Loose Rice,, , 45, 40, , KG, 25`}
           </div>
         </div>
       </div>
+
+      {/* T-058: Variant Manager Modal */}
+      {variantProduct && (
+        <VariantManager
+          storeProductId={variantProduct.id}
+          productName={variantProduct.name}
+          onClose={() => setVariantProduct(null)}
+        />
+      )}
     </>
   );
 }
