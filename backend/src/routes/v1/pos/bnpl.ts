@@ -28,6 +28,7 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
 
   try {
     // Get active drawdowns with supplier info
+    // T-153: Include paid_amount_minor and also show 'partial' status drawdowns
     const drawdownsResult = await pool.query(`
       SELECT
         bd.id,
@@ -36,14 +37,17 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
         po.order_number as "orderNumber",
         bd.purchase_order_id as "purchaseOrderId",
         bd.principal_minor as "principalMinor",
+        COALESCE(bd.paid_amount_minor, 0) as "paidAmountMinor",
         bd.due_date as "dueDate",
         bd.status,
         bd.created_at as "createdAt",
-        (bd.due_date - CURRENT_DATE) as "daysRemaining"
+        (bd.due_date - CURRENT_DATE) as "daysRemaining",
+        COALESCE(ssl.bnpl_interest_rate, 0) as "interestRatePercent"
       FROM payments.bnpl_drawdowns bd
       LEFT JOIN supplier.suppliers s ON s.id = bd.supplier_id
       LEFT JOIN orders.purchase_orders po ON po.id = bd.purchase_order_id
-      WHERE bd.store_id = $1 AND bd.status = 'active'
+      LEFT JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = bd.supplier_id AND ssl.store_id = bd.store_id
+      WHERE bd.store_id = $1 AND bd.status IN ('active', 'partial')
       ORDER BY bd.due_date ASC
     `, [storeId]);
 
@@ -63,17 +67,32 @@ posBnplRouter.get("/bnpl/active", requireDeviceToken, async (req: Request, res: 
     const availableCredit = Math.max(0, creditLimit - totalOutstanding);
 
     // Format drawdowns with days remaining
-    const drawdowns = drawdownsResult.rows.map(d => ({
+    // T-153: Include paidAmountMinor in response for partial payment tracking
+    // T-158: Calculate interest for each drawdown
+    const drawdowns = drawdownsResult.rows.map(d => {
+      const interestRate = parseFloat(d.interestRatePercent || '0');
+      const principal = d.principalMinor;
+      // Simple interest: principal * rate/100
+      const interestMinor = Math.round(principal * interestRate / 100);
+      const totalWithInterestMinor = principal + interestMinor;
+
+      return {
       id: d.id,
       supplierId: d.supplierId,
       supplierName: d.supplierName,
       orderNumber: d.orderNumber,
       purchaseOrderId: d.purchaseOrderId,
       principalMinor: d.principalMinor,
+      paidAmountMinor: parseInt(d.paidAmountMinor || '0', 10),
       dueDate: d.dueDate,
       status: d.status,
       daysRemaining: Math.max(0, parseInt(d.daysRemaining || '0', 10)),
-      isOverdue: parseInt(d.daysRemaining || '0', 10) < 0
+      isOverdue: parseInt(d.daysRemaining || '0', 10) < 0,
+      // T-158: Interest rate fields
+      interestRatePercent: interestRate,
+      interestMinor,
+      totalWithInterestMinor,
+    };
     }));
 
     console.log(`[SM-019] BNPL active: storeId=${storeId}, count=${drawdowns.length}, outstanding=${totalOutstanding}`);

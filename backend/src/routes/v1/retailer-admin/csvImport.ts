@@ -8,6 +8,14 @@
 import { Router, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import { getPool } from "../../../db/client";
+import {
+  validateProductName as validateProductNameUnified,
+  validateBarcode as validateBarcodeUnified,
+  validatePrice as validatePriceUnified,
+  validateStock as validateStockUnified,
+} from "../../../utils/productValidation";
+// T-197: Keyword-based auto-categorization fallback
+import { suggestCategory } from "../../../utils/autoCategorization";
 
 export const retailerAdminCsvImportRouter = Router();
 
@@ -136,13 +144,14 @@ function safeNumber(val: unknown, defaultVal = 0): number {
 
 // CSV Template headers and examples
 // T-061: Added variant_of, variant_label, variant_qty, variant_unit columns for retail variants
-const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes,variant_of,variant_label,variant_qty,variant_unit
-"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit","","","",""
-"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501","","","","",""
-"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati","","","",""
-"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate","","","",""
-"","","","","27.00","","","","","","","","","","","","500gm variant","Loose Rice Basmati","500 gm","500","GM"
-"","","","","240.00","","","","","","","","","","","","5kg variant","Loose Rice Basmati","5 kg","5","KG"
+// T-165: Added image_url column for product image links
+const CSV_TEMPLATE = `name,barcode,brand,unit,sell_price,purchase_price,mrp,stock,mode,sold_by,rate_unit,pack_size,pack_unit,low_stock_alert,gst_percent,hsn,notes,image_url,variant_of,variant_label,variant_qty,variant_unit
+"Parle-G Glucose Biscuits 100g","8901234567890","Parle","PCS","10.00","8.50","10.00","50","PACKAGED","","","100","g","10","18","1905","Popular biscuit","https://example.com/parle-g.jpg","","","",""
+"Tata Salt 1kg","8901234567891","Tata","PCS","28.00","25.00","28.00","100","PACKAGED","","","1000","g","20","0","2501","","","","","",""
+"Loose Rice Basmati","","Local","KG","85.00","75.00","","25","LOOSE_BULK","WEIGHT","KG","","","5","5","1006","Premium basmati","","","","",""
+"Fresh Eggs","","Farm Fresh","PCS","7.00","5.50","","100","LOOSE_BULK","COUNT","PCS","","","20","0","0407","Per piece rate","","","","",""
+"","","","","27.00","","","","","","","","","","","","500gm variant","","Loose Rice Basmati","500 gm","500","GM"
+"","","","","240.00","","","","","","","","","","","","5kg variant","","Loose Rice Basmati","5 kg","5","KG"
 `;
 
 // T-061: Valid variant base units
@@ -325,35 +334,68 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
           rowErrors.push(`variant_unit must be one of: ${[...VALID_VARIANT_UNITS].join(', ')}`);
         }
       } else {
-        // Standard product row validation
-        if (!row.name || !row.name.trim()) {
-          rowErrors.push('name is required');
+        // T-186: Standard product row validation using unified validators
+        const nameResult = validateProductNameUnified(row.name || '');
+        if (!nameResult.valid) {
+          rowErrors.push(nameResult.error || 'name is required');
         }
-        if (!row.sell_price || parseFloat(row.sell_price) <= 0) {
+
+        // Validate sell price
+        const sellPriceNum = parseFloat((row.sell_price || '').replace(/[₹,]/g, ''));
+        if (!Number.isFinite(sellPriceNum) || sellPriceNum <= 0) {
           rowErrors.push('sell_price must be > 0');
+        } else {
+          const sellPriceResult = validatePriceUnified(Math.round(sellPriceNum * 100));
+          if (!sellPriceResult.valid) {
+            rowErrors.push(sellPriceResult.error || 'sell_price invalid');
+          }
         }
-        if (!row.purchase_price || parseFloat(row.purchase_price) <= 0) {
+
+        // Validate purchase price
+        const purchasePriceNum = parseFloat((row.purchase_price || '').replace(/[₹,]/g, ''));
+        if (!Number.isFinite(purchasePriceNum) || purchasePriceNum <= 0) {
           rowErrors.push('purchase_price must be > 0');
+        } else {
+          const purchasePriceResult = validatePriceUnified(Math.round(purchasePriceNum * 100));
+          if (!purchasePriceResult.valid) {
+            rowErrors.push(purchasePriceResult.error || 'purchase_price invalid');
+          }
+        }
+
+        // T-186: Validate stock if provided
+        if (row.stock && row.stock.trim()) {
+          const stockNum = parseInt(row.stock, 10);
+          if (Number.isFinite(stockNum)) {
+            const stockResult = validateStockUnified(stockNum);
+            if (!stockResult.valid) {
+              rowErrors.push(stockResult.error || 'stock invalid');
+            }
+          }
         }
       }
 
-      // Validate barcode rules
+      // T-186: Validate barcode using unified validator
       const mode = isVariantRow ? 'VARIANT' :
                    (row.mode || '').toUpperCase() === 'LOOSE_BULK' ? 'LOOSE_BULK' :
                    (!row.barcode || !row.barcode.trim()) ? 'LOOSE_BULK' : 'PACKAGED';
 
-      // Validate numeric fields (only for non-variant rows that have these)
-      if (!isVariantRow && row.sell_price && isNaN(parseFloat(row.sell_price.replace(/[₹,]/g, '')))) {
-        rowErrors.push('sell_price must be numeric');
-      }
-      if (!isVariantRow && row.purchase_price && isNaN(parseFloat(row.purchase_price.replace(/[₹,]/g, '')))) {
-        rowErrors.push('purchase_price must be numeric');
+      if (!isVariantRow && row.barcode && row.barcode.trim()) {
+        const barcodeResult = validateBarcodeUnified(row.barcode.trim());
+        if (!barcodeResult.valid) {
+          rowErrors.push(barcodeResult.error || 'invalid barcode format');
+        }
       }
 
       if (rowErrors.length > 0) {
         errors.push(...rowErrors.map(e => ({ row: i, field: '', error: e })));
       } else {
         validCount++;
+      }
+
+      // T-165: Validate image_url if provided
+      const imageUrl = (row.image_url || '').trim();
+      if (imageUrl && !/^https?:\/\/.+/i.test(imageUrl)) {
+        rowErrors.push('image_url must be a valid HTTP/HTTPS URL');
       }
 
       previewRows.push({
@@ -367,6 +409,8 @@ retailerAdminCsvImportRouter.post("/products/import/validate", async (req: Reque
         mrp: parsePrice(row.mrp),
         stock: isVariantRow ? 0 : (parseInt(row.stock) || 0),
         mode,
+        // T-165: Image URL from CSV
+        imageUrl: imageUrl || null,
         // T-061: Variant-specific fields
         isVariant: isVariantRow,
         variantOf: row.variant_of?.trim() || null,
@@ -505,14 +549,16 @@ async function commitSingleRow(
       return { action: 'updated' };
     } else {
       // Create new product
+      // T-165: Include image_url if provided in CSV
       const prodResult = await client.query(
-        `INSERT INTO catalog.products (name, brand, unit, primary_barcode, is_active)
-         VALUES ($1, $2, $3, $4, true) RETURNING id`,
+        `INSERT INTO catalog.products (name, brand, unit, primary_barcode, image_url, is_active)
+         VALUES ($1, $2, $3, $4, $5, true) RETURNING id`,
         [
           row.name,
           row.brand || null,
           row.unit || 'PCS',
           mode === 'PACKAGED' && row.barcode ? row.barcode : null,
+          row.imageUrl || null,
         ]
       );
       const productId = prodResult.rows[0].id;

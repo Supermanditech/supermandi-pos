@@ -1,7 +1,8 @@
 // SA-001: Suppliers tab extracted from App.tsx
+// T-188: Batch approval/rejection for pending products
 import { useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
-import { toggleAutoApproval, publishProduct } from "../api/suppliers";
+import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
 import { formatDateTime } from "../lib/formatters";
 
 interface SuppliersTabProps {
@@ -116,6 +117,74 @@ export function SuppliersTab({
   // T-068: Publish button state
   const [publishLoading, setPublishLoading] = useState<Record<string, boolean>>({});
   const [publishResult, setPublishResult] = useState<Record<string, string>>({});
+  // T-188: Batch selection state
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [batchActionLoading, setBatchActionLoading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<string>("");
+  const [batchRejectModalOpen, setBatchRejectModalOpen] = useState(false);
+  const [batchRejectReason, setBatchRejectReason] = useState("");
+
+  // T-188: Toggle single product selection
+  const toggleProductSelection = (productId: string) => {
+    setSelectedProductIds(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
+  // T-188: Select/deselect all pending products
+  const toggleSelectAll = () => {
+    if (selectedProductIds.size === pendingProducts.length) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(pendingProducts.map(p => p.id)));
+    }
+  };
+
+  // T-188: Batch approve selected products
+  const handleBatchApprove = async () => {
+    if (selectedProductIds.size === 0) return;
+    setBatchActionLoading(true);
+    setBatchProgress(`Processing 0/${selectedProductIds.size}...`);
+    try {
+      const ids = Array.from(selectedProductIds);
+      const result = await batchProductAction(ids, "approve");
+      setBatchProgress(`Done: ${result.succeeded} approved, ${result.failed} failed`);
+      setSelectedProductIds(new Set());
+      refreshSuppliers();
+    } catch (err: any) {
+      setBatchProgress(`Error: ${err.message}`);
+    } finally {
+      setBatchActionLoading(false);
+      setTimeout(() => setBatchProgress(""), 5000);
+    }
+  };
+
+  // T-188: Batch reject selected products (opens modal for reason)
+  const handleBatchRejectConfirm = async () => {
+    if (selectedProductIds.size === 0 || batchRejectReason.length < 10) return;
+    setBatchActionLoading(true);
+    setBatchRejectModalOpen(false);
+    setBatchProgress(`Processing 0/${selectedProductIds.size}...`);
+    try {
+      const ids = Array.from(selectedProductIds);
+      const result = await batchProductAction(ids, "reject", batchRejectReason);
+      setBatchProgress(`Done: ${result.succeeded} rejected, ${result.failed} failed`);
+      setSelectedProductIds(new Set());
+      setBatchRejectReason("");
+      refreshSuppliers();
+    } catch (err: any) {
+      setBatchProgress(`Error: ${err.message}`);
+    } finally {
+      setBatchActionLoading(false);
+      setTimeout(() => setBatchProgress(""), 5000);
+    }
+  };
 
   const handleToggleAutoApprove = async (supplierId: string, currentValue: boolean) => {
     setAutoApproveLoading(prev => ({ ...prev, [supplierId]: true }));
@@ -437,6 +506,54 @@ export function SuppliersTab({
 
       {productActionError && <div className="banner" style={{ margin: "0 16px 12px" }}>{productActionError}</div>}
 
+      {/* T-188: Batch action buttons — shown when products exist */}
+      {pendingProducts.length > 0 && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "0 16px 12px", flexWrap: "wrap" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={selectedProductIds.size === pendingProducts.length && pendingProducts.length > 0}
+              onChange={toggleSelectAll}
+              style={{ width: 16, height: 16 }}
+            />
+            Select All
+          </label>
+          {selectedProductIds.size > 0 && (
+            <>
+              <button
+                onClick={handleBatchApprove}
+                disabled={batchActionLoading}
+                style={{
+                  background: "#22c55e", color: "white", border: "none", borderRadius: 4,
+                  padding: "6px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600,
+                }}
+              >
+                {batchActionLoading ? "Processing..." : `Approve Selected (${selectedProductIds.size})`}
+              </button>
+              <button
+                onClick={() => setBatchRejectModalOpen(true)}
+                disabled={batchActionLoading}
+                style={{
+                  background: "#ef4444", color: "white", border: "none", borderRadius: 4,
+                  padding: "6px 14px", fontSize: 13, cursor: "pointer", fontWeight: 600,
+                }}
+              >
+                {batchActionLoading ? "Processing..." : `Reject Selected (${selectedProductIds.size})`}
+              </button>
+            </>
+          )}
+          {batchProgress && (
+            <span style={{
+              fontSize: 12,
+              color: batchProgress.startsWith("Error") ? "#dc2626" : batchProgress.startsWith("Done") ? "#16a34a" : "#6b7280",
+              fontWeight: 500,
+            }}>
+              {batchProgress}
+            </span>
+          )}
+        </div>
+      )}
+
       {pendingProducts.length === 0 ? (
         <div className="empty">
           {suppliersLoading ? "Loading pending products..." : "No products pending approval."}
@@ -445,10 +562,54 @@ export function SuppliersTab({
         <div className="tableWrap">
           <div className="deviceGrid">
             {pendingProducts.map((product) => (
-              <div className="deviceCard" key={product.id}>
+              <div className="deviceCard" key={product.id} style={{
+                border: selectedProductIds.has(product.id) ? "2px solid #3b82f6" : undefined,
+              }}>
                 <div className="deviceHeader">
-                  <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
-                    {product.productName}
+                  {/* T-188: Checkbox + T-162: Product image thumbnail (48x48) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedProductIds.has(product.id)}
+                      onChange={() => toggleProductSelection(product.id)}
+                      style={{ width: 16, height: 16, cursor: "pointer", flexShrink: 0 }}
+                    />
+                    {product.thumbnailUrl || product.imageUrl ? (
+                      <img
+                        src={product.thumbnailUrl || product.imageUrl || ""}
+                        alt={product.productName}
+                        style={{
+                          width: 48,
+                          height: 48,
+                          objectFit: "cover",
+                          borderRadius: 6,
+                          border: "1px solid #e2e8f0",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 6,
+                          background: "#f1f5f9",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#94a3b8",
+                          fontSize: 20,
+                          flexShrink: 0,
+                          border: "1px solid #e2e8f0",
+                        }}
+                        title="No product image"
+                      >
+                        &#128230;
+                      </div>
+                    )}
+                    <div className="deviceLabelInput" style={{ fontWeight: 600 }}>
+                      {product.productName}
+                    </div>
                   </div>
                   <div className="badgeRow">
                     <span className="badge badgeWarn">Pending</span>
@@ -536,6 +697,53 @@ export function SuppliersTab({
         </div>
       )}
 
+      {/* T-188: Batch Reject Modal — collects rejection reason for selected products */}
+      {batchRejectModalOpen && (
+        <div className="modalOverlay" onClick={() => setBatchRejectModalOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 450 }}>
+            <div className="modalHeader">
+              <h3 style={{ margin: 0 }}>Reject {selectedProductIds.size} Product{selectedProductIds.size !== 1 ? "s" : ""}</h3>
+              <button className="btnGhost" onClick={() => setBatchRejectModalOpen(false)} aria-label="Close">&times;</button>
+            </div>
+            <div className="modalBody">
+              <p style={{ marginBottom: 12, fontSize: 14, color: "#6b7280" }}>
+                Provide a reason for rejecting the selected products. This will be sent to the supplier.
+              </p>
+              <div className="control">
+                <label>Rejection Reason (min 10 characters)</label>
+                <textarea
+                  value={batchRejectReason}
+                  onChange={(e) => setBatchRejectReason(e.target.value)}
+                  placeholder="Enter reason for rejection..."
+                  rows={3}
+                  style={{ width: "100%", padding: "8px", border: "1px solid #d1d5db", borderRadius: 4, fontSize: 14, resize: "vertical" }}
+                />
+              </div>
+              {batchRejectReason.length > 0 && batchRejectReason.length < 10 && (
+                <div style={{ fontSize: 12, color: "#dc2626", marginTop: 4 }}>
+                  Reason must be at least 10 characters ({batchRejectReason.length}/10)
+                </div>
+              )}
+            </div>
+            <div className="modalFooter">
+              <button className="btnGhost" onClick={() => setBatchRejectModalOpen(false)}>Cancel</button>
+              <button
+                onClick={handleBatchRejectConfirm}
+                disabled={batchRejectReason.length < 10 || batchActionLoading}
+                style={{
+                  background: batchRejectReason.length >= 10 ? "#ef4444" : "#f3f4f6",
+                  color: batchRejectReason.length >= 10 ? "white" : "#9ca3af",
+                  border: "none", borderRadius: 4, padding: "8px 16px", fontSize: 14,
+                  cursor: batchRejectReason.length >= 10 ? "pointer" : "default",
+                }}
+              >
+                {batchActionLoading ? "Processing..." : `Reject ${selectedProductIds.size} Product${selectedProductIds.size !== 1 ? "s" : ""}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Product Edit Modal (SA-1.3-003) + T-119: Dirty guard on close */}
       {editingProduct && (
         <div className="modalOverlay" onClick={handleCloseEditProduct}>
@@ -546,6 +754,42 @@ export function SuppliersTab({
             </div>
 
             <div className="modalBody">
+              {/* T-162: Larger product image preview (200x200) in detail modal */}
+              <div style={{ marginBottom: 16, textAlign: "center" }}>
+                {editingProduct.imageUrl || editingProduct.thumbnailUrl ? (
+                  <img
+                    src={editingProduct.imageUrl || editingProduct.thumbnailUrl || ""}
+                    alt={editingProduct.productName}
+                    style={{
+                      width: 200,
+                      height: 200,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      border: "1px solid #e2e8f0",
+                      display: "inline-block",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: 200,
+                      height: 200,
+                      borderRadius: 6,
+                      background: "#f1f5f9",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "column",
+                      color: "#94a3b8",
+                      border: "1px solid #e2e8f0",
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: 40 }}>&#128230;</span>
+                    <span style={{ fontSize: 12 }}>No image</span>
+                  </div>
+                )}
+              </div>
               <div style={{ marginBottom: 12 }}>
                 <strong>Original Name:</strong> {editingProduct.productName}
               </div>

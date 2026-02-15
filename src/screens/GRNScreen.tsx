@@ -26,10 +26,21 @@ import { getDeviceStoreId } from "../services/deviceSession";
 // TYPES
 // =============================================================================
 
+// T-172: GRN item type for barcode label generation
+export type GRNBarcodeItem = {
+  barcode: string;
+  name: string;
+  sellPrice?: number | null;
+  unit?: string | null;
+  copies?: number;
+};
+
 export interface GRNScreenProps {
   orderId: string;
   onBack?: () => void;
   onSuccess?: () => void;
+  // T-172: Navigate to barcode sheet with pre-selected GRN items
+  onNavigateToBarcodeSheet?: (items: GRNBarcodeItem[]) => void;
 }
 
 // =============================================================================
@@ -40,6 +51,7 @@ export default function GRNScreen({
   orderId,
   onBack,
   onSuccess,
+  onNavigateToBarcodeSheet,
 }: GRNScreenProps) {
   const insets = useSafeAreaInsets();
 
@@ -310,15 +322,49 @@ export default function GRNScreen({
           notes: notes.trim() || undefined,
         });
 
+        // T-172: Build barcode items from received goods for label generation
+        const receivedBarcodeItems: GRNBarcodeItem[] = [];
+        if (order && onNavigateToBarcodeSheet) {
+          for (const updatedItem of result.data.itemsUpdated) {
+            const orderItem = order.items.find((oi) => oi.id === updatedItem.id);
+            if (orderItem?.barcode) {
+              receivedBarcodeItems.push({
+                barcode: orderItem.barcode,
+                name: orderItem.productName,
+                sellPrice: null,
+                unit: null,
+                copies: receiveQuantities[orderItem.id] || 1,
+              });
+            }
+          }
+        }
+
+        // T-172: Show success with barcode label generation prompt
+        const successButtons: Array<{ text: string; onPress?: () => void; style?: "cancel" | "default" | "destructive" }> = [];
+
+        if (receivedBarcodeItems.length > 0 && onNavigateToBarcodeSheet) {
+          successButtons.push({
+            text: "Generate Labels",
+            onPress: () => onNavigateToBarcodeSheet(receivedBarcodeItems),
+          });
+          successButtons.push({
+            text: "Skip",
+            style: "cancel",
+            onPress: () => onSuccess?.(),
+          });
+        } else {
+          successButtons.push({
+            text: "OK",
+            onPress: () => onSuccess?.(),
+          });
+        }
+
         Alert.alert(
           "Success",
-          `Received ${result.data.itemsUpdated.length} items. Order status: ${getStatusLabel(result.data.order.status)}`,
-          [
-            {
-              text: "OK",
-              onPress: () => onSuccess?.(),
-            },
-          ]
+          `Received ${result.data.itemsUpdated.length} items. Order status: ${getStatusLabel(result.data.order.status)}${
+            receivedBarcodeItems.length > 0 ? "\n\nGenerate barcode labels for received items?" : ""
+          }`,
+          successButtons
         );
       } catch (err) {
         console.error("[GRNScreen] Failed to receive:", err);
@@ -351,7 +397,7 @@ export default function GRNScreen({
         ]
       );
     }
-  }, [storeId, order, canSubmit, receiveQuantities, totals, notes, orderId, onSuccess, excessItems]);
+  }, [storeId, order, canSubmit, receiveQuantities, totals, notes, orderId, onSuccess, onNavigateToBarcodeSheet, excessItems]);
 
   // Render item
   const renderItem = useCallback(

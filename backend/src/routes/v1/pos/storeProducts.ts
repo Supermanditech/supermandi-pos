@@ -7,6 +7,12 @@ import {
   type CreateStoreProductInput,
   type CreateStoreProductResult
 } from "../../../services/storeProductDigitisationService";
+import {
+  validateProductName as validateProductNameUnified,
+  validateBarcode as validateBarcodeUnified,
+  validatePrice as validatePriceUnified,
+  validateStock as validateStockUnified,
+} from "../../../utils/productValidation";
 
 export const posStoreProductsRouter = Router();
 
@@ -124,28 +130,30 @@ posStoreProductsRouter.post("/store-products", requireDeviceToken, requireActive
   const MAX_BRAND_LENGTH = 100;
   const MAX_BARCODE_LENGTH = 50;
 
-  // Basic validation
+  // T-186: Unified barcode validation
   if (typeof barcode !== "string" || barcode.trim().length === 0) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
       message: "Barcode is required"
     });
   }
-
-  // AUD-059-B FIX: Barcode length bounds
-  if (barcode.trim().length > MAX_BARCODE_LENGTH) {
+  const barcodeCheck = validateBarcodeUnified(barcode.trim());
+  if (!barcodeCheck.valid) {
     return res.status(422).json({
       error: "VALIDATION_ERROR",
-      message: `Barcode exceeds maximum length of ${MAX_BARCODE_LENGTH} characters`
+      message: barcodeCheck.error || `Barcode exceeds maximum length of ${MAX_BARCODE_LENGTH} characters`
     });
   }
 
-  // AUD-059-B FIX: Name length bounds
-  if (name && typeof name === "string" && name.length > MAX_NAME_LENGTH) {
-    return res.status(422).json({
-      error: "VALIDATION_ERROR",
-      message: `Product name exceeds maximum length of ${MAX_NAME_LENGTH} characters`
-    });
+  // T-186: Unified product name validation
+  if (name && typeof name === "string" && name.trim().length > 0) {
+    const nameCheck = validateProductNameUnified(name);
+    if (!nameCheck.valid) {
+      return res.status(422).json({
+        error: "VALIDATION_ERROR",
+        message: nameCheck.error || `Product name exceeds maximum length of ${MAX_NAME_LENGTH} characters`
+      });
+    }
   }
 
   // AUD-059-B FIX: Description length bounds
@@ -292,6 +300,7 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
       params.push(token);
       const idx = params.length; // $idx references this token
 
+      // T-132: Fuzzy/typo-tolerant search via pg_trgm on name, display_name, and brand
       tokenWhereClauses.push(`(
         p.primary_barcode = $${idx}
         OR spb.barcode = $${idx}
@@ -299,18 +308,24 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         OR COALESCE(sp.display_name, '') ILIKE '%' || $${idx} || '%'
         OR COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%'
         OR similarity(p.name, $${idx}) > 0.3
+        OR similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3
         OR similarity(COALESCE(p.brand, ''), $${idx}) > 0.3
       )`);
 
+      // T-132: Enhanced scoring with display_name similarity for typo tolerance
       tokenScoreCases.push(`CASE
         WHEN p.primary_barcode = $${idx} OR spb.barcode = $${idx} THEN 1000
         WHEN LOWER(p.name) = LOWER($${idx}) THEN 800
+        WHEN LOWER(COALESCE(sp.display_name, '')) = LOWER($${idx}) THEN 800
         WHEN LOWER(p.name) LIKE LOWER($${idx}) || '%' THEN 700
+        WHEN LOWER(COALESCE(sp.display_name, '')) LIKE LOWER($${idx}) || '%' THEN 700
         WHEN similarity(p.name, $${idx}) > 0.5 THEN 500 + similarity(p.name, $${idx}) * 100
+        WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.5 THEN 500 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100
         WHEN p.name ILIKE '%' || $${idx} || '%' THEN 300
         WHEN COALESCE(sp.display_name, '') ILIKE '%' || $${idx} || '%' THEN 300
         WHEN COALESCE(p.brand, '') ILIKE '%' || $${idx} || '%' THEN 250
         WHEN similarity(p.name, $${idx}) > 0.3 THEN 200 + similarity(p.name, $${idx}) * 100
+        WHEN similarity(COALESCE(sp.display_name, ''), $${idx}) > 0.3 THEN 200 + similarity(COALESCE(sp.display_name, ''), $${idx}) * 100
         WHEN similarity(COALESCE(p.brand, ''), $${idx}) > 0.3 THEN 150 + similarity(COALESCE(p.brand, ''), $${idx}) * 100
         ELSE 50
       END`);
@@ -1343,6 +1358,253 @@ posStoreProductsRouter.get("/store-products/:storeProductId/variants", requireDe
   } catch (error) {
     console.error("[storeProducts] Variants fetch error:", error);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch variants" });
+  }
+});
+
+// =============================================================================
+// T-131: GET /api/v1/pos/products/frequent
+// Frequently sold products — top 12 by sale count for this store
+// Simple in-memory cache (5 min TTL per store)
+// =============================================================================
+
+const frequentProductsCache = new Map<string, { data: any[]; expiresAt: number }>();
+const FREQUENT_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+posStoreProductsRouter.get("/products/frequent", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  // Check cache first
+  const cached = frequentProductsCache.get(storeId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return res.json({ success: true, data: cached.data, cached: true });
+  }
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  try {
+    // T-131: Query sale_items joined through sales (store isolation via sales.store_id)
+    // Group by product_id, count sales, return top 12
+    const result = await pool.query(
+      `SELECT
+        si.product_id,
+        COUNT(*)::int AS sale_count,
+        COALESCE(sp.display_name, p.name) AS name,
+        p.primary_barcode AS barcode,
+        COALESCE(sp.image_url, p.image_url) AS "imageUrl",
+        sp.sell_price AS "sellPrice",
+        p.category,
+        p.unit,
+        COALESCE(sp.brand, p.brand) AS brand,
+        sp.id AS "storeProductId"
+      FROM public.sale_items si
+      JOIN public.sales s ON s.id = si.sale_id
+      JOIN catalog.store_products sp ON sp.product_id = si.product_id AND sp.store_id = s.store_id
+      JOIN catalog.products p ON p.id = si.product_id
+      WHERE s.store_id = $1
+        AND s.status IN ('completed', 'pending')
+        AND sp.is_active = true
+        AND p.is_active = true
+      GROUP BY si.product_id, sp.display_name, p.name, p.primary_barcode,
+               sp.image_url, p.image_url, sp.sell_price, p.category, p.unit,
+               sp.brand, p.brand, sp.id
+      ORDER BY sale_count DESC
+      LIMIT 12`,
+      [storeId]
+    );
+
+    const data = result.rows.map((row: any) => ({
+      productId: row.product_id,
+      storeProductId: row.storeProductId,
+      name: row.name,
+      barcode: row.barcode || null,
+      imageUrl: row.imageUrl || null,
+      sellPrice: row.sellPrice,
+      category: row.category || null,
+      unit: row.unit || "pcs",
+      brand: row.brand || null,
+      saleCount: row.sale_count,
+    }));
+
+    // Cache the result
+    frequentProductsCache.set(storeId, {
+      data,
+      expiresAt: Date.now() + FREQUENT_CACHE_TTL_MS,
+    });
+
+    // ISSUE-MICRO-041: Bound cache size to prevent memory growth
+    if (frequentProductsCache.size > 1000) {
+      const firstKey = frequentProductsCache.keys().next().value;
+      if (firstKey) frequentProductsCache.delete(firstKey);
+    }
+
+    return res.json({ success: true, data, cached: false });
+  } catch (error) {
+    console.error("[storeProducts] Frequent products error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch frequent products" });
+  }
+});
+
+// =============================================================================
+// T-143: GET /api/v1/pos/purchases/recent
+// Recently purchased products — last 10 distinct products from purchase orders
+// Store isolation via JWT store_id
+// =============================================================================
+
+posStoreProductsRouter.get("/purchases/recent", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  try {
+    // T-143: Get the most recent purchase order items for this store
+    // DISTINCT ON product_id to get one row per product, most recent first
+    const result = await pool.query(
+      `SELECT DISTINCT ON (poi.product_id)
+        poi.product_id,
+        poi.product_name AS name,
+        poi.barcode,
+        poi.unit_price AS "lastPurchasePrice",
+        COALESCE(sp.image_url, p.image_url) AS "imageUrl",
+        COALESCE(sp.display_name, p.name) AS "displayName",
+        COALESCE(sp.brand, p.brand) AS brand,
+        p.unit,
+        sup.business_name AS "supplierName",
+        po.created_at AS "lastPurchaseDate",
+        sp.id AS "storeProductId"
+      FROM orders.purchase_order_items poi
+      JOIN orders.purchase_orders po ON po.id = poi.order_id
+      LEFT JOIN catalog.products p ON p.id = poi.product_id
+      LEFT JOIN catalog.store_products sp ON sp.product_id = poi.product_id AND sp.store_id = po.store_id AND sp.is_active = true
+      LEFT JOIN supplier.suppliers sup ON sup.id = po.supplier_id
+      WHERE po.store_id = $1
+        AND po.status NOT IN ('cancelled')
+      ORDER BY poi.product_id, po.created_at DESC
+      LIMIT 10`,
+      [storeId]
+    );
+
+    const data = result.rows.map((row: any) => ({
+      productId: row.product_id,
+      storeProductId: row.storeProductId || null,
+      name: row.displayName || row.name,
+      barcode: row.barcode || null,
+      lastPurchasePrice: row.lastPurchasePrice,
+      imageUrl: row.imageUrl || null,
+      supplierName: row.supplierName || null,
+      brand: row.brand || null,
+      unit: row.unit || "pcs",
+      lastPurchaseDate: row.lastPurchaseDate,
+    }));
+
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error("[storeProducts] Recent purchases error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch recent purchases" });
+  }
+});
+
+/**
+ * T-136: GET /api/v1/pos/products/:productId/substitutes
+ * Returns up to 4 substitute products from the same category that are in stock.
+ */
+posStoreProductsRouter.get("/products/:productId/substitutes", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { productId } = req.params;
+
+  if (!productId) {
+    return res.status(400).json({ error: "VALIDATION_ERROR", message: "productId is required" });
+  }
+
+  try {
+    const pool = getPool();
+
+    // Get the category of the requested product
+    const productResult = await pool.query(
+      `SELECT p.category FROM catalog.products p WHERE p.id = $1`,
+      [productId]
+    );
+
+    if (productResult.rowCount === 0) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const category = productResult.rows[0].category;
+    if (!category) {
+      return res.json({ success: true, data: [] });
+    }
+
+    // Find substitutes: same category, active, in stock, excluding the original product
+    const substitutesResult = await pool.query(
+      `SELECT
+        sp.product_id AS "productId",
+        COALESCE(sp.store_display_name, p.name) AS name,
+        sp.barcode,
+        COALESCE(sp.sell_price, 0) AS "sellPrice",
+        COALESCE(sb.current_qty, sp.current_stock, 0) AS "currentStock"
+      FROM catalog.store_products sp
+      JOIN catalog.products p ON p.id = sp.product_id
+      LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+      WHERE sp.store_id = $1
+        AND p.category = $2
+        AND sp.product_id != $3
+        AND sp.is_active = true
+        AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0
+      ORDER BY similarity(p.name, (SELECT name FROM catalog.products WHERE id = $3)) DESC NULLS LAST,
+               p.name ASC
+      LIMIT 4`,
+      [storeId, category, productId]
+    );
+
+    return res.json({
+      success: true,
+      data: substitutesResult.rows,
+    });
+  } catch (error) {
+    console.error("[storeProducts] Substitutes error:", error);
+    // Fallback: try without similarity (pg_trgm might not be installed)
+    try {
+      const pool = getPool();
+      const productResult = await pool.query(
+        `SELECT p.category FROM catalog.products p WHERE p.id = $1`,
+        [productId]
+      );
+      if (productResult.rowCount === 0) {
+        return res.json({ success: true, data: [] });
+      }
+      const category = productResult.rows[0].category;
+      if (!category) {
+        return res.json({ success: true, data: [] });
+      }
+      const fallbackResult = await pool.query(
+        `SELECT
+          sp.product_id AS "productId",
+          COALESCE(sp.store_display_name, p.name) AS name,
+          sp.barcode,
+          COALESCE(sp.sell_price, 0) AS "sellPrice",
+          COALESCE(sb.current_qty, sp.current_stock, 0) AS "currentStock"
+        FROM catalog.store_products sp
+        JOIN catalog.products p ON p.id = sp.product_id
+        LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+        WHERE sp.store_id = $1
+          AND p.category = $2
+          AND sp.product_id != $3
+          AND sp.is_active = true
+          AND COALESCE(sb.current_qty, sp.current_stock, 0) > 0
+        ORDER BY p.name ASC
+        LIMIT 4`,
+        [storeId, category, productId]
+      );
+      return res.json({ success: true, data: fallbackResult.rows });
+    } catch (fallbackError) {
+      console.error("[storeProducts] Substitutes fallback error:", fallbackError);
+      return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch substitutes" });
+    }
   }
 });
 

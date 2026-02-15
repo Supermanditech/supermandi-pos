@@ -27,7 +27,8 @@ import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 // TYPES
 // =============================================================================
 
-export type PaymentMode = "UPI" | "BNPL" | "CREDIT" | "COD";
+// T-157: Added BANK_TRANSFER for NEFT/RTGS/IMPS supplier payments
+export type PaymentMode = "UPI" | "BNPL" | "CREDIT" | "COD" | "BANK_TRANSFER";
 
 export interface PaymentOptionsSheetProps {
   visible: boolean;
@@ -370,6 +371,33 @@ export function PaymentOptionsSheet({
                   )}
                 </Pressable>
               )}
+
+              {/* T-157: Bank Transfer Option */}
+              <Pressable
+                style={[
+                  styles.optionCard,
+                  selectedMode === "BANK_TRANSFER" && styles.optionCardSelected,
+                ]}
+                onPress={() => handleSelectPayment("BANK_TRANSFER")}
+                disabled={processing}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: "#EFF6FF" }]}>
+                  <MaterialCommunityIcons name="bank-transfer" size={24} color="#2563EB" />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={styles.optionTitle}>
+                    {t("payment.bankTransfer", "Bank Transfer (NEFT/RTGS)")}
+                  </Text>
+                  <Text style={styles.optionDescription}>
+                    {t("payment.bankTransferDescription", "Pay via bank transfer, mark as paid later")}
+                  </Text>
+                </View>
+                {processing && selectedMode === "BANK_TRANSFER" ? (
+                  <ActivityIndicator size="small" color="#2563EB" />
+                ) : (
+                  <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
+                )}
+              </Pressable>
 
               {/* COD Option */}
               <Pressable

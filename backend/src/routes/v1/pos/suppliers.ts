@@ -341,3 +341,114 @@ posSuppliersRouter.get("/suppliers/:supplierId/products", requireDeviceToken, as
     });
   }
 });
+
+// =============================================================================
+// T-182: Browse Available Suppliers (not yet linked to store)
+// GET /api/v1/pos/suppliers/browse/available
+// =============================================================================
+
+posSuppliersRouter.get("/suppliers/browse/available", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { search, limit = "50", offset = "0" } = req.query;
+
+  const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
+  const offsetNum = parseInt(offset as string, 10) || 0;
+
+  try {
+    // Find verified suppliers NOT yet linked to this store
+    let query = `
+      SELECT
+        s.id,
+        s.business_name as "businessName",
+        s.trade_name as "tradeName",
+        s.city,
+        s.state,
+        s.gstin,
+        (SELECT COUNT(*) FROM catalog.supplier_products sp WHERE sp.supplier_id = s.id AND sp.is_active = true) as "productCount"
+      FROM supplier.suppliers s
+      WHERE s.verification_status = 'verified'
+        AND s.id NOT IN (
+          SELECT ssl.supplier_id FROM supplier.supplier_store_links ssl
+          WHERE ssl.store_id = $1 AND ssl.status = 'active'
+        )`;
+    const params: any[] = [storeId];
+    let paramIdx = 2;
+
+    if (search && typeof search === 'string' && search.trim()) {
+      query += ` AND (LOWER(s.business_name) LIKE $${paramIdx} OR LOWER(s.trade_name) LIKE $${paramIdx})`;
+      params.push(`%${search.trim().toLowerCase()}%`);
+      paramIdx++;
+    }
+
+    query += ` ORDER BY s.business_name ASC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+    params.push(limitNum, offsetNum);
+
+    const result = await pool.query(query, params);
+
+    return res.json({
+      success: true,
+      data: { suppliers: result.rows },
+      pagination: { limit: limitNum, offset: offsetNum },
+    });
+  } catch (error: any) {
+    console.error("[T-182] Browse suppliers error:", error.message);
+    return res.status(500).json({ error: "Failed to browse suppliers" });
+  }
+});
+
+// T-182: Request supplier link
+// POST /api/v1/pos/suppliers/:supplierId/request-link
+posSuppliersRouter.post("/suppliers/:supplierId/request-link", requireDeviceToken, async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { supplierId } = req.params;
+  const { message } = req.body as { message?: string };
+
+  try {
+    // Check supplier exists and is verified
+    const supplierCheck = await pool.query(
+      `SELECT id, business_name FROM supplier.suppliers WHERE id = $1 AND verification_status = 'verified'`,
+      [supplierId]
+    );
+    if (supplierCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+
+    // Check if already linked
+    const existingLink = await pool.query(
+      `SELECT id, status FROM supplier.supplier_store_links WHERE supplier_id = $1 AND store_id = $2`,
+      [supplierId, storeId]
+    );
+    if (existingLink.rows.length > 0) {
+      const status = existingLink.rows[0].status;
+      if (status === 'active') {
+        return res.status(409).json({ error: "Already linked to this supplier" });
+      }
+      if (status === 'pending') {
+        return res.status(409).json({ error: "Link request already pending" });
+      }
+    }
+
+    // Create pending link request
+    await pool.query(
+      `INSERT INTO supplier.supplier_store_links (supplier_id, store_id, status, request_message)
+       VALUES ($1, $2, 'pending', $3)
+       ON CONFLICT (supplier_id, store_id) DO UPDATE SET
+         status = 'pending', request_message = $3, updated_at = NOW()`,
+      [supplierId, storeId, message || null]
+    );
+
+    return res.json({
+      success: true,
+      message: `Link request sent to ${supplierCheck.rows[0].business_name}`,
+    });
+  } catch (error: any) {
+    console.error("[T-182] Request link error:", error.message);
+    return res.status(500).json({ error: "Failed to request supplier link" });
+  }
+});

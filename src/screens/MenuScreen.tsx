@@ -40,6 +40,16 @@ type RootStackParamList = {
   UiShowcase: undefined;
   Buy: undefined; // AUD-POS-NAV-002: Wire BuyScreen to navigation
   BnplDues: undefined; // SM-020: BNPL Dues screen
+  Khata: undefined; // T-154: Khata (Credit Book) screen
+  CustomerList: undefined; // T-155: Customer Profiles screen
+  DailyClosing: undefined; // T-191: Daily Closing / Z-Report screen
+  Shift: undefined; // T-192: Shift Management screen
+  OverdueDues: undefined; // T-193: Overdue DUE payments dunning
+  Return: undefined; // T-194: Return/Refund processing
+  CustomerManagement: undefined; // T-196: Customer management
+  OpeningStock: undefined; // T-198: Opening stock ledger
+  DailyReport: undefined; // T-199: Daily closing report
+  PrinterSettings: undefined; // T-195: Thermal printer configuration
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -363,6 +373,15 @@ export default function MenuScreen() {
   const goToStockStatement = () => navigation.navigate("StockStatement");
   const goToUiShowcase = () => navigation.navigate("UiShowcase");
   const goToBnplDues = () => navigation.navigate("BnplDues"); // SM-020
+  const goToKhata = () => navigation.navigate("Khata"); // T-154
+  const goToCustomerList = () => navigation.navigate("CustomerList"); // T-155
+  const goToDailyClosing = () => navigation.navigate("DailyClosing"); // T-191
+  const goToShift = () => navigation.navigate("Shift"); // T-192
+  const goToOverdueDues = () => navigation.navigate("OverdueDues"); // T-193
+  const goToReturn = () => navigation.navigate("Return"); // T-194
+  const goToCustomerManagement = () => navigation.navigate("CustomerManagement"); // T-196
+  const goToOpeningStock = () => navigation.navigate("OpeningStock"); // T-198
+  const goToDailyReport = () => navigation.navigate("DailyReport"); // T-199
 
   return (
     <ScrollView
@@ -597,6 +616,18 @@ export default function MenuScreen() {
         </Pressable>
       </View>
 
+      {/* T-194: Return/Refund Processing */}
+      <Pressable style={styles.menuItem} onPress={goToReturn}>
+        <View style={[styles.menuIcon, styles.menuIconDanger]}>
+          <MaterialCommunityIcons name={"rotate-left" as any} size={20} color={theme.colors.error} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Return / Refund</Text>
+          <Text style={styles.menuSubtitle}>Process returns and issue refunds</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
       {/* POS-PRINT-002: Printer status indicator */}
       <Pressable style={styles.printerStatusRow} onPress={handleTestPrint}>
         <MaterialCommunityIcons
@@ -712,6 +743,69 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>
 
+      {/* T-198: Opening Stock Ledger */}
+      <Pressable style={styles.menuItem} onPress={goToOpeningStock}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"package-variant-plus" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Opening Stock</Text>
+          <Text style={styles.menuSubtitle}>Initialize stock for new products</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-154 / T-155: Customers & Credit Section */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Customers & Credit</Text>
+      </View>
+
+      <Pressable style={styles.menuItem} onPress={goToKhata}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"book-open-variant" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Khata (Credit Book)</Text>
+          <Text style={styles.menuSubtitle}>Track credit and payments</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      <Pressable style={styles.menuItem} onPress={goToCustomerList}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"account-group-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Customers</Text>
+          <Text style={styles.menuSubtitle}>Customer profiles and purchase history</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-196: Customer Management */}
+      <Pressable style={styles.menuItem} onPress={goToCustomerManagement}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"account-details-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Customer Management</Text>
+          <Text style={styles.menuSubtitle}>Add, edit, and manage customer profiles</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-193: Overdue Dues Collection */}
+      <Pressable style={styles.menuItem} onPress={goToOverdueDues}>
+        <View style={[styles.menuIcon, styles.menuIconDanger]}>
+          <MaterialCommunityIcons name={"alert-circle-outline" as any} size={20} color={theme.colors.error} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Overdue Dues</Text>
+          <Text style={styles.menuSubtitle}>Collect overdue DUE payments and send reminders</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
       {/* Reports Section */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{t('menu.reports')}</Text>
@@ -746,6 +840,45 @@ export default function MenuScreen() {
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>{t('menu.stockStatement')}</Text>
           <Text style={styles.menuSubtitle}>{t('menu.stockStatementSubtitle')}</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-199: Daily Report */}
+      <Pressable style={styles.menuItem} onPress={goToDailyReport}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"file-chart-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Daily Report</Text>
+          <Text style={styles.menuSubtitle}>View, print, and share daily sales report</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-191 / T-192: Operations Section */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Operations</Text>
+      </View>
+
+      <Pressable style={styles.menuItem} onPress={goToDailyClosing}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"clipboard-check-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Daily Closing</Text>
+          <Text style={styles.menuSubtitle}>Z-Report and cash reconciliation</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      <Pressable style={styles.menuItem} onPress={goToShift}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"clock-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Shift Management</Text>
+          <Text style={styles.menuSubtitle}>Start, end, and view shift history</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>

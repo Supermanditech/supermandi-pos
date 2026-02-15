@@ -373,11 +373,13 @@ export async function applyBulkDeductions(params: {
       const stockBefore = balanceResult.rows.length > 0 ? Number(balanceResult.rows[0].stock_before) : 0;
       const stockAfter = Math.max(0, stockBefore + unitDelta);
 
+      // T-177: Include stock_version increment for optimistic concurrency
       await client.query(
-        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
-         VALUES ($1, $2, GREATEST(0, $3), $4, NOW())
+        `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, stock_version, last_ledger_id, updated_at)
+         VALUES ($1, $2, GREATEST(0, $3), 1, $4, NOW())
          ON CONFLICT (store_id, product_id) DO UPDATE SET
            current_qty = GREATEST(0, inventory.stock_balances.current_qty + $3),
+           stock_version = inventory.stock_balances.stock_version + 1,
            last_ledger_id = $4,
            updated_at = NOW()`,
         [storeId, productId, unitDelta, invLedgerId]

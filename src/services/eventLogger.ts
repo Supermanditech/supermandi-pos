@@ -23,7 +23,8 @@ export type EventType =
   | 'PRODUCTS_LOADED'
   | 'PRODUCTS_LOAD_FAILED'
   | 'ERROR'
-  | 'USER_ACTION';
+  | 'USER_ACTION'
+  | 'stock_drift'; // T-178: Stock reconciliation drift event
 
 export interface EventLog {
   id: string;

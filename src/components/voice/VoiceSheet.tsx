@@ -27,6 +27,9 @@ export type VoiceSheetState =
   | "success"
   | "error";
 
+// T-135: Voice language locale type
+export type VoiceLocale = "EN" | "HI";
+
 export interface VoiceSheetProps {
   /**
    * Current state of the voice sheet.
@@ -52,6 +55,16 @@ export interface VoiceSheetProps {
    * Called when user dismisses the sheet.
    */
   onDismiss: () => void;
+
+  /**
+   * T-135: Currently selected voice language locale.
+   */
+  locale?: VoiceLocale;
+
+  /**
+   * T-135: Called when user changes voice language.
+   */
+  onLocaleChange?: (locale: VoiceLocale) => void;
 
   /**
    * Optional test ID for e2e testing.
@@ -88,6 +101,8 @@ export function VoiceSheet({
   message,
   errorMessage,
   onDismiss,
+  locale = "EN",
+  onLocaleChange,
   testID = "voice-sheet",
 }: VoiceSheetProps) {
   const insets = useSafeAreaInsets();
@@ -115,6 +130,47 @@ export function VoiceSheet({
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           {/* Handle bar */}
           <View style={styles.handleBar} />
+
+          {/* T-135: Language toggle pill */}
+          {onLocaleChange && (state === "recording" || state === "hidden") ? null : null}
+          {onLocaleChange && (
+            <View style={styles.languageToggleRow}>
+              <Pressable
+                style={[
+                  styles.languageToggleButton,
+                  locale === "EN" && styles.languageToggleActive,
+                ]}
+                onPress={() => onLocaleChange("EN")}
+                testID={`${testID}-locale-en`}
+              >
+                <Text
+                  style={[
+                    styles.languageToggleText,
+                    locale === "EN" && styles.languageToggleTextActive,
+                  ]}
+                >
+                  EN
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.languageToggleButton,
+                  locale === "HI" && styles.languageToggleActive,
+                ]}
+                onPress={() => onLocaleChange("HI")}
+                testID={`${testID}-locale-hi`}
+              >
+                <Text
+                  style={[
+                    styles.languageToggleText,
+                    locale === "HI" && styles.languageToggleTextActive,
+                  ]}
+                >
+                  HI
+                </Text>
+              </Pressable>
+            </View>
+          )}
 
           {/* Content based on state */}
           {state === "recording" && (
@@ -365,6 +421,35 @@ const styles = StyleSheet.create({
   },
   errorCircle: {
     backgroundColor: theme.colors.error,
+  },
+  // T-135: Language toggle styles
+  languageToggleRow: {
+    flexDirection: "row",
+    alignSelf: "center",
+    marginBottom: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  languageToggleButton: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: "transparent",
+  },
+  languageToggleActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  languageToggleText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textTertiary,
+  },
+  languageToggleTextActive: {
+    color: theme.colors.textInverse,
   },
   // Waveform styles
   waveformContainer: {

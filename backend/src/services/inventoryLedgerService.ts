@@ -3,6 +3,19 @@ import type { PoolClient } from "pg";
 
 export type InventoryMovementType = "RECEIVE" | "SELL" | "ADJUSTMENT";
 
+// T-177: Custom error class for optimistic concurrency conflicts on stock_balances
+export class StockVersionConflictError extends Error {
+  productId: string;
+  storeId: string;
+
+  constructor(storeId: string, productId: string) {
+    super('Stock changed, please refresh');
+    this.name = 'StockVersionConflictError';
+    this.storeId = storeId;
+    this.productId = productId;
+  }
+}
+
 export type InventoryMovementInput = {
   client: PoolClient;
   storeId: string;
@@ -224,14 +237,15 @@ export async function applyInventoryMovement(
                           input.movementType === "RECEIVE" ? "purchase_received" :
                           "adjustment";
 
-  // Get current stock_balances entry
+  // T-177: Get current stock_balances entry with stock_version for optimistic concurrency
   const balanceResult = await input.client.query(
-    `SELECT current_qty FROM inventory.stock_balances
+    `SELECT current_qty, COALESCE(stock_version, 0) AS stock_version FROM inventory.stock_balances
      WHERE store_id = $1 AND product_id = $2
      FOR UPDATE`,
     [storeId, globalProductId]
   );
   const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
+  const expectedVersion = parseInt(balanceResult.rows[0]?.stock_version ?? '0', 10);
   const catalogStockAfter = Math.max(0, catalogStockBefore + delta);
 
   // Insert ledger entry to inventory.inventory_ledger
@@ -256,16 +270,55 @@ export async function applyInventoryMovement(
     ]
   );
 
-  // Upsert stock_balances
-  await input.client.query(
-    `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
-     VALUES ($1, $2, $3, $4, NOW())
-     ON CONFLICT (store_id, product_id) DO UPDATE SET
-       current_qty = GREATEST(0, inventory.stock_balances.current_qty + $5),
-       last_ledger_id = $4,
-       updated_at = NOW()`,
-    [storeId, globalProductId, catalogStockAfter, invLedgerId, delta]
-  );
+  // T-177: Upsert stock_balances with optimistic concurrency via stock_version
+  // For SELL movements, require version match and sufficient quantity
+  // For RECEIVE/ADJUSTMENT, we still increment version but are less strict on conflicts
+  if (balanceResult.rows.length > 0) {
+    // Row exists — update with version check
+    let updateResult;
+    if (input.movementType === 'SELL') {
+      // T-177: Strict version check + quantity guard for sells
+      updateResult = await input.client.query(
+        `UPDATE inventory.stock_balances
+         SET current_qty = GREATEST(0, current_qty + $3),
+             stock_version = stock_version + 1,
+             last_ledger_id = $4,
+             updated_at = NOW()
+         WHERE store_id = $1 AND product_id = $2
+           AND stock_version = $5
+           AND current_qty + $3 >= 0`,
+        [storeId, globalProductId, delta, invLedgerId, expectedVersion]
+      );
+    } else {
+      // RECEIVE/ADJUSTMENT — version check but no quantity guard
+      updateResult = await input.client.query(
+        `UPDATE inventory.stock_balances
+         SET current_qty = GREATEST(0, current_qty + $3),
+             stock_version = stock_version + 1,
+             last_ledger_id = $4,
+             updated_at = NOW()
+         WHERE store_id = $1 AND product_id = $2
+           AND stock_version = $5`,
+        [storeId, globalProductId, delta, invLedgerId, expectedVersion]
+      );
+    }
+
+    if ((updateResult.rowCount ?? 0) === 0) {
+      throw new StockVersionConflictError(storeId, globalProductId);
+    }
+  } else {
+    // Row doesn't exist — insert with initial stock_version = 1
+    await input.client.query(
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, stock_version, last_ledger_id, updated_at)
+       VALUES ($1, $2, GREATEST(0, $3), 1, $4, NOW())
+       ON CONFLICT (store_id, product_id) DO UPDATE SET
+         current_qty = GREATEST(0, inventory.stock_balances.current_qty + $5),
+         stock_version = inventory.stock_balances.stock_version + 1,
+         last_ledger_id = $4,
+         updated_at = NOW()`,
+      [storeId, globalProductId, catalogStockAfter, invLedgerId, delta]
+    );
+  }
 
   // AUD-051-A FIX: Dual-write to catalog.store_products.current_stock for dashboard consistency
   // This ensures POS sales are reflected in the catalog schema that dashboard reads
@@ -703,12 +756,13 @@ export async function recordSaleReturnMovements(params: {
       );
     }
 
-    // Upsert stock_balances
+    // T-177: Upsert stock_balances with stock_version increment
     await params.client.query(
-      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, last_ledger_id, updated_at)
-       VALUES ($1, $2, $3, $4, NOW())
+      `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, stock_version, last_ledger_id, updated_at)
+       VALUES ($1, $2, $3, 1, $4, NOW())
        ON CONFLICT (store_id, product_id) DO UPDATE SET
          current_qty = inventory.stock_balances.current_qty + $5,
+         stock_version = inventory.stock_balances.stock_version + 1,
          last_ledger_id = $4,
          updated_at = NOW()`,
       [storeId, globalProductId, catalogStockAfter, invLedgerId, quantity]

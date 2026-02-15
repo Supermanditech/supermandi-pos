@@ -476,6 +476,8 @@ export interface Product {
   mrp?: number; // in paise
   moq: number;
   unit: string;
+  imageUrl?: string; // T-161: Product image URL
+  thumbnailUrl?: string; // T-161: Thumbnail for list views
   approvalStatus: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string; // GL-WF-036: Rejection reason from admin
   createdAt: string;
@@ -491,6 +493,7 @@ export interface ProductInput {
   mrp?: number; // in paise
   moq?: number;
   unit?: string;
+  imageUrl?: string; // T-161: Product image URL
 }
 
 // GL-WF-063: Pagination types
@@ -539,6 +542,127 @@ export async function deleteProduct(id: string): Promise<void> {
   await apiFetch<void>(`/api/v1/supplier/products/${id}`, {
     method: 'DELETE',
   });
+}
+
+// ============================================================================
+// T-161: Product Image Upload
+// ============================================================================
+
+const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export interface ImageUploadResult {
+  imageUrl: string;
+  thumbnailUrl?: string;
+  cardImageUrl?: string;
+}
+
+/**
+ * T-161: Upload a product image. Returns the image URL to include in product create/update.
+ * Accepts JPEG, PNG, or WebP files up to 5MB.
+ * Reports upload progress via optional onProgress callback.
+ */
+export async function uploadProductImage(
+  file: File,
+  options?: { signal?: AbortSignal; onProgress?: (percent: number) => void }
+): Promise<ImageUploadResult> {
+  if (file.size > MAX_IMAGE_FILE_SIZE) {
+    throw new ApiError(400, 'FILE_TOO_LARGE', 'Image file size exceeds maximum allowed (5MB)');
+  }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new ApiError(400, 'INVALID_FILE_TYPE', 'Only JPEG, PNG, and WebP images are allowed');
+  }
+
+  const formData = new FormData();
+  formData.append('image', file);
+
+  const token = getAuthToken();
+
+  // Use XMLHttpRequest for progress tracking
+  if (options?.onProgress) {
+    return new Promise<ImageUploadResult>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_BASE_URL}/api/v1/uploads/image`);
+
+      if (token) {
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      }
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      xhr.withCredentials = true;
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && options.onProgress) {
+          options.onProgress(Math.round((event.loaded / event.total) * 100));
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            resolve(data.data ?? data);
+          } catch {
+            reject(new ApiError(xhr.status, 'INVALID_JSON', 'Server returned invalid response'));
+          }
+        } else if (xhr.status === 401) {
+          handle401Response();
+          reject(new ApiError(401, 'UNAUTHORIZED', 'Session expired. Please login again.'));
+        } else {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            reject(new ApiError(xhr.status, data.error?.code || 'UNKNOWN', data.error?.message || 'Upload failed'));
+          } catch {
+            reject(new ApiError(xhr.status, 'UNKNOWN', 'Upload failed'));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new ApiError(0, 'NETWORK_ERROR', 'Network error during upload'));
+      xhr.ontimeout = () => reject(new ApiError(408, 'TIMEOUT', 'Upload timed out'));
+      xhr.timeout = 60000;
+
+      if (options?.signal) {
+        options.signal.addEventListener('abort', () => xhr.abort());
+      }
+
+      xhr.send(formData);
+    });
+  }
+
+  // Fallback: simple fetch without progress
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  if (options?.signal) {
+    options.signal.addEventListener('abort', () => controller.abort());
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/v1/uploads/image`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  if (response.status === 401) {
+    handle401Response();
+    throw new ApiError(401, 'UNAUTHORIZED', 'Session expired. Please login again.');
+  }
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new ApiError(response.status, data.error?.code || 'UNKNOWN', data.error?.message || 'Upload failed');
+  }
+  return data.data ?? data;
 }
 
 // ============================================================================

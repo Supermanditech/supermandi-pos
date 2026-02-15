@@ -1031,6 +1031,246 @@ adminSuppliersRouter.post("/products/:productId/reject", requireAdminToken, requ
 });
 
 // =============================================================================
+// T-188: Batch Approval/Rejection for SuperAdmin
+// =============================================================================
+
+/**
+ * POST /api/v1/admin/applications/products/batch-action
+ * Batch approve or reject multiple products in a single transaction.
+ *
+ * Body: { action: 'approve' | 'reject', productIds: string[], rejectionReason?: string }
+ * Response: { success: true, data: { processed: number, failed: number, errors?: Array } }
+ */
+adminSuppliersRouter.post(
+  "/applications/products/batch-action",
+  requireAdminToken,
+  requirePermission("products", "approve"),
+  supplierApprovalRateLimiter,
+  async (req, res) => {
+    const { action, productIds, rejectionReason } = req.body as {
+      action?: string;
+      productIds?: string[];
+      rejectionReason?: string;
+    };
+
+    const adminId = (req as any).adminId;
+    if (!adminId) {
+      return res.status(401).json({ error: "Admin ID required for audit trail" });
+    }
+
+    // Validate action
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "action must be 'approve' or 'reject'" }
+      });
+    }
+
+    // Validate productIds
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "productIds must be a non-empty array" }
+      });
+    }
+
+    // Cap batch size to prevent abuse
+    const MAX_BATCH_SIZE = 100;
+    if (productIds.length > MAX_BATCH_SIZE) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: `Maximum ${MAX_BATCH_SIZE} products per batch` }
+      });
+    }
+
+    // Validate rejection reason for reject action
+    if (action === 'reject' && (!rejectionReason || rejectionReason.trim().length < 3)) {
+      return res.status(400).json({
+        error: { code: "VALIDATION_ERROR", message: "rejectionReason is required for reject action (min 3 chars)" }
+      });
+    }
+
+    // Validate all IDs are valid UUIDs
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    for (const id of productIds) {
+      if (typeof id !== 'string' || !UUID_REGEX.test(id)) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: `Invalid product ID: ${id}` }
+        });
+      }
+    }
+
+    const pool = getPool();
+    if (!pool) {
+      return res.status(503).json({ error: { code: "DB_UNAVAILABLE", message: "Database unavailable" } });
+    }
+
+    const client = await pool.connect();
+    let processed = 0;
+    const errors: Array<{ productId: string; error: string }> = [];
+
+    try {
+      await client.query("BEGIN");
+
+      for (const productId of productIds) {
+        try {
+          // Validate product exists and is pending
+          const checkResult = await client.query(
+            `SELECT sp.id, sp.approval_status, sp.supplier_id, sp.name as product_name,
+                    s.business_name as supplier_name, s.verification_status as supplier_status
+             FROM catalog.supplier_products sp
+             LEFT JOIN supplier.suppliers s ON s.id = sp.supplier_id
+             WHERE sp.id = $1::uuid
+             FOR UPDATE`,
+            [productId]
+          );
+
+          if (checkResult.rowCount === 0) {
+            errors.push({ productId, error: "Product not found" });
+            continue;
+          }
+
+          const product = checkResult.rows[0];
+
+          if (product.approval_status !== 'pending') {
+            errors.push({ productId, error: `Product is not pending (status: ${product.approval_status})` });
+            continue;
+          }
+
+          if (action === 'approve') {
+            // Verify supplier relationship
+            if (!product.supplier_id) {
+              errors.push({ productId, error: "Cannot approve product without supplier association" });
+              continue;
+            }
+
+            if (product.supplier_status !== 'verified') {
+              errors.push({
+                productId,
+                error: `Supplier "${product.supplier_name}" is not verified (status: ${product.supplier_status || 'unknown'})`
+              });
+              continue;
+            }
+
+            // Approve the product
+            await client.query(
+              `UPDATE catalog.supplier_products
+               SET approval_status = 'approved', approved_at = NOW(), approved_by = $2::uuid
+               WHERE id = $1::uuid`,
+              [productId, adminId]
+            );
+
+            // Log approval
+            await client.query(
+              `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id)
+               VALUES ('product', $1::uuid, 'approve', 'pending', 'approved', $2::uuid)`,
+              [productId, adminId]
+            );
+
+            // SUP-POS-005: Auto-map approved product to master catalog
+            try {
+              const spDetails = await client.query(
+                `SELECT name, edited_name, category, edited_category, brand, unit, barcode
+                 FROM catalog.supplier_products WHERE id = $1`,
+                [productId]
+              );
+
+              if (spDetails.rows.length > 0) {
+                const sp = spDetails.rows[0];
+                const spName = sp.edited_name || sp.name;
+                const spCategory = sp.edited_category || sp.category;
+
+                const existingMap = await client.query(
+                  `SELECT supplier_product_id FROM catalog.supplier_product_map WHERE supplier_product_id = $1::uuid`,
+                  [productId]
+                );
+
+                if (existingMap.rows.length === 0) {
+                  let mappedProductId: string | null = null;
+                  let mappingConfidence = 0;
+
+                  // Try barcode match
+                  if (sp.barcode) {
+                    const barcodeMatch = await client.query(
+                      `SELECT id FROM catalog.products WHERE primary_barcode = $1 LIMIT 1`,
+                      [sp.barcode]
+                    );
+                    if (barcodeMatch.rows.length > 0) {
+                      mappedProductId = barcodeMatch.rows[0].id;
+                      mappingConfidence = 1.0;
+                    }
+                  }
+
+                  // No barcode match - create new master product
+                  if (!mappedProductId) {
+                    const newProduct = await client.query(
+                      `INSERT INTO catalog.products (name, category, brand, unit, primary_barcode)
+                       VALUES ($1, $2, $3, $4, $5)
+                       RETURNING id`,
+                      [spName, spCategory, sp.brand, sp.unit, sp.barcode]
+                    );
+                    mappedProductId = newProduct.rows[0].id;
+                    mappingConfidence = 1.0;
+                  }
+
+                  if (mappedProductId) {
+                    await client.query(
+                      `INSERT INTO catalog.supplier_product_map (supplier_product_id, product_id, mapping_type, confidence, is_verified)
+                       VALUES ($1::uuid, $2::uuid, 'auto', $3, false)`,
+                      [productId, mappedProductId, mappingConfidence]
+                    );
+                  }
+                }
+              }
+            } catch (mapErr: any) {
+              // Non-critical — mapping failure should not block approval
+              console.warn(`[T-188] Auto-mapping failed for ${productId} (non-blocking):`, mapErr.message);
+            }
+          } else {
+            // Reject the product
+            await client.query(
+              `UPDATE catalog.supplier_products
+               SET approval_status = 'rejected', rejection_reason = $2
+               WHERE id = $1::uuid`,
+              [productId, rejectionReason?.trim() || null]
+            );
+
+            // Log rejection
+            await client.query(
+              `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, from_status, to_status, actor_id, reason)
+               VALUES ('product', $1::uuid, 'reject', 'pending', 'rejected', $2::uuid, $3)`,
+              [productId, adminId, rejectionReason?.trim() || null]
+            );
+          }
+
+          processed++;
+        } catch (itemErr: any) {
+          errors.push({ productId, error: itemErr?.message || "Unknown error" });
+        }
+      }
+
+      await client.query("COMMIT");
+
+      console.log(`[T-188] Batch ${action}: processed=${processed}, failed=${errors.length}, admin=${adminId}`);
+
+      return res.json({
+        success: true,
+        data: {
+          processed,
+          failed: errors.length,
+          ...(errors.length > 0 ? { errors } : {}),
+        },
+      });
+    } catch (err: any) {
+      await client.query("ROLLBACK");
+      console.error("[T-188] Batch action error:", err);
+      return res.status(500).json({
+        error: { code: "INTERNAL_ERROR", message: "Batch action failed" }
+      });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// =============================================================================
 // SM-009: SuperAdmin Edit SKU + Set Margin + BNPL API
 // =============================================================================
 
@@ -2063,5 +2303,101 @@ adminSuppliersRouter.post("/suppliers/:supplierId/bank-verify", requireAdminToke
   } catch (err: any) {
     console.error("[admin/suppliers/bank-verify] Failed:", err?.message);
     return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to verify bank details" });
+  }
+});
+
+// =============================================================================
+// T-158: BNPL Interest Rate Configuration
+// PUT /api/v1/admin/suppliers/:supplierId/bnpl-interest
+// Set or update BNPL interest rate for a supplier-store link
+// =============================================================================
+
+adminSuppliersRouter.put("/suppliers/:supplierId/bnpl-interest", requireAdminToken, requirePermission("suppliers", "write"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { supplierId } = req.params;
+  const { storeId, interestRatePercent } = req.body as {
+    storeId?: string;
+    interestRatePercent?: number;
+  };
+
+  // Validate interest rate: 0-100%, with max 2 decimal places
+  if (interestRatePercent === undefined || interestRatePercent === null) {
+    return res.status(400).json({ error: "interestRatePercent is required" });
+  }
+  if (typeof interestRatePercent !== 'number' || interestRatePercent < 0 || interestRatePercent > 100) {
+    return res.status(422).json({ error: "interestRatePercent must be between 0 and 100" });
+  }
+
+  try {
+    if (storeId) {
+      // Update a specific supplier-store link
+      const result = await pool.query(
+        `UPDATE supplier.supplier_store_links
+         SET bnpl_interest_rate = $1, updated_at = NOW()
+         WHERE supplier_id = $2::uuid AND store_id = $3::uuid
+         RETURNING supplier_id as "supplierId", store_id as "storeId", bnpl_interest_rate as "bnplInterestRate"`,
+        [interestRatePercent, supplierId, storeId]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "Supplier-store link not found" });
+      }
+
+      return res.json({ success: true, link: result.rows[0] });
+    } else {
+      // Update ALL supplier-store links for this supplier (bulk rate)
+      const result = await pool.query(
+        `UPDATE supplier.supplier_store_links
+         SET bnpl_interest_rate = $1, updated_at = NOW()
+         WHERE supplier_id = $2::uuid
+         RETURNING supplier_id as "supplierId", store_id as "storeId", bnpl_interest_rate as "bnplInterestRate"`,
+        [interestRatePercent, supplierId]
+      );
+
+      return res.json({
+        success: true,
+        updatedCount: result.rowCount,
+        links: result.rows,
+      });
+    }
+  } catch (err: any) {
+    console.error("[T-158] BNPL interest rate update failed:", err?.message);
+    return res.status(500).json({ error: "Failed to update BNPL interest rate" });
+  }
+});
+
+// T-158: GET BNPL interest rate for a supplier
+adminSuppliersRouter.get("/suppliers/:supplierId/bnpl-interest", requireAdminToken, requirePermission("suppliers", "read"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { supplierId } = req.params;
+  const storeId = req.query.storeId as string | undefined;
+
+  try {
+    let query = `
+      SELECT ssl.supplier_id as "supplierId",
+             ssl.store_id as "storeId",
+             s.name as "storeName",
+             COALESCE(ssl.bnpl_interest_rate, 0) as "bnplInterestRate"
+      FROM supplier.supplier_store_links ssl
+      LEFT JOIN platform.stores s ON s.id = ssl.store_id
+      WHERE ssl.supplier_id = $1::uuid`;
+    const params: any[] = [supplierId];
+
+    if (storeId) {
+      query += ` AND ssl.store_id = $2::uuid`;
+      params.push(storeId);
+    }
+
+    query += ` ORDER BY s.name ASC`;
+
+    const result = await pool.query(query, params);
+    return res.json({ success: true, links: result.rows });
+  } catch (err: any) {
+    console.error("[T-158] BNPL interest rate fetch failed:", err?.message);
+    return res.status(500).json({ error: "Failed to fetch BNPL interest rates" });
   }
 });

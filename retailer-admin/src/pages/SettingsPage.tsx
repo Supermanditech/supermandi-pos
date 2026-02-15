@@ -19,6 +19,10 @@ interface StoreSettings {
   gstNumber: string;
   address: string;
   phone: string;
+  // T-156: Receipt customization settings
+  receiptGstin: string;
+  receiptCustomFooter: string;
+  showTaxBreakdown: boolean;
 }
 
 interface ValidationErrors {
@@ -42,6 +46,10 @@ export default function SettingsPage() {
     gstNumber: '',
     address: '',
     phone: '',
+    // T-156: Receipt customization defaults
+    receiptGstin: '',
+    receiptCustomFooter: '',
+    showTaxBreakdown: false,
   });
 
   // UI state
@@ -69,6 +77,8 @@ export default function SettingsPage() {
         const response = await authFetch('/api/v1/retailer-admin/settings', accessToken);
         if (response.ok) {
           const data = await safeJson(response);
+          // T-156: Extract receipt settings from nested JSONB or top-level
+          const rs = data.receiptSettings || data.receipt_settings || {};
           setSettings({
             upiVpa: data.upiVpa || '',
             taxRate: data.taxRate ?? 18,
@@ -78,6 +88,10 @@ export default function SettingsPage() {
             gstNumber: data.gstNumber || '',
             address: data.address || '',
             phone: data.phone || '',
+            // T-156: Receipt customization
+            receiptGstin: rs.gstin || '',
+            receiptCustomFooter: rs.customFooter || '',
+            showTaxBreakdown: rs.showTaxBreakdown ?? false,
           });
         }
       } catch (err) {
@@ -167,10 +181,19 @@ export default function SettingsPage() {
     setSaveSuccess(false);
 
     try {
+      // T-156: Include receiptSettings JSONB in the save payload
+      const payload = {
+        ...settings,
+        receiptSettings: {
+          gstin: settings.receiptGstin,
+          customFooter: settings.receiptCustomFooter,
+          showTaxBreakdown: settings.showTaxBreakdown,
+        },
+      };
       const response = await authFetch('/api/v1/retailer-admin/settings', accessToken, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -683,6 +706,117 @@ export default function SettingsPage() {
               />
               <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
                 This message will appear at the bottom of printed receipts ({settings.receiptFooter?.length || 0}/200 characters)
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* T-156: Receipt Customization */}
+        <section style={{
+          background: 'white',
+          borderRadius: '16px',
+          padding: '1.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          border: '1px solid #e2e8f0',
+        }}>
+          <h2 style={{
+            margin: '0 0 1.25rem',
+            fontSize: '1rem',
+            fontWeight: '600',
+            color: '#334155',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}>
+            <span style={{ fontSize: '1.2rem' }}>🧾</span>
+            Receipt Customization
+          </h2>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}>
+                Receipt GSTIN
+              </label>
+              <input
+                type="text"
+                value={settings.receiptGstin}
+                onChange={(e) => handleChange('receiptGstin', e.target.value.toUpperCase())}
+                placeholder="22AAAAA0000A1Z5"
+                maxLength={15}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.95rem',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  textTransform: 'uppercase',
+                }}
+              />
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+                GSTIN printed on customer receipts. Leave blank to hide.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '1.5rem' }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: '#475569',
+                cursor: 'pointer',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={settings.showTaxBreakdown}
+                  onChange={(e) => handleChange('showTaxBreakdown', e.target.checked as any)}
+                  style={{ width: '18px', height: '18px', accentColor: '#3b82f6', cursor: 'pointer' }}
+                />
+                Show Tax Breakdown on Receipt
+              </label>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#94a3b8' }}>
+                Print CGST/SGST split on each receipt
+              </p>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}>
+                Custom Receipt Footer
+              </label>
+              <textarea
+                value={settings.receiptCustomFooter}
+                onChange={(e) => handleChange('receiptCustomFooter', e.target.value)}
+                rows={3}
+                maxLength={300}
+                placeholder="e.g. Exchange within 7 days with receipt. No refunds on perishables."
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  fontSize: '0.95rem',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '10px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  resize: 'vertical',
+                }}
+              />
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>
+                Additional text printed below the standard footer ({settings.receiptCustomFooter?.length || 0}/300 characters)
               </p>
             </div>
           </div>

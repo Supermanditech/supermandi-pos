@@ -2,14 +2,13 @@
 // Product card for BUY screen catalog grid
 
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import type { CatalogProduct } from "../../services/api/catalogApi";
 import {
-  getStockStatusColor,
   getLocalizedProductName,
   getLocalizedProductBrand,
 } from "../../services/api/catalogApi";
@@ -33,12 +32,30 @@ export function CatalogProductCard({
   onPress,
   cartQuantity = 0,
 }: CatalogProductCardProps) {
-  const stockColor = getStockStatusColor(product.stockStatus);
   const isOutOfStock = product.stockStatus === "out_of_stock";
 
   // TR-PEND-006: Use localized display names for Hindi UX parity
   const displayName = getLocalizedProductName(product);
   const displayBrand = getLocalizedProductBrand(product);
+
+  // T-142: Compute total available quantity from all suppliers
+  const totalAvailableQty = product.suppliers.reduce(
+    (sum, s) => sum + (s.stockQuantity || 0),
+    0
+  );
+  // T-142: Determine stock color based on actual quantity
+  const stockQtyColor =
+    totalAvailableQty <= 0
+      ? theme.colors.error
+      : totalAvailableQty < 10
+        ? theme.colors.warning
+        : theme.colors.success;
+
+  // T-141: Always show MOQ with unit
+  const moqValue = product.minMoq || 1;
+  const moqLabel = product.unit
+    ? `MOQ: ${moqValue} ${product.unit}`
+    : `MOQ: ${moqValue}`;
 
   return (
     <Pressable
@@ -56,15 +73,27 @@ export function CatalogProductCard({
       )}
 
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={2}>
-          {displayName}
-        </Text>
+        {/* T-139: Product image */}
+        <View style={styles.imageRow}>
+          {product.imageUrl ? (
+            <Image source={{ uri: product.imageUrl }} style={styles.productImage} />
+          ) : (
+            <View style={styles.productImageFallback}>
+              <MaterialCommunityIcons name="package-variant" size={22} color={theme.colors.textTertiary} />
+            </View>
+          )}
+          <View style={styles.imageRowInfo}>
+            <Text style={styles.name} numberOfLines={2}>
+              {displayName}
+            </Text>
 
-        {displayBrand && (
-          <Text style={styles.brand} numberOfLines={1}>
-            {displayBrand}
-          </Text>
-        )}
+            {displayBrand && (
+              <Text style={styles.brand} numberOfLines={1}>
+                {displayBrand}
+              </Text>
+            )}
+          </View>
+        </View>
 
         <View style={styles.priceRow}>
           <Text style={styles.price}>
@@ -76,14 +105,11 @@ export function CatalogProductCard({
         </View>
 
         <View style={styles.metaRow}>
-          <View style={[styles.stockBadge, { backgroundColor: stockColor + "20" }]}>
-            <View style={[styles.stockDot, { backgroundColor: stockColor }]} />
-            <Text style={[styles.stockText, { color: stockColor }]}>
-              {product.stockStatus === "in_stock"
-                ? "In Stock"
-                : product.stockStatus === "low_stock"
-                ? "Low"
-                : "Out"}
+          {/* T-142: Show actual numeric quantity instead of generic labels */}
+          <View style={[styles.stockBadge, { backgroundColor: stockQtyColor + "20" }]}>
+            <View style={[styles.stockDot, { backgroundColor: stockQtyColor }]} />
+            <Text style={[styles.stockText, { color: stockQtyColor }]}>
+              {totalAvailableQty} available
             </Text>
           </View>
 
@@ -99,11 +125,10 @@ export function CatalogProductCard({
           </View>
         </View>
 
-        {product.minMoq > 1 && (
-          <Text style={styles.moq}>
-            MOQ: {product.minMoq}
-          </Text>
-        )}
+        {/* T-141: Always show MOQ (not just when > 1) */}
+        <Text style={styles.moq}>
+          {moqLabel}
+        </Text>
       </View>
     </Pressable>
   );
@@ -150,6 +175,29 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: theme.spacing.md,
+  },
+  // T-139: Image row layout
+  imageRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+  },
+  imageRowInfo: {
+    flex: 1,
+  },
+  productImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+  },
+  productImageFallback: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: theme.colors.backgroundTertiary,
+    alignItems: "center",
+    justifyContent: "center",
   },
   name: {
     fontSize: 14,

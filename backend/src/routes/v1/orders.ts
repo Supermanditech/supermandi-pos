@@ -1546,12 +1546,15 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
         );
 
         // Update inventory (stock balance)
+        // T-177: Include stock_version increment for optimistic concurrency
         if (orderItem.product_id) {
           await client.query(
-            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
-             VALUES ($1, $2, $3)
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty, stock_version)
+             VALUES ($1, $2, $3, 1)
              ON CONFLICT (store_id, product_id)
-             DO UPDATE SET current_qty = inventory.stock_balances.current_qty + $3, updated_at = NOW()`,
+             DO UPDATE SET current_qty = inventory.stock_balances.current_qty + $3,
+                           stock_version = inventory.stock_balances.stock_version + 1,
+                           updated_at = NOW()`,
             [storeId, orderItem.product_id, item.quantityReceived]
           );
 

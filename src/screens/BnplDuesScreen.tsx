@@ -53,6 +53,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   } | null>(null);
 
   // Payment modal state
+  // T-153: Added payAmountText for partial payment input
   const [paymentModal, setPaymentModal] = useState<{
     visible: boolean;
     drawdown: BnplDrawdown | null;
@@ -64,6 +65,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     // GL-RJ-008: Auto-polling state
     isPolling: boolean;
     pollingStatus: string | null;
+    // T-153: Partial payment amount text
+    payAmountText: string | null;
   }>({
     visible: false,
     drawdown: null,
@@ -74,6 +77,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     paying: false,
     isPolling: false,
     pollingStatus: null,
+    payAmountText: null,
   });
 
   // GO-LIVE-240: Dispute modal state
@@ -134,7 +138,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   }, [loadData]);
 
   // Open payment modal
+  // T-153: Initialize with full balance as default payment amount
   const handlePayDrawdown = useCallback((drawdown: BnplDrawdown) => {
+    const remaining = drawdown.principalMinor - (drawdown.paidAmountMinor || 0);
     setPaymentModal({
       visible: true,
       drawdown,
@@ -145,6 +151,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       paying: false,
       isPolling: false,
       pollingStatus: null,
+      payAmountText: (remaining / 100).toFixed(2),
     });
   }, []);
 
@@ -222,14 +229,29 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   );
 
   // Select payment mode
+  // T-153: Pass partial payment amount to backend
   const handleSelectPaymentMode = useCallback(
     async (mode: "UPI" | "CASH") => {
       if (!paymentModal.drawdown) return;
 
+      // T-153: Parse the editable amount for partial payment
+      const payAmountMinor = Math.round(
+        parseFloat(paymentModal.payAmountText || "0") * 100
+      );
+      if (payAmountMinor <= 0) {
+        Alert.alert("Invalid Amount", "Please enter a valid payment amount.");
+        return;
+      }
+      const remaining = paymentModal.drawdown.principalMinor - (paymentModal.drawdown.paidAmountMinor || 0);
+      if (payAmountMinor > remaining) {
+        Alert.alert("Amount Too High", `Amount exceeds outstanding balance of ${formatMoney(remaining)}.`);
+        return;
+      }
+
       setPaymentModal((prev) => ({ ...prev, mode, paying: true }));
 
       try {
-        const response = await bnplApi.payBnpl(paymentModal.drawdown.id, mode);
+        const response = await bnplApi.payBnpl(paymentModal.drawdown.id, mode, payAmountMinor);
 
         if (mode === "UPI") {
           setPaymentModal((prev) => ({
@@ -322,6 +344,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       paying: false,
       isPolling: false,
       pollingStatus: null,
+      payAmountText: null,
     });
   }, []);
 
@@ -421,8 +444,37 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Amount Due</Text>
-              <Text style={styles.amountDue}>{formatMoney(drawdown.principalMinor)}</Text>
+              <Text style={styles.amountDue}>
+                {formatMoney(drawdown.principalMinor - (drawdown.paidAmountMinor || 0))}
+              </Text>
             </View>
+            {/* T-158: Show interest rate if applicable */}
+            {(drawdown.interestRatePercent || 0) > 0 && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Interest ({drawdown.interestRatePercent}%)</Text>
+                <Text style={[styles.detailValue, { color: theme.colors.warning }]}>
+                  +{formatMoney(drawdown.interestMinor || 0)}
+                </Text>
+              </View>
+            )}
+            {/* T-158: Show total with interest if applicable */}
+            {(drawdown.interestRatePercent || 0) > 0 && (
+              <View style={styles.detailRow}>
+                <Text style={[styles.detailLabel, { fontWeight: '600' }]}>Total Payable</Text>
+                <Text style={[styles.amountDue, { fontSize: 15 }]}>
+                  {formatMoney(drawdown.totalWithInterestMinor || drawdown.principalMinor)}
+                </Text>
+              </View>
+            )}
+            {/* T-153: Show paid amount for partial payments */}
+            {(drawdown.paidAmountMinor || 0) > 0 && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Already Paid</Text>
+                <Text style={[styles.detailValue, { color: theme.colors.success }]}>
+                  {formatMoney(drawdown.paidAmountMinor || 0)}
+                </Text>
+              </View>
+            )}
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Due Date</Text>
               <Text style={[styles.detailValue, drawdown.isOverdue && styles.overdueDate]}>
@@ -576,11 +628,31 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
 
           {paymentModal.drawdown && (
             <View style={styles.modalContent}>
-              {/* Amount to pay */}
+              {/* T-153: Editable payment amount with remaining balance display */}
               <View style={styles.paymentAmountCard}>
                 <Text style={styles.paymentAmountLabel}>Amount to Pay</Text>
-                <Text style={styles.paymentAmountValue}>
-                  {formatMoney(paymentModal.drawdown.principalMinor)}
+                <View style={styles.partialPayInputRow}>
+                  <Text style={styles.partialPayCurrency}>₹</Text>
+                  <TextInput
+                    style={styles.partialPayInput}
+                    value={paymentModal.payAmountText ?? (paymentModal.drawdown.principalMinor / 100).toFixed(2)}
+                    onChangeText={(text) => {
+                      if (/^\d*\.?\d{0,2}$/.test(text) || text === "") {
+                        setPaymentModal((prev) => ({
+                          ...prev,
+                          payAmountText: text,
+                        }));
+                      }
+                    }}
+                    keyboardType="decimal-pad"
+                    placeholder={(paymentModal.drawdown.principalMinor / 100).toFixed(2)}
+                    placeholderTextColor={theme.colors.textTertiary}
+                  />
+                </View>
+                <Text style={styles.paymentAmountHint}>
+                  Full balance: {formatMoney(paymentModal.drawdown.principalMinor)}
+                  {paymentModal.drawdown.paidAmountMinor > 0 &&
+                    ` (Paid: ${formatMoney(paymentModal.drawdown.paidAmountMinor)})`}
                 </Text>
                 <Text style={styles.paymentSupplier}>
                   {paymentModal.drawdown.supplierName}
@@ -1167,6 +1239,33 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     color: theme.colors.accent,
+  },
+  // T-153: Partial payment input styles
+  partialPayInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: theme.spacing.sm,
+  },
+  partialPayCurrency: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: theme.colors.accent,
+    marginRight: 4,
+  },
+  partialPayInput: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: theme.colors.accent,
+    minWidth: 100,
+    textAlign: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: theme.colors.primary,
+    paddingVertical: 4,
+  },
+  paymentAmountHint: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
   },
   paymentSupplier: {
     fontSize: 14,

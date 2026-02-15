@@ -7,6 +7,7 @@ import {
   BackHandler,
   Easing,
   FlatList,
+  Image,
   Modal,
   PanResponder,
   Pressable,
@@ -29,6 +30,7 @@ import type { CartItem, StockAdjustment } from "../stores/cartStore";
 import { useProductsStore } from "../stores/productsStore";
 import { formatMoney } from "../utils/money";
 import * as productsApi from "../services/api/productsApi";
+import type { SubstituteProduct } from "../services/api/productsApi";
 import * as sellSearchApi from "../services/api/sellSearchApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { setLocalPrice, upsertLocalProduct } from "../services/offline/scan";
@@ -56,12 +58,13 @@ import { CategoryRail, DEMO_CATEGORIES, fmcgCategoryToItem, type CategoryItem } 
 import { useSettingsStore } from "../stores/settingsStore";
 import { getFmcgCategories, getCategoryProducts, type CategoryProduct } from "../services/api/catalogApi";
 import { useFeatureEnabled } from "../utils/featureFlags";
-import { VoiceSheet, type VoiceButtonState, type VoiceSheetState } from "../components/voice";
+import { VoiceSheet, type VoiceButtonState, type VoiceSheetState, type VoiceLocale } from "../components/voice";
 import { startRecording, stopRecording, cancelRecording, submitVoiceCommand } from "../services/voice";
 // GL-CRIT-0089: Import centralized pagination constant
 // GO-LIVE-170: Import pagination safeguard
 import { PRODUCTS_PAGE_SIZE, MAX_PAGINATION_PAGE } from "../config/pagination";
 import { showToast } from "../utils/showToast";
+import * as searchHistory from "../services/searchHistory";
 
 type CartMode = "SELL" | "PURCHASE";
 
@@ -91,6 +94,7 @@ type SkuItem = {
   variantPriceMinor: number | null;
   variantMrpMinor: number | null;
   currentStock?: number | null;
+  imageUrl?: string | null; // T-134: Product image URL
 };
 
 const resolveSkuPrice = (item: SkuItem) => {
@@ -896,6 +900,8 @@ export default function SellScanScreen({
   const [categoryProductsHasMore, setCategoryProductsHasMore] = useState(true);
 
   // VOICE-001: Voice assistant state
+  // T-135: Voice language locale state
+  const [voiceLocale, setVoiceLocale] = useState<VoiceLocale>("EN");
   const [voiceButtonState, setVoiceButtonState] = useState<VoiceButtonState>("idle");
   const [voiceSheetState, setVoiceSheetState] = useState<VoiceSheetState>("hidden");
   const [voiceTranscript, setVoiceTranscript] = useState<string | undefined>();
@@ -1109,6 +1115,68 @@ export default function SellScanScreen({
   const suppressAddBlurRef = useRef(false);
   const suppressAddBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addFocusedRef = useRef(false);
+  // T-130: Search history state
+  const [searchHistoryTerms, setSearchHistoryTerms] = useState<string[]>([]);
+  const [searchHistoryVisible, setSearchHistoryVisible] = useState(false);
+
+  // T-133: Bulk quantity selector state
+  const [bulkQtyItem, setBulkQtyItem] = useState<SkuItem | null>(null);
+  const [bulkQtyValue, setBulkQtyValue] = useState("");
+
+  // T-136: Substitution suggestions state
+  const [substitutes, setSubstitutes] = useState<Record<string, SubstituteProduct[]>>({});
+
+  // T-137: Autocomplete suggestions state
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<SkuItem[]>([]);
+  const [autocompleteVisible, setAutocompleteVisible] = useState(false);
+
+  // T-130: Search history handlers (defined early to avoid block-scoped variable ordering issues)
+  const loadSearchHistory = useCallback(async () => {
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) return;
+      const terms = await searchHistory.getHistory(storeId);
+      setSearchHistoryTerms(terms);
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
+  const handleSearchHistoryTap = useCallback((term: string) => {
+    setAddQuery(term);
+    setSearchHistoryVisible(false);
+    if (!addExpanded) setAddExpanded(true);
+  }, [addExpanded]);
+
+  const handleClearSearchHistory = useCallback(async () => {
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) return;
+      await searchHistory.clearHistory(storeId);
+      setSearchHistoryTerms([]);
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
+  const saveSearchTerm = useCallback(async (term: string) => {
+    const trimmed = term.trim();
+    if (trimmed.length < 2) return;
+    // Skip barcode-like terms
+    if (/^\d{8,}$/.test(trimmed)) return;
+    try {
+      const storeId = await getDeviceStoreId();
+      if (!storeId) return;
+      await searchHistory.addTerm(storeId, trimmed);
+    } catch {
+      // Non-critical
+    }
+  }, []);
+
+  // T-128: Manual barcode entry state
+  const [manualBarcode, setManualBarcode] = useState("");
+  // T-129: Search debounce ref
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addExpandedBeforeCartRef = useRef(false);
   const addFocusedBeforeCartRef = useRef(false);
   const cartOpeningRef = useRef(false);
@@ -1469,6 +1537,13 @@ export default function SellScanScreen({
       feedHidText(value);
     }
     setAddQuery(value);
+    // T-130: Hide search history when typing
+    if (value.trim()) {
+      setSearchHistoryVisible(false);
+    } else {
+      setSearchHistoryVisible(true);
+      loadSearchHistory();
+    }
     if (!addExpanded) {
       setAddExpanded(true);
     }
@@ -1531,12 +1606,23 @@ export default function SellScanScreen({
     }
   }, []);
 
+  // T-128: Manual barcode entry fallback handler
+  const handleManualBarcodeSubmit = useCallback(() => {
+    const trimmed = manualBarcode.trim();
+    if (!trimmed) return;
+    void onBarcodeScanned(trimmed, undefined, "keyboard");
+    setManualBarcode("");
+  }, [manualBarcode]);
+
   const handleScanSubmit = (event?: { nativeEvent: { text: string } }) => {
     const raw = event?.nativeEvent?.text ?? addQuery;
     const trimmed = raw.trim();
     if (!trimmed) return;
     // SD-CATEGORY: Auto-collapse rail on scan
     setCategoryRailExpanded(false);
+    // T-130: Save search term to history
+    void saveSearchTerm(trimmed);
+    setSearchHistoryVisible(false);
     void onBarcodeScanned(trimmed, undefined, "keyboard");
     setAddQuery("");
     setAddExpanded(true);
@@ -1728,7 +1814,11 @@ export default function SellScanScreen({
       setAddHasMore(true);
       setAddPage(0);
       void loadAddResults(true);
-    }, 200);
+      // T-130: Save search term after debounce
+      if (addQueryNormalized.length >= 2) {
+        void saveSearchTerm(addQueryNormalized);
+      }
+    }, 300); // T-129: 300ms search debounce (was 200ms)
 
     return () => clearTimeout(timer);
   }, [addExpanded, addQueryNormalized, loadAddResults]);
@@ -2282,6 +2372,14 @@ export default function SellScanScreen({
         }}
         disabled={storeActive === false}
       >
+        {/* T-134: Product image */}
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.skuCardImage} />
+        ) : (
+          <View style={styles.skuCardImageFallback}>
+            <MaterialCommunityIcons name="package-variant" size={20} color={theme.colors.textTertiary} />
+          </View>
+        )}
         <View style={styles.skuCardTop}>
           <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
           <View style={styles.pricePill}>
@@ -2355,42 +2453,85 @@ export default function SellScanScreen({
     const priceLabel = formatMoney(resolved.priceMinor, item.currency ?? "INR");
     const stockValue = resolveStockForSku(item) ?? (typeof item.currentStock === "number" ? item.currentStock : null);
     const stockLabel = stockValue === null ? "Unknown" : String(stockValue);
+    const isOutOfStock = stockValue !== null && stockValue <= 0;
+    const productId = item.productId ?? "";
+
+    // T-136: Fetch substitutes if out of stock
+    if (isOutOfStock && productId && !substitutes[productId]) {
+      void fetchSubstitutes(productId);
+    }
+
+    const productSubstitutes = isOutOfStock && productId ? (substitutes[productId] ?? []) : [];
 
     return (
-      <Pressable
-        style={styles.addRow}
-        onPressIn={() => {
-          detailPressRef.current = false;
-          markAddInteraction();
-        }}
-        onLongPress={() => {
-          detailPressRef.current = true;
-          setDetailItem(item);
-        }}
-        delayLongPress={250}
-        onPress={() => {
-          if (detailPressRef.current) {
+      <View>
+        <Pressable
+          style={styles.addRow}
+          onPressIn={() => {
             detailPressRef.current = false;
-            return;
-          }
-          handleAddFromSearch(item);
-        }}
-        accessibilityLabel={`Add ${item.name}`}
-      >
-        <MaterialCommunityIcons name="barcode" size={16} color={theme.colors.textSecondary} />
-        <View style={styles.addRowInfo}>
-          <Text style={styles.addRowName} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={styles.addRowMeta} numberOfLines={1}>
-            {item.barcode}
-          </Text>
-        </View>
-        <View style={styles.addRowRight}>
-          <Text style={styles.addRowPrice}>{priceLabel}</Text>
-          <Text style={styles.addRowStock}>Stock: {stockLabel}</Text>
-        </View>
-      </Pressable>
+            markAddInteraction();
+          }}
+          onLongPress={() => {
+            // T-133: Long press opens bulk quantity selector
+            detailPressRef.current = true;
+            handleBulkQtyOpen(item);
+          }}
+          delayLongPress={250}
+          onPress={() => {
+            if (detailPressRef.current) {
+              detailPressRef.current = false;
+              return;
+            }
+            handleAddFromSearch(item);
+          }}
+          accessibilityLabel={`Add ${item.name}`}
+        >
+          {/* T-134: Product image in search results */}
+          {item.imageUrl ? (
+            <Image source={{ uri: item.imageUrl }} style={styles.addRowImage} />
+          ) : (
+            <View style={styles.addRowImageFallback}>
+              <MaterialCommunityIcons name="package-variant" size={16} color={theme.colors.textTertiary} />
+            </View>
+          )}
+          <View style={styles.addRowInfo}>
+            <Text style={styles.addRowName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={styles.addRowMeta} numberOfLines={1}>
+              {item.barcode}
+            </Text>
+          </View>
+          <View style={styles.addRowRight}>
+            <Text style={styles.addRowPrice}>{priceLabel}</Text>
+            <Text style={[styles.addRowStock, isOutOfStock && styles.addRowStockOut]}>
+              {isOutOfStock ? "Out of stock" : `Stock: ${stockLabel}`}
+            </Text>
+          </View>
+        </Pressable>
+
+        {/* T-136: Substitution suggestions for out-of-stock items */}
+        {productSubstitutes.length > 0 && (
+          <View style={styles.substituteSection}>
+            <Text style={styles.substituteLabel}>Try instead:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {productSubstitutes.map((sub) => (
+                <Pressable
+                  key={sub.productId}
+                  style={styles.substituteCard}
+                  onPress={() => handleAddSubstitute(sub)}
+                >
+                  <Text style={styles.substituteCardName} numberOfLines={1}>{sub.name}</Text>
+                  <Text style={styles.substituteCardPrice}>
+                    {formatMoney(sub.sellPrice, "INR")}
+                  </Text>
+                  <Text style={styles.substituteCardStock}>Stock: {sub.currentStock}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+      </View>
     );
   };
 
@@ -2439,6 +2580,11 @@ export default function SellScanScreen({
           onFocus={() => {
             addFocusedRef.current = true;
             openAddExpanded();
+            // T-130: Show search history when focused and empty
+            if (!addQuery.trim()) {
+              setSearchHistoryVisible(true);
+              loadSearchHistory();
+            }
           }}
           onBlur={() => {
             addFocusedRef.current = false;
@@ -2518,6 +2664,94 @@ export default function SellScanScreen({
   const searchHeader = (
     <View style={styles.searchHeader}>
       {renderSearchBar(addExpanded ? "expanded" : "collapsed")}
+      {/* T-128: Manual barcode entry fallback */}
+      {!addExpanded && (
+        <View style={styles.manualBarcodeRow}>
+          <MaterialCommunityIcons
+            name="barcode-scan"
+            size={18}
+            color={theme.colors.textTertiary}
+          />
+          <TextInput
+            style={styles.manualBarcodeInput}
+            value={manualBarcode}
+            onChangeText={setManualBarcode}
+            placeholder="Enter barcode manually"
+            placeholderTextColor={theme.colors.textTertiary}
+            keyboardType="numeric"
+            returnKeyType="done"
+            onSubmitEditing={handleManualBarcodeSubmit}
+            editable={storeActive !== false}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {manualBarcode.length > 0 && (
+            <Pressable
+              onPress={handleManualBarcodeSubmit}
+              hitSlop={8}
+              style={styles.manualBarcodeSubmit}
+              accessibilityLabel="Submit barcode"
+            >
+              <MaterialCommunityIcons
+                name="arrow-right-circle"
+                size={22}
+                color={theme.colors.primary}
+              />
+            </Pressable>
+          )}
+        </View>
+      )}
+      {/* T-137: Autocomplete suggestions dropdown */}
+      {autocompleteVisible && addExpanded && addQuery.trim().length >= 2 && (
+        <View style={styles.autocompleteDropdown}>
+          <FlatList
+            data={autocompleteSuggestions}
+            keyExtractor={(item) => item.barcode}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.autocompleteSuggestion}
+                onPress={() => handleAutocompleteTap(item)}
+              >
+                <Text style={styles.autocompleteName} numberOfLines={1}>{item.name}</Text>
+                {item.barcode ? (
+                  <Text style={styles.autocompleteBarcode} numberOfLines={1}>{item.barcode}</Text>
+                ) : null}
+              </Pressable>
+            )}
+          />
+        </View>
+      )}
+
+      {/* T-130: Search history chips */}
+      {addExpanded && searchHistoryVisible && !addQuery.trim() && searchHistoryTerms.length > 0 && (
+        <View style={styles.searchHistoryRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={styles.searchHistoryScroll}
+          >
+            {searchHistoryTerms.map((term) => (
+              <Pressable
+                key={term}
+                style={styles.searchHistoryChip}
+                onPress={() => handleSearchHistoryTap(term)}
+              >
+                <MaterialCommunityIcons name="history" size={14} color={theme.colors.textSecondary} />
+                <Text style={styles.searchHistoryChipText} numberOfLines={1}>{term}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              style={styles.searchHistoryClear}
+              onPress={handleClearSearchHistory}
+            >
+              <Text style={styles.searchHistoryClearText}>Clear</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+      )}
+
       <View
         style={[styles.searchPanel, !addExpanded && styles.searchPanelCollapsed]}
         pointerEvents={addExpanded ? "auto" : "none"}
@@ -2716,11 +2950,114 @@ export default function SellScanScreen({
     }
   }, [voiceButtonState, cancelVoiceRecording]);
 
+  // T-136: Fetch substitutes for out-of-stock products
+  const fetchSubstitutes = useCallback(async (productId: string) => {
+    if (!productId || substitutes[productId]) return;
+    try {
+      const subs = await productsApi.fetchProductSubstitutes(productId);
+      setSubstitutes((prev) => ({ ...prev, [productId]: subs }));
+    } catch {
+      // Non-critical
+    }
+  }, [substitutes]);
+
+  // T-136: Add substitute to cart
+  const handleAddSubstitute = useCallback((sub: SubstituteProduct) => {
+    const cartState = useCartStore.getState();
+    const existing = cartState.items.find((item) => item.id === sub.productId);
+    if (existing) {
+      cartState.updateQuantity(existing.id, existing.quantity + 1);
+      showToast(`${existing.name} qty +1`);
+    } else {
+      cartState.addItem({
+        id: sub.productId,
+        name: sub.name,
+        priceMinor: sub.sellPrice,
+        currency: "INR",
+        barcode: sub.barcode,
+      });
+    }
+  }, []);
+
+  // T-137: Update autocomplete on query change
+  useEffect(() => {
+    if (!addExpanded || !addQuery.trim() || addQuery.trim().length < 2) {
+      setAutocompleteSuggestions([]);
+      setAutocompleteVisible(false);
+      return;
+    }
+    // Show autocomplete when addResults have loaded
+    const suggestions = addResults.slice(0, 5);
+    setAutocompleteSuggestions(suggestions);
+    setAutocompleteVisible(suggestions.length > 0);
+  }, [addExpanded, addQuery, addResults]);
+
+  const handleAutocompleteTap = useCallback((item: SkuItem) => {
+    setAddQuery(item.name);
+    setAutocompleteVisible(false);
+    // Trigger search
+    setAddHasMore(true);
+    setAddPage(0);
+    void loadAddResults(true);
+  }, [loadAddResults]);
+
+  // T-133: Bulk quantity selector handlers
+  const handleBulkQtyOpen = useCallback((item: SkuItem) => {
+    setBulkQtyItem(item);
+    setBulkQtyValue("1");
+  }, []);
+
+  const handleBulkQtyConfirm = useCallback(() => {
+    if (!bulkQtyItem) return;
+    const qty = parseInt(bulkQtyValue, 10);
+    if (!Number.isFinite(qty) || qty <= 0) return;
+
+    const stockValue = resolveStockForSku(bulkQtyItem) ?? (typeof bulkQtyItem.currentStock === "number" ? bulkQtyItem.currentStock : null);
+    if (stockValue !== null && qty > stockValue) {
+      showToast(`Only ${stockValue} in stock`);
+      return;
+    }
+
+    const resolved = resolveSkuPrice(bulkQtyItem);
+    const cartState = useCartStore.getState();
+    const existing = cartState.items.find((entry) => entry.barcode === bulkQtyItem.barcode);
+
+    if (existing) {
+      cartState.updateQuantity(existing.id, existing.quantity + qty);
+    } else {
+      const priceResolutionFailed = resolved.priceMinor === 0;
+      cartState.addItem({
+        id: bulkQtyItem.barcode,
+        name: bulkQtyItem.name,
+        priceMinor: resolved.priceMinor,
+        currency: bulkQtyItem.currency ?? "INR",
+        barcode: bulkQtyItem.barcode,
+        quantity: qty,
+        metadata: {
+          storeProductId: bulkQtyItem.storeProductId || undefined,
+          productId: bulkQtyItem.productId || undefined,
+        },
+        priceResolutionError: priceResolutionFailed,
+        priceResolutionMessage: priceResolutionFailed ? "Price not found - enter manually" : undefined,
+      });
+    }
+
+    setBulkQtyItem(null);
+    setBulkQtyValue("");
+  }, [bulkQtyItem, bulkQtyValue]);
+
+  const handleBulkQtyClose = useCallback(() => {
+    setBulkQtyItem(null);
+    setBulkQtyValue("");
+  }, []);
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       if (voiceHoldTimerRef.current) clearTimeout(voiceHoldTimerRef.current);
       if (voiceDurationIntervalRef.current) clearInterval(voiceDurationIntervalRef.current);
+      // T-129: Cleanup search debounce timer on unmount
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
   }, []);
 
@@ -3521,12 +3858,72 @@ export default function SellScanScreen({
       ) : null}
 
       {/* VOICE-001: Voice sheet modal */}
+      {/* T-133: Bulk Quantity Selector Modal */}
+      <Modal
+        visible={Boolean(bulkQtyItem)}
+        transparent
+        animationType="slide"
+        onRequestClose={handleBulkQtyClose}
+      >
+        <View style={styles.onboardingOverlay}>
+          <Pressable style={styles.onboardingOverlayTap} onPress={handleBulkQtyClose} />
+          <View style={styles.onboardingSheet}>
+            <View style={styles.onboardingHandle} />
+            <View style={styles.onboardingHeader}>
+              <Text style={styles.onboardingTitle}>Add Quantity</Text>
+              {bulkQtyItem ? (
+                <Text style={styles.onboardingBarcode} numberOfLines={1}>{bulkQtyItem.name}</Text>
+              ) : null}
+            </View>
+            {bulkQtyItem ? (
+              <View style={styles.onboardingFields}>
+                <View style={styles.onboardingField}>
+                  <Text style={styles.onboardingLabel}>
+                    Available: {resolveStockForSku(bulkQtyItem) ?? bulkQtyItem?.currentStock ?? "Unknown"}
+                  </Text>
+                  <TextInput
+                    style={styles.onboardingInput}
+                    value={bulkQtyValue}
+                    onChangeText={setBulkQtyValue}
+                    placeholder="Enter quantity"
+                    placeholderTextColor={theme.colors.textTertiary}
+                    keyboardType="number-pad"
+                    autoFocus
+                  />
+                </View>
+              </View>
+            ) : null}
+            <View style={styles.onboardingActions}>
+              <Pressable
+                style={[styles.onboardingButton, styles.onboardingButtonGhost]}
+                onPress={handleBulkQtyClose}
+              >
+                <Text style={styles.onboardingButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.onboardingButton,
+                  styles.onboardingButtonPrimary,
+                  (!bulkQtyValue.trim() || parseInt(bulkQtyValue, 10) <= 0) && styles.onboardingButtonDisabled,
+                ]}
+                onPress={handleBulkQtyConfirm}
+                disabled={!bulkQtyValue.trim() || parseInt(bulkQtyValue, 10) <= 0}
+              >
+                <Text style={styles.onboardingButtonTextInverse}>Add to Cart</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <VoiceSheet
         state={voiceSheetState}
         transcript={voiceTranscript}
         message={voiceMessage}
         errorMessage={voiceErrorMessage}
         onDismiss={handleVoiceSheetDismiss}
+        locale={voiceLocale}
+        onLocaleChange={setVoiceLocale}
         testID="sell-voice-sheet"
       />
     </View>
@@ -3578,6 +3975,28 @@ const styles = StyleSheet.create({
   searchDismissOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
+  },
+  // T-128: Manual barcode entry fallback styles
+  manualBarcodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    gap: 8,
+  },
+  manualBarcodeInput: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    paddingVertical: 0,
+  },
+  manualBarcodeSubmit: {
+    padding: 2,
   },
   searchBar: {
     flexDirection: "row",
@@ -4922,5 +5341,147 @@ const styles = StyleSheet.create({
   },
   ctaDisabled: {
     opacity: 0.5,
+  },
+  // T-130: Search history chip styles
+  searchHistoryRow: {
+    marginTop: 8,
+  },
+  searchHistoryScroll: {
+    paddingHorizontal: 4,
+    gap: 8,
+    alignItems: "center",
+  },
+  searchHistoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  searchHistoryChipText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    maxWidth: 100,
+  },
+  searchHistoryClear: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  searchHistoryClearText: {
+    fontSize: 12,
+    color: theme.colors.primary,
+    fontWeight: "600",
+  },
+  // T-134: Product image styles for SKU cards
+  skuCardImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  skuCardImageFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: theme.colors.backgroundTertiary,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  // T-136: Out-of-stock text
+  addRowStockOut: {
+    color: theme.colors.error,
+  },
+  // T-136: Substitution suggestion styles
+  substituteSection: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  substituteLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.textTertiary,
+    marginBottom: 4,
+  },
+  substituteCard: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 8,
+    borderRadius: 8,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minWidth: 100,
+  },
+  substituteCardName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+    maxWidth: 120,
+  },
+  substituteCardPrice: {
+    fontSize: 11,
+    color: theme.colors.primary,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  substituteCardStock: {
+    fontSize: 10,
+    color: theme.colors.success,
+    marginTop: 1,
+  },
+  // T-137: Autocomplete dropdown styles
+  autocompleteDropdown: {
+    position: "relative",
+    zIndex: 10,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    maxHeight: 200,
+    ...theme.shadows.md,
+  },
+  autocompleteSuggestion: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  autocompleteName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  autocompleteBarcode: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+    marginLeft: 8,
+  },
+  // T-134: Product image in search result rows
+  addRowImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+  },
+  addRowImageFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: theme.colors.backgroundTertiary,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

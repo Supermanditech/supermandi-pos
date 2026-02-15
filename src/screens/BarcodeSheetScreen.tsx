@@ -1,34 +1,102 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+// BarcodeSheetScreen — T-166 through T-172
+// Category filtering, custom selection, preview, print settings, batch printing, enriched labels
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
+  BARCODE_CATEGORIES,
+  calculateLabelsPerRow,
   fetchBarcodeSheetItems,
   getBarcodeSheetCapacity,
+  getTotalLabelCount,
+  inferCategory,
+  loadPrintSettings,
+  savePrintSettings,
   shareBarcodeSheetPdf,
+  type BarcodeCategory,
   type BarcodeSheetItem,
-  type BarcodeSheetTier
+  type BarcodeSheetItemWithCopies,
+  type BarcodeSheetTier,
+  type LabelSize,
+  type PaperSize,
+  type PrintSettings,
 } from "../services/barcodeSheet";
 import { theme } from "../theme";
 
 // GO-LIVE-243: Persist barcode sheet tier preference
 const BARCODE_TIER_KEY = "supermandi.barcode.tier.v1";
+// T-167: Max products per sheet in custom selection mode
+const MAX_CUSTOM_SELECTION = 100;
+
+// T-172: Route params type for GRN pre-selection
+type BarcodeSheetRouteParams = {
+  grnItems?: Array<{
+    barcode: string;
+    name: string;
+    sellPrice?: number | null;
+    unit?: string | null;
+    copies?: number;
+  }>;
+};
 
 export default function BarcodeSheetScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  const { width: screenWidth } = useWindowDimensions();
+  const isTablet = screenWidth >= 600;
+  const previewColumns = isTablet ? 3 : 2;
+
+  // Core state
   const [activeTier, setActiveTier] = useState<BarcodeSheetTier | null>(null);
-  const [items, setItems] = useState<BarcodeSheetItem[]>([]);
+  const [allItems, setAllItems] = useState<BarcodeSheetItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<"download" | "whatsapp" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // GL-BARCODE-001: Track if we've tried fetching (to distinguish initial vs empty state)
   const [hasFetched, setHasFetched] = useState(false);
 
-  // GO-LIVE-243: Load saved tier preference on mount
+  // T-166: Category filter
+  const [selectedCategory, setSelectedCategory] = useState<BarcodeCategory>("All");
+
+  // T-167: Custom selection mode
+  const [customMode, setCustomMode] = useState(false);
+  const [selectedBarcodes, setSelectedBarcodes] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // T-169: Print settings
+  const [printSettings, setPrintSettings] = useState<PrintSettings>({
+    paperSize: "A4",
+    labelSize: "Medium",
+    labelsPerRow: 3,
+  });
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // T-170: Copies per item
+  const [copiesMap, setCopiesMap] = useState<Record<string, number>>({});
+
+  // T-168: Preview pagination
+  const PAGE_SIZE = 12;
+  const [previewPage, setPreviewPage] = useState(0);
+
+  // T-172: Check for GRN pre-selection on mount
+  const grnItems = (route.params as BarcodeSheetRouteParams)?.grnItems;
+
+  // Load saved tier and print settings on mount
   useEffect(() => {
     void (async () => {
       try {
@@ -39,12 +107,95 @@ export default function BarcodeSheetScreen() {
       } catch (e) {
         console.warn("[BarcodeSheet] Failed to load saved tier:", e);
       }
+      const settings = await loadPrintSettings();
+      setPrintSettings(settings);
     })();
   }, []);
 
+  // T-172: Handle GRN pre-selection
+  useEffect(() => {
+    if (!grnItems || grnItems.length === 0) return;
+
+    const items: BarcodeSheetItem[] = grnItems
+      .filter((item) => item.barcode && item.barcode.trim().length > 0)
+      .map((item) => ({
+        barcode: item.barcode,
+        name: item.name,
+        sellPrice: item.sellPrice ?? null,
+        unit: item.unit ?? null,
+        category: inferCategory(item.name),
+      }));
+
+    if (items.length === 0) return;
+
+    setAllItems(items);
+    setHasFetched(true);
+    setCustomMode(true);
+    // Pre-select all GRN items
+    setSelectedBarcodes(new Set(items.map((i) => i.barcode)));
+    // T-172: Pre-fill copies from received quantity
+    const copies: Record<string, number> = {};
+    for (const grnItem of grnItems) {
+      if (grnItem.barcode && grnItem.copies && grnItem.copies > 0) {
+        copies[grnItem.barcode] = Math.min(grnItem.copies, 50);
+      }
+    }
+    setCopiesMap(copies);
+    // Auto-set tier
+    if (!activeTier) {
+      setActiveTier("TIER_1");
+    }
+  }, [grnItems]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // T-166: Items filtered by category
+  const categoryFilteredItems = useMemo(() => {
+    if (selectedCategory === "All") return allItems;
+    return allItems.filter((item) => {
+      const cat = item.category || inferCategory(item.name);
+      return cat === selectedCategory;
+    });
+  }, [allItems, selectedCategory]);
+
+  // T-167: Items filtered by search (in custom mode)
+  const searchFilteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return categoryFilteredItems;
+    const q = searchQuery.toLowerCase().trim();
+    return categoryFilteredItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(q) ||
+        item.barcode.toLowerCase().includes(q)
+    );
+  }, [categoryFilteredItems, searchQuery]);
+
+  // T-167/T-168: Final items for preview and PDF
+  const finalItems: BarcodeSheetItemWithCopies[] = useMemo(() => {
+    let items: BarcodeSheetItem[];
+    if (customMode) {
+      // Only selected items
+      items = categoryFilteredItems.filter((item) => selectedBarcodes.has(item.barcode));
+    } else {
+      items = categoryFilteredItems;
+    }
+    return items.map((item) => ({
+      ...item,
+      category: item.category || inferCategory(item.name),
+      copies: copiesMap[item.barcode] ?? 1,
+    }));
+  }, [categoryFilteredItems, customMode, selectedBarcodes, copiesMap]);
+
+  // T-170: Total label count
+  const totalLabelCount = useMemo(() => getTotalLabelCount(finalItems), [finalItems]);
+  const totalProductCount = finalItems.length;
+
+  // T-168: Paginated preview items
+  const totalPages = Math.max(1, Math.ceil(finalItems.length / PAGE_SIZE));
+  const previewItems = useMemo(
+    () => finalItems.slice(previewPage * PAGE_SIZE, (previewPage + 1) * PAGE_SIZE),
+    [finalItems, previewPage]
+  );
+
   const handleGenerate = async (tier: BarcodeSheetTier) => {
     setActiveTier(tier);
-    // GO-LIVE-243: Persist tier preference
     try {
       await AsyncStorage.setItem(BARCODE_TIER_KEY, tier);
     } catch (e) {
@@ -52,14 +203,22 @@ export default function BarcodeSheetScreen() {
     }
     setLoading(true);
     setError(null);
-    setPreviewPage(0); // AUDIT-POS-010: Reset pagination on new generation
+    setPreviewPage(0);
     try {
       const results = await fetchBarcodeSheetItems(tier);
-      setItems(results);
+      // T-171: Enrich with inferred categories
+      const enriched = results.map((item) => ({
+        ...item,
+        category: item.category || inferCategory(item.name),
+      }));
+      setAllItems(enriched);
       setHasFetched(true);
-      // GL-BARCODE-001: Don't set error for empty results - show empty state CTA instead
+      // Reset selection when regenerating
+      if (!customMode) {
+        setSelectedBarcodes(new Set());
+      }
     } catch {
-      setItems([]);
+      setAllItems([]);
       setHasFetched(true);
       setError(t("barcodeSheet.loadError", "Unable to load products for barcode sheets."));
     } finally {
@@ -67,18 +226,16 @@ export default function BarcodeSheetScreen() {
     }
   };
 
-  // GL-BARCODE-001: Navigate to SELL tab to add products
   const handleAddProducts = () => {
-    // Go back to POS root which shows SELL tab
     navigation.goBack();
   };
 
   const handleDownload = async () => {
-    if (!activeTier || items.length === 0) return;
+    if (!activeTier || finalItems.length === 0) return;
     if (actionLoading) return;
     setActionLoading("download");
     try {
-      await shareBarcodeSheetPdf(items, activeTier, "Save Barcode Sheet PDF");
+      await shareBarcodeSheetPdf(finalItems, activeTier, "Save Barcode Sheet PDF", printSettings);
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
@@ -92,11 +249,11 @@ export default function BarcodeSheetScreen() {
   };
 
   const handleWhatsApp = async () => {
-    if (!activeTier || items.length === 0) return;
+    if (!activeTier || finalItems.length === 0) return;
     if (actionLoading) return;
     setActionLoading("whatsapp");
     try {
-      await shareBarcodeSheetPdf(items, activeTier, "Send Barcode Sheet via WhatsApp");
+      await shareBarcodeSheetPdf(finalItems, activeTier, "Send Barcode Sheet via WhatsApp", printSettings);
     } catch (e: any) {
       const message = e?.message ? String(e.message) : "share_failed";
       if (message === "sharing_unavailable") {
@@ -109,29 +266,83 @@ export default function BarcodeSheetScreen() {
     }
   };
 
-  // AUDIT-POS-010: Client-side pagination for barcode preview
-  const PAGE_SIZE = 10;
-  const [previewPage, setPreviewPage] = useState(0);
+  // T-167: Toggle item selection
+  const toggleSelection = useCallback((barcode: string) => {
+    setSelectedBarcodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(barcode)) {
+        next.delete(barcode);
+      } else {
+        if (next.size >= MAX_CUSTOM_SELECTION) {
+          Alert.alert("Limit reached", `Maximum ${MAX_CUSTOM_SELECTION} products per sheet.`);
+          return prev;
+        }
+        next.add(barcode);
+      }
+      return next;
+    });
+  }, []);
+
+  // T-167: Select all / Deselect all
+  const handleSelectAll = useCallback(() => {
+    const barcodes = searchFilteredItems
+      .slice(0, MAX_CUSTOM_SELECTION)
+      .map((item) => item.barcode);
+    setSelectedBarcodes(new Set(barcodes));
+  }, [searchFilteredItems]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedBarcodes(new Set());
+  }, []);
+
+  // T-170: Update copies for an item
+  const updateCopies = useCallback((barcode: string, delta: number) => {
+    setCopiesMap((prev) => {
+      const current = prev[barcode] ?? 1;
+      const next = Math.max(1, Math.min(50, current + delta));
+      return { ...prev, [barcode]: next };
+    });
+  }, []);
+
+  // T-169: Save print settings
+  const handleSaveSettings = useCallback(async (newSettings: PrintSettings) => {
+    setPrintSettings(newSettings);
+    await savePrintSettings(newSettings);
+    setShowSettingsModal(false);
+  }, []);
+
   const previewTitle = activeTier === "TIER_2" ? "Tier 2 Sheet" : "Tier 1 Sheet";
-  const actionDisabled = !activeTier || items.length === 0 || loading;
+  const actionDisabled = !activeTier || finalItems.length === 0 || loading;
   const actionIconColor = actionDisabled ? theme.colors.textTertiary : theme.colors.textInverse;
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const previewItems = useMemo(
-    () => items.slice(previewPage * PAGE_SIZE, (previewPage + 1) * PAGE_SIZE),
-    [items, previewPage]
-  );
-  const previewCount = items.length;
   const sheetCapacity = activeTier ? getBarcodeSheetCapacity(activeTier) : 0;
+
+  // T-171: Format price for display in preview
+  const formatPrice = (price: number | null | undefined): string => {
+    if (price == null || price <= 0) return "";
+    return `\u20B9${(price / 100).toFixed(2)}`;
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Barcode Sheet Generator</Text>
         <Text style={styles.subtitle}>Generate, preview, and share barcode sheets.</Text>
       </View>
 
+      {/* Tier Selection */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Generate Sheets</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Generate Sheets</Text>
+          {/* T-169: Settings gear button */}
+          <Pressable
+            style={styles.settingsButton}
+            onPress={() => setShowSettingsModal(true)}
+            accessibilityLabel="Print settings"
+          >
+            <MaterialCommunityIcons name="cog-outline" size={18} color={theme.colors.textSecondary} />
+          </Pressable>
+        </View>
         <View style={styles.tierGrid}>
           <Pressable
             style={[styles.tierCard, activeTier === "TIER_1" && styles.tierCardActive]}
@@ -152,6 +363,177 @@ export default function BarcodeSheetScreen() {
         </View>
       </View>
 
+      {/* T-166: Category Filter */}
+      {hasFetched && allItems.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Filter by Category</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryRow}
+          >
+            {BARCODE_CATEGORIES.map((cat) => {
+              const isActive = selectedCategory === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  style={[styles.categoryChip, isActive && styles.categoryChipActive]}
+                  onPress={() => {
+                    setSelectedCategory(cat);
+                    setPreviewPage(0);
+                  }}
+                >
+                  <Text style={[styles.categoryChipText, isActive && styles.categoryChipTextActive]}>
+                    {cat}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* T-167: Custom Selection Mode Toggle + Search */}
+      {hasFetched && allItems.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.customModeRow}>
+            <Pressable
+              style={[styles.customModeToggle, customMode && styles.customModeToggleActive]}
+              onPress={() => {
+                setCustomMode((prev) => !prev);
+                if (!customMode) {
+                  // Entering custom mode - select all by default
+                  const barcodes = categoryFilteredItems
+                    .slice(0, MAX_CUSTOM_SELECTION)
+                    .map((item) => item.barcode);
+                  setSelectedBarcodes(new Set(barcodes));
+                }
+                setPreviewPage(0);
+              }}
+            >
+              <MaterialCommunityIcons
+                name={customMode ? "checkbox-multiple-marked" : "checkbox-multiple-blank-outline"}
+                size={16}
+                color={customMode ? theme.colors.textInverse : theme.colors.primary}
+              />
+              <Text style={[styles.customModeText, customMode && styles.customModeTextActive]}>
+                Custom Selection
+              </Text>
+            </Pressable>
+            {customMode && (
+              <Text style={styles.selectionCount}>
+                {selectedBarcodes.size}/{MAX_CUSTOM_SELECTION} selected
+              </Text>
+            )}
+          </View>
+
+          {/* T-167: Search + Selection controls */}
+          {customMode && (
+            <View style={styles.customControls}>
+              <View style={styles.searchBar}>
+                <MaterialCommunityIcons name="magnify" size={18} color={theme.colors.textTertiary} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search by name or barcode..."
+                  placeholderTextColor={theme.colors.textTertiary}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                />
+                {searchQuery.length > 0 && (
+                  <Pressable onPress={() => setSearchQuery("")}>
+                    <MaterialCommunityIcons name="close-circle" size={16} color={theme.colors.textTertiary} />
+                  </Pressable>
+                )}
+              </View>
+              <View style={styles.selectionActions}>
+                <Pressable style={styles.selectionBtn} onPress={handleSelectAll}>
+                  <Text style={styles.selectionBtnText}>Select All</Text>
+                </Pressable>
+                <Pressable style={styles.selectionBtn} onPress={handleDeselectAll}>
+                  <Text style={styles.selectionBtnText}>Deselect All</Text>
+                </Pressable>
+              </View>
+
+              {/* T-167: Product list with checkboxes + T-170: Copies stepper */}
+              <View style={styles.productListContainer}>
+                {searchFilteredItems.length === 0 ? (
+                  <View style={styles.emptySearch}>
+                    <Text style={styles.emptySearchText}>No products match your search.</Text>
+                  </View>
+                ) : (
+                  searchFilteredItems.slice(0, 100).map((item) => {
+                    const isSelected = selectedBarcodes.has(item.barcode);
+                    const copies = copiesMap[item.barcode] ?? 1;
+                    return (
+                      <View key={item.barcode} style={styles.productRow}>
+                        <Pressable
+                          style={styles.productCheckArea}
+                          onPress={() => toggleSelection(item.barcode)}
+                        >
+                          <MaterialCommunityIcons
+                            name={isSelected ? "checkbox-marked" : "checkbox-blank-outline"}
+                            size={20}
+                            color={isSelected ? theme.colors.primary : theme.colors.textTertiary}
+                          />
+                          <View style={styles.productInfo}>
+                            <Text style={styles.productName} numberOfLines={1}>
+                              {item.name || item.barcode}
+                            </Text>
+                            <View style={styles.productMeta}>
+                              <Text style={styles.productBarcode} numberOfLines={1}>
+                                {item.barcode}
+                              </Text>
+                              {/* T-171: Show price in product list */}
+                              {item.sellPrice != null && item.sellPrice > 0 && (
+                                <Text style={styles.productPrice}>
+                                  {formatPrice(item.sellPrice)}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        </Pressable>
+
+                        {/* T-170: Copies stepper */}
+                        {isSelected && (
+                          <View style={styles.copiesStepper}>
+                            <Pressable
+                              style={styles.stepperBtn}
+                              onPress={() => updateCopies(item.barcode, -1)}
+                              disabled={copies <= 1}
+                            >
+                              <MaterialCommunityIcons
+                                name="minus"
+                                size={14}
+                                color={copies <= 1 ? theme.colors.textTertiary : theme.colors.primary}
+                              />
+                            </Pressable>
+                            <Text style={styles.stepperValue}>{copies}</Text>
+                            <Pressable
+                              style={styles.stepperBtn}
+                              onPress={() => updateCopies(item.barcode, 1)}
+                              disabled={copies >= 50}
+                            >
+                              <MaterialCommunityIcons
+                                name="plus"
+                                size={14}
+                                color={copies >= 50 ? theme.colors.textTertiary : theme.colors.primary}
+                              />
+                            </Pressable>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* T-168: Preview Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preview</Text>
         <View style={styles.previewCard}>
@@ -165,61 +547,124 @@ export default function BarcodeSheetScreen() {
               <MaterialCommunityIcons name="alert-circle-outline" size={24} color={theme.colors.warning} />
               <Text style={styles.previewEmptyText}>{error}</Text>
             </View>
-          ) : items.length > 0 ? (
+          ) : finalItems.length > 0 ? (
             <View style={styles.previewContent}>
               <View style={styles.previewSheet}>
                 <MaterialCommunityIcons name="barcode" size={28} color={theme.colors.primary} />
                 <Text style={styles.previewTitle}>{previewTitle}</Text>
                 <Text style={styles.previewMeta}>
-                  {previewCount} labels ready (capacity {sheetCapacity})
+                  {/* T-170: Show total labels vs products */}
+                  {totalLabelCount} labels ({totalProductCount} products)
+                  {sheetCapacity > 0 ? ` | capacity ${sheetCapacity}` : ""}
                 </Text>
               </View>
-              <View style={styles.previewGrid}>
-                {previewItems.map((item) => (
-                  <View key={item.barcode} style={styles.previewChip}>
-                    <MaterialCommunityIcons name="barcode" size={14} color={theme.colors.textSecondary} />
-                    <Text style={styles.previewChipText} numberOfLines={1}>
-                      {item.name || item.barcode}
-                    </Text>
-                  </View>
-                ))}
-                {/* AUDIT-POS-010: Pagination controls for large barcode sets */}
-                {items.length > PAGE_SIZE && (
-                  <View style={styles.paginationRow}>
+
+              {/* T-168: Grid preview */}
+              <View style={[styles.previewGrid, { flexDirection: "row", flexWrap: "wrap" }]}>
+                {previewItems.map((item, idx) => {
+                  const isDeselectable = customMode;
+                  return (
                     <Pressable
-                      style={[styles.paginationBtn, previewPage === 0 && styles.paginationBtnDisabled]}
-                      onPress={() => setPreviewPage(p => Math.max(0, p - 1))}
-                      disabled={previewPage === 0}
-                      accessibilityLabel="Previous page"
+                      key={`${item.barcode}-${idx}`}
+                      style={[
+                        styles.previewCell,
+                        { width: `${Math.floor(100 / previewColumns)}%` },
+                      ]}
+                      onPress={isDeselectable ? () => toggleSelection(item.barcode) : undefined}
                     >
-                      <MaterialCommunityIcons name="chevron-left" size={18} color={previewPage === 0 ? theme.colors.textTertiary : theme.colors.primary} />
-                      <Text style={[styles.paginationText, previewPage === 0 && styles.paginationTextDisabled]}>Prev</Text>
+                      <View style={styles.previewCellInner}>
+                        {/* T-171: Category header */}
+                        {item.category && item.category !== "All" && (
+                          <Text style={styles.previewCellCategory} numberOfLines={1}>
+                            {item.category}
+                          </Text>
+                        )}
+                        <Text style={styles.previewCellName} numberOfLines={1}>
+                          {item.name || "Unnamed"}
+                        </Text>
+                        <MaterialCommunityIcons name="barcode" size={22} color={theme.colors.textSecondary} />
+                        <Text style={styles.previewCellCode} numberOfLines={1}>
+                          {item.barcode}
+                        </Text>
+                        {/* T-171: Price and unit */}
+                        {(item.sellPrice != null && item.sellPrice > 0) && (
+                          <Text style={styles.previewCellPrice}>
+                            {formatPrice(item.sellPrice)}
+                            {item.unit ? ` / ${item.unit}` : ""}
+                          </Text>
+                        )}
+                        {/* T-170: Copies badge */}
+                        {item.copies > 1 && (
+                          <View style={styles.copiesBadge}>
+                            <Text style={styles.copiesBadgeText}>x{item.copies}</Text>
+                          </View>
+                        )}
+                      </View>
                     </Pressable>
-                    <Text style={styles.paginationInfo}>
-                      {previewPage + 1} / {totalPages}
-                    </Text>
-                    <Pressable
-                      style={[styles.paginationBtn, previewPage >= totalPages - 1 && styles.paginationBtnDisabled]}
-                      onPress={() => setPreviewPage(p => Math.min(totalPages - 1, p + 1))}
-                      disabled={previewPage >= totalPages - 1}
-                      accessibilityLabel="Next page"
-                    >
-                      <Text style={[styles.paginationText, previewPage >= totalPages - 1 && styles.paginationTextDisabled]}>Next</Text>
-                      <MaterialCommunityIcons name="chevron-right" size={18} color={previewPage >= totalPages - 1 ? theme.colors.textTertiary : theme.colors.primary} />
-                    </Pressable>
-                  </View>
-                )}
+                  );
+                })}
               </View>
+
+              {/* Pagination */}
+              {finalItems.length > PAGE_SIZE && (
+                <View style={styles.paginationRow}>
+                  <Pressable
+                    style={[styles.paginationBtn, previewPage === 0 && styles.paginationBtnDisabled]}
+                    onPress={() => setPreviewPage((p) => Math.max(0, p - 1))}
+                    disabled={previewPage === 0}
+                    accessibilityLabel="Previous page"
+                  >
+                    <MaterialCommunityIcons
+                      name="chevron-left"
+                      size={18}
+                      color={previewPage === 0 ? theme.colors.textTertiary : theme.colors.primary}
+                    />
+                    <Text style={[styles.paginationText, previewPage === 0 && styles.paginationTextDisabled]}>
+                      Prev
+                    </Text>
+                  </Pressable>
+                  <Text style={styles.paginationInfo}>
+                    {previewPage + 1} / {totalPages}
+                  </Text>
+                  <Pressable
+                    style={[styles.paginationBtn, previewPage >= totalPages - 1 && styles.paginationBtnDisabled]}
+                    onPress={() => setPreviewPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={previewPage >= totalPages - 1}
+                    accessibilityLabel="Next page"
+                  >
+                    <Text
+                      style={[
+                        styles.paginationText,
+                        previewPage >= totalPages - 1 && styles.paginationTextDisabled,
+                      ]}
+                    >
+                      Next
+                    </Text>
+                    <MaterialCommunityIcons
+                      name="chevron-right"
+                      size={18}
+                      color={previewPage >= totalPages - 1 ? theme.colors.textTertiary : theme.colors.primary}
+                    />
+                  </Pressable>
+                </View>
+              )}
+
+              {/* T-168: Showing N labels text */}
+              <Text style={styles.showingLabelsText}>
+                Showing {totalLabelCount} labels
+              </Text>
             </View>
           ) : hasFetched ? (
-            /* GL-BARCODE-001: Empty state with CTA for stores with no products */
             <View style={styles.previewEmpty}>
               <MaterialCommunityIcons name="package-variant" size={32} color={theme.colors.textTertiary} />
               <Text style={styles.emptyTitle}>
                 {t("barcodeSheet.emptyTitle", "No Products Yet")}
               </Text>
               <Text style={styles.emptyDescription}>
-                {t("barcodeSheet.emptyDescription", "Add products by scanning barcodes in the SELL tab. Once added, you can generate barcode sheets here.")}
+                {t(
+                  "barcodeSheet.emptyDescription",
+                  "Add products by scanning barcodes in the SELL tab. Once added, you can generate barcode sheets here."
+                )}
               </Text>
               <Pressable style={styles.addProductsButton} onPress={handleAddProducts}>
                 <MaterialCommunityIcons name="plus" size={16} color={theme.colors.textInverse} />
@@ -239,6 +684,7 @@ export default function BarcodeSheetScreen() {
         </View>
       </View>
 
+      {/* Actions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Actions</Text>
         <Pressable
@@ -262,9 +708,131 @@ export default function BarcodeSheetScreen() {
           </Text>
         </Pressable>
       </View>
+
+      {/* T-169: Print Settings Modal */}
+      <PrintSettingsModal
+        visible={showSettingsModal}
+        settings={printSettings}
+        onSave={handleSaveSettings}
+        onClose={() => setShowSettingsModal(false)}
+      />
     </ScrollView>
   );
 }
+
+// =============================================================================
+// T-169: Print Settings Modal Component
+// =============================================================================
+
+function PrintSettingsModal({
+  visible,
+  settings,
+  onSave,
+  onClose,
+}: {
+  visible: boolean;
+  settings: PrintSettings;
+  onSave: (settings: PrintSettings) => void;
+  onClose: () => void;
+}) {
+  const [paperSize, setPaperSize] = useState<PaperSize>(settings.paperSize);
+  const [labelSize, setLabelSize] = useState<LabelSize>(settings.labelSize);
+  const [labelsPerRow, setLabelsPerRow] = useState(settings.labelsPerRow);
+
+  useEffect(() => {
+    setPaperSize(settings.paperSize);
+    setLabelSize(settings.labelSize);
+    setLabelsPerRow(settings.labelsPerRow);
+  }, [settings]);
+
+  // Auto-calculate labels per row when paper or label size changes
+  useEffect(() => {
+    const auto = calculateLabelsPerRow(paperSize, labelSize);
+    setLabelsPerRow(auto);
+  }, [paperSize, labelSize]);
+
+  const paperSizes: PaperSize[] = ["A4", "Letter", "Custom"];
+  const labelSizes: LabelSize[] = ["Small", "Medium", "Large"];
+  const labelDescriptions: Record<LabelSize, string> = {
+    Small: "25 x 15 mm",
+    Medium: "38 x 25 mm",
+    Large: "50 x 30 mm",
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={modalStyles.overlay}>
+        <View style={modalStyles.card}>
+          <View style={modalStyles.header}>
+            <Text style={modalStyles.title}>Print Settings</Text>
+            <Pressable onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={22} color={theme.colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          {/* Paper Size */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={modalStyles.fieldLabel}>Paper Size</Text>
+            <View style={modalStyles.chipRow}>
+              {paperSizes.map((ps) => (
+                <Pressable
+                  key={ps}
+                  style={[modalStyles.chip, paperSize === ps && modalStyles.chipActive]}
+                  onPress={() => setPaperSize(ps)}
+                >
+                  <Text style={[modalStyles.chipText, paperSize === ps && modalStyles.chipTextActive]}>
+                    {ps}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Label Size */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={modalStyles.fieldLabel}>Label Size</Text>
+            <View style={modalStyles.chipRow}>
+              {labelSizes.map((ls) => (
+                <Pressable
+                  key={ls}
+                  style={[modalStyles.chip, labelSize === ls && modalStyles.chipActive]}
+                  onPress={() => setLabelSize(ls)}
+                >
+                  <View style={modalStyles.chipContent}>
+                    <Text style={[modalStyles.chipText, labelSize === ls && modalStyles.chipTextActive]}>
+                      {ls}
+                    </Text>
+                    <Text style={[modalStyles.chipSubtext, labelSize === ls && modalStyles.chipSubtextActive]}>
+                      {labelDescriptions[ls]}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Labels per row (auto) */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={modalStyles.fieldLabel}>Labels per Row</Text>
+            <Text style={modalStyles.fieldValue}>{labelsPerRow} (auto-calculated)</Text>
+          </View>
+
+          {/* Save */}
+          <Pressable
+            style={modalStyles.saveButton}
+            onPress={() => onSave({ paperSize, labelSize, labelsPerRow })}
+          >
+            <Text style={modalStyles.saveButtonText}>Save Settings</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -292,10 +860,23 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     gap: 12,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: theme.colors.textPrimary,
+  },
+  // T-169: Settings gear button
+  settingsButton: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   tierGrid: {
     flexDirection: "row",
@@ -323,6 +904,186 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: theme.colors.textSecondary,
   },
+
+  // T-166: Category filter styles
+  categoryRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  categoryChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  categoryChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  categoryChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  categoryChipTextActive: {
+    color: theme.colors.textInverse,
+  },
+
+  // T-167: Custom selection mode styles
+  customModeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  customModeToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  customModeToggleActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  customModeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  customModeTextActive: {
+    color: theme.colors.textInverse,
+  },
+  selectionCount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+  },
+  customControls: {
+    gap: 10,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: theme.colors.textPrimary,
+    paddingVertical: 4,
+  },
+  selectionActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  selectionBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  selectionBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+
+  // T-167: Product list
+  productListContainer: {
+    maxHeight: 300,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  productRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  productCheckArea: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  productMeta: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 2,
+  },
+  productBarcode: {
+    fontSize: 10,
+    color: theme.colors.textTertiary,
+  },
+  productPrice: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: theme.colors.success,
+  },
+  emptySearch: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptySearchText: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+  },
+
+  // T-170: Copies stepper
+  copiesStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginLeft: 8,
+  },
+  stepperBtn: {
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  stepperValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    minWidth: 22,
+    textAlign: "center",
+  },
+
+  // T-168: Preview styles
   previewCard: {
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -357,27 +1118,64 @@ const styles = StyleSheet.create({
   previewGrid: {
     marginTop: 12,
     width: "100%",
-    gap: 8,
   },
-  previewChip: {
-    flexDirection: "row",
+  // T-168: Preview cell styles
+  previewCell: {
+    padding: 4,
+  },
+  previewCellInner: {
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: 3,
+    padding: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
+    minHeight: 90,
   },
-  previewChipText: {
-    flex: 1,
-    fontSize: 12,
+  previewCellCategory: {
+    fontSize: 8,
+    fontWeight: "600",
+    color: theme.colors.textTertiary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  previewCellName: {
+    fontSize: 10,
+    fontWeight: "700",
     color: theme.colors.textPrimary,
+    textAlign: "center",
   },
-  previewMoreText: {
+  previewCellCode: {
+    fontSize: 8,
+    color: theme.colors.textTertiary,
+    letterSpacing: 0.5,
+  },
+  previewCellPrice: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: theme.colors.success,
+  },
+  // T-170: Copies badge in preview
+  copiesBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  copiesBadgeText: {
+    fontSize: 8,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
+  },
+  showingLabelsText: {
     fontSize: 12,
+    fontWeight: "600",
     color: theme.colors.textSecondary,
+    marginTop: 8,
     textAlign: "center",
   },
   previewEmpty: {
@@ -388,6 +1186,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textSecondary,
   },
+
+  // Actions
   actionButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -415,7 +1215,8 @@ const styles = StyleSheet.create({
   actionTextDisabled: {
     color: theme.colors.textSecondary,
   },
-  // GL-BARCODE-001: Empty state styles
+
+  // Empty state styles
   emptyTitle: {
     fontSize: 15,
     fontWeight: "700",
@@ -445,7 +1246,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textInverse,
   },
-  // AUDIT-POS-010: Pagination styles
+
+  // Pagination styles
   paginationRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -480,5 +1282,92 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: theme.colors.textSecondary,
+  },
+});
+
+// T-169: Modal styles
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    gap: 18,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+  },
+  fieldGroup: {
+    gap: 8,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  fieldValue: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    fontWeight: "600",
+  },
+  chipRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  chipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  chipContent: {
+    alignItems: "center",
+    gap: 2,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  chipTextActive: {
+    color: theme.colors.textInverse,
+  },
+  chipSubtext: {
+    fontSize: 10,
+    color: theme.colors.textTertiary,
+  },
+  chipSubtextActive: {
+    color: theme.colors.textInverse,
+    opacity: 0.8,
+  },
+  saveButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textInverse,
   },
 });

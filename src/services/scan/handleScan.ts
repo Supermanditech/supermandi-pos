@@ -1,5 +1,6 @@
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { showToast } from "../../utils/showToast";
+import * as Haptics from "expo-haptics";
 import { ApiError } from "../api/apiClient";
 import {
   createStoreProductFromScan,
@@ -162,11 +163,25 @@ function isScanStorm(barcode: string): boolean {
   return false;
 }
 
+// T-138: Trigger haptic feedback safely
+function triggerHaptic(type: "success" | "error"): void {
+  try {
+    if (type === "success") {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  } catch {
+    // Haptics not available on this device — ignore silently
+  }
+}
+
 function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: string[]): boolean {
   try {
     // Validate product data
     if (!product) {
       console.error("addToSellCart: product is null/undefined");
+      triggerHaptic("error"); // T-138
       return false;
     }
 
@@ -179,6 +194,7 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
     if (!productId) {
       console.error("addToSellCart: product.id is missing");
       showToast("Cannot add item: missing product ID");
+      triggerHaptic("error"); // T-138
       return false;
     }
 
@@ -208,12 +224,14 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
         flags,
         metadata: product.metadata,
       });
+      triggerHaptic("success"); // T-138
       return true;
     }
 
     if (safePriceMinor <= 0) {
       console.warn(`scan_invalid_price:${productBarcode || productId},price=${priceMinor}`);
       showToast("Price not set for this item. Cannot add to cart.", "long");
+      triggerHaptic("error"); // T-138
       return false;
     }
 
@@ -228,6 +246,8 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
       metadata: product.metadata
     });
 
+    triggerHaptic("success"); // T-138
+
     // ISSUE-MICRO-075: Soft stock warning at scan time
     // Show a toast when available stock is low (≤5 units) so the cashier knows
     const availableQty = typeof product.metadata?.availableQty === "number" ? product.metadata.availableQty : null;
@@ -239,6 +259,7 @@ function addToSellCart(product: CartScanProduct, priceMinor: number, flags?: str
   } catch (err) {
     console.error("addToSellCart error:", err);
     showToast("Error adding item to cart");
+    triggerHaptic("error"); // T-138
     return false;
   }
 }

@@ -13,6 +13,8 @@ import { checkIpBlockMiddleware, recordAuthFailure, clearIpFailures } from "../.
 import { logLoginSuccess, logLoginFailed, logAccountLocked } from "../../../services/authAuditService";
 // AUTH-SESSION-169: Cookie utility for auth session persistence
 import { setAuthCookies, clearAuthCookies, getRefreshTokenFromRequest } from "../../../utils/authCookies";
+// T-184: Redis token blacklist for immediate revocation at gateway level
+import { blacklistToken } from "../../../db/redis";
 
 // GO-LIVE-LOGIN: Import Firebase verification for phone-based auth
 let verifyFirebaseIdToken: ((idToken: string) => Promise<{ success: boolean; payload?: { phone_number?: string; uid?: string }; error?: string; code?: string }>) | null = null;
@@ -1221,6 +1223,12 @@ router.post("/auth/logout", requireSupplierAuth, async (req: SupplierAuthRequest
       // Log but don't fail - token will expire eventually
       console.warn('[SupplierAuth] Failed to record token revocation:', dbError);
     }
+
+    // T-184: Also blacklist in Redis for immediate gateway-level revocation
+    const remainingSeconds = decoded.exp
+      ? Math.max(0, decoded.exp - Math.floor(Date.now() / 1000))
+      : 24 * 60 * 60; // Default 24h if no exp
+    blacklistToken(decoded.jti, remainingSeconds).catch(() => {});
 
     // AUTH-SESSION-169: Clear auth cookies on logout
     clearAuthCookies(res);

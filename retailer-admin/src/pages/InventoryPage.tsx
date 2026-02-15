@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
@@ -10,7 +10,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, RefreshCw } from 'lucide-react';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -75,12 +75,18 @@ export default function InventoryPage() {
   // RET-AUD-034: Date range filters
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  // T-183: Auto-refresh state
+  const [lastRefreshAt, setLastRefreshAt] = useState<number>(Date.now());
+  const [secondsSinceRefresh, setSecondsSinceRefresh] = useState<number>(0);
+  const [refreshFlash, setRefreshFlash] = useState(false);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const AUTO_REFRESH_INTERVAL_MS = 30000; // 30 seconds
 
   // GO-LIVE-021: Extract fetchLedger to allow retry on error
-  const fetchLedger = useCallback(async () => {
+  const fetchLedger = useCallback(async (options?: { silent?: boolean }) => {
     if (!accessToken) return;
 
-    setLoading(true);
+    if (!options?.silent) setLoading(true);
     setError(null);
     try {
       // Map display filter to API transaction types
@@ -114,6 +120,13 @@ export default function InventoryPage() {
       if (data.totals) {
         setTotals(data.totals);
       }
+      // T-183: Track last refresh time and trigger subtle flash animation
+      setLastRefreshAt(Date.now());
+      setSecondsSinceRefresh(0);
+      if (options?.silent) {
+        setRefreshFlash(true);
+        setTimeout(() => setRefreshFlash(false), 600);
+      }
     } catch (err) {
       console.error('Failed to load ledger:', err);
       setError('Failed to load inventory ledger. Please try again.');
@@ -128,6 +141,41 @@ export default function InventoryPage() {
     fetchLedger();
   }, [fetchLedger]);
 
+  // T-183: Auto-refresh polling — only when page is focused
+  useEffect(() => {
+    // Update "seconds ago" counter every second
+    const counterInterval = setInterval(() => {
+      setSecondsSinceRefresh(Math.floor((Date.now() - lastRefreshAt) / 1000));
+    }, 1000);
+
+    // Set up 30-second polling (only fetch when page is visible)
+    pollIntervalRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible' && accessToken) {
+        fetchLedger({ silent: true });
+      }
+    }, AUTO_REFRESH_INTERVAL_MS);
+
+    return () => {
+      clearInterval(counterInterval);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, [fetchLedger, accessToken, lastRefreshAt]);
+
+  // T-183: Refresh when tab regains focus (if stale)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && accessToken) {
+        const elapsed = Date.now() - lastRefreshAt;
+        // If more than 30 seconds have passed while tab was hidden, refresh
+        if (elapsed >= AUTO_REFRESH_INTERVAL_MS) {
+          fetchLedger({ silent: true });
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [accessToken, lastRefreshAt, fetchLedger]);
+
   // RCAT-LEDGER-001: Use backend-provided totals for accuracy
   const totalSKUs = totals.totalSkus;
   const todayMovements = totals.todaysMovements;
@@ -139,7 +187,25 @@ export default function InventoryPage() {
         <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Inventory' }]} />
       </div>
       <header className="page-header">
-        <h1 className="page-title">Inventory Ledger</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <h1 className="page-title" style={{ margin: 0 }}>Inventory Ledger</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {/* T-183: Last updated indicator */}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Updated {secondsSinceRefresh < 5 ? 'just now' : `${secondsSinceRefresh}s ago`}
+            </span>
+            {/* T-183: Manual refresh button */}
+            <button
+              className="btn btn-secondary"
+              onClick={() => fetchLedger()}
+              disabled={loading}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.75rem' }}
+            >
+              <RefreshCw style={{ width: 14, height: 14, transition: 'transform 0.3s', transform: loading ? 'rotate(180deg)' : 'none' }} />
+              Refresh
+            </button>
+          </div>
+        </div>
       </header>
 
       <div className="page-content">
@@ -220,8 +286,12 @@ export default function InventoryPage() {
           )}
         </div>
 
-        {/* Ledger Table */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {/* Ledger Table — T-183: refreshFlash adds subtle highlight animation on auto-refresh */}
+        <div className="card" style={{
+          padding: 0, overflow: 'hidden',
+          transition: 'box-shadow 0.3s ease',
+          boxShadow: refreshFlash ? '0 0 0 2px var(--primary)' : undefined,
+        }}>
           <table className="table">
             <thead>
               <tr>
@@ -246,7 +316,7 @@ export default function InventoryPage() {
                     <div style={{ color: 'var(--danger)', marginBottom: '1rem' }}>{error}</div>
                     {/* GO-LIVE-021: Retry button for ledger load failure */}
                     <button
-                      onClick={fetchLedger}
+                      onClick={() => fetchLedger()}
                       style={{
                         padding: '0.5rem 1rem',
                         background: 'var(--primary)',

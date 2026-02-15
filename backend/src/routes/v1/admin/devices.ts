@@ -107,10 +107,36 @@ adminDevicesRouter.get("/devices", requireAdminToken, async (req, res) => {
     updated_at: row.updated_at ? new Date(row.updated_at).toISOString() : null
   }));
 
-  return res.json({ devices, total, limit, offset });
+  // T-185: Include max_devices and active device count when filtering by store
+  let storeDeviceInfo: { max_devices: number; active_device_count: number } | undefined;
+  if (storeId) {
+    try {
+      const [maxRes, activeRes] = await Promise.all([
+        pool.query(
+          `SELECT COALESCE(max_devices, 10) as max_devices FROM platform.stores WHERE id = $1::uuid`,
+          [storeId]
+        ),
+        pool.query(
+          `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND active = true`,
+          [storeId]
+        ),
+      ]);
+      storeDeviceInfo = {
+        max_devices: maxRes.rows[0]?.max_devices ?? 10,
+        active_device_count: activeRes.rows[0]?.count ?? 0,
+      };
+    } catch {
+      // Non-critical — continue without device info
+    }
+  }
+
+  return res.json({ devices, total, limit, offset, ...(storeDeviceInfo ? { storeDeviceInfo } : {}) });
 });
 
 // PATCH /api/v1/admin/devices/:deviceId
+// T-185: Default max devices per store (matches enroll.ts)
+const DEFAULT_MAX_DEVICES_PER_STORE = 10;
+
 adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, res) => {
   const deviceId = typeof req.params.deviceId === "string" ? req.params.deviceId.trim() : "";
   if (!deviceId) {
@@ -152,6 +178,54 @@ adminDevicesRouter.patch("/devices/:deviceId", requireAdminToken, async (req, re
 
   if (!hasLabel && !hasDeviceType && !hasActive && !hasPrintingMode && !hasScanLookupV2 && !resetToken) {
     return res.status(400).json({ error: "no updates provided" });
+  }
+
+  // T-185: Enforce max_devices when activating a device
+  if (hasActive && active === true) {
+    const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    // Get the device's store_id first
+    const deviceRes = await pool.query(
+      `SELECT store_id FROM pos_devices WHERE id = $1`,
+      [deviceId]
+    );
+    if (deviceRes.rowCount === 0) {
+      return res.status(404).json({ error: "device not found" });
+    }
+    const storeId = deviceRes.rows[0].store_id;
+
+    if (storeId) {
+      // Check if this device is already active (if so, no need to check limit)
+      const alreadyActiveRes = await pool.query(
+        `SELECT active FROM pos_devices WHERE id = $1`,
+        [deviceId]
+      );
+      const alreadyActive = alreadyActiveRes.rows[0]?.active === true;
+
+      if (!alreadyActive) {
+        // Count active devices for the store (excluding this device)
+        const countRes = await pool.query(
+          `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND active = true AND id != $2`,
+          [storeId, deviceId]
+        );
+        const activeCount = countRes.rows[0]?.count ?? 0;
+
+        // Get max_devices from store
+        const storeRes = await pool.query(
+          `SELECT COALESCE(max_devices, $2) as max_devices FROM platform.stores WHERE id = $1::uuid`,
+          [storeId, DEFAULT_MAX_DEVICES_PER_STORE]
+        );
+        const maxDevices = storeRes.rows[0]?.max_devices ?? DEFAULT_MAX_DEVICES_PER_STORE;
+
+        if (activeCount >= maxDevices) {
+          return res.status(403).json({
+            error: "DEVICE_LIMIT_EXCEEDED",
+            message: `Maximum devices reached for this store (${activeCount}/${maxDevices})`
+          });
+        }
+      }
+    }
   }
 
   const updates: string[] = [];

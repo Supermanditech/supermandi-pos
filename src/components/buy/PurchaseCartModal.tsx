@@ -243,9 +243,14 @@ export function PurchaseCartModal({
           case "COD":
             storeNotes = "CASH_ON_DELIVERY";
             break;
+          // T-157: Bank transfer (NEFT/RTGS/IMPS) for supplier purchases
+          case "BANK_TRANSFER":
+            storeNotes = "BANK_TRANSFER_PENDING";
+            break;
         }
 
         // Create the order via API
+        // T-140: Include expected delivery date
         const orderResult = await orderApi.createOrder(storeId, {
           supplierId: group.supplierId,
           orderType: "manual",
@@ -255,6 +260,7 @@ export function PurchaseCartModal({
             unitPrice: item.unitPrice,
           })),
           storeNotes,
+          expectedDeliveryDate: expectedDeliveryDate.toISOString(),
         });
 
         // For UPI, DON'T remove items yet - wait for payment confirmation
@@ -427,6 +433,7 @@ export function PurchaseCartModal({
             throw new Error("No items found for supplier");
           }
 
+          // T-140: Include expected delivery date
           await orderApi.createOrder(storeId, {
             supplierId,
             orderType: "manual",
@@ -436,6 +443,7 @@ export function PurchaseCartModal({
               unitPrice: item.unitPrice,
             })),
             storeNotes: "BNPL_REQUESTED",
+            expectedDeliveryDate: expectedDeliveryDate.toISOString(),
           });
 
           removeSupplierItems(supplierId);
@@ -487,6 +495,7 @@ export function PurchaseCartModal({
               }
 
               // Place orders sequentially
+              // T-140: Include expected delivery date in all orders
               for (const group of supplierGroups) {
                 await orderApi.createOrder(storeId, {
                   supplierId: group.supplierId,
@@ -496,6 +505,7 @@ export function PurchaseCartModal({
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
                   })),
+                  expectedDeliveryDate: expectedDeliveryDate.toISOString(),
                 });
               }
 
@@ -527,6 +537,48 @@ export function PurchaseCartModal({
     );
   }, [allOrdersValid, supplierGroups, totals, clear, onAllOrdersPlaced, onClose]);
 
+  // T-140: Delivery date picker state
+  const getDefaultDeliveryDate = (): Date => {
+    const date = new Date();
+    let daysAdded = 0;
+    while (daysAdded < 3) {
+      date.setDate(date.getDate() + 1);
+      const day = date.getDay();
+      // Skip weekends (0 = Sunday, 6 = Saturday)
+      if (day !== 0 && day !== 6) {
+        daysAdded++;
+      }
+    }
+    return date;
+  };
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date>(getDefaultDeliveryDate);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const formatDeliveryDate = (date: Date): string => {
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // T-140: Generate next 7 business days for date picker options
+  const deliveryDateOptions = useMemo(() => {
+    const options: Date[] = [];
+    const cursor = new Date();
+    while (options.length < 7) {
+      cursor.setDate(cursor.getDate() + 1);
+      const day = cursor.getDay();
+      if (day !== 0 && day !== 6) {
+        options.push(new Date(cursor));
+      }
+    }
+    return options;
+  }, []);
+
+  // T-140: Short weekday names for date picker
+  const shortDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const shortMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   // POS-BUY-004: Save all orders as drafts
   const [savingDraft, setSavingDraft] = useState(false);
   const handleSaveDraft = useCallback(async () => {
@@ -539,6 +591,7 @@ export function PurchaseCartModal({
         throw new Error("Store not found");
       }
 
+      // T-140: Include expected delivery date in drafts
       for (const group of supplierGroups) {
         await orderApi.createOrder(storeId, {
           supplierId: group.supplierId,
@@ -549,6 +602,7 @@ export function PurchaseCartModal({
             quantity: item.quantity,
             unitPrice: item.unitPrice,
           })),
+          expectedDeliveryDate: expectedDeliveryDate.toISOString(),
         });
       }
 
@@ -674,6 +728,82 @@ export function PurchaseCartModal({
                 />
               ))}
             </ScrollView>
+
+            {/* T-140: Delivery Date Picker */}
+            <View style={styles.deliveryDateSection}>
+              <Pressable
+                style={styles.deliveryDateHeader}
+                onPress={() => setShowDatePicker((prev) => !prev)}
+              >
+                <View style={styles.deliveryDateLeft}>
+                  <MaterialCommunityIcons
+                    name="truck-delivery-outline"
+                    size={20}
+                    color={theme.colors.primary}
+                  />
+                  <View>
+                    <Text style={styles.deliveryDateLabel}>Expected Delivery</Text>
+                    <Text style={styles.deliveryDateValue}>
+                      {shortDayNames[expectedDeliveryDate.getDay()]},{" "}
+                      {expectedDeliveryDate.getDate()}{" "}
+                      {shortMonthNames[expectedDeliveryDate.getMonth()]}
+                    </Text>
+                  </View>
+                </View>
+                <MaterialCommunityIcons
+                  name={showDatePicker ? "chevron-up" : "chevron-down"}
+                  size={22}
+                  color={theme.colors.textTertiary}
+                />
+              </Pressable>
+
+              {showDatePicker && (
+                <View style={styles.deliveryDateGrid}>
+                  {deliveryDateOptions.map((option, idx) => {
+                    const isSelected =
+                      option.toDateString() === expectedDeliveryDate.toDateString();
+                    return (
+                      <Pressable
+                        key={idx}
+                        style={[
+                          styles.deliveryDateOption,
+                          isSelected && styles.deliveryDateOptionSelected,
+                        ]}
+                        onPress={() => {
+                          setExpectedDeliveryDate(option);
+                          setShowDatePicker(false);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.deliveryDateOptionDay,
+                            isSelected && styles.deliveryDateOptionTextSelected,
+                          ]}
+                        >
+                          {shortDayNames[option.getDay()]}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.deliveryDateOptionDate,
+                            isSelected && styles.deliveryDateOptionTextSelected,
+                          ]}
+                        >
+                          {option.getDate()}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.deliveryDateOptionMonth,
+                            isSelected && styles.deliveryDateOptionTextSelected,
+                          ]}
+                        >
+                          {shortMonthNames[option.getMonth()]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
 
             {/* Footer with grand total and place all */}
             <View style={[styles.footer, { paddingBottom: insets.bottom + theme.spacing.md }]}>
@@ -922,6 +1052,74 @@ const styles = StyleSheet.create({
   saveDraftText: {
     fontSize: 14,
     fontWeight: "600" as const,
+    color: theme.colors.primary,
+  },
+  // T-140: Delivery date picker styles
+  deliveryDateSection: {
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+  },
+  deliveryDateHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  deliveryDateLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: theme.spacing.sm,
+  },
+  deliveryDateLabel: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+  },
+  deliveryDateValue: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: theme.colors.textPrimary,
+  },
+  deliveryDateGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  deliveryDateOption: {
+    alignItems: "center" as const,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    minWidth: 60,
+  },
+  deliveryDateOptionSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + "15",
+  },
+  deliveryDateOptionDay: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+    fontWeight: "500" as const,
+  },
+  deliveryDateOptionDate: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: theme.colors.textPrimary,
+    marginVertical: 2,
+  },
+  deliveryDateOptionMonth: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+  },
+  deliveryDateOptionTextSelected: {
     color: theme.colors.primary,
   },
 });

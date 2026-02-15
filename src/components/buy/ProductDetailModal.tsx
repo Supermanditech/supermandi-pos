@@ -17,7 +17,6 @@ import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { SupplierRow } from "./SupplierRow";
 import type { CatalogProduct, CatalogSupplier } from "../../services/api/catalogApi";
-import { getStockStatusColor, getStockStatusLabel } from "../../services/api/catalogApi";
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
 // T-127: Modal back handler for Android hardware back button
 import { useModalBackHandler } from "../../hooks/useModalBackHandler";
@@ -115,7 +114,17 @@ export function ProductDetailModal({
 
   if (!product) return null;
 
-  const stockColor = getStockStatusColor(product.stockStatus);
+  // T-142: Compute total available quantity from all suppliers
+  const totalAvailableQty = product.suppliers.reduce(
+    (sum, s) => sum + (s.stockQuantity || 0),
+    0
+  );
+  const stockColor =
+    totalAvailableQty <= 0
+      ? theme.colors.error
+      : totalAvailableQty < 10
+        ? theme.colors.warning
+        : theme.colors.success;
 
   return (
     <Modal
@@ -217,17 +226,21 @@ export function ProductDetailModal({
                 </Text>
               </View>
 
+              {/* T-141: Always show MOQ with unit */}
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>Min MOQ</Text>
-                <Text style={styles.statValue}>{product.minMoq}</Text>
+                <Text style={styles.statValue}>
+                  {product.minMoq || 1}{product.unit ? ` ${product.unit}` : ""}
+                </Text>
               </View>
 
+              {/* T-142: Show actual available quantity */}
               <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Status</Text>
+                <Text style={styles.statLabel}>Available</Text>
                 <View style={[styles.stockBadge, { backgroundColor: stockColor + "20" }]}>
                   <View style={[styles.stockDot, { backgroundColor: stockColor }]} />
                   <Text style={[styles.stockBadgeText, { color: stockColor }]}>
-                    {getStockStatusLabel(product.stockStatus)}
+                    {totalAvailableQty} available
                   </Text>
                 </View>
               </View>

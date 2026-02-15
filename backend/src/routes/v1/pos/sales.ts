@@ -22,7 +22,8 @@ import {
   recordSaleInventoryMovements,
   recordSaleReturnMovements,
   ensureStoreInventoryAvailability,
-  InsufficientStockError
+  InsufficientStockError,
+  StockVersionConflictError
 } from "../../../services/inventoryLedgerService";
 // GO-LIVE-034: Import stock cache invalidation for returns
 import { invalidateStockCache } from "./inventory";
@@ -1246,6 +1247,13 @@ posSalesRouter.post("/sales", requireDeviceToken, requireActiveStore, salesRateL
         details: error.details
       });
     }
+    // T-177: Handle optimistic concurrency conflict on stock_balances
+    if (error instanceof StockVersionConflictError) {
+      return res.status(409).json({
+        error: "stock_version_conflict",
+        message: "Stock changed, please refresh"
+      });
+    }
     if (error instanceof Error && error.message === "insufficient_stock") {
       return res.status(409).json({
         error: "insufficient_stock",
@@ -1467,6 +1475,13 @@ posSalesRouter.post("/sales/:saleId/confirm", requireDeviceToken, requireActiveS
         error: "insufficient_stock",
         message,
         details: error.details
+      });
+    }
+    // T-177: Handle optimistic concurrency conflict on stock_balances
+    if (error instanceof StockVersionConflictError) {
+      return res.status(409).json({
+        error: "stock_version_conflict",
+        message: "Stock changed, please refresh"
       });
     }
     return res.status(500).json({ error: "failed to confirm payment" });
@@ -1891,6 +1906,13 @@ posSalesRouter.post("/payments/upi/confirm-manual", requireDeviceToken, requireA
         details: error.details
       });
     }
+    // T-177: Handle optimistic concurrency conflict on stock_balances
+    if (error instanceof StockVersionConflictError) {
+      return res.status(409).json({
+        error: "stock_version_conflict",
+        message: "Stock changed, please refresh"
+      });
+    }
     return res.status(500).json({ error: "failed to confirm payment" });
   } finally {
     client.release();
@@ -2024,6 +2046,13 @@ posSalesRouter.post("/payments/cash", requireDeviceToken, requireActiveStore, fi
         error: "insufficient_stock",
         message,
         details: error.details
+      });
+    }
+    // T-177: Handle optimistic concurrency conflict on stock_balances
+    if (error instanceof StockVersionConflictError) {
+      return res.status(409).json({
+        error: "stock_version_conflict",
+        message: "Stock changed, please refresh"
       });
     }
     return res.status(500).json({ error: "failed to process payment" });
@@ -2186,6 +2215,13 @@ posSalesRouter.post("/payments/due", requireDeviceToken, requireActiveStore, fin
         error: "insufficient_stock",
         message,
         details: error.details
+      });
+    }
+    // T-177: Handle optimistic concurrency conflict on stock_balances
+    if (error instanceof StockVersionConflictError) {
+      return res.status(409).json({
+        error: "stock_version_conflict",
+        message: "Stock changed, please refresh"
       });
     }
     return res.status(500).json({ error: "failed to process payment" });

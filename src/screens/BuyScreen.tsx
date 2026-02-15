@@ -29,6 +29,16 @@ import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { fetchUiStatus } from "../services/api/uiStatusApi";
 import { LIST_PAGE_SIZE, shouldStopPagination } from "../config/pagination";
+// T-146: Offline catalog browsing
+import { isOnline, subscribeNetworkStatus } from "../services/networkStatus";
+import {
+  cacheCatalogProducts,
+  getCachedCatalog,
+  cacheCatalogCategories,
+  getCachedCategories,
+  getCacheAge,
+  searchCachedProducts,
+} from "../services/catalogCache";
 
 // =============================================================================
 // TYPES
@@ -91,6 +101,11 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   // GL-AUD-007: BNPL badge state
   const [bnplEnabled, setBnplEnabled] = useState(false);
 
+  // T-146: Offline catalog browsing state
+  const [isOffline, setIsOffline] = useState(false);
+  const [cacheAge, setCacheAge] = useState<string | null>(null);
+  const [usingCache, setUsingCache] = useState(false);
+
   // Get cart quantity for a product
   const getCartQuantity = useCallback(
     (productId: string): number => {
@@ -112,6 +127,22 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
     });
   }, []);
 
+  // T-146: Subscribe to network status changes
+  useEffect(() => {
+    // Check initial state
+    isOnline().then((online) => setIsOffline(!online));
+    // Subscribe to changes
+    const unsubscribe = subscribeNetworkStatus((online) => {
+      setIsOffline(!online);
+      if (online && usingCache && storeId) {
+        // Back online — auto-refresh to get fresh data
+        setUsingCache(false);
+        setCacheAge(null);
+      }
+    });
+    return unsubscribe;
+  }, [usingCache, storeId]);
+
   // Debounce search query
   useEffect(() => {
     if (searchTimeoutRef.current) {
@@ -130,15 +161,25 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   }, [searchQuery]);
 
   // Load categories
+  // T-146: Enhanced with offline cache support
   useEffect(() => {
     if (!storeId) return;
 
     setCategoriesLoading(true);
     catalogApi
       .getBuyCatalogCategories(storeId)
-      .then(setCategories)
-      .catch((err) => {
+      .then((cats) => {
+        setCategories(cats);
+        // T-146: Cache categories on success
+        void cacheCatalogCategories(storeId, cats);
+      })
+      .catch(async (err) => {
         console.warn("[BuyScreen] Failed to load buy categories:", err);
+        // T-146: Fall back to cached categories
+        const cached = await getCachedCategories(storeId);
+        if (cached && cached.length > 0) {
+          setCategories(cached);
+        }
       })
       .finally(() => setCategoriesLoading(false));
   }, [storeId]);
@@ -153,6 +194,7 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
   }, [storeId, debouncedQuery, selectedCategory]);
 
   // Load products function
+  // T-146: Enhanced with offline cache support
   const loadProducts = useCallback(
     async (pageNum: number, replace: boolean) => {
       if (!storeId) return;
@@ -180,8 +222,35 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
 
         setHasMore(response.pagination.hasMore);
         setPage(pageNum);
+
+        // T-146: Cache products on successful fetch
+        setUsingCache(false);
+        setCacheAge(null);
+        if (response.data.length > 0) {
+          void cacheCatalogProducts(storeId, response.data);
+        }
       } catch (err) {
         console.error("[BuyScreen] Failed to load products:", err);
+
+        // T-146: Fall back to cached data when offline or API fails
+        if (replace && pageNum === 1) {
+          const cached = await getCachedCatalog(storeId);
+          if (cached && cached.length > 0) {
+            const filtered = searchCachedProducts(
+              cached,
+              debouncedQuery || undefined,
+              selectedCategory || undefined
+            );
+            setProducts(filtered);
+            setHasMore(false); // No pagination for cached data
+            setUsingCache(true);
+            const age = await getCacheAge(storeId);
+            setCacheAge(age);
+            setError(null); // Clear error since we have cache
+            return;
+          }
+        }
+
         setError("Failed to load products. Pull to refresh.");
       } finally {
         setLoading(false);
@@ -507,6 +576,30 @@ export function BuyScreen({ onOpenScanner, onProductPress }: BuyScreenProps) {
           </Text>
         </Pressable>
       </View>
+
+      {/* T-146: Offline / Cache Banner */}
+      {(isOffline || usingCache) && (
+        <View style={styles.offlineBanner}>
+          <MaterialCommunityIcons
+            name={isOffline ? "wifi-off" : "database-clock-outline"}
+            size={16}
+            color={theme.colors.warning}
+          />
+          <Text style={styles.offlineBannerText}>
+            {isOffline
+              ? "You're offline — showing cached catalog"
+              : `Showing cached data${cacheAge ? ` (${cacheAge})` : ""}`}
+          </Text>
+          {!isOffline && (
+            <Pressable
+              style={styles.offlineRefreshButton}
+              onPress={handleRefresh}
+            >
+              <Text style={styles.offlineRefreshText}>Refresh</Text>
+            </Pressable>
+          )}
+        </View>
+      )}
 
       {/* TICKET-003: Active Filters Display */}
       {hasActiveFilters && (
@@ -834,6 +927,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     color: theme.colors.error,
+  },
+  // T-146: Offline banner styles
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.warningSoft,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.warning + "40",
+    gap: theme.spacing.sm,
+  },
+  offlineBannerText: {
+    flex: 1,
+    fontSize: 12,
+    color: theme.colors.warning,
+    fontWeight: "500",
+  },
+  offlineRefreshButton: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.warning + "20",
+  },
+  offlineRefreshText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: theme.colors.warning,
   },
 });
 

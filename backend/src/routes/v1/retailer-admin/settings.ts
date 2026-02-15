@@ -63,7 +63,8 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         phone,
         gst_number as "gstNumber",
         tax_rate as "taxRate",
-        operating_hours as "operatingHours"
+        operating_hours as "operatingHours",
+        receipt_settings as "receiptSettings"
       FROM platform.stores
       WHERE id = $1`,
       [storeId]
@@ -92,6 +93,8 @@ retailerAdminSettingsRouter.get("/settings", async (req: Request, res: Response)
         gstNumber: store.gstNumber || '',
         taxRate: store.taxRate ?? 18.0,
         operatingHours: store.operatingHours || { open: '09:00', close: '21:00' },
+        // T-156: Receipt customization JSONB
+        receiptSettings: store.receiptSettings || {},
       }
     });
 
@@ -206,7 +209,7 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
 
   const {
     storeName, upiVpa, receiptFooter, address, phone, gstNumber,
-    taxRate, operatingHours
+    taxRate, operatingHours, receiptSettings
   } = req.body;
 
   // GO-LIVE-251: Collect all validation errors as field-mapped
@@ -291,6 +294,11 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
       updates.push(`operating_hours = $${paramIndex++}`);
       values.push(JSON.stringify(operatingHours || { open: '09:00', close: '21:00' }));
     }
+    // T-156: Receipt customization JSONB
+    if (receiptSettings !== undefined) {
+      updates.push(`receipt_settings = $${paramIndex++}`);
+      values.push(JSON.stringify(receiptSettings || {}));
+    }
 
     if (updates.length === 0) {
       return res.status(400).json({
@@ -313,7 +321,8 @@ retailerAdminSettingsRouter.patch("/settings", async (req: Request, res: Respons
          phone,
          gst_number as "gstNumber",
          tax_rate as "taxRate",
-         operating_hours as "operatingHours"`,
+         operating_hours as "operatingHours",
+         receipt_settings as "receiptSettings"`,
       values
     );
 

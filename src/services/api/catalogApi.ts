@@ -45,6 +45,7 @@ export interface CatalogProduct {
   supplierCount: number;
   stockStatus: "in_stock" | "low_stock" | "out_of_stock";
   suppliers: CatalogSupplier[];
+  imageUrl?: string; // T-139: Product image URL
 }
 
 export interface CatalogPagination {

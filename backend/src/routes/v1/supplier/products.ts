@@ -211,6 +211,9 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         edited_category,
         supermandi_margin_minor,
         bnpl_eligible,
+        price_change_pending,
+        pending_purchase_price,
+        pending_mrp,
         created_at,
         updated_at
       FROM catalog.supplier_products
@@ -242,6 +245,10 @@ router.get("/products", requireSupplierAuth, requireRegisteredSupplier, async (r
         editedCategory: p.edited_category || null,
         superMandiMarginMinor: p.supermandi_margin_minor || 0,
         bnplEligible: p.bnpl_eligible || false,
+        // T-147: Pending price change fields
+        priceChangePending: p.price_change_pending || false,
+        pendingPurchasePrice: p.pending_purchase_price || null,
+        pendingMrp: p.pending_mrp || null,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
       })),
@@ -554,11 +561,64 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
       return;
     }
 
-    // T-064/GL-WF-037: If product was approved or rejected and is being edited, reset to pending
-    // Rejected products should go back to pending for re-review (resubmit flow)
-    updates.push(`approval_status = CASE WHEN approval_status IN ('approved', 'rejected') THEN 'pending' ELSE approval_status END`);
-    // Clear rejection reason when resubmitting
-    updates.push(`rejection_reason = CASE WHEN approval_status = 'rejected' THEN NULL ELSE rejection_reason END`);
+    // T-147: Determine if this is a price-only edit on an approved product
+    // Price-only fields: purchasePrice, mrp (no name/barcode/description/category/brand/unit change)
+    const NON_PRICE_FIELDS_CHANGED = (
+      name !== undefined ||
+      category !== undefined ||
+      brand !== undefined ||
+      barcode !== undefined ||
+      supplierSku !== undefined ||
+      moq !== undefined ||
+      unit !== undefined
+    );
+    const PRICE_FIELDS_CHANGED = (purchasePrice !== undefined || mrp !== undefined);
+    const isPriceOnlyEdit = PRICE_FIELDS_CHANGED && !NON_PRICE_FIELDS_CHANGED;
+
+    // Get the current approval_status to decide behavior
+    const currentStatusResult = await pool.query(
+      `SELECT approval_status FROM catalog.supplier_products WHERE id = $1`,
+      [id]
+    );
+    const currentApprovalStatus = currentStatusResult.rows[0]?.approval_status;
+
+    if (isPriceOnlyEdit && currentApprovalStatus === 'approved') {
+      // T-147: Price-only edit on approved product — keep approved, store pending price
+      // Product stays visible on POS at the OLD price until admin approves the new price
+      if (purchasePrice !== undefined) {
+        updates.push(`pending_purchase_price = $${paramIndex++}`);
+        values.push(purchasePrice);
+      }
+      if (mrp !== undefined) {
+        updates.push(`pending_mrp = $${paramIndex++}`);
+        values.push(mrp);
+      }
+      updates.push(`price_change_pending = true`);
+      // Do NOT change approval_status — product stays approved and visible
+
+      // Remove the direct price updates from the SET clause since we store them as pending
+      // We need to rebuild updates without the direct price fields
+      const filteredUpdates = updates.filter(u =>
+        !u.startsWith('purchase_price =') && !u.startsWith('mrp =')
+      );
+      // Replace updates array
+      updates.length = 0;
+      updates.push(...filteredUpdates);
+
+      // Also remove the corresponding values — we need to rebuild paramIndex
+      // Since we added pending fields at the end, and removed direct price fields,
+      // the values array is already correct (pending values replaced direct price values)
+    } else {
+      // T-064/GL-WF-037: Non-price edit or product not approved — reset to pending for re-review
+      // Rejected products should go back to pending for re-review (resubmit flow)
+      updates.push(`approval_status = CASE WHEN approval_status IN ('approved', 'rejected') THEN 'pending' ELSE approval_status END`);
+      // Clear rejection reason when resubmitting
+      updates.push(`rejection_reason = CASE WHEN approval_status = 'rejected' THEN NULL ELSE rejection_reason END`);
+      // T-147: Clear any pending price fields since we're going back to pending review anyway
+      updates.push(`price_change_pending = false`);
+      updates.push(`pending_purchase_price = NULL`);
+      updates.push(`pending_mrp = NULL`);
+    }
 
     values.push(id);
 
@@ -579,6 +639,9 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
          unit,
          approval_status,
          is_active,
+         price_change_pending,
+         pending_purchase_price,
+         pending_mrp,
          updated_at`,
       values
     );
@@ -586,7 +649,9 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
     const product = result.rows[0];
 
     // CL-014: Cascade purchase price to linked store_products when supplier changes price
-    if (purchasePrice !== undefined) {
+    // T-147: Only cascade immediately if product is NOT approved (going to pending review)
+    // For approved products with price-only edits, the price cascades only after admin approval
+    if (purchasePrice !== undefined && !(isPriceOnlyEdit && currentApprovalStatus === 'approved')) {
       await pool.query(
         `UPDATE catalog.store_products sp
          SET purchase_price = $1, updated_at = NOW()
@@ -612,6 +677,10 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
         unit: product.unit,
         approvalStatus: product.approval_status,
         isActive: product.is_active,
+        // T-147: Include pending price info in response
+        priceChangePending: product.price_change_pending || false,
+        pendingPurchasePrice: product.pending_purchase_price || null,
+        pendingMrp: product.pending_mrp || null,
         updatedAt: product.updated_at,
       },
     });

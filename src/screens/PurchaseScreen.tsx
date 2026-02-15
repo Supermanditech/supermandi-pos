@@ -219,35 +219,94 @@ export default function PurchaseScreen({
     }
   }, []);
 
+  // T-148: Unified scan — check supplier catalog first, fall back to manual quick purchase
+  // Track scan resolution state for UI feedback
+  const [scanResolving, setScanResolving] = useState(false);
+  const [lastScanResult, setLastScanResult] = useState<"supplier" | "manual" | null>(null);
+
   // Handle scanned barcode from parent
   useEffect(() => {
-    if (scannedBarcode) {
-      markUserActive();
-      setExpandedSegment("quick");
+    if (!scannedBarcode) return;
+    markUserActive();
 
-      // Add to quick items - use functional update to avoid stale closure
-      setQuickItems((prev) => {
-        const existing = prev.find((i) => i.barcode === scannedBarcode);
-        if (existing) {
-          return prev.map((item) =>
-            item.barcode === scannedBarcode ? { ...item, quantity: item.quantity + 1 } : item
-          );
-        } else {
-          const newItem: QuickPurchaseItem = {
-            id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            barcode: scannedBarcode,
-            productName: "",
-            quantity: 1,
-            buyPrice: 0,
-            sellPrice: 0,
-            isNew: true,
-          };
-          return [newItem, ...prev];
+    // T-148: Try supplier catalog lookup first (if live suppliers ready)
+    if (liveSuppliersReady) {
+      setScanResolving(true);
+      (async () => {
+        try {
+          const storeId = await getDeviceStoreId();
+          if (storeId) {
+            const product = await buyBarcodeSearch(storeId, scannedBarcode);
+            if (product && product.suppliers.length > 0) {
+              // Found in supplier catalog — add to purchase cart (supplier flow)
+              const supplier = getPreferredOrBestSupplier(product);
+              if (supplier) {
+                purchaseCart.addItem({
+                  supplierProductId: supplier.supplierProductId,
+                  productId: product.id,
+                  supplierId: supplier.supplierId,
+                  supplierName: supplier.supplierName,
+                  productName: product.name,
+                  barcode: product.primaryBarcode || scannedBarcode,
+                  unitPrice: supplier.purchasePrice,
+                  mrp: supplier.mrp,
+                  moq: supplier.moq,
+                });
+                setExpandedSegment("suppliers");
+                setLastScanResult("supplier");
+                setScanResolving(false);
+                onBarcodeProcessed?.();
+                return;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("[PurchaseScreen] T-148: Supplier lookup failed, falling back to manual:", err);
         }
-      });
+        // Not found in supplier catalog — fall through to manual entry
+        setScanResolving(false);
+        addToQuickItems(scannedBarcode);
+        onBarcodeProcessed?.();
+      })();
+    } else {
+      // No live suppliers — direct to quick purchase
+      addToQuickItems(scannedBarcode);
       onBarcodeProcessed?.();
     }
-  }, [scannedBarcode, markUserActive, onBarcodeProcessed]);
+  }, [scannedBarcode, markUserActive, onBarcodeProcessed, liveSuppliersReady, purchaseCart]);
+
+  // T-148: Helper to add barcode to quick purchase items
+  const addToQuickItems = useCallback((barcode: string) => {
+    setExpandedSegment("quick");
+    setLastScanResult("manual");
+    setQuickItems((prev) => {
+      const existing = prev.find((i) => i.barcode === barcode);
+      if (existing) {
+        return prev.map((item) =>
+          item.barcode === barcode ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      } else {
+        const newItem: QuickPurchaseItem = {
+          id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          barcode,
+          productName: "",
+          quantity: 1,
+          buyPrice: 0,
+          sellPrice: 0,
+          isNew: true,
+        };
+        return [newItem, ...prev];
+      }
+    });
+  }, []);
+
+  // T-148: Clear scan result indicator after 3 seconds
+  useEffect(() => {
+    if (lastScanResult) {
+      const timer = setTimeout(() => setLastScanResult(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastScanResult]);
 
   // POS-BUY-001: Fetch live supplier catalog
   const fetchCatalog = useCallback(async (query?: string, page = 1) => {
@@ -639,6 +698,34 @@ export default function PurchaseScreen({
           )}
         </View>
       </View>
+
+      {/* T-148: Scan resolution feedback */}
+      {scanResolving && (
+        <View style={styles.scanFeedbackBar}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={styles.scanFeedbackText}>Checking supplier catalog...</Text>
+        </View>
+      )}
+      {lastScanResult && !scanResolving && (
+        <View style={[
+          styles.scanFeedbackBar,
+          lastScanResult === "supplier" ? styles.scanFeedbackSupplier : styles.scanFeedbackManual,
+        ]}>
+          <MaterialCommunityIcons
+            name={lastScanResult === "supplier" ? "check-circle" : "pencil-plus"}
+            size={16}
+            color={lastScanResult === "supplier" ? theme.colors.success : theme.colors.warning}
+          />
+          <Text style={[
+            styles.scanFeedbackText,
+            { color: lastScanResult === "supplier" ? theme.colors.success : theme.colors.warning },
+          ]}>
+            {lastScanResult === "supplier"
+              ? "Added from supplier catalog"
+              : "Not in catalog — manual entry"}
+          </Text>
+        </View>
+      )}
 
       {/* Content */}
       {mode === "quick" ? (
@@ -1283,5 +1370,27 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 14,
     color: theme.colors.textPrimary,
+  },
+  // T-148: Scan resolution feedback styles
+  scanFeedbackBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: 8,
+  },
+  scanFeedbackText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+  },
+  scanFeedbackSupplier: {
+    backgroundColor: theme.colors.successSoft,
+  },
+  scanFeedbackManual: {
+    backgroundColor: theme.colors.warningSoft,
   },
 });

@@ -14,10 +14,16 @@ export interface BnplDrawdown {
   orderNumber: string | null;
   purchaseOrderId: string | null;
   principalMinor: number;
+  // T-153: Track partial payments
+  paidAmountMinor: number;
   dueDate: string;
-  status: "active" | "paid" | "overdue" | "defaulted";
+  status: "active" | "paid" | "partial" | "overdue" | "defaulted";
   daysRemaining: number;
   isOverdue: boolean;
+  // T-158: Interest rate fields
+  interestRatePercent: number;
+  interestMinor: number;
+  totalWithInterestMinor: number;
 }
 
 export interface BnplActiveResponse {

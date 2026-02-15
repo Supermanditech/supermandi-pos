@@ -274,6 +274,7 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
           upi_vpa_updated_at,
           upi_vpa_updated_by,
           allowed_payment_methods,
+          max_devices,
           created_at,
           updated_at
         FROM platform.stores
@@ -287,7 +288,22 @@ adminStoresRouter.get("/stores/:storeId", requirePermission("stores", "read"), a
       return res.status(404).json({ error: "store not found" });
     }
 
-    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'] } });
+    // T-185: Include max_devices and active device count in store detail
+    let deviceInfo: { max_devices: number; active_device_count: number } | undefined;
+    try {
+      const deviceCountRes = await pool.query(
+        `SELECT COUNT(*)::int as count FROM pos_devices WHERE store_id = $1 AND active = true`,
+        [store.id]
+      );
+      deviceInfo = {
+        max_devices: store.max_devices ?? 10,
+        active_device_count: deviceCountRes.rows[0]?.count ?? 0,
+      };
+    } catch {
+      // Non-critical
+    }
+
+    return res.json({ store: { ...store, storeName: store.name, storeCode: store.store_code ?? store.code, allowedPaymentMethods: store.allowed_payment_methods ?? ['CASH', 'UPI', 'DUE'], ...(deviceInfo ?? {}) } });
   } catch (error: any) {
     console.error("[admin/stores/:storeId] Query failed:", error?.message);
     // Fallback with base columns

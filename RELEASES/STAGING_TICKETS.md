@@ -2,8 +2,9 @@
 
 > **Phase 1**: T-001 to T-053 — UI/UX staging fixes from operator browser testing (ALL DONE)
 > **Phase 2**: T-054 to T-073 — E2E production-grade implementation tickets (ALL DONE)
-> **Phase 3**: T-074 to T-111 — UI/UX Professional Polish (QUEUED)
-> **Phase 4**: T-112 to T-127 — Wiring & Navigation (QUEUED)
+> **Phase 3**: T-074 to T-111 — UI/UX Professional Polish (ALL DONE)
+> **Phase 4**: T-112 to T-127 — Wiring & Navigation (ALL DONE)
+> **Phase 5**: T-128 to T-199 — Production Audit: POS + Cross-Platform Gaps (QUEUED)
 > **Launch Geography**: India — INR (₹), +91, IST, DD/MM/YYYY
 > **Zero Regression Rule**: Every ticket must leave the system in a deployable state. Fix micro issues inline.
 
@@ -454,3 +455,166 @@ Phase 4D: POS Navigation Polish
 4. **Modal state is defensive**: Stale sessionStorage → silently discard.
 5. **POS stability**: Error boundaries per-screen — one crash never takes down the app.
 6. **Typecheck clean**: `pnpm -r typecheck` after every ticket.
+
+---
+
+## PHASE 5: PRODUCTION AUDIT — POS + CROSS-PLATFORM GAPS (T-128 → T-199)
+
+> 72 tickets across 8 categories (X→AE). Comprehensive audit of POS sell/buy flows, payments, product images, barcode labels, data sync, cross-platform integration, and business logic.
+> P0 Go-Live Blockers: T-147 (price continuity), T-149 (QR expiry), T-150 (refund flow), T-173 (real-time sync), T-177 (stock locking), T-184 (token revocation), T-188 (batch approval)
+
+| Category | Range | Count | Priority | Description |
+|----------|-------|-------|----------|-------------|
+| X: POS Sell Flow & Scan | T-128 → T-138 | 11 | P0-P2 | Manual barcode, search debounce, fuzzy search, product images, voice Hindi |
+| Y: POS Purchase Tab (B2B) | T-139 → T-148 | 10 | P0-P2 | Purchase images, MOQ, batch/lot, price continuity, unified flows |
+| Z: Payment & UPI | T-149 → T-158 | 10 | P0-P2 | QR expiry, refund flow, Khata, customer profiles, BNPL partial |
+| AA: Product Images | T-159 → T-165 | 7 | P1-P2 | Image schema, GCS upload, supplier UI, placeholders, optimization |
+| AB: Barcode Sheets | T-166 → T-172 | 7 | P2 | Category filter, custom selection, preview, label enrichment |
+| AC: Data Sync & Offline | T-173 → T-179 | 7 | P0-P1 | Real-time SSE, stock locking, deadletter, auto-sync |
+| AD: Cross-Platform | T-180 → T-190 | 11 | P0-P2 | PO visibility, batch approval, token revocation, max devices |
+| AE: Business Logic | T-191 → T-199 | 9 | P1-P2 | Z-report, shift management, returns, customer management |
+
+### CATEGORY X: POS SELL FLOW & SCAN (T-128 → T-138)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-128 | Manual barcode entry fallback to POS sell screen | P0 |
+| T-129 | 300ms search debounce to POS sell screen | P1 |
+| T-130 | Recent search history to POS sell screen | P2 |
+| T-131 | Frequently sold products when search empty | P2 |
+| T-132 | Fuzzy/typo-tolerant search via pg_trgm | P1 |
+| T-133 | Bulk quantity selector on product cards | P2 |
+| T-134 | Product images on POS sell screen cards | P1 |
+| T-135 | Voice command Hindi language indicator | P2 |
+| T-136 | Product substitution suggestions (out of stock) | P2 |
+| T-137 | Search autocomplete/suggestions | P2 |
+| T-138 | Audio/haptic feedback on scan add | P2 |
+
+### CATEGORY Y: POS PURCHASE TAB B2B (T-139 → T-148)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-139 | Product images on purchase catalog cards | P1 |
+| T-140 | Delivery date picker in purchase flow | P1 |
+| T-141 | Always show MOQ on purchase cards | P1 |
+| T-142 | Show actual available quantity from supplier | P1 |
+| T-143 | Recently purchased quick-reorder section | P2 |
+| T-144 | Batch/lot number + expiry date in GRN | P1 |
+| T-145 | Backend cart backup for purchase cart | P1 |
+| T-146 | Offline catalog browsing for purchase tab | P1 |
+| T-147 | Prevent product disappearance during supplier price edit | P0 |
+| T-148 | Unify Quick Purchase and Live Supplier flows | P2 |
+
+### CATEGORY Z: PAYMENT & UPI (T-149 → T-158)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-149 | UPI QR expiry 5 minutes + countdown timer | P0 |
+| T-150 | Payment refund flow (refunds table + API + POS UI) | P0 |
+| T-151 | Payment reconciliation dashboard (Retailer Admin) | P1 |
+| T-152 | Three-way split payment support | P2 |
+| T-153 | BNPL partial payment option | P1 |
+| T-154 | Khata (credit book) UI to POS | P1 |
+| T-155 | Customer profiles for regular buyers | P1 |
+| T-156 | Payment receipt customization | P2 |
+| T-157 | Bank transfer option for supplier purchases | P2 |
+| T-158 | Configurable BNPL interest rates per supplier | P2 |
+
+### CATEGORY AA: PRODUCT IMAGES (T-159 → T-165)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-159 | image_url column to supplier/store/products tables | P1 |
+| T-160 | Image upload endpoint with GCS storage | P1 |
+| T-161 | Image upload UI in supplier portal product creation | P1 |
+| T-162 | Image preview in SuperAdmin product approval | P1 |
+| T-163 | Placeholder image component for products without photos | P1 |
+| T-164 | Image optimization/resizing pipeline (sharp) | P2 |
+| T-165 | Image column in CSV import for supplier products | P2 |
+
+### CATEGORY AB: BARCODE SHEETS (T-166 → T-172)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-166 | Category-wise filtering for barcode sheet | P2 |
+| T-167 | Custom product selection for barcode sheet | P2 |
+| T-168 | Barcode sheet preview before download | P2 |
+| T-169 | Print settings for barcode labels | P2 |
+| T-170 | Batch printing (N copies of same barcode) | P2 |
+| T-171 | Enrich labels with price, unit, category | P2 |
+| T-172 | Auto-generate labels after GRN | P2 |
+
+### CATEGORY AC: DATA SYNC & OFFLINE (T-173 → T-179)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-173 | Real-time product sync via SSE | P0 |
+| T-174 | Real-time settings sync from web to POS | P0 |
+| T-175 | Sync progress indicator + queue depth | P1 |
+| T-176 | Deadletter recovery for failed sync events | P1 |
+| T-177 | Stock locking (optimistic concurrency) | P0 |
+| T-178 | Periodic stock reconciliation POS↔server | P1 |
+| T-179 | Background auto-sync configurable interval | P1 |
+
+### CATEGORY AD: CROSS-PLATFORM (T-180 → T-190)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-180 | POS purchase order visibility in Retailer Admin | P1 |
+| T-181 | PO-to-invoice linkage for reconciliation | P1 |
+| T-182 | Supplier catalog browsing from POS | P1 |
+| T-183 | Auto-refresh on Retailer Admin inventory page | P1 |
+| T-184 | Immediate token revocation via Redis blacklist | P0 |
+| T-185 | Max devices per store enforcement | P1 |
+| T-186 | Align CSV import validation with product form | P1 |
+| T-187 | Populate categoryId in product creation flow | P1 |
+| T-188 | Batch approval/rejection in SuperAdmin | P0 |
+| T-189 | Margin analysis report (SuperAdmin analytics) | P2 |
+| T-190 | Compliance/KYC doc upload from POS app | P2 |
+
+### CATEGORY AE: POS MENU & BUSINESS LOGIC (T-191 → T-199)
+
+| # | Title | Priority |
+|---|-------|----------|
+| T-191 | Daily cash closing / Z-report | P1 |
+| T-192 | Shift management with cash count | P1 |
+| T-193 | Collection/dunning for overdue DUE payments | P1 |
+| T-194 | Return/refund processing screen | P1 |
+| T-195 | Thermal printer configuration screen | P2 |
+| T-196 | Customer management screen | P1 |
+| T-197 | Auto-categorization of products by name | P2 |
+| T-198 | Opening stock ledger creation from POS | P1 |
+| T-199 | Daily closing printable report | P2 |
+
+### EXECUTION ORDER
+
+```
+Phase 5A: Schema Foundation (DB migrations)
+  T-159, T-154, T-155, T-144, T-145, T-150, T-177, T-191, T-192
+
+Phase 5B: Backend Core APIs
+  T-147 (P0), T-184 (P0), T-149 (P0), T-173 (P0), T-132, T-160, T-131, T-143, T-186, T-185, T-188 (P0)
+
+Phase 5C: POS App Features
+  T-128 (P0), T-129, T-134, T-139-T-142, T-146, T-153, T-174-T-179
+
+Phase 5D: POS New Screens
+  T-154, T-155, T-191, T-192, T-194, T-196, T-198
+
+Phase 5E: Web Portal Features
+  T-161-T-163, T-151, T-180-T-181, T-183, T-187, T-188
+
+Phase 5F-5I: UX + Advanced + Barcode
+  T-130, T-133, T-135-T-138, T-148, T-152, T-156-T-158, T-164-T-172, T-189-T-190, T-193, T-195, T-197, T-199
+```
+
+### ZERO REGRESSION RULES FOR PHASE 5
+
+1. **Schema migrations are additive only** — new columns with DEFAULT null, new tables. Never alter existing columns.
+2. **Stock integrity**: `stock_balances.quantity = SUM(inventory_ledger.delta_qty)` must hold.
+3. **Store isolation**: All new endpoints derive `store_id` from JWT only.
+4. **Price integrity**: All money in minor units (paise). No floating point. Integer arithmetic only.
+5. **Supplier gate**: T-147 does NOT bypass approval — old price stays visible while change is pending.
+6. **Offline safety**: Cache is read-only fallback. Mutations always through server when online.
+7. **India market**: DD/MM/YYYY, INR (₹), +91 on all new screens.
+8. **Typecheck clean**: `pnpm -r typecheck` after every batch.

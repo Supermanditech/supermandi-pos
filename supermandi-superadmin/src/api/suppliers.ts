@@ -164,6 +164,8 @@ export type PendingProduct = {
   purchasePrice: number;
   mrp: number;
   moq?: number;
+  imageUrl?: string | null; // T-162: Product image URL
+  thumbnailUrl?: string | null; // T-162: Thumbnail for list views
   createdAt: string;
   supplierId: string;
   supplierName: string;
@@ -395,6 +397,45 @@ export async function fetchSupplierStatusHistory(
 
   const data = await res.json();
   return Array.isArray(data?.history) ? data.history : [];
+}
+
+// =============================================================================
+// T-188: Batch Product Approval/Rejection
+// =============================================================================
+
+export interface BatchActionResult {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  errors: Array<{ productId: string; error: string }>;
+}
+
+/**
+ * T-188: Batch approve or reject multiple products at once
+ * POST /api/v1/admin/applications/products/batch-action
+ */
+export async function batchProductAction(
+  productIds: string[],
+  action: "approve" | "reject",
+  reason?: string
+): Promise<BatchActionResult> {
+  const base = requireApiBase();
+
+  const res = await fetchWithTimeout(`${base}/api/v1/admin/applications/products/batch-action`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify({ productIds, action, reason })
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseError(res));
+  }
+
+  return res.json();
 }
 
 /**

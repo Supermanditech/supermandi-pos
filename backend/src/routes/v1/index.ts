@@ -14,7 +14,9 @@ import { posStoreProductsRouter } from "./pos/storeProducts";
 import { posSuppliersRouter } from "./pos/suppliers";
 import { posStockInRouter } from "./pos/stockIn";
 import { posPaymentsRouter } from "./pos/payments";
+import { posRefundsRouter } from "./pos/refunds";  // T-150: Payment refund flow
 import { posBnplRouter } from "./pos/bnpl";  // SM-019: BNPL drawdowns
+import { posComplianceRouter } from "./pos/compliance";  // T-190: KYC document upload
 import { posCreditRouter } from "./pos/credit";  // SM-021: Credit offers
 import { posDuesRouter } from "./pos/dues";  // POS-DUE-001: Customer dues management
 import { tokenManagementRouter } from "./pos/tokenManagement";  // GL-WF-045-A: Token security
@@ -62,7 +64,9 @@ import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
 import { supplierRouter } from "./supplier";  // SM-005, SM-006, SM-007: Supplier portal APIs
+import { posSyncEventsRouter } from "./pos/syncEvents";  // T-173: SSE real-time sync
 import { voiceRouter } from "./pos/voice";  // GO-LIVE: Voice order with OpenAI
+import { uploadsRouter } from "./uploads/images";  // T-160: Image upload endpoint
 import { documentsRouter } from "./documents";  // DOCS-001: Unified document storage
 import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin document management
 import { adminRegistrationEventsRouter } from "./admin/registrationEvents";  // RO-007: Registration events
@@ -96,11 +100,14 @@ v1Router.use("/pos", posStoreProductsRouter);
 v1Router.use("/pos", posSuppliersRouter);
 v1Router.use("/pos", posStockInRouter);
 v1Router.use("/pos", posPaymentsRouter);  // SM-010: SELL UPI + Cash + DUE payments
+v1Router.use("/pos", posRefundsRouter);  // T-150: Payment refund flow
 v1Router.use("/pos", posBnplRouter);  // SM-019: BNPL drawdowns
+v1Router.use("/pos", posComplianceRouter);  // T-190: KYC document upload
 v1Router.use("/pos", posCreditRouter);  // SM-021: Credit offers
 v1Router.use("/pos", posDuesRouter);  // POS-DUE-001: Customer dues management
 v1Router.use("/pos", tokenManagementRouter);  // GL-WF-045-A: Token security endpoints
 v1Router.use("/pos", posStaffRouter);  // SA-P1-001: POS staff login
+v1Router.use("/pos", posSyncEventsRouter);  // T-173: SSE real-time sync
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
@@ -187,4 +194,5 @@ v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL v
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs
+v1Router.use("/uploads", uploadsRouter);  // T-160: Image upload endpoint
 v1Router.use("/voice", voiceRouter);  // GO-LIVE: Voice order with OpenAI

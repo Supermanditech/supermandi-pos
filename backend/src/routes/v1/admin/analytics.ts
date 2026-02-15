@@ -254,6 +254,109 @@ adminAnalyticsRouter.get("/analytics/dues", async (req, res) => {
   }
 });
 
+// =============================================================================
+// T-189: Margin Analysis Report
+// GET /api/v1/admin/analytics/margins
+// Returns product margins grouped by category with aggregation
+// =============================================================================
+
+adminAnalyticsRouter.get("/analytics/margins", async (req, res) => {
+  try {
+    const storeId = asString(req.query.storeId);
+    const from = asString(req.query.from);
+    const to = asString(req.query.to);
+    const groupBy = asString(req.query.groupBy) || 'category'; // category | product
+    const limit = asNumber(req.query.limit) || 50;
+    const offset = asNumber(req.query.offset) || 0;
+
+    // GO-LIVE-007: Validate date range
+    const dateValidation = validateDateRange(from, to);
+    if (dateValidation.error) {
+      return res.status(400).json({ error: dateValidation.error });
+    }
+
+    const pool = (await import("../../../db/client")).getPool();
+    if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+    let query: string;
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (groupBy === 'product') {
+      // Per-product margin analysis
+      query = `
+        SELECT
+          p.name as "productName",
+          p.brand,
+          COALESCE(t.name, 'Uncategorized') as "category",
+          sp.sell_price as "sellPriceMinor",
+          sp.purchase_price as "purchasePriceMinor",
+          sp.mrp as "mrpMinor",
+          CASE WHEN sp.purchase_price > 0
+            THEN ROUND(((sp.sell_price - sp.purchase_price)::numeric / sp.purchase_price) * 100, 2)
+            ELSE 0
+          END as "marginPercent",
+          (sp.sell_price - COALESCE(sp.purchase_price, 0)) as "marginMinor",
+          COALESCE(sp.current_stock, 0) as "currentStock",
+          sp.store_id as "storeId"
+        FROM catalog.store_products sp
+        JOIN catalog.products p ON p.id = sp.product_id
+        LEFT JOIN catalog.store_taxonomies t ON t.id = sp.taxonomy_id
+        WHERE sp.is_active = true`;
+
+      if (storeId) {
+        query += ` AND sp.store_id = $${paramIdx}`;
+        params.push(storeId);
+        paramIdx++;
+      }
+
+      query += ` ORDER BY "marginPercent" DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+      params.push(limit, offset);
+    } else {
+      // Category-level margin aggregation
+      query = `
+        SELECT
+          COALESCE(t.name, 'Uncategorized') as "category",
+          COUNT(*) as "productCount",
+          ROUND(AVG(
+            CASE WHEN sp.purchase_price > 0
+              THEN ((sp.sell_price - sp.purchase_price)::numeric / sp.purchase_price) * 100
+              ELSE 0
+            END
+          ), 2) as "avgMarginPercent",
+          SUM(sp.sell_price - COALESCE(sp.purchase_price, 0)) as "totalMarginMinor",
+          SUM(sp.sell_price) as "totalRevenuePotentialMinor",
+          SUM(COALESCE(sp.purchase_price, 0)) as "totalCostMinor",
+          SUM(COALESCE(sp.current_stock, 0)) as "totalStock"
+        FROM catalog.store_products sp
+        JOIN catalog.products p ON p.id = sp.product_id
+        LEFT JOIN catalog.store_taxonomies t ON t.id = sp.taxonomy_id
+        WHERE sp.is_active = true`;
+
+      if (storeId) {
+        query += ` AND sp.store_id = $${paramIdx}`;
+        params.push(storeId);
+        paramIdx++;
+      }
+
+      query += ` GROUP BY t.name ORDER BY "avgMarginPercent" DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`;
+      params.push(limit, offset);
+    }
+
+    const result = await pool.query(query, params);
+
+    return res.json({
+      success: true,
+      margins: result.rows,
+      groupBy,
+      pagination: { limit, offset },
+    });
+  } catch (e: any) {
+    console.error("[T-189] Margin analysis failed:", e?.message);
+    res.status(500).json({ error: { code: "ANALYTICS_FAILED", message: "Failed to fetch margin analysis" } });
+  }
+});
+
 // MED-012: DEPRECATED - No frontend callers as of 2026-01-25
 // Retained for potential future admin dashboard use
 adminAnalyticsRouter.get("/analytics/activity", async (req, res) => {

@@ -9,6 +9,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  uploadProductImage,
   Product,
   ProductInput,
   PaginatedResponse,
@@ -20,7 +21,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import { useUrlState } from '@/hooks/useUrlState';
 // GAP-3: EmptyState component for consistent empty states
 import EmptyState from '@/components/EmptyState';
-import { Package } from 'lucide-react';
+import { Package, Upload, X, ImageIcon } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -69,6 +70,13 @@ export default function ProductsPage() {
   // ISSUE-MICRO-005: Pagination synced to URL for refresh/back-button persistence
   const currentPage = Math.max(1, parseInt(searchParams.get('page') || '1') || 1);
   const pageSize = 20;
+
+  // T-161: Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUploadProgress, setImageUploadProgress] = useState<number>(0);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const [formData, setFormData] = useState<ProductInput>({
     name: '',
@@ -167,6 +175,12 @@ export default function ProductsPage() {
     setShowForm(false);
     setEditingProduct(null);
     setHasUnsavedChanges(false); // GL-WF-062
+    // T-161: Clear image state
+    setImageFile(null);
+    setImagePreview(null);
+    setImageUploadProgress(0);
+    setIsUploadingImage(false);
+    setIsDragOver(false);
     setFormData({
       name: '',
       description: '',
@@ -220,6 +234,11 @@ export default function ProductsPage() {
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
     setHasUnsavedChanges(false); // GL-WF-062: Reset on edit start
+    // T-161: Load existing image preview if product has an image
+    setImageFile(null);
+    setImagePreview(product.imageUrl || product.thumbnailUrl || null);
+    setImageUploadProgress(0);
+    setIsUploadingImage(false);
     setFormData({
       name: product.name,
       description: product.description || '',
@@ -230,6 +249,7 @@ export default function ProductsPage() {
       mrp: product.mrp,
       moq: product.moq,
       unit: product.unit,
+      imageUrl: product.imageUrl,
     });
     setShowForm(true);
   };
@@ -240,7 +260,52 @@ export default function ProductsPage() {
     return /^\d{8}$|^\d{12,14}$/.test(barcode);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // T-161: Image file selection handler
+  const handleImageSelect = (file: File) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only JPEG, PNG, and WebP images are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image file size must be under 5MB');
+      return;
+    }
+    setImageFile(file);
+    setHasUnsavedChanges(true);
+    // Create local preview
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setImagePreview(ev.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // T-161: Handle file input change
+  const handleImageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageSelect(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
+
+  // T-161: Handle drag-and-drop
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageSelect(file);
+  };
+
+  // T-161: Remove selected image
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setHasUnsavedChanges(true);
+    setFormData((prev) => ({ ...prev, imageUrl: undefined }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // SUP-004: Product name validation — min 2 chars, max 200
@@ -273,10 +338,28 @@ export default function ProductsPage() {
       return;
     }
 
+    // T-161: Upload image first if a new file is selected
+    let submitData = { ...formData };
+    if (imageFile) {
+      try {
+        setIsUploadingImage(true);
+        setImageUploadProgress(0);
+        const result = await uploadProductImage(imageFile, {
+          onProgress: setImageUploadProgress,
+        });
+        submitData = { ...submitData, imageUrl: result.imageUrl };
+        setIsUploadingImage(false);
+      } catch (error) {
+        setIsUploadingImage(false);
+        toast.error(error instanceof Error ? error.message : 'Failed to upload image');
+        return;
+      }
+    }
+
     if (editingProduct) {
-      updateMutation.mutate({ id: editingProduct.id, data: formData });
+      updateMutation.mutate({ id: editingProduct.id, data: submitData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -310,7 +393,7 @@ export default function ProductsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isSubmitting = createMutation.isPending || updateMutation.isPending || isUploadingImage;
 
   // ISSUE-MICRO-005: Update pagination via URL for back-button/refresh persistence
   const handlePageChange = (newPage: number) => {
@@ -481,13 +564,93 @@ export default function ProductsPage() {
               />
             </div>
 
+            {/* T-161: Product Image Upload */}
+            <div>
+              <label className="label">Product Image</label>
+              {imagePreview ? (
+                <div className="flex items-start gap-4">
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Product preview"
+                      className="w-32 h-32 object-cover rounded-lg border border-slate-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                  <div className="text-sm text-slate-500 mt-2">
+                    {imageFile ? (
+                      <span>{imageFile.name} ({(imageFile.size / 1024).toFixed(0)} KB)</span>
+                    ) : (
+                      <span>Current product image</span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+                    isDragOver
+                      ? 'border-primary-400 bg-primary-50'
+                      : 'border-slate-300 hover:border-primary-400'
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => document.getElementById('product-image-input')?.click()}
+                >
+                  <input
+                    id="product-image-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleImageInputChange}
+                  />
+                  <div className="flex flex-col items-center gap-2">
+                    {isDragOver ? (
+                      <ImageIcon size={32} className="text-primary-400" />
+                    ) : (
+                      <Upload size={32} className="text-slate-400" />
+                    )}
+                    <div className="text-sm text-slate-600">
+                      <span className="font-medium text-primary-600">Click to upload</span> or drag and drop
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      JPEG, PNG, or WebP (max 5MB)
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* T-161: Upload progress indicator */}
+              {isUploadingImage && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary-500 rounded-full transition-all duration-300"
+                        style={{ width: `${imageUploadProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-mono">{imageUploadProgress}%</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={isSubmitting}
               >
-                {isSubmitting
+                {isUploadingImage
+                  ? 'Uploading Image...'
+                  : isSubmitting
                   ? 'Saving...'
                   : editingProduct
                   ? 'Update Product'

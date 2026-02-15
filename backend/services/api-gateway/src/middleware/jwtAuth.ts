@@ -1,9 +1,12 @@
 // JWT Authentication Middleware for API Gateway
 // Verifies JWT tokens and sets x-user-id, x-actor-id headers for downstream services
 // GO-LIVE-139: Reject demo tokens in production
+// T-184: Redis-based token blacklist for immediate revocation
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { isTokenBlacklisted } from '../redis';
 
 // =============================================================================
 // TYPES
@@ -137,7 +140,7 @@ function getCookieValue(req: Request, name: string): string | undefined {
  *
  * Public routes (listed in PUBLIC_PATHS) bypass authentication.
  */
-export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
+export async function jwtAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   // Check if this is a public path (auth, registration, health endpoints)
   const isPublicPath = PUBLIC_PATHS.some(path => req.path.startsWith(path));
   if (isPublicPath) {
@@ -194,6 +197,28 @@ export function jwtAuthMiddleware(req: Request, res: Response, next: NextFunctio
         requestId: req.correlationId,
       });
       return;
+    }
+
+    // T-184: Check Redis blacklist for immediate token revocation
+    // Use jti if present, otherwise hash the token as the blacklist key
+    const blacklistKey = decoded.jti || crypto.createHash('sha256').update(token).digest('hex');
+    try {
+      const revoked = await isTokenBlacklisted(blacklistKey);
+      if (revoked) {
+        console.log(`[T-184] Rejected blacklisted token: key=${blacklistKey.substring(0, 8)}..., user=${decoded.sub}`);
+        res.status(401).json({
+          error: {
+            code: 'TOKEN_REVOKED',
+            message: 'This session has been logged out. Please login again.',
+          },
+          requestId: req.correlationId,
+        });
+        return;
+      }
+    } catch (blacklistError) {
+      // T-184: Fail open — if Redis is down, allow the request through
+      // The downstream services still check DB-based revocation as a fallback
+      console.warn('[T-184] Redis blacklist check failed (failing open):', blacklistError);
     }
 
     // Validate required claims

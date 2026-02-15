@@ -5,6 +5,8 @@
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
+// T-197: Keyword-based auto-categorization
+import { suggestCategory, getAvailableCategories } from "../../utils/autoCategorization";
 
 export const catalogRouter = Router();
 
@@ -1005,4 +1007,51 @@ catalogRouter.get("/stores/:storeId/categories/:taxonomyId/products", requireDev
       error: "Failed to load products",
     });
   }
+});
+
+// =============================================================================
+// T-197: Auto-Categorization Suggestion Endpoint
+// POST /api/v1/catalog/suggest-category
+// =============================================================================
+
+/**
+ * POST /api/v1/catalog/suggest-category
+ * T-197: Suggest category for a product name using Indian FMCG keyword matching
+ *
+ * Body: { name: string } or { names: string[] } for batch
+ * Returns: { category: string | null } or { suggestions: Array<{ name, category }> }
+ */
+catalogRouter.post("/suggest-category", requireDeviceToken, (req: Request, res: Response) => {
+  const { name, names } = req.body as { name?: string; names?: string[] };
+
+  // Batch mode
+  if (Array.isArray(names)) {
+    if (names.length > 500) {
+      return res.status(400).json({ error: "Maximum 500 names per batch" });
+    }
+    const suggestions = names.map((n: string) => ({
+      name: n,
+      category: suggestCategory(n),
+    }));
+    return res.json({ success: true, suggestions });
+  }
+
+  // Single mode
+  if (!name || typeof name !== 'string') {
+    return res.status(400).json({ error: "name is required (string)" });
+  }
+
+  const category = suggestCategory(name);
+  return res.json({ success: true, name, category });
+});
+
+/**
+ * GET /api/v1/catalog/categories/auto
+ * T-197: Get all available auto-categorization categories
+ */
+catalogRouter.get("/categories/auto", requireDeviceToken, (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    categories: getAvailableCategories(),
+  });
 });

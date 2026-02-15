@@ -1,0 +1,835 @@
+// T-155: Customer Profiles Screen
+// List of all customers, search, detail view with purchase history, add/edit customer
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import { theme } from "../theme";
+import { formatMoney } from "../utils/money";
+import { formatDateTime } from "../i18n/formatters";
+import { useCustomerStore } from "../stores/customerStore";
+import type { Customer, CustomerPurchase } from "../services/customerService";
+import { BackHeader } from "../components/ui/BackHeader";
+import EmptyState from "../components/ui/EmptyState";
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+function formatDateDDMMYYYY(dateStr: string | null): string {
+  if (!dateStr) return "--";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "--";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+interface CustomerListScreenProps {
+  onBack?: () => void;
+}
+
+export default function CustomerListScreen({ onBack }: CustomerListScreenProps) {
+  const {
+    customers,
+    selectedCustomer,
+    loading,
+    detailLoading,
+    error,
+    fetchCustomers,
+    fetchCustomerDetail,
+    createCustomer,
+    updateCustomer,
+    setSelectedCustomer,
+    clearError,
+  } = useCustomerStore();
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Add customer form state
+  const [formName, setFormName] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formAddress, setFormAddress] = useState("");
+  const [formSubmitting, setFormSubmitting] = useState(false);
+
+  useEffect(() => {
+    void fetchCustomers();
+  }, []);
+
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error);
+      clearError();
+    }
+  }, [error]);
+
+  const handleSearch = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      void fetchCustomers(text || undefined);
+    },
+    [fetchCustomers]
+  );
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchCustomers(searchQuery || undefined).finally(() => setRefreshing(false));
+  }, [fetchCustomers, searchQuery]);
+
+  const handleCustomerTap = useCallback(
+    (customer: Customer) => {
+      void fetchCustomerDetail(customer.id);
+      setShowDetail(true);
+    },
+    [fetchCustomerDetail]
+  );
+
+  const handleCloseDetail = useCallback(() => {
+    setShowDetail(false);
+    setSelectedCustomer(null);
+  }, [setSelectedCustomer]);
+
+  // Add customer
+  const handleOpenAddModal = useCallback(() => {
+    setFormName("");
+    setFormPhone("");
+    setFormEmail("");
+    setFormAddress("");
+    setShowAddModal(true);
+  }, []);
+
+  const handleSubmitAdd = useCallback(async () => {
+    const name = formName.trim();
+    const phone = formPhone.trim();
+    if (!name) {
+      Alert.alert("Required", "Please enter the customer name.");
+      return;
+    }
+    if (!phone || phone.length < 10) {
+      Alert.alert("Required", "Please enter a valid 10-digit phone number.");
+      return;
+    }
+    setFormSubmitting(true);
+    const success = await createCustomer({
+      name,
+      phone,
+      email: formEmail.trim() || undefined,
+      address: formAddress.trim() || undefined,
+    });
+    setFormSubmitting(false);
+    if (success) {
+      setShowAddModal(false);
+      Alert.alert("Success", "Customer added.");
+    }
+  }, [formName, formPhone, formEmail, formAddress, createCustomer]);
+
+  // Edit customer
+  const handleOpenEditModal = useCallback(() => {
+    if (!selectedCustomer) return;
+    setFormName(selectedCustomer.name);
+    setFormPhone(selectedCustomer.phone);
+    setFormEmail(selectedCustomer.email || "");
+    setFormAddress(selectedCustomer.address || "");
+    setShowEditModal(true);
+  }, [selectedCustomer]);
+
+  const handleSubmitEdit = useCallback(async () => {
+    if (!selectedCustomer) return;
+    const name = formName.trim();
+    if (!name) {
+      Alert.alert("Required", "Please enter the customer name.");
+      return;
+    }
+    setFormSubmitting(true);
+    const success = await updateCustomer(selectedCustomer.id, {
+      name,
+      email: formEmail.trim() || undefined,
+      address: formAddress.trim() || undefined,
+    });
+    setFormSubmitting(false);
+    if (success) {
+      setShowEditModal(false);
+      // Refresh detail
+      void fetchCustomerDetail(selectedCustomer.id);
+      Alert.alert("Success", "Customer updated.");
+    }
+  }, [selectedCustomer, formName, formEmail, formAddress, updateCustomer, fetchCustomerDetail]);
+
+  // Render customer card
+  const renderCustomerCard = useCallback(
+    ({ item }: { item: Customer }) => (
+      <Pressable style={styles.customerCard} onPress={() => handleCustomerTap(item)}>
+        <View style={styles.customerAvatar}>
+          <Text style={styles.customerAvatarText}>
+            {(item.name || "?").charAt(0).toUpperCase()}
+          </Text>
+        </View>
+        <View style={styles.customerInfo}>
+          <Text style={styles.customerName} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.customerPhone}>{item.phone}</Text>
+          <View style={styles.customerStats}>
+            <Text style={styles.customerStat}>
+              {formatMoney(item.totalPurchasesMinor)} spent
+            </Text>
+            <Text style={styles.customerStatDivider}>|</Text>
+            <Text style={styles.customerStat}>{item.visitCount} visits</Text>
+          </View>
+          {item.lastVisitAt && (
+            <Text style={styles.customerLastVisit}>
+              Last visit: {formatDateDDMMYYYY(item.lastVisitAt)}
+            </Text>
+          )}
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={theme.colors.textTertiary} />
+      </Pressable>
+    ),
+    [handleCustomerTap]
+  );
+
+  // Render purchase history item in detail view
+  const renderPurchaseItem = useCallback((purchase: CustomerPurchase) => (
+    <View key={purchase.saleId} style={styles.purchaseItem}>
+      <View style={styles.purchaseInfo}>
+        <Text style={styles.purchaseBillRef}>Bill #{purchase.billRef}</Text>
+        <Text style={styles.purchaseDate}>{formatDateDDMMYYYY(purchase.createdAt)}</Text>
+        <View style={styles.purchaseMeta}>
+          <Text style={styles.purchaseMetaText}>{purchase.itemCount} items</Text>
+          <Text style={styles.purchaseMetaDivider}>|</Text>
+          <Text style={styles.purchaseMetaText}>{purchase.paymentMode}</Text>
+        </View>
+      </View>
+      <Text style={styles.purchaseAmount}>{formatMoney(purchase.totalMinor)}</Text>
+    </View>
+  ), []);
+
+  return (
+    <View style={styles.container}>
+      <BackHeader title="Customers" onBack={onBack} />
+
+      {/* Search bar */}
+      <View style={styles.searchBar}>
+        <MaterialCommunityIcons name="magnify" size={20} color={theme.colors.textTertiary} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by name or phone..."
+          placeholderTextColor={theme.colors.textTertiary}
+          value={searchQuery}
+          onChangeText={handleSearch}
+          autoCapitalize="none"
+          returnKeyType="search"
+        />
+        {searchQuery.length > 0 && (
+          <Pressable onPress={() => handleSearch("")} hitSlop={8}>
+            <MaterialCommunityIcons name="close-circle" size={18} color={theme.colors.textTertiary} />
+          </Pressable>
+        )}
+      </View>
+
+      {/* Add button */}
+      <Pressable style={styles.addButton} onPress={handleOpenAddModal}>
+        <MaterialCommunityIcons name="account-plus-outline" size={18} color={theme.colors.primary} />
+        <Text style={styles.addButtonText}>Add Customer</Text>
+      </Pressable>
+
+      {/* Customer list */}
+      {loading && customers.length === 0 ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading customers...</Text>
+        </View>
+      ) : customers.length === 0 ? (
+        <EmptyState
+          icon="account-group-outline"
+          title="No customers yet"
+          description="Add your first customer to start building your customer profiles."
+        />
+      ) : (
+        <FlatList
+          data={customers}
+          keyExtractor={(item) => item.id}
+          renderItem={renderCustomerCard}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+        />
+      )}
+
+      {/* Detail Modal */}
+      <Modal
+        visible={showDetail}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseDetail}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Pressable style={styles.modalCloseButton} onPress={handleCloseDetail}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.modalTitle}>Customer Profile</Text>
+            <Pressable style={styles.modalEditButton} onPress={handleOpenEditModal}>
+              <MaterialCommunityIcons name="pencil-outline" size={20} color={theme.colors.primary} />
+            </Pressable>
+          </View>
+
+          {detailLoading ? (
+            <View style={styles.centerContent}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : selectedCustomer ? (
+            <ScrollView style={styles.detailContent} contentContainerStyle={styles.detailContentContainer}>
+              {/* Profile card */}
+              <View style={styles.profileCard}>
+                <View style={styles.profileAvatarLarge}>
+                  <Text style={styles.profileAvatarText}>
+                    {(selectedCustomer.name || "?").charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={styles.profileName}>{selectedCustomer.name}</Text>
+                <Text style={styles.profilePhone}>{selectedCustomer.phone}</Text>
+                {selectedCustomer.email && (
+                  <Text style={styles.profileEmail}>{selectedCustomer.email}</Text>
+                )}
+                {selectedCustomer.address && (
+                  <Text style={styles.profileAddress}>{selectedCustomer.address}</Text>
+                )}
+              </View>
+
+              {/* Stats */}
+              <View style={styles.statsRow}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>
+                    {formatMoney(selectedCustomer.totalPurchasesMinor)}
+                  </Text>
+                  <Text style={styles.statLabel}>Total Purchases</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>{selectedCustomer.visitCount}</Text>
+                  <Text style={styles.statLabel}>Visits</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statValue}>
+                    {formatDateDDMMYYYY(selectedCustomer.lastVisitAt)}
+                  </Text>
+                  <Text style={styles.statLabel}>Last Visit</Text>
+                </View>
+              </View>
+
+              {/* Purchase history */}
+              <Text style={styles.sectionTitle}>Purchase History</Text>
+              {selectedCustomer.purchases.length === 0 ? (
+                <Text style={styles.noPurchases}>No purchase history available.</Text>
+              ) : (
+                selectedCustomer.purchases.map(renderPurchaseItem)
+              )}
+            </ScrollView>
+          ) : null}
+        </View>
+      </Modal>
+
+      {/* Add Customer Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Pressable style={styles.modalCloseButton} onPress={() => setShowAddModal(false)}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.modalTitle}>Add Customer</Text>
+            <View style={styles.modalHeaderSpacer} />
+          </View>
+
+          <ScrollView style={styles.modalFormContent} keyboardShouldPersistTaps="handled">
+            <Text style={styles.formLabel}>Name *</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="Customer name"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formName}
+              onChangeText={setFormName}
+            />
+
+            <Text style={styles.formLabel}>Phone *</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="10-digit phone number"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formPhone}
+              onChangeText={setFormPhone}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+
+            <Text style={styles.formLabel}>Email (Optional)</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="email@example.com"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formEmail}
+              onChangeText={setFormEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.formLabel}>Address (Optional)</Text>
+            <TextInput
+              style={[styles.formInput, styles.formTextArea]}
+              placeholder="Customer address"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formAddress}
+              onChangeText={setFormAddress}
+              multiline
+              numberOfLines={3}
+            />
+
+            <Pressable
+              style={[styles.submitButton, formSubmitting && styles.submitButtonDisabled]}
+              onPress={handleSubmitAdd}
+              disabled={formSubmitting}
+            >
+              {formSubmitting ? (
+                <ActivityIndicator size="small" color={theme.colors.textInverse} />
+              ) : (
+                <Text style={styles.submitButtonText}>Add Customer</Text>
+              )}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </Modal>
+
+      {/* Edit Customer Modal */}
+      <Modal
+        visible={showEditModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Pressable style={styles.modalCloseButton} onPress={() => setShowEditModal(false)}>
+              <MaterialCommunityIcons name="close" size={24} color={theme.colors.textPrimary} />
+            </Pressable>
+            <Text style={styles.modalTitle}>Edit Customer</Text>
+            <View style={styles.modalHeaderSpacer} />
+          </View>
+
+          <ScrollView style={styles.modalFormContent} keyboardShouldPersistTaps="handled">
+            <Text style={styles.formLabel}>Name *</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="Customer name"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formName}
+              onChangeText={setFormName}
+            />
+
+            <Text style={styles.formLabel}>Phone (read-only)</Text>
+            <TextInput
+              style={[styles.formInput, styles.formInputDisabled]}
+              value={formPhone}
+              editable={false}
+            />
+
+            <Text style={styles.formLabel}>Email (Optional)</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="email@example.com"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formEmail}
+              onChangeText={setFormEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.formLabel}>Address (Optional)</Text>
+            <TextInput
+              style={[styles.formInput, styles.formTextArea]}
+              placeholder="Customer address"
+              placeholderTextColor={theme.colors.textTertiary}
+              value={formAddress}
+              onChangeText={setFormAddress}
+              multiline
+              numberOfLines={3}
+            />
+
+            <Pressable
+              style={[styles.submitButton, formSubmitting && styles.submitButtonDisabled]}
+              onPress={handleSubmitEdit}
+              disabled={formSubmitting}
+            >
+              {formSubmitting ? (
+                <ActivityIndicator size="small" color={theme.colors.textInverse} />
+              ) : (
+                <Text style={styles.submitButtonText}>Save Changes</Text>
+              )}
+            </Pressable>
+          </ScrollView>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+// =============================================================================
+// STYLES
+// =============================================================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    margin: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    paddingVertical: 4,
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  addButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: theme.colors.primary,
+  },
+  listContent: {
+    padding: theme.spacing.md,
+    paddingTop: 0,
+    paddingBottom: theme.spacing.xl,
+  },
+  customerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.sm,
+  },
+  customerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customerAvatarText: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  customerInfo: {
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  customerPhone: {
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  customerStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+    gap: 6,
+  },
+  customerStat: {
+    fontSize: 12,
+    color: theme.colors.textTertiary,
+    fontWeight: "500",
+  },
+  customerStatDivider: {
+    fontSize: 12,
+    color: theme.colors.border,
+  },
+  customerLastVisit: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  modalHeaderSpacer: {
+    width: 40,
+  },
+  modalEditButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalFormContent: {
+    padding: theme.spacing.md,
+  },
+  // Detail view
+  detailContent: {
+    flex: 1,
+  },
+  detailContentContainer: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+  },
+  profileCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.lg,
+    alignItems: "center",
+    ...theme.shadows.sm,
+  },
+  profileAvatarLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.md,
+  },
+  profileAvatarText: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: theme.colors.primary,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  profilePhone: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  profileEmail: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
+  },
+  profileAddress: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.sm,
+    alignItems: "center",
+    ...theme.shadows.sm,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  noPurchases: {
+    fontSize: 13,
+    color: theme.colors.textTertiary,
+    textAlign: "center",
+    paddingVertical: theme.spacing.lg,
+  },
+  purchaseItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  purchaseInfo: {
+    flex: 1,
+  },
+  purchaseBillRef: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textPrimary,
+  },
+  purchaseDate: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  purchaseMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  purchaseMetaText: {
+    fontSize: 11,
+    color: theme.colors.textTertiary,
+  },
+  purchaseMetaDivider: {
+    fontSize: 11,
+    color: theme.colors.border,
+  },
+  purchaseAmount: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: theme.colors.primaryDark,
+  },
+  // Form styles
+  formLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+    marginTop: theme.spacing.md,
+  },
+  formInput: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    fontSize: 15,
+    color: theme.colors.textPrimary,
+  },
+  formInputDisabled: {
+    backgroundColor: theme.colors.surfaceAlt,
+    color: theme.colors.textTertiary,
+  },
+  formTextArea: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  submitButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: theme.spacing.lg,
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: theme.colors.textInverse,
+  },
+});

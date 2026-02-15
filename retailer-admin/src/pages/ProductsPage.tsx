@@ -107,6 +107,25 @@ interface ProductFormData {
   bnplEligible: boolean;     // Optional - whether product can be purchased on BNPL
 }
 
+// T-187: Static fallback categories for Indian FMCG — used when categories API is unavailable
+const FALLBACK_FMCG_CATEGORIES: FmcgCategory[] = [
+  { id: 'staples', labelEn: 'Staples', labelHi: null, iconKey: 'grain', sortOrder: 1, productCount: 0, stockValue: 0 },
+  { id: 'cooking-oil', labelEn: 'Cooking Oil', labelHi: null, iconKey: 'droplet', sortOrder: 2, productCount: 0, stockValue: 0 },
+  { id: 'dairy', labelEn: 'Dairy', labelHi: null, iconKey: 'milk', sortOrder: 3, productCount: 0, stockValue: 0 },
+  { id: 'beverages', labelEn: 'Beverages', labelHi: null, iconKey: 'cup', sortOrder: 4, productCount: 0, stockValue: 0 },
+  { id: 'snacks', labelEn: 'Snacks', labelHi: null, iconKey: 'cookie', sortOrder: 5, productCount: 0, stockValue: 0 },
+  { id: 'personal-care', labelEn: 'Personal Care', labelHi: null, iconKey: 'heart', sortOrder: 6, productCount: 0, stockValue: 0 },
+  { id: 'cleaning', labelEn: 'Cleaning', labelHi: null, iconKey: 'sparkle', sortOrder: 7, productCount: 0, stockValue: 0 },
+  { id: 'spices', labelEn: 'Spices', labelHi: null, iconKey: 'flame', sortOrder: 8, productCount: 0, stockValue: 0 },
+  { id: 'pulses', labelEn: 'Pulses', labelHi: null, iconKey: 'bean', sortOrder: 9, productCount: 0, stockValue: 0 },
+  { id: 'ready-to-eat', labelEn: 'Ready to Eat', labelHi: null, iconKey: 'utensils', sortOrder: 10, productCount: 0, stockValue: 0 },
+  { id: 'baby-care', labelEn: 'Baby Care', labelHi: null, iconKey: 'baby', sortOrder: 11, productCount: 0, stockValue: 0 },
+  { id: 'health', labelEn: 'Health', labelHi: null, iconKey: 'plus', sortOrder: 12, productCount: 0, stockValue: 0 },
+  { id: 'confectionery', labelEn: 'Confectionery', labelHi: null, iconKey: 'candy', sortOrder: 13, productCount: 0, stockValue: 0 },
+  { id: 'frozen', labelEn: 'Frozen', labelHi: null, iconKey: 'snowflake', sortOrder: 14, productCount: 0, stockValue: 0 },
+  { id: 'other', labelEn: 'Other', labelHi: null, iconKey: 'box', sortOrder: 15, productCount: 0, stockValue: 0 },
+];
+
 const initialFormData: ProductFormData = {
   barcode: '',
   name: '',
@@ -251,16 +270,24 @@ export default function ProductsPage() {
     fetchSuppliers(controller.signal);
 
     // FE-RETAILER-CAT-001: Load categories from POS taxonomy
+    // T-187: Falls back to static Indian FMCG categories if API unavailable
     const loadCategories = async () => {
       setCategoriesLoading(true);
       try {
         const result = await fetchCategories(accessToken);
         // Filter out "Sab" (All) category - we'll add our own "All" option
-        setCategories((result.data || []).filter(c => c.sortOrder > 0));
+        const fetched = (result.data || []).filter(c => c.sortOrder > 0);
+        if (fetched.length > 0) {
+          setCategories(fetched);
+        } else {
+          // T-187: Use static fallback when API returns empty
+          setCategories(FALLBACK_FMCG_CATEGORIES);
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
         console.error('Failed to load categories:', err);
-        setCategories([]);
+        // T-187: Use static fallback when API fails
+        setCategories(FALLBACK_FMCG_CATEGORIES);
       } finally {
         setCategoriesLoading(false);
       }

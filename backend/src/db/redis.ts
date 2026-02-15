@@ -355,3 +355,33 @@ export async function getSession<T>(sessionId: string): Promise<T | null> {
 export async function deleteSession(sessionId: string): Promise<void> {
   await cacheDelete(SESSION_PREFIX + sessionId);
 }
+
+// =============================================================================
+// T-184: TOKEN BLACKLIST (Shared with API Gateway)
+// Key format must match api-gateway/src/redis.ts BLACKLIST_PREFIX
+// =============================================================================
+
+const BLACKLIST_PREFIX = 'token_blacklist:';
+
+/**
+ * T-184: Add a token to the Redis blacklist for immediate revocation.
+ * The API gateway checks this blacklist on every request.
+ *
+ * @param jtiOrHash - The JWT's jti claim or a sha256 hash of the token
+ * @param ttlSeconds - TTL matching the token's remaining lifetime
+ */
+export async function blacklistToken(jtiOrHash: string, ttlSeconds: number): Promise<void> {
+  try {
+    const client = getRedis();
+    if (!client) return; // Silently skip if Redis unavailable
+
+    const effectiveTtl = Math.max(1, Math.ceil(ttlSeconds));
+    // Uses CACHE_PREFIX + BLACKLIST_PREFIX to match gateway key: supermandi:token_blacklist:{key}
+    await client.setex(CACHE_PREFIX + BLACKLIST_PREFIX + jtiOrHash, effectiveTtl, '1');
+
+    console.log(`[T-184] Token blacklisted via backend: ${jtiOrHash.substring(0, 8)}..., TTL: ${effectiveTtl}s`);
+  } catch (error) {
+    console.error('[T-184] Redis blacklist write error:', error);
+    // Non-fatal — DB revocation table is the fallback
+  }
+}

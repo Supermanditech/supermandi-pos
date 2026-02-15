@@ -80,6 +80,14 @@ import { probeReadiness } from "../services/api/readinessGate";
 import { useSessionTimeout } from "../hooks/useSessionTimeout";
 // T-126: Offline indicator banner
 import { OfflineBanner } from "../components/ui/OfflineBanner";
+// T-174: Real-time settings sync (SSE/polling)
+import { startSSEClient, stopSSEClient } from "../services/sseClient";
+// T-175: Sync status widget
+import { SyncStatusWidget } from "../components/ui/SyncStatusWidget";
+// T-178: Periodic stock reconciliation
+import { startStockReconciliation, stopStockReconciliation } from "../services/stockReconciliation";
+// T-179: Background auto-sync
+import { startAutoSync, stopAutoSync } from "../services/autoSync";
 
 type RootStackParamList = {
   SellScan: undefined;
@@ -672,6 +680,22 @@ export default function PosRootLayout() {
     void refreshStockSnapshot();
   }, [deviceStoreId, effectiveMode]);
 
+  // T-174/T-178/T-179: Start data sync services on mount
+  useEffect(() => {
+    // T-174: Start SSE client for real-time settings sync from web
+    startSSEClient();
+    // T-178: Start periodic stock reconciliation (every 15 min)
+    startStockReconciliation();
+    // T-179: Start background auto-sync (default 60s interval)
+    void startAutoSync();
+
+    return () => {
+      stopSSEClient();
+      stopStockReconciliation();
+      stopAutoSync();
+    };
+  }, []);
+
   // Fetch pending reorder count for badge
   useEffect(() => {
     if (!deviceStoreId || !reorderEnabled) {
@@ -1095,6 +1119,9 @@ export default function PosRootLayout() {
         scannerOk={scannerOk}
         cameraAvailable={cameraAvailable}
       />
+
+      {/* T-175: Sync status widget — shows sync progress, queue depth, and drift info */}
+      <SyncStatusWidget />
 
       {/* REG-AUTH-401: LIMITED MODE banner - shows when store status is not ACTIVE */}
       {/* Replaces DEV-055 store inactive banner with status-aware messaging */}

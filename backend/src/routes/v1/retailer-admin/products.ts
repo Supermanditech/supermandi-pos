@@ -17,6 +17,12 @@ import {
   validateCategoryId,
   validatePrice,
 } from "@supermandi/common";
+import {
+  validateProductName as validateProductNameUnified,
+  validateBarcode as validateBarcodeUnified,
+  validatePrice as validatePriceUnified,
+  validateStock as validateStockUnified,
+} from "../../../utils/productValidation";
 
 export const retailerAdminProductsRouter = Router();
 
@@ -202,12 +208,13 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   const MAX_DESCRIPTION_LENGTH = 500;
   const MAX_BRAND_LENGTH = 100;
 
-  // Validate required fields
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Product name is required" } });
+  // T-186: Validate required fields using unified product validation
+  const nameValidation = validateProductNameUnified(name || '');
+  if (!nameValidation.valid) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: nameValidation.error || "Product name is required" } });
   }
-  // AUD-059-B FIX: Name length bounds
-  if (name.trim().length > MAX_NAME_LENGTH) {
+  // AUD-059-B FIX: Name length bounds (kept for backward compat, unified validator also checks)
+  if (name && name.trim().length > MAX_NAME_LENGTH) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Product name exceeds ${MAX_NAME_LENGTH} characters` } });
   }
   // GO-LIVE-147: Sanitize product name for XSS prevention
@@ -223,26 +230,36 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
   if (brand && brand.length > MAX_BRAND_LENGTH) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: `Brand exceeds ${MAX_BRAND_LENGTH} characters` } });
   }
-  // GO-LIVE-148: Barcode validation with proper length check
+  // GO-LIVE-148 + T-186: Barcode validation with both common and unified validators
   const barcodeValidation = validateBarcode(barcode);
   if (!barcodeValidation.valid) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: barcodeValidation.error } });
   }
   const validatedBarcode = barcodeValidation.value;
+  // T-186: Additional unified barcode format check (EAN/UPC/custom)
+  if (validatedBarcode) {
+    const unifiedBarcodeCheck = validateBarcodeUnified(validatedBarcode);
+    if (!unifiedBarcodeCheck.valid) {
+      return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: unifiedBarcodeCheck.error } });
+    }
+  }
 
+  // T-186: Unified price validation for sell price
   if (!sellPrice || sellPrice <= 0) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid sell price is required" } });
   }
-  // AUD-059-A FIX: Price upper bounds
-  if (sellPrice > MAX_PRICE_MINOR) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Sell price exceeds maximum allowed value" } });
+  const sellPriceValidation = validatePriceUnified(sellPrice);
+  if (!sellPriceValidation.valid) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: sellPriceValidation.error || "Sell price exceeds maximum allowed value" } });
   }
+
+  // T-186: Unified price validation for purchase price
   if (!purchasePrice || purchasePrice <= 0) {
     return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Valid purchase price is required for ledger tracking" } });
   }
-  // AUD-059-A FIX: Price upper bounds
-  if (purchasePrice > MAX_PRICE_MINOR) {
-    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: "Purchase price exceeds maximum allowed value" } });
+  const purchasePriceValidation = validatePriceUnified(purchasePrice);
+  if (!purchasePriceValidation.valid) {
+    return res.status(400).json({ error: { code: "VALIDATION_ERROR", message: purchasePriceValidation.error || "Purchase price exceeds maximum allowed value" } });
   }
   // AUD-059-A FIX: MRP bounds
   if (mrp !== undefined && mrp !== null && (mrp < 0 || mrp > MAX_PRICE_MINOR)) {

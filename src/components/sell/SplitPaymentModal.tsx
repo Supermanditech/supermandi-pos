@@ -42,7 +42,9 @@ interface SplitPaymentModalProps {
   onComplete: (result: SplitPaymentResult) => void;
 }
 
+// T-152: Three-way split payment support (UPI + CASH + DUE, any 2-3 combination)
 type SplitStep = "input" | "upi-waiting" | "cash-collect" | "complete";
+type SplitMethod = "UPI" | "CASH" | "DUE";
 
 export function SplitPaymentModal({
   visible,
@@ -58,6 +60,12 @@ export function SplitPaymentModal({
   const [step, setStep] = useState<SplitStep>("input");
   const [upiAmount, setUpiAmount] = useState("");
   const [cashAmount, setCashAmount] = useState("");
+  // T-152: DUE amount for three-way split
+  const [dueAmount, setDueAmount] = useState("");
+  // T-152: Track which methods are selected (min 2, max 3)
+  const [selectedMethods, setSelectedMethods] = useState<Set<SplitMethod>>(
+    new Set(["UPI", "CASH"])
+  );
   const [loading, setLoading] = useState(false);
   const [verifyingUpi, setVerifyingUpi] = useState(false);
   const [splitResponse, setSplitResponse] = useState<SplitPaymentResponse | null>(null);
@@ -69,12 +77,35 @@ export function SplitPaymentModal({
   const [manualUtr, setManualUtr] = useState("");
   const pollIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // T-152: Toggle a payment method on/off
+  const toggleMethod = (method: SplitMethod) => {
+    setSelectedMethods((prev) => {
+      const next = new Set(prev);
+      if (next.has(method)) {
+        // Must keep at least 2 methods selected
+        if (next.size <= 2) return prev;
+        next.delete(method);
+        // Clear the amount for deselected method
+        if (method === "UPI") setUpiAmount("");
+        if (method === "CASH") setCashAmount("");
+        if (method === "DUE") setDueAmount("");
+      } else {
+        // Max 3 methods
+        if (next.size >= 3) return prev;
+        next.add(method);
+      }
+      return next;
+    });
+  };
+
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
       setStep("input");
       setUpiAmount("");
       setCashAmount("");
+      setDueAmount("");
+      setSelectedMethods(new Set(["UPI", "CASH"]));
       setLoading(false);
       setVerifyingUpi(false);
       setSplitResponse(null);
@@ -170,55 +201,107 @@ export function SplitPaymentModal({
     };
   }, [step, saleId, upiVerified, pollingActive]);
 
-  // Auto-calculate remaining amount
-  const upiMinor = Math.round(parseFloat(upiAmount || "0") * 100);
-  const cashMinor = Math.round(parseFloat(cashAmount || "0") * 100);
-  const remaining = totalAmountMinor - upiMinor - cashMinor;
-  const isValid = remaining === 0 && upiMinor > 0 && cashMinor > 0;
+  // T-152: Auto-calculate remaining amount across all selected methods
+  const upiMinor = selectedMethods.has("UPI") ? Math.round(parseFloat(upiAmount || "0") * 100) : 0;
+  const cashMinor = selectedMethods.has("CASH") ? Math.round(parseFloat(cashAmount || "0") * 100) : 0;
+  const dueMinor = selectedMethods.has("DUE") ? Math.round(parseFloat(dueAmount || "0") * 100) : 0;
+  const remaining = totalAmountMinor - upiMinor - cashMinor - dueMinor;
+
+  // Validate: all selected methods must have >0 amounts and total must match
+  const isValid =
+    remaining === 0 &&
+    (!selectedMethods.has("UPI") || upiMinor > 0) &&
+    (!selectedMethods.has("CASH") || cashMinor > 0) &&
+    (!selectedMethods.has("DUE") || dueMinor > 0);
+
+  // T-152: Auto-fill the last remaining method when exactly 2 of 3 have amounts
+  const autoFillRemaining = (
+    changedMethod: SplitMethod,
+    changedMinor: number
+  ) => {
+    const methods = Array.from(selectedMethods);
+    if (methods.length === 2) {
+      // Two methods: auto-fill the other
+      const otherMethod = methods.find((m) => m !== changedMethod);
+      if (otherMethod && changedMinor > 0 && changedMinor < totalAmountMinor) {
+        const otherVal = (totalAmountMinor - changedMinor) / 100;
+        if (otherMethod === "UPI") setUpiAmount(otherVal.toFixed(2));
+        if (otherMethod === "CASH") setCashAmount(otherVal.toFixed(2));
+        if (otherMethod === "DUE") setDueAmount(otherVal.toFixed(2));
+      }
+    }
+    // For 3 methods, don't auto-fill (user must distribute manually)
+  };
 
   const handleUpiChange = (value: string) => {
-    // Only allow valid decimal input
     if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
       setUpiAmount(value);
-      // Auto-calculate cash if UPI is entered
       const upi = Math.round(parseFloat(value || "0") * 100);
-      if (upi > 0 && upi < totalAmountMinor) {
-        const cashVal = (totalAmountMinor - upi) / 100;
-        setCashAmount(cashVal.toFixed(2));
-      }
+      autoFillRemaining("UPI", upi);
     }
   };
 
   const handleCashChange = (value: string) => {
     if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
       setCashAmount(value);
-      // Auto-calculate UPI if cash is entered
       const cash = Math.round(parseFloat(value || "0") * 100);
-      if (cash > 0 && cash < totalAmountMinor) {
-        const upiVal = (totalAmountMinor - cash) / 100;
-        setUpiAmount(upiVal.toFixed(2));
-      }
+      autoFillRemaining("CASH", cash);
+    }
+  };
+
+  // T-152: Handler for DUE amount changes
+  const handleDueChange = (value: string) => {
+    if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
+      setDueAmount(value);
+      const due = Math.round(parseFloat(value || "0") * 100);
+      autoFillRemaining("DUE", due);
     }
   };
 
   const handleProceed = async () => {
     if (!isValid) {
-      Alert.alert("Invalid Split", "UPI + Cash must equal the total amount.");
+      Alert.alert("Invalid Split", "Selected amounts must equal the total amount.");
       return;
     }
 
     setLoading(true);
     try {
+      // T-152: Build payments array from selected methods
+      const payments: { mode: "UPI" | "CASH" | "DUE"; amountMinor: number }[] = [];
+      if (selectedMethods.has("UPI") && upiMinor > 0) {
+        payments.push({ mode: "UPI", amountMinor: upiMinor });
+      }
+      if (selectedMethods.has("CASH") && cashMinor > 0) {
+        payments.push({ mode: "CASH", amountMinor: cashMinor });
+      }
+      if (selectedMethods.has("DUE") && dueMinor > 0) {
+        payments.push({ mode: "DUE", amountMinor: dueMinor });
+      }
+
       const response = await createSplitPayment({
         saleId,
-        payments: [
-          { mode: "UPI", amountMinor: upiMinor },
-          { mode: "CASH", amountMinor: cashMinor },
-        ],
+        payments,
       });
 
       setSplitResponse(response);
-      setStep("upi-waiting");
+      // T-152: Navigate to appropriate step based on selected methods
+      if (selectedMethods.has("UPI")) {
+        setStep("upi-waiting");
+      } else if (selectedMethods.has("CASH")) {
+        // No UPI — just need cash confirmation
+        setStep("cash-collect");
+      } else {
+        // Only DUE (with some other method already handled) — complete
+        setStep("complete");
+        setTimeout(() => {
+          onComplete({
+            success: true,
+            paymentStatus: "completed",
+            upiVerified: false,
+            cashConfirmed: false,
+          });
+        }, 1000);
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to create split payment. Please try again.");
       console.error("[SplitPayment] Error:", error);
@@ -377,36 +460,83 @@ export function SplitPaymentModal({
         Total: {formatMoney(totalAmountMinor, currency)}
       </Text>
 
-      <View style={styles.inputRow}>
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>UPI Amount</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.currencyPrefix}>₹</Text>
-            <TextInput
-              style={styles.input}
-              value={upiAmount}
-              onChangeText={handleUpiChange}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.textTertiary}
-            />
-          </View>
-        </View>
+      {/* T-152: Method selection toggles */}
+      <View style={styles.methodToggles}>
+        {(["UPI", "CASH", "DUE"] as SplitMethod[]).map((method) => {
+          const active = selectedMethods.has(method);
+          const icon = method === "UPI" ? "qrcode-scan" : method === "CASH" ? "cash" : "calendar-clock";
+          return (
+            <TouchableOpacity
+              key={method}
+              style={[styles.methodToggle, active && styles.methodToggleActive]}
+              onPress={() => toggleMethod(method)}
+            >
+              <MaterialCommunityIcons
+                name={icon as any}
+                size={16}
+                color={active ? theme.colors.textInverse : theme.colors.textSecondary}
+              />
+              <Text
+                style={[styles.methodToggleText, active && styles.methodToggleTextActive]}
+              >
+                {method}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Cash Amount</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.currencyPrefix}>₹</Text>
-            <TextInput
-              style={styles.input}
-              value={cashAmount}
-              onChangeText={handleCashChange}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor={theme.colors.textTertiary}
-            />
+      <View style={styles.inputRow}>
+        {selectedMethods.has("UPI") && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>UPI Amount</Text>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.currencyPrefix}>₹</Text>
+              <TextInput
+                style={styles.input}
+                value={upiAmount}
+                onChangeText={handleUpiChange}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textTertiary}
+              />
+            </View>
           </View>
-        </View>
+        )}
+
+        {selectedMethods.has("CASH") && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Cash Amount</Text>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.currencyPrefix}>₹</Text>
+              <TextInput
+                style={styles.input}
+                value={cashAmount}
+                onChangeText={handleCashChange}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textTertiary}
+              />
+            </View>
+          </View>
+        )}
+
+        {selectedMethods.has("DUE") && (
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Due Amount</Text>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.currencyPrefix}>₹</Text>
+              <TextInput
+                style={styles.input}
+                value={dueAmount}
+                onChangeText={handleDueChange}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textTertiary}
+              />
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.remainingRow}>
@@ -561,21 +691,26 @@ export function SplitPaymentModal({
     </>
   );
 
-  const renderCompleteStep = () => (
-    <>
-      <View style={styles.successIcon}>
-        <MaterialCommunityIcons
-          name="check-circle"
-          size={80}
-          color={theme.colors.success}
-        />
-      </View>
-      <Text style={styles.title}>Payment Complete!</Text>
-      <Text style={styles.subtitle}>
-        {formatMoney(upiMinor, currency)} UPI + {formatMoney(cashMinor, currency)} Cash
-      </Text>
-    </>
-  );
+  // T-152: Build summary string showing all split amounts
+  const renderCompleteStep = () => {
+    const parts: string[] = [];
+    if (upiMinor > 0) parts.push(`${formatMoney(upiMinor, currency)} UPI`);
+    if (cashMinor > 0) parts.push(`${formatMoney(cashMinor, currency)} Cash`);
+    if (dueMinor > 0) parts.push(`${formatMoney(dueMinor, currency)} Due`);
+    return (
+      <>
+        <View style={styles.successIcon}>
+          <MaterialCommunityIcons
+            name="check-circle"
+            size={80}
+            color={theme.colors.success}
+          />
+        </View>
+        <Text style={styles.title}>Payment Complete!</Text>
+        <Text style={styles.subtitle}>{parts.join(" + ")}</Text>
+      </>
+    );
+  };
 
   return (
     <Modal
@@ -714,10 +849,41 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 24,
   },
+  // T-152: Method toggle styles
+  methodToggles: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+    justifyContent: "center",
+  },
+  methodToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+  },
+  methodToggleActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  methodToggleText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
+  methodToggleTextActive: {
+    color: theme.colors.textInverse,
+  },
   inputRow: {
     flexDirection: "row",
-    gap: 16,
+    gap: 12,
     marginBottom: 16,
+    flexWrap: "wrap",
   },
   inputGroup: {
     flex: 1,

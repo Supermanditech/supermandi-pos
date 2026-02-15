@@ -573,3 +573,25 @@ export async function fetchRetailVariants(storeProductId: string): Promise<Retai
     return [];
   }
 }
+
+// T-136: Product substitution suggestions
+export interface SubstituteProduct {
+  productId: string;
+  name: string;
+  barcode?: string;
+  sellPrice: number;
+  currentStock: number;
+}
+
+export async function fetchProductSubstitutes(productId: string): Promise<SubstituteProduct[]> {
+  try {
+    const res = await apiClient.get<{
+      success: boolean;
+      data: SubstituteProduct[];
+    }>(`/api/v1/pos/products/${productId}/substitutes`);
+    return res.data || [];
+  } catch (error) {
+    console.warn(`[fetchProductSubstitutes] Failed for ${productId}:`, error);
+    return [];
+  }
+}

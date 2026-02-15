@@ -47,6 +47,24 @@ import StockStatementScreen from "./src/screens/StockStatementScreen";
 import { BuyScreen } from "./src/screens/BuyScreen";
 // SM-020: BNPL Dues Screen
 import { BnplDuesScreen } from "./src/screens/BnplDuesScreen";
+// T-154: Khata (Credit Book) Screen
+import KhataScreen from "./src/screens/KhataScreen";
+// T-155: Customer Profiles Screen
+import CustomerListScreen from "./src/screens/CustomerListScreen";
+// T-191: Daily Closing / Z-Report Screen
+import DailyClosingScreen from "./src/screens/DailyClosingScreen";
+// T-192: Shift Management Screen
+import ShiftScreen from "./src/screens/ShiftScreen";
+// T-193: Overdue Dues Screen
+import OverdueDuesScreen from "./src/screens/OverdueDuesScreen";
+// T-194: Return/Refund Screen
+import ReturnScreen from "./src/screens/ReturnScreen";
+// T-196: Customer Management Screen
+import CustomerManagementScreen from "./src/screens/CustomerManagementScreen";
+// T-198: Opening Stock Screen
+import OpeningStockScreen from "./src/screens/OpeningStockScreen";
+// T-199: Daily Report Screen
+import DailyReportScreen from "./src/screens/DailyReportScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -111,6 +129,9 @@ function GRNWrapper() {
         orderId={route.params?.orderId}
         onBack={() => navigation.goBack()}
         onSuccess={() => navigation.goBack()}
+        onNavigateToBarcodeSheet={(grnItems) =>
+          navigation.replace("BarcodeSheet", { grnItems })
+        }
       />
     </FeatureGate>
   );
@@ -179,6 +200,78 @@ function BnplDuesWrapper() {
   const navigation = useNavigation<any>();
   return (
     <BnplDuesScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-154: Khata (Credit Book) wrapper
+function KhataWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <KhataScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-155: Customer Profiles wrapper
+function CustomerListWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <CustomerListScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-191: Daily Closing / Z-Report wrapper
+function DailyClosingWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <DailyClosingScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-192: Shift Management wrapper
+function ShiftWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <ShiftScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-193: Overdue Dues wrapper
+function OverdueDuesWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <OverdueDuesScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-194: Return/Refund wrapper
+function ReturnWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <ReturnScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-196: Customer Management wrapper
+function CustomerManagementWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <CustomerManagementScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-198: Opening Stock wrapper
+function OpeningStockWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <OpeningStockScreen onBack={() => navigation.goBack()} />
+  );
+}
+
+// T-199: Daily Report wrapper
+function DailyReportWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <DailyReportScreen onBack={() => navigation.goBack()} />
   );
 }
 
@@ -280,6 +373,24 @@ export default function App() {
           <Stack.Screen name="Buy" component={BuyScreenWrapper} />
           {/* SM-020: BNPL Dues Screen */}
           <Stack.Screen name="BnplDues" component={BnplDuesWrapper} />
+          {/* T-154: Khata (Credit Book) Screen */}
+          <Stack.Screen name="Khata" component={KhataWrapper} />
+          {/* T-155: Customer Profiles Screen */}
+          <Stack.Screen name="CustomerList" component={CustomerListWrapper} />
+          {/* T-191: Daily Closing / Z-Report Screen */}
+          <Stack.Screen name="DailyClosing" component={DailyClosingWrapper} />
+          {/* T-192: Shift Management Screen */}
+          <Stack.Screen name="Shift" component={ShiftWrapper} />
+          {/* T-193: Overdue Dues Screen */}
+          <Stack.Screen name="OverdueDues" component={OverdueDuesWrapper} />
+          {/* T-194: Return/Refund Screen */}
+          <Stack.Screen name="Return" component={ReturnWrapper} />
+          {/* T-196: Customer Management Screen */}
+          <Stack.Screen name="CustomerManagement" component={CustomerManagementWrapper} />
+          {/* T-198: Opening Stock Screen */}
+          <Stack.Screen name="OpeningStock" component={OpeningStockWrapper} />
+          {/* T-199: Daily Report Screen */}
+          <Stack.Screen name="DailyReport" component={DailyReportWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
         </ErrorBoundary>

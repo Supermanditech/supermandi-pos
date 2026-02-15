@@ -15,6 +15,12 @@ import { financialOperationsRateLimiter } from "../../../middleware/posRateLimit
 
 export const posPaymentsRouter = Router();
 
+// =============================================================================
+// T-149: UPI QR expiry constant — reduced from 15 minutes to 5 minutes
+// to limit the window for stale QR codes and improve payment security
+// =============================================================================
+const QR_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
+
 // Extended request type with posDevice from middleware
 interface PosRequest extends Request {
   posDevice: PosDeviceContext;
@@ -170,11 +176,11 @@ posPaymentsRouter.post(
         [saleId, storeId]
       );
 
-      // If there's an existing pending payment less than 15 mins old, return it
+      // T-149: If there's an existing pending payment within QR_EXPIRY_MS, return it
       if (existingPayment.rowCount && existingPayment.rows[0]) {
         const existing = existingPayment.rows[0];
         const createdAt = new Date(existing.created_at);
-        const expiresAt = new Date(createdAt.getTime() + 15 * 60 * 1000);
+        const expiresAt = new Date(createdAt.getTime() + QR_EXPIRY_MS);
 
         if (expiresAt > new Date()) {
           await client.query("COMMIT");
@@ -206,8 +212,8 @@ posPaymentsRouter.post(
         note: `Sale ${saleId.substring(0, 8)}`
       });
 
-      // 5. Calculate expiry (15 minutes from now)
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+      // 5. T-149: Calculate expiry using QR_EXPIRY_MS constant
+      const expiresAt = new Date(Date.now() + QR_EXPIRY_MS);
 
       // 6. Create payment record
       const paymentId = randomUUID();
@@ -299,9 +305,9 @@ posPaymentsRouter.get(
 
       const payment = result.rows[0];
 
-      // Check if payment has expired (15 minutes)
+      // T-149: Check if payment has expired using QR_EXPIRY_MS constant
       const createdAt = new Date(payment.created_at);
-      const expiresAt = new Date(createdAt.getTime() + 15 * 60 * 1000);
+      const expiresAt = new Date(createdAt.getTime() + QR_EXPIRY_MS);
 
       if (payment.status === 'initiated' && expiresAt < new Date()) {
         // Mark as expired
@@ -364,8 +370,9 @@ posPaymentsRouter.post(
     if (!saleId) {
       return res.status(400).json({ error: "saleId is required" });
     }
-    if (!payments || !Array.isArray(payments) || payments.length < 2) {
-      return res.status(400).json({ error: "payments must be an array with at least 2 payment methods" });
+    // T-152: Support 2-3 payment methods in a single split
+    if (!payments || !Array.isArray(payments) || payments.length < 2 || payments.length > 3) {
+      return res.status(400).json({ error: "payments must be an array with 2-3 payment methods" });
     }
 
     // Validate each payment
@@ -497,7 +504,7 @@ posPaymentsRouter.post(
             note: `Split ${saleId.substring(0, 8)}`
           });
 
-          const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+          const expiresAt = new Date(Date.now() + QR_EXPIRY_MS);
           const idempotencyKey = `split_upi_${saleId}_${Date.now()}`;
 
           await client.query(
@@ -778,31 +785,41 @@ posPaymentsRouter.get(
 
       const saleStatus = saleResult.rows[0]?.status || 'unknown';
 
-      // Parse payment statuses
+      // T-152: Parse payment statuses for all 3 possible methods
       let upiStatus = 'not_found';
       let cashStatus = 'not_found';
+      let dueStatus = 'not_found';
       let cashAmount: number | undefined;
+      let dueAmount: number | undefined;
+      let upiAmount: number | undefined;
 
       for (const payment of paymentsResult.rows) {
         if (payment.mode === 'UPI') {
           upiStatus = payment.status;
+          upiAmount = payment.amount_minor;
         } else if (payment.mode === 'CASH') {
           cashStatus = payment.status;
           cashAmount = payment.amount_minor;
+        } else if (payment.mode === 'DUE') {
+          dueStatus = payment.status;
+          dueAmount = payment.amount_minor;
         }
       }
 
-      // Determine if awaiting cash collection
-      const awaitingCash = upiStatus === 'completed' && cashStatus !== 'completed';
+      // Determine if awaiting cash collection (UPI must complete first for cash)
+      const awaitingCash = upiStatus === 'completed' && cashStatus !== 'completed' && cashStatus !== 'not_found';
 
-      console.log(`[GL-RJ-001] Split status check: saleId=${saleId}, upi=${upiStatus}, cash=${cashStatus}`);
+      console.log(`[T-152] Split status check: saleId=${saleId}, upi=${upiStatus}, cash=${cashStatus}, due=${dueStatus}`);
 
       return res.json({
         upiStatus,
         cashStatus,
+        dueStatus,
         saleStatus,
         awaitingCash,
-        cashAmount
+        cashAmount,
+        dueAmount,
+        upiAmount,
       });
 
     } catch (err: any) {
