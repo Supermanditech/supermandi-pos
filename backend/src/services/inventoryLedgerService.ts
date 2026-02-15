@@ -659,13 +659,24 @@ export async function recordSaleReturnMovements(params: {
     const catalogStockBefore = balanceResult.rows[0]?.current_qty ?? 0;
     const catalogStockAfter = catalogStockBefore + quantity;
 
+    // T-062: Find original sale ledger entry for reversal chain tracking
+    const originalLedgerRes = await params.client.query(
+      `SELECT id FROM inventory.inventory_ledger
+       WHERE store_id = $1 AND product_id = $2
+         AND reference_type = 'sale' AND reference_id = $3
+         AND transaction_type = 'sale'
+       ORDER BY created_at DESC LIMIT 1`,
+      [storeId, globalProductId, params.saleId]
+    );
+    const originalLedgerId = originalLedgerRes.rows[0]?.id ?? null;
+
     // Insert into inventory.inventory_ledger with sale_return type
     const invLedgerId = randomUUID();
     await params.client.query(
       `INSERT INTO inventory.inventory_ledger
        (id, store_id, product_id, delta_qty, transaction_type, reference_type, reference_id,
         stock_before, stock_after, unit_cost, source, notes, reversal_of_id)
-       VALUES ($1, $2, $3, $4, 'sale_return', 'return', $5, $6, $7, $8, 'RETURN_SERVICE', $9, NULL)`,
+       VALUES ($1, $2, $3, $4, 'sale_return', 'return', $5, $6, $7, $8, 'RETURN_SERVICE', $9, $10)`,
       [
         invLedgerId,
         storeId,
@@ -675,9 +686,20 @@ export async function recordSaleReturnMovements(params: {
         catalogStockBefore,
         catalogStockAfter,
         item.unitSellMinor,
-        params.reason ?? `Return for sale ${params.saleId}`
+        params.reason ?? `Return for sale ${params.saleId}`,
+        originalLedgerId
       ]
     );
+
+    // T-062: Mark original sale entry as reversed
+    if (originalLedgerId) {
+      await params.client.query(
+        `UPDATE inventory.inventory_ledger
+         SET reversed_by_id = $1, reversed_at = NOW()
+         WHERE id = $2 AND reversed_by_id IS NULL`,
+        [invLedgerId, originalLedgerId]
+      );
+    }
 
     // Upsert stock_balances
     await params.client.query(

@@ -351,6 +351,7 @@ retailerAdminInventoryRouter.get("/inventory", async (req: Request, res: Respons
  * Query params:
  * - productId: filter by product (optional)
  * - transactionType: filter by type (sale, purchase_received, etc.)
+ * - supplierId: T-062: filter by supplier UUID (optional)
  * - startDate: filter from date (ISO string)
  * - endDate: filter to date (ISO string)
  * - limit: page size (default 50, max 200)
@@ -365,7 +366,7 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
     return res.status(401).json({ error: "Store not identified" });
   }
 
-  const { productId, transactionType, startDate, endDate, limit = "50", offset = "0" } = req.query;
+  const { productId, transactionType, supplierId, startDate, endDate, limit = "50", offset = "0" } = req.query;
 
   try {
     let whereClause = "WHERE il.store_id = $1";
@@ -381,6 +382,13 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
     if (transactionType && typeof transactionType === "string") {
       whereClause += ` AND il.transaction_type = $${paramIndex}`;
       params.push(transactionType);
+      paramIndex++;
+    }
+
+    // T-062: Supplier filter
+    if (supplierId && typeof supplierId === "string") {
+      whereClause += ` AND il.supplier_id = $${paramIndex}::uuid`;
+      params.push(supplierId);
       paramIndex++;
     }
 
@@ -424,6 +432,7 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
     // Get paginated results with product details
+    // T-062: Added supplier_id, adjustment_reason, reversal fields, notes
     const result = await pool.query(
       `SELECT
         il.id,
@@ -438,6 +447,12 @@ retailerAdminInventoryRouter.get("/inventory/ledger", async (req: Request, res: 
         il.stock_before as "stockBefore",
         il.stock_after as "stockAfter",
         il.unit_cost as "unitCost",
+        il.supplier_id as "supplierId",
+        il.adjustment_reason as "adjustmentReason",
+        il.reversal_of_id as "reversalOfId",
+        il.reversed_by_id as "reversedById",
+        il.source,
+        il.notes,
         il.created_at as "createdAt"
       FROM inventory.inventory_ledger il
       LEFT JOIN catalog.store_products sp ON sp.store_id = il.store_id AND sp.product_id = il.product_id

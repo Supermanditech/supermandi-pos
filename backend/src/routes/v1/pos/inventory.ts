@@ -93,6 +93,8 @@ setInterval(() => {
  * Query params:
  * - transactionType: filter by type (sale, purchase_received, etc.)
  * - referenceType: filter by reference (sale, po, manual, return)
+ * - supplierId: T-062: filter by supplier UUID
+ * - productId: filter by product UUID
  * - startDate: filter from date (ISO string)
  * - endDate: filter to date (ISO string)
  * - limit: page size (default 50, max 200)
@@ -108,7 +110,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
     return res.status(400).json({ error: "Store not configured" });
   }
 
-  const { transactionType, referenceType, startDate, endDate, limit = "50", offset = "0" } = req.query;
+  const { transactionType, referenceType, supplierId, productId, startDate, endDate, limit = "50", offset = "0" } = req.query;
 
   try {
     let whereClause = "WHERE il.store_id = $1";
@@ -124,6 +126,20 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
     if (referenceType && typeof referenceType === "string") {
       whereClause += ` AND il.reference_type = $${paramIndex}`;
       params.push(referenceType);
+      paramIndex++;
+    }
+
+    // T-062: Supplier filter
+    if (supplierId && typeof supplierId === "string") {
+      whereClause += ` AND il.supplier_id = $${paramIndex}::uuid`;
+      params.push(supplierId);
+      paramIndex++;
+    }
+
+    // T-062: Product filter
+    if (productId && typeof productId === "string") {
+      whereClause += ` AND il.product_id = $${paramIndex}::uuid`;
+      params.push(productId);
       paramIndex++;
     }
 
@@ -151,8 +167,7 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
     // Get paginated results with product details
-    // AUD-050: Fixed sp.name -> COALESCE(sp.display_name, p.name), sp.barcode -> p.primary_barcode
-    // ITER2: Added null-safe fallbacks for productName and barcode
+    // T-062: Added supplier_id, adjustment_reason, reversal fields
     const result = await pool.query(
       `SELECT
         il.id,
@@ -167,6 +182,13 @@ posInventoryRouter.get("/inventory/ledger", requireDeviceToken, async (req: Requ
         il.stock_before as "stockBefore",
         il.stock_after as "stockAfter",
         il.unit_cost as "unitCost",
+        il.supplier_id as "supplierId",
+        il.adjustment_reason as "adjustmentReason",
+        il.reversal_of_id as "reversalOfId",
+        il.reversed_by_id as "reversedById",
+        il.reversed_at as "reversedAt",
+        il.source,
+        il.notes,
         il.created_at as "createdAt"
       FROM inventory.inventory_ledger il
       LEFT JOIN catalog.store_products sp ON sp.store_id = il.store_id AND sp.product_id = il.product_id
@@ -694,6 +716,65 @@ posInventoryRouter.get("/inventory/statement/export", requireDeviceToken, async 
   } catch (error: any) {
     console.error("[InventoryExport] Error:", error.message);
     return res.status(500).json({ error: "Failed to export stock statement" });
+  }
+});
+
+// =============================================================================
+// T-062: INVENTORY VALUATION SUMMARY
+// =============================================================================
+
+/**
+ * GET /api/v1/pos/inventory/valuation
+ * Inventory valuation summary — total stock value at cost and sell price
+ *
+ * Returns aggregate metrics:
+ *   - totalSkus: number of products with stock > 0
+ *   - totalUnits: sum of all stock quantities
+ *   - totalCostValue: sum(stock × purchase_price) in paise
+ *   - totalSellValue: sum(stock × sell_price) in paise
+ *   - totalMrpValue: sum(stock × mrp) in paise (where mrp exists)
+ *   - potentialMargin: totalSellValue - totalCostValue
+ */
+posInventoryRouter.get("/inventory/valuation", requireDeviceToken, async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  if (!storeId) return res.status(400).json({ error: "Store not configured" });
+
+  try {
+    const result = await pool.query(
+      `SELECT
+        COUNT(*)::int AS "totalSkus",
+        COALESCE(SUM(sb.current_qty), 0)::bigint AS "totalUnits",
+        COALESCE(SUM(sb.current_qty * COALESCE(sp.purchase_price, 0)), 0)::bigint AS "totalCostValue",
+        COALESCE(SUM(sb.current_qty * COALESCE(sp.sell_price, 0)), 0)::bigint AS "totalSellValue",
+        COALESCE(SUM(sb.current_qty * COALESCE(sp.mrp, sp.sell_price, 0)), 0)::bigint AS "totalMrpValue"
+      FROM inventory.stock_balances sb
+      JOIN catalog.store_products sp ON sp.store_id = sb.store_id AND sp.product_id = sb.product_id
+      WHERE sb.store_id = $1 AND sb.current_qty > 0 AND sp.is_active = true`,
+      [storeId]
+    );
+
+    const row = result.rows[0] || {};
+    const totalCostValue = Number(row.totalCostValue || 0);
+    const totalSellValue = Number(row.totalSellValue || 0);
+
+    return res.json({
+      success: true,
+      data: {
+        totalSkus: Number(row.totalSkus || 0),
+        totalUnits: Number(row.totalUnits || 0),
+        totalCostValue,
+        totalSellValue,
+        totalMrpValue: Number(row.totalMrpValue || 0),
+        potentialMargin: totalSellValue - totalCostValue,
+        asOf: new Date().toISOString(),
+      },
+    });
+  } catch (error: any) {
+    console.error("[Valuation] Error:", error.message);
+    return res.status(500).json({ error: "Failed to compute valuation" });
   }
 });
 
