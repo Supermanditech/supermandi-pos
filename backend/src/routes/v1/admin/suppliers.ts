@@ -1058,7 +1058,11 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
     superMandiMarginMinor,
     marginPercent,
     bnplEligible,
-    bnplMaxDays
+    bnplMaxDays,
+    // T-070: Invoice config fields
+    invoiceModel,
+    hsnCode,
+    gstRate,
   } = req.body || {};
   // ITER4-P0-008: Require valid admin ID for audit trail - no fallback
   const adminId = (req as any).adminId;
@@ -1112,6 +1116,7 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
         sp.edited_name, sp.edited_category,
         sp.supermandi_margin_minor, sp.margin_percent,
         sp.bnpl_eligible, sp.bnpl_max_days,
+        sp.invoice_model, sp.hsn_code, sp.gst_rate,
         sp.approval_status,
         sp.supplier_id,
         s.business_name as supplier_name,
@@ -1202,6 +1207,34 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
       }
     }
 
+    // T-070: Invoice configuration fields
+    if (invoiceModel !== undefined) {
+      if (!['buy_resell', 'platform_fee'].includes(invoiceModel)) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: "invoiceModel must be 'buy_resell' or 'platform_fee'" });
+      }
+      updates.push(`invoice_model = $${paramIndex++}`);
+      values.push(invoiceModel);
+      changes.invoiceModel = { from: current.invoice_model, to: invoiceModel };
+    }
+
+    if (hsnCode !== undefined) {
+      updates.push(`hsn_code = $${paramIndex++}`);
+      values.push(hsnCode || null);
+      changes.hsnCode = { from: current.hsn_code, to: hsnCode };
+    }
+
+    if (gstRate !== undefined) {
+      const validGstRates = [0, 5, 12, 18, 28];
+      if (!validGstRates.includes(Number(gstRate))) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ error: `gstRate must be one of: ${validGstRates.join(', ')}` });
+      }
+      updates.push(`gst_rate = $${paramIndex++}`);
+      values.push(gstRate);
+      changes.gstRate = { from: current.gst_rate, to: gstRate };
+    }
+
     if (updates.length === 0) {
       await client.query("ROLLBACK");
       return res.status(400).json({ error: "No fields to update" });
@@ -1224,7 +1257,10 @@ adminSuppliersRouter.put("/products/:productId/edit", requireAdminToken, require
          supermandi_margin_minor as "superMandiMarginMinor",
          margin_percent as "marginPercent",
          bnpl_eligible as "bnplEligible",
-         bnpl_max_days as "bnplMaxDays"`,
+         bnpl_max_days as "bnplMaxDays",
+         invoice_model as "invoiceModel",
+         hsn_code as "hsnCode",
+         gst_rate as "gstRate"`,
       values
     );
 

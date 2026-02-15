@@ -175,6 +175,10 @@ export type ProductEditInput = {
   marginPercent?: number;          // Percentage margin (mutually exclusive with superMandiMarginMinor)
   bnplEligible?: boolean;
   bnplMaxDays?: number;
+  // T-070: Invoice configuration
+  invoiceModel?: "buy_resell" | "platform_fee";
+  hsnCode?: string;
+  gstRate?: number;  // 0, 5, 12, 18, or 28
 };
 
 export type ProductEditResponse = {
@@ -187,6 +191,10 @@ export type ProductEditResponse = {
   bnplMaxDays: number;
   purchasePrice: number;
   retailerPrice: number;
+  // T-070: Invoice config in response
+  invoiceModel?: string;
+  hsnCode?: string | null;
+  gstRate?: number;
 };
 
 /**
