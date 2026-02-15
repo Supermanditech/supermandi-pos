@@ -264,8 +264,18 @@ export default function LoginPage() {
   };
 
   // Reset to initial state
-  // T-009: Clear registration sessionStorage when switching phone
-  const handleChangePhone = () => {
+  // T-009: Clear DRAFT registration on backend + sessionStorage when switching phone
+  const handleChangePhone = async () => {
+    // Best-effort backend clear — expire DRAFT application so GSTIN/phone can be reused
+    if (phone) {
+      try {
+        await fetch(`/api/v1/supplier/registration/clear`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: phone.trim() }),
+        });
+      } catch { /* ignore — best-effort clear */ }
+    }
     setStep('phone');
     setOtp('');
     setError('');

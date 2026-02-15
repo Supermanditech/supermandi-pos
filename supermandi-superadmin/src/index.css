@@ -8,19 +8,21 @@
   color: var(--color-text-primary);
   background-color: var(--color-bg);
 
-  --color-primary: #1d4ed8;
-  --color-primary-dark: #1e3a8a;
+  /* T-016: Aligned with retailer primary (#2563eb) for cross-portal consistency */
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
   --color-primary-soft: #e0e7ff;
   --color-accent: #14b8a6;
   --color-accent-soft: #ecfeff;
-  --color-bg: #f3f6fb;
+  --color-bg: #F7F9FC; /* T-016: Aligned with retailer background */
   --color-surface: #ffffff;
   --color-surface-alt: #f8fafc;
   --color-border: #e2e8f0;
   --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
+  /* T-016: Aligned secondary text + success with retailer portal */
+  --color-text-secondary: #64748b;
   --color-text-inverse: #ffffff;
-  --color-success: #16a34a;
+  --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-error: #dc2626;
   --color-success-soft: #ecfdf5;

@@ -1118,4 +1118,39 @@ router.get("/resume/:gstin", async (req: Request, res: Response, next: NextFunct
   }
 });
 
+// T-009: Clear stuck DRAFT registration so phone/GSTIN can be reused
+// Only DRAFT applications can be expired (not submitted or approved ones)
+router.post("/clear", registrationRateLimiter, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone } = req.body;
+    if (!phone || typeof phone !== 'string') {
+      return res.status(400).json({
+        error: { code: 'INVALID_INPUT', message: 'Phone number is required' }
+      });
+    }
+
+    const pool = getPool();
+    const normalizedPhone = phone.trim().replace(/\s+/g, '');
+
+    // Only expire DRAFT applications — submitted/approved ones are protected
+    const result = await pool.query(
+      `UPDATE auth.applications
+       SET status = 'EXPIRED', updated_at = NOW()
+       WHERE phone = $1 AND entity_type = 'supplier' AND status = 'DRAFT'
+       RETURNING id`,
+      [normalizedPhone]
+    );
+
+    // Always return success (prevent phone enumeration)
+    res.json({
+      success: true,
+      message: result.rowCount && result.rowCount > 0
+        ? 'Previous registration cleared. You can register again.'
+        : 'No pending registration found for this phone.'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export const supplierRegistrationRouter = router;

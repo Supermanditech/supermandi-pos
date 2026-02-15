@@ -253,7 +253,8 @@ export default function RegisterPage() {
   const [city, setCity] = useState(saved.current.city || '');
   const [selectedState, setSelectedState] = useState(saved.current.selectedState || '');
   const [pincode, setPincode] = useState(saved.current.pincode || '');
-  const [agreement, setAgreement] = useState(false);
+  // T-005 parity: Restore agreement from sessionStorage
+  const [agreement, setAgreement] = useState(saved.current.agreement || false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Documents
@@ -271,11 +272,11 @@ export default function RegisterPage() {
     }
     const stateToSave = {
       step, phone, applicationId, businessName, businessType, businessTypeOther,
-      ownerName, gstin, email, addressLine1, addressLine2, city, selectedState, pincode,
+      ownerName, gstin, email, addressLine1, addressLine2, city, selectedState, pincode, agreement,
     };
     sessionStorage.setItem(REG_STORAGE_KEY, JSON.stringify(stateToSave));
   }, [step, phone, applicationId, businessName, businessType, businessTypeOther,
-      ownerName, gstin, email, addressLine1, addressLine2, city, selectedState, pincode]);
+      ownerName, gstin, email, addressLine1, addressLine2, city, selectedState, pincode, agreement]);
 
   // Setup reCAPTCHA
   useEffect(() => {

@@ -287,12 +287,13 @@ adminApplicationsRouter.post(
       const app = appResult.rows[0];
 
       // Validate status allows approval
-      if (!['KYC_SUBMITTED', 'PAYMENTS_SUBMITTED'].includes(app.status)) {
+      // T-012: Allow approval from NEEDS_FIX (after applicant resubmits docs, admin may approve directly)
+      if (!['KYC_SUBMITTED', 'PAYMENTS_SUBMITTED', 'NEEDS_FIX'].includes(app.status)) {
         await client.query('ROLLBACK');
         return res.status(400).json({
           error: {
             code: "INVALID_STATUS",
-            message: `Cannot approve application in status '${app.status}'. Must be KYC_SUBMITTED or PAYMENTS_SUBMITTED.`
+            message: `Cannot approve application in status '${app.status}'. Must be KYC_SUBMITTED, PAYMENTS_SUBMITTED, or NEEDS_FIX.`
           }
         });
       }

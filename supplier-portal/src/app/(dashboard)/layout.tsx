@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { sendVerificationEmail, verifyEmail, getDashboardStats, markOrdersRead } from '@/lib/api';
+import { BuildStamp } from '@/components/BuildStamp';
 // REG-AUTH-302: LIMITED MODE Banner
 import LimitedModeBanner from '@/components/LimitedModeBanner';
 
@@ -379,6 +380,12 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <div className="p-6">{children}</div>
+
+        {/* T-020: Dashboard footer with build info — matches retailer + pre-auth layout */}
+        <footer className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between text-xs text-slate-400">
+          <span>&copy; 2026 SuperManditech. All rights reserved.</span>
+          <BuildStamp />
+        </footer>
       </main>
     </div>
   );
