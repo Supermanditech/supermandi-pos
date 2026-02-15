@@ -31,6 +31,7 @@ export type VerifiedSupplier = {
   verificationStatus: string;
   status: string;
   rating?: number;
+  autoApproveProducts?: boolean;  // T-066
 };
 
 function requireApiBase(): string {

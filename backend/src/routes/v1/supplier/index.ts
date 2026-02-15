@@ -12,6 +12,7 @@ import { supplierOrdersRouter } from "./orders";
 import { supplierDashboardRouter } from "./dashboard";
 import { supplierKycRouter } from "./kyc";
 import { supplierPayoutsRouter } from "./payouts";
+import { supplierInvoicesRouter } from "./invoices";  // T-073: Supplier invoice views
 
 export const supplierRouter = Router();
 
@@ -27,3 +28,4 @@ supplierRouter.use("/", supplierOrdersRouter);
 supplierRouter.use("/", supplierDashboardRouter);
 supplierRouter.use("/kyc", supplierKycRouter);
 supplierRouter.use("/payouts", supplierPayoutsRouter);
+supplierRouter.use("/invoices", supplierInvoicesRouter);  // T-073: Supplier invoice views

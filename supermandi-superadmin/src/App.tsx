@@ -86,6 +86,7 @@ import { AuditTab } from "./tabs/AuditTab";
 import { RegistrationsTab } from "./tabs/RegistrationsTab";
 import { StaffTab } from "./tabs/StaffTab";
 import { GrnAlertsTab } from "./tabs/GrnAlertsTab";
+import { InvoicesTab } from "./tabs/InvoicesTab";  // T-073: Invoice management
 import "./App.css";
 
 // SA-001: PayloadDetails, LoginGate, EnrollmentCountdown extracted to ./components/
@@ -329,7 +330,10 @@ export default function App() {
     percentMargin: string;
     bnplEligible: boolean;
     bnplMaxDays: string;
-  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7" });
+    invoiceModel: "buy_resell" | "platform_fee" | "";  // T-070
+    hsnCode: string;  // T-070
+    gstRate: string;  // T-070
+  }>({ editedName: "", marginType: "fixed", fixedMargin: "", percentMargin: "", bnplEligible: false, bnplMaxDays: "7", invoiceModel: "buy_resell", hsnCode: "", gstRate: "" });
   const [editProductLoading, setEditProductLoading] = useState<boolean>(false);
   const [editProductError, setEditProductError] = useState<string>("");
   const [editProductSuccess, setEditProductSuccess] = useState<string>("");
@@ -959,7 +963,11 @@ export default function App() {
       const input: ProductEditInput = {
         editedName: editProductForm.editedName || undefined,
         bnplEligible: editProductForm.bnplEligible,
-        bnplMaxDays: parseInt(editProductForm.bnplMaxDays) || 7
+        bnplMaxDays: parseInt(editProductForm.bnplMaxDays) || 7,
+        // T-070: Invoice configuration
+        invoiceModel: editProductForm.invoiceModel === "" ? undefined : editProductForm.invoiceModel as "buy_resell" | "platform_fee",
+        hsnCode: editProductForm.hsnCode || undefined,
+        gstRate: editProductForm.gstRate ? parseFloat(editProductForm.gstRate) : undefined,
       };
 
       if (editProductForm.marginType === "fixed" && editProductForm.fixedMargin) {
@@ -2256,6 +2264,9 @@ export default function App() {
               <span>GRN Alerts</span>
               {grnAlertsOpenCount > 0 && <span className="sidebarBadge">{grnAlertsOpenCount}</span>}
             </button>
+            <button className={`sidebarItem ${tab === "invoices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("invoices")}>
+              Invoices
+            </button>
           </div>
 
           {/* Onboarding */}
@@ -2342,6 +2353,7 @@ export default function App() {
           <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>Registrations</button>
           <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>Staff</button>
           <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN</button>
+          <button className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
         </nav>
 
         <div className="mainContent">
@@ -2750,6 +2762,8 @@ export default function App() {
           handleGrnAlertAction={confirmedGrnAlertAction}
         />
       )}
+
+      {tab === "invoices" && <InvoicesTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}

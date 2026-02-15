@@ -29,6 +29,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const DeviceActivationPage = lazy(() => import('./pages/DeviceActivationPage'));
 // RET-WEB-003: Payments Setup page
 const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
+const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));  // T-073
 // RET-CLEANUP-001: Forgot password page
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 // SM-024: Admin approval queue pages
@@ -238,6 +239,8 @@ function AppRoutes() {
           <Route path="settings" element={<Suspense fallback={<PageLoadingFallback />}><SettingsPage /></Suspense>} />
           {/* RET-WEB-003: Payments Setup page */}
           <Route path="settings/payments" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><PaymentsPage /></Suspense></LimitedModeGuard>} />
+          {/* T-073: Invoices page */}
+          <Route path="invoices" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><InvoicesPage /></Suspense></LimitedModeGuard>} />
           {/* RET-WEB-002: Device Activation page — allowed in limited mode */}
           <Route path="devices" element={<Suspense fallback={<PageLoadingFallback />}><DeviceActivationPage /></Suspense>} />
           {/* SM-024: SuperAdmin approval queue pages */}

@@ -1,5 +1,7 @@
 // SA-001: Suppliers tab extracted from App.tsx
+import { useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
+import { toggleAutoApproval, publishProduct } from "../api/suppliers";
 import { formatDateTime } from "../lib/formatters";
 
 interface SuppliersTabProps {
@@ -47,6 +49,9 @@ interface SuppliersTabProps {
     percentMargin: string;
     bnplEligible: boolean;
     bnplMaxDays: string;
+    invoiceModel: "buy_resell" | "platform_fee" | "";  // T-070
+    hsnCode: string;  // T-070
+    gstRate: string;  // T-070
   };
   setEditProductForm: (fn: (f: SuppliersTabProps["editProductForm"]) => SuppliersTabProps["editProductForm"]) => void;
   editProductError: string;
@@ -96,6 +101,38 @@ export function SuppliersTab({
   editProductLoading,
   handleSubmitEditProduct,
 }: SuppliersTabProps) {
+  // T-066: Auto-approve toggle state
+  const [autoApproveLoading, setAutoApproveLoading] = useState<Record<string, boolean>>({});
+  // T-068: Publish button state
+  const [publishLoading, setPublishLoading] = useState<Record<string, boolean>>({});
+  const [publishResult, setPublishResult] = useState<Record<string, string>>({});
+
+  const handleToggleAutoApprove = async (supplierId: string, currentValue: boolean) => {
+    setAutoApproveLoading(prev => ({ ...prev, [supplierId]: true }));
+    try {
+      await toggleAutoApproval(supplierId, !currentValue);
+      refreshSuppliers();
+    } catch (err) {
+      console.error("Failed to toggle auto-approve:", err);
+    } finally {
+      setAutoApproveLoading(prev => ({ ...prev, [supplierId]: false }));
+    }
+  };
+
+  const handlePublishProduct = async (productId: string) => {
+    setPublishLoading(prev => ({ ...prev, [productId]: true }));
+    setPublishResult(prev => ({ ...prev, [productId]: "" }));
+    try {
+      const result = await publishProduct(productId);
+      setPublishResult(prev => ({ ...prev, [productId]: `Published to ${result.publishedToStores} stores` }));
+      refreshSuppliers();
+    } catch (err: any) {
+      setPublishResult(prev => ({ ...prev, [productId]: `Error: ${err.message}` }));
+    } finally {
+      setPublishLoading(prev => ({ ...prev, [productId]: false }));
+    }
+  };
+
   return (
     <section className="card">
       <div className="cardHeader">
@@ -312,6 +349,7 @@ export function SuppliersTab({
                 <th>Location</th>
                 <th>Status</th>
                 <th>Rating</th>
+                <th>Auto-Approve</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -334,6 +372,19 @@ export function SuppliersTab({
                     </span>
                   </td>
                   <td className="mono">{typeof s.rating === "number" ? s.rating.toFixed(1) : "-"}</td>
+                  <td>
+                    <button
+                      onClick={() => handleToggleAutoApprove(s.id, !!s.autoApproveProducts)}
+                      disabled={autoApproveLoading[s.id]}
+                      style={{
+                        padding: "4px 10px", fontSize: 12, border: "1px solid #d1d5db", borderRadius: 4, cursor: "pointer",
+                        background: s.autoApproveProducts ? "#22c55e" : "#f3f4f6",
+                        color: s.autoApproveProducts ? "#fff" : "#374151",
+                      }}
+                    >
+                      {autoApproveLoading[s.id] ? "..." : s.autoApproveProducts ? "ON" : "OFF"}
+                    </button>
+                  </td>
                   <td>
                     {s.verificationStatus === "SUSPENDED" ? (
                       <button
@@ -443,6 +494,18 @@ export function SuppliersTab({
                     {productActionLoading[product.id] ? "Approving..." : "Approve"}
                   </button>
                   <button
+                    onClick={async () => {
+                      handleApproveProduct(product.id);
+                      // Wait briefly for approval to complete, then publish
+                      setTimeout(() => handlePublishProduct(product.id), 1500);
+                    }}
+                    disabled={productActionLoading[product.id] || publishLoading[product.id]}
+                    style={{ background: "#2563eb", color: "white" }}
+                    title="Approve and publish to all linked stores"
+                  >
+                    {publishLoading[product.id] ? "Publishing..." : "Approve & Publish"}
+                  </button>
+                  <button
                     className="btnGhost"
                     onClick={() => handleRejectProduct(product.id)}
                     disabled={productActionLoading[product.id] || (productRejectReason[product.id]?.length || 0) < 10}
@@ -452,6 +515,11 @@ export function SuppliersTab({
                     {productActionLoading[product.id] ? "Rejecting..." : "Reject"}
                   </button>
                 </div>
+                {publishResult[product.id] && (
+                  <div style={{ marginTop: 4, fontSize: 11, color: publishResult[product.id].startsWith("Error") ? "#dc2626" : "#16a34a" }}>
+                    {publishResult[product.id]}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -556,6 +624,49 @@ export function SuppliersTab({
                   />
                 </div>
               )}
+
+              <hr style={{ margin: "16px 0", borderColor: "#e5e7eb" }} />
+
+              {/* T-070: Invoice Configuration */}
+              <div className="control" style={{ marginBottom: 16 }}>
+                <label>Invoice Model</label>
+                <select
+                  value={editProductForm.invoiceModel}
+                  onChange={(e) => setEditProductForm((f) => ({ ...f, invoiceModel: e.target.value as "buy_resell" | "platform_fee" | "" }))}
+                >
+                  <option value="buy_resell">Buy & Resell</option>
+                  <option value="platform_fee">Platform Fee (Commission)</option>
+                </select>
+                <div className="muted" style={{ marginTop: 4 }}>
+                  {editProductForm.invoiceModel === "platform_fee"
+                    ? "Supplier sells directly; SuperMandi earns commission"
+                    : "SuperMandi buys from supplier and resells to retailer"}
+                </div>
+              </div>
+
+              <div className="control" style={{ marginBottom: 16 }}>
+                <label>HSN Code</label>
+                <input
+                  value={editProductForm.hsnCode}
+                  onChange={(e) => setEditProductForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                  placeholder="e.g. 0713"
+                />
+              </div>
+
+              <div className="control" style={{ marginBottom: 16 }}>
+                <label>GST Rate (%)</label>
+                <select
+                  value={editProductForm.gstRate}
+                  onChange={(e) => setEditProductForm((f) => ({ ...f, gstRate: e.target.value }))}
+                >
+                  <option value="">Not set</option>
+                  <option value="0">0%</option>
+                  <option value="5">5%</option>
+                  <option value="12">12%</option>
+                  <option value="18">18%</option>
+                  <option value="28">28%</option>
+                </select>
+              </div>
 
               {editProductError && <div className="banner">{editProductError}</div>}
               {editProductSuccess && <div className="muted" style={{ color: "#22c55e", marginTop: 8 }}>{editProductSuccess}</div>}

@@ -1003,6 +1003,74 @@ export async function getOrderEvents(orderId: string): Promise<OrderEvent[]> {
 }
 
 // ============================================================================
+// T-073: SUPPLIER INVOICES
+// ============================================================================
+
+export interface SupplierInvoice {
+  id: string;
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate?: string;
+  invoiceModel: string;
+  invoiceType: string;
+  status: string;
+  sellerName: string;
+  buyerName: string;
+  subtotalMinor: number;
+  totalTaxMinor: number;
+  totalAmountMinor: number;
+  amountPaidMinor: number;
+  balanceDueMinor: number;
+  createdAt: string;
+}
+
+export interface SupplierInvoiceDetail extends SupplierInvoice {
+  sellerGstin?: string;
+  sellerAddress?: string;
+  buyerGstin?: string;
+  buyerAddress?: string;
+  taxableAmountMinor: number;
+  discountMinor: number;
+  cgstMinor: number;
+  sgstMinor: number;
+  igstMinor: number;
+  platformFeePercent?: number;
+  platformFeeMinor?: number;
+  items: Array<{
+    id: string;
+    productName: string;
+    hsnCode?: string;
+    quantity: number;
+    unit: string;
+    unitPriceMinor: number;
+    taxableAmountMinor: number;
+    gstRate: number;
+    totalMinor: number;
+  }>;
+  payments: Array<{
+    id: string;
+    paymentDate: string;
+    amountMinor: number;
+    paymentMode: string;
+    paymentReference?: string;
+  }>;
+}
+
+export async function getSupplierInvoices(params: { page?: number; limit?: number; status?: string } = {}): Promise<{ data: SupplierInvoice[]; total: number }> {
+  const queryParams = new URLSearchParams();
+  if (params.limit) queryParams.set('limit', params.limit.toString());
+  if (params.page && params.limit) queryParams.set('offset', ((params.page - 1) * params.limit).toString());
+  if (params.status) queryParams.set('status', params.status);
+  const qs = queryParams.toString();
+  return apiFetch<{ data: SupplierInvoice[]; total: number }>(`/api/v1/supplier/invoices${qs ? `?${qs}` : ''}`);
+}
+
+export async function getSupplierInvoiceDetail(invoiceId: string): Promise<SupplierInvoiceDetail> {
+  const result = await apiFetch<{ data: SupplierInvoiceDetail }>(`/api/v1/supplier/invoices/${invoiceId}`);
+  return result.data;
+}
+
+// ============================================================================
 // REG-AUTH-302: REGISTRATION-FIRST AUTHENTICATION APIs
 // ============================================================================
 

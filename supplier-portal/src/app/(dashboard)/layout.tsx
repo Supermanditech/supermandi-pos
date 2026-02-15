@@ -16,6 +16,7 @@ const navItems = [
   { href: '/orders', label: 'Orders', icon: '🛒' },
   { href: '/kyc', label: 'KYC Documents', icon: '📋' },
   { href: '/earnings', label: 'Earnings', icon: '💰' },
+  { href: '/invoices', label: 'Invoices', icon: '🧾' },  // T-073
   { href: '/profile', label: 'Profile', icon: '👤' },
 ];
 

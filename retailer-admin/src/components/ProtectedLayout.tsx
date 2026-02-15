@@ -82,6 +82,7 @@ export default function ProtectedLayout() {
     { path: 'settings', label: 'Settings', icon: '⚙️' }, // GL-RJ-005
     { path: 'settings/payments', label: 'Payments', icon: '💳' }, // RET-WEB-003
     { path: 'devices', label: 'Devices', icon: '📱' }, // RET-WEB-002
+    { path: 'invoices', label: 'Invoices', icon: '🧾' }, // T-073
   ];
 
   // SM-024: Admin approval queue navigation
