@@ -640,7 +640,38 @@ jobs:
           bash scripts/gates/observability-docs.sh
 
   # ==========================================================================
-  # JOB 13: ZRP Routing Spec Validation
+  # JOB 13: ZRP-M Security Deep Scan
+  # ==========================================================================
+  security-deep-scan:
+    name: "ZRP-M: Security Deep Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install backend (for audit)
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: "ZRP-M: Deep security scan"
+        run: |
+          chmod +x scripts/gates/security-deep-scan.sh
+          bash scripts/gates/security-deep-scan.sh
+
+  # ==========================================================================
+  # JOB 14: ZRP Routing Spec Validation
   # ==========================================================================
   routing-validation:
     name: "ZRP-L: Routing Validation"
@@ -661,8 +692,8 @@ jobs:
     name: All Gates Passed
     runs-on: ubuntu-latest
     needs: [typecheck, lint, test, build-verify, local-smoke,
-            git-discipline, security-audit, migration-safety, config-parity,
-            license-coverage, db-auth-scan, scalability-observability,
+            git-discipline, security-audit, security-deep-scan, migration-safety,
+            config-parity, license-coverage, db-auth-scan, scalability-observability,
             routing-validation]
     if: always()
     steps:
@@ -699,10 +730,11 @@ jobs:
             ZRP_FAILED=$((ZRP_FAILED + 1))
           fi
 
-          for job in security-audit migration-safety config-parity license-coverage db-auth-scan scalability-observability routing-validation; do
+          for job in security-audit security-deep-scan migration-safety config-parity license-coverage db-auth-scan scalability-observability routing-validation; do
             RESULT=""
             case "$job" in
               security-audit)            RESULT="${{ needs.security-audit.result }}" ;;
+              security-deep-scan)        RESULT="${{ needs.security-deep-scan.result }}" ;;
               migration-safety)          RESULT="${{ needs.migration-safety.result }}" ;;
               config-parity)             RESULT="${{ needs.config-parity.result }}" ;;
               license-coverage)          RESULT="${{ needs.license-coverage.result }}" ;;
@@ -728,7 +760,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (5 core + 8 ZRP)"
+          echo "ALL CI GATES PASSED (5 core + 9 ZRP)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

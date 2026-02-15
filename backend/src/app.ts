@@ -8,6 +8,9 @@ import { notFoundHandler } from "./middleware/notFoundHandler";
 import { noCacheHeaders } from "./middleware/noCache";
 import { perEndpointBodyLimit } from "./middleware/bodySizeLimit";
 import { correlationIdMiddleware } from "./middleware/correlationId";
+import { tracingMiddleware } from "./middleware/tracing";
+import { metricsMiddleware } from "./services/metricsCollector";
+import { errorReportingMiddleware } from "./services/errorReporter";
 import { getTranslationHealth } from "./services/translationService";
 import { initializeFirebase } from "@supermandi/common";
 import { logger } from "./lib/logger";
@@ -81,6 +84,10 @@ const corsOptions: cors.CorsOptions = {
 app.use(cors(corsOptions));
 // T-210: Attach correlation ID to every request (from X-Request-Id or X-Cloud-Trace-Context)
 app.use(correlationIdMiddleware);
+// T-223: GCP Cloud Trace integration — extract trace context from Cloud Run headers
+app.use(tracingMiddleware);
+// T-223: Performance metrics collection — track latency and throughput per endpoint
+app.use(metricsMiddleware);
 // GO-LIVE-194: Per-endpoint body size limits (replaces global 1MB limit)
 // ITER4-P1-012: Now using perEndpointBodyLimit which applies different limits per endpoint
 app.use("/api", perEndpointBodyLimit());
@@ -121,6 +128,9 @@ app.use("/api", noCacheHeaders, apiRouter);
 
 // FINDING-004: Standardize 404 response format (must be before errorHandler)
 app.use(notFoundHandler);
+
+// T-223: GCP Error Reporting integration — report errors to Cloud Error Reporting
+app.use(errorReportingMiddleware);
 
 app.use(errorHandler);
 

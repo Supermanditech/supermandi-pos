@@ -92,6 +92,7 @@ import { adminGstComplianceRouter } from "./admin/gstCompliance";  // T-235: GST
 import { adminScheduledJobsRouter } from "./admin/scheduledJobs";  // T-231/T-223: Scheduled jobs + monitoring
 import { refundWebhookRouter } from "./webhooks/refundWebhook";  // T-219: Razorpay refund webhooks
 import { adminRefundsRouter } from "./admin/refunds";  // T-219: Admin refund management
+import { qualityDashboardRouter } from "./admin/qualityDashboard";  // T-223: Quality dashboard API
 
 export const v1Router = Router();
 
@@ -175,6 +176,7 @@ v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approva
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
 v1Router.use("/admin", adminScheduledJobsRouter);  // T-231/T-223: Payment reminders + monitoring
 v1Router.use("/admin", adminRefundsRouter);  // T-219: Admin refund management
+v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
