@@ -1,17 +1,23 @@
-// T-230: Auto-reorder suggestions page for retailer-admin
+// T-244: Reorder dashboard — fixed to match T-243 canonical schema (migration 007 + 150)
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 import EmptyState from '../components/EmptyState';
-import { PackageCheck, RefreshCw, Settings, AlertTriangle } from 'lucide-react';
+import { PackageCheck, RefreshCw, Settings, AlertTriangle, CreditCard } from 'lucide-react';
+
+// =============================================================================
+// TYPES (matching T-243 backend response)
+// =============================================================================
 
 interface ReorderSettings {
   storeId: string;
-  isEnabled: boolean;
-  lowStockThreshold: number;
-  reorderWindowDays: number;
-  autoCreatePo: boolean;
+  reorderEnabled: boolean;
+  requireApproval: boolean;
+  notifyOnLowStock: boolean;
+  autoApproveThreshold: number | null;
+  defaultLeadDays: number;
+  updatedAt: string | null;
 }
 
 interface Suggestion {
@@ -21,19 +27,26 @@ interface Suggestion {
   category: string | null;
   unit: string | null;
   currentStock: number;
+  minStock: number;
+  targetStock: number;
+  maxReorderQty: number | null;
   purchasePrice: number | null;
   sellPrice: number | null;
-  threshold: number;
 }
 
 interface PendingReorder {
   id: string;
+  storeId: string;
   productId: string;
   productName: string;
   currentStock: number;
-  threshold: number;
-  suggestedQty: number;
+  minThreshold: number;
+  targetStock: number;
+  suggestedQuantity: number;
+  supplierName: string | null;
+  unitPrice: number | null;
   status: string;
+  expiresAt: string;
   createdAt: string;
 }
 
@@ -42,25 +55,29 @@ function formatCurrency(minor: number | null): string {
   return '\u20B9' + (minor / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 }
 
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
 export default function ReorderPage() {
   const { accessToken } = useAuth();
   const [activeTab, setActiveTab] = useState<'suggestions' | 'pending' | 'settings'>('suggestions');
 
-  // Settings state
+  // Settings state (matches canonical schema)
   const [settings, setSettings] = useState<ReorderSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [editThreshold, setEditThreshold] = useState(10);
-  const [editWindowDays, setEditWindowDays] = useState(7);
-  const [editEnabled, setEditEnabled] = useState(false);
-  const [editAutoPo, setEditAutoPo] = useState(false);
+  const [editEnabled, setEditEnabled] = useState(true);
+  const [editRequireApproval, setEditRequireApproval] = useState(true);
+  const [editNotifyLowStock, setEditNotifyLowStock] = useState(true);
+  const [editAutoApproveThreshold, setEditAutoApproveThreshold] = useState('');
+  const [editDefaultLeadDays, setEditDefaultLeadDays] = useState(3);
 
   // Suggestions state
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [suggestionsError, setSuggestionsError] = useState('');
-  const [threshold, setThreshold] = useState(10);
 
   // Pending state
   const [pending, setPending] = useState<PendingReorder[]>([]);
@@ -77,10 +94,11 @@ export default function ReorderPage() {
       const data = await safeJson<{ data: ReorderSettings }>(response);
       if (data?.data) {
         setSettings(data.data);
-        setEditThreshold(data.data.lowStockThreshold);
-        setEditWindowDays(data.data.reorderWindowDays);
-        setEditEnabled(data.data.isEnabled);
-        setEditAutoPo(data.data.autoCreatePo);
+        setEditEnabled(data.data.reorderEnabled);
+        setEditRequireApproval(data.data.requireApproval);
+        setEditNotifyLowStock(data.data.notifyOnLowStock);
+        setEditAutoApproveThreshold(data.data.autoApproveThreshold != null ? String(data.data.autoApproveThreshold) : '');
+        setEditDefaultLeadDays(data.data.defaultLeadDays);
       }
     } catch (e: any) {
       setSettingsError(e?.message || 'Failed to load settings');
@@ -96,10 +114,11 @@ export default function ReorderPage() {
       const response = await authFetch('/api/v1/retailer-admin/reorder/settings', accessToken, {
         method: 'PUT',
         body: JSON.stringify({
-          isEnabled: editEnabled,
-          lowStockThreshold: editThreshold,
-          reorderWindowDays: editWindowDays,
-          autoCreatePo: editAutoPo,
+          reorderEnabled: editEnabled,
+          requireApproval: editRequireApproval,
+          notifyOnLowStock: editNotifyLowStock,
+          autoApproveThreshold: editAutoApproveThreshold ? Number(editAutoApproveThreshold) : null,
+          defaultLeadDays: editDefaultLeadDays,
         }),
       });
       if (!response.ok) throw new Error('Failed to save settings');
@@ -110,7 +129,7 @@ export default function ReorderPage() {
     } finally {
       setSettingsSaving(false);
     }
-  }, [accessToken, editEnabled, editThreshold, editWindowDays, editAutoPo]);
+  }, [accessToken, editEnabled, editRequireApproval, editNotifyLowStock, editAutoApproveThreshold, editDefaultLeadDays]);
 
   const fetchSuggestions = useCallback(async () => {
     setSuggestionsLoading(true);
@@ -119,10 +138,9 @@ export default function ReorderPage() {
       const response = await authFetch('/api/v1/retailer-admin/reorder/suggestions', accessToken);
       if (response.status === 401) return;
       if (!response.ok) throw new Error('Failed to fetch suggestions');
-      const data = await safeJson<{ data: Suggestion[]; total: number; threshold: number }>(response);
+      const data = await safeJson<{ data: Suggestion[]; total: number }>(response);
       if (data) {
         setSuggestions(data.data || []);
-        setThreshold(data.threshold || 10);
       }
     } catch (e: any) {
       setSuggestionsError(e?.message || 'Failed to load suggestions');
@@ -175,7 +193,7 @@ export default function ReorderPage() {
               color: activeTab === t ? '#2563eb' : '#666', background: 'transparent', marginBottom: -2,
             }}
           >
-            {t === 'suggestions' ? 'Low Stock' : t === 'pending' ? 'Pending Reorders' : 'Settings'}
+            {t === 'suggestions' ? 'Low Stock' : t === 'pending' ? `Pending Reorders${pending.length > 0 ? ` (${pending.length})` : ''}` : 'Settings'}
           </button>
         ))}
       </div>
@@ -184,14 +202,14 @@ export default function ReorderPage() {
       {activeTab === 'suggestions' && (
         <div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, color: '#666' }}>Products at or below <strong>{threshold} units</strong></span>
+            <span style={{ fontSize: 13, color: '#666' }}>Products below their reorder threshold (per-product policy)</span>
             <button onClick={fetchSuggestions} disabled={suggestionsLoading} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
               <RefreshCw size={14} className={suggestionsLoading ? 'spin' : ''} /> Refresh
             </button>
           </div>
           {suggestionsError && <div className="error-banner" style={{ marginBottom: 12 }}>{suggestionsError}</div>}
           {!suggestionsLoading && suggestions.length === 0 ? (
-            <EmptyState icon={<PackageCheck size={32} />} title="All stocked up!" description="No products are below the reorder threshold." />
+            <EmptyState icon={<PackageCheck size={32} />} title="All stocked up!" description="No products are below their reorder threshold." />
           ) : (
             <div className="table-container">
               <table className="table">
@@ -199,11 +217,12 @@ export default function ReorderPage() {
                   <tr>
                     <th>Product</th>
                     <th>Category</th>
-                    <th>Current Stock</th>
-                    <th>Threshold</th>
-                    <th>Unit</th>
-                    <th>Purchase Price</th>
-                    <th>Sell Price</th>
+                    <th>Current</th>
+                    <th>Min</th>
+                    <th>Target</th>
+                    <th>Max Qty</th>
+                    <th>Purchase</th>
+                    <th>Sell</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -217,8 +236,9 @@ export default function ReorderPage() {
                           {s.currentStock}
                         </span>
                       </td>
-                      <td>{s.threshold}</td>
-                      <td>{s.unit || '\u2014'}</td>
+                      <td>{s.minStock}</td>
+                      <td>{s.targetStock}</td>
+                      <td>{s.maxReorderQty ?? '\u2014'}</td>
                       <td>{formatCurrency(s.purchasePrice)}</td>
                       <td>{formatCurrency(s.sellPrice)}</td>
                     </tr>
@@ -241,16 +261,19 @@ export default function ReorderPage() {
           </div>
           {pendingError && <div className="error-banner" style={{ marginBottom: 12 }}>{pendingError}</div>}
           {!pendingLoading && pending.length === 0 ? (
-            <EmptyState icon={<PackageCheck size={32} />} title="No pending reorders" description="Pending reorder requests will appear here." />
+            <EmptyState icon={<PackageCheck size={32} />} title="No pending reorders" description="Pending reorder requests will appear here when the system detects low stock." />
           ) : (
             <div className="table-container">
               <table className="table">
                 <thead>
                   <tr>
                     <th>Product</th>
-                    <th>Current Stock</th>
-                    <th>Threshold</th>
+                    <th>Current</th>
+                    <th>Min</th>
+                    <th>Target</th>
                     <th>Suggested Qty</th>
+                    <th>Supplier</th>
+                    <th>Unit Price</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -258,9 +281,16 @@ export default function ReorderPage() {
                   {pending.map((p) => (
                     <tr key={p.id}>
                       <td style={{ fontWeight: 500 }}>{p.productName}</td>
-                      <td>{p.currentStock}</td>
-                      <td>{p.threshold}</td>
-                      <td style={{ fontWeight: 600, color: '#2563eb' }}>{p.suggestedQty}</td>
+                      <td>
+                        <span style={{ color: p.currentStock === 0 ? '#dc2626' : '#f59e0b', fontWeight: 600 }}>
+                          {p.currentStock}
+                        </span>
+                      </td>
+                      <td>{p.minThreshold}</td>
+                      <td>{p.targetStock}</td>
+                      <td style={{ fontWeight: 600, color: '#2563eb' }}>{p.suggestedQuantity}</td>
+                      <td>{p.supplierName || '\u2014'}</td>
+                      <td>{formatCurrency(p.unitPrice)}</td>
                       <td><span className="badge badge-warning">{p.status}</span></td>
                     </tr>
                   ))}
@@ -278,7 +308,7 @@ export default function ReorderPage() {
           {settingsLoading && <div style={{ textAlign: 'center', padding: 24, color: '#888' }}>Loading settings...</div>}
           {settingsError && <div className="error-banner" style={{ marginBottom: 12 }}>{settingsError}</div>}
           {!settingsLoading && (
-            <div className="card" style={{ padding: 24, maxWidth: 480 }}>
+            <div className="card" style={{ padding: 24, maxWidth: 520 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <Settings size={18} />
                 <h3 style={{ margin: 0 }}>Reorder Settings</h3>
@@ -286,20 +316,25 @@ export default function ReorderPage() {
               <div style={{ display: 'grid', gap: 16 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input type="checkbox" checked={editEnabled} onChange={(e) => setEditEnabled(e.target.checked)} />
-                  <span>Enable auto-reorder suggestions</span>
+                  <span>Enable reorder suggestions</span>
                 </label>
-                <div>
-                  <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Low stock threshold (units)</label>
-                  <input type="number" min={1} max={999} value={editThreshold} onChange={(e) => setEditThreshold(Number(e.target.value))} style={{ width: 120 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Reorder window (days)</label>
-                  <input type="number" min={1} max={90} value={editWindowDays} onChange={(e) => setEditWindowDays(Number(e.target.value))} style={{ width: 120 }} />
-                </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="checkbox" checked={editAutoPo} onChange={(e) => setEditAutoPo(e.target.checked)} />
-                  <span>Auto-create purchase orders</span>
+                  <input type="checkbox" checked={editRequireApproval} onChange={(e) => setEditRequireApproval(e.target.checked)} />
+                  <span>Require approval before creating POs</span>
                 </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="checkbox" checked={editNotifyLowStock} onChange={(e) => setEditNotifyLowStock(e.target.checked)} />
+                  <span>Notify on low stock</span>
+                </label>
+                <div>
+                  <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Auto-approve threshold (amount in paise, leave blank to disable)</label>
+                  <input type="number" min={0} value={editAutoApproveThreshold} onChange={(e) => setEditAutoApproveThreshold(e.target.value)} placeholder="No auto-approve" style={{ width: 180 }} />
+                  <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>Orders below this value auto-approve</span>
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Default lead time (days)</label>
+                  <input type="number" min={1} max={90} value={editDefaultLeadDays} onChange={(e) => setEditDefaultLeadDays(Number(e.target.value))} style={{ width: 120 }} />
+                </div>
                 <button onClick={saveSettings} disabled={settingsSaving} className="btn-primary" style={{ width: 'fit-content' }}>
                   {settingsSaving ? 'Saving...' : 'Save Settings'}
                 </button>

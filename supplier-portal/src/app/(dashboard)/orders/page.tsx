@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, markOrdersRead, getOrderDetail, getOrderEvents, getOrderStreamUrl, Order, OrderItem, OrderNote, OrderDetail, OrderDetailItem, OrderEvent, PaginatedResponse } from '@/lib/api';
+import { getOrders, updateOrderStatus, updateOrderShipment, updateOrderItemStatus, getOrderNotes, addOrderNote, markOrdersRead, getOrderDetail, getOrderEvents, getOrderStreamUrl, confirmOrderDelivery, Order, OrderItem, OrderNote, OrderDetail, OrderDetailItem, OrderEvent, PaginatedResponse } from '@/lib/api';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
@@ -11,7 +11,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import { useUrlState } from '@/hooks/useUrlState';
 // GAP-3: EmptyState component for consistent empty states
 import EmptyState from '@/components/EmptyState';
-import { ShoppingCart } from 'lucide-react';
+import { ShoppingCart, Repeat } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -73,6 +73,9 @@ export default function OrdersPage() {
   // GO-LIVE-030: Order notes state
   const [newNoteText, setNewNoteText] = useState('');
   const [showNotesSection, setShowNotesSection] = useState(false);
+  // T-246: Delivery confirmation state
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [showDeliveryForm, setShowDeliveryForm] = useState(false);
 
   // GL-WF-063: Paginated orders query
   const { data: ordersResponse, isLoading } = useQuery({
@@ -104,6 +107,7 @@ export default function OrdersPage() {
     es.addEventListener('order.created', handleOrderEvent);
     es.addEventListener('order.status_changed', handleOrderEvent);
     es.addEventListener('order.payment_received', handleOrderEvent);
+    es.addEventListener('order.delivery_confirmed', handleOrderEvent);  // T-247
     es.addEventListener('order.event', handleOrderEvent);
 
     es.onerror = () => {
@@ -205,6 +209,23 @@ export default function OrdersPage() {
     },
   });
 
+  // T-246: Delivery confirmation mutation
+  const deliveryMutation = useMutation({
+    mutationFn: ({ orderId, deliveryNotes: notes }: { orderId: string; deliveryNotes?: string }) =>
+      confirmOrderDelivery(orderId, { deliveryNotes: notes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orderDetail'] });
+      toast.success('Delivery confirmed successfully');
+      setSelectedOrder(null);
+      setShowDeliveryForm(false);
+      setDeliveryNotes('');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to confirm delivery');
+    },
+  });
+
   const filteredOrders = orders?.filter(
     (order) => statusFilter === 'all' || order.status === statusFilter
   );
@@ -225,7 +246,7 @@ export default function OrdersPage() {
   }
 
   // ISSUE-MICRO-004: Track any pending mutation to prevent modal close during operations
-  const isAnyMutationPending = updateStatusMutation.isPending || shipmentMutation.isPending || itemStatusMutation.isPending || addNoteMutation.isPending;
+  const isAnyMutationPending = updateStatusMutation.isPending || shipmentMutation.isPending || itemStatusMutation.isPending || addNoteMutation.isPending || deliveryMutation.isPending;
 
   // STBT-185.7: Force-close escape after mutation hangs >15s
   const [mutationStartTime, setMutationStartTime] = useState<number | null>(null);
@@ -353,6 +374,13 @@ export default function OrdersPage() {
                     >
                       {order.status}
                     </span>
+                    {/* T-246: Reorder badge */}
+                    {order.orderType === 'reorder' && (
+                      <span className="ml-1.5 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700" title="Auto-generated reorder">
+                        <Repeat size={10} />
+                        Reorder
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-sm text-slate-500">
                     {formatDateTime(order.createdAt)}
@@ -481,10 +509,34 @@ export default function OrdersPage() {
                   {selectedOrder.status}
                 </span>
               </div>
+              {/* T-246: Reorder context */}
+              {orderDetail?.isReorder && (
+                <div>
+                  <p className="text-slate-500">Order Type</p>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-indigo-100 text-indigo-700">
+                    <Repeat size={12} />
+                    Auto Reorder
+                  </span>
+                </div>
+              )}
+              {/* T-246: Payment terms */}
+              {orderDetail?.paymentTerms && (
+                <div>
+                  <p className="text-slate-500">Payment Terms</p>
+                  <p className="font-medium">{orderDetail.paymentTerms}</p>
+                </div>
+              )}
               {orderDetail?.expectedDeliveryDate && (
                 <div>
                   <p className="text-slate-500">Expected Delivery</p>
                   <p className="font-medium">{formatDateTime(orderDetail.expectedDeliveryDate)}</p>
+                </div>
+              )}
+              {/* T-246: Actual delivery date */}
+              {orderDetail?.actualDeliveryDate && (
+                <div>
+                  <p className="text-slate-500">Delivered On</p>
+                  <p className="font-medium text-green-700">{formatDateTime(orderDetail.actualDeliveryDate)}</p>
                 </div>
               )}
               {orderDetail?.storeNotes && (
@@ -718,6 +770,47 @@ export default function OrdersPage() {
               </div>
             )}
 
+            {/* T-246: Delivery Confirmation Form */}
+            {showDeliveryForm && selectedOrder.status === 'shipped' && (
+              <div className="border border-green-200 rounded-lg p-4 mb-6 bg-green-50">
+                <h3 className="font-medium text-green-800 mb-3">Confirm Delivery</h3>
+                <p className="text-sm text-green-700 mb-3">
+                  Confirming delivery will mark this order as delivered and record the delivery date.
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm text-green-800 mb-1">Delivery Notes (optional)</label>
+                  <textarea
+                    value={deliveryNotes}
+                    onChange={(e) => setDeliveryNotes(e.target.value)}
+                    placeholder="Add any delivery notes (condition, issues, etc.)"
+                    rows={2}
+                    maxLength={500}
+                    className="w-full px-3 py-2 border border-green-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      deliveryMutation.mutate({
+                        orderId: selectedOrder.id,
+                        deliveryNotes: deliveryNotes.trim() || undefined,
+                      });
+                    }}
+                    disabled={deliveryMutation.isPending}
+                    className="btn bg-green-600 text-white hover:bg-green-700"
+                  >
+                    {deliveryMutation.isPending ? 'Confirming...' : 'Confirm Delivery'}
+                  </button>
+                  <button
+                    onClick={() => { setShowDeliveryForm(false); setDeliveryNotes(''); }}
+                    className="btn bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* GO-LIVE-030: Order Notes/Communication Section */}
             <div className="border-t border-slate-200 pt-4 mt-4">
               <button
@@ -812,7 +905,7 @@ export default function OrdersPage() {
             </div>
 
             {/* Status Actions */}
-            {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && (
+            {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && !showDeliveryForm && (
               <div className="mt-4">
                 <p className="text-sm text-slate-500 mb-3">Update Status</p>
                 <div className="flex gap-3">
@@ -832,17 +925,10 @@ export default function OrdersPage() {
                           }
                           // GL-WF-039: Show shipment form instead of directly updating
                           setShowShipmentForm(true);
+                        } else if (newStatus === 'delivered') {
+                          // T-246: Use delivery confirmation form instead of generic status update
+                          setShowDeliveryForm(true);
                         } else {
-                          // ISSUE-MICRO-020: Validate receipt quantities before marking delivered
-                          if (newStatus === 'delivered') {
-                            const unreceived = selectedOrder.items.filter(item => !item.receivedQuantity || item.status === 'pending');
-                            if (unreceived.length > 0) {
-                              const proceed = window.confirm(
-                                `${unreceived.length} item(s) have not been marked as received. Mark as delivered anyway?`
-                              );
-                              if (!proceed) return;
-                            }
-                          }
                           updateStatusMutation.mutate({
                             id: selectedOrder.id,
                             status: newStatus as Order['status'],
@@ -853,11 +939,15 @@ export default function OrdersPage() {
                       className={`btn ${
                         newStatus === 'cancelled'
                           ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : newStatus === 'delivered'
+                          ? 'bg-green-600 text-white hover:bg-green-700'
                           : 'btn-primary'
                       }`}
                     >
                       {updateStatusMutation.isPending
                         ? 'Updating...'
+                        : newStatus === 'delivered'
+                        ? 'Confirm Delivery'
                         : `Mark as ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`}
                     </button>
                   ))}

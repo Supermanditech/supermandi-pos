@@ -1,5 +1,6 @@
 // SM-005: Supplier Orders Routes
 // SEC-001: Status gating for write operations
+// T-245: Added reorder context + delivery confirmation
 // View and manage orders from retailers
 
 import { Router, Request, Response, NextFunction } from "express";
@@ -83,12 +84,14 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
     // GL-WF-063: Add LIMIT and OFFSET for pagination
     // GL-WF-038: Include item-level status for per-item tracking
     // FIX: Use correct column names from actual schema
+    // T-245: Include order_type for reorder badge display
     const result = await pool.query(
       `SELECT
         po.id,
         po.store_id,
         s.name as store_name,
         po.status,
+        po.order_type,
         po.total_amount as total_amount,
         po.created_at,
         po.updated_at,
@@ -110,7 +113,7 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
       WHERE sp.supplier_id = $1
         AND po.status != 'draft'
-      GROUP BY po.id, po.store_id, s.name, po.status, po.total_amount, po.created_at, po.updated_at
+      GROUP BY po.id, po.store_id, s.name, po.status, po.order_type, po.total_amount, po.created_at, po.updated_at
       ORDER BY po.created_at DESC
       LIMIT $2 OFFSET $3`,
       [req.supplierId, limit, offset]
@@ -122,6 +125,7 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
         storeId: o.store_id,
         storeName: o.store_name,
         status: o.status,
+        orderType: o.order_type || 'manual',  // T-245: reorder context
         totalAmount: o.total_amount,
         items: o.items || [],
         createdAt: o.created_at,
@@ -273,8 +277,10 @@ router.get("/orders/stream", async (req: Request, res: Response) => {
       for (const row of result.rows) {
         if (closed) break;
 
+        // T-247: Enhanced event type mapping including delivery + reorder events
         const eventType = row.event_type.includes('status_changed') ? 'order.status_changed'
           : row.event_type === 'order_created' ? 'order.created'
+          : row.event_type === 'delivery_confirmed' ? 'order.delivery_confirmed'
           : row.event_type.includes('payment') ? 'order.payment_received'
           : 'order.event';
 
@@ -328,7 +334,7 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
       return;
     }
 
-    // Get order with store contact info
+    // T-245: Get order with store contact info + reorder context + payment terms
     const orderResult = await pool.query(
       `SELECT
         po.id,
@@ -338,15 +344,19 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
         s.city as store_city,
         s.phone as store_phone,
         po.status,
+        po.order_type,
+        po.source_reorder_ids,
         po.total_amount,
         po.tracking_number,
         po.carrier,
         po.shipped_at,
         po.shipment_date,
         po.expected_delivery_date,
+        po.actual_delivery_date,
         po.store_notes,
         po.created_at,
         po.updated_at,
+        ssl.payment_terms,
         json_agg(
           json_build_object(
             'id', poi.id,
@@ -366,11 +376,14 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
       JOIN platform.stores s ON s.id = po.store_id
       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+      LEFT JOIN supplier.supplier_store_links ssl
+        ON ssl.supplier_id = $2 AND ssl.store_id = po.store_id
       WHERE po.id = $1 AND sp.supplier_id = $2
       GROUP BY po.id, po.order_number, po.store_id, s.name, s.city, s.phone,
-               po.status, po.total_amount, po.tracking_number, po.carrier,
-               po.shipped_at, po.shipment_date, po.expected_delivery_date,
-               po.store_notes, po.created_at, po.updated_at`,
+               po.status, po.order_type, po.source_reorder_ids, po.total_amount,
+               po.tracking_number, po.carrier, po.shipped_at, po.shipment_date,
+               po.expected_delivery_date, po.actual_delivery_date,
+               po.store_notes, po.created_at, po.updated_at, ssl.payment_terms`,
       [id, req.supplierId]
     );
 
@@ -383,6 +396,7 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
 
     const o = orderResult.rows[0];
 
+    // T-245: Include reorder context + payment terms + delivery info
     res.json({
       data: {
         id: o.id,
@@ -392,12 +406,17 @@ router.get("/orders/:id", requireSupplierAuth, requireRegisteredSupplier, async 
         storeCity: o.store_city,
         storePhone: o.store_phone,
         status: o.status,
+        orderType: o.order_type || 'manual',
+        isReorder: o.order_type === 'reorder',
+        sourceReorderIds: o.source_reorder_ids || [],
         totalAmount: o.total_amount,
         trackingNumber: o.tracking_number,
         carrier: o.carrier,
         shippedAt: o.shipped_at,
         shipmentDate: o.shipment_date,
         expectedDeliveryDate: o.expected_delivery_date,
+        actualDeliveryDate: o.actual_delivery_date,
+        paymentTerms: o.payment_terms || null,
         storeNotes: o.store_notes,
         items: o.items || [],
         createdAt: o.created_at,
@@ -665,6 +684,90 @@ router.patch("/orders/:id/shipment", requireSupplierAuth, requireActiveSupplier,
         expectedDeliveryDate: result.rows[0].expected_delivery_date,
         updatedAt: result.rows[0].updated_at,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/supplier/orders/:id/delivery-confirm
+ * T-245: Dedicated delivery confirmation endpoint
+ * Transitions shipped → delivered, sets actual_delivery_date, records delivery notes
+ * SEC-001: Requires ACTIVE supplier status
+ */
+router.post("/orders/:id/delivery-confirm", requireSupplierAuth, requireActiveSupplier, async (req: SupplierAuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { deliveryNotes, deliveryProofUrl } = req.body;
+
+    const pool = getPool();
+    if (!pool) {
+      res.status(503).json({ error: { code: 'DB_UNAVAILABLE', message: 'Database unavailable' } });
+      return;
+    }
+
+    // Verify this order contains items from this supplier
+    const checkResult = await pool.query(
+      `SELECT DISTINCT po.id, po.status, po.order_type
+       FROM orders.purchase_orders po
+       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
+       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
+       WHERE po.id = $1 AND sp.supplier_id = $2`,
+      [id, req.supplierId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Order not found' }
+      });
+      return;
+    }
+
+    const currentStatus = checkResult.rows[0].status;
+    if (currentStatus !== 'shipped') {
+      res.status(400).json({
+        error: { code: 'INVALID_TRANSITION', message: `Only shipped orders can be confirmed delivered (current: ${currentStatus})` }
+      });
+      return;
+    }
+
+    // Transition to delivered + set actual_delivery_date
+    const result = await pool.query(
+      `UPDATE orders.purchase_orders
+       SET status = 'delivered',
+           actual_delivery_date = NOW(),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, status, actual_delivery_date, updated_at`,
+      [id]
+    );
+
+    // Log delivery confirmation event with metadata
+    await pool.query(
+      `INSERT INTO orders.order_events (purchase_order_id, event_type, actor_id, actor_type, metadata)
+       VALUES ($1, 'delivery_confirmed', $2, 'supplier', $3)`,
+      [
+        id,
+        req.supplierId,
+        JSON.stringify({
+          from: currentStatus,
+          to: 'delivered',
+          deliveryNotes: deliveryNotes || null,
+          deliveryProofUrl: deliveryProofUrl || null,
+          isReorder: checkResult.rows[0].order_type === 'reorder',
+        }),
+      ]
+    );
+
+    res.json({
+      data: {
+        id: result.rows[0].id,
+        status: result.rows[0].status,
+        actualDeliveryDate: result.rows[0].actual_delivery_date,
+        updatedAt: result.rows[0].updated_at,
+      },
+      message: 'Delivery confirmed successfully',
     });
   } catch (error) {
     next(error);

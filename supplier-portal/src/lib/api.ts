@@ -685,6 +685,7 @@ export interface Order {
   id: string;
   storeId: string;
   storeName: string;
+  orderType?: 'manual' | 'reorder';  // T-246: reorder context
   items: OrderItem[];
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
@@ -1079,6 +1080,22 @@ export async function markOrdersRead(): Promise<{ success: boolean }> {
   });
 }
 
+// T-245: Confirm delivery for an order (shipped → delivered)
+export interface DeliveryConfirmation {
+  deliveryNotes?: string;
+  deliveryProofUrl?: string;
+}
+
+export async function confirmOrderDelivery(
+  orderId: string,
+  data?: DeliveryConfirmation
+): Promise<{ id: string; status: string; actualDeliveryDate: string; updatedAt: string }> {
+  return apiFetch(`/api/v1/supplier/orders/${orderId}/delivery-confirm`, {
+    method: 'POST',
+    body: JSON.stringify(data || {}),
+  });
+}
+
 // SUP-POS-008: Get single order detail with barcode, SKU, store contact
 export interface OrderDetail {
   id: string;
@@ -1088,12 +1105,17 @@ export interface OrderDetail {
   storeCity: string | null;
   storePhone: string | null;
   status: Order['status'];
+  orderType?: 'manual' | 'reorder';  // T-246: reorder context
+  isReorder?: boolean;  // T-246: convenience flag
+  sourceReorderIds?: string[];  // T-246: linked reorder IDs
   totalAmount: number;
   trackingNumber: string | null;
   carrier: string | null;
   shippedAt: string | null;
   shipmentDate: string | null;
   expectedDeliveryDate: string | null;
+  actualDeliveryDate: string | null;  // T-245: delivery confirmation timestamp
+  paymentTerms: string | null;  // T-245: payment terms from supplier_store_links
   storeNotes: string | null;
   items: OrderDetailItem[];
   createdAt: string;
