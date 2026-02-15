@@ -28,9 +28,6 @@ export default function LoginPage() {
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
 
-  // GO-LIVE-UI-REG-003: Track if lookup was successful (registration exists)
-  const [lookupComplete, setLookupComplete] = useState(false);
-
   // T-003: Dual auth — password + OTP toggle
   const [authMode, setAuthMode] = useState<AuthMode>('otp');
   const [email, setEmail] = useState('');
@@ -42,9 +39,9 @@ export default function LoginPage() {
     setMounted(true);
   }, []);
 
-  // Setup reCAPTCHA only when ready to send OTP (after successful lookup)
+  // T-021: Setup reCAPTCHA when in OTP phone step (initialize early for combined lookup+send)
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && lookupComplete) {
+    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && authMode === 'otp') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -57,7 +54,7 @@ export default function LoginPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step, lookupComplete]);
+  }, [step, authMode]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -75,8 +72,8 @@ export default function LoginPage() {
     }
   }, [otpExpirySeconds]);
 
-  // GO-LIVE-UI-REG-003: Lookup registration by phone FIRST
-  const handleContinue = async (e: React.FormEvent) => {
+  // T-021: Combined lookup + OTP send — single "Send OTP" click
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -96,52 +93,37 @@ export default function LoginPage() {
         normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
       }
 
-      // GO-LIVE-UI-REG-004: Call lookup endpoint
+      // Step 1: Lookup registration status
       const data = await lookupSupplierRegistration(normalizedPhone);
 
       // Handle lookup result
       if (!data.exists) {
-        // PORTAL-AUTH-001: Show "not onboarded" state with Register CTA
         setStep('not_onboarded');
         return;
       }
 
-      // Registration exists - check if login is allowed
-      if (data.nextStep === 'LOGIN_ALLOWED') {
-        // Can proceed with OTP
-        setLookupComplete(true);
-        // reCAPTCHA will be setup by useEffect
-      } else if (data.nextStep === 'PENDING_APPROVAL') {
+      if (data.nextStep === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
-      } else if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
+        return;
+      }
+      if (data.nextStep === 'VERIFY_PHONE' || data.nextStep === 'UPLOAD_DOCUMENTS' || data.nextStep === 'FIX_REQUIRED') {
         setStep('incomplete');
-      } else if (data.nextStep === 'ACCOUNT_SUSPENDED') {
-        // SA-P1-005: Suspended supplier
+        return;
+      }
+      if (data.nextStep === 'ACCOUNT_SUSPENDED') {
         setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
-      } else if (data.nextStep === 'CONTACT_SUPPORT') {
+        return;
+      }
+      if (data.nextStep === 'CONTACT_SUPPORT') {
         setError('Your application was not approved. Please contact support for assistance.');
-      } else {
-        // Unknown status - show message
+        return;
+      }
+      if (data.nextStep !== 'LOGIN_ALLOWED') {
         setError(data.message || 'Unable to proceed. Please contact support.');
+        return;
       }
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to check registration. Please try again.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Send OTP (only after successful lookup)
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    try {
+      // Step 2: Send OTP via Firebase (lookup succeeded)
       if (!isFirebaseReady()) {
         throw new Error('Firebase is not configured. Phone verification is required.');
       }
@@ -149,9 +131,13 @@ export default function LoginPage() {
       await sendOtp(phone);
       setStep('otp');
       setResendCooldown(60);
-      setOtpExpirySeconds(300); // AUTH-OTP-001: Firebase OTP ~5 min
+      setOtpExpirySeconds(300);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -285,7 +271,6 @@ export default function LoginPage() {
     setError('');
     setPassword('');
     setEmail('');
-    setLookupComplete(false);
     recaptchaInitialized.current = false;
     sessionStorage.removeItem('supermandi_supplier_reg_state');
   };
@@ -296,21 +281,15 @@ export default function LoginPage() {
         Sign in to your account
       </h2>
 
-      {step === 'phone' && !lookupComplete && authMode === 'otp' && (
+      {step === 'phone' && authMode === 'otp' && (
         <p className="text-slate-600 text-sm mb-6">
-          Enter your registered phone number to continue
+          Enter your registered phone number to receive an OTP
         </p>
       )}
 
-      {step === 'phone' && !lookupComplete && authMode === 'password' && (
+      {step === 'phone' && authMode === 'password' && (
         <p className="text-slate-600 text-sm mb-6">
           Sign in with your email and password
-        </p>
-      )}
-
-      {step === 'phone' && lookupComplete && (
-        <p className="text-slate-600 text-sm mb-6">
-          Click "Send OTP" to receive a verification code at {phone}
         </p>
       )}
 
@@ -321,7 +300,7 @@ export default function LoginPage() {
       )}
 
       {/* Firebase warning - only show after client mount */}
-      {mounted && !isFirebaseReady() && step === 'phone' && lookupComplete && (
+      {mounted && !isFirebaseReady() && step === 'phone' && authMode === 'otp' && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4 text-sm">
           <strong>Phone Verification Unavailable</strong>
           <p className="mt-1">
@@ -337,9 +316,9 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* Step 1: Phone Number - Lookup First (OTP mode) */}
-      {step === 'phone' && !lookupComplete && authMode === 'otp' && (
-        <form onSubmit={handleContinue} className="space-y-4">
+      {/* T-021: Phone Number — combined lookup + OTP send */}
+      {step === 'phone' && authMode === 'otp' && (
+        <form onSubmit={handleSendOtp} className="space-y-4">
           <div>
             <label htmlFor="phone" className="label">
               Phone Number
@@ -357,17 +336,18 @@ export default function LoginPage() {
           </div>
 
           <button
+            id="send-otp-button"
             type="submit"
             className="btn btn-primary w-full py-3"
-            disabled={isLoading}
+            disabled={isLoading || !isFirebaseReady()}
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Checking...
+                Sending OTP...
               </span>
             ) : (
-              'Continue'
+              'Send OTP'
             )}
           </button>
 
@@ -385,7 +365,7 @@ export default function LoginPage() {
       )}
 
       {/* T-003: Password Login Form */}
-      {step === 'phone' && !lookupComplete && authMode === 'password' && (
+      {step === 'phone' && authMode === 'password' && (
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           <div>
             <label htmlFor="email" className="label">
@@ -440,52 +420,6 @@ export default function LoginPage() {
               onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); }}
             >
               Sign in with phone OTP instead
-            </button>
-          </p>
-        </form>
-      )}
-
-      {/* Step 1b: Phone Number - Send OTP (after successful lookup) */}
-      {step === 'phone' && lookupComplete && (
-        <form onSubmit={handleSendOtp} className="space-y-4">
-          <div>
-            <label htmlFor="phone" className="label">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              id="phone"
-              value={phone}
-              className="input bg-slate-50"
-              placeholder="+91 9876543210"
-              disabled={true}
-            />
-          </div>
-
-          <button
-            id="send-otp-button"
-            type="submit"
-            className="btn btn-primary w-full py-3"
-            disabled={isLoading || !isFirebaseReady()}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                Sending OTP...
-              </span>
-            ) : (
-              'Send OTP'
-            )}
-          </button>
-
-          <p className="text-center text-sm text-slate-600">
-            <button
-              type="button"
-              className="text-primary-600 hover:text-primary-700 font-medium"
-              onClick={handleChangePhone}
-              disabled={isLoading}
-            >
-              Use different phone number
             </button>
           </p>
         </form>

@@ -422,7 +422,7 @@ export default function ForgotPasswordPage() {
                   <label style={styles.label}>Verification Code</label>
                   <input
                     type="text"
-                    style={{ ...styles.input, textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.3em' }}
+                    style={{ ...styles.input, textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.5rem', fontFamily: 'monospace' }}
                     placeholder="123456"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}

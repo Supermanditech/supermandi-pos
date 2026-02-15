@@ -281,17 +281,14 @@ export default function LoginPage() {
   const [authData, setAuthData] = useState<{ token: string; refreshToken: string; user: OtpLoginResponse['user'] } | null>(null);
   const recaptchaInitialized = useRef(false);
 
-  // GO-LIVE-UI-REG-002: Track if lookup was successful (registration exists)
-  const [lookupComplete, setLookupComplete] = useState(false);
-
   // T-003: Dual auth — password + OTP toggle
   const [authMode, setAuthMode] = useState<AuthMode>('otp');
   const [password, setPassword] = useState('');
   const [storeCode, setStoreCode] = useState('');
 
-  // Setup reCAPTCHA only when ready to send OTP (after successful lookup)
+  // T-021: Setup reCAPTCHA when in OTP phone step (initialize early for combined lookup+send)
   useEffect(() => {
-    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && lookupComplete) {
+    if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && authMode === 'otp') {
       try {
         setupRecaptcha('send-otp-button');
         recaptchaInitialized.current = true;
@@ -304,7 +301,7 @@ export default function LoginPage() {
       cleanup();
       recaptchaInitialized.current = false;
     };
-  }, [step, lookupComplete]);
+  }, [step, authMode]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -322,8 +319,8 @@ export default function LoginPage() {
     }
   }, [otpExpirySeconds]);
 
-  // GO-LIVE-UI-REG-002: Lookup registration by phone FIRST
-  const handleContinue = async (e: React.FormEvent) => {
+  // T-021: Combined lookup + OTP send — single "Send OTP" click
+  const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -343,9 +340,7 @@ export default function LoginPage() {
         normalizedPhone = normalizedPhone.length === 10 ? `+91${normalizedPhone}` : `+${normalizedPhone}`;
       }
 
-      // GO-LIVE-UI-REG-004: Call lookup endpoint
-      // RET-001: Include credentials for cookie-based auth consistency
-      // STBT-187.9: Use POST to avoid phone in URL/logs
+      // Step 1: Lookup registration status
       const response = await fetch(
         `${API_GATEWAY_BASE}/api/v1/retailer-admin/registration/lookup`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: normalizedPhone }), credentials: 'include' }
@@ -357,37 +352,30 @@ export default function LoginPage() {
         throw new Error(data.message || 'Failed to check registration status');
       }
 
-      // DR-009: Handle lookup result via action field (enumeration-safe)
+      // Handle lookup result
       const action = data.action;
       if (action === 'REGISTER_REQUIRED') {
         setStep('not_onboarded');
         return;
       }
-      if (action === 'LOGIN_ALLOWED') {
-        setLookupComplete(true);
-      } else if (action === 'PENDING_APPROVAL') {
+      if (action === 'PENDING_APPROVAL') {
         setError('Your application is under review. You will be able to login once approved.');
-      } else if (action === 'VERIFY_PHONE' || action === 'UPLOAD_DOCUMENTS' || action === 'FIX_REQUIRED') {
-        setStep('incomplete');
-      } else if (action === 'CONTACT_SUPPORT') {
-        setError('Your application was not approved. Please contact support for assistance.');
-      } else {
-        setError(data.message || 'Unable to proceed. Please contact support.');
+        return;
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to check registration. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      if (action === 'VERIFY_PHONE' || action === 'UPLOAD_DOCUMENTS' || action === 'FIX_REQUIRED') {
+        setStep('incomplete');
+        return;
+      }
+      if (action === 'CONTACT_SUPPORT') {
+        setError('Your application was not approved. Please contact support for assistance.');
+        return;
+      }
+      if (action !== 'LOGIN_ALLOWED') {
+        setError(data.message || 'Unable to proceed. Please contact support.');
+        return;
+      }
 
-  // Send OTP (only after successful lookup)
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    try {
+      // Step 2: Send OTP via Firebase (lookup succeeded)
       if (!isFirebaseReady()) {
         throw new Error('Firebase is not configured. Phone verification is required.');
       }
@@ -395,7 +383,7 @@ export default function LoginPage() {
       await sendOtp(phone);
       setStep('otp');
       setResendCooldown(60);
-      setOtpExpirySeconds(300); // AUTH-OTP-001: Firebase OTP ~5 min
+      setOtpExpirySeconds(300);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send OTP. Please try again.');
     } finally {
@@ -548,7 +536,6 @@ export default function LoginPage() {
     setError('');
     setPassword('');
     setStoreCode('');
-    setLookupComplete(false);
     recaptchaInitialized.current = false;
     sessionStorage.removeItem('supermandi_retailer_reg_state');
   };
@@ -580,16 +567,12 @@ export default function LoginPage() {
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Sign in to your account</h2>
 
-            {step === 'phone' && !lookupComplete && authMode === 'otp' && (
-              <p style={styles.cardSubtitle}>Enter your registered phone number to continue</p>
+            {step === 'phone' && authMode === 'otp' && (
+              <p style={styles.cardSubtitle}>Enter your registered phone number to receive an OTP</p>
             )}
 
-            {step === 'phone' && !lookupComplete && authMode === 'password' && (
+            {step === 'phone' && authMode === 'password' && (
               <p style={styles.cardSubtitle}>Sign in with your phone number and password</p>
-            )}
-
-            {step === 'phone' && lookupComplete && (
-              <p style={styles.cardSubtitle}>Click "Send OTP" to receive a verification code at {phone}</p>
             )}
 
             {step === 'otp' && (
@@ -601,7 +584,7 @@ export default function LoginPage() {
             )}
 
             {/* Firebase warning */}
-            {!isFirebaseReady() && step === 'phone' && lookupComplete && (
+            {!isFirebaseReady() && step === 'phone' && authMode === 'otp' && (
               <div style={styles.alertWarning}>
                 <strong>Phone Verification Unavailable</strong>
                 <p style={{ marginTop: '0.25rem', marginBottom: 0 }}>
@@ -613,9 +596,9 @@ export default function LoginPage() {
             {/* Error display */}
             {error && <div style={styles.alertError}>{error}</div>}
 
-            {/* Step 1: Phone Number - Lookup First (OTP mode) */}
-            {step === 'phone' && !lookupComplete && authMode === 'otp' && (
-              <form onSubmit={handleContinue}>
+            {/* T-021: Phone Number — combined lookup + OTP send */}
+            {step === 'phone' && authMode === 'otp' && (
+              <form onSubmit={handleSendOtp}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Phone Number</label>
                   <input
@@ -630,19 +613,20 @@ export default function LoginPage() {
                 </div>
 
                 <button
+                  id="send-otp-button"
                   type="submit"
                   style={{
                     ...styles.btnPrimary,
-                    ...(isLoading ? styles.btnPrimaryDisabled : {}),
+                    ...(isLoading || !isFirebaseReady() ? styles.btnPrimaryDisabled : {}),
                   }}
-                  disabled={isLoading}
+                  disabled={isLoading || !isFirebaseReady()}
                 >
                   {isLoading ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                       <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                      Checking...
+                      Sending OTP...
                     </span>
-                  ) : 'Continue'}
+                  ) : 'Send OTP'}
                 </button>
 
                 {/* T-003: Toggle to password login */}
@@ -669,7 +653,7 @@ export default function LoginPage() {
             )}
 
             {/* T-003: Password Login Form */}
-            {step === 'phone' && !lookupComplete && authMode === 'password' && (
+            {step === 'phone' && authMode === 'password' && (
               <form onSubmit={handlePasswordLogin}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Phone Number</label>
@@ -741,50 +725,6 @@ export default function LoginPage() {
                       Forgot Password?
                     </Link>
                   </p>
-                </div>
-              </form>
-            )}
-
-            {/* Step 1b: Phone Number - Send OTP (after successful lookup) */}
-            {step === 'phone' && lookupComplete && (
-              <form onSubmit={handleSendOtp}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone Number</label>
-                  <input
-                    type="tel"
-                    style={{ ...styles.input, ...styles.inputDisabled }}
-                    placeholder="+91 9876543210"
-                    value={phone}
-                    disabled={true}
-                  />
-                </div>
-
-                <button
-                  id="send-otp-button"
-                  type="submit"
-                  style={{
-                    ...styles.btnPrimary,
-                    ...(isLoading || !isFirebaseReady() ? styles.btnPrimaryDisabled : {}),
-                  }}
-                  disabled={isLoading || !isFirebaseReady()}
-                >
-                  {isLoading ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
-                      Sending OTP...
-                    </span>
-                  ) : 'Send OTP'}
-                </button>
-
-                <div style={{ textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={handleChangePhone}
-                    style={styles.textLink}
-                    disabled={isLoading}
-                  >
-                    Use different phone number
-                  </button>
                 </div>
               </form>
             )}
