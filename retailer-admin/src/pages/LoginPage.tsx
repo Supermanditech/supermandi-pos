@@ -9,6 +9,7 @@ import { BuildStamp } from '../components/BuildStamp';
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
 
 type Step = 'phone' | 'otp' | 'stores' | 'not_onboarded' | 'incomplete';
+type AuthMode = 'otp' | 'password';
 
 interface Store {
   id: string;
@@ -283,6 +284,11 @@ export default function LoginPage() {
   // GO-LIVE-UI-REG-002: Track if lookup was successful (registration exists)
   const [lookupComplete, setLookupComplete] = useState(false);
 
+  // T-003: Dual auth — password + OTP toggle
+  const [authMode, setAuthMode] = useState<AuthMode>('otp');
+  const [password, setPassword] = useState('');
+  const [storeCode, setStoreCode] = useState('');
+
   // Setup reCAPTCHA only when ready to send OTP (after successful lookup)
   useEffect(() => {
     if (isFirebaseReady() && !recaptchaInitialized.current && step === 'phone' && lookupComplete) {
@@ -480,11 +486,67 @@ export default function LoginPage() {
     }
   };
 
+  // T-003: Password login handler
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const cleanedPhone = phone.replace(/[\s-]/g, '');
+    if (!cleanedPhone) {
+      setError('Please enter your phone number');
+      return;
+    }
+    if (!storeCode.trim()) {
+      setError('Please enter your store code');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(API_GATEWAY_BASE + '/api/v1/retailer-admin/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: cleanedPhone, password, storeCode: storeCode.trim() }),
+        credentials: 'include',
+      });
+
+      const data = await safeJson(response);
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Login failed');
+      }
+
+      const result = data as OtpLoginResponse;
+      setAuthData({ token: result.token, refreshToken: result.refreshToken || '', user: result.user });
+
+      if (result.stores.length === 0) {
+        setStores([]);
+        setStep('stores');
+      } else if (result.stores.length === 1) {
+        const store = result.stores[0];
+        login(result.token, result.refreshToken || '', result.user, store);
+        navigate(`/s/${store.code}`, { replace: true });
+      } else {
+        setStores(result.stores);
+        setStep('stores');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Reset to initial state
   const handleChangePhone = () => {
     setStep('phone');
     setOtp('');
     setError('');
+    setPassword('');
+    setStoreCode('');
     setLookupComplete(false);
     recaptchaInitialized.current = false;
   };
@@ -516,8 +578,12 @@ export default function LoginPage() {
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Sign in to your account</h2>
 
-            {step === 'phone' && !lookupComplete && (
+            {step === 'phone' && !lookupComplete && authMode === 'otp' && (
               <p style={styles.cardSubtitle}>Enter your registered phone number to continue</p>
+            )}
+
+            {step === 'phone' && !lookupComplete && authMode === 'password' && (
+              <p style={styles.cardSubtitle}>Sign in with your phone number and password</p>
             )}
 
             {step === 'phone' && lookupComplete && (
@@ -545,8 +611,8 @@ export default function LoginPage() {
             {/* Error display */}
             {error && <div style={styles.alertError}>{error}</div>}
 
-            {/* Step 1: Phone Number - Lookup First */}
-            {step === 'phone' && !lookupComplete && (
+            {/* Step 1: Phone Number - Lookup First (OTP mode) */}
+            {step === 'phone' && !lookupComplete && authMode === 'otp' && (
               <form onSubmit={handleContinue}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Phone Number</label>
@@ -577,6 +643,13 @@ export default function LoginPage() {
                   ) : 'Continue'}
                 </button>
 
+                {/* T-003: Toggle to password login */}
+                <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                  <button type="button" onClick={() => { setAuthMode('password'); setError(''); }} style={styles.textLink}>
+                    Sign in with password instead
+                  </button>
+                </div>
+
                 <div style={styles.divider}>
                   <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
                     Don't have an account?{' '}
@@ -584,7 +657,83 @@ export default function LoginPage() {
                       Register
                     </Link>
                   </p>
-                  {/* RET-CLEANUP-001: Forgot password link */}
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
+                    <Link to="/retailer/forgot-password" style={styles.textLink}>
+                      Forgot Password?
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            )}
+
+            {/* T-003: Password Login Form */}
+            {step === 'phone' && !lookupComplete && authMode === 'password' && (
+              <form onSubmit={handlePasswordLogin}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Phone Number</label>
+                  <input
+                    type="tel"
+                    style={styles.input}
+                    placeholder="+91 9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Store Code</label>
+                  <input
+                    type="text"
+                    style={styles.input}
+                    placeholder="e.g. MYSTORE"
+                    value={storeCode}
+                    onChange={(e) => setStoreCode(e.target.value.toUpperCase())}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Password</label>
+                  <input
+                    type="password"
+                    style={styles.input}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  style={{
+                    ...styles.btnPrimary,
+                    ...(isLoading ? styles.btnPrimaryDisabled : {}),
+                  }}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      Signing in...
+                    </span>
+                  ) : 'Sign In'}
+                </button>
+
+                {/* Toggle back to OTP */}
+                <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
+                  <button type="button" onClick={() => { setAuthMode('otp'); setError(''); setPassword(''); setStoreCode(''); }} style={styles.textLink}>
+                    Sign in with OTP instead
+                  </button>
+                </div>
+
+                <div style={styles.divider}>
+                  <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
+                    Don't have an account?{' '}
+                    <Link to="/retailer/register" style={styles.textLink}>
+                      Register
+                    </Link>
+                  </p>
                   <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
                     <Link to="/retailer/forgot-password" style={styles.textLink}>
                       Forgot Password?

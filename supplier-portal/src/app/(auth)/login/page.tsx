@@ -7,11 +7,12 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { phoneOtpLogin, ApiError, lookupSupplierRegistration } from '@/lib/api';
+import { phoneOtpLogin, loginSupplier, ApiError, lookupSupplierRegistration } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
 import { useAuth } from '@/lib/auth';
 
 type Step = 'phone' | 'otp' | 'not_onboarded' | 'incomplete';
+type AuthMode = 'otp' | 'password';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +30,11 @@ export default function LoginPage() {
 
   // GO-LIVE-UI-REG-003: Track if lookup was successful (registration exists)
   const [lookupComplete, setLookupComplete] = useState(false);
+
+  // T-003: Dual auth — password + OTP toggle
+  const [authMode, setAuthMode] = useState<AuthMode>('otp');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   // Track if component has mounted (for SSR compatibility)
   const [mounted, setMounted] = useState(false);
@@ -229,11 +235,55 @@ export default function LoginPage() {
     }
   };
 
+  // T-003: Password login handler
+  const handlePasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await loginSupplier({ email: email.trim().toLowerCase(), password });
+      await refreshProfile();
+      toast.success('Welcome back!');
+      router.push('/dashboard');
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.code === 'PENDING_APPROVAL') {
+          router.push('/pending-approval');
+          return;
+        } else if (err.code === 'ACCOUNT_LOCKED') {
+          setError('Your account has been locked due to too many failed attempts. Please try again later.');
+        } else if (err.code === 'ACCOUNT_SUSPENDED') {
+          setError('Your account has been suspended. Please contact support at support@supermandi.com for assistance.');
+        } else if (err.code === 'PASSWORD_NOT_SET') {
+          setError('Your account uses OTP login. Please switch to "Sign in with OTP" or set a password via "Forgot Password".');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Reset to initial state
   const handleChangePhone = () => {
     setStep('phone');
     setOtp('');
     setError('');
+    setPassword('');
+    setEmail('');
     setLookupComplete(false);
     recaptchaInitialized.current = false;
   };
@@ -244,9 +294,15 @@ export default function LoginPage() {
         Sign in to your account
       </h2>
 
-      {step === 'phone' && !lookupComplete && (
+      {step === 'phone' && !lookupComplete && authMode === 'otp' && (
         <p className="text-slate-600 text-sm mb-6">
           Enter your registered phone number to continue
+        </p>
+      )}
+
+      {step === 'phone' && !lookupComplete && authMode === 'password' && (
+        <p className="text-slate-600 text-sm mb-6">
+          Sign in with your email and password
         </p>
       )}
 
@@ -279,8 +335,8 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* Step 1: Phone Number - Lookup First */}
-      {step === 'phone' && !lookupComplete && (
+      {/* Step 1: Phone Number - Lookup First (OTP mode) */}
+      {step === 'phone' && !lookupComplete && authMode === 'otp' && (
         <form onSubmit={handleContinue} className="space-y-4">
           <div>
             <label htmlFor="phone" className="label">
@@ -312,6 +368,78 @@ export default function LoginPage() {
               'Continue'
             )}
           </button>
+
+          {/* T-003: Toggle to password login */}
+          <p className="text-center text-sm">
+            <button
+              type="button"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+              onClick={() => { setAuthMode('password'); setError(''); }}
+            >
+              Sign in with email &amp; password instead
+            </button>
+          </p>
+        </form>
+      )}
+
+      {/* T-003: Password Login Form */}
+      {step === 'phone' && !lookupComplete && authMode === 'password' && (
+        <form onSubmit={handlePasswordLogin} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="label">
+              Email Address
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input"
+              placeholder="you@company.com"
+              disabled={isLoading}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="label">
+              Password
+            </label>
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input"
+              placeholder="Enter your password"
+              disabled={isLoading}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full py-3"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                Signing in...
+              </span>
+            ) : (
+              'Sign In'
+            )}
+          </button>
+
+          {/* Toggle back to OTP */}
+          <p className="text-center text-sm">
+            <button
+              type="button"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+              onClick={() => { setAuthMode('otp'); setError(''); setEmail(''); setPassword(''); }}
+            >
+              Sign in with phone OTP instead
+            </button>
+          </p>
         </form>
       )}
 
