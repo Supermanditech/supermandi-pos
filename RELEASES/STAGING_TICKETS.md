@@ -1089,3 +1089,96 @@ Wave I — AI Polish + Scale:
 7. **WhatsApp rate limits**: Respect Meta rate limits. Queue messages via BullMQ, not direct API calls.
 8. **AI safety**: Voice commands that involve money (reorder, payment) ALWAYS require explicit confirmation.
 9. **India market**: DD/MM/YYYY, INR, +91, Hindi-ready on all new screens.
+
+---
+
+## PHASE 10: PRODUCTION GO-LIVE TESTING (TEST-001 → TEST-052)
+
+> **52 tickets. 1,135 files × 10 test types × 3 rounds = 34,050 test executions.**
+> Testing happens AFTER all 109 pending development tickets (Phases 6+7+9) are completed.
+> This is the final gate before GCP staging deploy and India market go-live.
+
+> **Detailed R&D reference**: See plan file for full test type details, per-project coverage requirements, CI pipeline architecture, and 48 GO/NO-GO checks.
+
+### Phase A: Test Infrastructure Setup (TEST-001 → TEST-010)
+
+| # | Title | What | Effort |
+|---|-------|------|--------|
+| TEST-001 | Install testcontainers + PostgreSQL/Redis containers | Backend integration test infrastructure | M |
+| TEST-002 | Install Snyk + Semgrep + gitleaks + wire to CI | Security scanning tools in CI pipeline | M |
+| TEST-003 | Install @axe-core/playwright | Accessibility testing for web portals | S |
+| TEST-004 | Create 100K SKU seed script (Indian FMCG data) | @faker-js/faker + realistic product data | L |
+| TEST-005 | Create k6 load test scenarios (scan, search, checkout, payment, 10K VU) | 15 load test scripts | L |
+| TEST-006 | Configure Maestro CLI for POS mobile E2E | Mobile test runner setup | M |
+| TEST-007 | Add coverage thresholds to all Jest/Vitest configs (80%/70%) | Coverage enforcement | S |
+| TEST-008 | Enhance CI pipeline from 5 → 13 jobs (4 tiers) | ci-gates.yml restructure | M |
+| TEST-009 | Create Zod contract schemas for all 102 API endpoints | API shape validation | L |
+| TEST-010 | Capture visual regression baseline screenshots for all portal pages | Playwright snapshots | M |
+
+### Phase B: Round 1 — Discovery (TEST-011 → TEST-028)
+
+| # | Title | Scope | What |
+|---|-------|-------|------|
+| TEST-011 | Backend unit tests — all 306 files (80% coverage) | Backend | Unit tests for every service, route, middleware, utility |
+| TEST-012 | POS app unit tests — all 267 files (80% coverage) | POS | Unit tests for every screen, store, service, component |
+| TEST-013 | Retailer Admin unit tests — all 98 files (75% coverage) | Retailer | Unit tests for every page, component, API call |
+| TEST-014 | SuperAdmin unit tests — all 114 files (75% coverage) | SuperAdmin | Unit tests for every tab, component, API call |
+| TEST-015 | Supplier Portal unit tests — all 73 files (75% coverage) | Supplier | Unit tests for every page, component, API call |
+| TEST-016 | Backend integration tests — 102 routes + 158 migrations | Backend | testcontainers, real DB, migration from zero |
+| TEST-017 | Backend contract tests — all 102 API endpoints | Backend | Zod schema validation on request/response |
+| TEST-018 | Portal contract tests — all frontend API calls | Cross-platform | Every fetch/axios call matches backend schema |
+| TEST-019 | Retailer Admin E2E — all 15+ pages × desktop + mobile | Retailer | Playwright, all CRUD flows, auth, navigation |
+| TEST-020 | Supplier Portal E2E — all 10+ pages × desktop + mobile | Supplier | Playwright, products, orders, earnings, KYC |
+| TEST-021 | SuperAdmin E2E — all 18+ tabs × desktop + mobile | SuperAdmin | Playwright, approvals, analytics, settings |
+| TEST-022 | POS mobile E2E — all 39 screens, core flows | POS | Maestro, scan→cart→pay→bill, offline |
+| TEST-023 | Cross-portal E2E — product/order/payment lifecycle | All | Supplier→Admin→Retailer→POS end-to-end |
+| TEST-024 | Security scan — ALL 1,135 files | All | Snyk + Semgrep + gitleaks + npm audit |
+| TEST-025 | Visual regression — all portal pages × 2 viewports | Web | Playwright screenshot comparison |
+| TEST-026 | Accessibility — all portal pages (WCAG 2.1 AA) | Web | axe-core scan |
+| TEST-027 | Data integrity — 6 domain invariants | Backend | Stock, ledger, isolation, idempotency, price, payment |
+| TEST-028 | Load test baseline — all hot paths at 100 VU | Backend | k6 baseline performance |
+
+### Phase C: Round 2 — Regression (TEST-029 → TEST-037)
+
+| # | Title | What |
+|---|-------|------|
+| TEST-029 | Re-run ALL unit tests across all 5 projects | Zero failures |
+| TEST-030 | Re-run ALL integration tests | Zero failures |
+| TEST-031 | Re-run ALL contract tests | Zero failures |
+| TEST-032 | Re-run ALL E2E tests (web + mobile) | Zero failures |
+| TEST-033 | Re-run ALL security scans | Zero high-severity findings |
+| TEST-034 | Re-run visual regression (compare to Round 1 baselines) | Zero unexpected diffs |
+| TEST-035 | Re-run accessibility scans | Zero violations |
+| TEST-036 | Re-run data integrity checks | Zero invariant violations |
+| TEST-037 | Regression fix sweep | Fix ANY new failures found in Round 2 |
+
+### Phase D: Round 3 — Stress + GO/NO-GO (TEST-038 → TEST-052)
+
+| # | Title | What |
+|---|-------|------|
+| TEST-038 | Seed 100K SKUs + 1M ledger + 50K sales + 10K customers | Production-scale test data |
+| TEST-039 | Run ALL tests against 100K SKU database | Must pass at scale |
+| TEST-040 | Scan stress: 35 scans/min × 30 min (p95 < 200ms) | Sustained scanner load |
+| TEST-041 | Search stress: 100K product search (p95 < 200ms) | Big data query speed |
+| TEST-042 | Checkout stress: 500/min (p95 < 3s) | Transaction throughput |
+| TEST-043 | 10K concurrent users: all endpoints (< 10% errors) | Extreme user load |
+| TEST-044 | Multi-device stock race: 10 devices, same store | Zero oversell |
+| TEST-045 | DB failure mid-test: graceful degradation | PostgreSQL kill test |
+| TEST-046 | Redis failure mid-test: app continues | Redis kill test |
+| TEST-047 | POS offline stress: 50 items offline → sync | Offline reliability |
+| TEST-048 | Payment stress: 100 UPI QR/min | Payment throughput |
+| TEST-049 | Full E2E under background load | Playwright + k6 simultaneous |
+| TEST-050 | Final security sweep | All security tools |
+| TEST-051 | Final data integrity on production-scale DB | All 6 invariants |
+| TEST-052 | GO/NO-GO report: 48-check pass/fail summary | Final gate |
+
+### TESTING SUMMARY
+
+| Phase | Tickets | Purpose | Effort |
+|-------|---------|---------|--------|
+| A: Infrastructure | TEST-001→010 | Setup tools + frameworks | ~30h |
+| B: Round 1 Discovery | TEST-011→028 | Find ALL bugs | ~50h |
+| C: Round 2 Regression | TEST-029→037 | Verify fixes | ~25h |
+| D: Round 3 Stress | TEST-038→052 | Production simulation | ~20h |
+| Bug fixing | N/A | From Round 1+2 | ~40-60h |
+| **TOTAL** | **52 tickets** | | **~165-185h** |
