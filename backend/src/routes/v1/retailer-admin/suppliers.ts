@@ -179,6 +179,7 @@ retailerAdminSuppliersRouter.get("/suppliers/available", async (req: Request, re
     );
     const total = parseInt(countResult.rows[0]?.total || "0", 10);
 
+    // T-065: Replace N+1 correlated subquery with batched LEFT JOIN aggregate
     const result = await pool.query(
       `SELECT
         s.id,
@@ -186,10 +187,14 @@ retailerAdminSuppliersRouter.get("/suppliers/available", async (req: Request, re
         s.trade_name as "tradeName",
         s.city,
         s.rating,
-        (SELECT COUNT(*) FROM catalog.supplier_products sp
-         WHERE sp.supplier_id = s.id AND sp.approval_status = 'approved' AND sp.is_active = true
-        )::int as "productCount"
+        COALESCE(pc.product_count, 0)::int as "productCount"
       FROM supplier.suppliers s
+      LEFT JOIN (
+        SELECT supplier_id, COUNT(*) as product_count
+        FROM catalog.supplier_products
+        WHERE approval_status = 'approved' AND is_active = true
+        GROUP BY supplier_id
+      ) pc ON pc.supplier_id = s.id
       ${whereClause}
       ORDER BY s.business_name ASC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,

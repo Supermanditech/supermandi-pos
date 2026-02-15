@@ -431,13 +431,19 @@ adminSuppliersRouter.post("/pending-suppliers/:supplierId/reject", requireAdminT
  * List all self-registered suppliers pending verification (from SM-005)
  */
 // GO-LIVE-128: Requires 'suppliers:read' permission
-adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermission("suppliers", "read"), async (_req, res) => {
+adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermission("suppliers", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
   }
 
+  // T-065: Pagination support
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
   try {
+    // T-065: Use LATERAL join instead of full-table subquery aggregation
+    // This only counts products for the suppliers actually in the result set
     const result = await pool.query(
       `SELECT
         s.id,
@@ -446,16 +452,17 @@ adminSuppliersRouter.get("/suppliers/pending", requireAdminToken, requirePermiss
         s.primary_email as "email",
         s.primary_phone as "phone",
         s.created_at as "createdAt",
-        COALESCE(pc.product_count, 0) as "productCount"
+        COALESCE(pc.cnt, 0)::int as "productCount"
       FROM supplier.suppliers s
-      LEFT JOIN (
-        SELECT supplier_id, COUNT(*) as product_count
-        FROM catalog.supplier_products
-        GROUP BY supplier_id
-      ) pc ON pc.supplier_id = s.id
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) as cnt
+        FROM catalog.supplier_products sp
+        WHERE sp.supplier_id = s.id
+      ) pc ON true
       WHERE s.verification_status = 'pending'
       ORDER BY s.created_at DESC
-      LIMIT 100`
+      LIMIT $1 OFFSET $2`,
+      [limit, offset]
     );
 
     return res.json({
@@ -630,14 +637,24 @@ adminSuppliersRouter.post("/suppliers/:supplierId/reject", requireAdminToken, re
  * List all products pending approval
  */
 // GO-LIVE-128: Requires 'products:read' permission
-adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermission("products", "read"), async (_req, res) => {
+adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermission("products", "read"), async (req, res) => {
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "database unavailable" });
   }
 
+  // T-065: Pagination support for scalability
+  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+  const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+
   try {
     // T-064: Enhanced pending products query with category, unit, brand, margin info
+    // T-065: Uses approval_status index for efficient lookups at scale
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int as total FROM catalog.supplier_products WHERE approval_status = 'pending'`
+    );
+    const total = countResult.rows[0]?.total || 0;
+
     const result = await pool.query(
       `SELECT
         sp.id,
@@ -661,12 +678,15 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
       JOIN supplier.suppliers s ON s.id = sp.supplier_id
       WHERE sp.approval_status = 'pending'
       ORDER BY sp.created_at DESC
-      LIMIT 100`
+      LIMIT $1 OFFSET $2`,
+      [limit, offset]
     );
 
     return res.json({
       data: result.rows,
-      count: result.rowCount
+      count: result.rowCount,
+      total,
+      pagination: { limit, offset, hasMore: offset + result.rows.length < total },
     });
   } catch (err: any) {
     console.error("[admin/products/pending] Error:", err);
