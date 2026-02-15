@@ -2,8 +2,11 @@
 // View and approve/reject pending suppliers
 
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { authFetch, safeJson } from '../../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../../components/Breadcrumb';
 
 interface PendingSupplier {
   id: string;
@@ -16,6 +19,7 @@ interface PendingSupplier {
 }
 
 export default function SupplierQueuePage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
 
   const [pendingSuppliers, setPendingSuppliers] = useState<PendingSupplier[]>([]);
@@ -131,6 +135,10 @@ export default function SupplierQueuePage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Admin' }, { label: 'Supplier Queue' }]} />
+      </div>
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 className="page-title">Supplier Approval Queue</h1>

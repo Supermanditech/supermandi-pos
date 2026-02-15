@@ -2,8 +2,11 @@
 // Read-only view of invoices where the store is the buyer
 
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 interface InvoiceListItem {
   id: string;
@@ -74,6 +77,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function InvoicesPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -147,6 +151,8 @@ export default function InvoicesPage() {
 
   return (
     <div style={{ padding: "1.5rem" }}>
+      {/* T-112: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Invoices' }]} />
       <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1rem" }}>Invoices</h2>
 
       {/* Filters */}

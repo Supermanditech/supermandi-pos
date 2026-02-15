@@ -8,17 +8,12 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F9FC]">
-      {/* Header Bar - 64px height per spec */}
-      <header className="bg-white border-b border-slate-200 h-16 flex items-center">
-        <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-primary-600">
-              SuperManditech
-            </h1>
-            <span className="text-slate-400">|</span>
-            <span className="text-slate-600 text-sm font-medium">Supplier Portal</span>
-          </div>
-        </div>
+      {/* T-095: Unified login header — shortmark + brand text + portal name */}
+      <header style={{ height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', borderBottom: '1px solid #E2E8F0', background: 'white' }}>
+        <img src="/supplier/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+        <span style={{ marginLeft: 10, fontWeight: 600, fontSize: 18, color: '#2563EB' }}>SuperMandi</span>
+        <span style={{ margin: '0 12px', color: '#CBD5E1' }}>|</span>
+        <span style={{ color: '#64748B', fontSize: 16 }}>Supplier Portal</span>
       </header>
 
       {/* Main Content - RET-AUD-057: Standardized padding (2rem 1rem = py-8 px-4) */}
@@ -29,12 +24,10 @@ export default function AuthLayout({
         </div>
       </main>
 
-      {/* Footer - minimal, muted per spec */}
-      <footer className="bg-white border-t border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-[13px] text-slate-500">
-          &copy; 2026 SuperManditech. All rights reserved.
-          <BuildStamp />
-        </div>
+      {/* T-097: Unified footer — standard text + BuildStamp */}
+      <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
+        <BuildStamp />
       </footer>
     </div>
   );

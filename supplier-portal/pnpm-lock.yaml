@@ -17,6 +17,9 @@ importers:
       firebase:
         specifier: ^11.10.0
         version: 11.10.0
+      lucide-react:
+        specifier: ^0.564.0
+        version: 0.564.0(react@18.3.1)
       next:
         specifier: ^16.1.5
         version: 16.1.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -789,6 +792,11 @@ packages:
   loose-envify@1.4.0:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
+
+  lucide-react@0.564.0:
+    resolution: {integrity: sha512-JJ8GVTQqFwuliifD48U6+h7DXEHdkhJ/E87kksGByII3qHxtPciVb8T8woQONHBQgHVOl7rSMrrip3SeVNy7Fg==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
@@ -1833,6 +1841,10 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+
+  lucide-react@0.564.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
 
   merge2@1.4.1: {}
 

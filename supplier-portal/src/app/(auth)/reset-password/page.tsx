@@ -4,14 +4,23 @@
 // User arrives here from the reset link in their email, or manually enters token
 // POST /api/v1/supplier/auth/reset-password with { email, token, newPassword }
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 
 type Step = 'form' | 'success';
 
+// T-111: Wrap useSearchParams in Suspense boundary (Next.js 16 requirement)
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-slate-500 py-8">Loading...</div>}>
+      <ResetPasswordInner />
+    </Suspense>
+  );
+}
+
+function ResetPasswordInner() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>('form');
   const [email, setEmail] = useState(searchParams.get('email') || '');

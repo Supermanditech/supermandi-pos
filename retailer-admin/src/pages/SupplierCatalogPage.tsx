@@ -2,8 +2,11 @@
 // Browse and add approved products from verified suppliers to your store catalog
 
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 interface SupplierProduct {
   productId: string;
@@ -37,6 +40,7 @@ interface Pagination {
 }
 
 export default function SupplierCatalogPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [products, setProducts] = useState<SupplierProduct[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ total: 0, limit: 50, offset: 0, hasMore: false });
@@ -135,6 +139,10 @@ export default function SupplierCatalogPage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Supplier Catalog' }]} />
+      </div>
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>

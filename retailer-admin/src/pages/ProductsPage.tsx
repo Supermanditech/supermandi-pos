@@ -7,6 +7,8 @@ import { fetchCategories, FmcgCategory } from '../api/store';
 import { formatCurrency } from '../lib/formatters';
 // T-058: Variant management for LOOSE_BULK products
 import VariantManager from '../components/VariantManager';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 interface Supplier {
   id: string;
@@ -700,6 +702,10 @@ export default function ProductsPage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Products' }]} />
+      </div>
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 className="page-title">Products</h1>

@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // TZ-FORMAT-001: Use shared date/time formatters
 import { formatDateTime } from '../lib/formatters';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -53,6 +56,7 @@ function getDisplayType(transactionType: string): 'INWARD' | 'OUTWARD' | 'ADJUST
 }
 
 export default function InventoryPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [filter, setFilter] = useState<'all' | 'INWARD' | 'OUTWARD' | 'ADJUSTMENT'>('all');
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
@@ -122,6 +126,10 @@ export default function InventoryPage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Inventory' }]} />
+      </div>
       <header className="page-header">
         <h1 className="page-title">Inventory Ledger</h1>
       </header>

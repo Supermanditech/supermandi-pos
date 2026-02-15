@@ -5,6 +5,8 @@ import { FeatureFlagProvider } from './lib/FeatureFlagContext';
 import ProtectedLayout from './components/ProtectedLayout';
 // ISSUE-MICRO-105: Global error boundary
 import { ErrorBoundary } from './components/ErrorBoundary';
+// T-094: Standardized toast notifications
+import { Toaster } from 'react-hot-toast';
 
 // RET-AUD-048: Lazy load pages for code splitting and better performance at scale
 // Critical auth pages loaded eagerly for fast initial load
@@ -35,6 +37,8 @@ const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 // SM-024: Admin approval queue pages
 const SupplierQueuePage = lazy(() => import('./pages/admin/SupplierQueuePage'));
 const ProductQueuePage = lazy(() => import('./pages/admin/ProductQueuePage'));
+// T-115: Branded 404 page
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // RET-AUD-048 + ISSUE-MICRO-106: Skeleton loading fallback for Suspense boundaries
 const PageLoadingFallback = () => (
@@ -249,10 +253,12 @@ function AppRoutes() {
           <Route path="admin/products" element={<LimitedModeGuard><AdminRoute><Suspense fallback={<PageLoadingFallback />}><ProductQueuePage /></Suspense></AdminRoute></LimitedModeGuard>} />
           {/* P2-RD-002: QA page hidden in production */}
           {import.meta.env.DEV && <Route path="_pages" element={<Suspense fallback={<PageLoadingFallback />}><AllPagesPage /></Suspense>} />}
+          {/* T-115: Store-scoped 404 — catches unknown paths under /s/:storeCode */}
+          <Route path="*" element={<Suspense fallback={<PageLoadingFallback />}><NotFoundPage /></Suspense>} />
         </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* T-115: Branded 404 catch-all — replaces blind redirect to / */}
+        <Route path="*" element={<Suspense fallback={<PageLoadingFallback />}><NotFoundPage /></Suspense>} />
       </Routes>
     </>
   );
@@ -266,6 +272,24 @@ export default function App() {
           <AppRoutes />
         </FeatureFlagProvider>
       </AuthProvider>
+      {/* T-094: Standardized toast config per DESIGN_TOKENS.md */}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#0F172A',
+            color: '#FFFFFF',
+            borderRadius: '8px',
+          },
+          success: {
+            duration: 4000,
+          },
+          error: {
+            duration: 6000,
+          },
+        }}
+      />
     </ErrorBoundary>
   );
 }

@@ -6,6 +6,8 @@ import { useEscapeKey } from '../lib/hooks';
 import { fetchInventory, InventoryItem, fetchCategories, FmcgCategory, fetchSearch, SearchResult, fetchDailySummary, DailySummary } from '../api/store';
 // GL-CRIT-0066: Use centralized category icons configuration
 import { getCategoryIcon as getCategoryIconFromConfig } from '../config/categoryIcons';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 // TZ-FORMAT-001 + CURRENCY-FORMAT-001: Use shared formatters
 import { formatCurrencyWhole, formatCurrency, formatDateShort, formatRupees } from '../lib/formatters';
 
@@ -257,6 +259,8 @@ export default function DashboardPage() {
       background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
       padding: '2rem',
     }}>
+      {/* T-112: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Home' }]} />
       {/* AUDIT-RET-008: Shimmer animation for loading skeletons */}
       <style>{`@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }`}</style>
       {/* Welcome Hero Section */}

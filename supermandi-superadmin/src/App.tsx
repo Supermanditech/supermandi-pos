@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 // ISSUE-MICRO-105: Global error boundary
 import { ErrorBoundary } from "./components/ErrorBoundary";
+// T-094: Standardized toast notifications
+import { Toaster } from "react-hot-toast";
 import { fetchHealth } from "./api/health";
 import { fetchPosEvents, type PosEvent } from "./api/posEvents";
 import { fetchAiHealth } from "./api/ai";
@@ -87,12 +89,48 @@ import { RegistrationsTab } from "./tabs/RegistrationsTab";
 import { StaffTab } from "./tabs/StaffTab";
 import { GrnAlertsTab } from "./tabs/GrnAlertsTab";
 import { InvoicesTab } from "./tabs/InvoicesTab";  // T-073: Invoice management
+// T-083: Lucide sidebar icons
+import {
+  Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
+  FileCheck, UserPlus, FileText, Truck, CreditCard, BarChart3,
+  Shield, UserCog, Settings2
+} from "lucide-react";
 import "./App.css";
 
 // SA-001: PayloadDetails, LoginGate, EnrollmentCountdown extracted to ./components/
 
+// T-114: Tab key → display label mapping for breadcrumb
+const TAB_LABELS: Record<TabKey, string> = {
+  events: "Events",
+  stores: "Stores",
+  devices: "Devices",
+  staff: "Staff",
+  "grn-alerts": "GRN Alerts",
+  invoices: "Invoices",
+  applications: "Applications",
+  registrations: "Registrations",
+  documents: "Documents",
+  suppliers: "Suppliers",
+  payments: "Payments",
+  analytics: "Analytics",
+  ai: "AI Assistant",
+  audit: "Audit Logs",
+  users: "Users",
+  settings: "Settings",
+};
+
+// T-114: Valid tab keys for hash routing
+const VALID_TABS = new Set<string>(Object.keys(TAB_LABELS));
+
+// T-114: Read tab from URL hash (e.g. #events → "events")
+function getTabFromHash(): TabKey | null {
+  const hash = window.location.hash.replace("#", "");
+  return VALID_TABS.has(hash) ? (hash as TabKey) : null;
+}
+
 export default function App() {
-  const [tab, setTabRaw] = useState<TabKey>("events");
+  // T-114: Initialize tab from URL hash, fallback to "events"
+  const [tab, setTabRaw] = useState<TabKey>(() => getTabFromHash() || "events");
   // ISSUE-MICRO-063: Abort in-flight requests when switching tabs
   // AUDIT-SA-016: Clear error states on tab switch to prevent stale errors
   const setTab = (newTab: TabKey) => {
@@ -110,7 +148,28 @@ export default function App() {
       setStaffSuccess(""); setConfirmDialog(null);
     }
     setTabRaw(newTab);
+    // T-114: Update URL hash when tab changes
+    window.history.pushState(null, "", `#${newTab}`);
   };
+
+  // T-114: Listen for browser back/forward navigation (popstate)
+  useEffect(() => {
+    const handlePopState = () => {
+      const hashTab = getTabFromHash();
+      if (hashTab && hashTab !== tab) {
+        setTabRaw(hashTab);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [tab]);
+
+  // T-114: Set initial hash if not present
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.history.replaceState(null, "", `#${tab}`);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ITER4-CRIT-001: Track authentication state
   // GO-LIVE-UI-001: Use hasValidSession() to ensure valid JWT, not just any stale token
@@ -946,7 +1005,10 @@ export default function App() {
       fixedMargin: "",
       percentMargin: "",
       bnplEligible: false,
-      bnplMaxDays: "7"
+      bnplMaxDays: "7",
+      invoiceModel: "",
+      hsnCode: "",
+      gstRate: "",
     });
     setEditProductError("");
     setEditProductSuccess("");
@@ -2245,27 +2307,41 @@ export default function App() {
       {/* T-015: Grouped sidebar navigation */}
       <div className="pageLayout">
         <aside className="sidebar">
+          {/* T-086: Brand header */}
+          <div className="sidebarBrand">
+            <div className="sidebarBrandRow">
+              <img src="/admin/brand/logo-shortmark.svg" alt="" width={24} height={24} />
+              <div className="sidebarBrandText">
+                <span className="sidebarBrandTitle">SuperMandi</span>
+                <span className="sidebarBrandSubtitle">SuperAdmin</span>
+              </div>
+            </div>
+            <div className="sidebarBrandHealth">
+              <span className={health.ok ? "dot dotOk" : "dot dotBad"} />
+              <span style={{ fontSize: 11 }}>{health.ok ? "Online" : "Offline"}</span>
+            </div>
+          </div>
           {/* Operations */}
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Operations</div>
             <button className={`sidebarItem ${tab === "events" ? "sidebarItemActive" : ""}`} onClick={() => setTab("events")}>
-              Events
+              <span className="sidebarItemLabel"><Activity size={18} style={{ opacity: tab === "events" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Events</span>
             </button>
             <button className={`sidebarItem ${tab === "stores" ? "sidebarItemActive" : ""}`} onClick={() => setTab("stores")}>
-              Stores
+              <span className="sidebarItemLabel"><Store size={18} style={{ opacity: tab === "stores" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Stores</span>
             </button>
             <button className={`sidebarItem ${tab === "devices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("devices")}>
-              Devices
+              <span className="sidebarItemLabel"><Smartphone size={18} style={{ opacity: tab === "devices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Devices</span>
             </button>
             <button className={`sidebarItem ${tab === "staff" ? "sidebarItemActive" : ""}`} onClick={() => setTab("staff")}>
-              Staff
+              <span className="sidebarItemLabel"><Users size={18} style={{ opacity: tab === "staff" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Staff</span>
             </button>
             <button className={`sidebarItem ${tab === "grn-alerts" ? "sidebarItemActive" : ""}`} onClick={() => setTab("grn-alerts")}>
-              <span>GRN Alerts</span>
+              <span className="sidebarItemLabel"><AlertTriangle size={18} style={{ opacity: tab === "grn-alerts" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />GRN Alerts</span>
               {grnAlertsOpenCount > 0 && <span className="sidebarBadge">{grnAlertsOpenCount}</span>}
             </button>
             <button className={`sidebarItem ${tab === "invoices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("invoices")}>
-              Invoices
+              <span className="sidebarItemLabel"><Receipt size={18} style={{ opacity: tab === "invoices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Invoices</span>
             </button>
           </div>
 
@@ -2273,17 +2349,17 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Onboarding</div>
             <button className={`sidebarItem ${tab === "applications" ? "sidebarItemActive" : ""}`} onClick={() => setTab("applications")}>
-              <span>Applications</span>
+              <span className="sidebarItemLabel"><FileCheck size={18} style={{ opacity: tab === "applications" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Applications</span>
               {applicationsTotal > 0 && <span className="sidebarBadge">{applicationsTotal}</span>}
             </button>
             <button className={`sidebarItem ${tab === "registrations" ? "sidebarItemActive" : ""}`} onClick={() => setTab("registrations")}>
-              <span>Registrations</span>
+              <span className="sidebarItemLabel"><UserPlus size={18} style={{ opacity: tab === "registrations" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Registrations</span>
               {tab !== "registrations" && regEventsTotal > regEventsLastSeenTotal && (
                 <span className="sidebarBadge sidebarBadgeError">{regEventsTotal - regEventsLastSeenTotal}</span>
               )}
             </button>
             <button className={`sidebarItem ${tab === "documents" ? "sidebarItemActive" : ""}`} onClick={() => setTab("documents")}>
-              <span>Documents</span>
+              <span className="sidebarItemLabel"><FileText size={18} style={{ opacity: tab === "documents" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Documents</span>
               {pendingDocuments.length > 0 && <span className="sidebarBadge">{pendingDocsTotal}</span>}
             </button>
           </div>
@@ -2292,13 +2368,13 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Commerce</div>
             <button className={`sidebarItem ${tab === "suppliers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("suppliers")}>
-              <span>Suppliers</span>
+              <span className="sidebarItemLabel"><Truck size={18} style={{ opacity: tab === "suppliers" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Suppliers</span>
               {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
                 <span className="sidebarBadge">{pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}</span>
               )}
             </button>
             <button className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
-              Payments
+              <span className="sidebarItemLabel"><CreditCard size={18} style={{ opacity: tab === "payments" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Payments</span>
             </button>
           </div>
 
@@ -2306,10 +2382,10 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Monitoring</div>
             <button className={`sidebarItem ${tab === "analytics" ? "sidebarItemActive" : ""}`} onClick={() => setTab("analytics")}>
-              Analytics
+              <span className="sidebarItemLabel"><BarChart3 size={18} style={{ opacity: tab === "analytics" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Analytics</span>
             </button>
             <button className={`sidebarItem ${tab === "audit" ? "sidebarItemActive" : ""}`} onClick={() => setTab("audit")}>
-              Audit Logs
+              <span className="sidebarItemLabel"><Shield size={18} style={{ opacity: tab === "audit" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Audit Logs</span>
             </button>
           </div>
 
@@ -2317,10 +2393,10 @@ export default function App() {
           <div className="sidebarGroup">
             <div className="sidebarGroupLabel">Platform</div>
             <button className={`sidebarItem ${tab === "users" ? "sidebarItemActive" : ""}`} onClick={() => setTab("users")}>
-              Users
+              <span className="sidebarItemLabel"><UserCog size={18} style={{ opacity: tab === "users" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Users</span>
             </button>
             <button className={`sidebarItem ${tab === "settings" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settings")}>
-              Settings
+              <span className="sidebarItemLabel"><Settings2 size={18} style={{ opacity: tab === "settings" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Settings</span>
             </button>
             <button
               className={`sidebarItem ${aiPanelOpen ? "sidebarItemActive" : ""}`}
@@ -2357,6 +2433,12 @@ export default function App() {
         </nav>
 
         <div className="mainContent">
+      {/* T-114: Breadcrumb navigation */}
+      <nav style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B', padding: '12px 16px 0' }}>
+        <span style={{ color: '#64748B' }}>SuperAdmin</span>
+        <span style={{ color: '#CBD5E1' }}>&rsaquo;</span>
+        <span style={{ color: '#0F172A', fontWeight: 500 }}>{TAB_LABELS[tab]}</span>
+      </nav>
       {/* T-013: Events filter controls — only visible on Events tab */}
       {tab === "events" && <section className="controls">
         <div className="control">
@@ -2824,11 +2906,30 @@ export default function App() {
         resetAiIdleTimer={resetAiIdleTimer}
       />
 
-      <footer className="footer muted">
-        {import.meta.env.DEV && <>Tip: this dashboard is static-deployable. Set <span className="mono">VITE_API_BASE_URL</span> in hosting env. </>}
+      {/* T-097: Unified footer — standard text + BuildStamp */}
+      <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
         <BuildStamp />
       </footer>
     </div>
+    {/* T-094: Standardized toast config per DESIGN_TOKENS.md */}
+    <Toaster
+      position="top-center"
+      toastOptions={{
+        duration: 4000,
+        style: {
+          background: '#0F172A',
+          color: '#FFFFFF',
+          borderRadius: '8px',
+        },
+        success: {
+          duration: 4000,
+        },
+        error: {
+          duration: 6000,
+        },
+      }}
+    />
     </ErrorBoundary>
   );
 }

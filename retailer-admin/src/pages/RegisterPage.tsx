@@ -208,7 +208,7 @@ function loadSavedRegState(): Partial<{
   businessName: string; businessType: string; businessTypeOther: string;
   ownerName: string; gstin: string; email: string;
   addressLine1: string; addressLine2: string; city: string;
-  selectedState: string; pincode: string;
+  selectedState: string; pincode: string; agreement: boolean;
 }> {
   try {
     const raw = sessionStorage.getItem(REG_STORAGE_KEY);

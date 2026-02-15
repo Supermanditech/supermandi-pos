@@ -2,8 +2,11 @@
 // Allows retailers to configure UPI VPA, tax rates, and store preferences
 
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 // RET-005: Import shared UPI validation (single source of truth)
 import { validateUpiVpa } from '../components/UpiInput';
 
@@ -26,6 +29,7 @@ interface ValidationErrors {
 }
 
 export default function SettingsPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { store, accessToken } = useAuth();
 
   // Form state
@@ -252,6 +256,8 @@ export default function SettingsPage() {
       background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
       padding: '2rem',
     }}>
+      {/* T-112: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Settings' }]} />
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{

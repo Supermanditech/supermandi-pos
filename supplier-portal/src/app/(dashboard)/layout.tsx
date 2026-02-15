@@ -6,18 +6,24 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
 import { sendVerificationEmail, verifyEmail, getDashboardStats, markOrdersRead } from '@/lib/api';
 import { BuildStamp } from '@/components/BuildStamp';
+// T-092: Shared Modal component
+import Modal from '@/components/Modal';
 // REG-AUTH-302: LIMITED MODE Banner
 import LimitedModeBanner from '@/components/LimitedModeBanner';
+// T-082: Lucide SVG nav icons  |  T-087: Mobile hamburger icons
+import { LayoutDashboard, Package, FileSpreadsheet, ShoppingCart, ClipboardList, DollarSign, Receipt, User, Menu, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/products', label: 'Products', icon: '📦' },
-  { href: '/upload', label: 'CSV Upload', icon: '📄' },
-  { href: '/orders', label: 'Orders', icon: '🛒' },
-  { href: '/kyc', label: 'KYC Documents', icon: '📋' },
-  { href: '/earnings', label: 'Earnings', icon: '💰' },
-  { href: '/invoices', label: 'Invoices', icon: '🧾' },  // T-073
-  { href: '/profile', label: 'Profile', icon: '👤' },
+// T-082: Lucide SVG icons replace emoji strings
+const navItems: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/products', label: 'Products', icon: Package },
+  { href: '/upload', label: 'CSV Upload', icon: FileSpreadsheet },
+  { href: '/orders', label: 'Orders', icon: ShoppingCart },
+  { href: '/kyc', label: 'KYC Documents', icon: ClipboardList },
+  { href: '/earnings', label: 'Earnings', icon: DollarSign },
+  { href: '/invoices', label: 'Invoices', icon: Receipt },  // T-073
+  { href: '/profile', label: 'Profile', icon: User },
 ];
 
 export default function DashboardLayout({
@@ -28,6 +34,8 @@ export default function DashboardLayout({
   const { supplier, isLoading, isAuthenticated, logout, refreshProfile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  // T-087: Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // GL-WF-061: Logout confirmation state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   // SUP-POS-007: New orders badge count
@@ -38,13 +46,14 @@ export default function DashboardLayout({
   const [verificationLoading, setVerificationLoading] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // ISSUE-MICRO-089: Lock body scroll when any modal is open
+  // ISSUE-MICRO-089: Lock body scroll when any modal/sidebar is open
+  // T-092: Removed showLogoutConfirm — Modal component handles its own scroll lock
   useEffect(() => {
-    if (showLogoutConfirm || showVerificationModal) {
+    if (showVerificationModal || sidebarOpen) {
       document.body.style.overflow = 'hidden';
       return () => { document.body.style.overflow = ''; };
     }
-  }, [showLogoutConfirm, showVerificationModal]);
+  }, [showVerificationModal, sidebarOpen]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -83,15 +92,47 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white flex flex-col">
-        {/* Brand */}
-        <div className="p-6 border-b border-slate-700">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
-            SuperMandi
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Supplier Portal</p>
+      {/* T-087: Mobile hamburger button */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-40 p-2 bg-white border border-slate-200 rounded-lg shadow"
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5 text-slate-700" />
+      </button>
+
+      {/* T-087: Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — T-087: hidden on mobile by default, shown as overlay when sidebarOpen */}
+      <aside
+        className={`${
+          sidebarOpen
+            ? 'fixed inset-y-0 left-0 z-50 flex w-64'
+            : 'hidden md:flex w-64'
+        } bg-gradient-to-b from-slate-900 to-slate-800 text-white flex-col`}
+      >
+        {/* T-085: Brand with logo */}
+        <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/supplier/brand/logo-white.svg" alt="" width={24} height={24} />
+            <span className="text-white font-semibold text-xl">SuperMandi</span>
+          </div>
+          {/* T-087: Close button inside mobile sidebar */}
+          <button
+            className="md:hidden p-1 rounded hover:bg-slate-700 transition-colors"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
         </div>
+        <p className="text-slate-400 text-sm px-6 pt-2 pb-1">Supplier Portal</p>
 
         {/* Supplier Info */}
         <div className="p-4 border-b border-slate-700">
@@ -112,22 +153,24 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation — T-082: Lucide icon components */}
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             // SUP-006: Use startsWith for sub-route active state (e.g. /orders/123 highlights /orders)
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+            const IconComponent = item.icon;
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-primary-600/20 text-white border border-primary-500/30'
                     : 'text-slate-400 hover:bg-slate-700/50 hover:text-white'
                 }`}
               >
-                <span className="text-lg">{item.icon}</span>
+                <IconComponent className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
                 {/* SUP-POS-007: New orders badge */}
                 {item.href === '/orders' && newOrdersCount > 0 && (
@@ -151,42 +194,35 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* GL-WF-061: Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={() => setShowLogoutConfirm(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-slate-800 mb-2">
-              Confirm Logout
-            </h3>
-            <p className="text-slate-600 mb-4">
-              Are you sure you want to logout? Any unsaved changes will be lost.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowLogoutConfirm(false);
-                  logout();
-                }}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* GL-WF-061: Logout Confirmation Modal — T-092: Uses shared Modal component */}
+      <Modal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        title="Confirm Logout"
+        footer={
+          <>
+            <button
+              onClick={() => setShowLogoutConfirm(false)}
+              className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                setShowLogoutConfirm(false);
+                logout();
+              }}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all"
+            >
+              Logout
+            </button>
+          </>
+        }
+      >
+        <p className="text-slate-600">
+          Are you sure you want to logout? Any unsaved changes will be lost.
+        </p>
+      </Modal>
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
@@ -382,9 +418,9 @@ export default function DashboardLayout({
         {/* Page Content */}
         <div className="p-6">{children}</div>
 
-        {/* T-020: Dashboard footer with build info — matches retailer + pre-auth layout */}
-        <footer className="border-t border-slate-200 bg-slate-50 px-6 py-3 flex items-center justify-between text-xs text-slate-400">
-          <span>&copy; 2026 SuperManditech. All rights reserved.</span>
+        {/* T-097: Unified footer — standard text + BuildStamp */}
+        <footer style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '12px 24px', fontSize: 12, color: '#94A3B8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
           <BuildStamp />
         </footer>
       </main>

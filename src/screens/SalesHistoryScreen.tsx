@@ -12,6 +12,8 @@ import { listBills } from "../services/api/billingApi";
 import type { BillSummary } from "../services/billing/billTypes";
 // GL-CRIT-0085: Import skeleton loader component
 import { SkeletonList } from "../components/ui/LoadingState";
+// T-109: Branded empty state
+import EmptyState from "../components/ui/EmptyState";
 
 type RootStackParamList = {
   SalesHistory: undefined;
@@ -100,10 +102,12 @@ export default function SalesHistoryScreen() {
           <SkeletonList count={5} itemHeight={80} />
         </View>
       ) : bills.length === 0 ? (
-        <View style={styles.empty}>
-          <MaterialCommunityIcons name="receipt" size={48} color={theme.colors.textTertiary} />
-          <Text style={styles.emptyTitle}>{t('history.noBills', 'No bills yet')}</Text>
-          <Text style={styles.emptyText}>{t('history.noBillsHint', 'Bills will appear here after you make sales.')}</Text>
+        /* T-109: Branded empty state */
+        <EmptyState
+          icon="receipt"
+          title={t('history.noBills', 'No sales yet')}
+          description={t('history.noBillsHint', 'Bills will appear here after you make sales.')}
+        >
           <Pressable
             style={styles.ctaButton}
             onPress={() => (navigation as any).navigate("SellScan")}
@@ -111,7 +115,7 @@ export default function SalesHistoryScreen() {
             <MaterialCommunityIcons name="cart-outline" size={18} color={theme.colors.textInverse} />
             <Text style={styles.ctaButtonText}>{t('history.makeFirstSale', 'Make Your First Sale')}</Text>
           </Pressable>
-        </View>
+        </EmptyState>
       ) : (
         <FlatList
           data={bills}

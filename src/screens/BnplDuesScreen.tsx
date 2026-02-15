@@ -23,6 +23,8 @@ import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
 import * as bnplApi from "../services/api/bnplApi";
 import type { BnplDrawdown } from "../services/api/bnplApi";
+// T-109: Branded empty state
+import EmptyState from "../components/ui/EmptyState";
 
 // =============================================================================
 // TYPES
@@ -534,18 +536,13 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       )}
 
       {/* Content */}
+      {/* T-109: Branded empty state */}
       {isEmpty ? (
-        <View style={styles.emptyContainer}>
-          <MaterialCommunityIcons
-            name="check-circle-outline"
-            size={64}
-            color={theme.colors.success}
-          />
-          <Text style={styles.emptyTitle}>No Outstanding Dues</Text>
-          <Text style={styles.emptyText}>
-            You don't have any active BNPL payments. All dues are paid.
-          </Text>
-        </View>
+        <EmptyState
+          icon="check-circle-outline"
+          title="No outstanding dues"
+          description="You don't have any active BNPL payments. All dues are paid."
+        />
       ) : (
         <ScrollView
           style={styles.content}

@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react';
 import { Link, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
+// T-081: Lucide SVG icons for navigation
+// T-088: Menu/X icons for mobile hamburger
+import { LayoutDashboard, Package, ClipboardList, Store, ShoppingCart, FileText, FileSpreadsheet, Settings, CreditCard, Smartphone, Receipt, CheckCircle, PenSquare, Menu, X, type LucideIcon } from 'lucide-react';
 // FLOW-001: Device Required Banner
 import DeviceRequiredBanner from './DeviceRequiredBanner';
 // REG-AUTH-301: LIMITED MODE Banner
 import LimitedModeBanner from './LimitedModeBanner';
 // RET-AUD-005: Build fingerprint in UI footer
 import BuildStamp from './BuildStamp';
+// T-091: Shared Modal component
+import Modal from './Modal';
 
 // A1: RouterDebug banner - shows routing info for debugging "no screens" issues
 const API_BASE_URL = '/api/v1/retailer-admin';
@@ -19,20 +24,22 @@ export default function ProtectedLayout() {
   const location = useLocation();
   // GL-WF-053: Logout confirmation state
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // T-088: Mobile hamburger sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
-  // #184.25: Escape key handler for session warning and logout modals
+  // T-088: Track viewport width for mobile detection
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showLogoutConfirm) setShowLogoutConfirm(false);
-        else if (showSessionWarning) dismissSessionWarning();
-      }
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(false); // close sidebar when resizing to desktop
     };
-    if (showSessionWarning || showLogoutConfirm) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [showSessionWarning, showLogoutConfirm, dismissSessionWarning]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // #184.25: Escape key handling moved to Modal component (T-091)
 
   // GL-WF-033: Check if user has admin role
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'owner';
@@ -71,24 +78,25 @@ export default function ProtectedLayout() {
     return false;
   };
 
-  const navItems = [
-    { path: '', label: 'Dashboard', icon: '📊' },
-    { path: 'products', label: 'Products', icon: '📦' },
-    { path: 'inventory', label: 'Inventory', icon: '📋' },
-    { path: 'suppliers', label: 'Suppliers', icon: '🏪' },
-    { path: 'supplier-catalog', label: 'Supplier Catalog', icon: '🛒' }, // CA-1.4-001
-    { path: 'import', label: 'Import CSV', icon: '📄' },
-    { path: 'compliance', label: 'Compliance', icon: '📑' },
-    { path: 'settings', label: 'Settings', icon: '⚙️' }, // GL-RJ-005
-    { path: 'settings/payments', label: 'Payments', icon: '💳' }, // RET-WEB-003
-    { path: 'devices', label: 'Devices', icon: '📱' }, // RET-WEB-002
-    { path: 'invoices', label: 'Invoices', icon: '🧾' }, // T-073
+  // T-081: Lucide SVG icons replace emoji icons
+  const navItems: { path: string; label: string; icon: LucideIcon }[] = [
+    { path: '', label: 'Dashboard', icon: LayoutDashboard },
+    { path: 'products', label: 'Products', icon: Package },
+    { path: 'inventory', label: 'Inventory', icon: ClipboardList },
+    { path: 'suppliers', label: 'Suppliers', icon: Store },
+    { path: 'supplier-catalog', label: 'Supplier Catalog', icon: ShoppingCart }, // CA-1.4-001
+    { path: 'import', label: 'Import CSV', icon: FileText },
+    { path: 'compliance', label: 'Compliance', icon: FileSpreadsheet },
+    { path: 'settings', label: 'Settings', icon: Settings }, // GL-RJ-005
+    { path: 'settings/payments', label: 'Payments', icon: CreditCard }, // RET-WEB-003
+    { path: 'devices', label: 'Devices', icon: Smartphone }, // RET-WEB-002
+    { path: 'invoices', label: 'Invoices', icon: Receipt }, // T-073
   ];
 
   // SM-024: Admin approval queue navigation
-  const adminNavItems = [
-    { path: 'admin/suppliers', label: 'Supplier Queue', icon: '✅' },
-    { path: 'admin/products', label: 'Product Queue', icon: '📝' },
+  const adminNavItems: { path: string; label: string; icon: LucideIcon }[] = [
+    { path: 'admin/suppliers', label: 'Supplier Queue', icon: CheckCircle },
+    { path: 'admin/products', label: 'Product Queue', icon: PenSquare },
   ];
 
   // AUDIT-RET-057: Filter navigation in limited mode — only allow dashboard and settings
@@ -112,148 +120,128 @@ export default function ProtectedLayout() {
   }, [isLimitedMode, location.pathname, storeCode, navigate]);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: '240px',
-        background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
-        color: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
-      }}>
-        {/* Brand Header */}
-        <div style={{
-          padding: '1.75rem 1.5rem',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-        }}>
-          <div style={{
-            fontWeight: '800',
-            fontSize: '1.5rem',
-            background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.5px',
-          }}>
-            SuperMandi
-          </div>
-          <div style={{
-            fontSize: '0.8rem',
-            color: '#94a3b8',
-            marginTop: '0.5rem',
+    <div className="layout-wrapper">
+      {/* T-088: Mobile hamburger button — visible only on mobile */}
+      {isMobile && !sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+          style={{
+            position: 'fixed',
+            top: 16,
+            left: 16,
+            zIndex: 40,
+            width: 40,
+            height: 40,
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
-          }}>
-            <span style={{
-              width: '8px',
-              height: '8px',
-              background: '#22c55e',
-              borderRadius: '50%',
-              display: 'inline-block',
-            }}></span>
+            justifyContent: 'center',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            cursor: 'pointer',
+            padding: 0,
+          }}
+        >
+          <Menu style={{ width: 22, height: 22, color: '#1e293b' }} />
+        </button>
+      )}
+
+      {/* T-088: Mobile backdrop overlay */}
+      {isMobile && sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 45,
+          }}
+        />
+      )}
+
+      {/* T-089: Sidebar — refactored to CSS classes */}
+      <aside
+        className="sidebar-dark"
+        style={{
+          display: isMobile && !sidebarOpen ? 'none' : 'flex',
+          // T-088: Mobile fixed overlay positioning
+          ...(isMobile && sidebarOpen ? {
+            position: 'fixed' as const,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            zIndex: 50,
+          } : {}),
+        }}
+      >
+        {/* Brand Header */}
+        <div className="sidebar-brand">
+          {/* Top row: brand + mobile close */}
+          <div className="sidebar-brand-row">
+            {/* T-084: Brand logo + plain white text replaces gradient text */}
+            <div className="sidebar-brand-logo">
+              <img src="/retailer/brand/logo-white.svg" alt="" width={24} height={24} />
+              <span className="sidebar-brand-name">SuperMandi</span>
+            </div>
+            {/* T-088: Close button for mobile sidebar */}
+            {isMobile && (
+              <button
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close menu"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X style={{ width: 22, height: 22, color: '#94a3b8' }} />
+              </button>
+            )}
+          </div>
+          {/* Store name indicator */}
+          <div className="sidebar-store-indicator">
+            <span className="sidebar-store-dot"></span>
             {store?.name || storeCode}
           </div>
         </div>
 
         {/* Navigation */}
-        <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <nav className="sidebar-nav-section">
           {/* AUDIT-RET-015: Use Link for SPA navigation instead of <a> full reloads */}
           {visibleNavItems.map((item) => (
             <Link
               key={item.path}
               to={`/s/${storeCode}${item.path ? `/${item.path}` : ''}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.875rem 1rem',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: '10px',
-                background: isActive(item.path)
-                  ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(6, 182, 212, 0.2))'
-                  : 'transparent',
-                border: isActive(item.path)
-                  ? '1px solid rgba(59, 130, 246, 0.3)'
-                  : '1px solid transparent',
-                fontWeight: isActive(item.path) ? '500' : '400',
-                fontSize: '0.95rem',
-                transition: 'all 0.2s',
-                opacity: isActive(item.path) ? 1 : 0.7,
-              }}
-              onMouseOver={(e) => {
-                if (!isActive(item.path)) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.opacity = '1';
-                }
-              }}
-              onMouseOut={(e) => {
-                if (!isActive(item.path)) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.opacity = '0.7';
-                }
-              }}
+              onClick={() => isMobile && setSidebarOpen(false)}
+              className={`sidebar-nav-link${isActive(item.path) ? ' active' : ''}`}
             >
-              <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
+              {/* T-081: Lucide SVG icon */}
+              <item.icon className="sidebar-nav-icon" />
               {item.label}
             </Link>
           ))}
 
           {/* SM-024: Admin Section Divider - GL-WF-033: Only show for admin users */}
           {isAdmin && visibleAdminItems.length > 0 && (
-            <div style={{
-              borderTop: '1px solid rgba(255,255,255,0.1)',
-              margin: '0.75rem 0',
-              paddingTop: '0.75rem',
-            }}>
-              <div style={{
-                fontSize: '0.7rem',
-                color: '#64748b',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                padding: '0 1rem',
-                marginBottom: '0.5rem',
-              }}>
+            <div className="sidebar-admin-divider">
+              <div className="sidebar-admin-label">
                 SuperAdmin
               </div>
               {visibleAdminItems.map((item) => (
                 <Link
                   key={item.path}
                   to={`/s/${storeCode}/${item.path}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.875rem 1rem',
-                    color: 'white',
-                    textDecoration: 'none',
-                    borderRadius: '10px',
-                    background: isActive(item.path)
-                      ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2))'
-                      : 'transparent',
-                    border: isActive(item.path)
-                      ? '1px solid rgba(139, 92, 246, 0.3)'
-                      : '1px solid transparent',
-                    fontWeight: isActive(item.path) ? '500' : '400',
-                    fontSize: '0.95rem',
-                    transition: 'all 0.2s',
-                    opacity: isActive(item.path) ? 1 : 0.7,
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isActive(item.path)) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.opacity = '1';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!isActive(item.path)) {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.opacity = '0.7';
-                    }
-                  }}
+                  onClick={() => isMobile && setSidebarOpen(false)}
+                  className={`sidebar-nav-link admin-link${isActive(item.path) ? ' active' : ''}`}
                 >
-                  <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
+                  {/* T-081: Lucide SVG icon */}
+                  <item.icon className="sidebar-nav-icon" />
                   {item.label}
                 </Link>
               ))}
@@ -262,37 +250,11 @@ export default function ProtectedLayout() {
         </nav>
 
         {/* Footer */}
-        <div style={{
-          padding: '1rem 1.5rem',
-          borderTop: '1px solid rgba(255,255,255,0.1)',
-        }}>
+        <div className="sidebar-footer-section">
           {/* GL-WF-053: Logout button with confirmation */}
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '8px',
-              color: '#fca5a5',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: '500',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)';
-              e.currentTarget.style.color = '#fecaca';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-              e.currentTarget.style.color = '#fca5a5';
-            }}
+            className="sidebar-logout-btn"
           >
             Logout
           </button>
@@ -300,7 +262,7 @@ export default function ProtectedLayout() {
       </aside>
 
       {/* Main Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <div className="layout-main">
         {/* AUDIT-RET-014: Gate debug banner behind DEV — exposes API URLs in production */}
         {import.meta.env.DEV && (
           <div style={{
@@ -340,122 +302,51 @@ export default function ProtectedLayout() {
           <Outlet />
         </main>
 
-        {/* T-020: Standardized footer — copyright + build stamp (all environments) */}
-        <footer style={{
-          padding: '0.6rem 2rem',
-          background: '#f8fafc',
-          color: '#94a3b8',
-          fontSize: '0.75rem',
-          display: 'flex',
-          borderTop: '1px solid #e2e8f0',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <span>&copy; 2026 SuperManditech. All rights reserved.</span>
+        {/* T-097: Unified footer — standard text + BuildStamp */}
+        <footer style={{ padding: '12px 24px', background: '#F8FAFC', color: '#94A3B8', fontSize: '12px', display: 'flex', borderTop: '1px solid #E2E8F0', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
           <BuildStamp />
         </footer>
       </div>
 
-      {/* GL-WF-028: Session Expiry Warning Modal */}
+      {/* GL-WF-028: Session Expiry Warning Modal — T-091: Uses shared Modal component */}
       {/* #184.25: Click-outside dismisses modal */}
-      {showSessionWarning && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-        }} onClick={dismissSessionWarning}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '400px',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>⏰</div>
-            <h3 style={{ margin: '0 0 1rem', textAlign: 'center', color: '#1e293b' }}>Session Expiring Soon</h3>
-            <p style={{ margin: '0 0 1.5rem', color: '#64748b', textAlign: 'center' }}>
-              Your session will expire in less than 5 minutes due to inactivity. Click below to stay logged in.
-            </p>
-            <button
-              onClick={dismissSessionWarning}
-              style={{
-                width: '100%',
-                padding: '0.875rem',
-                background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '10px',
-                fontWeight: '600',
-                cursor: 'pointer',
-              }}
-            >
-              Stay Logged In
+      <Modal
+        isOpen={showSessionWarning}
+        onClose={dismissSessionWarning}
+        title="Session Expiring Soon"
+        actions={
+          <button onClick={dismissSessionWarning} className="modal-btn modal-btn-primary">
+            Stay Logged In
+          </button>
+        }
+      >
+        <div style={{ fontSize: '2rem', marginBottom: '1rem', textAlign: 'center' }}>&#9200;</div>
+        <p className="modal-body">
+          Your session will expire in less than 5 minutes due to inactivity. Click below to stay logged in.
+        </p>
+      </Modal>
+
+      {/* GL-WF-053: Logout Confirmation Modal — T-091: Uses shared Modal component */}
+      <Modal
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        title="Confirm Logout"
+        actions={
+          <div className="modal-actions">
+            <button onClick={() => setShowLogoutConfirm(false)} className="modal-btn modal-btn-cancel">
+              Cancel
+            </button>
+            <button onClick={handleLogout} className="modal-btn modal-btn-danger">
+              Logout
             </button>
           </div>
-        </div>
-      )}
-
-      {/* GL-WF-053: Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 10000,
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '16px',
-            padding: '2rem',
-            maxWidth: '400px',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-          }}>
-            <h3 style={{ margin: '0 0 1rem', textAlign: 'center', color: '#1e293b' }}>Confirm Logout</h3>
-            <p style={{ margin: '0 0 1.5rem', color: '#64748b', textAlign: 'center' }}>
-              Are you sure you want to logout?
-            </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                style={{
-                  flex: 1,
-                  padding: '0.875rem',
-                  background: '#f1f5f9',
-                  color: '#475569',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleLogout}
-                style={{
-                  flex: 1,
-                  padding: '0.875rem',
-                  background: '#ef4444',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '10px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        }
+      >
+        <p className="modal-body">
+          Are you sure you want to logout?
+        </p>
+      </Modal>
     </div>
   );
 }

@@ -3,9 +3,12 @@
 // Allows retailers to configure UPI VPA for receiving payments
 
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import UpiInput, { validateUpiVpa } from '../components/UpiInput';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 interface PaymentSettings {
   upiVpa: string;
@@ -14,6 +17,7 @@ interface PaymentSettings {
 }
 
 export default function PaymentsPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
 
   // Form state
@@ -151,6 +155,8 @@ export default function PaymentsPage() {
       background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
       padding: '2rem',
     }}>
+      {/* T-112: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Settings', path: `/s/${storeCode}/settings` }, { label: 'Payments' }]} />
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{

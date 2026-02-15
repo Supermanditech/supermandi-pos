@@ -23,21 +23,25 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <AuthProvider>
         {children}
       </AuthProvider>
+      {/* T-094: Standardized toast config per DESIGN_TOKENS.md */}
       <Toaster
-        position="top-right"
+        position="top-center"
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#1e293b',
-            color: '#fff',
+            background: '#0F172A',
+            color: '#FFFFFF',
+            borderRadius: '8px',
           },
           success: {
+            duration: 4000,
             iconTheme: {
               primary: '#22c55e',
               secondary: '#fff',
             },
           },
           error: {
+            duration: 6000,
             iconTheme: {
               primary: '#ef4444',
               secondary: '#fff',

@@ -12,8 +12,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://supermandi.tech">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><polygon points='50,10 90,90 10,90' fill='%23000'/></svg>">
+    <!-- T-078: Brand shortmark favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,7 +56,7 @@
         }
 
         ::selection {
-            background: var(--foreground);
+            background: #2563EB;
             color: var(--background);
         }
 
@@ -86,12 +86,8 @@
         }
 
         .logo-mark {
-            width: 22px;
-            height: 20px;
-        }
-
-        .logo-mark svg {
-            fill: var(--foreground);
+            width: 32px;
+            height: 32px;
         }
 
         .logo-text {
@@ -141,11 +137,11 @@
 
         .nav-btn-primary {
             color: var(--background);
-            background: var(--foreground);
+            background: #2563EB;
         }
 
         .nav-btn-primary:hover {
-            background: var(--gray-700);
+            background: #1D4ED8;
         }
 
         .nav-btn svg {
@@ -319,6 +315,17 @@
             }
         }
 
+        /* Portal Section */
+        .portal-section { max-width: 900px; margin: 0 auto; padding: 80px 20px; text-align: center; }
+        .portal-heading { font-size: 28px; font-weight: 700; color: #0F172A; margin-bottom: 40px; }
+        .portal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+        .portal-card { display: flex; flex-direction: column; align-items: center; padding: 32px 24px; background: white; border: 1px solid #E2E8F0; border-radius: 8px; text-decoration: none; color: #0F172A; transition: all 0.2s; }
+        .portal-card:hover { border-color: #2563EB; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1); transform: translateY(-2px); }
+        .portal-card h3 { font-size: 18px; font-weight: 600; margin: 12px 0 8px; }
+        .portal-card p { font-size: 14px; color: #64748B; line-height: 1.5; }
+        .portal-icon { font-size: 32px; margin-bottom: 8px; }
+        @media (max-width: 640px) { .portal-grid { grid-template-columns: 1fr; } }
+
         /* Responsive */
         @media (max-width: 768px) {
             nav {
@@ -370,12 +377,8 @@
         <!-- Navigation -->
         <nav>
             <a href="/" class="nav-logo">
-                <div class="logo-mark">
-                    <svg viewBox="0 0 76 65" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M37.5274 0L75.0548 65H0L37.5274 0Z"/>
-                    </svg>
-                </div>
-                <span class="logo-text">supermandi</span>
+                <img src="/brand/logo-shortmark.svg" alt="SuperMandi" width="32" height="32" class="logo-mark">
+                <span class="logo-text">SuperMandi</span>
             </a>
 
             <!-- GO-LIVE-UX-001: Single role entry system - all routes go to LOGIN pages -->
@@ -428,6 +431,28 @@
                 <!-- STAGING-FIX: Register CTA removed — registration not yet public -->
             </section>
         </main>
+
+        <!-- Portal Entry Section -->
+        <section class="portal-section" id="portals">
+            <h2 class="portal-heading">Access Your Portal</h2>
+            <div class="portal-grid">
+                <a href="/retailer/login" class="portal-card">
+                    <div class="portal-icon">&#127978;</div>
+                    <h3>Retailer Portal</h3>
+                    <p>Manage your store, inventory, and orders</p>
+                </a>
+                <a href="/supplier/login" class="portal-card">
+                    <div class="portal-icon">&#128230;</div>
+                    <h3>Supplier Portal</h3>
+                    <p>List products, manage orders, track earnings</p>
+                </a>
+                <a href="/admin/" class="portal-card">
+                    <div class="portal-icon">&#9881;&#65039;</div>
+                    <h3>SuperAdmin</h3>
+                    <p>Platform management and analytics</p>
+                </a>
+            </div>
+        </section>
 
         <!-- Footer -->
         <footer>

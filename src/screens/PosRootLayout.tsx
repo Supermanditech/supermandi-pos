@@ -35,6 +35,8 @@ import SellScanScreen from "./SellScanScreen";
 import PurchaseScreen from "./PurchaseScreen";
 import ReorderScreen from "./ReorderScreen";
 import CreditScreen from "./CreditScreen";
+// T-117: Per-screen error boundaries for POS tabs
+import ScreenErrorBoundary from "../components/ui/ScreenErrorBoundary";
 import { usePurchaseCartStore } from "../stores/purchaseCartStore";
 import * as reorderApi from "../services/api/reorderApi";
 import { cacheDeviceInfo, fetchDeviceInfo, getCachedDeviceInfo, getDeviceMeta, updateDeviceMetadata } from "../services/deviceInfo";
@@ -1212,29 +1214,42 @@ export default function PosRootLayout() {
         </View>
       ) : null}
 
+      {/* T-117: Each tab wrapped with ScreenErrorBoundary for isolated crash recovery */}
       <View style={styles.content}>
-        {effectiveMode === "MENU" ? <MenuScreen /> : null}
+        {effectiveMode === "MENU" ? (
+          <ScreenErrorBoundary screenName="Menu">
+            <MenuScreen />
+          </ScreenErrorBoundary>
+        ) : null}
         {effectiveMode === "SELL" ? (
-          <SellScanScreen
-            storeActive={storeActive}
-            scanDisabled={scanDisabled}
-            onOpenScanner={handleOpenCamera}
-            cartMode={cartMode}
-            sellOnboardingRequest={sellOnboardingRequest}
-            onSellOnboardingClose={closeSellOnboarding}
-            isScanningActive={scannerOpen || hidConnected}
-          />
+          <ScreenErrorBoundary screenName="Sell">
+            <SellScanScreen
+              storeActive={storeActive}
+              scanDisabled={scanDisabled}
+              onOpenScanner={handleOpenCamera}
+              cartMode={cartMode}
+              sellOnboardingRequest={sellOnboardingRequest}
+              onSellOnboardingClose={closeSellOnboarding}
+              isScanningActive={scannerOpen || hidConnected}
+            />
+          </ScreenErrorBoundary>
         ) : null}
         {effectiveMode === "PURCHASE" ? (
-          <PurchaseScreen
-            onOpenScanner={handleOpenCamera}
-          />
+          <ScreenErrorBoundary screenName="Purchase">
+            <PurchaseScreen
+              onOpenScanner={handleOpenCamera}
+            />
+          </ScreenErrorBoundary>
         ) : null}
         {effectiveMode === "REORDER" ? (
-          <ReorderScreen onNavigateToBuy={() => setSelectedModeInternal("PURCHASE")} />
+          <ScreenErrorBoundary screenName="Reorder">
+            <ReorderScreen onNavigateToBuy={() => setSelectedModeInternal("PURCHASE")} />
+          </ScreenErrorBoundary>
         ) : null}
         {effectiveMode === "CREDIT" ? (
-          <CreditScreen onBack={() => setSelectedModeInternal("MENU")} />
+          <ScreenErrorBoundary screenName="Credit">
+            <CreditScreen onBack={() => setSelectedModeInternal("MENU")} />
+          </ScreenErrorBoundary>
         ) : null}
       </View>
 

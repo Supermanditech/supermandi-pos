@@ -1,6 +1,7 @@
 /* Using system fonts to avoid CSP issues with external font imports */
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* T-077: Inter first — matches retailer + supplier per DESIGN_TOKENS.md */
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -64,7 +65,7 @@ body {
 }
 
 button {
-  border-radius: 10px;
+  border-radius: 6px; /* T-077: DESIGN_TOKENS.md ButtonRadius */
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 0.95em;

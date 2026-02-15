@@ -21,6 +21,8 @@ import * as orderApi from "../services/api/orderApi";
 import type { PurchaseOrder, OrderStatus } from "../services/api/orderApi";
 import { getDeviceStoreId } from "../services/deviceSession";
 import { shouldStopPagination } from "../config/pagination";
+// T-109: Branded empty state
+import EmptyState from "../components/ui/EmptyState";
 
 // =============================================================================
 // TYPES
@@ -192,26 +194,24 @@ export default function OrderHistoryScreen({
       );
     }
 
+    /* T-109: Branded empty state */
     return (
-      <View style={styles.emptyContainer}>
-        <MaterialCommunityIcons
-          name="clipboard-list-outline"
-          size={48}
-          color={theme.colors.textTertiary}
-        />
-        <Text style={styles.emptyTitle}>No Orders Found</Text>
-        <Text style={styles.emptyText}>
-          {filter === "all"
+      <EmptyState
+        icon="clipboard-list-outline"
+        title="No orders yet"
+        description={
+          filter === "all"
             ? "You haven't placed any orders yet."
-            : `No ${filter} orders to display.`}
-        </Text>
+            : `No ${filter} orders to display.`
+        }
+      >
         {filter === "all" && onNavigateToBuy && (
           <Pressable style={styles.ctaButton} onPress={onNavigateToBuy}>
             <MaterialCommunityIcons name="cart-plus" size={18} color={theme.colors.textInverse} />
             <Text style={styles.ctaButtonText}>Create First Order</Text>
           </Pressable>
         )}
-      </View>
+      </EmptyState>
     );
   }, [loading, error, filter, loadOrders, onNavigateToBuy]);
 

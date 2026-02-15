@@ -7,6 +7,7 @@ import { BuildStamp } from '../components/BuildStamp';
 
 // UI-SPEC-001: Stripe-level calm infrastructure design
 // Solid neutral background (#F7F9FC), 448px card, Inter font, 44-48px buttons
+// T-090: All styles moved to CSS classes in index.css (.login-page-container, .login-card-box, etc.)
 
 type Step = 'phone' | 'otp' | 'stores' | 'not_onboarded' | 'incomplete';
 type AuthMode = 'otp' | 'password';
@@ -36,235 +37,6 @@ interface LookupResponse {
   message?: string;
 }
 
-// UI-SPEC: Stripe-level infrastructure design system
-const styles = {
-  // Page layout - solid neutral background per spec
-  pageContainer: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    background: '#F7F9FC',
-    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  header: {
-    background: 'white',
-    borderBottom: '1px solid #e2e8f0',
-    height: '64px',
-    display: 'flex',
-    alignItems: 'center',
-  },
-  headerInner: {
-    maxWidth: '1152px',
-    width: '100%',
-    margin: '0 auto',
-    padding: '0 1.5rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  logoText: {
-    fontSize: '1.5rem',
-    fontWeight: 600,
-    color: '#2563eb',
-  },
-  logoSeparator: {
-    color: '#94a3b8',
-  },
-  logoSubtext: {
-    color: '#475569',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-  },
-  headerLink: {
-    fontSize: '0.875rem',
-    color: '#2563eb',
-    textDecoration: 'none',
-    fontWeight: 500,
-  },
-  // Main content
-  main: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '2rem 1rem',
-  },
-  cardContainer: {
-    width: '100%',
-    maxWidth: '448px',
-  },
-  // Card styling - white with subtle shadow per spec
-  card: {
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-    border: '1px solid #e2e8f0',
-    padding: '2rem',
-  },
-  cardTitle: {
-    fontSize: '1.5rem',
-    fontWeight: 600,
-    color: '#0F172A',
-    marginBottom: '0.5rem',
-  },
-  cardSubtitle: {
-    color: '#64748b',
-    fontSize: '0.875rem',
-    marginBottom: '1.5rem',
-  },
-  // Form elements - 40-44px height per spec
-  formGroup: {
-    marginBottom: '1rem',
-  },
-  label: {
-    display: 'block',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-    color: '#0F172A',
-    marginBottom: '0.5rem',
-  },
-  input: {
-    width: '100%',
-    height: '42px',
-    padding: '0 1rem',
-    fontSize: '0.9375rem',
-    border: '1px solid #cbd5e1',
-    borderRadius: '6px',
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-  },
-  inputDisabled: {
-    background: '#f8fafc',
-    cursor: 'not-allowed',
-  },
-  // Buttons - 44-48px height per spec
-  btnPrimary: {
-    width: '100%',
-    height: '46px',
-    padding: '0 1.5rem',
-    fontSize: '0.9375rem',
-    fontWeight: 500,
-    color: 'white',
-    background: '#2563eb',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'background 0.15s',
-    marginBottom: '1rem',
-  },
-  btnPrimaryDisabled: {
-    background: '#93c5fd',
-    cursor: 'not-allowed',
-  },
-  btnSecondary: {
-    width: '100%',
-    height: '46px',
-    padding: '0 1.5rem',
-    fontSize: '0.9375rem',
-    fontWeight: 500,
-    color: '#0F172A',
-    background: 'white',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'background 0.15s, border-color 0.15s',
-  },
-  // Alert styles - soft red background per spec
-  alertError: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    color: '#991b1b',
-    padding: '0.875rem 1rem',
-    borderRadius: '6px',
-    fontSize: '0.875rem',
-    marginBottom: '1rem',
-  },
-  alertWarning: {
-    background: '#fffbeb',
-    border: '1px solid #fde68a',
-    color: '#92400e',
-    padding: '0.875rem 1rem',
-    borderRadius: '6px',
-    fontSize: '0.875rem',
-    marginBottom: '1rem',
-  },
-  // Footer - minimal, muted per spec
-  footer: {
-    background: 'white',
-    borderTop: '1px solid #e2e8f0',
-  },
-  footerInner: {
-    maxWidth: '1152px',
-    margin: '0 auto',
-    padding: '1rem 1.5rem',
-    textAlign: 'center' as const,
-    fontSize: '0.8125rem',
-    color: '#64748b',
-  },
-  // Links
-  textLink: {
-    color: '#2563eb',
-    textDecoration: 'none',
-    fontWeight: 500,
-    fontSize: '0.875rem',
-    cursor: 'pointer',
-    background: 'none',
-    border: 'none',
-    padding: 0,
-  },
-  textLinkDisabled: {
-    color: '#9ca3af',
-    cursor: 'not-allowed',
-  },
-  // Divider
-  divider: {
-    borderTop: '1px solid #e5e7eb',
-    margin: '1.5rem 0',
-    paddingTop: '1rem',
-  },
-  // Store selector
-  storeButton: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-start',
-    padding: '1rem',
-    background: '#F7F9FC',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    width: '100%',
-    marginBottom: '0.75rem',
-    transition: 'all 0.15s',
-  },
-  storeName: {
-    fontWeight: 600,
-    color: '#0F172A',
-  },
-  storeCode: {
-    fontSize: '0.8125rem',
-    color: '#64748b',
-  },
-  // AUTH-UX-LOGIN-001: Neutral icon container for "Account not found" state
-  warningIconContainer: {
-    width: '4rem',
-    height: '4rem',
-    background: '#f1f5f9',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 1rem',
-    fontSize: '1.5rem',
-    color: '#64748b',
-  },
-};
-
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -281,7 +53,7 @@ export default function LoginPage() {
   const [authData, setAuthData] = useState<{ token: string; refreshToken: string; user: OtpLoginResponse['user'] } | null>(null);
   const recaptchaInitialized = useRef(false);
 
-  // T-003: Dual auth — password + OTP toggle
+  // T-003: Dual auth -- password + OTP toggle
   const [authMode, setAuthMode] = useState<AuthMode>('otp');
   const [password, setPassword] = useState('');
   const [storeCode, setStoreCode] = useState('');
@@ -319,7 +91,7 @@ export default function LoginPage() {
     }
   }, [otpExpirySeconds]);
 
-  // T-021: Combined lookup + OTP send — single "Send OTP" click
+  // T-021: Combined lookup + OTP send -- single "Send OTP" click
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -531,7 +303,7 @@ export default function LoginPage() {
   // Reset to initial state
   // T-009: Clear DRAFT registration on backend + sessionStorage when switching phone
   const handleChangePhone = async () => {
-    // Best-effort backend clear — expire DRAFT application so GSTIN/phone can be reused
+    // Best-effort backend clear -- expire DRAFT application so GSTIN/phone can be reused
     if (phone) {
       try {
         await fetch(`${API_GATEWAY_BASE}/api/v1/retailer-admin/registration/clear`, {
@@ -539,7 +311,7 @@ export default function LoginPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: phone.trim() }),
         });
-      } catch { /* ignore — best-effort clear */ }
+      } catch { /* ignore -- best-effort clear */ }
     }
     setStep('phone');
     setOtp('');
@@ -551,7 +323,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={styles.pageContainer}>
+    <div className="login-page-container">
       {/* AUDIT-RET-004: Fade-in + spin animations to prevent white flash on mount */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -560,42 +332,43 @@ export default function LoginPage() {
         .login-page-fade { animation: fadeIn 0.3s ease-out; }
         .login-skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200px 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
       `}</style>
-      {/* Header Bar */}
-      <header style={styles.header}>
-        <div style={styles.headerInner}>
-          <div style={styles.logo}>
-            <span style={styles.logoText}>SuperManditech</span>
-            <span style={styles.logoSeparator}>|</span>
-            <span style={styles.logoSubtext}>Retailer Portal</span>
+      {/* T-095: Unified login header */}
+      <header className="login-header">
+        <div className="login-header-inner">
+          <div className="login-logo">
+            <img src="/retailer/brand/logo-shortmark.svg" alt="" width={20} height={20} />
+            <span className="login-logo-text">SuperMandi</span>
+            <span className="login-logo-separator">|</span>
+            <span className="login-logo-subtext">Retailer Portal</span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main style={styles.main} className="login-page-fade">
-        <div style={styles.cardContainer}>
-          <div style={styles.card}>
-            <h2 style={styles.cardTitle}>Sign in to your account</h2>
+      <main className="login-main login-page-fade">
+        <div className="login-card-container">
+          <div className="login-card-box">
+            <h2 className="login-card-title">Sign in to your account</h2>
 
             {step === 'phone' && authMode === 'otp' && (
-              <p style={styles.cardSubtitle}>Enter your registered phone number to receive an OTP</p>
+              <p className="login-card-subtitle">Enter your registered phone number to receive an OTP</p>
             )}
 
             {step === 'phone' && authMode === 'password' && (
-              <p style={styles.cardSubtitle}>Sign in with your phone number and password</p>
+              <p className="login-card-subtitle">Sign in with your phone number and password</p>
             )}
 
             {step === 'otp' && (
-              <p style={styles.cardSubtitle}>Enter the 6-digit code sent to {phone}</p>
+              <p className="login-card-subtitle">Enter the 6-digit code sent to {phone}</p>
             )}
 
             {step === 'stores' && stores.length > 0 && (
-              <p style={styles.cardSubtitle}>Select a store to continue</p>
+              <p className="login-card-subtitle">Select a store to continue</p>
             )}
 
             {/* Firebase warning */}
             {!isFirebaseReady() && step === 'phone' && authMode === 'otp' && (
-              <div style={styles.alertWarning}>
+              <div className="login-alert-warning">
                 <strong>Phone Verification Unavailable</strong>
                 <p style={{ marginTop: '0.25rem', marginBottom: 0 }}>
                   Login requires phone verification which is currently unavailable.
@@ -604,17 +377,17 @@ export default function LoginPage() {
             )}
 
             {/* Error display */}
-            {error && <div style={styles.alertError}>{error}</div>}
+            {error && <div className="login-alert-error">{error}</div>}
 
-            {/* T-021: Phone Number — combined lookup + OTP send */}
+            {/* T-021: Phone Number -- combined lookup + OTP send */}
             {step === 'phone' && authMode === 'otp' && (
               <form onSubmit={handleSendOtp}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone Number</label>
+                <div className="login-form-group">
+                  <label className="login-form-label">Phone Number</label>
                   <input
                     type="tel"
-                    style={styles.input}
-                    placeholder="+91 9876543210"
+                    className="login-form-input"
+                    placeholder="+91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     disabled={isLoading}
@@ -625,15 +398,12 @@ export default function LoginPage() {
                 <button
                   id="send-otp-button"
                   type="submit"
-                  style={{
-                    ...styles.btnPrimary,
-                    ...(isLoading || !isFirebaseReady() ? styles.btnPrimaryDisabled : {}),
-                  }}
+                  className="login-btn-primary"
                   disabled={isLoading || !isFirebaseReady()}
                 >
                   {isLoading ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      <span className="login-spinner" />
                       Sending OTP...
                     </span>
                   ) : 'Send OTP'}
@@ -641,20 +411,20 @@ export default function LoginPage() {
 
                 {/* T-003: Toggle to password login */}
                 <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
-                  <button type="button" onClick={() => { setAuthMode('password'); setError(''); }} style={styles.textLink}>
+                  <button type="button" onClick={() => { setAuthMode('password'); setError(''); }} className="login-text-link">
                     Sign in with password instead
                   </button>
                 </div>
 
-                <div style={styles.divider}>
+                <div className="login-divider">
                   <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
                     Don't have an account?{' '}
-                    <Link to="/retailer/register" style={styles.textLink}>
+                    <Link to="/retailer/register" className="login-text-link">
                       Register
                     </Link>
                   </p>
                   <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
-                    <Link to="/retailer/forgot-password" style={styles.textLink}>
+                    <Link to="/retailer/forgot-password" className="login-text-link">
                       Forgot Password?
                     </Link>
                   </p>
@@ -665,34 +435,34 @@ export default function LoginPage() {
             {/* T-003: Password Login Form */}
             {step === 'phone' && authMode === 'password' && (
               <form onSubmit={handlePasswordLogin}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone Number</label>
+                <div className="login-form-group">
+                  <label className="login-form-label">Phone Number</label>
                   <input
                     type="tel"
-                    style={styles.input}
-                    placeholder="+91 9876543210"
+                    className="login-form-input"
+                    placeholder="+91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     disabled={isLoading}
                     autoFocus
                   />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Store Code</label>
+                <div className="login-form-group">
+                  <label className="login-form-label">Store Code</label>
                   <input
                     type="text"
-                    style={styles.input}
+                    className="login-form-input"
                     placeholder="e.g. MYSTORE"
                     value={storeCode}
                     onChange={(e) => setStoreCode(e.target.value.toUpperCase())}
                     disabled={isLoading}
                   />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Password</label>
+                <div className="login-form-group">
+                  <label className="login-form-label">Password</label>
                   <input
                     type="password"
-                    style={styles.input}
+                    className="login-form-input"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -702,15 +472,12 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
-                  style={{
-                    ...styles.btnPrimary,
-                    ...(isLoading ? styles.btnPrimaryDisabled : {}),
-                  }}
+                  className="login-btn-primary"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      <span className="login-spinner" />
                       Signing in...
                     </span>
                   ) : 'Sign In'}
@@ -718,20 +485,20 @@ export default function LoginPage() {
 
                 {/* Toggle back to OTP */}
                 <div style={{ textAlign: 'center', marginBottom: '0.75rem' }}>
-                  <button type="button" onClick={() => { setAuthMode('otp'); setError(''); setPassword(''); setStoreCode(''); }} style={styles.textLink}>
+                  <button type="button" onClick={() => { setAuthMode('otp'); setError(''); setPassword(''); setStoreCode(''); }} className="login-text-link">
                     Sign in with OTP instead
                   </button>
                 </div>
 
-                <div style={styles.divider}>
+                <div className="login-divider">
                   <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: 0, textAlign: 'center' }}>
                     Don't have an account?{' '}
-                    <Link to="/retailer/register" style={styles.textLink}>
+                    <Link to="/retailer/register" className="login-text-link">
                       Register
                     </Link>
                   </p>
                   <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0.5rem 0 0', textAlign: 'center' }}>
-                    <Link to="/retailer/forgot-password" style={styles.textLink}>
+                    <Link to="/retailer/forgot-password" className="login-text-link">
                       Forgot Password?
                     </Link>
                   </p>
@@ -742,18 +509,12 @@ export default function LoginPage() {
             {/* Step 2: OTP Verification */}
             {step === 'otp' && (
               <form onSubmit={handleVerifyOtp}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Verification Code</label>
+                <div className="login-form-group">
+                  <label className="login-form-label">Verification Code</label>
                   <input
                     type="text"
-                    style={{
-                      ...styles.input,
-                      textAlign: 'center',
-                      fontSize: '1.25rem',
-                      letterSpacing: '0.5rem',
-                      fontFamily: 'monospace',
-                    }}
-                    placeholder="123456"
+                    className="login-form-input login-form-input--otp"
+                    placeholder="Enter 6-digit PIN"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     maxLength={6}
@@ -764,37 +525,24 @@ export default function LoginPage() {
 
                 {/* AUTH-OTP-001: OTP expiry countdown */}
                 {otpExpirySeconds > 0 && (
-                  <p style={{
-                    fontSize: '0.8125rem',
-                    color: otpExpirySeconds <= 60 ? '#dc2626' : '#64748b',
-                    textAlign: 'center',
-                    marginBottom: '1rem',
-                  }}>
+                  <p className={`login-otp-expiry ${otpExpirySeconds <= 60 ? 'login-otp-expiry--warning' : 'login-otp-expiry--normal'}`}>
                     Code expires in {Math.floor(otpExpirySeconds / 60)}:{String(otpExpirySeconds % 60).padStart(2, '0')}
                   </p>
                 )}
                 {otpExpirySeconds === 0 && step === 'otp' && (
-                  <p style={{
-                    fontSize: '0.8125rem',
-                    color: '#dc2626',
-                    textAlign: 'center',
-                    marginBottom: '1rem',
-                  }}>
+                  <p className="login-otp-expiry login-otp-expiry--warning">
                     Code expired. Please resend OTP.
                   </p>
                 )}
 
                 <button
                   type="submit"
-                  style={{
-                    ...styles.btnPrimary,
-                    ...(isLoading || otp.length !== 6 ? styles.btnPrimaryDisabled : {}),
-                  }}
+                  className="login-btn-primary"
                   disabled={isLoading || otp.length !== 6}
                 >
                   {isLoading ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                      <span style={{ display: 'inline-block', width: '1rem', height: '1rem', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+                      <span className="login-spinner" />
                       Verifying...
                     </span>
                   ) : 'Verify & Sign In'}
@@ -804,7 +552,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={handleChangePhone}
-                    style={styles.textLink}
+                    className="login-text-link"
                     disabled={isLoading}
                   >
                     Change Phone Number
@@ -814,10 +562,7 @@ export default function LoginPage() {
                     id="resend-otp-button"
                     type="button"
                     onClick={handleResendOtp}
-                    style={{
-                      ...styles.textLink,
-                      ...(resendCooldown > 0 ? styles.textLinkDisabled : {}),
-                    }}
+                    className="login-text-link"
                     disabled={isLoading || resendCooldown > 0}
                   >
                     {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
@@ -831,7 +576,7 @@ export default function LoginPage() {
               <div>
                 {stores.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                    <div style={styles.warningIconContainer}>!</div>
+                    <div className="login-warning-icon">!</div>
                     <h3 style={{ color: '#d97706', marginBottom: '0.5rem' }}>No Store Assigned</h3>
                     <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                       Your account is not associated with any store. Please contact your administrator.
@@ -842,9 +587,8 @@ export default function LoginPage() {
                         setOtp('');
                         setPhone('');
                         setAuthData(null);
-                        setLookupComplete(false);
                       }}
-                      style={styles.btnSecondary}
+                      className="login-btn-secondary"
                     >
                       Back to Login
                     </button>
@@ -855,18 +599,10 @@ export default function LoginPage() {
                       <button
                         key={store.id}
                         onClick={() => handleStoreSelect(store)}
-                        style={styles.storeButton}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.background = '#f3f4f6';
-                          e.currentTarget.style.borderColor = '#3b82f6';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.background = '#f9fafb';
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                        }}
+                        className="login-store-btn"
                       >
-                        <span style={styles.storeName}>{store.name}</span>
-                        <span style={styles.storeCode}>Code: {store.code}</span>
+                        <span className="login-store-name">{store.name}</span>
+                        <span className="login-store-code">Code: {store.code}</span>
                       </button>
                     ))}
                   </div>
@@ -877,7 +613,7 @@ export default function LoginPage() {
             {/* AUTH-UX-LOGIN-001: Account Not Found State - Professional messaging */}
             {step === 'not_onboarded' && (
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div style={styles.warningIconContainer}>!</div>
+                <div className="login-warning-icon">!</div>
                 <h3 style={{ color: '#475569', marginBottom: '0.5rem', fontWeight: 600 }}>Account not found</h3>
                 <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
                   This phone number is not associated with an active account. Please complete registration to continue.
@@ -885,13 +621,8 @@ export default function LoginPage() {
                 <Link
                   to="/retailer/register"
                   state={{ phone }}
-                  style={{
-                    ...styles.btnPrimary,
-                    display: 'block',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    lineHeight: '46px',
-                  }}
+                  className="login-btn-primary"
+                  style={{ display: 'block', textDecoration: 'none', textAlign: 'center', lineHeight: '46px' }}
                 >
                   Register
                 </Link>
@@ -902,7 +633,7 @@ export default function LoginPage() {
                       setPhone('');
                       setError('');
                     }}
-                    style={styles.textLink}
+                    className="login-text-link"
                   >
                     Use a different phone number
                   </button>
@@ -910,25 +641,17 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* Incomplete Registration — Resume flow */}
+            {/* Incomplete Registration -- Resume flow */}
             {step === 'incomplete' && (
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-                <div style={{
-                  ...styles.alertWarning,
-                  textAlign: 'left',
-                }}>
+                <div className="login-alert-warning" style={{ textAlign: 'left' }}>
                   Your registration is incomplete. Please resume to complete your application.
                 </div>
                 <Link
                   to="/retailer/register"
                   state={{ phone, resume: true }}
-                  style={{
-                    ...styles.btnPrimary,
-                    display: 'block',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    lineHeight: '46px',
-                  }}
+                  className="login-btn-primary"
+                  style={{ display: 'block', textDecoration: 'none', textAlign: 'center', lineHeight: '46px' }}
                 >
                   Resume Registration
                 </Link>
@@ -939,7 +662,7 @@ export default function LoginPage() {
                       setPhone('');
                       setError('');
                     }}
-                    style={styles.textLink}
+                    className="login-text-link"
                   >
                     Use a different phone number
                   </button>
@@ -950,10 +673,10 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer style={styles.footer}>
-        <div style={styles.footerInner}>
-          &copy; 2026 SuperManditech. All rights reserved.
+      {/* T-097: Unified footer */}
+      <footer className="login-footer">
+        <div className="login-footer-inner" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>&copy; 2026 SuperMandi Tech Pvt Ltd &middot; Made in India</span>
           <BuildStamp />
         </div>
       </footer>

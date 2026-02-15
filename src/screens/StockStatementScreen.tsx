@@ -18,6 +18,8 @@ import { getStockStatusLabel, getStockStatusColor, type StockStatus } from "../s
 import { getStockStatement, type StockStatementItem } from "../services/api/inventoryApi";
 import { formatMoney } from "../utils/money";
 import { theme } from "../theme";
+// T-109: Branded empty state
+import EmptyState from "../components/ui/EmptyState";
 
 interface StockStatementScreenProps {
   onBack: () => void;
@@ -189,13 +191,12 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
           </Pressable>
         </View>
       ) : stockItems.length === 0 ? (
-        <View style={styles.centerContent}>
-          <MaterialCommunityIcons name="package-variant" size={48} color={theme.colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No products</Text>
-          <Text style={styles.emptyText}>
-            Products will appear here once added to the catalog.
-          </Text>
-        </View>
+        /* T-109: Branded empty state */
+        <EmptyState
+          icon="package-variant"
+          title="No stock data"
+          description="Products will appear here once added to the catalog."
+        />
       ) : (
         <FlatList
           data={stockItems}

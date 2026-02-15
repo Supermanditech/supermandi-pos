@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 // Debounce delay for server-side search (RCAT-SUP-API-001)
 const SEARCH_DEBOUNCE_MS = 350;
@@ -216,6 +218,7 @@ const SECTION_CONFIGS: SectionConfig[] = [
 ];
 
 export default function SuppliersPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -1022,6 +1025,10 @@ export default function SuppliersPage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Suppliers' }]} />
+      </div>
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 className="page-title">Suppliers</h1>

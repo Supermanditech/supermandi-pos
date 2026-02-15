@@ -2,9 +2,12 @@
 // View and approve/reject pending products, edit before approval
 
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../../lib/AuthContext';
 import { authFetch, safeJson } from '../../lib/api';
 import { useEscapeKey } from '../../lib/hooks';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../../components/Breadcrumb';
 
 interface PendingProduct {
   id: string;
@@ -40,6 +43,7 @@ const initialEditForm: EditFormData = {
 };
 
 export default function ProductQueuePage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
 
   const [pendingProducts, setPendingProducts] = useState<PendingProduct[]>([]);
@@ -288,6 +292,10 @@ export default function ProductQueuePage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Admin' }, { label: 'Product Queue' }]} />
+      </div>
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 className="page-title">Product Approval Queue</h1>

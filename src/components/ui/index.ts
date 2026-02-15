@@ -7,6 +7,9 @@
 export { AppText, ButtonText, LabelText, PriceText } from "./AppText";
 export type { AppTextVariant } from "./AppText";
 
+// T-117: Per-screen error boundary for isolated crash recovery
+export { default as ScreenErrorBoundary } from "./ScreenErrorBoundary";
+
 // GL-CRIT-0083, GL-CRIT-0084, GL-CRIT-0085: Unified loading states
 export {
   LoadingState,

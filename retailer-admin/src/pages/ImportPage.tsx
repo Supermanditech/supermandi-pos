@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 type ImportStep = 'upload' | 'validate' | 'review' | 'commit' | 'done';
 
@@ -30,6 +33,7 @@ interface CommitResult {
 }
 
 export default function ImportPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [step, setStep] = useState<ImportStep>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -279,6 +283,10 @@ export default function ImportPage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Import' }]} />
+      </div>
       <header className="page-header">
         <h1 className="page-title">Import Products (CSV)</h1>
       </header>

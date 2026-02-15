@@ -1,7 +1,10 @@
 // GL-WF-032: Compliance Document Upload with real API integration
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
+// T-112: Breadcrumb navigation
+import Breadcrumb from '../components/Breadcrumb';
 
 interface Document {
   id: string;
@@ -23,6 +26,7 @@ const documentTypes = [
 ];
 
 export default function CompliancePage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
   const [selectedType, setSelectedType] = useState('');
@@ -151,6 +155,10 @@ export default function CompliancePage() {
 
   return (
     <>
+      {/* T-112: Breadcrumb navigation */}
+      <div style={{ padding: '0 1rem' }}>
+        <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Compliance' }]} />
+      </div>
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 className="page-title">Compliance Documents</h1>
