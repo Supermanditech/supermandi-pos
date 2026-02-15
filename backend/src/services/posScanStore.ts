@@ -17,6 +17,10 @@ export type PosProduct = {
   priceMinor: number | null;
   currency: string;
   digitisedByRetailer: boolean;
+  productMode?: string;
+  soldBy?: string;
+  rateUnit?: string;
+  purchasePrice?: number | null;
 };
 
 export type ScanResult =
@@ -57,7 +61,11 @@ async function fetchStoreProductByBarcode(
       'INR' as currency,
       sp.sell_price as selling_price_minor,
       true as digitised_by_retailer,
-      COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock
+      COALESCE(sb.current_qty, sp.current_stock, 0) as current_stock,
+      sp.product_mode,
+      sp.sold_by,
+      sp.rate_unit,
+      sp.purchase_price
     FROM catalog.store_products sp
     JOIN catalog.products p ON p.id = sp.product_id
     LEFT JOIN inventory.stock_balances sb
@@ -89,7 +97,11 @@ async function fetchStoreProductByBarcode(
       barcode: row.barcode || lookupBarcode,
       currency: row.currency,
       priceMinor: row.selling_price_minor ?? null,
-      digitisedByRetailer: Boolean(row.digitised_by_retailer)
+      digitisedByRetailer: Boolean(row.digitised_by_retailer),
+      productMode: row.product_mode || 'PACKAGED',
+      soldBy: row.sold_by || undefined,
+      rateUnit: row.rate_unit || undefined,
+      purchasePrice: row.purchase_price ?? null,
     };
   }
 

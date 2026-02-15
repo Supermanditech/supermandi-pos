@@ -37,6 +37,9 @@ export interface StoreProductResponse {
   imageUrl: string;
   variant: string; // AUD-073-A FIX: Product variant
   packSize: number | null; // AUD-073-A FIX: Pack size
+  productMode?: string; // T-054: PACKAGED or LOOSE_BULK
+  soldBy?: string; // T-054: WEIGHT or COUNT (LOOSE_BULK only)
+  rateUnit?: string; // T-054: KG, GM, LTR, ML, PCS (LOOSE_BULK only)
 }
 
 export interface ScanResolvePrefill {
@@ -107,7 +110,10 @@ async function lookupStoreProductByBarcode(
       p.brand,
       p.description,
       p.variant,
-      p.pack_size
+      p.pack_size,
+      sp.product_mode,
+      sp.sold_by,
+      sp.rate_unit
     FROM catalog.store_product_barcodes spb
     JOIN catalog.store_products sp ON sp.id = spb.store_product_id AND sp.store_id = spb.store_id
     JOIN catalog.products p ON p.id = sp.product_id
@@ -137,7 +143,10 @@ async function lookupStoreProductByBarcode(
       description: row.description || "",
       imageUrl: "",
       variant: row.variant || "",
-      packSize: row.pack_size ?? null
+      packSize: row.pack_size ?? null,
+      productMode: row.product_mode || 'PACKAGED',
+      soldBy: row.sold_by || undefined,
+      rateUnit: row.rate_unit || undefined,
     };
   }
 
@@ -158,7 +167,10 @@ async function lookupStoreProductByBarcode(
       p.brand,
       p.description,
       p.variant,
-      p.pack_size
+      p.pack_size,
+      sp.product_mode,
+      sp.sold_by,
+      sp.rate_unit
     FROM catalog.products p
     JOIN catalog.store_products sp ON sp.product_id = p.id AND sp.store_id = $1
     LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
@@ -187,7 +199,10 @@ async function lookupStoreProductByBarcode(
       description: row.description || "",
       imageUrl: "",
       variant: row.variant || "",
-      packSize: row.pack_size ?? null
+      packSize: row.pack_size ?? null,
+      productMode: row.product_mode || 'PACKAGED',
+      soldBy: row.sold_by || undefined,
+      rateUnit: row.rate_unit || undefined,
     };
   }
 
@@ -534,7 +549,10 @@ export async function createStoreProductFromDigitisation(
         description: input.description || "",
         imageUrl: "",
         variant: input.variant?.trim() || "",
-        packSize: input.packSize ?? null
+        packSize: input.packSize ?? null,
+        productMode: 'PACKAGED',
+        soldBy: undefined,
+        rateUnit: undefined,
       }
     };
   } catch (error) {

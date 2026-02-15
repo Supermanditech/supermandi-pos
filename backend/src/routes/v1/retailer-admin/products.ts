@@ -301,6 +301,20 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
     );
     const productId = productResult.rows[0].id;
 
+    // T-054: Auto-assign taxonomy if not explicitly provided (matches POS digitisation behavior)
+    let resolvedCategoryId = categoryId || null;
+    if (!resolvedCategoryId) {
+      try {
+        const taxonomyResult = await client.query(
+          `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
+          [sanitizedName]
+        );
+        resolvedCategoryId = taxonomyResult.rows[0]?.taxonomy_id || null;
+      } catch {
+        // Taxonomy function may not exist — safe to ignore, product gets "Baaki" (Others)
+      }
+    }
+
     // 2. Create the store_product mapping
     // RCAT-CAT-002: Include taxonomy_id for category assignment (store override)
     // SYNC-PRD-001: Set display_name = name so product is immediately visible with correct name
@@ -326,7 +340,7 @@ retailerAdminProductsRouter.post("/products", async (req: Request, res: Response
         productMode === 'LOOSE_BULK' ? (soldBy || 'WEIGHT') : null,
         productMode === 'LOOSE_BULK' ? (rateUnit || 'KG') : null,
         supplierId || null,
-        categoryId || null,
+        resolvedCategoryId,
         sanitizedName,
       ]
     );

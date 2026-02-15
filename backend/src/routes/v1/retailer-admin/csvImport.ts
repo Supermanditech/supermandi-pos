@@ -483,12 +483,23 @@ async function commitSingleRow(
       );
       const productId = prodResult.rows[0].id;
 
+      // T-055: Auto-assign taxonomy for CSV-imported products
+      let taxonomyId: string | null = null;
+      try {
+        const taxRes = await client.query(
+          `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
+          [row.name]
+        );
+        taxonomyId = taxRes.rows[0]?.taxonomy_id || null;
+      } catch { /* taxonomy function may not exist */ }
+
       const spResult = await client.query(
         `INSERT INTO catalog.store_products (
           store_id, product_id, sell_price, mrp, purchase_price,
-          product_mode, current_stock, is_active
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
-        [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock]
+          product_mode, current_stock, is_active, display_name, taxonomy_id,
+          metadata_updated_at, metadata_updated_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, $9, NOW(), 'CSV_IMPORT') RETURNING id`,
+        [storeId, productId, sellPricePaise, row.mrp || null, purchasePricePaise, mode, stock, row.name, taxonomyId]
       );
       const storeProductId = spResult.rows[0].id;
 
@@ -1066,11 +1077,22 @@ retailerAdminCsvImportRouter.post("/products/bulk-paste/commit", async (req: Req
           );
           const productId = prodResult.rows[0].id;
 
+          // T-055: Auto-assign taxonomy for bulk paste imports
+          let bulkTaxonomyId: string | null = null;
+          try {
+            const taxRes = await client.query(
+              `SELECT catalog.assign_taxonomy_by_name($1) AS taxonomy_id`,
+              [row.name]
+            );
+            bulkTaxonomyId = taxRes.rows[0]?.taxonomy_id || null;
+          } catch { /* taxonomy function may not exist */ }
+
           const spResult = await client.query(
             `INSERT INTO catalog.store_products (
-              store_id, product_id, sell_price, purchase_price, product_mode, current_stock, is_active
-            ) VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
-            [storeId, productId, sellPrice, purchasePrice, mode, stock]
+              store_id, product_id, sell_price, purchase_price, product_mode, current_stock, is_active,
+              display_name, taxonomy_id, metadata_updated_at, metadata_updated_by
+            ) VALUES ($1, $2, $3, $4, $5, $6, true, $7, $8, NOW(), 'BULK_PASTE') RETURNING id`,
+            [storeId, productId, sellPrice, purchasePrice, mode, stock, row.name, bulkTaxonomyId]
           );
           const storeProductId = spResult.rows[0].id;
 

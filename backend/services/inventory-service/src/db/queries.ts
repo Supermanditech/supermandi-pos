@@ -291,6 +291,13 @@ export async function createLedgerEntryWithBalanceUpdate(
       [input.storeId, input.productId, newQty, ledgerEntry.id]
     );
 
+    // T-054: Sync denormalized store_products.current_stock to prevent drift
+    await client.query(
+      `UPDATE catalog.store_products SET current_stock = $3, updated_at = NOW()
+       WHERE store_id = $1 AND product_id = $2 AND is_active = true`,
+      [input.storeId, input.productId, newQty]
+    );
+
     await client.query('COMMIT');
 
     return ledgerEntry;
@@ -409,6 +416,13 @@ async function createLedgerEntryWithClient(
        last_ledger_id = $4,
        updated_at = NOW()`,
     [input.storeId, input.productId, newQty, ledgerEntry.id]
+  );
+
+  // T-054: Sync denormalized store_products.current_stock to prevent drift
+  await client.query(
+    `UPDATE catalog.store_products SET current_stock = $3, updated_at = NOW()
+     WHERE store_id = $1 AND product_id = $2 AND is_active = true`,
+    [input.storeId, input.productId, newQty]
   );
 
   return ledgerEntry;
