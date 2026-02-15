@@ -14,6 +14,7 @@ import {
   type CreateInvoiceInput,
   type InvoiceItemInput,
 } from "../../../services/invoiceService";
+import { generateInvoicePdf } from "../../../services/invoicePdfService";
 
 export const adminInvoicesRouter = Router();
 
@@ -592,5 +593,36 @@ adminInvoicesRouter.post("/invoices/:invoiceId/cancel", requireAdminToken, requi
   } catch (err: any) {
     console.error("[admin/invoices/cancel] Error:", err);
     return res.status(500).json({ error: "Failed to cancel invoice" });
+  }
+});
+
+// =============================================================================
+// T-073: Invoice PDF Download
+// =============================================================================
+
+/**
+ * GET /api/v1/admin/invoices/:invoiceId/pdf
+ * T-073: Download invoice as PDF
+ */
+adminInvoicesRouter.get("/invoices/:invoiceId/pdf", requireAdminToken, requirePermission("products", "read"), async (req, res) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    const invoice = await getInvoice(pool, req.params.invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+
+    const pdfDoc = generateInvoicePdf(invoice);
+
+    const filename = `${invoice.invoiceNumber.replace(/\//g, "-")}.pdf`;
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    pdfDoc.pipe(res);
+  } catch (err: any) {
+    console.error("[admin/invoices/pdf] Error:", err);
+    return res.status(500).json({ error: "Failed to generate invoice PDF" });
   }
 });
