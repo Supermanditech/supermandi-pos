@@ -1,0 +1,252 @@
+# T-223: Cloud Monitoring Alert Policies for SuperMandi
+# Apply with: gcloud alpha monitoring policies create --policy-from-file=alert-policies.yaml
+#
+# These alert policies monitor all 6 Cloud Run services in staging + production.
+# Notification channels must be created first (see notification-channels.yaml).
+
+---
+# 1. Cloud Run Service Latency Alert (p95 > 2s)
+displayName: "Cloud Run p95 Latency > 2s"
+documentation:
+  content: |
+    Cloud Run service p95 latency exceeded 2 seconds.
+    Check Cloud Run logs and scaling configuration.
+    Dashboard: https://console.cloud.google.com/run?project=supermandi-backend
+conditions:
+  - displayName: "p95 latency exceeds 2s"
+    conditionThreshold:
+      filter: >
+        resource.type="cloud_run_revision"
+        AND metric.type="run.googleapis.com/request_latencies"
+      comparison: COMPARISON_GT
+      thresholdValue: 2000  # milliseconds
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_PERCENTILE_95
+          crossSeriesReducer: REDUCE_MAX
+          groupByFields:
+            - "resource.label.service_name"
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 2. Cloud Run 5xx Error Rate Alert (> 5%)
+displayName: "Cloud Run 5xx Error Rate > 5%"
+documentation:
+  content: |
+    Cloud Run service returning >5% 5xx errors.
+    Check application logs for errors.
+    Run: gcloud logging read 'resource.type="cloud_run_revision" AND severity>=ERROR' --limit=50
+conditions:
+  - displayName: "5xx error rate exceeds 5%"
+    conditionThreshold:
+      filter: >
+        resource.type="cloud_run_revision"
+        AND metric.type="run.googleapis.com/request_count"
+        AND metric.label.response_code_class="5xx"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.05
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_RATE
+          crossSeriesReducer: REDUCE_SUM
+          groupByFields:
+            - "resource.label.service_name"
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 3. Cloud Run Instance Count (> 10 instances — unexpected scaling)
+displayName: "Cloud Run Instance Count > 10"
+documentation:
+  content: |
+    Cloud Run service scaled beyond 10 instances.
+    Check for traffic spikes or runaway requests.
+    May indicate a DDoS or infinite loop.
+conditions:
+  - displayName: "Instance count exceeds 10"
+    conditionThreshold:
+      filter: >
+        resource.type="cloud_run_revision"
+        AND metric.type="run.googleapis.com/container/instance_count"
+      comparison: COMPARISON_GT
+      thresholdValue: 10
+      duration: "120s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_MAX
+          crossSeriesReducer: REDUCE_SUM
+          groupByFields:
+            - "resource.label.service_name"
+combiner: OR
+alertStrategy:
+  autoClose: "3600s"
+
+---
+# 4. Cloud SQL CPU > 80%
+displayName: "Cloud SQL CPU Utilization > 80%"
+documentation:
+  content: |
+    Cloud SQL instance CPU utilization exceeded 80%.
+    Consider scaling up the instance or optimizing queries.
+conditions:
+  - displayName: "CPU utilization exceeds 80%"
+    conditionThreshold:
+      filter: >
+        resource.type="cloudsql_database"
+        AND metric.type="cloudsql.googleapis.com/database/cpu/utilization"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.8
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_MEAN
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 5. Cloud SQL Memory > 85%
+displayName: "Cloud SQL Memory > 85%"
+documentation:
+  content: |
+    Cloud SQL memory utilization exceeded 85%.
+    Check for memory leaks or expensive queries.
+conditions:
+  - displayName: "Memory utilization exceeds 85%"
+    conditionThreshold:
+      filter: >
+        resource.type="cloudsql_database"
+        AND metric.type="cloudsql.googleapis.com/database/memory/utilization"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.85
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_MEAN
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 6. Cloud SQL Disk > 80%
+displayName: "Cloud SQL Disk Usage > 80%"
+documentation:
+  content: |
+    Cloud SQL disk usage exceeded 80%.
+    Consider increasing storage or cleaning up old data.
+conditions:
+  - displayName: "Disk utilization exceeds 80%"
+    conditionThreshold:
+      filter: >
+        resource.type="cloudsql_database"
+        AND metric.type="cloudsql.googleapis.com/database/disk/utilization"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.8
+      duration: "600s"
+      aggregations:
+        - alignmentPeriod: "300s"
+          perSeriesAligner: ALIGN_MEAN
+combiner: OR
+alertStrategy:
+  autoClose: "3600s"
+
+---
+# 7. Cloud SQL Connection Count > 80
+displayName: "Cloud SQL Active Connections > 80"
+documentation:
+  content: |
+    Cloud SQL active connections exceeded 80.
+    Check for connection pool leaks or sudden traffic increase.
+conditions:
+  - displayName: "Connection count exceeds 80"
+    conditionThreshold:
+      filter: >
+        resource.type="cloudsql_database"
+        AND metric.type="cloudsql.googleapis.com/database/network/connections"
+      comparison: COMPARISON_GT
+      thresholdValue: 80
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_MEAN
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 8. Redis Memory > 75%
+displayName: "Redis Memory Usage > 75%"
+documentation:
+  content: |
+    Memorystore Redis memory usage exceeded 75%.
+    Check for large keys or missing TTLs.
+conditions:
+  - displayName: "Redis memory exceeds 75%"
+    conditionThreshold:
+      filter: >
+        resource.type="redis_instance"
+        AND metric.type="redis.googleapis.com/stats/memory/usage_ratio"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.75
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_MEAN
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 9. Load Balancer 4xx Rate > 20% (possible auth issues)
+displayName: "Load Balancer 4xx Rate > 20%"
+documentation:
+  content: |
+    Global load balancer returning >20% 4xx errors.
+    Check if auth tokens are expiring or CORS is misconfigured.
+conditions:
+  - displayName: "4xx rate exceeds 20%"
+    conditionThreshold:
+      filter: >
+        resource.type="https_lb_rule"
+        AND metric.type="loadbalancing.googleapis.com/https/request_count"
+        AND metric.label.response_code_class="400"
+      comparison: COMPARISON_GT
+      thresholdValue: 0.2
+      duration: "300s"
+      aggregations:
+        - alignmentPeriod: "60s"
+          perSeriesAligner: ALIGN_RATE
+combiner: OR
+alertStrategy:
+  autoClose: "1800s"
+
+---
+# 10. Cloud Run Container Startup Latency > 30s (cold start alert)
+displayName: "Cloud Run Cold Start > 30s"
+documentation:
+  content: |
+    Cloud Run container startup latency exceeded 30 seconds.
+    Check container image size and initialization code.
+conditions:
+  - displayName: "Startup latency exceeds 30s"
+    conditionThreshold:
+      filter: >
+        resource.type="cloud_run_revision"
+        AND metric.type="run.googleapis.com/container/startup_latencies"
+      comparison: COMPARISON_GT
+      thresholdValue: 30000  # milliseconds
+      duration: "0s"
+      aggregations:
+        - alignmentPeriod: "300s"
+          perSeriesAligner: ALIGN_PERCENTILE_99
+          crossSeriesReducer: REDUCE_MAX
+          groupByFields:
+            - "resource.label.service_name"
+combiner: OR
+alertStrategy:
+  autoClose: "3600s"

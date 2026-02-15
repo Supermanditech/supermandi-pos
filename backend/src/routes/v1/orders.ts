@@ -7,6 +7,8 @@ import { randomUUID } from "crypto";
 import { getPool } from "../../db/client";
 import { requireDeviceToken, PosDeviceContext } from "../../middleware/deviceToken";
 import { isPayoutsEnabled } from "../../services/supplierPayoutService";
+// T-232: GRN alert push notifications
+import { notifyGrnExcessAlert, notifyGrnMismatch, notifyOrderStatusChange } from "../../services/grnAlertNotificationService";
 
 export const ordersRouter = Router();
 
@@ -1528,6 +1530,27 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
             [storeId, orderId, item.orderItemId, receiveId,
              orderItem.productName, orderedQty, newReceivedQty, excessQty, excessPct]
           );
+
+          // T-232: Send push notification for excess GRN (fire-and-forget, don't block transaction)
+          notifyGrnExcessAlert({
+            storeId,
+            orderId,
+            productName: orderItem.productName,
+            orderedQty,
+            receivedQty: newReceivedQty,
+            excessQty,
+            excessPct,
+          }).catch(() => { /* non-blocking */ });
+        } else if (orderedQty > 0 && newReceivedQty < orderedQty && itemStatus === 'received') {
+          // T-232: Short receipt — notify mismatch
+          notifyGrnMismatch({
+            storeId,
+            orderId,
+            productName: orderItem.productName,
+            orderedQty,
+            receivedQty: newReceivedQty,
+            shortQty: orderedQty - newReceivedQty,
+          }).catch(() => { /* non-blocking */ });
         }
 
         // Update order item
@@ -1606,6 +1629,17 @@ ordersRouter.post("/stores/:storeId/orders/:orderId/receive", requireDeviceToken
           JSON.stringify({ receiveId, itemCount: items.length }),
         ]
       );
+
+      // T-232: Notify order status change (fire-and-forget)
+      if (newOrderStatus !== order.status) {
+        notifyOrderStatusChange({
+          storeId,
+          orderId,
+          supplierId: order.supplier_id,
+          oldStatus: order.status,
+          newStatus: newOrderStatus,
+        }).catch(() => { /* non-blocking */ });
+      }
 
       await client.query("COMMIT");
 

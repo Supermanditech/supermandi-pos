@@ -85,6 +85,13 @@ import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
 import { retailerMeRouter } from "./retailer/me";  // RO-005: Cross-surface login linking
 import { configStatusRouter } from "./configStatus";  // RO-009: Config status endpoint
+import { posNotificationsRouter } from "./pos/notifications";  // Phase 8: FCM push notifications
+import { posRefundRequestsRouter } from "./pos/refundRequests";  // T-219: UPI refund requests
+import { retailerNotificationsRouter } from "./retailer-admin/notifications";  // Phase 8: Retailer notifications
+import { adminGstComplianceRouter } from "./admin/gstCompliance";  // T-235: GST compliance
+import { adminScheduledJobsRouter } from "./admin/scheduledJobs";  // T-231/T-223: Scheduled jobs + monitoring
+import { refundWebhookRouter } from "./webhooks/refundWebhook";  // T-219: Razorpay refund webhooks
+import { adminRefundsRouter } from "./admin/refunds";  // T-219: Admin refund management
 
 export const v1Router = Router();
 
@@ -123,6 +130,8 @@ v1Router.use("/pos", posDailyClosingRouter);  // POS-DAILY-001: Daily closing re
 v1Router.use("/pos", posKhataRouter);  // POS-KHATA-001: Khata credit ledger
 v1Router.use("/pos", posCustomersRouter);  // POS-CUST-001: Customer profiles
 v1Router.use("/pos", posSyncEventsRouter);  // T-173: SSE real-time sync
+v1Router.use("/pos", posNotificationsRouter);  // Phase 8: FCM push notifications + device token CRUD
+v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request management
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
@@ -163,6 +172,9 @@ v1Router.use("/admin", adminFeatureFlagsRouter);  // SA-P0-005: Feature flag CRU
 v1Router.use("/admin", adminApplicationsRouter);  // STAGING-FIX-014: Application approval
 v1Router.use("/admin", adminInvoicesRouter);  // T-071: Buy-resell invoicing
 v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
+v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
+v1Router.use("/admin", adminScheduledJobsRouter);  // T-231/T-223: Payment reminders + monitoring
+v1Router.use("/admin", adminRefundsRouter);  // T-219: Admin refund management
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
@@ -207,8 +219,10 @@ v1Router.use("/retailer-admin", retailerInvoicesRouter);  // T-073: Retailer inv
 v1Router.use("/retailer-admin", retailerReorderRouter);  // CL-017: Retailer reorder
 v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL view
 v1Router.use("/retailer-admin", retailerAdminCustomersRouter);  // T-218: Customer CRM
+v1Router.use("/retailer-admin", retailerNotificationsRouter);  // Phase 8: In-app notification center
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
+v1Router.use("/webhooks", refundWebhookRouter);  // T-219: Razorpay refund status webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs
 v1Router.use("/uploads", uploadsRouter);  // T-160: Image upload endpoint
 v1Router.use("/voice", voiceRouter);  // GO-LIVE: Voice order with OpenAI

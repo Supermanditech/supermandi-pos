@@ -589,7 +589,12 @@ jobs:
           GCS_DOCUMENTS_BUCKET=supermandi-pos-documents,\
           GCS_IMAGES_BUCKET=supermandi-pos-images,\
           GCP_PROJECT_ID=${{ env.GCP_PROJECT }},\
-          FEATURE_REORDER_ENABLED=true" \
+          FEATURE_REORDER_ENABLED=true,\
+          SUPERMANDI_ENTITY_NAME=SUPERMANDI TECH PRIVATE LIMITED,\
+          SUPERMANDI_GSTIN=08ABRCS8282R1ZY,\
+          SUPERMANDI_ADDRESS=166/1 Bhandu Khurd Jodhpur Rajasthan 342014,\
+          SUPERMANDI_STATE=Rajasthan,\
+          FRONTEND_URL=https://staging.supermandi.tech" \
             --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest" \
             --allow-unauthenticated \
             --quiet

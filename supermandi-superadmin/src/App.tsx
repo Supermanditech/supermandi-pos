@@ -89,12 +89,15 @@ import { RegistrationsTab } from "./tabs/RegistrationsTab";
 import { StaffTab } from "./tabs/StaffTab";
 import { GrnAlertsTab } from "./tabs/GrnAlertsTab";
 import { InvoicesTab } from "./tabs/InvoicesTab";  // T-073: Invoice management
+import { GstComplianceTab } from "./tabs/GstComplianceTab";  // T-235: GST compliance
+import { RefundsTab } from "./tabs/RefundsTab";  // T-219: Refund management
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
   FileCheck, UserPlus, FileText, Truck, CreditCard, BarChart3,
   Shield, UserCog, Settings2,
-  Link2, Check  // T-118: Copy deep link button icons
+  Link2, Check,  // T-118: Copy deep link button icons
+  IndianRupee, ArrowLeftRight  // T-235, T-219: GST + Refunds icons
 } from "lucide-react";
 import "./App.css";
 
@@ -118,6 +121,8 @@ const TAB_LABELS: Record<TabKey, string> = {
   audit: "Audit Logs",
   users: "Users",
   settings: "Settings",
+  "gst-compliance": "GST Compliance",
+  refunds: "Refunds",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -2594,6 +2599,12 @@ export default function App() {
             <button className={`sidebarItem ${tab === "invoices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("invoices")}>
               <span className="sidebarItemLabel"><Receipt size={18} style={{ opacity: tab === "invoices" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Invoices</span>
             </button>
+            <button className={`sidebarItem ${tab === "gst-compliance" ? "sidebarItemActive" : ""}`} onClick={() => setTab("gst-compliance")}>
+              <span className="sidebarItemLabel"><IndianRupee size={18} style={{ opacity: tab === "gst-compliance" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />GST Compliance</span>
+            </button>
+            <button className={`sidebarItem ${tab === "refunds" ? "sidebarItemActive" : ""}`} onClick={() => setTab("refunds")}>
+              <span className="sidebarItemLabel"><ArrowLeftRight size={18} style={{ opacity: tab === "refunds" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Refunds</span>
+            </button>
           </div>
 
           {/* Onboarding */}
@@ -3125,6 +3136,10 @@ export default function App() {
       )}
 
       {tab === "invoices" && <InvoicesTab />}
+
+      {tab === "gst-compliance" && <GstComplianceTab />}
+
+      {tab === "refunds" && <RefundsTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}

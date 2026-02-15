@@ -287,6 +287,8 @@ function DailyReportWrapper() {
 
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
+// Phase 8: Push notification setup
+import { registerForPushNotifications, setupNotificationListeners } from "./src/services/pushNotifications";
 
 const Stack = createNativeStackNavigator();
 
@@ -312,6 +314,18 @@ export default function App() {
     initializeApp();
     startScanIntentListener();
   }, [initializeApp]);
+
+  // Phase 8: Initialize push notifications after app is ready
+  useEffect(() => {
+    if (!appReady) return;
+    // Register for push notifications (requests permission + gets token)
+    registerForPushNotifications().catch((err) =>
+      console.warn("[Push] Registration failed:", err)
+    );
+    // Set up notification listeners (foreground display + tap handling)
+    const cleanup = setupNotificationListeners();
+    return cleanup;
+  }, [appReady]);
 
   // CACHE-000: Force refresh truth data (products/stock) when app resumes from background
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);

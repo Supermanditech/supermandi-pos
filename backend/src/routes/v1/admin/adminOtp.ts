@@ -99,12 +99,37 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
     console.log(`[GL-CRIT-0053] OTP generated for ${email} (${purpose})`);
   }
 
-  // TODO: Integrate with email service
-  // await sendEmail({
-  //   to: email,
-  //   subject: `SuperMandi Admin Verification Code`,
-  //   body: `Your verification code is: ${otp}. It expires in 10 minutes.`
-  // });
+  // Phase 8: Wire OTP to email service (was TODO, now implemented)
+  if (process.env.EMAIL_PROVIDER && process.env.EMAIL_PROVIDER !== 'disabled') {
+    try {
+      const nodemailer = require("nodemailer") as typeof import("nodemailer");
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || "",
+        port: parseInt(process.env.SMTP_PORT || "587", 10),
+        secure: process.env.SMTP_SECURE === "true",
+        auth: { user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "" },
+      });
+      const from = process.env.EMAIL_FROM || "SuperMandi <noreply@supermandi.com>";
+      await transporter.sendMail({
+        from,
+        to: email,
+        subject: "SuperMandi Admin Verification Code",
+        text: `Your verification code is: ${otp}\n\nIt expires in 10 minutes.\n\nIf you did not request this, please ignore this email.`,
+        html: `<div style="font-family:sans-serif;max-width:400px;margin:auto;padding:20px;">
+          <h2 style="color:#10b981;margin-bottom:16px;">SuperMandi Admin Verification</h2>
+          <p>Your verification code is:</p>
+          <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:16px;text-align:center;margin:16px 0;">
+            <span style="font-family:monospace;font-size:32px;font-weight:700;letter-spacing:4px;color:#15803d;">${otp}</span>
+          </div>
+          <p style="color:#6b7280;font-size:13px;">This code expires in 10 minutes. If you did not request this, please ignore this email.</p>
+        </div>`,
+      });
+      console.log(`[GL-CRIT-0053] OTP email sent to ${email}`);
+    } catch (emailErr) {
+      console.warn(`[GL-CRIT-0053] OTP email failed for ${email}:`, emailErr);
+      // Don't fail the OTP request — fallback to console logging
+    }
+  }
 
   return res.json({
     success: true,
