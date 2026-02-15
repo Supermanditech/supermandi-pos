@@ -7,6 +7,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getSupplierInvoices, getSupplierInvoiceDetail, type SupplierInvoice, type SupplierInvoiceDetail } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/formatters';
+// T-113: Breadcrumb navigation
+import Breadcrumb from '@/components/Breadcrumb';
 
 export default function InvoicesPage() {
   const [page, setPage] = useState(1);
@@ -62,6 +64,8 @@ export default function InvoicesPage() {
 
   return (
     <div>
+      {/* T-113: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Invoices' }]} />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Invoices</h1>

@@ -4,6 +4,8 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// T-120: URL state for search persistence
+import { useUrlState } from '../hooks/useUrlState';
 
 // Debounce delay for server-side search (RCAT-SUP-API-001)
 const SEARCH_DEBOUNCE_MS = 350;
@@ -225,7 +227,8 @@ export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  // T-120: Sync search term with URL for back/forward persistence
+  const [searchTerm, setSearchTerm] = useUrlState('search');
   const [formData, setFormData] = useState<SupplierFormData>(initialFormData);
   const [activeSection, setActiveSection] = useState<FormSection>('identity');
   const [isLoading, setIsLoading] = useState(false);

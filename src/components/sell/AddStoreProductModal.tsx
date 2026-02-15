@@ -27,6 +27,8 @@ import {
   type ScanResolvePrefill,
   type DigitisationMode
 } from "../../services/api/scanApi";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 export type AddStoreProductRequest = {
   barcode: string;
@@ -50,6 +52,9 @@ export function AddStoreProductModal({
   onClose,
   onSuccess
 }: AddStoreProductModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const [activeTab, setActiveTab] = useState<TabMode>("FAST_SELL");
   const [name, setName] = useState("");
   const [sellPrice, setSellPrice] = useState("");

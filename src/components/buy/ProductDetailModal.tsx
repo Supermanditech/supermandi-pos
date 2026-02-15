@@ -19,6 +19,8 @@ import { SupplierRow } from "./SupplierRow";
 import type { CatalogProduct, CatalogSupplier } from "../../services/api/catalogApi";
 import { getStockStatusColor, getStockStatusLabel } from "../../services/api/catalogApi";
 import { usePurchaseCartStore } from "../../stores/purchaseCartStore";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 // =============================================================================
 // TYPES
@@ -41,6 +43,9 @@ export function ProductDetailModal({
   onClose,
   onViewCart,
 }: ProductDetailModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const insets = useSafeAreaInsets();
   const [expandedSupplierId, setExpandedSupplierId] = useState<string | null>(null);
 

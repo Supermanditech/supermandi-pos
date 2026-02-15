@@ -22,6 +22,8 @@ import {
   SplitPaymentResponse,
 } from "../../services/api/posApi";
 import { theme } from "../../theme";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 export interface SplitPaymentResult {
   success: boolean;
@@ -50,6 +52,9 @@ export function SplitPaymentModal({
   onClose,
   onComplete,
 }: SplitPaymentModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const [step, setStep] = useState<SplitStep>("input");
   const [upiAmount, setUpiAmount] = useState("");
   const [cashAmount, setCashAmount] = useState("");

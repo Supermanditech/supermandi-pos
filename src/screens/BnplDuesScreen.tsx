@@ -548,7 +548,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[theme.colors.primary]} tintColor={theme.colors.primary} />
           }
         >
           <Text style={styles.sectionTitle}>

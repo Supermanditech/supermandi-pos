@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -14,6 +14,8 @@ import type { BillSummary } from "../services/billing/billTypes";
 import { SkeletonList } from "../components/ui/LoadingState";
 // T-109: Branded empty state
 import EmptyState from "../components/ui/EmptyState";
+// T-122: Standardized back header
+import { BackHeader } from "../components/ui/BackHeader";
 
 type RootStackParamList = {
   SalesHistory: undefined;
@@ -31,6 +33,8 @@ export default function SalesHistoryScreen() {
   const [bills, setBills] = useState<BillSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // T-125: Pull-to-refresh state
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadBills = async () => {
     setLoading(true);
@@ -43,8 +47,15 @@ export default function SalesHistoryScreen() {
       setError(e?.message ? String(e.message) : t('history.loadError', 'Failed to load bills.'));
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  // T-125: Pull-to-refresh handler
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    void loadBills();
+  }, []);
 
   useEffect(() => {
     if (isFocused) {
@@ -80,19 +91,8 @@ export default function SalesHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-            <MaterialCommunityIcons name="chevron-left" size={20} color={theme.colors.primary} />
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-          <Text style={styles.title}>Bills</Text>
-        </View>
-        <Pressable style={styles.refresh} onPress={loadBills} disabled={loading}>
-          <MaterialCommunityIcons name="refresh" size={18} color={theme.colors.primary} />
-          <Text style={styles.refreshText}>{loading ? "Loading..." : "Refresh"}</Text>
-        </Pressable>
-      </View>
+      {/* T-122: Standardized back header with Android BackHandler */}
+      <BackHeader title="Bills" />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -122,6 +122,14 @@ export default function SalesHistoryScreen() {
           keyExtractor={(item) => item.saleId}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#2563EB"]}
+              tintColor="#2563EB"
+            />
+          }
         />
       )}
     </View>

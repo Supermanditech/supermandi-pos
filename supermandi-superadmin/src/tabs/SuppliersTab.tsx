@@ -42,6 +42,8 @@ interface SuppliersTabProps {
   // Product edit modal
   editingProduct: PendingProduct | null;
   setEditingProduct: (p: PendingProduct | null) => void;
+  handleCloseEditProduct: () => void;  // T-119: Close with dirty guard
+  onModalDirty: (dirty: boolean) => void;  // T-119: Track unsaved changes
   editProductForm: {
     editedName: string;
     marginType: "fixed" | "percent";
@@ -94,6 +96,8 @@ export function SuppliersTab({
   handleRejectProduct,
   editingProduct,
   setEditingProduct,
+  handleCloseEditProduct,
+  onModalDirty,
   editProductForm,
   setEditProductForm,
   editProductError,
@@ -101,6 +105,12 @@ export function SuppliersTab({
   editProductLoading,
   handleSubmitEditProduct,
 }: SuppliersTabProps) {
+  // T-119: Wrapper that marks form dirty on any edit
+  function updateProductForm(fn: (f: SuppliersTabProps["editProductForm"]) => SuppliersTabProps["editProductForm"]) {
+    setEditProductForm(fn);
+    onModalDirty(true);
+  }
+
   // T-066: Auto-approve toggle state
   const [autoApproveLoading, setAutoApproveLoading] = useState<Record<string, boolean>>({});
   // T-068: Publish button state
@@ -526,13 +536,13 @@ export function SuppliersTab({
         </div>
       )}
 
-      {/* Product Edit Modal (SA-1.3-003) */}
+      {/* Product Edit Modal (SA-1.3-003) + T-119: Dirty guard on close */}
       {editingProduct && (
-        <div className="modalOverlay" onClick={() => setEditingProduct(null)}>
+        <div className="modalOverlay" onClick={handleCloseEditProduct}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
             <div className="modalHeader">
               <h3 style={{ margin: 0 }}>Edit Product - Set Margin & BNPL</h3>
-              <button className="btnGhost" onClick={() => setEditingProduct(null)} aria-label="Close product editor">&times;</button>
+              <button className="btnGhost" onClick={handleCloseEditProduct} aria-label="Close product editor">&times;</button>
             </div>
 
             <div className="modalBody">
@@ -552,7 +562,7 @@ export function SuppliersTab({
                 <label>Display Name (optional override)</label>
                 <input
                   value={editProductForm.editedName}
-                  onChange={(e) => setEditProductForm((f) => ({ ...f, editedName: e.target.value }))}
+                  onChange={(e) => updateProductForm((f) => ({ ...f, editedName: e.target.value }))}
                   placeholder={editingProduct.productName}
                 />
               </div>
@@ -561,7 +571,7 @@ export function SuppliersTab({
                 <label>Margin Type</label>
                 <select
                   value={editProductForm.marginType}
-                  onChange={(e) => setEditProductForm((f) => ({ ...f, marginType: e.target.value as "fixed" | "percent" }))}
+                  onChange={(e) => updateProductForm((f) => ({ ...f, marginType: e.target.value as "fixed" | "percent" }))}
                 >
                   <option value="fixed">Fixed Amount (INR)</option>
                   <option value="percent">Percentage (%)</option>
@@ -576,7 +586,7 @@ export function SuppliersTab({
                     step="0.01"
                     min="0"
                     value={editProductForm.fixedMargin}
-                    onChange={(e) => setEditProductForm((f) => ({ ...f, fixedMargin: e.target.value }))}
+                    onChange={(e) => updateProductForm((f) => ({ ...f, fixedMargin: e.target.value }))}
                     placeholder="e.g. 5.00"
                   />
                   <div className="muted" style={{ marginTop: 4 }}>
@@ -592,7 +602,7 @@ export function SuppliersTab({
                     min="0"
                     max="100"
                     value={editProductForm.percentMargin}
-                    onChange={(e) => setEditProductForm((f) => ({ ...f, percentMargin: e.target.value }))}
+                    onChange={(e) => updateProductForm((f) => ({ ...f, percentMargin: e.target.value }))}
                     placeholder="e.g. 10"
                   />
                   <div className="muted" style={{ marginTop: 4 }}>
@@ -606,7 +616,7 @@ export function SuppliersTab({
                   <input
                     type="checkbox"
                     checked={editProductForm.bnplEligible}
-                    onChange={(e) => setEditProductForm((f) => ({ ...f, bnplEligible: e.target.checked }))}
+                    onChange={(e) => updateProductForm((f) => ({ ...f, bnplEligible: e.target.checked }))}
                   />
                   BNPL Eligible (Buy Now Pay Later)
                 </label>
@@ -620,7 +630,7 @@ export function SuppliersTab({
                     min="1"
                     max="30"
                     value={editProductForm.bnplMaxDays}
-                    onChange={(e) => setEditProductForm((f) => ({ ...f, bnplMaxDays: e.target.value }))}
+                    onChange={(e) => updateProductForm((f) => ({ ...f, bnplMaxDays: e.target.value }))}
                   />
                 </div>
               )}
@@ -632,7 +642,7 @@ export function SuppliersTab({
                 <label>Invoice Model</label>
                 <select
                   value={editProductForm.invoiceModel}
-                  onChange={(e) => setEditProductForm((f) => ({ ...f, invoiceModel: e.target.value as "buy_resell" | "platform_fee" | "" }))}
+                  onChange={(e) => updateProductForm((f) => ({ ...f, invoiceModel: e.target.value as "buy_resell" | "platform_fee" | "" }))}
                 >
                   <option value="buy_resell">Buy & Resell</option>
                   <option value="platform_fee">Platform Fee (Commission)</option>
@@ -648,7 +658,7 @@ export function SuppliersTab({
                 <label>HSN Code</label>
                 <input
                   value={editProductForm.hsnCode}
-                  onChange={(e) => setEditProductForm((f) => ({ ...f, hsnCode: e.target.value }))}
+                  onChange={(e) => updateProductForm((f) => ({ ...f, hsnCode: e.target.value }))}
                   placeholder="e.g. 0713"
                 />
               </div>
@@ -657,7 +667,7 @@ export function SuppliersTab({
                 <label>GST Rate (%)</label>
                 <select
                   value={editProductForm.gstRate}
-                  onChange={(e) => setEditProductForm((f) => ({ ...f, gstRate: e.target.value }))}
+                  onChange={(e) => updateProductForm((f) => ({ ...f, gstRate: e.target.value }))}
                 >
                   <option value="">Not set</option>
                   <option value="0">0%</option>

@@ -339,7 +339,7 @@ export default function LoginPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="input"
-              placeholder="+91 9876543210"
+              placeholder="+91 98765 43210"
               disabled={isLoading}
               autoFocus
             />
@@ -448,7 +448,7 @@ export default function LoginPage() {
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               className="input text-center text-xl tracking-widest"
-              placeholder="123456"
+              placeholder="Enter 6-digit PIN"
               maxLength={6}
               disabled={isLoading}
               autoFocus

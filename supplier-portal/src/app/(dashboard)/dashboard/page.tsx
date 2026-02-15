@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { getDashboardStats, getOrders, getProducts } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatCurrency } from '@/lib/formatters';
+// T-113: Breadcrumb navigation
+import Breadcrumb from '@/components/Breadcrumb';
 
 function StatCard({
   title,
@@ -83,6 +85,8 @@ export default function DashboardPage() {
 
   return (
     <div>
+      {/* T-113: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard' }]} />
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-800">

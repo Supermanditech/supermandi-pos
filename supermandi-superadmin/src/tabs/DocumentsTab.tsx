@@ -18,6 +18,9 @@ interface DocumentsTabProps {
   setDocumentsPage: (fn: (p: number) => number) => void;
   setDocumentsEntityFilter: (v: "" | "store" | "supplier") => void;
   setSelectedDocument: (v: DocumentRecord | null) => void;
+  handleOpenDocument: (doc: DocumentRecord) => void;  // T-119
+  handleCloseDocument: () => void;  // T-119
+  onModalDirty: (dirty: boolean) => void;  // T-119
   setDocRejectReason: (v: string) => void;
   refreshDocuments: () => void;
   handleApproveDocument: (id: string) => void;
@@ -28,7 +31,8 @@ export function DocumentsTab({
   pendingDocuments, pendingDocsTotal, documentsLoading, documentsError,
   documentsPage, documentsEntityFilter, selectedDocument, docRejectReason,
   documentActionLoading, setDocumentsPage, setDocumentsEntityFilter,
-  setSelectedDocument, setDocRejectReason, refreshDocuments,
+  setSelectedDocument, handleOpenDocument, handleCloseDocument, onModalDirty,
+  setDocRejectReason, refreshDocuments,
   handleApproveDocument, handleRejectDocument,
 }: DocumentsTabProps) {
   // T-014: Fetch document via API with auth headers → blob URL for rendering
@@ -115,7 +119,7 @@ export function DocumentsTab({
                     <span className={`badge ${doc.status === "pending" ? "badgeWarn" : doc.status === "approved" ? "badgeGood" : "badgeBad"}`}>{doc.status}</span>
                   </td>
                   <td>
-                    <button onClick={() => setSelectedDocument(doc)} style={{ padding: "4px 8px", fontSize: 12 }}>Review</button>
+                    <button onClick={() => handleOpenDocument(doc)} style={{ padding: "4px 8px", fontSize: 12 }}>Review</button>
                   </td>
                 </tr>
               ))}
@@ -124,12 +128,13 @@ export function DocumentsTab({
         )}
       </div>
 
+      {/* T-119: Document review modal with dirty guard on close */}
       {selectedDocument && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={() => setSelectedDocument(null)}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }} onClick={handleCloseDocument}>
           <div style={{ backgroundColor: "#1a1a2e", borderRadius: 8, padding: 24, maxWidth: "90vw", maxHeight: "90vh", overflow: "auto", minWidth: 400 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>Review Document</h3>
-              <button onClick={() => setSelectedDocument(null)} style={{ padding: "4px 8px" }} aria-label="Close document review">✕</button>
+              <button onClick={handleCloseDocument} style={{ padding: "4px 8px" }} aria-label="Close document review">✕</button>
             </div>
             <div style={{ marginBottom: 16 }}>
               <div style={{ marginBottom: 8 }}><strong>Entity:</strong> {selectedDocument.entity_type} - {selectedDocument.entity_name || selectedDocument.entity_id}</div>
@@ -156,7 +161,7 @@ export function DocumentsTab({
                 {documentActionLoading === selectedDocument.id ? "Processing..." : "✓ Approve Document"}
               </button>
               <div style={{ display: "flex", gap: 8 }}>
-                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => setDocRejectReason(e.target.value)} style={{ flex: 1, padding: "8px 12px" }} />
+                <input type="text" placeholder="Rejection reason (min 10 chars)" value={docRejectReason} onChange={(e) => { setDocRejectReason(e.target.value); onModalDirty(true); }} style={{ flex: 1, padding: "8px 12px" }} />
                 <button onClick={() => handleRejectDocument(selectedDocument.id, docRejectReason)} disabled={documentActionLoading === selectedDocument.id || docRejectReason.trim().length < 10} style={{ padding: "10px 20px", backgroundColor: "#ef4444", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading || docRejectReason.trim().length < 10 ? "not-allowed" : "pointer", opacity: docRejectReason.trim().length < 10 ? 0.5 : 1 }}>
                   ✕ Reject
                 </button>

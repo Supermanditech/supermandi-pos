@@ -7,6 +7,8 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// T-120: URL state for filter persistence
+import { useUrlState } from '../hooks/useUrlState';
 
 interface InvoiceListItem {
   id: string;
@@ -84,7 +86,8 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
-  const [statusFilter, setStatusFilter] = useState("");
+  // T-120: Sync status filter with URL for back/forward persistence
+  const [statusFilter, setStatusFilter] = useUrlState('status');
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const limit = 20;

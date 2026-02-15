@@ -25,6 +25,8 @@ import * as orderApi from "../../services/api/orderApi";
 import * as bnplApi from "../../services/api/bnplApi";
 import * as creditApi from "../../services/api/creditApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 // =============================================================================
 // TYPES
@@ -49,6 +51,9 @@ export function PurchaseCartModal({
   onOrderPlaced,
   onAllOrdersPlaced,
 }: PurchaseCartModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const insets = useSafeAreaInsets();
 
   // Cart store

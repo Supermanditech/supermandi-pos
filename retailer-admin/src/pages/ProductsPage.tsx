@@ -9,6 +9,8 @@ import { formatCurrency } from '../lib/formatters';
 import VariantManager from '../components/VariantManager';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// T-120: URL state for search persistence
+import { useUrlState } from '../hooks/useUrlState';
 
 interface Supplier {
   id: string;
@@ -141,7 +143,8 @@ export default function ProductsPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // RET-AUD-040: Track supplier fetch errors for user feedback
   const [supplierFetchError, setSupplierFetchError] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  // T-120: Sync search term with URL for back/forward persistence
+  const [searchTerm, setSearchTerm] = useUrlState('search');
 
   // FE-RETAILER-CAT-001: Categories from POS taxonomy
   const [categories, setCategories] = useState<FmcgCategory[]>([]);
@@ -181,13 +184,7 @@ export default function ProductsPage() {
     // RCAT-CAT-001 + ISSUE-MICRO-092: Sync category from URL (persisted for back-button support)
     const catParam = searchParams.get('category');
     setSelectedCategory(catParam || 'all');
-    // RCAT-SEARCH-001: Handle ?search=... from global search
-    const searchParam = searchParams.get('search');
-    if (searchParam) {
-      setSearchTerm(searchParam);
-      searchParams.delete('search');
-      setSearchParams(searchParams, { replace: true });
-    }
+    // T-120: ?search= is now handled by useUrlState — no manual sync needed
   }, [searchParams, setSearchParams]);
 
   // RCAT-CAT-001: Fetch products from API with optional category filter

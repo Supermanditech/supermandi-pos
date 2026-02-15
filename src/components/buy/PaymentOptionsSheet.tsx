@@ -20,6 +20,8 @@ import { useTranslation } from "react-i18next";
 import { theme } from "../../theme";
 import { formatMoney } from "../../utils/money";
 import { verifyUtr } from "../../services/api/posApi";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 // =============================================================================
 // TYPES
@@ -68,6 +70,9 @@ export function PaymentOptionsSheet({
   onUpiPaymentConfirmed,
   onUpiPaymentCancelled,
 }: PaymentOptionsSheetProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 

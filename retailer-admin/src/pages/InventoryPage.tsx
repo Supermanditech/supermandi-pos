@@ -6,6 +6,8 @@ import { authFetch, safeJson } from '../lib/api';
 import { formatDateTime } from '../lib/formatters';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// T-120: URL state for filter persistence
+import { useUrlState } from '../hooks/useUrlState';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -58,7 +60,10 @@ function getDisplayType(transactionType: string): 'INWARD' | 'OUTWARD' | 'ADJUST
 export default function InventoryPage() {
   const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
-  const [filter, setFilter] = useState<'all' | 'INWARD' | 'OUTWARD' | 'ADJUSTMENT'>('all');
+  // T-120: Sync filter with URL for back/forward persistence
+  const [filterValue, setFilterValue] = useUrlState('filter', 'all');
+  const filter = filterValue as 'all' | 'INWARD' | 'OUTWARD' | 'ADJUSTMENT';
+  const setFilter = setFilterValue;
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -12,6 +12,8 @@ import { printerService } from "../services/printerService";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { theme } from "../theme";
+// T-122: Standardized back header
+import { BackHeader } from "../components/ui/BackHeader";
 
 type RootStackParamList = {
   BillDetail: { saleId: string; billRef?: string };
@@ -200,14 +202,8 @@ export default function BillDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-          <MaterialCommunityIcons name="chevron-left" size={22} color={theme.colors.primary} />
-          <Text style={styles.backText}>Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Bill Details</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      {/* T-122: Standardized back header with Android BackHandler */}
+      <BackHeader title="Bill Details" />
 
       {loading ? (
         <View style={styles.center}>

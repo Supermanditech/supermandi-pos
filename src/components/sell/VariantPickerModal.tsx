@@ -25,6 +25,8 @@ import {
   type RetailVariant,
   type StoreLookupProduct,
 } from "../../services/api/productsApi";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 export type VariantPickerRequest = {
   barcode: string;
@@ -47,6 +49,9 @@ export function VariantPickerModal({
   onSelect,
   onFallback,
 }: VariantPickerModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const [variants, setVariants] = useState<RetailVariant[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

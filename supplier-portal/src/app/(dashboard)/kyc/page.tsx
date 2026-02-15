@@ -6,6 +6,8 @@
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+// T-113: Breadcrumb navigation
+import Breadcrumb from '@/components/Breadcrumb';
 import {
   getKycDocuments,
   getKycStatus,
@@ -209,6 +211,8 @@ export default function KycPage() {
 
   return (
     <div>
+      {/* T-113: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'KYC' }]} />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">KYC & Bank Verification</h1>

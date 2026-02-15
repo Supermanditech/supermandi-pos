@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { uploadProductsCsv, CsvUploadResult } from '@/lib/api';
+// T-113: Breadcrumb navigation
+import Breadcrumb from '@/components/Breadcrumb';
 
 export default function UploadPage() {
   const queryClient = useQueryClient();
@@ -84,6 +86,8 @@ export default function UploadPage() {
 
   return (
     <div>
+      {/* T-113: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'CSV Upload' }]} />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">CSV Upload</h1>

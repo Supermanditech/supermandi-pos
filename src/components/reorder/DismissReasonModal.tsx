@@ -17,6 +17,8 @@ import { useTranslation } from "react-i18next";
 
 import { theme } from "../../theme";
 import type { PendingReorder } from "../../services/api/reorderApi";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 // =============================================================================
 // TYPES
@@ -53,6 +55,9 @@ export function DismissReasonModal({
   onDismiss,
   onClose,
 }: DismissReasonModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [reason, setReason] = useState("");

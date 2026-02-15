@@ -93,7 +93,8 @@ import { InvoicesTab } from "./tabs/InvoicesTab";  // T-073: Invoice management
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
   FileCheck, UserPlus, FileText, Truck, CreditCard, BarChart3,
-  Shield, UserCog, Settings2
+  Shield, UserCog, Settings2,
+  Link2, Check  // T-118: Copy deep link button icons
 } from "lucide-react";
 import "./App.css";
 
@@ -122,19 +123,101 @@ const TAB_LABELS: Record<TabKey, string> = {
 // T-114: Valid tab keys for hash routing
 const VALID_TABS = new Set<string>(Object.keys(TAB_LABELS));
 
+// T-118: Parse tab name and query params from URL hash
+// Supports formats like #suppliers?status=pending&search=rice
+function parseHashParams(): { tab: TabKey | null; params: Record<string, string> } {
+  const raw = window.location.hash.replace("#", "");
+  if (!raw) return { tab: null, params: {} };
+  const qIdx = raw.indexOf("?");
+  const tabPart = qIdx >= 0 ? raw.slice(0, qIdx) : raw;
+  const paramsPart = qIdx >= 0 ? raw.slice(qIdx + 1) : "";
+  const tab = VALID_TABS.has(tabPart) ? (tabPart as TabKey) : null;
+  const params: Record<string, string> = {};
+  if (paramsPart) {
+    for (const pair of paramsPart.split("&")) {
+      const eqIdx = pair.indexOf("=");
+      if (eqIdx > 0) {
+        params[decodeURIComponent(pair.slice(0, eqIdx))] = decodeURIComponent(pair.slice(eqIdx + 1));
+      }
+    }
+  }
+  return { tab, params };
+}
+
 // T-114: Read tab from URL hash (e.g. #events → "events")
 function getTabFromHash(): TabKey | null {
-  const hash = window.location.hash.replace("#", "");
-  return VALID_TABS.has(hash) ? (hash as TabKey) : null;
+  return parseHashParams().tab;
+}
+
+// T-118: Build hash string with optional query params
+function buildHash(tabKey: TabKey, params?: Record<string, string>): string {
+  const qs = params ? Object.entries(params)
+    .filter(([, v]) => v !== "" && v !== undefined)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&") : "";
+  return qs ? `#${tabKey}?${qs}` : `#${tabKey}`;
+}
+
+// T-119: Modal state type for sessionStorage persistence
+interface ModalPersistState {
+  modal: string;        // modal identifier: 'editProduct' | 'viewDocument' | etc.
+  id?: string;          // entity ID (product ID, document ID, etc.)
+  tab: TabKey;          // which tab the modal was opened on
+}
+const MODAL_STORAGE_KEY = "adminModalState";
+
+function saveModalState(state: ModalPersistState | null) {
+  if (state) {
+    sessionStorage.setItem(MODAL_STORAGE_KEY, JSON.stringify(state));
+  } else {
+    sessionStorage.removeItem(MODAL_STORAGE_KEY);
+  }
+}
+
+function loadModalState(): ModalPersistState | null {
+  try {
+    const raw = sessionStorage.getItem(MODAL_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.modal === "string" && typeof parsed.tab === "string") {
+      return parsed as ModalPersistState;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export default function App() {
+  // T-118: Parse initial hash params (tab + query params)
+  const initialHash = parseHashParams();
   // T-114: Initialize tab from URL hash, fallback to "events"
-  const [tab, setTabRaw] = useState<TabKey>(() => getTabFromHash() || "events");
+  const [tab, setTabRaw] = useState<TabKey>(() => initialHash.tab || "events");
+  // T-118: Store hash params for tab filter initialization
+  const [hashParams, setHashParams] = useState<Record<string, string>>(() => initialHash.params);
+  // T-118: Copy link feedback state
+  const [linkCopied, setLinkCopied] = useState(false);
+  // T-119: Track whether a modal form has unsaved changes
+  const [modalDirty, setModalDirty] = useState(false);
+
+  // T-119: Guard function — warns before losing unsaved modal changes
+  function guardModalDirty(action: () => void) {
+    if (modalDirty) {
+      if (!window.confirm("You have unsaved changes. Discard?")) return;
+    }
+    setModalDirty(false);
+    action();
+  }
+
   // ISSUE-MICRO-063: Abort in-flight requests when switching tabs
   // AUDIT-SA-016: Clear error states on tab switch to prevent stale errors
   const setTab = (newTab: TabKey) => {
     if (newTab !== tab) {
+      // T-119: Warn if modal is open with unsaved changes
+      if (modalDirty) {
+        if (!window.confirm("You have unsaved changes. Discard?")) return;
+        setModalDirty(false);
+      }
       abortActiveRequests();
       setEventsError(""); setHealthError(""); setAiError(""); setStoreError("");
       setStoreDirectoryError(""); setStoreNameError(""); setCreateStoreError("");
@@ -148,21 +231,32 @@ export default function App() {
       setStaffSuccess(""); setConfirmDialog(null);
     }
     setTabRaw(newTab);
-    // T-114: Update URL hash when tab changes
+    // T-118: Update URL hash when tab changes (no query params on manual switch)
+    setHashParams({});
     window.history.pushState(null, "", `#${newTab}`);
   };
 
   // T-114: Listen for browser back/forward navigation (popstate)
   useEffect(() => {
     const handlePopState = () => {
-      const hashTab = getTabFromHash();
+      const { tab: hashTab, params } = parseHashParams();
       if (hashTab && hashTab !== tab) {
+        // T-119: Warn if modal is open with unsaved changes
+        if (modalDirty) {
+          if (!window.confirm("You have unsaved changes. Discard?")) {
+            // Re-push current state to prevent navigation
+            window.history.pushState(null, "", buildHash(tab));
+            return;
+          }
+          setModalDirty(false);
+        }
         setTabRaw(hashTab);
+        setHashParams(params);
       }
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [tab]);
+  }, [tab, modalDirty]);
 
   // T-114: Set initial hash if not present
   useEffect(() => {
@@ -170,6 +264,32 @@ export default function App() {
       window.history.replaceState(null, "", `#${tab}`);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // T-118: Update URL hash params without triggering tab switch
+  // Call this from tab components when filters change to keep URL in sync
+  function updateHashParams(params: Record<string, string>) {
+    setHashParams(params);
+    window.history.replaceState(null, "", buildHash(tab, params));
+  }
+
+  // T-118: Copy current deep link (hash + query params) to clipboard
+  function copyDeepLink() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }).catch(() => {
+      // Fallback for insecure contexts
+      const input = document.createElement("input");
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  }
 
   // ITER4-CRIT-001: Track authentication state
   // GO-LIVE-UI-001: Use hasValidSession() to ensure valid JWT, not just any stale token
@@ -997,6 +1117,7 @@ export default function App() {
   }
 
   // SA-1.3-003: Open edit modal for a product
+  // T-119: Persist modal state to sessionStorage
   function handleOpenEditProduct(product: PendingProduct) {
     setEditingProduct(product);
     setEditProductForm({
@@ -1012,6 +1133,16 @@ export default function App() {
     });
     setEditProductError("");
     setEditProductSuccess("");
+    setModalDirty(false);
+    saveModalState({ modal: "editProduct", id: product.id, tab: "suppliers" });
+  }
+
+  // T-119: Close product edit modal with dirty guard
+  function handleCloseEditProduct() {
+    guardModalDirty(() => {
+      setEditingProduct(null);
+      saveModalState(null);
+    });
   }
 
   // SA-1.3-003: Submit product edit
@@ -1046,6 +1177,9 @@ export default function App() {
 
       const result = await editProduct(editingProduct.id, input);
       setEditProductSuccess(`Saved! Retailer Price: ${formatCurrency(result.retailerPrice)}`);
+      // T-119: Clear dirty state and modal persistence after successful save
+      setModalDirty(false);
+      saveModalState(null);
 
       // Update local state
       setPendingProducts((prev) =>
@@ -1171,6 +1305,21 @@ export default function App() {
     }
   }
 
+  // T-119: Open document review modal with persistence
+  function handleOpenDocument(doc: DocumentRecord) {
+    setSelectedDocument(doc);
+    saveModalState({ modal: "viewDocument", id: doc.id, tab: "documents" });
+  }
+
+  // T-119: Close document review modal with dirty guard
+  function handleCloseDocument() {
+    guardModalDirty(() => {
+      setSelectedDocument(null);
+      setDocRejectReason("");
+      saveModalState(null);
+    });
+  }
+
   // DOCS-001: Approve a document
   async function handleApproveDocument(docId: string) {
     setDocumentActionLoading(docId);
@@ -1178,6 +1327,9 @@ export default function App() {
       await approveDocument(docId);
       await logAdminAction("approve", "document", docId, { status: "approved" });
       setSelectedDocument(null);
+      // T-119: Clear modal persistence on action complete
+      setModalDirty(false);
+      saveModalState(null);
       refreshDocuments();
     } catch (e: any) {
       await logAdminActionError("approve", "document", docId, e?.message || "Unknown error");
@@ -1200,6 +1352,9 @@ export default function App() {
       await logAdminAction("reject", "document", docId, { status: "rejected", reason });
       setSelectedDocument(null);
       setDocRejectReason("");
+      // T-119: Clear modal persistence on action complete
+      setModalDirty(false);
+      saveModalState(null);
       refreshDocuments();
     } catch (e: any) {
       await logAdminActionError("reject", "document", docId, e?.message || "Unknown error");
@@ -1484,6 +1639,111 @@ export default function App() {
       setAppActionLoading((prev) => ({ ...prev, [appId]: false }));
     }
   }
+
+  // T-118: Apply hash params to tab filters on initial load
+  // This runs once on mount to initialize filters from URL deep link params
+  const hashParamsAppliedRef = useRef(false);
+  useEffect(() => {
+    if (hashParamsAppliedRef.current) return;
+    hashParamsAppliedRef.current = true;
+    const hp = hashParams;
+    if (!hp || Object.keys(hp).length === 0) return;
+
+    // Events tab: deviceId, storeId, eventType
+    if (tab === "events") {
+      if (hp.deviceId) setDeviceIdFilter(hp.deviceId);
+      if (hp.storeId) setStoreIdFilter(hp.storeId);
+      if (hp.eventType) setEventTypeFilter(hp.eventType);
+    }
+    // Suppliers tab: search
+    if (tab === "suppliers") {
+      if (hp.search) setSupplierSearch(hp.search);
+    }
+    // Users tab: search
+    if (tab === "users") {
+      if (hp.search) setUserSearch(hp.search);
+    }
+    // Audit tab: action, resource_type, from_date, to_date
+    if (tab === "audit") {
+      const filter: typeof auditLogsFilter = {};
+      if (hp.action) filter.action = hp.action;
+      if (hp.resource_type) filter.resource_type = hp.resource_type;
+      if (hp.from_date) filter.from_date = hp.from_date;
+      if (hp.to_date) filter.to_date = hp.to_date;
+      if (Object.keys(filter).length > 0) setAuditLogsFilter(filter);
+    }
+    // Documents tab: entity filter
+    if (tab === "documents") {
+      if (hp.entity === "store" || hp.entity === "supplier") setDocumentsEntityFilter(hp.entity);
+    }
+    // Registrations tab: source, outcome
+    if (tab === "registrations") {
+      if (hp.source) setRegEventsSourceFilter(hp.source);
+      if (hp.outcome) setRegEventsOutcomeFilter(hp.outcome);
+    }
+    // Analytics tab: storeId, from, to, sub-tab
+    if (tab === "analytics") {
+      if (hp.storeId) setAnalyticsStoreId(hp.storeId);
+      if (hp.from) setAnalyticsFrom(hp.from);
+      if (hp.to) setAnalyticsTo(hp.to);
+      if (hp.sub) setAnalyticsTab(hp.sub as AnalyticsTabKey);
+    }
+    // GRN alerts tab: status filter
+    if (tab === "grn-alerts") {
+      if (hp.status === "OPEN" || hp.status === "ACKNOWLEDGED" || hp.status === "DISMISSED") {
+        setGrnAlertsFilter(hp.status);
+      }
+    }
+    // Applications tab: entity filter
+    if (tab === "applications") {
+      if (hp.entity) setAppEntityFilter(hp.entity);
+    }
+    // Staff tab: storeId
+    if (tab === "staff") {
+      if (hp.storeId) setStaffStoreId(hp.storeId);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // T-119: Restore modal state from sessionStorage on mount
+  // This re-opens a modal if the user refreshed the page or navigated away
+  const modalRestoredRef = useRef(false);
+  useEffect(() => {
+    if (modalRestoredRef.current) return;
+    modalRestoredRef.current = true;
+    const saved = loadModalState();
+    if (!saved) return;
+    // Only restore if we're on the same tab the modal was opened on
+    if (saved.tab !== tab) {
+      // Clear stale modal state for wrong tab
+      saveModalState(null);
+      return;
+    }
+    // Restore product edit modal — requires products to be loaded first
+    // We set a flag and check it after data loads
+    if (saved.modal === "editProduct" && saved.id) {
+      // Products load asynchronously, so we use a short interval to wait
+      const checkInterval = setInterval(() => {
+        const product = pendingProducts.find((p) => p.id === saved.id);
+        if (product) {
+          clearInterval(checkInterval);
+          handleOpenEditProduct(product);
+        }
+      }, 500);
+      // Give up after 10 seconds if product not found
+      setTimeout(() => clearInterval(checkInterval), 10000);
+    }
+    // Restore document review modal — similar approach
+    if (saved.modal === "viewDocument" && saved.id) {
+      const checkInterval = setInterval(() => {
+        const doc = pendingDocuments.find((d) => d.id === saved.id);
+        if (doc) {
+          clearInterval(checkInterval);
+          handleOpenDocument(doc);
+        }
+      }, 500);
+      setTimeout(() => clearInterval(checkInterval), 10000);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ISSUE-MICRO-024: Update ref each render so polling interval uses latest closures
   refreshRef.current = { refreshHealth, refreshEvents, refreshDevices, refreshStores, refreshSuppliers, refreshUsers, refreshSettings, refreshAuditLogs, refreshDocuments, refreshRegEvents, refreshStaff, refreshGrnAlerts, refreshAnalytics, refreshApplications };
@@ -2433,11 +2693,33 @@ export default function App() {
         </nav>
 
         <div className="mainContent">
-      {/* T-114: Breadcrumb navigation */}
+      {/* T-114: Breadcrumb navigation + T-118: Copy deep link */}
       <nav style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B', padding: '12px 16px 0' }}>
         <span style={{ color: '#64748B' }}>SuperAdmin</span>
         <span style={{ color: '#CBD5E1' }}>&rsaquo;</span>
         <span style={{ color: '#0F172A', fontWeight: 500 }}>{TAB_LABELS[tab]}</span>
+        <button
+          onClick={copyDeepLink}
+          title="Copy link to this view"
+          aria-label="Copy deep link"
+          style={{
+            marginLeft: 'auto',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '4px 10px',
+            fontSize: 12,
+            color: linkCopied ? '#16A34A' : '#64748B',
+            background: linkCopied ? '#F0FDF4' : '#F1F5F9',
+            border: `1px solid ${linkCopied ? '#BBF7D0' : '#E2E8F0'}`,
+            borderRadius: 6,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {linkCopied ? <Check size={14} /> : <Link2 size={14} />}
+          {linkCopied ? 'Copied!' : 'Copy link'}
+        </button>
       </nav>
       {/* T-013: Events filter controls — only visible on Events tab */}
       {tab === "events" && <section className="controls">
@@ -2649,6 +2931,8 @@ export default function App() {
           handleRejectProduct={handleRejectProduct}
           editingProduct={editingProduct}
           setEditingProduct={setEditingProduct}
+          handleCloseEditProduct={handleCloseEditProduct}
+          onModalDirty={setModalDirty}
           editProductForm={editProductForm}
           setEditProductForm={setEditProductForm}
           editProductError={editProductError}
@@ -2756,6 +3040,9 @@ export default function App() {
           setDocumentsPage={setDocumentsPage}
           setDocumentsEntityFilter={setDocumentsEntityFilter}
           setSelectedDocument={setSelectedDocument}
+          handleOpenDocument={handleOpenDocument}
+          handleCloseDocument={handleCloseDocument}
+          onModalDirty={setModalDirty}
           setDocRejectReason={setDocRejectReason}
           refreshDocuments={refreshDocuments}
           handleApproveDocument={confirmedApproveDocument}

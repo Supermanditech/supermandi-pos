@@ -14,6 +14,10 @@ import {
   PaginatedResponse,
 } from '@/lib/api';
 import { formatCurrency } from '@/lib/formatters';
+// T-113: Breadcrumb navigation
+import Breadcrumb from '@/components/Breadcrumb';
+// T-121: URL state for search persistence
+import { useUrlState } from '@/hooks/useUrlState';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -52,7 +56,8 @@ export default function ProductsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   // AUDIT-SUP-024: Track which product is being resubmitted (per-product loading)
   const [resubmittingId, setResubmittingId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  // T-121: Sync search term with URL for back/forward persistence
+  const [searchTerm, setSearchTerm] = useUrlState('search');
   // ISSUE-MICRO-096: Sync status filter to URL for refresh/back-button persistence
   const statusFilter = searchParams.get('status') || 'all';
   // GL-WF-062: Track unsaved changes
@@ -318,6 +323,8 @@ export default function ProductsPage() {
 
   return (
     <div>
+      {/* T-113: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Products' }]} />
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

@@ -208,6 +208,7 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
               refreshing={refreshing}
               onRefresh={() => loadData(true)}
               colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
             />
           }
         />

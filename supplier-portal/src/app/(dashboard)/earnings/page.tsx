@@ -7,6 +7,8 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { getPayouts, getPayoutSummary, getKycStatus, getPayoutOrders, Payout, PayoutSummary, PayoutOrderItem } from '@/lib/api';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
+// T-113: Breadcrumb navigation
+import Breadcrumb from '@/components/Breadcrumb';
 
 export default function EarningsPage() {
   const [page, setPage] = useState(1);
@@ -60,6 +62,8 @@ export default function EarningsPage() {
 
   return (
     <div>
+      {/* T-113: Breadcrumb navigation */}
+      <Breadcrumb items={[{ label: 'Dashboard', path: '/dashboard' }, { label: 'Earnings' }]} />
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-800">Earnings & Payouts</h1>

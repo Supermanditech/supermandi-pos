@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   AppState,
   AccessibilityInfo,
@@ -75,6 +76,10 @@ import { theme } from "../theme";
 import { showToast } from "../utils/showToast";
 // GATE-000: Import probeReadiness for startup endpoint check
 import { probeReadiness } from "../services/api/readinessGate";
+// T-123: Session timeout hook
+import { useSessionTimeout } from "../hooks/useSessionTimeout";
+// T-126: Offline indicator banner
+import { OfflineBanner } from "../components/ui/OfflineBanner";
 
 type RootStackParamList = {
   SellScan: undefined;
@@ -146,8 +151,42 @@ export default function PosRootLayout() {
     if (storeActive === false && mode !== "MENU") {
       return; // Silently block - the UI will show disabled state
     }
+
+    // T-124: Confirm tab switch when sell cart has items
+    const currentTab = selectedMode;
+    if (mode !== currentTab && currentTab === "SELL") {
+      const sellCartItems = useCartStore.getState().items;
+      if (sellCartItems.length > 0) {
+        Alert.alert(
+          "Cart Not Empty",
+          `You have ${sellCartItems.length} item${sellCartItems.length > 1 ? "s" : ""} in your cart. Switching tabs will keep your cart. Continue?`,
+          [
+            { text: "Stay", style: "cancel" },
+            { text: "Switch", onPress: () => setSelectedModeInternal(mode) },
+          ]
+        );
+        return;
+      }
+    }
+
+    // T-124: Confirm tab switch when purchase cart has items
+    if (mode !== currentTab && currentTab === "PURCHASE") {
+      const purchaseCartItems = usePurchaseCartStore.getState().items;
+      if (purchaseCartItems.length > 0) {
+        Alert.alert(
+          "Purchase Cart Not Empty",
+          `You have ${purchaseCartItems.length} item${purchaseCartItems.length > 1 ? "s" : ""} in your purchase cart. Continue?`,
+          [
+            { text: "Stay", style: "cancel" },
+            { text: "Switch", onPress: () => setSelectedModeInternal(mode) },
+          ]
+        );
+        return;
+      }
+    }
+
     setSelectedModeInternal(mode);
-  }, [storeActive]);
+  }, [storeActive, selectedMode]);
 
   const [deviceActive, setDeviceActive] = useState<boolean | null>(null);
   const [deviceType, setDeviceType] = useState<string | null>(null);
@@ -1020,7 +1059,11 @@ export default function PosRootLayout() {
 
   // SA-P1-001: Staff session gate — require staff login before POS operations
   const staffSession = useStaffSessionStore((s) => s.session);
+  const clearStaffSession = useStaffSessionStore((s) => s.clearSession);
   const isCashier = staffSession?.role === "CASHIER";
+
+  // T-123: Session timeout — auto-logout staff after 35 min idle
+  const { resetTimer: resetSessionTimer } = useSessionTimeout(clearStaffSession);
 
   if (!staffSession) {
     return <StaffLoginScreen storeName={storeName} />;
@@ -1035,6 +1078,8 @@ export default function PosRootLayout() {
       style={styles.container}
       onStartShouldSetResponderCapture={() => {
         scheduleHidFocus();
+        // T-123: Reset session timeout on any touch interaction
+        resetSessionTimer();
         return false;
       }}
     >
@@ -1349,6 +1394,9 @@ export default function PosRootLayout() {
         showSoftInputOnFocus={false}
         style={styles.hidInput}
       />
+
+      {/* T-126: Offline indicator banner — overlays on top when offline */}
+      <OfflineBanner />
     </View>
   );
 }

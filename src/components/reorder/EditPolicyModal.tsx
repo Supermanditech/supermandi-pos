@@ -20,6 +20,8 @@ import type { ReorderPolicy, UpdatePolicyRequest } from "../../services/api/reor
 import * as catalogApi from "../../services/api/catalogApi";
 import type { CatalogSupplier } from "../../services/api/catalogApi";
 import { getDeviceStoreId } from "../../services/deviceSession";
+// T-127: Modal back handler for Android hardware back button
+import { useModalBackHandler } from "../../hooks/useModalBackHandler";
 
 // =============================================================================
 // TYPES
@@ -42,6 +44,9 @@ export function EditPolicyModal({
   onSave,
   onClose,
 }: EditPolicyModalProps) {
+  // T-127: Close modal on Android hardware back button
+  useModalBackHandler(visible, onClose);
+
   const insets = useSafeAreaInsets();
 
   // State
