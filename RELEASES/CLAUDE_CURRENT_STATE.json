@@ -1,17 +1,9 @@
 {
-  "version": "19.3",
-  "lastUpdated": "2026-02-16T10:30:00+05:30",
-  "currentPhase": "Phase 7: B2B Reorder System (COMPLETE)",
+  "version": "20.0",
+  "lastUpdated": "2026-02-16T14:00:00+05:30",
+  "currentPhase": "Phase 8: FCM Push Notifications + Deferred Tickets (COMPLETE)",
   "currentTicket": null,
-  "ticketQueue": [
-    "T-236", "T-237",
-    "T-238", "T-243", "T-239",
-    "T-240", "T-241", "T-242",
-    "T-244", "T-245", "T-246", "T-247",
-    "T-249", "T-250",
-    "T-248", "T-252", "T-251",
-    "T-219", "T-223", "T-231", "T-232", "T-235"
-  ],
+  "ticketQueue": [],
   "ticketStatus": {
     "T-054": "DONE", "T-055": "DONE",
     "T-056": "DONE", "T-057": "DONE", "T-058": "DONE", "T-059": "DONE", "T-060": "DONE", "T-061": "DONE",
@@ -49,11 +41,11 @@
     "T-209": "DONE", "T-210": "DONE", "T-211": "DONE", "T-212": "DONE",
     "T-213": "DONE", "T-214": "DONE",
     "T-215": "DONE", "T-216": "DONE", "T-217": "DONE", "T-218": "DONE",
-    "T-219": "DEFERRED-POSTLAUNCH", "T-220": "DONE-FALSE-POSITIVE", "T-221": "DONE", "T-222": "DONE",
-    "T-223": "DEFERRED-POSTLAUNCH", "T-224": "DONE-FALSE-POSITIVE", "T-225": "DONE-FALSE-POSITIVE", "T-226": "DONE-FALSE-POSITIVE",
+    "T-219": "DONE", "T-220": "DONE-FALSE-POSITIVE", "T-221": "DONE", "T-222": "DONE",
+    "T-223": "DONE", "T-224": "DONE-FALSE-POSITIVE", "T-225": "DONE-FALSE-POSITIVE", "T-226": "DONE-FALSE-POSITIVE",
     "T-227": "DONE-FALSE-POSITIVE", "T-228": "DONE-FALSE-POSITIVE", "T-229": "DONE-FALSE-POSITIVE", "T-230": "DONE",
-    "T-231": "DEFERRED-POSTLAUNCH", "T-232": "DEFERRED-POSTLAUNCH", "T-233": "DONE-FALSE-POSITIVE", "T-234": "DONE",
-    "T-235": "DEFERRED-POSTLAUNCH",
+    "T-231": "DONE", "T-232": "DONE", "T-233": "DONE-FALSE-POSITIVE", "T-234": "DONE",
+    "T-235": "DONE",
     "T-236": "DONE", "T-237": "DONE", "T-238": "DONE", "T-239": "DONE",
     "T-240": "DONE", "T-241": "DONE", "T-242": "DONE", "T-243": "DONE",
     "T-244": "DONE", "T-245": "DONE", "T-246": "DONE", "T-247": "DONE",
@@ -93,7 +85,8 @@
     { "phase": 30, "name": "7C: POS Reorder Enhancements", "tickets": ["T-240", "T-241", "T-242"], "status": "DONE" },
     { "phase": 31, "name": "7D: Portal Build-Out", "tickets": ["T-244", "T-245", "T-246", "T-247"], "status": "DONE" },
     { "phase": 32, "name": "7E: GRN Unification", "tickets": ["T-249", "T-250"], "status": "DONE" },
-    { "phase": 33, "name": "7F: Integration & Cleanup", "tickets": ["T-248", "T-252", "T-251"], "status": "DONE" }
+    { "phase": 33, "name": "7F: Integration & Cleanup", "tickets": ["T-248", "T-252", "T-251"], "status": "DONE" },
+    { "phase": 34, "name": "8A: FCM Push Notifications + Deferred Tickets", "tickets": ["T-219", "T-223", "T-231", "T-232", "T-235"], "status": "DONE" }
   ],
   "completedPhase1": {
     "range": "T-001 → T-053",
@@ -120,7 +113,7 @@
   "phase6_CTOAudit": {
     "range": "T-200 → T-235",
     "count": 36,
-    "status": "DONE — 31/36 DONE (Waves 1-7 complete, 5 deferred post-launch)",
+    "status": "DONE — 36/36 DONE (all waves complete, 5 deferred tickets now implemented in Phase 8)",
     "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
     "falsePositivesDropped": 9,
     "breakdown": {
@@ -151,15 +144,22 @@
     },
     "estimatedEffort": "~180 hours (6 waves)"
   },
+  "phase8_FCMNotifications": {
+    "range": "T-219, T-223, T-231, T-232, T-235",
+    "count": 5,
+    "status": "DONE — All 5 deferred tickets implemented",
+    "commit": "ecbaf3b",
+    "summary": "FCM push notification infrastructure (migration 152, firebase-admin, expo-notifications), UPI refund management (T-219), Cloud Monitoring alerts (T-223), payment reminder service (T-231), GRN alert push delivery (T-232), GST compliance dashboard + GSTR-1 export (T-235), notification UIs for all 3 portals + POS app"
+  },
   "phaseSnapshot": {
     "totalTickets": 252,
-    "completed": 247,
-    "queued": 5,
+    "completed": 252,
+    "queued": 0,
     "inProgress": 0,
-    "headSHA": "42e4f19",
+    "headSHA": "ecbaf3b",
     "stagingLive": true,
     "stagingSHA": "a46ae13",
-    "unpushedCommits": "6 — Waves 2-6 (NOT pushed per operator instruction)"
+    "unpushedCommits": "7 — Waves 2-6 + Phase 8 (NOT pushed per operator instruction)"
   },
   "goLiveAudit": {
     "status": "COMPLETE",
@@ -202,12 +202,12 @@
   },
   "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "Phase 7 COMPLETE. Remaining 5 tickets are deferred post-launch (T-219, T-223, T-231, T-232, T-235). Ready for operator review + push.",
+  "nextAction": "ALL 252 TICKETS COMPLETE. Ready for operator review + push. No remaining work items.",
   "lastActions": [
-    "Wave 5+6 complete — T-249 (GRN reorder badge), T-250 (auto-close fulfilled + migration 151), T-248 (deploy.yml FEATURE_REORDER_ENABLED), T-251 (CRITICAL: POS reorder routes migrated to canonical schema), T-252 (E2E lifecycle tests)",
-    "Wave 4 complete — T-244 (retailer reorder dashboard fix), T-245 (delivery confirm endpoint), T-246 (supplier reorder badge + delivery UI), T-247 (SSE delivery event mapping)",
-    "Wave 3 complete — T-240 (payment terms display), T-241 (quick reorder from history), T-242 (max qty in policy edit)",
-    "Wave 1+2 complete — T-236 (schema unification), T-237 (payment terms), T-238 (stock monitor fix), T-239 (max qty cap), T-243 (retailer admin route fix)",
-    "247 total tickets completed, 5 remaining (all deferred post-launch)"
+    "Phase 8 COMPLETE — T-219 (UPI refund management + webhook), T-223 (Cloud Monitoring 10 alert policies), T-231 (payment reminder service), T-232 (GRN alert push delivery), T-235 (GST compliance + GSTR-1 export)",
+    "Phase 8 infrastructure — Migration 152 (notifications schema), FCM service (firebase-admin), POS expo-notifications, retailer/supplier/superadmin notification UIs",
+    "Cross-verification audit: 49/49 web portal checks PASS, all backend routes verified, POS integration confirmed, GST API response mapping fixed",
+    "Wave 5+6 complete — T-249 (GRN reorder badge), T-250 (auto-close fulfilled + migration 151), T-248 (deploy.yml FEATURE_REORDER_ENABLED), T-251 (POS reorder routes migrated), T-252 (E2E lifecycle tests)",
+    "252/252 tickets completed — zero remaining"
   ]
 }
