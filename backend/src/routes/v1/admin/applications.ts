@@ -472,11 +472,12 @@ adminApplicationsRouter.post(
 
       const app = appResult.rows[0];
 
-      if (!['KYC_SUBMITTED', 'PAYMENTS_SUBMITTED'].includes(app.status)) {
+      // T-012: Allow reject from NEEDS_FIX (admin can re-reject with updated reason)
+      if (!['KYC_SUBMITTED', 'PAYMENTS_SUBMITTED', 'NEEDS_FIX'].includes(app.status)) {
         return res.status(400).json({
           error: {
             code: "INVALID_STATUS",
-            message: `Cannot reject application in status '${app.status}'. Must be KYC_SUBMITTED or PAYMENTS_SUBMITTED.`
+            message: `Cannot reject application in status '${app.status}'. Must be KYC_SUBMITTED, PAYMENTS_SUBMITTED, or NEEDS_FIX.`
           }
         });
       }

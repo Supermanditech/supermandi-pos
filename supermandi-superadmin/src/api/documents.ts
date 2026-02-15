@@ -188,3 +188,26 @@ export function getDocumentViewUrl(documentId: string): string {
   const base = requireApiBase();
   return `${base}/api/v1/documents/${documentId}`;
 }
+
+/**
+ * T-014: Fetch document as blob with auth headers.
+ * Browser iframe/img src doesn't send Authorization headers,
+ * causing "refused to connect" errors. This fetches the document
+ * via API with proper auth and returns a blob URL for rendering.
+ */
+export async function fetchDocumentBlob(documentId: string): Promise<string> {
+  const base = requireApiBase();
+  const res = await fetchWithTimeout(`${base}/api/v1/documents/${encodeURIComponent(documentId)}`, {
+    method: "GET",
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to load document (${res.status})`);
+  }
+
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}

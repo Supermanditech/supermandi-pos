@@ -130,23 +130,43 @@ export function ApplicationsTab({
                   />
                 </div>
 
+                {/* T-012: Conditional actions based on application status */}
                 <div className="deviceActions" style={{ flexWrap: "wrap", gap: 8 }}>
-                  <button
-                    onClick={() => handleApproveApplication(app.id)}
-                    disabled={appActionLoading[app.id]}
-                    style={{ background: "#22c55e", color: "white" }}
-                    title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
-                  >
-                    {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
-                  </button>
-                  <button
-                    className="btnGhost"
-                    onClick={() => handleRejectApplication(app.id)}
-                    disabled={appActionLoading[app.id]}
-                    style={{ color: "#ef4444" }}
-                  >
-                    {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
-                  </button>
+                  {app.status === 'NEEDS_FIX' ? (
+                    <>
+                      <span style={{ fontSize: 12, color: "#f59e0b", fontStyle: "italic", alignSelf: "center" }}>
+                        Awaiting applicant resubmission
+                      </span>
+                      <button
+                        className="btnGhost"
+                        onClick={() => handleRejectApplication(app.id)}
+                        disabled={appActionLoading[app.id]}
+                        style={{ color: "#ef4444" }}
+                        title="Update rejection reason"
+                      >
+                        {appActionLoading[app.id] ? "Rejecting..." : "Re-Reject"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleApproveApplication(app.id)}
+                        disabled={appActionLoading[app.id]}
+                        style={{ background: "#22c55e", color: "white" }}
+                        title={`Approve and create ${app.entityType === 'retailer' ? 'store' : 'supplier'} record`}
+                      >
+                        {appActionLoading[app.id] ? "Approving..." : `Approve ${app.entityType === 'retailer' ? 'Store' : 'Supplier'}`}
+                      </button>
+                      <button
+                        className="btnGhost"
+                        onClick={() => handleRejectApplication(app.id)}
+                        disabled={appActionLoading[app.id]}
+                        style={{ color: "#ef4444" }}
+                      >
+                        {appActionLoading[app.id] ? "Rejecting..." : "Reject"}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

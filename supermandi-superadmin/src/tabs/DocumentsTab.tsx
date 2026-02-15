@@ -1,5 +1,7 @@
 // SA-001: Documents verification tab extracted from App.tsx
+import { useState, useEffect } from "react";
 import type { DocumentRecord } from "../api/documents";
+import { fetchDocumentBlob } from "../api/documents";
 import { formatDateTime } from "../lib/formatters";
 import { TableSkeleton } from "../components/TableSkeleton";
 
@@ -29,6 +31,37 @@ export function DocumentsTab({
   setSelectedDocument, setDocRejectReason, refreshDocuments,
   handleApproveDocument, handleRejectDocument,
 }: DocumentsTabProps) {
+  // T-014: Fetch document via API with auth headers → blob URL for rendering
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobLoading, setBlobLoading] = useState(false);
+  const [blobError, setBlobError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedDocument) {
+      setBlobUrl(null);
+      setBlobError(null);
+      return;
+    }
+    let cancelled = false;
+    setBlobLoading(true);
+    setBlobError(null);
+    fetchDocumentBlob(selectedDocument.id)
+      .then((url) => {
+        if (!cancelled) setBlobUrl(url);
+      })
+      .catch((err) => {
+        if (!cancelled) setBlobError(err instanceof Error ? err.message : "Failed to load document");
+      })
+      .finally(() => {
+        if (!cancelled) setBlobLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDocument?.id]);
+
   return (
     <section className="card">
       <div className="cardHeader">
@@ -104,14 +137,19 @@ export function DocumentsTab({
               <div style={{ marginBottom: 8 }}><strong>File:</strong> {selectedDocument.file_name} ({(selectedDocument.file_size / 1024).toFixed(1)} KB)</div>
               <div style={{ marginBottom: 8 }}><strong>Uploaded:</strong> {formatDateTime(selectedDocument.uploaded_at)}</div>
             </div>
-            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#0f0f23", padding: 16, borderRadius: 4 }}>
-              {selectedDocument.content_type.startsWith("image/") ? (
-                <img src={selectedDocument.view_url} alt={selectedDocument.file_name} style={{ maxWidth: "100%", maxHeight: 400 }} />
-              ) : selectedDocument.content_type === "application/pdf" ? (
-                <iframe src={selectedDocument.view_url} title={selectedDocument.file_name} style={{ width: "100%", height: 400, border: "none" }} />
-              ) : (
-                <div><a href={selectedDocument.view_url} target="_blank" rel="noopener noreferrer" style={{ color: "#7c3aed" }}>Download {selectedDocument.file_name}</a></div>
-              )}
+            {/* T-014: Document preview via authenticated blob URL */}
+            <div style={{ marginBottom: 16, textAlign: "center", backgroundColor: "#0f0f23", padding: 16, borderRadius: 4, minHeight: 120 }}>
+              {blobLoading ? (
+                <div style={{ color: "#888", padding: 40 }}>Loading document preview...</div>
+              ) : blobError ? (
+                <div style={{ color: "#ef4444", padding: 40 }}>{blobError}</div>
+              ) : blobUrl && selectedDocument.content_type.startsWith("image/") ? (
+                <img src={blobUrl} alt={selectedDocument.file_name} style={{ maxWidth: "100%", maxHeight: 400 }} />
+              ) : blobUrl && selectedDocument.content_type === "application/pdf" ? (
+                <iframe src={blobUrl} title={selectedDocument.file_name} style={{ width: "100%", height: 400, border: "none" }} />
+              ) : blobUrl ? (
+                <div><a href={blobUrl} download={selectedDocument.file_name} style={{ color: "#7c3aed" }}>Download {selectedDocument.file_name}</a></div>
+              ) : null}
             </div>
             <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
               <button onClick={() => handleApproveDocument(selectedDocument.id)} disabled={documentActionLoading === selectedDocument.id} style={{ padding: "10px 20px", backgroundColor: "#22c55e", color: "white", border: "none", borderRadius: 4, cursor: documentActionLoading ? "wait" : "pointer" }}>
