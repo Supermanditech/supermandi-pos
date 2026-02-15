@@ -83,13 +83,15 @@ export async function generateInvoiceNumber(
   fiscalYear: string
 ): Promise<string> {
   // Upsert the series and atomically increment
+  // CL-024: Use sentinel UUID for NULL entity_id to avoid PostgreSQL NULL != NULL uniqueness issue
+  const safeEntityId = entityId || '00000000-0000-0000-0000-000000000000';
   const result = await client.query(
     `INSERT INTO invoicing.invoice_series (entity_type, entity_id, prefix, current_number, fiscal_year)
      VALUES ($1, $2, $3, 1, $4)
      ON CONFLICT (entity_type, entity_id, fiscal_year)
      DO UPDATE SET current_number = invoicing.invoice_series.current_number + 1
      RETURNING current_number`,
-    [entityType, entityId, prefix, fiscalYear]
+    [entityType, safeEntityId, prefix, fiscalYear]
   );
 
   const seqNum = result.rows[0].current_number;
@@ -450,6 +452,9 @@ export async function getInvoice(pool: Pool, invoiceId: string): Promise<any> {
       i.platform_fee_percent as "platformFeePercent",
       i.platform_fee_minor as "platformFeeMinor",
       i.fiscal_year as "fiscalYear",
+      i.seller_id as "sellerId",
+      i.buyer_id as "buyerId",
+      i.order_id as "orderId",
       i.created_at as "createdAt",
       i.issued_at as "issuedAt",
       i.paid_at as "paidAt"

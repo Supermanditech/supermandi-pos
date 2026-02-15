@@ -622,15 +622,17 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
       SELECT
         COUNT(*)::int AS total_bills,
         COALESCE(SUM(total_minor), 0)::bigint AS total_sales,
-        COUNT(*) FILTER (WHERE status = 'PAID_CASH')::int AS cash_count,
-        COALESCE(SUM(total_minor) FILTER (WHERE status = 'PAID_CASH'), 0)::bigint AS cash_total,
+        COUNT(*) FILTER (WHERE status IN ('PAID_CASH', 'completed'))::int AS cash_count,
+        COALESCE(SUM(total_minor) FILTER (WHERE status IN ('PAID_CASH', 'completed')), 0)::bigint AS cash_total,
         COUNT(*) FILTER (WHERE status = 'PAID_UPI')::int AS upi_count,
         COALESCE(SUM(total_minor) FILTER (WHERE status = 'PAID_UPI'), 0)::bigint AS upi_total,
         COUNT(*) FILTER (WHERE status = 'DUE')::int AS due_count,
-        COALESCE(SUM(total_minor) FILTER (WHERE status = 'DUE'), 0)::bigint AS due_total
+        COALESCE(SUM(total_minor) FILTER (WHERE status = 'DUE'), 0)::bigint AS due_total,
+        COUNT(*) FILTER (WHERE status = 'SPLIT')::int AS split_count,
+        COALESCE(SUM(total_minor) FILTER (WHERE status = 'SPLIT'), 0)::bigint AS split_total
       FROM sales
       WHERE store_id = $1
-        AND status IN ('PAID_CASH', 'PAID_UPI', 'DUE')
+        AND status IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed', 'SPLIT')
         AND created_at::date = $2::date
       `,
       [storeId, targetDate]

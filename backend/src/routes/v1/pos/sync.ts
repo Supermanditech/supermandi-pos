@@ -1020,16 +1020,9 @@ posSyncRouter.post("/sync", requireDeviceToken, requireActiveStore, salesRateLim
             }))
           });
 
-          // MT-10: Also update catalog inventory.stock_balances for dashboard consistency
-          await decrementCatalogStock(client, {
-            storeId,
-            saleId,
-            items: resolvedItems.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              priceMinor: item.priceMinor
-            }))
-          });
+          // CL-001: decrementCatalogStock REMOVED — recordSaleInventoryMovements already
+          // writes to inventory_ledger + stock_balances + store_products via applyInventoryMovement.
+          // Calling decrementCatalogStock here caused DOUBLE stock deduction for every offline-synced sale.
 
           await applyBulkDeductions({
             client,

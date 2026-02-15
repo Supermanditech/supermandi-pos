@@ -60,7 +60,9 @@ const normalizeDelta = (movementType: InventoryMovementType, quantity: number): 
   if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
     throw new Error("invalid_quantity");
   }
-  const rounded = Math.round(quantity);
+  // CL-002: Round to 3 decimal places instead of integer to support fractional variant qty
+  // e.g., selling 1 pack of 500GM variant → stockQuantity = 0.5 KG (not rounded to 1)
+  const rounded = Math.round(quantity * 1000) / 1000;
   if (rounded === 0) {
     throw new Error("invalid_quantity");
   }

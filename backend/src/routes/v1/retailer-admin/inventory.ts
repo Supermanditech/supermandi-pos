@@ -121,10 +121,11 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
         COALESCE(SUM(CASE WHEN payment_mode = 'CASH' OR status = 'PAID_CASH' THEN total_minor ELSE 0 END), 0)::bigint as "cashTotal",
         COALESCE(SUM(CASE WHEN payment_mode = 'UPI' OR status = 'PAID_UPI' THEN total_minor ELSE 0 END), 0)::bigint as "upiTotal",
         COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::bigint as "cardTotal",
-        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' OR status = 'PAID_DUE' THEN total_minor ELSE 0 END), 0)::bigint as "creditTotal"
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' OR status = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint as "creditTotal",
+        COALESCE(SUM(CASE WHEN payment_mode = 'SPLIT' THEN total_minor ELSE 0 END), 0)::bigint as "splitTotal"
       FROM public.sales
       WHERE store_id = $1
-        AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'PAID_DUE')
+        AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
         AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') = $2::date`,
       [storeId, targetDate]
     );
@@ -140,13 +141,13 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
       FROM public.sale_items si
       JOIN public.sales s ON s.id = si.sale_id
       WHERE s.store_id = $1
-        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'PAID_DUE')
+        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
         AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date`,
       [storeId, targetDate]
     );
     const itemsSold = Number(itemsResult.rows[0]?.itemsSold) || 0;
 
-    // RCAT-FIX-003: Include POS sale statuses for top selling items
+    // CL-007: Include all valid POS sale statuses for top selling items
     const topItemsResult = await pool.query(
       `SELECT
         si.variant_id as "productId",
@@ -156,7 +157,7 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
       FROM public.sale_items si
       JOIN public.sales s ON s.id = si.sale_id
       WHERE s.store_id = $1
-        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'PAID_DUE')
+        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
         AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') = $2::date
       GROUP BY si.variant_id, si.name, si.item_name
       ORDER BY SUM(si.quantity) DESC

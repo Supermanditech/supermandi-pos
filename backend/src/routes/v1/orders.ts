@@ -202,12 +202,12 @@ ordersRouter.post("/stores/:storeId/orders", requireDeviceToken, async (req: Req
       const itemId = randomUUID();
       const itemResult = await client.query(
         `INSERT INTO orders.purchase_order_items (
-          id, purchase_order_id, supplier_product_id, product_id,
+          id, order_id, supplier_product_id, product_id,
           ordered_quantity, received_quantity, unit_price, total_price, status
         ) VALUES ($1, $2, $3, $4, $5, 0, $6, $7, 'pending')
         RETURNING
           id,
-          purchase_order_id as "orderId",
+          order_id as "orderId",
           supplier_product_id as "supplierProductId",
           product_id as "productId",
           ordered_quantity as "orderedQuantity",
@@ -447,7 +447,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
     const itemsResult = await pool.query(
       `SELECT
         poi.id,
-        poi.purchase_order_id as "orderId",
+        poi.order_id as "orderId",
         poi.supplier_product_id as "supplierProductId",
         poi.product_id as "productId",
         COALESCE(p.name, sp.name, 'Unknown Product') as "productName",
@@ -461,7 +461,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
       FROM orders.purchase_order_items poi
       LEFT JOIN catalog.products p ON p.id = poi.product_id
       LEFT JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
-      WHERE poi.purchase_order_id = $1
+      WHERE poi.order_id = $1
       ORDER BY poi.created_at ASC`,
       [orderId]
     );
@@ -694,7 +694,7 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
 
     // Delete order items first
     await pool.query(
-      `DELETE FROM orders.purchase_order_items WHERE purchase_order_id = $1`,
+      `DELETE FROM orders.purchase_order_items WHERE order_id = $1`,
       [orderId]
     );
 

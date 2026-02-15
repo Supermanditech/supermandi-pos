@@ -534,34 +534,24 @@ posCreditRouter.post("/credit/:applicationId/kyc", requireDeviceToken, async (re
       });
     }
 
-    // KYC passed - approve application
-    const approvedAmount = app.requested_amount_minor;
-
-    // DATA-002: Add store_id filter for store isolation
+    // CL-020: KYC passed — set status to kyc_verified (pending SuperAdmin approval)
+    // Previously auto-approved with mock KYC. Now requires admin review via /admin/credit/applications
     await client.query(`
       UPDATE payments.credit_applications
-      SET kyc_status = 'verified', status = 'approved',
-          pan_number = $1, aadhaar_last4 = $2, approved_amount_minor = $3
-      WHERE id = $4 AND store_id = $5
-    `, [panNumber, aadhaarLast4, approvedAmount, applicationId, storeId]);
-
-    // Update offer status
-    // DATA-002: Add store_id filter for store isolation
-    await client.query(`
-      UPDATE payments.credit_offers SET status = 'approved' WHERE id = $1 AND store_id = $2
-    `, [app.offer_id, storeId]);
+      SET kyc_status = 'verified', status = 'kyc_verified',
+          pan_number = $1, aadhaar_last4 = $2
+      WHERE id = $3 AND store_id = $4
+    `, [panNumber, aadhaarLast4, applicationId, storeId]);
 
     await client.query("COMMIT");
 
-    console.log(`[SM-021] KYC verified, application approved: applicationId=${applicationId}, amount=${approvedAmount}`);
+    console.log(`[SM-021] KYC verified, pending admin approval: applicationId=${applicationId}`);
 
     return res.json({
       success: true,
       kycStatus: "verified",
-      applicationStatus: "approved",
-      approvedAmount: approvedAmount,
-      disbursementEta: "24 hours",
-      message: "Congratulations! Your credit application has been approved.",
+      applicationStatus: "kyc_verified",
+      message: "KYC verified. Your credit application is under review and will be approved shortly.",
     });
 
   } catch (error: any) {

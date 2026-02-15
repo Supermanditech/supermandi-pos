@@ -585,6 +585,19 @@ router.patch("/products/:id", requireSupplierAuth, requireActiveSupplier, async 
 
     const product = result.rows[0];
 
+    // CL-014: Cascade purchase price to linked store_products when supplier changes price
+    if (purchasePrice !== undefined) {
+      await pool.query(
+        `UPDATE catalog.store_products sp
+         SET purchase_price = $1, updated_at = NOW()
+         FROM catalog.supplier_product_map spm
+         WHERE spm.product_id = sp.product_id
+           AND spm.supplier_product_id = $2
+           AND sp.is_active = true`,
+        [purchasePrice, id]
+      );
+    }
+
     res.json({
       data: {
         id: product.id,

@@ -142,8 +142,8 @@ voiceRouter.post(
         });
       }
 
-      // Get store context from device token (AUDIT-API-006: never trust client-sent storeId)
-      const device = (req as any).device;
+      // CL-015: Fix .device → .posDevice (requireDeviceToken sets posDevice, not device)
+      const device = (req as any).posDevice;
       const storeId = device?.storeId || device?.store_id;
 
       if (!storeId) {
@@ -273,8 +273,8 @@ voiceRouter.post(
         });
       }
 
-      // AUDIT-API-006: derive storeId from device token only (never trust client-sent)
-      const device = (req as any).device;
+      // CL-015: Fix .device → .posDevice (requireDeviceToken sets posDevice, not device)
+      const device = (req as any).posDevice;
       const storeId = device?.storeId || device?.store_id;
 
       if (!storeId) {

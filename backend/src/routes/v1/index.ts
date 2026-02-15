@@ -55,6 +55,8 @@ import { retailerAdminSettingsRouter } from "./retailer-admin/settings";  // GL-
 import { retailerAdminDevicesRouter } from "./retailer-admin/devices";  // RET-WEB-002: Device activation
 import { retailerAdminVariantsRouter } from "./retailer-admin/variants";  // T-057: Retail variant CRUD
 import { retailerInvoicesRouter } from "./retailer-admin/invoices";  // T-073: Retailer invoice views
+import { retailerReorderRouter } from "./retailer-admin/reorder";  // CL-017: Retailer reorder
+import { retailerBnplRouter } from "./retailer-admin/bnpl";  // CL-019: Retailer BNPL view
 import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
@@ -66,6 +68,7 @@ import { adminDocumentsRouter } from "./admin/documents";  // DOCS-001: Admin do
 import { adminRegistrationEventsRouter } from "./admin/registrationEvents";  // RO-007: Registration events
 import { adminApplicationsRouter } from "./admin/applications";  // STAGING-FIX-014: Application approval
 import { adminInvoicesRouter } from "./admin/invoices";  // T-071: Buy-resell invoicing
+import { adminCreditRouter } from "./admin/credit";  // CL-020: Credit approval
 import { authRouter } from "./auth";  // PORTAL-AUTH-001: Unified auth routes
 import { retailerRegisterRouter } from "./retailer/register";  // RO-001: Canonical registration
 import { retailerMeRouter } from "./retailer/me";  // RO-005: Cross-surface login linking
@@ -137,6 +140,7 @@ v1Router.use("/admin", adminGrnAlertsRouter);  // SA-P1-004: GRN excess alerts
 v1Router.use("/admin", adminFeatureFlagsRouter);  // SA-P0-005: Feature flag CRUD
 v1Router.use("/admin", adminApplicationsRouter);  // STAGING-FIX-014: Application approval
 v1Router.use("/admin", adminInvoicesRouter);  // T-071: Buy-resell invoicing
+v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approval
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
@@ -178,6 +182,8 @@ v1Router.use("/retailer-admin", retailerAdminSettingsRouter);  // GL-AUD-004: St
 v1Router.use("/retailer-admin", retailerAdminDevicesRouter);  // RET-WEB-002: Device activation
 v1Router.use("/retailer-admin", retailerAdminVariantsRouter);  // T-057: Retail variant CRUD
 v1Router.use("/retailer-admin", retailerInvoicesRouter);  // T-073: Retailer invoice views
+v1Router.use("/retailer-admin", retailerReorderRouter);  // CL-017: Retailer reorder
+v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL view
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs

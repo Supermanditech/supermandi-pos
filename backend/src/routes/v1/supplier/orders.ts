@@ -56,18 +56,21 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
        FROM orders.purchase_orders po
        JOIN orders.purchase_order_items poi ON poi.order_id = po.id
        JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
-       WHERE sp.supplier_id = $1`,
+       WHERE sp.supplier_id = $1
+         AND po.status != 'draft'`,
       [req.supplierId]
     );
     const total = parseInt(countResult.rows[0]?.total || '0');
 
     // GO-LIVE-028: Get status counts for accurate dashboard display
+    // CL-010: Exclude draft orders from supplier visibility
     const statusCountsResult = await pool.query(
       `SELECT po.status, COUNT(DISTINCT po.id) as count
        FROM orders.purchase_orders po
        JOIN orders.purchase_order_items poi ON poi.order_id = po.id
        JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
        WHERE sp.supplier_id = $1
+         AND po.status != 'draft'
        GROUP BY po.status`,
       [req.supplierId]
     );
@@ -106,6 +109,7 @@ router.get("/orders", requireSupplierAuth, requireRegisteredSupplier, async (req
       JOIN orders.purchase_order_items poi ON poi.order_id = po.id
       JOIN catalog.supplier_products sp ON sp.id = poi.supplier_product_id
       WHERE sp.supplier_id = $1
+        AND po.status != 'draft'
       GROUP BY po.id, po.store_id, s.name, po.status, po.total_amount, po.created_at, po.updated_at
       ORDER BY po.created_at DESC
       LIMIT $2 OFFSET $3`,

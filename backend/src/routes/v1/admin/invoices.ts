@@ -3,7 +3,7 @@
 
 import { Router } from "express";
 import { getPool } from "../../../db/client";
-import { requireAdminToken, requirePermission } from "./auth";
+import { requireAdminToken, requirePermission } from "../../../middleware/adminToken";
 import {
   createInvoice,
   issueInvoice,

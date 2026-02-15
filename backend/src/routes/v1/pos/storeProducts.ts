@@ -352,6 +352,15 @@ posStoreProductsRouter.get("/store-products/search", requireDeviceToken, async (
         WHERE sp.store_id = $1
           AND sp.is_active = true
           AND p.is_active = true
+          -- CL-013: If product has supplier links, at least one must be approved
+          AND (
+            NOT EXISTS (SELECT 1 FROM catalog.supplier_product_map spm WHERE spm.product_id = sp.product_id)
+            OR EXISTS (
+              SELECT 1 FROM catalog.supplier_product_map spm
+              JOIN catalog.supplier_products sup ON sup.id = spm.supplier_product_id
+              WHERE spm.product_id = sp.product_id AND sup.approval_status = 'approved'
+            )
+          )
           ${stockFilter}
           AND (
             ${whereClause}
@@ -450,6 +459,15 @@ posStoreProductsRouter.get("/store-products/lookup", requireDeviceToken, async (
       WHERE sp.store_id = $1
         AND sp.is_active = true
         AND p.is_active = true
+        -- CL-013: If product has supplier links, at least one must be approved
+        AND (
+          NOT EXISTS (SELECT 1 FROM catalog.supplier_product_map spm WHERE spm.product_id = sp.product_id)
+          OR EXISTS (
+            SELECT 1 FROM catalog.supplier_product_map spm
+            JOIN catalog.supplier_products sup ON sup.id = spm.supplier_product_id
+            WHERE spm.product_id = sp.product_id AND sup.approval_status = 'approved'
+          )
+        )
         AND (
           p.primary_barcode = $2
           OR spb_match.barcode IS NOT NULL
@@ -584,6 +602,15 @@ posStoreProductsRouter.get("/store-products/list", requireDeviceToken, async (re
         WHERE sp.store_id = $1
           AND sp.is_active = true
           AND p.is_active = true
+          -- CL-013: If product has supplier links, at least one must be approved
+          AND (
+            NOT EXISTS (SELECT 1 FROM catalog.supplier_product_map spm WHERE spm.product_id = sp.product_id)
+            OR EXISTS (
+              SELECT 1 FROM catalog.supplier_product_map spm
+              JOIN catalog.supplier_products sup ON sup.id = spm.supplier_product_id
+              WHERE spm.product_id = sp.product_id AND sup.approval_status = 'approved'
+            )
+          )
         ORDER BY COALESCE(sp.display_name, p.name) ASC
         LIMIT $2 OFFSET $3`,
         [storeId, limit, offset]
