@@ -507,7 +507,15 @@ export default function LoginPage() {
               Register
             </Link>
           </p>
-          {/* AUDIT-SUP-002: Removed dead forgot-password link — portal uses OTP-based login */}
+          {/* T-002: Forgot password link restored */}
+          <p className="text-slate-600 text-sm">
+            <Link
+              href="/forgot-password"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Forgot Password?
+            </Link>
+          </p>
         </div>
       )}
     </>

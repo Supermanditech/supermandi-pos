@@ -353,6 +353,64 @@ adminAuthRouter.get("/auth/check", (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/v1/admin/auth/refresh
+ * T-011: Refresh admin JWT token — prevents "Session expired" on fresh login.
+ * Frontend calls this on app mount and every 10 minutes.
+ * Validates current token and issues a new one with extended expiry.
+ */
+adminAuthRouter.post("/auth/refresh", (req: Request, res: Response) => {
+  const cookieToken = extractCookie(req, 'admin_session');
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  const token = cookieToken || bearerToken;
+
+  if (!token) {
+    return res.status(401).json({
+      error: { code: "NO_TOKEN", message: "No authentication token provided" }
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { email: string; role: string; type: string };
+
+    // Issue new token with fresh expiry
+    const newToken = jwt.sign(
+      {
+        email: decoded.email,
+        role: decoded.role,
+        type: decoded.type || 'admin',
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
+    );
+
+    // Refresh the HttpOnly cookie too
+    res.cookie('admin_session', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/api',
+    });
+
+    const expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+
+    return res.json({
+      sessionToken: newToken,
+      expiresAt,
+      admin: {
+        email: decoded.email,
+        role: decoded.role,
+      },
+    });
+  } catch {
+    return res.status(401).json({
+      error: { code: "INVALID_TOKEN", message: "Invalid or expired token" }
+    });
+  }
+});
+
+/**
  * POST /api/v1/admin/auth/logout
  * ISSUE-MICRO-025: Clear HttpOnly session cookie
  */
