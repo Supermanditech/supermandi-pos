@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
@@ -39,6 +40,7 @@ interface BnplDuesScreenProps {
 // =============================================================================
 
 export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // State
@@ -111,7 +113,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       });
     } catch (error) {
       console.error("[BnplDuesScreen] Failed to load data:", error);
-      Alert.alert("Error", "Failed to load BNPL dues. Please try again.");
+      Alert.alert(t("common.error"), t("common.tryAgain"));
     } finally {
       setLoading(false);
       setRefreshing(false);

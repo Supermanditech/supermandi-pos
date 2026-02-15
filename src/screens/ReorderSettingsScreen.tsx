@@ -15,6 +15,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
 import * as reorderApi from "../services/api/reorderApi";
 import type { ReorderSettings } from "../services/api/reorderApi";
@@ -37,6 +38,7 @@ export default function ReorderSettingsScreen({
   onNavigateToPolicies,
   onBack,
 }: ReorderSettingsScreenProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // State
@@ -96,7 +98,7 @@ export default function ReorderSettingsScreen({
         setSettings((prev) =>
           prev ? { ...prev, reorderEnabled: !value } : prev
         );
-        Alert.alert("Error", "Failed to update setting. Please try again.");
+        Alert.alert(t("common.error"), t("common.tryAgain"));
       } finally {
         setSaving(false);
       }
@@ -126,7 +128,7 @@ export default function ReorderSettingsScreen({
         setSettings((prev) =>
           prev ? { ...prev, requireApproval: !value } : prev
         );
-        Alert.alert("Error", "Failed to update setting. Please try again.");
+        Alert.alert(t("common.error"), t("common.tryAgain"));
       } finally {
         setSaving(false);
       }

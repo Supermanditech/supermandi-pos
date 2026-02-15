@@ -1080,3 +1080,39 @@
     padding: 24px;
   }
 }
+
+/* T-221: Mobile-responsive touch targets and spacing */
+@media (max-width: 768px) {
+  /* T-221: Touch-friendly tab buttons (min 44px height) */
+  .tabs .tab {
+    min-height: 44px;
+    padding: 0 12px;
+  }
+
+  /* T-221: Scroll tabs horizontally on mobile */
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* T-221: Full-width controls on mobile */
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  /* T-221: Card table horizontal scroll */
+  .card table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* T-221: Reduce mainContent padding on mobile */
+  .mainContent {
+    padding: 8px;
+  }
+}

@@ -1,10 +1,16 @@
 {
-  "version": "17.4",
-  "lastUpdated": "2026-02-16T04:30:00+05:30",
-  "currentPhase": "Phase 6: 360° CTO Production Readiness Audit",
+  "version": "18.0",
+  "lastUpdated": "2026-02-16T05:00:00+05:30",
+  "currentPhase": "Phase 6 (finishing) + Phase 7: B2B Reorder System",
   "currentTicket": null,
   "ticketQueue": [
-    "T-216", "T-217", "T-219", "T-221", "T-222", "T-223", "T-231", "T-232", "T-235"
+    "T-236", "T-237",
+    "T-238", "T-243", "T-239",
+    "T-240", "T-241", "T-242",
+    "T-244", "T-245", "T-246", "T-247",
+    "T-249", "T-250",
+    "T-248", "T-252", "T-251",
+    "T-219", "T-223", "T-231", "T-232", "T-235"
   ],
   "ticketStatus": {
     "T-054": "DONE", "T-055": "DONE",
@@ -42,12 +48,17 @@
     "T-205": "DONE", "T-206": "DONE", "T-207": "DONE", "T-208": "DONE",
     "T-209": "DONE", "T-210": "DONE", "T-211": "DONE", "T-212": "DONE",
     "T-213": "DONE", "T-214": "DONE",
-    "T-215": "DONE", "T-216": "QUEUED", "T-217": "QUEUED", "T-218": "DONE",
-    "T-219": "DEFERRED-POSTLAUNCH", "T-220": "DONE-FALSE-POSITIVE", "T-221": "QUEUED", "T-222": "QUEUED",
+    "T-215": "DONE", "T-216": "DONE", "T-217": "DONE", "T-218": "DONE",
+    "T-219": "DEFERRED-POSTLAUNCH", "T-220": "DONE-FALSE-POSITIVE", "T-221": "DONE", "T-222": "DONE",
     "T-223": "DEFERRED-POSTLAUNCH", "T-224": "DONE-FALSE-POSITIVE", "T-225": "DONE-FALSE-POSITIVE", "T-226": "DONE-FALSE-POSITIVE",
     "T-227": "DONE-FALSE-POSITIVE", "T-228": "DONE-FALSE-POSITIVE", "T-229": "DONE-FALSE-POSITIVE", "T-230": "DONE",
     "T-231": "DEFERRED-POSTLAUNCH", "T-232": "DEFERRED-POSTLAUNCH", "T-233": "DONE-FALSE-POSITIVE", "T-234": "DONE",
-    "T-235": "DEFERRED-POSTLAUNCH"
+    "T-235": "DEFERRED-POSTLAUNCH",
+    "T-236": "QUEUED", "T-237": "QUEUED", "T-238": "QUEUED", "T-239": "QUEUED",
+    "T-240": "QUEUED", "T-241": "QUEUED", "T-242": "QUEUED", "T-243": "QUEUED",
+    "T-244": "QUEUED", "T-245": "QUEUED", "T-246": "QUEUED", "T-247": "QUEUED",
+    "T-248": "QUEUED", "T-249": "QUEUED", "T-250": "QUEUED", "T-251": "QUEUED",
+    "T-252": "QUEUED"
   },
   "executionPhases": [
     { "phase": 1, "name": "Retailer → POS Sync", "tickets": ["T-054", "T-055"], "status": "DONE" },
@@ -76,7 +87,13 @@
     { "phase": 24, "name": "6D: P1 Features & UX", "tickets": ["T-205", "T-206", "T-212", "T-213"], "status": "DONE" },
     { "phase": 25, "name": "6E: P2 Quick Wins", "tickets": ["T-215", "T-228", "T-233"], "status": "DONE" },
     { "phase": 26, "name": "6F: P2 Medium", "tickets": ["T-218", "T-219", "T-220", "T-223", "T-224", "T-225", "T-226", "T-227", "T-229", "T-230", "T-231", "T-232", "T-234", "T-235"], "status": "DONE" },
-    { "phase": 27, "name": "6G: P2 Large (Post-Launch)", "tickets": ["T-216", "T-217", "T-221", "T-222"], "status": "QUEUED" }
+    { "phase": 27, "name": "6G: P2 Large (Post-Launch)", "tickets": ["T-216", "T-217", "T-221", "T-222"], "status": "DONE" },
+    { "phase": 28, "name": "7A: Reorder Schema Foundation", "tickets": ["T-236", "T-237"], "status": "QUEUED" },
+    { "phase": 29, "name": "7B: Suggestion Engine + Backend Fixes", "tickets": ["T-238", "T-243", "T-239"], "status": "QUEUED" },
+    { "phase": 30, "name": "7C: POS Reorder Enhancements", "tickets": ["T-240", "T-241", "T-242"], "status": "QUEUED" },
+    { "phase": 31, "name": "7D: Portal Build-Out", "tickets": ["T-244", "T-245", "T-246", "T-247"], "status": "QUEUED" },
+    { "phase": 32, "name": "7E: GRN Unification", "tickets": ["T-249", "T-250"], "status": "QUEUED" },
+    { "phase": 33, "name": "7F: Integration & Cleanup", "tickets": ["T-248", "T-252", "T-251"], "status": "QUEUED" }
   ],
   "completedPhase1": {
     "range": "T-001 → T-053",
@@ -103,7 +120,7 @@
   "phase6_CTOAudit": {
     "range": "T-200 → T-235",
     "count": 36,
-    "status": "IN PROGRESS — 27/36 DONE (Waves 1-6 complete, 5 deferred post-launch, 4 remaining P2 Large)",
+    "status": "DONE — 31/36 DONE (Waves 1-7 complete, 5 deferred post-launch)",
     "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
     "falsePositivesDropped": 9,
     "breakdown": {
@@ -122,10 +139,22 @@
     "ZRP_Protocol": "ENFORCED — 185 gates active",
     "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
   },
+  "phase7_B2BReorder": {
+    "range": "T-236 → T-252",
+    "count": 17,
+    "status": "QUEUED — B2B Reorder System production build",
+    "auditMethod": "3 parallel deep-audit agents (backend+DB, POS+web frontend, purchase+GRN flow) + 1 plan agent",
+    "breakdown": {
+      "P0_mustHave": 10,
+      "P1_important": 5,
+      "P2_postLaunch": 2
+    },
+    "estimatedEffort": "~180 hours (6 waves)"
+  },
   "phaseSnapshot": {
-    "totalTickets": 235,
-    "completed": 226,
-    "queued": 9,
+    "totalTickets": 252,
+    "completed": 230,
+    "queued": 22,
     "inProgress": 0,
     "headSHA": "7f4da20",
     "stagingLive": true,
@@ -173,13 +202,11 @@
   },
   "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "Wave 7 — P2 Large (Post-Launch): T-216, T-217, T-221, T-222 — OR push pending commits",
+  "nextAction": "Phase 7 Wave 1: T-236 (schema unification) → T-237 (payment terms columns). Then Wave 2: T-238 (stock monitor fix) + T-243 (retailer admin route fix) + T-239 (max qty)",
   "lastActions": [
-    "Wave 6 P2 Medium DONE — T-234, T-218, T-230 + 7 FALSE POSITIVES + 5 DEFERRED (commit 7f4da20, NOT PUSHED)",
-    "T-234: Per-store feature flag overrides UI in SuperAdmin SettingsTab",
-    "T-218: Customer CRM page for retailer-admin (backend + frontend + sidebar)",
-    "T-230: Auto-reorder suggestions page for retailer-admin (3-tab: suggestions, pending, settings)",
-    "Wave 5 P2 Quick Wins DONE — T-215 UPI VPA canonical pattern, T-228+T-233 FALSE POSITIVES",
-    "Wave 4 P1 Features DONE — T-206, T-205, T-212, T-213"
+    "Wave 7 complete — T-216 (RLS), T-217 (Hindi i18n), T-221 (responsive CSS), T-222 (WCAG a11y)",
+    "Phase 6 CTO Audit DONE — 31/36 tickets (5 deferred post-launch)",
+    "230 total tickets completed, 22 remaining (17 Phase 7 + 5 deferred)",
+    "Phase 7 B2B Reorder System next — 17 tickets (T-236→T-252)"
   ]
 }

@@ -2503,6 +2503,8 @@ export default function App() {
   return (
     <ErrorBoundary>
     <div className="page">
+      {/* T-222: Skip to content for keyboard navigation */}
+      <a href="#main-content" className="skip-to-content">Skip to content</a>
       <header className="header">
         <div>
           <div className="title">
@@ -2555,7 +2557,7 @@ export default function App() {
 
       {/* T-015: Grouped sidebar navigation */}
       <div className="pageLayout">
-        <aside className="sidebar">
+        <aside className="sidebar" aria-label="SuperAdmin sidebar">
           {/* T-086: Brand header */}
           <div className="sidebarBrand">
             <div className="sidebarBrandRow">
@@ -2663,7 +2665,7 @@ export default function App() {
         </aside>
 
         {/* Mobile fallback: flat tabs */}
-        <nav className="tabs">
+        <nav className="tabs" aria-label="Main navigation">
           <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>Events</button>
           <button className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>Stores</button>
           <button className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>Devices</button>
@@ -2681,9 +2683,9 @@ export default function App() {
           <button className={tab === "invoices" ? "tab tabActive" : "tab"} onClick={() => setTab("invoices")}>Invoices</button>
         </nav>
 
-        <div className="mainContent">
+        <div id="main-content" className="mainContent" role="main">
       {/* T-114: Breadcrumb navigation + T-118: Copy deep link */}
-      <nav style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B', padding: '12px 16px 0' }}>
+      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#64748B', padding: '12px 16px 0' }}>
         <span style={{ color: '#64748B' }}>SuperAdmin</span>
         <span style={{ color: '#CBD5E1' }}>&rsaquo;</span>
         <span style={{ color: '#0F172A', fontWeight: 500 }}>{TAB_LABELS[tab]}</span>

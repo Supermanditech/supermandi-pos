@@ -66,3 +66,22 @@ export function getPool(): Pool | undefined {
   void getDb();
   return pool;
 }
+
+// T-216: RLS store context helper
+// Sets app.current_store_id for the duration of a transaction/callback
+// Usage: await withStoreContext(storeId, async (client) => { ... })
+export async function withStoreContext<T>(
+  storeId: string,
+  fn: (client: import("pg").PoolClient) => Promise<T>
+): Promise<T> {
+  const p = getPool();
+  if (!p) throw new Error("Database pool not initialized");
+  const client = await p.connect();
+  try {
+    await client.query("SET LOCAL app.current_store_id = $1", [storeId]);
+    return await fn(client);
+  } finally {
+    // RESET clears session-level SET LOCAL automatically on release
+    client.release();
+  }
+}

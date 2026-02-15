@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
 import { useDailyClosingStore } from "../stores/dailyClosingStore";
@@ -57,6 +58,7 @@ interface DailyClosingScreenProps {
 }
 
 export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) {
+  const { t } = useTranslation();
   const {
     summary,
     history,
@@ -87,7 +89,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
   useEffect(() => {
     if (error) {
-      Alert.alert("Error", error);
+      Alert.alert(t("common.error"), error);
       clearError();
     }
   }, [error]);
@@ -128,12 +130,12 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
     }
 
     Alert.alert(
-      "Close Day",
-      `Are you sure you want to close the day for ${formatDateDDMMYYYY(selectedDate)}? This cannot be undone.`,
+      t("menu.dailyClosing"),
+      `${t("common.confirm")}? ${formatDateDDMMYYYY(selectedDate)}`,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Close Day",
+          text: t("menu.dailyClosing"),
           style: "destructive",
           onPress: async () => {
             const success = await closeDay({
@@ -142,7 +144,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
             });
             if (success) {
               setActualCash("");
-              Alert.alert("Success", "Day closed successfully.");
+              Alert.alert(t("common.success"), t("common.done"));
             }
           },
         },

@@ -127,6 +127,8 @@ export default function ProtectedLayout() {
 
   return (
     <div className="layout-wrapper">
+      {/* T-222: Skip to content link for keyboard navigation */}
+      <a href="#main-content" className="skip-to-content">Skip to content</a>
       {/* T-088: Mobile hamburger button — visible only on mobile */}
       {isMobile && !sidebarOpen && (
         <button
@@ -218,7 +220,7 @@ export default function ProtectedLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="sidebar-nav-section">
+        <nav className="sidebar-nav-section" aria-label="Main navigation">
           {/* AUDIT-RET-015: Use Link for SPA navigation instead of <a> full reloads */}
           {visibleNavItems.map((item) => (
             <Link
@@ -226,6 +228,7 @@ export default function ProtectedLayout() {
               to={`/s/${storeCode}${item.path ? `/${item.path}` : ''}`}
               onClick={() => isMobile && setSidebarOpen(false)}
               className={`sidebar-nav-link${isActive(item.path) ? ' active' : ''}`}
+              {...(isActive(item.path) ? { 'aria-current': 'page' as const } : {})}
             >
               {/* T-081: Lucide SVG icon */}
               <item.icon className="sidebar-nav-icon" />
@@ -245,6 +248,7 @@ export default function ProtectedLayout() {
                   to={`/s/${storeCode}/${item.path}`}
                   onClick={() => isMobile && setSidebarOpen(false)}
                   className={`sidebar-nav-link admin-link${isActive(item.path) ? ' active' : ''}`}
+                  {...(isActive(item.path) ? { 'aria-current': 'page' as const } : {})}
                 >
                   {/* T-081: Lucide SVG icon */}
                   <item.icon className="sidebar-nav-icon" />
@@ -304,7 +308,7 @@ export default function ProtectedLayout() {
         )}
 
         {/* Main Content — GAP-4: page-animate gives every page a subtle fade-in */}
-        <main className="page-animate" style={{ flex: 1, overflow: 'auto' }}>
+        <main id="main-content" className="page-animate" style={{ flex: 1, overflow: 'auto' }}>
           <Outlet />
         </main>
 

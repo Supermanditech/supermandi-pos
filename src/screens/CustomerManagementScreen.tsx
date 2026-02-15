@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+import { useTranslation } from "react-i18next";
 import { theme } from "../theme";
 import { formatMoney } from "../utils/money";
 import { BackHeader } from "../components/ui/BackHeader";
@@ -50,6 +51,7 @@ interface CustomerManagementScreenProps {
 export default function CustomerManagementScreen({
   onBack,
 }: CustomerManagementScreenProps) {
+  const { t } = useTranslation();
   const {
     customers,
     selectedCustomer,
@@ -144,7 +146,7 @@ export default function CustomerManagementScreen({
       // Refresh detail
       await fetchCustomerDetail(selectedCustomer.id);
     } else {
-      Alert.alert("Error", "Failed to update customer.");
+      Alert.alert(t("common.error"), t("common.tryAgain"));
     }
   }, [
     selectedCustomer,
@@ -166,11 +168,11 @@ export default function CustomerManagementScreen({
   // Add customer
   const handleAddCustomer = useCallback(async () => {
     if (!addName.trim()) {
-      Alert.alert("Required", "Customer name is required.");
+      Alert.alert(t("common.required"), t("validation.nameRequired"));
       return;
     }
     if (!addPhone.trim() || addPhone.trim().length < 10) {
-      Alert.alert("Required", "A valid 10-digit phone number is required.");
+      Alert.alert(t("common.required"), t("validation.phoneRequired"));
       return;
     }
 
@@ -190,9 +192,9 @@ export default function CustomerManagementScreen({
       setAddEmail("");
       setAddAddress("");
       setAddCreditLimit("");
-      Alert.alert("Success", "Customer added successfully.");
+      Alert.alert(t("common.success"), t("common.done"));
     } else {
-      Alert.alert("Error", error || "Failed to add customer.");
+      Alert.alert(t("common.error"), error || t("common.tryAgain"));
     }
   }, [addName, addPhone, addEmail, addAddress, createCustomer, error]);
 

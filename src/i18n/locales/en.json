@@ -410,7 +410,9 @@
     "invalidEmail": "Please enter a valid email",
     "invalidPhone": "Please enter a valid phone number",
     "invalidNumber": "Please enter a valid number",
-    "positiveNumber": "Please enter a positive number"
+    "positiveNumber": "Please enter a positive number",
+    "nameRequired": "Name is required",
+    "phoneRequired": "A valid 10-digit phone number is required"
   },
   "time": {
     "justNow": "Just now",

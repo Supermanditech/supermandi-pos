@@ -92,6 +92,8 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-slate-100">
+      {/* T-222: Skip to content for keyboard navigation */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-[10000] focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-br">Skip to content</a>
       {/* T-087: Mobile hamburger button */}
       <button
         className="md:hidden fixed top-4 left-4 z-40 p-2 bg-white border border-slate-200 rounded-lg shadow"
@@ -154,7 +156,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation — T-082: Lucide icon components */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1" aria-label="Main navigation">
           {navItems.map((item) => {
             // SUP-006: Use startsWith for sub-route active state (e.g. /orders/123 highlights /orders)
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -164,6 +166,7 @@ export default function DashboardLayout({
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-primary-600/20 text-white border border-primary-500/30'
@@ -225,7 +228,7 @@ export default function DashboardLayout({
       </Modal>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main id="main-content" className="flex-1 overflow-auto">
         {/* AUDIT-SUP-023: Removed duplicate inline banners — LimitedModeBanner handles all non-verified states */}
 
         {/* REG-AUTH-302: LIMITED MODE Banner for non-verified suppliers */}

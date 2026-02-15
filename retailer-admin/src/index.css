@@ -3,6 +3,35 @@
  * Font: system stack (no external import for CSP compliance)
  */
 
+/* T-222: WCAG skip-to-content link — visible on focus for keyboard users */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--primary, #2563eb);
+  color: #fff;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+}
+.skip-to-content:focus {
+  left: 0;
+}
+/* T-222: Screen-reader-only utility class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 :root {
   /* Primary (blue) — matches supplier primary-600/700 */
   --primary: #2563eb;
@@ -388,6 +417,72 @@ input, select, textarea {
 
   .main-content {
     margin-left: 0;
+  }
+
+  /* T-221: Mobile-responsive content padding */
+  .page-content {
+    padding: 1rem;
+  }
+
+  .page-header {
+    padding: 1rem;
+  }
+
+  /* T-221: Table horizontal scroll on mobile */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  /* T-221: Card padding reduction on mobile */
+  .card {
+    padding: 1rem;
+  }
+
+  /* T-221: Stack stat cards vertically on mobile */
+  .stat-card {
+    padding: 1rem;
+  }
+
+  /* T-221: Touch-friendly button/link targets (min 44px) */
+  .btn, .btn-primary, .btn-secondary, .btn-danger {
+    min-height: 44px;
+    padding: 0 1rem;
+  }
+
+  /* T-221: Modal full-width on mobile */
+  .modal-card {
+    width: 95%;
+    max-width: none;
+  }
+}
+
+/* T-221: Small phone breakpoint */
+@media (max-width: 480px) {
+  .page-header {
+    padding: 0.75rem;
+  }
+
+  .page-content {
+    padding: 0.75rem;
+  }
+
+  /* T-221: Compact table cells on small screens */
+  .table th,
+  .table td {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.8125rem;
+  }
+
+  /* T-221: Login card padding reduction */
+  .login-card-box {
+    padding: 1.25rem;
+  }
+
+  .login-main {
+    padding: 1rem 0.5rem;
   }
 }
 
@@ -1111,6 +1206,22 @@ input, select, textarea {
 .product-image-placeholder svg {
   width: 40%;
   height: 40%;
+}
+
+/* T-222: Focus-visible outlines for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.sidebar-nav-link:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: -2px;
+}
+
+/* T-222: aria-live region for status messages */
+[role="status"],
+[role="alert"] {
+  /* Ensure screen readers announce dynamic content */
 }
 
 /* T-099: Skeleton shimmer animation */
