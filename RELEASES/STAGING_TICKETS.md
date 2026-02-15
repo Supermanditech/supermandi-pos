@@ -618,3 +618,132 @@ Phase 5F-5I: UX + Advanced + Barcode
 6. **Offline safety**: Cache is read-only fallback. Mutations always through server when online.
 7. **India market**: DD/MM/YYYY, INR (₹), +91 on all new screens.
 8. **Typecheck clean**: `pnpm -r typecheck` after every batch.
+
+---
+
+## PHASE 6: 360° CTO PRODUCTION READINESS AUDIT (T-200 → T-235)
+
+> 36 tickets from comprehensive CTO-level audit across ALL platforms.
+> Audit method: 5 parallel deep-dive agents + 1 reconciliation agent. ~150+ raw findings → 9 false positives dropped → 36 final tickets.
+> Priority: 4 P0 blockers, 11 P1 high, 21 P2 medium.
+> Estimated effort: ~490 hours (7 S, 15 M, 10 L, 2 XL).
+
+### FALSE POSITIVES DROPPED (9 items that ALREADY WORK)
+
+1. `POST /api/v1/orders/create` "missing" → Backend has `/api/v1/pos/purchases` (correct route name)
+2. Webhooks/payments "missing" → Exists as `/razorpay/payments`
+3. Supplier CSV upload "missing" → Exists at `upload/page.tsx` with `uploadProductsCsv`
+4. Split payment "not implemented" → Fully implemented (`payments.ts` lines 361-606)
+5. BNPL dispute false success → Already fixed (catch block shows "Failed")
+6. Stock cap silent → Toast IS shown (`SellScanScreen.tsx:1856-1873`)
+7. Hindi voice NLU missing → Defaults to Hindi (`voiceOrderService.ts:386`)
+8. Store isolation "not enforced" → Middleware + query-level isolation comprehensive (reframed as P2 RLS)
+9. CSP/Helmet missing → WORKING (api-gateway has Helmet with HSTS, X-Frame-Options)
+
+---
+
+### P0 GO-LIVE BLOCKERS (4 tickets — platform BREAKS without these)
+
+| # | Title | Platform | What's Wrong | Impact | Fix | Effort |
+|---|-------|----------|-------------|--------|-----|--------|
+| T-200 | POS B2B order placement stubbed to "Coming Soon" | POS | `PurchaseScreen.tsx:929-931` — "Place Order" shows `Alert.alert("Coming Soon")` instead of calling `POST /api/v1/pos/purchases`. Backend fully implemented. | Retailers CANNOT place purchase orders from POS. B2B flow dead. | Wire button to purchases API, navigate to confirmation screen | M |
+| T-201 | Purchase history shows hardcoded Rs.0 for all orders | POS | `PurchaseHistoryScreen.tsx:47-54` — `totalValue: 0` hardcoded because ledger API doesn't return `unitCost`. | Financial tracking useless. Every purchase displays Rs.0. | Include `unit_cost` in ledger API response, update grouping logic | M |
+| T-202 | Retailer bank account fields not persisted | Retailer Web | `PaymentsPage.tsx:49-50` — bank/IFSC fields load empty with "Not stored in backend yet" comments. | Retailers can't configure bank details for payouts. | Add `bank_account_number` + `ifsc_code` to `platform.stores`, update settings API | M |
+| T-204 | UPI QR code has no visual expiry countdown | POS | Backend returns `expiresAt` (5-min expiry) but POS shows no countdown. QR expires silently. | Cashiers/customers wait forever. UPI (India's #1 payment) broken UX. | Add countdown timer, auto-refresh on expiry, "Tap to regenerate" | M |
+
+---
+
+### P1 HIGH PRIORITY (11 tickets — platform works but has serious gaps)
+
+| # | Title | Platform | Category | Fix | Effort |
+|---|-------|----------|----------|-----|--------|
+| T-205 | Supplier commission/fee transparency missing | Supplier Web | Business Logic | Add commission rate, gross, platform fee, net payout columns to earnings | M |
+| T-206 | Product images not displayed in product cards | Cross-Platform | UI-UX | Wire image display into POS/web cards. Backend upload works, DB stores URLs, but cards show placeholders | L |
+| T-207 | Stock-in PO validation missing | Backend | Data Integrity | Add PO existence validation before GRN creation in `stockIn.ts` | S |
+| T-208 | OTP verification rate limiting needs hardening | Backend | Security | 5 attempts per phone per 15 min on verification + exponential backoff + lockout | S |
+| T-209 | npm audit — 25 high-severity vulnerabilities | Backend | Security | `npm audit fix` + manual upgrades for breaking changes | M |
+| T-210 | Replace console.log with structured logging | Backend | Infrastructure | Introduce pino/winston, JSON output, correlation IDs. Replace 68+ console.* calls | L |
+| T-211 | Webhook idempotency uses in-memory Map | Backend | Infrastructure | Move `webhooks.ts:22-23` Map to Redis-based idempotency with TTL for multi-instance safety | M |
+| T-212 | Sales analytics dashboard missing on Retailer Admin | Retailer Web | UI-UX | Create AnalyticsPage with date range, charts, top products, payment breakdown | L |
+| T-213 | Offline sync conflict UI missing on POS | POS | UI-UX | Add SyncConflictScreen with pending/failed items and resolution options | M |
+| T-214 | Password strength validation missing | Backend | Security | Enforce min 8 chars, 1 number + 1 letter, common password blocklist | S |
+
+---
+
+### P2 MEDIUM PRIORITY (21 tickets — fix post-launch or in parallel)
+
+| # | Title | Platform | Category | Fix | Effort |
+|---|-------|----------|----------|-----|--------|
+| T-215 | UPI VPA regex inconsistency between POS and web | Cross-Platform | Data Integrity | Centralize VPA regex: `^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$` | S |
+| T-216 | Database RLS not enabled (defense-in-depth) | Backend | Security | Add PostgreSQL RLS policies on critical tables keyed on store_id | L |
+| T-217 | Hindi/regional language missing on web portals | Cross-Platform | UI-UX | Integrate react-i18next/next-intl, start with Hindi for nav/buttons/labels | XL |
+| T-218 | Customer CRM not exposed in Retailer Admin | Retailer Web | Business Logic | Create CustomersPage with list, search, due balances, purchase history | L |
+| T-219 | UPI refunds stay "pending" forever | Cross-Platform | Business Logic | Integrate Razorpay refund API for UPI, add admin UI for pending refunds | L |
+| T-220 | Error retry buttons missing on POS | POS | UI-UX | Add shared ErrorState component with retry callback across all screens | M |
+| T-221 | Mobile responsive untested on web portals | Cross-Platform | UI-UX | Audit for 360-414px viewports, add media queries | L |
+| T-222 | WCAG accessibility gaps | Cross-Platform | UI-UX | ARIA labels, keyboard nav, contrast check, skip-nav links | XL |
+| T-223 | Cloud Monitoring alerts not configured | Backend | Infrastructure | Alert policies for 5xx rate, p95 latency, memory, payment failures | M |
+| T-224 | Staff tracking on sales missing | POS | Business Logic | Add staff_id to sales, populate from POS staff context, show in receipts | M |
+| T-225 | Daily closing report not fully wired on POS | POS | UI-UX | Wire DailyClosingScreen to backend API, show cash/UPI breakdown | M |
+| T-226 | Supplier order acceptance flow incomplete | Supplier Web | Business Logic | Complete accept/reject/ship workflow, propagate status to retailer+POS | L |
+| T-227 | Khata integration needs verification | POS | Business Logic | Verify khata screen wired to backend, integrates with DUE payment checkout | M |
+| T-228 | Invoice PDF service has uncommitted changes | Backend | Infrastructure | Review, test, commit `invoicePdfService.ts` + `invoices.ts` changes | S |
+| T-229 | Voice product search returns empty | POS | Business Logic | Implement product search callback in voice.ts to query store_products by name | M |
+| T-230 | Auto-reorder suggestions not wired E2E | Cross-Platform | Business Logic | Verify reorder algorithm, wire retailer-admin page to create POs from suggestions | L |
+| T-231 | No overdue payment reminders | Backend | Business Logic | Cloud Scheduler job to check overdue + send SMS/push notifications | L |
+| T-232 | GRN alerts have no delivery mechanism | Backend | Business Logic | Wire to FCM push or in-app notification center | M |
+| T-233 | Barcode sheet printing UX unverified | SuperAdmin | UI-UX | Verify API returns printable PDF, ensure retailer-admin has download UI | S |
+| T-234 | Feature flag admin UI missing | SuperAdmin | Infrastructure | Add FeatureFlagsPage to superadmin with toggle controls per store | M |
+| T-235 | GST compliance document flow incomplete | Cross-Platform | Business Logic | Verify GST summary report, GSTR-1 export, document storage working E2E | M |
+
+---
+
+### EXECUTION ORDER (Phase 6)
+
+```
+Wave 1 — P0 Blockers (before ANY deployment):
+  T-200 → T-201 → T-202 → T-204
+
+Wave 2 — P1 Security (before production exposure):
+  T-208 → T-214 → T-209 → T-211
+
+Wave 3 — P1 Infrastructure:
+  T-210 → T-207
+
+Wave 4 — P1 Features:
+  T-205 → T-206 → T-212 → T-213
+
+Wave 5 — P2 Quick Wins (S effort):
+  T-215 → T-228 → T-233
+
+Wave 6 — P2 Medium (parallel work):
+  T-218, T-219, T-220, T-223, T-224, T-225, T-226, T-227, T-229, T-230, T-231, T-232, T-234, T-235
+
+Wave 7 — P2 Large (post-launch):
+  T-216, T-217, T-221, T-222
+```
+
+### ZERO REGRESSION RULES FOR PHASE 6
+
+1. **P0 blockers first**: No deployment until T-200, T-201, T-202, T-204 are all resolved.
+2. **Security before exposure**: OTP hardening (T-208) and password strength (T-214) before any public access.
+3. **Schema additive only**: New columns with DEFAULT null/new tables. Never alter existing column types.
+4. **Store isolation**: All new endpoints derive `store_id` from JWT only.
+5. **Price integrity**: All money in minor units (paise). Integer arithmetic only.
+6. **India market**: DD/MM/YYYY, INR, +91 on all new screens.
+7. **Typecheck clean**: `pnpm -r typecheck` after every batch.
+8. **Multi-instance safety**: T-211 webhook fix must work across Cloud Run instances.
+
+---
+
+## GRAND TOTAL SUMMARY
+
+| Phase | Range | Count | Status |
+|-------|-------|-------|--------|
+| Phase 1: Staging UI/UX Fixes | T-001 → T-053 | 53 | ALL DONE |
+| Phase 2: E2E Production Implementation | T-054 → T-073 | 20 | ALL DONE |
+| Phase 3: UI/UX Professional Polish | T-074 → T-111 | 38 | ALL DONE |
+| Phase 4: Wiring & Navigation | T-112 → T-127 | 16 | ALL DONE |
+| Phase 5: Production Audit (POS+Cross) | T-128 → T-199 | 72 | ALL DONE |
+| **Phase 6: 360° CTO Audit** | **T-200 → T-235** | **36** | **QUEUED** |
+| **GRAND TOTAL** | **T-001 → T-235** | **235** | **199 DONE / 36 QUEUED** |

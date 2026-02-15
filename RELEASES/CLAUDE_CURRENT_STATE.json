@@ -1,9 +1,17 @@
 {
-  "version": "16.0",
-  "lastUpdated": "2026-02-16T07:00:00+05:30",
-  "currentPhase": "Phase 5 COMPLETE — All 199 tickets done",
+  "version": "17.0",
+  "lastUpdated": "2026-02-15T23:30:00+05:30",
+  "currentPhase": "Phase 6: 360° CTO Production Readiness Audit",
   "currentTicket": null,
-  "ticketQueue": [],
+  "ticketQueue": [
+    "T-200", "T-201", "T-202", "T-204",
+    "T-208", "T-214", "T-209", "T-211",
+    "T-210", "T-207",
+    "T-205", "T-206", "T-212", "T-213",
+    "T-215", "T-228", "T-233",
+    "T-218", "T-219", "T-220", "T-223", "T-224", "T-225", "T-226", "T-227", "T-229", "T-230", "T-231", "T-232", "T-234", "T-235",
+    "T-216", "T-217", "T-221", "T-222"
+  ],
   "ticketStatus": {
     "T-054": "DONE", "T-055": "DONE",
     "T-056": "DONE", "T-057": "DONE", "T-058": "DONE", "T-059": "DONE", "T-060": "DONE", "T-061": "DONE",
@@ -35,7 +43,17 @@
     "T-180": "DONE", "T-181": "DONE", "T-182": "DONE", "T-183": "DONE", "T-184": "DONE",
     "T-185": "DONE", "T-186": "DONE", "T-187": "DONE", "T-188": "DONE", "T-189": "DONE", "T-190": "DONE",
     "T-191": "DONE", "T-192": "DONE", "T-193": "DONE", "T-194": "DONE", "T-195": "DONE",
-    "T-196": "DONE", "T-197": "DONE", "T-198": "DONE", "T-199": "DONE"
+    "T-196": "DONE", "T-197": "DONE", "T-198": "DONE", "T-199": "DONE",
+    "T-200": "QUEUED", "T-201": "QUEUED", "T-202": "QUEUED", "T-204": "QUEUED",
+    "T-205": "QUEUED", "T-206": "QUEUED", "T-207": "QUEUED", "T-208": "QUEUED",
+    "T-209": "QUEUED", "T-210": "QUEUED", "T-211": "QUEUED", "T-212": "QUEUED",
+    "T-213": "QUEUED", "T-214": "QUEUED",
+    "T-215": "QUEUED", "T-216": "QUEUED", "T-217": "QUEUED", "T-218": "QUEUED",
+    "T-219": "QUEUED", "T-220": "QUEUED", "T-221": "QUEUED", "T-222": "QUEUED",
+    "T-223": "QUEUED", "T-224": "QUEUED", "T-225": "QUEUED", "T-226": "QUEUED",
+    "T-227": "QUEUED", "T-228": "QUEUED", "T-229": "QUEUED", "T-230": "QUEUED",
+    "T-231": "QUEUED", "T-232": "QUEUED", "T-233": "QUEUED", "T-234": "QUEUED",
+    "T-235": "QUEUED"
   },
   "executionPhases": [
     { "phase": 1, "name": "Retailer → POS Sync", "tickets": ["T-054", "T-055"], "status": "DONE" },
@@ -57,7 +75,14 @@
     { "phase": 17, "name": "5F: POS UX Enhancements", "tickets": ["T-130", "T-133", "T-135", "T-136", "T-137", "T-138"], "status": "DONE" },
     { "phase": 18, "name": "5G: Purchase + Business Logic", "tickets": ["T-148", "T-157", "T-182", "T-193", "T-199"], "status": "DONE" },
     { "phase": 19, "name": "5H: Advanced Features", "tickets": ["T-152", "T-156", "T-158", "T-164", "T-165", "T-189", "T-190", "T-195", "T-197"], "status": "DONE" },
-    { "phase": 20, "name": "5I: Barcode Improvements", "tickets": ["T-166", "T-167", "T-168", "T-169", "T-170", "T-171", "T-172"], "status": "DONE" }
+    { "phase": 20, "name": "5I: Barcode Improvements", "tickets": ["T-166", "T-167", "T-168", "T-169", "T-170", "T-171", "T-172"], "status": "DONE" },
+    { "phase": 21, "name": "6A: P0 Go-Live Blockers", "tickets": ["T-200", "T-201", "T-202", "T-204"], "status": "QUEUED" },
+    { "phase": 22, "name": "6B: P1 Security Hardening", "tickets": ["T-208", "T-214", "T-209", "T-211"], "status": "QUEUED" },
+    { "phase": 23, "name": "6C: P1 Infrastructure", "tickets": ["T-210", "T-207"], "status": "QUEUED" },
+    { "phase": 24, "name": "6D: P1 Features & UX", "tickets": ["T-205", "T-206", "T-212", "T-213"], "status": "QUEUED" },
+    { "phase": 25, "name": "6E: P2 Quick Wins", "tickets": ["T-215", "T-228", "T-233"], "status": "QUEUED" },
+    { "phase": 26, "name": "6F: P2 Medium", "tickets": ["T-218", "T-219", "T-220", "T-223", "T-224", "T-225", "T-226", "T-227", "T-229", "T-230", "T-231", "T-232", "T-234", "T-235"], "status": "QUEUED" },
+    { "phase": 27, "name": "6G: P2 Large (Post-Launch)", "tickets": ["T-216", "T-217", "T-221", "T-222"], "status": "QUEUED" }
   ],
   "completedPhase1": {
     "range": "T-001 → T-053",
@@ -81,6 +106,19 @@
     "commit": "c397950",
     "summary": "72 production audit tickets: 10 schema migrations, P0 APIs (stock locking, token blacklist, SSE sync, QR expiry, refunds), POS features (search, images, voice, haptics, offline cache, substitutions, barcode sheets, sync widget, khata, customers, shifts, closings, returns, reports, printer settings), web portal features (reconciliation, purchase orders, image upload, batch approval, receipt customization, BNPL interest), auto-categorization (19 Indian FMCG categories)"
   },
+  "phase6_CTOAudit": {
+    "range": "T-200 → T-235",
+    "count": 36,
+    "status": "QUEUED — 36 tickets from 360° CTO production readiness audit",
+    "auditMethod": "5 parallel deep-audit agents + 1 reconciliation agent",
+    "falsePositivesDropped": 9,
+    "breakdown": {
+      "P0_blockers": 4,
+      "P1_high": 11,
+      "P2_medium": 21
+    },
+    "estimatedEffort": "~490 hours total (7 S, 15 M, 10 L, 2 XL)"
+  },
   "infraStatus": {
     "A1_WIF": "DONE",
     "A2_SECRETS": "DONE",
@@ -91,9 +129,9 @@
     "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
   },
   "phaseSnapshot": {
-    "totalTickets": 199,
+    "totalTickets": 235,
     "completed": 199,
-    "queued": 0,
+    "queued": 36,
     "inProgress": 0,
     "headSHA": "c397950",
     "stagingLive": true,
@@ -120,13 +158,33 @@
       "Dependabot: 33 npm vulnerabilities (25 high) — review before production"
     ]
   },
+  "ctoAudit": {
+    "status": "COMPLETE — tickets created",
+    "date": "2026-02-15",
+    "method": "5 parallel deep-dive agents (POS, Retailer+Supplier, Backend+Infra, API Wiring, UI/UX) + 1 reconciliation agent",
+    "rawFindings": "~150+",
+    "falsePositivesDropped": 9,
+    "finalTickets": 36,
+    "falsePositiveDetails": [
+      "POST /api/v1/orders/create 'missing' → Backend has /api/v1/pos/purchases (correct route)",
+      "Webhooks/payments 'missing' → Exists as /razorpay/payments",
+      "Supplier CSV upload 'missing' → Exists at upload/page.tsx with uploadProductsCsv",
+      "Split payment 'not implemented' → Fully implemented (payments.ts:361-606)",
+      "BNPL dispute false success → Already fixed (catch block shows 'Failed')",
+      "Stock cap silent → Toast IS shown (SellScanScreen.tsx:1856-1873)",
+      "Hindi voice NLU missing → Defaults to Hindi (voiceOrderService.ts:386)",
+      "Store isolation 'not enforced' → Middleware + query-level isolation comprehensive (reframed as P2 RLS)",
+      "CSP/Helmet missing → WORKING (api-gateway has Helmet with HSTS, X-Frame-Options)"
+    ]
+  },
   "launchGeography": "India — INR (₹), +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "ALL 199 TICKETS COMPLETE. Next: CI verification, staging deploy with new migrations, full E2E audit",
+  "nextAction": "Phase 6 tickets queued (T-200→T-235). VS Code Claude to implement. Priority: P0 blockers first (T-200, T-201, T-202, T-204)",
   "lastActions": [
-    "Phase 5 complete: 72 tickets (T-128→T-199) committed as c397950 and pushed",
-    "12 parallel agents executed all Phase 5 categories (5A→5I)",
-    "107 files changed, +18,864 lines added",
-    "State file updated to v16.0 — 199/199 tickets DONE"
+    "360° CTO Production Readiness Audit completed by 5 parallel agents",
+    "9 false positives identified and dropped (features already working)",
+    "36 deduplicated tickets created (T-200→T-235): 4 P0, 11 P1, 21 P2",
+    "State file updated to v17.0 — 199 DONE + 36 QUEUED = 235 total",
+    "Ticket details in STAGING_TICKETS.md Phase 6 section + plan file"
   ]
 }
