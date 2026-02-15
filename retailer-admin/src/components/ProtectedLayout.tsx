@@ -339,28 +339,20 @@ export default function ProtectedLayout() {
           <Outlet />
         </main>
 
-        {/* RET-002: Debug footer only in development — no store/API info leak in production */}
-        {import.meta.env.DEV && (
-          <footer style={{
-            padding: '0.6rem 2rem',
-            background: '#0f172a',
-            color: '#64748b',
-            fontSize: '0.7rem',
-            display: 'flex',
-            gap: '2rem',
-            borderTop: '1px solid #1e293b',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}>
-            <div style={{ display: 'flex', gap: '2rem' }}>
-              <span>StoreCode: <strong style={{ color: '#38bdf8' }}>{storeCode}</strong></span>
-              <span>StoreId: <strong style={{ color: '#38bdf8' }}>{store?.id || '...'}</strong></span>
-              <span>API: <strong style={{ color: '#38bdf8' }}>{import.meta.env.VITE_API_BASE_URL || window.location.origin}</strong></span>
-            </div>
-            {/* RET-AUD-005: Build fingerprint for deployment verification */}
-            <BuildStamp />
-          </footer>
-        )}
+        {/* T-020: Standardized footer — copyright + build stamp (all environments) */}
+        <footer style={{
+          padding: '0.6rem 2rem',
+          background: '#f8fafc',
+          color: '#94a3b8',
+          fontSize: '0.75rem',
+          display: 'flex',
+          borderTop: '1px solid #e2e8f0',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span>&copy; 2026 SuperManditech. All rights reserved.</span>
+          <BuildStamp />
+        </footer>
       </div>
 
       {/* GL-WF-028: Session Expiry Warning Modal */}
