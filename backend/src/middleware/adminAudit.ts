@@ -262,6 +262,7 @@ async function writeAuditLog(params: {
 }): Promise<void> {
   try {
     const pool = getPool();
+    if (!pool) return; // No DB connection available
     await pool.query(
       `INSERT INTO admin.audit_log (
         actor_user_id, actor_ip, actor_user_agent,
