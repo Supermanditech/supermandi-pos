@@ -20,10 +20,10 @@ export const adminInvoicesRouter = Router();
 
 // GAP-5: SuperMandi entity details for invoices — populated from env vars
 const SUPERMANDI_ENTITY = {
-  name: process.env.SUPERMANDI_ENTITY_NAME || "SuperMandi Technologies Pvt. Ltd.",
-  gstin: process.env.SUPERMANDI_GSTIN || "",
-  address: process.env.SUPERMANDI_ADDRESS || "",
-  state: process.env.SUPERMANDI_STATE || "Maharashtra",
+  name: process.env.SUPERMANDI_ENTITY_NAME || "SUPERMANDI TECH PRIVATE LIMITED",
+  gstin: process.env.SUPERMANDI_GSTIN || "08ABRCS8282R1ZY",
+  address: process.env.SUPERMANDI_ADDRESS || "166/1, Bhandu Khurd, Jodhpur, Rajasthan - 342014",
+  state: process.env.SUPERMANDI_STATE || "Rajasthan",
 };
 
 // =============================================================================

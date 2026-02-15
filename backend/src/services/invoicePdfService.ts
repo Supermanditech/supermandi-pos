@@ -109,7 +109,7 @@ export function generateInvoicePdf(data: InvoicePdfData): PDFKit.PDFDocument {
     margin: 40,
     info: {
       Title: `Invoice ${data.invoiceNumber}`,
-      Author: "SuperMandi Technologies Pvt. Ltd.",
+      Author: "SUPERMANDI TECH PRIVATE LIMITED",
     },
   });
 
@@ -369,7 +369,7 @@ export function generateInvoicePdf(data: InvoicePdfData): PDFKit.PDFDocument {
     });
 
   y += 10;
-  doc.text("SuperMandi Technologies Pvt. Ltd.", leftCol, y, {
+  doc.text("SUPERMANDI TECH PRIVATE LIMITED", leftCol, y, {
     align: "center",
     width: pageWidth,
   });
