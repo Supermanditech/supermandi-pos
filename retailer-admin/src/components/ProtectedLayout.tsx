@@ -297,8 +297,8 @@ export default function ProtectedLayout() {
           </div>
         )}
 
-        {/* Main Content */}
-        <main style={{ flex: 1, overflow: 'auto' }}>
+        {/* Main Content — GAP-4: page-animate gives every page a subtle fade-in */}
+        <main className="page-animate" style={{ flex: 1, overflow: 'auto' }}>
           <Outlet />
         </main>
 

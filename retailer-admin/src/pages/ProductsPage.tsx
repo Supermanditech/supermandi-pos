@@ -11,6 +11,9 @@ import VariantManager from '../components/VariantManager';
 import Breadcrumb from '../components/Breadcrumb';
 // T-120: URL state for search persistence
 import { useUrlState } from '../hooks/useUrlState';
+// GAP-2: EmptyState component for consistent empty states
+import EmptyState from '../components/EmptyState';
+import { Package } from 'lucide-react';
 
 interface Supplier {
   id: string;
@@ -1555,13 +1558,22 @@ Loose Rice,, , 45, 40, , KG, 25`}
               Loading products...
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: error ? '#dc2626' : 'var(--text-muted)' }}>
+            <div>
               {/* ISSUE-MICRO-048: Distinguish error state from empty state */}
               {error
-                ? 'Could not load products. Please try again.'
-                : searchTerm
-                  ? 'No products match your search.'
-                  : 'No products yet. Add your first product above!'}
+                ? <div style={{ padding: '2rem', textAlign: 'center', color: '#dc2626' }}>Could not load products. Please try again.</div>
+                : <EmptyState
+                    icon={Package}
+                    title={searchTerm ? 'No products match your search' : 'No products yet'}
+                    description={searchTerm
+                      ? 'Try a different search term or clear the search.'
+                      : 'Add your first product to get started with inventory management.'}
+                    action={!searchTerm ? (
+                      <button className="btn btn-primary" onClick={() => { setShowForm(true); setEditingProduct(null); setFormData(initialFormData); }}>
+                        + Add Product
+                      </button>
+                    ) : undefined}
+                  />}
             </div>
           ) : (
             <table className="table">

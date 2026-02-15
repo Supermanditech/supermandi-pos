@@ -18,6 +18,14 @@ import { generateInvoicePdf } from "../../../services/invoicePdfService";
 
 export const adminInvoicesRouter = Router();
 
+// GAP-5: SuperMandi entity details for invoices — populated from env vars
+const SUPERMANDI_ENTITY = {
+  name: process.env.SUPERMANDI_ENTITY_NAME || "SuperMandi Technologies Pvt. Ltd.",
+  gstin: process.env.SUPERMANDI_GSTIN || "",
+  address: process.env.SUPERMANDI_ADDRESS || "",
+  state: process.env.SUPERMANDI_STATE || "Maharashtra",
+};
+
 // =============================================================================
 // T-071: Buy-Resell Invoice Generation
 // =============================================================================
@@ -100,8 +108,10 @@ adminInvoicesRouter.post("/invoices/purchase", requireAdminToken, requirePermiss
       },
       buyer: {
         type: "supermandi",
-        name: "SuperMandi Technologies Pvt. Ltd.",
-        // SuperMandi GSTIN and address would come from platform config
+        name: SUPERMANDI_ENTITY.name,
+        gstin: SUPERMANDI_ENTITY.gstin || undefined,
+        address: SUPERMANDI_ENTITY.address || undefined,
+        state: SUPERMANDI_ENTITY.state || undefined,
       },
       items: invoiceItems,
       dueDate,
@@ -196,7 +206,10 @@ adminInvoicesRouter.post("/invoices/sale", requireAdminToken, requirePermission(
       invoiceType: "sale",
       seller: {
         type: "supermandi",
-        name: "SuperMandi Technologies Pvt. Ltd.",
+        name: SUPERMANDI_ENTITY.name,
+        gstin: SUPERMANDI_ENTITY.gstin || undefined,
+        address: SUPERMANDI_ENTITY.address || undefined,
+        state: SUPERMANDI_ENTITY.state || undefined,
       },
       buyer: {
         type: "store",
@@ -317,7 +330,10 @@ adminInvoicesRouter.post("/invoices/commission", requireAdminToken, requirePermi
       invoiceType: "commission",
       seller: {
         type: "supermandi",
-        name: "SuperMandi Technologies Pvt. Ltd.",
+        name: SUPERMANDI_ENTITY.name,
+        gstin: SUPERMANDI_ENTITY.gstin || undefined,
+        address: SUPERMANDI_ENTITY.address || undefined,
+        state: SUPERMANDI_ENTITY.state || undefined,
       },
       buyer: {
         type: "supplier",

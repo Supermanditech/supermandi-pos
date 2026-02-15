@@ -17,6 +17,7 @@ export interface InvoiceParty {
   name: string;
   gstin?: string;
   address?: string;
+  state?: string; // GAP-5: State for GST inter/intra-state determination
 }
 
 export interface InvoiceItemInput {

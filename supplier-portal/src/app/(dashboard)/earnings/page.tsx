@@ -9,6 +9,9 @@ import { getPayouts, getPayoutSummary, getKycStatus, getPayoutOrders, Payout, Pa
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+// GAP-3: EmptyState component for consistent empty states
+import EmptyState from '@/components/EmptyState';
+import { Wallet } from 'lucide-react';
 
 export default function EarningsPage() {
   const [page, setPage] = useState(1);
@@ -165,12 +168,11 @@ export default function EarningsPage() {
             </button>
           </div>
         ) : payouts.length === 0 ? (
-          <div className="text-center py-8 text-slate-500">
-            <p className="text-lg mb-2">No payouts yet</p>
-            <p className="text-sm">
-              Payouts are processed weekly for delivered orders.
-            </p>
-          </div>
+          <EmptyState
+            icon={Wallet}
+            title="No payouts yet"
+            description="Payouts are processed weekly for delivered orders. Your earnings will appear here."
+          />
         ) : (
           <>
             {/* Desktop Table */}

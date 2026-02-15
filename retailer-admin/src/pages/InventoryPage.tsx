@@ -8,6 +8,9 @@ import { formatDateTime } from '../lib/formatters';
 import Breadcrumb from '../components/Breadcrumb';
 // T-120: URL state for filter persistence
 import { useUrlState } from '../hooks/useUrlState';
+// GAP-2: EmptyState component for consistent empty states
+import EmptyState from '../components/EmptyState';
+import { ClipboardList } from 'lucide-react';
 
 // FE-RETAILER-INVENTORY-001: Real ledger entry from API
 interface LedgerEntry {
@@ -260,12 +263,23 @@ export default function InventoryPage() {
                 </tr>
               ) : ledgerEntries.length === 0 ? (
                 <tr>
-                  {/* GL-CRIT-0073: Contextual empty state based on filter */}
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                    {filter === 'all' && 'No ledger entries found. Stock movements will appear here once you start selling or receiving inventory.'}
-                    {filter === 'INWARD' && 'No inward entries found. These will appear when you receive stock from suppliers or record purchase receipts.'}
-                    {filter === 'OUTWARD' && 'No sales recorded yet. Outward entries will appear when items are sold through POS.'}
-                    {filter === 'ADJUSTMENT' && 'No stock adjustments found. Use this to track manual stock corrections, damage, or expired goods.'}
+                  {/* GL-CRIT-0073: Contextual empty state based on filter — GAP-2: Using EmptyState component */}
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon={ClipboardList}
+                      title={
+                        filter === 'INWARD' ? 'No inward entries found'
+                        : filter === 'OUTWARD' ? 'No sales recorded yet'
+                        : filter === 'ADJUSTMENT' ? 'No stock adjustments found'
+                        : 'No ledger entries yet'
+                      }
+                      description={
+                        filter === 'INWARD' ? 'These will appear when you receive stock from suppliers or record purchase receipts.'
+                        : filter === 'OUTWARD' ? 'Outward entries will appear when items are sold through POS.'
+                        : filter === 'ADJUSTMENT' ? 'Use this to track manual stock corrections, damage, or expired goods.'
+                        : 'Stock movements will appear here once you start selling or receiving inventory.'
+                      }
+                    />
                   </td>
                 </tr>
               ) : (

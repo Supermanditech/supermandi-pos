@@ -6,6 +6,9 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 // T-120: URL state for search persistence
 import { useUrlState } from '../hooks/useUrlState';
+// GAP-2: EmptyState component for consistent empty states
+import EmptyState from '../components/EmptyState';
+import { Truck } from 'lucide-react';
 
 // Debounce delay for server-side search (RCAT-SUP-API-001)
 const SEARCH_DEBOUNCE_MS = 350;
@@ -1311,8 +1314,17 @@ export default function SuppliersPage() {
             Loading suppliers...
           </div>
         ) : suppliers.length === 0 && !searchTerm ? (
-          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            No suppliers yet. Add your first supplier above!
+          <div className="card">
+            <EmptyState
+              icon={Truck}
+              title="No suppliers yet"
+              description="Add your first supplier to start managing your supply chain."
+              action={
+                <button className="btn btn-primary" onClick={() => { setShowForm(true); setEditingSupplier(null); setFormData(initialFormData); setActiveSection('identity'); }}>
+                  + Add Supplier
+                </button>
+              }
+            />
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

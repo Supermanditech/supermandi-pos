@@ -9,6 +9,9 @@ import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 // T-120: URL state for filter persistence
 import { useUrlState } from '../hooks/useUrlState';
+// GAP-2: EmptyState component for consistent empty states
+import EmptyState from '../components/EmptyState';
+import { FileText } from 'lucide-react';
 
 interface InvoiceListItem {
   id: string;
@@ -180,7 +183,11 @@ export default function InvoicesPage() {
 
       {/* Table */}
       {!loading && invoices.length === 0 && (
-        <div style={{ padding: "2rem", textAlign: "center", color: "#9ca3af" }}>No invoices found.</div>
+        <EmptyState
+          icon={FileText}
+          title="No invoices yet"
+          description="Invoices will appear here once orders are processed and billed."
+        />
       )}
 
       {!loading && invoices.length > 0 && (

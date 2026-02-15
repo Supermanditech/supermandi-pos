@@ -18,6 +18,9 @@ import { formatCurrency } from '@/lib/formatters';
 import Breadcrumb from '@/components/Breadcrumb';
 // T-121: URL state for search persistence
 import { useUrlState } from '@/hooks/useUrlState';
+// GAP-3: EmptyState component for consistent empty states
+import EmptyState from '@/components/EmptyState';
+import { Package } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -672,15 +675,19 @@ export default function ProductsPage() {
             </tbody>
           </table>
         ) : (
-          <div className="p-8 text-center text-slate-500">
-            <p>No products found.</p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-2 text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Add your first product
-            </button>
-          </div>
+          <EmptyState
+            icon={Package}
+            title="No products yet"
+            description="Add your first product to start building your catalog."
+            action={
+              <button
+                onClick={() => setShowForm(true)}
+                className="btn btn-primary"
+              >
+                + Add Product
+              </button>
+            }
+          />
         )}
       </div>
 

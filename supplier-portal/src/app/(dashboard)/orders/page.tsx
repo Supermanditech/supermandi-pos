@@ -9,6 +9,9 @@ import { formatCurrency, formatDateTime } from '@/lib/formatters';
 import Breadcrumb from '@/components/Breadcrumb';
 // T-121: URL state for filter persistence
 import { useUrlState } from '@/hooks/useUrlState';
+// GAP-3: EmptyState component for consistent empty states
+import EmptyState from '@/components/EmptyState';
+import { ShoppingCart } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -367,12 +370,11 @@ export default function OrdersPage() {
             </tbody>
           </table>
         ) : (
-          <div className="p-8 text-center text-slate-500">
-            <p>No orders found.</p>
-            <p className="text-sm mt-1">
-              Orders will appear here when retailers place orders.
-            </p>
-          </div>
+          <EmptyState
+            icon={ShoppingCart}
+            title="No orders yet"
+            description="Orders will appear here when retailers place orders for your products."
+          />
         )}
       </div>
 

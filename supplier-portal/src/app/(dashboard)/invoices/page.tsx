@@ -9,6 +9,9 @@ import { getSupplierInvoices, getSupplierInvoiceDetail, type SupplierInvoice, ty
 import { formatCurrency, formatDate } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
 import Breadcrumb from '@/components/Breadcrumb';
+// GAP-3: EmptyState component for consistent empty states
+import EmptyState from '@/components/EmptyState';
+import { FileText } from 'lucide-react';
 
 export default function InvoicesPage() {
   const [page, setPage] = useState(1);
@@ -102,7 +105,11 @@ export default function InvoicesPage() {
 
       {/* Empty */}
       {!isLoading && !isError && invoices.length === 0 && (
-        <div className="p-8 text-center text-slate-400">No invoices found.</div>
+        <EmptyState
+          icon={FileText}
+          title="No invoices yet"
+          description="Invoices will appear here once orders are completed and billed."
+        />
       )}
 
       {/* Table */}
