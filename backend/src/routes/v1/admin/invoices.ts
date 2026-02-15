@@ -223,6 +223,248 @@ adminInvoicesRouter.post("/invoices/sale", requireAdminToken, requirePermission(
 });
 
 // =============================================================================
+// T-072: Platform Fee Invoice Generation
+// =============================================================================
+
+/**
+ * POST /api/v1/admin/invoices/commission
+ * T-072: Generate a commission/platform-fee invoice (SuperMandi → Supplier)
+ * Used when supplier sells directly to retailer and SuperMandi charges a fee
+ * The commission invoice is issued BY SuperMandi TO the supplier
+ */
+adminInvoicesRouter.post("/invoices/commission", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const {
+    supplierId,
+    storeId,
+    items,
+    platformFeePercent,
+    referenceNote,
+    dueDate,
+    orderId,
+  } = req.body || {};
+  const adminId = (req as any).adminId;
+
+  if (!supplierId) return res.status(400).json({ error: "supplierId is required" });
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: "items array is required and must not be empty" });
+  }
+  if (!platformFeePercent || platformFeePercent <= 0 || platformFeePercent > 100) {
+    return res.status(400).json({ error: "platformFeePercent must be between 0 and 100" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Get supplier details
+    const supplierResult = await pool.query(
+      `SELECT id, business_name, gstin, city, state,
+              COALESCE(address_line1, '') || ' ' || COALESCE(city, '') || ' ' || COALESCE(state, '') as full_address
+       FROM supplier.suppliers WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    if (supplierResult.rows.length === 0) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+    const supplier = supplierResult.rows[0];
+
+    // Get store details if provided (for reference)
+    let storeName: string | undefined;
+    if (storeId) {
+      const storeResult = await pool.query(
+        `SELECT name FROM platform.stores WHERE id = $1::uuid`,
+        [storeId]
+      );
+      if (storeResult.rows.length > 0) {
+        storeName = storeResult.rows[0].name;
+      }
+    }
+
+    // Resolve product details — these are the items the supplier sold
+    const invoiceItems: InvoiceItemInput[] = [];
+    for (const item of items) {
+      const productResult = await pool.query(
+        `SELECT id, name, supplier_sku, hsn_code, gst_rate, purchase_price, unit
+         FROM catalog.supplier_products
+         WHERE id = $1::uuid AND supplier_id = $2::uuid`,
+        [item.productId, supplierId]
+      );
+
+      if (productResult.rows.length === 0) {
+        return res.status(400).json({ error: `Product ${item.productId} not found for this supplier` });
+      }
+      const product = productResult.rows[0];
+
+      invoiceItems.push({
+        productId: product.id,
+        supplierProductId: product.id,
+        productName: product.name,
+        productSku: product.supplier_sku,
+        hsnCode: product.hsn_code || item.hsnCode,
+        quantity: item.quantity,
+        unit: product.unit || "PCS",
+        unitPriceMinor: item.unitPriceMinor || product.purchase_price,
+        discountMinor: item.discountMinor || 0,
+        gstRate: item.gstRate ?? product.gst_rate ?? 0,
+      });
+    }
+
+    // Commission invoice: SuperMandi (seller of service) charges the supplier (buyer of service)
+    const invoiceInput: CreateInvoiceInput = {
+      invoiceModel: "platform_fee",
+      invoiceType: "commission",
+      seller: {
+        type: "supermandi",
+        name: "SuperMandi Technologies Pvt. Ltd.",
+      },
+      buyer: {
+        type: "supplier",
+        id: supplier.id,
+        name: supplier.business_name,
+        gstin: supplier.gstin,
+        address: supplier.full_address,
+      },
+      items: invoiceItems,
+      platformFeePercent,
+      dueDate,
+      orderId,
+      referenceNote: referenceNote || (storeName ? `Commission on sales to ${storeName}` : undefined),
+      createdBy: adminId,
+    };
+
+    const invoice = await createInvoice(pool, invoiceInput);
+
+    return res.status(201).json({
+      success: true,
+      data: invoice,
+    });
+  } catch (err: any) {
+    console.error("[admin/invoices/commission] Error:", err);
+    return res.status(500).json({ error: "Failed to create commission invoice" });
+  }
+});
+
+/**
+ * POST /api/v1/admin/invoices/supplier-sale
+ * T-072: Generate a supplier direct-sale invoice (Supplier → Retailer Store)
+ * Used in platform-fee model: supplier sells directly to retailer
+ * Invoice issued by the supplier, SuperMandi records it for tracking
+ */
+adminInvoicesRouter.post("/invoices/supplier-sale", requireAdminToken, requirePermission("products", "approve"), async (req, res) => {
+  const {
+    supplierId,
+    storeId,
+    items,
+    referenceNote,
+    dueDate,
+    orderId,
+  } = req.body || {};
+  const adminId = (req as any).adminId;
+
+  if (!supplierId) return res.status(400).json({ error: "supplierId is required" });
+  if (!storeId) return res.status(400).json({ error: "storeId is required" });
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: "items array is required and must not be empty" });
+  }
+
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  try {
+    // Get supplier details
+    const supplierResult = await pool.query(
+      `SELECT id, business_name, gstin, city, state,
+              COALESCE(address_line1, '') || ' ' || COALESCE(city, '') || ' ' || COALESCE(state, '') as full_address
+       FROM supplier.suppliers WHERE id = $1::uuid`,
+      [supplierId]
+    );
+
+    if (supplierResult.rows.length === 0) {
+      return res.status(404).json({ error: "Supplier not found" });
+    }
+    const supplier = supplierResult.rows[0];
+
+    // Get store details
+    const storeResult = await pool.query(
+      `SELECT id, name, gstin,
+              COALESCE(address, '') || ' ' || COALESCE(city, '') || ' ' || COALESCE(state, '') as full_address
+       FROM platform.stores WHERE id = $1::uuid`,
+      [storeId]
+    );
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ error: "Store not found" });
+    }
+    const store = storeResult.rows[0];
+
+    // Resolve product details
+    const invoiceItems: InvoiceItemInput[] = [];
+    for (const item of items) {
+      const productResult = await pool.query(
+        `SELECT id, name, supplier_sku, hsn_code, gst_rate, purchase_price, unit
+         FROM catalog.supplier_products
+         WHERE id = $1::uuid AND supplier_id = $2::uuid`,
+        [item.productId, supplierId]
+      );
+
+      if (productResult.rows.length === 0) {
+        return res.status(400).json({ error: `Product ${item.productId} not found for this supplier` });
+      }
+      const product = productResult.rows[0];
+
+      invoiceItems.push({
+        productId: product.id,
+        supplierProductId: product.id,
+        productName: product.name,
+        productSku: product.supplier_sku,
+        hsnCode: product.hsn_code || item.hsnCode,
+        quantity: item.quantity,
+        unit: product.unit || "PCS",
+        unitPriceMinor: item.unitPriceMinor || product.purchase_price,
+        discountMinor: item.discountMinor || 0,
+        gstRate: item.gstRate ?? product.gst_rate ?? 0,
+      });
+    }
+
+    // Supplier direct-sale: Supplier (seller) → Retailer Store (buyer)
+    const invoiceInput: CreateInvoiceInput = {
+      invoiceModel: "platform_fee",
+      invoiceType: "sale",
+      seller: {
+        type: "supplier",
+        id: supplier.id,
+        name: supplier.business_name,
+        gstin: supplier.gstin,
+        address: supplier.full_address,
+      },
+      buyer: {
+        type: "store",
+        id: store.id,
+        name: store.name,
+        gstin: store.gstin,
+        address: store.full_address,
+      },
+      items: invoiceItems,
+      dueDate,
+      orderId,
+      referenceNote,
+      createdBy: adminId,
+    };
+
+    const invoice = await createInvoice(pool, invoiceInput);
+
+    return res.status(201).json({
+      success: true,
+      data: invoice,
+    });
+  } catch (err: any) {
+    console.error("[admin/invoices/supplier-sale] Error:", err);
+    return res.status(500).json({ error: "Failed to create supplier sale invoice" });
+  }
+});
+
+// =============================================================================
 // Invoice Management (shared across models)
 // =============================================================================
 
