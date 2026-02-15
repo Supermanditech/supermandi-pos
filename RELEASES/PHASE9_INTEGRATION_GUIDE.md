@@ -492,6 +492,38 @@ socket.emit('send_message', { conversationId, text: 'Hello!' });
 
 ## AREA 4: AI AUTOMATION (T-303 → T-316)
 
+### ⚠️ ALREADY EXISTS — DO NOT RECREATE
+
+Phase 9 voice tickets are **ADDITIVE** (add TTS + multi-turn + alerts). They do NOT replace existing voice infra.
+
+| Layer | File | What It Does | Status |
+|-------|------|-------------|--------|
+| POS Client | `src/services/voice/voiceClient.ts` (438 lines) | Audio recording via expo-av, upload to backend, intent execution | ✅ WORKING |
+| POS Client | `src/services/voice/voicePermissions.ts` (207 lines) | Microphone permissions + audio session config | ✅ WORKING |
+| POS Client | `src/components/voice/VoiceButton.tsx` (218 lines) | Push-to-talk FAB with pulse animation | ✅ WORKING |
+| POS Client | `src/components/voice/VoiceSheet.tsx` (471 lines) | Bottom sheet: recording → processing → success/error | ✅ WORKING |
+| POS Client | `src/screens/SellScanScreen.tsx` | Full state machine: button + sheet + cart integration | ✅ INTEGRATED |
+| Backend API | `backend/src/routes/v1/pos/voice.ts` (368 lines) | POST /interpret, /parse, /execute, GET /health | ✅ WORKING |
+| AI Service | `backend/src/services/ai/voiceOrderService.ts` (522 lines) | STT → intent parsing → product resolution pipeline | ✅ WORKING |
+| AI Provider | `backend/src/services/ai/openaiProvider.ts` (595 lines) | GPT-4o-mini chat + Whisper STT, rate limiting, budget | ✅ PRODUCTION |
+| Voice Service | `backend/services/voice-service/` (port 3009) | Standalone microservice with Anthropic Claude STT | ✅ WORKING |
+| Feature Flag | `voiceEnabled` | Server-side toggle for voice feature | ✅ ACTIVE |
+| E2E Test | `e2e/voiceAddToCart.yaml` | Push-to-talk → record → submit → cart add flow | ✅ DEFINED |
+
+### STT Provider Clarification
+
+**Two STT paths exist** (this is intentional, not a conflict):
+1. **Main backend** (`openaiProvider.ts`): Uses OpenAI Whisper — this is the **active path** called by POS app
+2. **Voice service** (`sttService.ts`, port 3009): Uses Anthropic Claude multimodal — standalone microservice
+
+The POS app calls `POST /api/v1/voice/interpret` which goes through the main backend → OpenAI Whisper. The voice-service is a separate deployment for future scaling.
+
+### ⚠️ Product Search Prerequisite
+
+`voice.ts` line 72: `registerProductSearch()` returns **EMPTY ARRAY** — documented TODO.
+
+The search endpoint already exists at `storeProducts.ts` line 263. This must be wired before T-306 (multi-turn server-side disambiguation) and T-315 (voice workflows) can work. The POS app currently works around this via client-side product search.
+
 ### Existing AI/Voice Codebase Audit
 
 | Component | File | Status |
@@ -543,79 +575,98 @@ Speech.stop();
 - ✅ No permission needed
 - Rate control, pitch control, volume control available
 
-### Per-Ticket Guide
+### Per-Ticket Guide (CORRECTED — matches STAGING_TICKETS.md source of truth)
 
-#### T-303 (A-1): Voice TTS response ✅ CAN CODE NOW
-- **Package**: `expo-speech` (built into Expo, FREE)
+#### T-303: AI onboarding assistant ✅ CAN CODE NOW
+- **Depends on**: T-305 (TTS) for spoken prompts
+- **Action**: First-time flow: AI walks through store setup → first product → first sale
+- **Pattern**: Guided wizard with TTS prompts at each step. Detect "first-time retailer" via empty store_products count.
+- **Files**: New wizard component + `VoiceSheet.tsx` integration for spoken guidance
+
+#### T-304: Hindi NLU expansion (Marathi, Gujarati, Tamil) ✅ CAN CODE NOW
+- **What exists**: `voiceOrderService.ts` defaults to Hindi/Hinglish (system prompt lines 150-186)
+- **Action**: Add regional number words (Marathi: ek/don/teen, Gujarati: ek/be/tran, Tamil: onnu/rendu/moonu) + product aliases to NLU system prompt
+- **Files**: `backend/src/services/ai/voiceOrderService.ts` (expand VOICE_ORDER_SYSTEM_PROMPT)
+
+#### T-305: Voice TTS response (AI speaks back) ✅ CAN CODE NOW
+- **Package**: `expo-speech` (built into Expo, FREE, offline, no install needed)
 - **Action**: In `src/components/voice/VoiceSheet.tsx`, after voice command processed, call `Speech.speak(responseText, { language: locale === 'hi' ? 'hi-IN' : 'en-IN' })`
-- **No API key needed**
+- **No API key needed**. No new packages. Add `import * as Speech from 'expo-speech'` to VoiceSheet.
+- **PREREQUISITE for**: T-303, T-306, T-310, T-315
 
-#### T-304 (A-2): Multi-turn voice conversation ✅ CAN CODE NOW
+#### T-306: Multi-turn voice conversation ✅ CAN CODE NOW
+- **Depends on**: T-305 (TTS for spoken clarifications), product search wired (`voice.ts:72`)
 - **Action**: Add conversation context to `voiceOrderService.ts`. Track last intent + product mentions. When ambiguous ("which one?"), system asks clarifying question via TTS.
 - **Pattern**: State machine: IDLE → LISTENING → PROCESSING → CLARIFYING → CONFIRMING → DONE
+- **Key change**: Add `VoiceSession` type with `previousActions[]`, `contextWindow[]`, `sessionId`. Store in-memory Map with 10-min TTL.
+- **PREREQUISITE for**: T-315 (voice workflows)
 
-#### T-305 (A-3): Proactive AI alerts ✅ CAN CODE NOW
-- **What exists**: FCM push service (fcmService.ts), stock monitor (reorder-service), credit scoring
-- **Action**: Daily cron generates alerts: low stock, expiring items, overdue payments. Sends via `sendAndPersistNotification()`.
+#### T-307: Proactive AI alerts (push) ✅ CAN CODE NOW
+- **What exists**: FCM push service (`fcmService.ts` — COMPLETE), stock monitor (reorder-service), credit scoring
+- **Action**: Daily cron (9 PM IST, offset from stock monitor at minute 0) generates alerts: low stock, expiring items, overdue payments. Sends via `sendAndPersistNotification()`.
+- **Pattern**: `node-cron` schedule → query conditions → dedup via Redis TTL → FCM push
 
-#### T-306 (A-4): Demand forecasting engine ✅ CAN CODE NOW
-- **npm**: `simple-statistics` or `ml-regression-simple-linear`
-- **Action**: Query last 4 weeks of daily sales per SKU → linear regression → predict next 7 days
-- **Pattern**: `SELECT product_id, sale_date::date, SUM(quantity) FROM sale_items GROUP BY 1,2`
+#### T-308: Demand forecasting engine ✅ CAN CODE NOW
+- **npm**: `simple-statistics` (45KB, no API key)
+- **Action**: Query last 4 weeks of daily sales per SKU → weighted moving average with day-of-week adjustment → predict next 7 days
+- **Pattern**: `SELECT product_id, DATE(created_at), SUM(quantity) FROM sale_items WHERE store_id=$1 GROUP BY 1,2`
+- **New file**: `backend/src/services/analytics/demandForecast.ts`
+- **PREREQUISITE for**: T-309 (smart reorder)
 
-#### T-307 (A-5): Smart reorder suggestions ✅ CAN CODE NOW
+#### T-309: Smart reorder suggestions (forecast-driven) ✅ CAN CODE NOW
+- **Depends on**: T-308 (forecasting)
 - **What exists**: Reorder stock monitor, product policies
 - **Action**: Enhance: `suggested_qty = demand_forecast_7d + buffer_days * avg_daily - current_stock`
 
-#### T-308 (A-6): Auto daily closing summary ✅ CAN CODE NOW
+#### T-310: Auto daily closing summary ✅ CAN CODE NOW
 - **What exists**: `getDailySummary()` endpoint returns sales totals
-- **Action**: Evening cron (9 PM IST) → generate summary → push notification + TTS readout option
+- **Action**: Evening cron (9 PM IST) → generate summary → push notification + TTS readout option (uses T-305 expo-speech)
 
-#### T-309 (A-7): Supplier price comparison ✅ CAN CODE NOW
+#### T-311: Supplier price comparison ✅ CAN CODE NOW
 - **What exists**: `catalog.supplier_products` with `purchase_price_minor`
 - **Action**: At PO creation, query all suppliers for same product → show "Supplier B is ₹X cheaper"
 
-#### T-310 (A-8): Customer purchase insights ✅ CAN CODE NOW
+#### T-312: Customer purchase insights ✅ CAN CODE NOW
 - **What exists**: `platform.customer_profiles`, `orders.sale_items`
 - **Action**: Aggregate top 10 customers by value, inactive customers (7+ days)
 
-#### T-311 (A-9): Slow mover detection ✅ CAN CODE NOW
+#### T-313: Slow mover detection ✅ CAN CODE NOW
 - **Action**: Query items with <2 sales in last 30 days → flag → suggest discount/discontinue
+- **New file**: `backend/src/services/analytics/slowMoverDetector.ts`
 
-#### T-312 (A-10): Expiry tracking alerts ✅ CAN CODE NOW
+#### T-314: Expiry tracking alerts ✅ CAN CODE NOW
 - **What exists**: `expiry_date` column on `purchase_order_items` (T-144)
 - **Action**: Daily cron checks items expiring in 30/15/7 days → push alert → suggest markdown
+- **No API key needed** — pure backend + FCM push
 
-#### T-313 (A-11): Voice-driven full workflow ✅ CAN CODE NOW
+#### T-315: Voice-driven full workflow ✅ CAN CODE NOW
+- **Depends on**: T-305 (TTS) + T-306 (multi-turn) + product search wired
 - **Action**: "Place reorder for all low stock items" → AI shows list → user confirms → POs created
-- **Pattern**: Multi-step voice flow using A-2 conversation state machine
+- **Pattern**: Multi-step voice flow using T-306 conversation state machine
 
-#### T-314 (A-12): AI onboarding assistant ✅ CAN CODE NOW
-- **Action**: First-time flow: AI walks through store setup → first product → first sale
-- **Pattern**: Guided wizard with TTS prompts at each step
-
-#### T-315 (A-13): Anomaly detection ✅ CAN CODE NOW
-- **npm**: `simple-statistics` for z-score calculation
+#### T-316: Anomaly detection ✅ CAN CODE NOW
+- **npm**: `simple-statistics` for z-score calculation (same as T-308)
 - **Action**: Compare today's metrics vs rolling 30-day average. If >2 std deviations → alert.
-
-#### T-316 (A-14): Hindi NLU expansion ✅ CAN CODE NOW
-- **What exists**: `voiceOrderService.ts` defaults to Hindi/Hinglish
-- **Action**: Add Marathi, Gujarati, Tamil number words + product aliases to NLU prompt
+- **New file**: `backend/src/services/analytics/anomalyDetector.ts`
+- **No API key needed** — pure backend math
 
 ---
 
 ## EXECUTION PRIORITY — WHAT TO START NOW
 
-### WAVE A: Start Immediately (✅ CAN CODE NOW) — 32 tickets
+### WAVE A: Start Immediately (✅ CAN CODE NOW) — 44 tickets
 
 | Category | Tickets | What |
 |----------|---------|------|
-| UPI Core | T-253, T-255, T-260, T-261, T-262 | Webhook wiring, UTR verify, reconciliation, QR timer, outbox |
+| UPI Core | T-253, T-254, T-255, T-258-T-262 | Webhook wiring, UPI tracking, UTR verify, payout retry, refund, reconciliation, QR timer, outbox |
 | BNPL Platform | T-263, T-274-T-282, T-287-T-290 | Abstraction layer, UI, tracking, dashboards, comparison |
-| Chat | T-291-T-295, T-299-T-302 | Schema, API, Socket.io, POS/Supplier chat, FCM, templates |
-| AI | T-303-T-316 | ALL 14 AI tickets — TTS, forecasting, alerts, voice flows |
+| Chat | T-291-T-295, T-297-T-302 | Schema, API, Socket.io, POS/Supplier chat, WhatsApp receipt/alerts, FCM, templates |
+| AI Core (Wave E) | T-305, T-306, T-307, T-310 | TTS (expo-speech) → multi-turn → alerts → daily closing |
+| AI Intelligence (Wave H) | T-308, T-309, T-311, T-312 | Forecasting → smart reorder → price compare → insights |
+| AI Polish (Wave I) | T-313, T-314, T-303, T-316, T-304 | Slow mover → expiry → onboarding → anomaly → Hindi NLU |
+| AI Voice (Wave H) | T-315 | Voice-driven workflows (depends on T-305 + T-306) |
 
-### WAVE B: Needs API Keys Only (⚠️) — 5 tickets
+### WAVE B: Needs API Keys Only (⚠️) — 3 tickets
 
 | Ticket | Provider | What Operator Must Do |
 |--------|----------|----------------------|
@@ -623,7 +674,6 @@ Speech.stop();
 | T-256 | RazorpayX | Contact Razorpay sales → get RazorpayX account |
 | T-273 | Cashfree EL | Sign up at cashfree.com → sandbox credentials |
 | T-296 | Meta WhatsApp | Create app at developers.facebook.com |
-| T-297-T-298 | Meta WhatsApp | Submit message templates for approval |
 
 ### WAVE C: Needs Partnership (🔑) — 13 tickets
 

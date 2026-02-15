@@ -1,6 +1,6 @@
 {
-  "version": "22.0",
-  "lastUpdated": "2026-02-16T21:30:00+05:30",
+  "version": "23.0",
+  "lastUpdated": "2026-02-17T01:00:00+05:30",
   "currentPhase": "Phase 9: Payments + B2B Finance + WhatsApp + AI Automation",
   "currentTicket": null,
   "ticketQueue": [
@@ -167,11 +167,11 @@
     "status": "QUEUED — 0/64 tickets started. R&D COMPLETE.",
     "integrationGuide": "RELEASES/PHASE9_INTEGRATION_GUIDE.md",
     "integrationReadiness": {
-      "canCodeNow": 41,
-      "needApiKeys": 6,
+      "canCodeNow": 44,
+      "needApiKeys": 3,
       "needPartnership": 13,
       "fixExistingCode": 4,
-      "percentImmediate": 64,
+      "percentImmediate": 69,
       "canCodeNowTickets": [
         "T-253 (Razorpay sell webhook)", "T-254 (UPI order tracking)", "T-255 (UTR verification)",
         "T-258 (Payout retry)", "T-259 (Refund flow)", "T-260 (Reconciliation dashboard)",
@@ -189,15 +189,14 @@
         "T-305 (Voice TTS — expo-speech FREE)", "T-306 (Multi-turn voice)",
         "T-307 (Proactive AI alerts)", "T-308 (Demand forecasting)", "T-309 (Smart reorder)",
         "T-310 (Auto daily closing)", "T-311 (Supplier price comparison)",
-        "T-312 (Customer purchase insights)", "T-313 (Slow mover detection)"
+        "T-312 (Customer purchase insights)", "T-313 (Slow mover detection)",
+        "T-314 (Expiry tracking alerts)", "T-315 (Voice-driven workflows — depends on T-305+T-306)",
+        "T-316 (Anomaly detection — pure backend logic)"
       ],
       "needApiKeysTickets": [
         "T-256 (RazorpayX payouts — needs RAZORPAY_KEY_ID/SECRET + linked current account)",
         "T-257 (Supplier bank KYC — needs RazorpayX for fund accounts)",
-        "T-296 (WhatsApp Cloud API — needs META_WHATSAPP_TOKEN + META_PHONE_NUMBER_ID)",
-        "T-314 (Expiry tracking — needs expo-barcode-scanner already installed)",
-        "T-315 (Voice-driven workflows — builds on T-305+T-306)",
-        "T-316 (Anomaly detection — pure backend logic)"
+        "T-296 (WhatsApp Cloud API — needs META_WHATSAPP_TOKEN + META_PHONE_NUMBER_ID)"
       ],
       "needPartnershipTickets": [
         "T-264 (Rupifi — needs developers.rupifi.com partnership)",
@@ -219,7 +218,14 @@
         "T-253 (Fix razorpayClient.ts timing attack + undefined method calls)",
         "T-259 (Wire razorpay.payments.refund() — handler exists, API call missing)",
         "T-299 (FCM push — ALREADY FULLY BUILT in fcmService.ts, just wire to new events)",
-        "T-303 (AI onboarding — voiceOrderService.ts TODO: product search returns empty array)"
+        "T-306 (Multi-turn voice — must wire product search callback at voice.ts:72 to storeProducts.ts:263)"
+      ],
+      "voiceDependencyNotes": [
+        "T-305 (TTS) is PREREQUISITE for T-303, T-306, T-310, T-315",
+        "Product search (voice.ts:72) must be wired before T-306 and T-315",
+        "T-308 (forecasting) is PREREQUISITE for T-309 (smart reorder)",
+        "Existing voice infra (VoiceButton, VoiceSheet, voiceClient, voiceOrderService) — DO NOT RECREATE",
+        "STT: Main backend uses OpenAI Whisper (active POS path). Voice-service uses Anthropic Claude (port 3009)."
       ]
     },
     "areas": {
@@ -314,11 +320,12 @@
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
   "nextAction": "VS Code Claude: READ RELEASES/PHASE9_INTEGRATION_GUIDE.md FIRST — contains per-ticket SDK/API/sandbox details. Start with Wave A (UPI Core: T-253→T-262). 41 of 64 tickets need ZERO external deps. Operator: sign up Razorpay live account + RazorpayX.",
   "lastActions": [
-    "R&D COMPLETE — PHASE9_INTEGRATION_GUIDE.md created with per-ticket implementation details for all 64 tickets",
-    "Integration readiness: 41 CAN CODE NOW (64%) / 6 NEED API KEYS / 13 NEED PARTNERSHIP / 4 FIX EXISTING CODE",
-    "Key R&D findings: (1) razorpayClient.ts has timing attack bug + undefined method calls to fix, (2) fcmService.ts already complete — T-299 is just wiring, (3) expo-speech is FREE built-in TTS with Hindi support, (4) WhatsApp official Node.js SDK: npm install whatsapp",
-    "BNPL strategy: Build abstraction layer (T-263) with mock providers FIRST, swap real providers as partnerships come",
-    "14 provider APIs researched: Rupifi/KredX/Mintifi/Trevex (trade credit) + Lendingkart/FlexiLoans/Progcap/NeoGrowth/Finova (credit lines) + Cashfree EL (LaaS) + KredX/M1xchange/Vayana/Credlix (supplier invoice)",
-    "State updated to v22.0 with integrationReadiness section"
+    "Voice/TTS conflict audit: NO code conflicts found. Phase 9 AI tickets are ADDITIVE to existing voice infra.",
+    "Fixed 14 ticket ID mismatches in PHASE9_INTEGRATION_GUIDE.md (T-303 was mapped as TTS, actually AI onboarding; T-305 is the real TTS ticket)",
+    "Corrected integration readiness: 44 CAN CODE NOW (69%) / 3 NEED API KEYS / 13 NEED PARTNERSHIP / 4 FIX EXISTING CODE",
+    "Added ALREADY EXISTS section to guide: 10 voice files exist (VoiceButton, VoiceSheet, voiceClient, voiceOrderService, etc.) — DO NOT RECREATE",
+    "Added dependency notes: T-305 (TTS) prerequisite for T-303/T-306/T-315; product search prerequisite for T-306/T-315",
+    "STT clarified: POS app → OpenAI Whisper (main path), voice-service → Anthropic Claude (port 3009)",
+    "State updated to v23.0 with voiceDependencyNotes + corrected categories"
   ]
 }

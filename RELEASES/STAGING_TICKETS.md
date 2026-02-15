@@ -977,6 +977,19 @@ Wave 6 — Integration & Cleanup:
 | T-315 | Voice-driven full workflow | P1 | POS App | L | "Place reorder for all low stock items" → AI shows list → retailer approves → POs created |
 | T-316 | Anomaly detection | P2 | Backend | M | Flag: "Sales dropped 40% vs last Tuesday" or "Unusual 50-item return" |
 
+> **AI Ticket Dependencies:**
+> - T-305 (TTS) → PREREQUISITE for T-303 (onboarding), T-306 (multi-turn), T-315 (workflows)
+> - Product search (`voice.ts:72`) → Must wire to `storeProducts.ts` search before T-306/T-315 work server-side
+> - T-308 (forecasting) → PREREQUISITE for T-309 (smart reorder)
+> - T-305 + T-306 → PREREQUISITE for T-315 (voice workflows)
+>
+> **ALREADY EXISTS — Phase 9 voice tickets are ADDITIVE, not replacing:**
+> - Audio recording (`expo-av`) ✅, `VoiceButton.tsx` ✅, `VoiceSheet.tsx` ✅, voice routes ✅
+> - STT (OpenAI Whisper via `openaiProvider.ts`) ✅, Intent parsing (GPT-4o-mini) ✅
+> - `SellScanScreen.tsx` voice integration ✅, `voiceEnabled` feature flag ✅
+> - Voice service microservice (port 3009, Anthropic Claude STT) ✅
+> - Phase 9 ADDS: TTS output (`expo-speech`), multi-turn context, alerts, forecasting, anomalies
+
 ---
 
 ### EXECUTION WAVES (Phase 9)
