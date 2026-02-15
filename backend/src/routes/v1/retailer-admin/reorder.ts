@@ -24,7 +24,7 @@ retailerReorderRouter.get("/reorder/settings", async (req: Request, res: Respons
   if (!storeId) return res.status(401).json({ error: "Store not identified" });
 
   try {
-    let result = await pool.query(
+    const result = await pool.query(
       `SELECT
         store_id as "storeId",
         is_enabled as "isEnabled",

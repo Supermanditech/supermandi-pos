@@ -83,7 +83,7 @@ export function validateProductName(name: string): ValidationResult {
   }
 
   // Must contain at least one alphanumeric character
-  if (!/[A-Za-z0-9\u0900-\u097F\u0980-\u09FF]/.test(trimmed)) {
+  if (!/[A-Za-z0-9\u0900-\u097F\u0980-\u09FF]/u.test(trimmed)) {
     return {
       valid: false,
       error: "Product name must contain at least one letter or digit",
