@@ -31,7 +31,7 @@ export function DocumentsTab({
   pendingDocuments, pendingDocsTotal, documentsLoading, documentsError,
   documentsPage, documentsEntityFilter, selectedDocument, docRejectReason,
   documentActionLoading, setDocumentsPage, setDocumentsEntityFilter,
-  setSelectedDocument, handleOpenDocument, handleCloseDocument, onModalDirty,
+  handleOpenDocument, handleCloseDocument, onModalDirty,
   setDocRejectReason, refreshDocuments,
   handleApproveDocument, handleRejectDocument,
 }: DocumentsTabProps) {

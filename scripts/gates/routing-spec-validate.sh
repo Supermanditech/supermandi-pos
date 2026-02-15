@@ -86,7 +86,8 @@ echo "--- L-005: deploy.yml service names ---"
 EXPECTED_SERVICES=("api-gateway" "main-backend" "retailer-admin" "supplier-portal" "superadmin" "landing")
 MISSING_SVC=0
 for svc in "${EXPECTED_SERVICES[@]}"; do
-  if grep -q "\"$svc\"" "$DEPLOY_YML" 2>/dev/null || grep -q "'$svc'" "$DEPLOY_YML" 2>/dev/null; then
+  # Service names can appear quoted or unquoted in deploy.yml (e.g. in build tags, loop arrays, SERVICE_NAME vars)
+  if grep -q "$svc" "$DEPLOY_YML" 2>/dev/null; then
     echo "  OK: $svc found in deploy.yml"
   else
     echo "  MISSING: $svc not found in deploy.yml"
@@ -144,19 +145,21 @@ fi
 # =============================================================================
 echo ""
 echo "--- L-009: Nginx retailer routing ---"
+# Cloud Run standalone nginx serves from / (LB strips prefix), so /retailer/ may only be in local-prod conf.
+# Check both: standalone must have try_files SPA fallback, and local-prod (if present) must reference /retailer/.
 RETAILER_NGINX=""
-for f in retailer-admin/nginx.conf retailer-admin/nginx-local-prod.conf retailer-admin/default.conf; do
+RETAILER_NGINX_LP=""
+for f in retailer-admin/nginx.conf retailer-admin/default.conf; do
   if [ -f "$f" ]; then RETAILER_NGINX="$f"; break; fi
 done
+if [ -f "retailer-admin/nginx-local-prod.conf" ]; then RETAILER_NGINX_LP="retailer-admin/nginx-local-prod.conf"; fi
 
-if [ -n "$RETAILER_NGINX" ]; then
-  if grep -q "/retailer/" "$RETAILER_NGINX" 2>/dev/null; then
-    gate_pass "L-009" "Nginx retailer config references /retailer/ ($RETAILER_NGINX)"
-  else
-    gate_fail "L-009" "Nginx retailer" "Config $RETAILER_NGINX does not reference /retailer/"
-  fi
+if [ -n "$RETAILER_NGINX_LP" ] && grep -q "/retailer/" "$RETAILER_NGINX_LP" 2>/dev/null; then
+  gate_pass "L-009" "Nginx retailer local-prod config references /retailer/ ($RETAILER_NGINX_LP)"
+elif [ -n "$RETAILER_NGINX" ] && grep -q "try_files" "$RETAILER_NGINX" 2>/dev/null; then
+  gate_pass "L-009" "Nginx retailer standalone config has SPA fallback ($RETAILER_NGINX)"
 else
-  gate_warn "L-009" "Nginx retailer" "No nginx config found for retailer-admin"
+  gate_fail "L-009" "Nginx retailer" "No nginx config with /retailer/ or SPA fallback found"
 fi
 
 # =============================================================================
@@ -164,19 +167,20 @@ fi
 # =============================================================================
 echo ""
 echo "--- L-010: Nginx superadmin routing ---"
+# Cloud Run standalone nginx serves from / (LB strips prefix), so /admin/ may only be in local-prod conf.
 ADMIN_NGINX=""
-for f in supermandi-superadmin/nginx.conf supermandi-superadmin/nginx-local-prod.conf supermandi-superadmin/default.conf; do
+ADMIN_NGINX_LP=""
+for f in supermandi-superadmin/nginx.conf supermandi-superadmin/default.conf; do
   if [ -f "$f" ]; then ADMIN_NGINX="$f"; break; fi
 done
+if [ -f "supermandi-superadmin/nginx-local-prod.conf" ]; then ADMIN_NGINX_LP="supermandi-superadmin/nginx-local-prod.conf"; fi
 
-if [ -n "$ADMIN_NGINX" ]; then
-  if grep -q "/admin/" "$ADMIN_NGINX" 2>/dev/null; then
-    gate_pass "L-010" "Nginx superadmin config references /admin/ ($ADMIN_NGINX)"
-  else
-    gate_fail "L-010" "Nginx superadmin" "Config $ADMIN_NGINX does not reference /admin/"
-  fi
+if [ -n "$ADMIN_NGINX_LP" ] && grep -q "/admin/" "$ADMIN_NGINX_LP" 2>/dev/null; then
+  gate_pass "L-010" "Nginx superadmin local-prod config references /admin/ ($ADMIN_NGINX_LP)"
+elif [ -n "$ADMIN_NGINX" ] && grep -q "try_files" "$ADMIN_NGINX" 2>/dev/null; then
+  gate_pass "L-010" "Nginx superadmin standalone config has SPA fallback ($ADMIN_NGINX)"
 else
-  gate_warn "L-010" "Nginx superadmin" "No nginx config found for superadmin"
+  gate_fail "L-010" "Nginx superadmin" "No nginx config with /admin/ or SPA fallback found"
 fi
 
 # =============================================================================
@@ -337,7 +341,8 @@ echo "--- L-019: Spec-deploy service parity ---"
 # Verify each service name appears in deploy contexts (gcloud run deploy)
 PARITY_FAIL=0
 for svc in "${EXPECTED_SERVICES[@]}"; do
-  if grep -qE "gcloud run deploy.*$svc|gcloud run services.*$svc" "$DEPLOY_YML" 2>/dev/null; then
+  # Service names appear in: docker build tags, SERVICE_NAME assignments, PORTALS arrays, gcloud run deploy, image refs
+  if grep -qE "gcloud run deploy.*$svc|gcloud run services.*$svc|SERVICE_NAME=.*$svc|AR_REPO.*/$svc:|PORTALS=.*$svc" "$DEPLOY_YML" 2>/dev/null; then
     echo "  OK: $svc has deploy block"
   else
     echo "  MISSING: $svc has no deploy block in deploy.yml"

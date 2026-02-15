@@ -144,11 +144,6 @@ function parseHashParams(): { tab: TabKey | null; params: Record<string, string>
   return { tab, params };
 }
 
-// T-114: Read tab from URL hash (e.g. #events → "events")
-function getTabFromHash(): TabKey | null {
-  return parseHashParams().tab;
-}
-
 // T-118: Build hash string with optional query params
 function buildHash(tabKey: TabKey, params?: Record<string, string>): string {
   const qs = params ? Object.entries(params)
@@ -264,13 +259,6 @@ export default function App() {
       window.history.replaceState(null, "", `#${tab}`);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // T-118: Update URL hash params without triggering tab switch
-  // Call this from tab components when filters change to keep URL in sync
-  function updateHashParams(params: Record<string, string>) {
-    setHashParams(params);
-    window.history.replaceState(null, "", buildHash(tab, params));
-  }
 
   // T-118: Copy current deep link (hash + query params) to clipboard
   function copyDeepLink() {

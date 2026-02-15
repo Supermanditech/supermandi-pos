@@ -31,9 +31,9 @@ CREATE INDEX IF NOT EXISTS idx_suppliers_verification_status
   ON supplier.suppliers (verification_status, created_at DESC);
 
 -- 6. Store-supplier link composite index (retailer supplier list)
--- Existing: store_supplier_links has store_id, but no composite with status
+-- Existing: supplier_store_links has store_id, but no composite with status
 CREATE INDEX IF NOT EXISTS idx_store_supplier_links_store_status
-  ON supplier.store_supplier_links (store_id, status)
+  ON supplier.supplier_store_links (store_id, status)
   WHERE status = 'active';
 
 -- 7. Supplier product map: product_id index with verified flag
