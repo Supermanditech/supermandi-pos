@@ -814,7 +814,21 @@ retailerAdminSuppliersRouter.get("/supplier-catalog", async (req: Request, res: 
         sp.unit,
         sp.purchase_price as "supplierPriceMinor",
         sp.supermandi_margin_minor as "marginMinor",
-        (sp.purchase_price + COALESCE(sp.supermandi_margin_minor, 0)) as "retailerPriceMinor",
+        sp.margin_percent as "marginPercent",
+        CASE
+          WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
+            THEN 'fixed'
+          WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
+            THEN 'percentage'
+          ELSE 'none'
+        END as "marginType",
+        (sp.purchase_price + CASE
+          WHEN sp.supermandi_margin_minor IS NOT NULL AND sp.supermandi_margin_minor > 0
+            THEN sp.supermandi_margin_minor
+          WHEN sp.margin_percent IS NOT NULL AND sp.margin_percent > 0
+            THEN ROUND(sp.purchase_price * sp.margin_percent / 100)
+          ELSE 0
+        END) as "retailerPriceMinor",
         sp.mrp as "mrpMinor",
         sp.bnpl_eligible as "bnplEligible",
         sp.bnpl_max_days as "bnplMaxDays",
@@ -917,7 +931,7 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
     // Verify product is approved and from a verified supplier
     const productCheck = await client.query(
       `SELECT sp.id, sp.name, sp.barcode, sp.category, sp.purchase_price,
-              sp.supermandi_margin_minor, sp.mrp, sp.unit,
+              sp.supermandi_margin_minor, sp.margin_percent, sp.mrp, sp.unit,
               s.id as supplier_id, s.business_name
        FROM catalog.supplier_products sp
        JOIN supplier.suppliers s ON s.id = sp.supplier_id
@@ -935,8 +949,14 @@ retailerAdminSuppliersRouter.post("/supplier-catalog/:productId/add", async (req
     }
 
     const product = productCheck.rows[0];
-    const retailerPrice = sellPrice ||
-      (product.purchase_price + (product.supermandi_margin_minor || 0));
+    // T-067: Calculate retailer price using either fixed margin or percentage
+    let marginAmount = 0;
+    if (product.supermandi_margin_minor && product.supermandi_margin_minor > 0) {
+      marginAmount = product.supermandi_margin_minor;
+    } else if (product.margin_percent && product.margin_percent > 0) {
+      marginAmount = Math.round(product.purchase_price * product.margin_percent / 100);
+    }
+    const retailerPrice = sellPrice || (product.purchase_price + marginAmount);
 
     // T-063: Resolve the master catalog product_id via supplier_product_map
     // The approval flow creates a catalog.products entry and maps it via supplier_product_map.

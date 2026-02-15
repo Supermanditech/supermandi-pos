@@ -734,6 +734,7 @@ adminSuppliersRouter.get("/products/pending", requireAdminToken, requirePermissi
         sp.mrp,
         sp.moq,
         sp.supermandi_margin_minor as "marginMinor",
+        sp.margin_percent as "marginPercent",
         sp.edited_name as "editedName",
         sp.edited_category as "editedCategory",
         sp.created_at as "createdAt",
