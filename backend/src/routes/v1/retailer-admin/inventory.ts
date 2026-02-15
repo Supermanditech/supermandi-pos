@@ -216,6 +216,143 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
 });
 
 // =============================================================================
+// T-212: SALES ANALYTICS (date range)
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/analytics/sales
+ * T-212: Sales analytics with date range support for retailer dashboard
+ *
+ * Query params:
+ * - from: ISO date string (YYYY-MM-DD), defaults to 7 days ago
+ * - to: ISO date string (YYYY-MM-DD), defaults to today
+ *
+ * Returns: daily totals, payment breakdown, top products
+ */
+retailerAdminInventoryRouter.get("/analytics/sales", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: "Store not identified" });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const fromDate = (req.query.from as string) || weekAgo;
+  const toDate = (req.query.to as string) || today;
+
+  // Validate dates
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD." });
+  }
+
+  try {
+    // Daily sales trend
+    const dailyResult = await pool.query(
+      `SELECT
+        DATE(created_at AT TIME ZONE 'Asia/Kolkata') as date,
+        COUNT(*)::integer as bills,
+        COALESCE(SUM(total_minor), 0)::bigint as total_sales,
+        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' OR status = 'PAID_CASH' THEN total_minor ELSE 0 END), 0)::bigint as cash,
+        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' OR status = 'PAID_UPI' THEN total_minor ELSE 0 END), 0)::bigint as upi,
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' OR status = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint as credit
+      FROM public.sales
+      WHERE store_id = $1
+        AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
+        AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') BETWEEN $2::date AND $3::date
+      GROUP BY DATE(created_at AT TIME ZONE 'Asia/Kolkata')
+      ORDER BY date ASC`,
+      [storeId, fromDate, toDate]
+    );
+
+    // Aggregate totals
+    const totalsResult = await pool.query(
+      `SELECT
+        COUNT(*)::integer as total_bills,
+        COALESCE(SUM(total_minor), 0)::bigint as total_sales,
+        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' OR status = 'PAID_CASH' THEN total_minor ELSE 0 END), 0)::bigint as cash,
+        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' OR status = 'PAID_UPI' THEN total_minor ELSE 0 END), 0)::bigint as upi,
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' OR status = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint as credit
+      FROM public.sales
+      WHERE store_id = $1
+        AND status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
+        AND DATE(created_at AT TIME ZONE 'Asia/Kolkata') BETWEEN $2::date AND $3::date`,
+      [storeId, fromDate, toDate]
+    );
+
+    // Top selling products in range
+    const topProducts = await pool.query(
+      `SELECT
+        si.variant_id as product_id,
+        COALESCE(si.name, si.item_name, 'Unknown') as product_name,
+        SUM(si.quantity)::integer as qty_sold,
+        SUM(si.line_total_minor)::bigint as total_amount
+      FROM public.sale_items si
+      JOIN public.sales s ON s.id = si.sale_id
+      WHERE s.store_id = $1
+        AND s.status IN ('completed', 'PAID_CASH', 'PAID_UPI', 'DUE', 'SPLIT')
+        AND DATE(s.created_at AT TIME ZONE 'Asia/Kolkata') BETWEEN $2::date AND $3::date
+      GROUP BY si.variant_id, si.name, si.item_name
+      ORDER BY SUM(si.line_total_minor) DESC
+      LIMIT 15`,
+      [storeId, fromDate, toDate]
+    );
+
+    const totals = totalsResult.rows[0] || {};
+
+    return res.json({
+      success: true,
+      data: {
+        from: fromDate,
+        to: toDate,
+        totals: {
+          totalSales: Number(totals.total_sales) || 0,
+          totalBills: Number(totals.total_bills) || 0,
+          averageBillValue: Number(totals.total_bills) > 0
+            ? Math.round(Number(totals.total_sales) / Number(totals.total_bills))
+            : 0,
+        },
+        paymentBreakdown: {
+          cash: Number(totals.cash) || 0,
+          upi: Number(totals.upi) || 0,
+          credit: Number(totals.credit) || 0,
+        },
+        daily: dailyResult.rows.map(r => ({
+          date: r.date,
+          bills: Number(r.bills),
+          totalSales: Number(r.total_sales),
+          cash: Number(r.cash),
+          upi: Number(r.upi),
+          credit: Number(r.credit),
+        })),
+        topProducts: topProducts.rows.map(r => ({
+          productId: r.product_id,
+          productName: r.product_name,
+          qtySold: Number(r.qty_sold),
+          totalAmount: Number(r.total_amount),
+        })),
+      },
+    });
+  } catch (error: any) {
+    console.error("[T-212] Analytics error:", error.message);
+    if (error.code === "42P01") {
+      return res.json({
+        success: true,
+        data: {
+          from: fromDate, to: toDate,
+          totals: { totalSales: 0, totalBills: 0, averageBillValue: 0 },
+          paymentBreakdown: { cash: 0, upi: 0, credit: 0 },
+          daily: [], topProducts: [],
+        },
+      });
+    }
+    return res.status(500).json({ success: false, error: { code: "ANALYTICS_FAILED", message: "Failed to load analytics" } });
+  }
+});
+
+// =============================================================================
 // INVENTORY OVERVIEW - FE-RETAILER-INVENTORY-001
 // =============================================================================
 

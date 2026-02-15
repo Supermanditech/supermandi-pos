@@ -22,6 +22,8 @@ export interface CatalogProduct {
   hsnCode?: string;
   defaultGstRate?: number;
   isActive: boolean;
+  imageUrl?: string;       // T-206: Product image URL
+  thumbnailUrl?: string;   // T-206: Thumbnail for list views
   // Aggregated from suppliers
   bestPrice: number;
   minMoq: number;
@@ -81,6 +83,8 @@ interface CatalogProductRow {
   hsn_code: string | null;
   default_gst_rate: string | null;
   is_active: boolean;
+  image_url: string | null;      // T-206
+  thumbnail_url: string | null;  // T-206
   best_price: string;
   min_moq: number;
   supplier_count: string;
@@ -255,6 +259,8 @@ async function fetchStoreCatalog(
       p.hsn_code,
       p.default_gst_rate,
       p.is_active,
+      p.image_url,
+      p.thumbnail_url,
       MIN(sp.purchase_price) as best_price,
       MIN(sp.moq) as min_moq,
       COUNT(DISTINCT sp.supplier_id)::text as supplier_count,
@@ -266,7 +272,8 @@ async function fetchStoreCatalog(
     JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
     WHERE ${whereClause}
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
-             p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active
+             p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active,
+             p.image_url, p.thumbnail_url
     ORDER BY p.name ASC
     LIMIT $${paramIndex++} OFFSET $${paramIndex}
   `;
@@ -370,6 +377,8 @@ async function fetchStoreCatalog(
         ? parseFloat(row.default_gst_rate)
         : undefined,
       isActive: row.is_active,
+      imageUrl: row.image_url ?? undefined,         // T-206
+      thumbnailUrl: row.thumbnail_url ?? undefined,  // T-206
       bestPrice: parseFloat(row.best_price),
       minMoq: row.min_moq,
       supplierCount: parseInt(row.supplier_count, 10),
@@ -442,6 +451,8 @@ export async function getStoreCatalogProduct(
       p.hsn_code,
       p.default_gst_rate,
       p.is_active,
+      p.image_url,
+      p.thumbnail_url,
       MIN(sp.purchase_price) as best_price,
       MIN(sp.moq) as min_moq,
       COUNT(DISTINCT sp.supplier_id)::text as supplier_count,
@@ -459,7 +470,8 @@ export async function getStoreCatalogProduct(
       AND s.verification_status = 'verified'
       AND sp.approval_status = 'approved'
     GROUP BY p.id, p.name, p.description, p.brand, p.category, p.unit,
-             p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active
+             p.pack_size, p.primary_barcode, p.hsn_code, p.default_gst_rate, p.is_active,
+             p.image_url, p.thumbnail_url
   `;
 
   const productRow = await queryOne<CatalogProductRow>(sql, [storeId, productId]);
@@ -551,6 +563,8 @@ export async function getStoreCatalogProduct(
       ? parseFloat(productRow.default_gst_rate)
       : undefined,
     isActive: productRow.is_active,
+    imageUrl: productRow.image_url ?? undefined,         // T-206
+    thumbnailUrl: productRow.thumbnail_url ?? undefined,  // T-206
     bestPrice: parseFloat(productRow.best_price),
     minMoq: productRow.min_moq,
     supplierCount: parseInt(productRow.supplier_count, 10),

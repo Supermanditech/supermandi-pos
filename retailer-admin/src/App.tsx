@@ -34,6 +34,7 @@ const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));  // T-073
 const ReconciliationPage = lazy(() => import('./pages/ReconciliationPage'));  // T-151
 const PurchaseOrdersPage = lazy(() => import('./pages/PurchaseOrdersPage'));  // T-180
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));  // T-212
 // RET-CLEANUP-001: Forgot password page
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 // SM-024: Admin approval queue pages
@@ -251,6 +252,8 @@ function AppRoutes() {
           <Route path="reconciliation" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ReconciliationPage /></Suspense></LimitedModeGuard>} />
           {/* T-180: Purchase Orders Visibility */}
           <Route path="purchase-orders" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><PurchaseOrdersPage /></Suspense></LimitedModeGuard>} />
+          {/* T-212: Sales Analytics Dashboard */}
+          <Route path="analytics" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><AnalyticsPage /></Suspense></LimitedModeGuard>} />
           {/* RET-WEB-002: Device Activation page — allowed in limited mode */}
           <Route path="devices" element={<Suspense fallback={<PageLoadingFallback />}><DeviceActivationPage /></Suspense>} />
           {/* SM-024: SuperAdmin approval queue pages */}

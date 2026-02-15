@@ -4,7 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { API_GATEWAY_BASE } from '../lib/api';
 // T-081: Lucide SVG icons for navigation
 // T-088: Menu/X icons for mobile hamburger
-import { LayoutDashboard, Package, ClipboardList, Store, ShoppingCart, FileText, FileSpreadsheet, Settings, CreditCard, Smartphone, Receipt, CheckCircle, PenSquare, Menu, X, IndianRupee, Truck, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Package, ClipboardList, Store, ShoppingCart, FileText, FileSpreadsheet, Settings, CreditCard, Smartphone, Receipt, CheckCircle, PenSquare, Menu, X, IndianRupee, Truck, BarChart3, type LucideIcon } from 'lucide-react';
 // FLOW-001: Device Required Banner
 import DeviceRequiredBanner from './DeviceRequiredBanner';
 // REG-AUTH-301: LIMITED MODE Banner
@@ -59,7 +59,7 @@ export default function ProtectedLayout() {
   const allPaths = [
     '', 'products', 'inventory', 'suppliers', 'supplier-catalog', 'import',
     'compliance', 'settings', 'settings/payments', 'devices',
-    'invoices', 'reconciliation', 'purchase-orders',
+    'invoices', 'reconciliation', 'purchase-orders', 'analytics',
     'admin/suppliers', 'admin/products',
   ];
   const isActive = (path: string) => {
@@ -94,6 +94,7 @@ export default function ProtectedLayout() {
     { path: 'invoices', label: 'Invoices', icon: Receipt }, // T-073
     { path: 'reconciliation', label: 'Reconciliation', icon: IndianRupee }, // T-151
     { path: 'purchase-orders', label: 'Purchase Orders', icon: Truck }, // T-180
+    { path: 'analytics', label: 'Analytics', icon: BarChart3 }, // T-212
   ];
 
   // SM-024: Admin approval queue navigation

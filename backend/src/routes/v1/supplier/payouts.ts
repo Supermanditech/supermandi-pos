@@ -144,6 +144,30 @@ router.get("/summary", requireSupplierAuth, async (req: SupplierAuthRequest, res
       // Orders table might not exist in test env
     }
 
+    // T-205: Get platform fee breakdown from invoices for transparency
+    let totalPlatformFeePaise = 0;
+    let grossSalesPaise = 0;
+    let avgCommissionRate = 0;
+    try {
+      const feeResult = await pool.query(
+        `SELECT
+          COALESCE(SUM(subtotal_minor), 0) as gross_sales,
+          COALESCE(SUM(platform_fee_minor), 0) as total_fees,
+          COALESCE(AVG(platform_fee_percent), 0) as avg_rate
+        FROM invoicing.invoices
+        WHERE seller_type = 'supplier'
+          AND seller_id = $1
+          AND status != 'cancelled'
+          AND status != 'void'`,
+        [req.supplierId]
+      );
+      grossSalesPaise = parseInt(feeResult.rows[0].gross_sales) || 0;
+      totalPlatformFeePaise = parseInt(feeResult.rows[0].total_fees) || 0;
+      avgCommissionRate = parseFloat(feeResult.rows[0].avg_rate) || 0;
+    } catch (e) {
+      // invoicing schema might not exist in test env
+    }
+
     res.json({
       data: {
         totalRevenuePaise: totalRevenue,
@@ -153,6 +177,11 @@ router.get("/summary", requireSupplierAuth, async (req: SupplierAuthRequest, res
         availableBalancePaise: totalRevenue - parseInt(summary.total_paid) - parseInt(summary.total_pending) - parseInt(summary.total_processing),
         completedPayouts: parseInt(summary.completed_count),
         pendingPayouts: parseInt(summary.pending_count),
+        // T-205: Fee transparency fields
+        grossSalesPaise,
+        platformFeePaise: totalPlatformFeePaise,
+        netEarningsPaise: grossSalesPaise - totalPlatformFeePaise,
+        avgCommissionPercent: Math.round(avgCommissionRate * 100) / 100,
       }
     });
   } catch (error) {

@@ -961,6 +961,11 @@ export interface PayoutSummary {
   availableBalancePaise: number;
   completedPayouts: number;
   pendingPayouts: number;
+  // T-205: Fee transparency fields
+  grossSalesPaise?: number;
+  platformFeePaise?: number;
+  netEarningsPaise?: number;
+  avgCommissionPercent?: number;
 }
 
 // GL-WF-044: Get payout history with pagination

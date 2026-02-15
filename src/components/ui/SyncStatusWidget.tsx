@@ -15,6 +15,8 @@ import { useSyncStore, type ConnectionStatus } from "../../stores/syncStore";
 import { retryAll as retryDeadletter, clearAll as clearDeadletter } from "../../services/deadletterService";
 import { showToast } from "../../utils/showToast";
 import { theme } from "../../theme";
+// T-213: Import conflict resolution panel
+import { SyncConflictPanel } from "./SyncConflictPanel";
 
 type StatusColor = typeof theme.colors.success | typeof theme.colors.warning | typeof theme.colors.error;
 
@@ -71,6 +73,7 @@ export function SyncStatusWidget() {
   const syncNow = useSyncStore((s) => s.syncNow);
 
   const [expanded, setExpanded] = useState(false);
+  const [conflictPanelVisible, setConflictPanelVisible] = useState(false); // T-213
   const [relativeTime, setRelativeTime] = useState(formatRelativeTime(lastSyncAt));
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -276,9 +279,23 @@ export function SyncStatusWidget() {
                 </Pressable>
               </>
             ) : null}
+
+            {/* T-213: View Details button to open full conflict panel */}
+            <Pressable
+              style={[styles.actionButton, styles.detailsButton]}
+              onPress={() => setConflictPanelVisible(true)}
+            >
+              <Text style={styles.detailsButtonText}>View Details</Text>
+            </Pressable>
           </View>
         </View>
       ) : null}
+
+      {/* T-213: Full sync conflict resolution panel */}
+      <SyncConflictPanel
+        visible={conflictPanelVisible}
+        onClose={() => setConflictPanelVisible(false)}
+      />
     </View>
   );
 }
@@ -407,5 +424,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     color: theme.colors.error,
+  },
+  // T-213: View Details button
+  detailsButton: {
+    backgroundColor: theme.colors.backgroundTertiary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  detailsButtonText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
   },
 });

@@ -145,6 +145,44 @@ export default function EarningsPage() {
         </div>
       )}
 
+      {/* T-205: Fee Transparency Breakdown */}
+      {summary && (summary.grossSalesPaise ?? 0) > 0 && (
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
+          <h3 className="font-medium text-slate-700 mb-3">Commission Breakdown</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-xs text-slate-500">Gross Sales</p>
+              <p className="text-lg font-semibold text-slate-800">
+                {formatCurrency(summary.grossSalesPaise!)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Platform Fee</p>
+              <p className="text-lg font-semibold text-red-600">
+                - {formatCurrency(summary.platformFeePaise!)}
+              </p>
+              {(summary.avgCommissionPercent ?? 0) > 0 && (
+                <p className="text-xs text-slate-400">
+                  Avg {summary.avgCommissionPercent}%
+                </p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Net Earnings</p>
+              <p className="text-lg font-semibold text-green-700">
+                {formatCurrency(summary.netEarningsPaise!)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Commission Rate</p>
+              <p className="text-lg font-semibold text-slate-800">
+                {summary.avgCommissionPercent ?? 0}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payout History */}
       <div className="card">
         <h2 className="text-lg font-semibold text-slate-800 mb-4">Payout History</h2>

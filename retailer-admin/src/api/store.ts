@@ -126,6 +126,51 @@ export async function fetchDailySummary(accessToken: string, date?: string): Pro
   return data;
 }
 
+// T-212: Sales analytics with date range
+export interface SalesAnalytics {
+  from: string;
+  to: string;
+  totals: {
+    totalSales: number;
+    totalBills: number;
+    averageBillValue: number;
+  };
+  paymentBreakdown: {
+    cash: number;
+    upi: number;
+    credit: number;
+  };
+  daily: Array<{
+    date: string;
+    bills: number;
+    totalSales: number;
+    cash: number;
+    upi: number;
+    credit: number;
+  }>;
+  topProducts: Array<{
+    productId: string;
+    productName: string;
+    qtySold: number;
+    totalAmount: number;
+  }>;
+}
+
+export async function fetchSalesAnalytics(accessToken: string, from?: string, to?: string): Promise<ApiResponse<SalesAnalytics>> {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  const qs = params.toString();
+  const response = await authFetch(`${API_BASE}/analytics/sales${qs ? `?${qs}` : ''}`, accessToken);
+
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (!response.ok) throw new Error('Failed to fetch analytics');
+
+  const data = await safeJson<ApiResponse<SalesAnalytics>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
+}
+
 // FE-RETAILER-CAT-001: Categories from FMCG taxonomy
 export interface FmcgCategory {
   id: string;
