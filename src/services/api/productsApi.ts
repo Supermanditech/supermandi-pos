@@ -45,6 +45,9 @@ export type StoreLookupProduct = {
   variant: string | null;
   available_qty: number;
   is_first_time_in_store: boolean;
+  // T-059: Product mode and store product ID for variant picker
+  product_mode?: string;
+  store_product_id?: string;
 };
 
 export type PriceSources = {
@@ -200,7 +203,9 @@ export async function lookupStoreProductByScan(input: {
       unit: d.unit || null,
       variant: null,
       available_qty: d.currentStock,
-      is_first_time_in_store: false
+      is_first_time_in_store: false,
+      product_mode: (d as any).mode || undefined,
+      store_product_id: d.storeProductId || undefined,
     };
   } catch (error) {
     if (error instanceof ApiError && (error.status === 404 || error.message === "product_not_found")) {
@@ -247,7 +252,9 @@ export async function lookupStoreProductPreviewByScan(input: {
       unit: d.unit || null,
       variant: null,
       available_qty: d.currentStock,
-      is_first_time_in_store: false
+      is_first_time_in_store: false,
+      product_mode: d.mode || undefined,
+      store_product_id: d.storeProductId || undefined,
     };
   } catch (error) {
     console.log(`[scan_debug] error:`, error instanceof ApiError ? `ApiError(${error.status}): ${error.message}` : String(error));
@@ -537,4 +544,32 @@ export function resolvePriceMinorFromSources(sources: PriceSources): PriceResolu
 
 export function resolveProductPriceMinor(product: ApiProduct): number {
   return resolvePriceMinorFromSources(getProductPriceSources(product)).priceMinor;
+}
+
+// =============================================================================
+// T-059: Retail variant types and fetch function
+// =============================================================================
+
+export type RetailVariant = {
+  id: string;
+  storeProductId: string;
+  variantLabel: string;
+  variantQty: number;
+  baseUnit: string;
+  sellPriceMinor: number;
+  barcode: string;
+  sortOrder: number;
+};
+
+export async function fetchRetailVariants(storeProductId: string): Promise<RetailVariant[]> {
+  try {
+    const res = await apiClient.get<{
+      success: boolean;
+      data: RetailVariant[];
+    }>(`${STORE_PRODUCTS_BASE}/${storeProductId}/variants`);
+    return res.data || [];
+  } catch (error) {
+    console.warn(`[fetchRetailVariants] Failed for ${storeProductId}:`, error);
+    return [];
+  }
 }

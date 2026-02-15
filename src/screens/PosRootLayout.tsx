@@ -56,9 +56,14 @@ import {
   setScanRuntime,
   type AddStoreProductRequest,
   type ScanNotice,
-  type SellFirstOnboardingRequest
+  type SellFirstOnboardingRequest,
+  type VariantPickerRequest,
 } from "../services/scan/handleScan";
 import { AddStoreProductModal } from "../components/sell/AddStoreProductModal";
+// T-059: Variant picker for LOOSE_BULK products
+import { VariantPickerModal } from "../components/sell/VariantPickerModal";
+import type { RetailVariant, StoreLookupProduct } from "../services/api/productsApi";
+import { useCartStore } from "../stores/cartStore";
 import { getLastPosMode, setLastPosMode } from "../services/posMode";
 import { POS_MESSAGES } from "../utils/uiStatus";
 import { hydrateStockCacheForStore, setStockCacheStoreId } from "../services/stockCache";
@@ -158,6 +163,9 @@ export default function PosRootLayout() {
   // SD-ONBOARD-001B: Add store product modal state for digitisation flow
   const [addStoreProductRequest, setAddStoreProductRequest] =
     useState<AddStoreProductRequest | null>(null);
+  // T-059: Variant picker modal state
+  const [variantPickerRequest, setVariantPickerRequest] =
+    useState<VariantPickerRequest | null>(null);
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [cameraScanLocked, setCameraScanLocked] = useState(false);
@@ -168,7 +176,9 @@ export default function PosRootLayout() {
   const sellOnboardingActive = sellOnboardingRequest !== null && effectiveMode === "SELL";
   // SD-ONBOARD-001B: Block scans while add store product modal is open
   const addStoreProductActive = addStoreProductRequest !== null && effectiveMode === "SELL";
-  const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive || addStoreProductActive;
+  // T-059: Block scans while variant picker is open
+  const variantPickerActive = variantPickerRequest !== null && effectiveMode === "SELL";
+  const scanDisabled = !isFocused || storeActive === false || scannerOpen || sellOnboardingActive || addStoreProductActive || variantPickerActive;
   const cartMode = effectiveMode === "PURCHASE" ? "PURCHASE" : "SELL";
   const statusMode = "SELL";
   const hidConnected = scannerOk;
@@ -368,8 +378,14 @@ export default function PosRootLayout() {
         setAddStoreProductRequest((current) => current ?? request);
       },
       addStoreProductActive,
+      // T-059: Variant picker for LOOSE_BULK products
+      onVariantPicker: (request) => {
+        if (effectiveMode !== "SELL") return;
+        setVariantPickerRequest((current) => current ?? request);
+      },
+      variantPickerActive,
     });
-  }, [addStoreProductActive, effectiveMode, handleDeviceAuthError, scanLookupV2Enabled, sellOnboardingActive, storeActive]);
+  }, [addStoreProductActive, effectiveMode, handleDeviceAuthError, scanLookupV2Enabled, sellOnboardingActive, storeActive, variantPickerActive]);
 
   useEffect(() => {
     let cancelled = false;
@@ -908,6 +924,48 @@ export default function PosRootLayout() {
     setAddStoreProductRequest(null);
   }, []);
 
+  // T-059: Close handler for variant picker modal
+  const closeVariantPicker = useCallback(() => {
+    setVariantPickerRequest(null);
+  }, []);
+
+  // T-059: Handle variant selection — add variant to cart with variant-specific price
+  const handleVariantSelect = useCallback((variant: RetailVariant, parentProduct: StoreLookupProduct) => {
+    const cartState = useCartStore.getState();
+    cartState.addItem({
+      id: parentProduct.global_product_id,
+      name: `${parentProduct.store_display_name || parentProduct.global_name} — ${variant.variantLabel}`,
+      priceMinor: variant.sellPriceMinor,
+      currency: "INR",
+      barcode: variant.barcode,
+      metadata: {
+        variantId: variant.id,
+        variantLabel: variant.variantLabel,
+        variantQty: variant.variantQty,
+        baseUnit: variant.baseUnit,
+        parentProductId: parentProduct.global_product_id,
+        storeProductId: parentProduct.store_product_id,
+      },
+    });
+    showToast(`${variant.variantLabel} added`);
+  }, []);
+
+  // T-059: Fallback — add parent product directly to cart (no variant selected)
+  const handleVariantFallback = useCallback((parentProduct: StoreLookupProduct, barcode: string) => {
+    const cartState = useCartStore.getState();
+    cartState.addItem({
+      id: parentProduct.global_product_id,
+      name: parentProduct.store_display_name || parentProduct.global_name || barcode,
+      priceMinor: parentProduct.sell_price ?? 0,
+      currency: "INR",
+      barcode,
+      metadata: {
+        globalProductId: parentProduct.global_product_id,
+        storeProductId: parentProduct.store_product_id,
+      },
+    });
+  }, []);
+
   const handleOpenCamera = async () => {
     if (!isFocused || scannerOpen) return;
     if (storeActive === false) {
@@ -1247,6 +1305,15 @@ export default function PosRootLayout() {
             addStoreProductToCart(storeProduct);
           }
         }}
+      />
+
+      {/* T-059: Variant Picker Modal for LOOSE_BULK products */}
+      <VariantPickerModal
+        visible={variantPickerActive}
+        request={variantPickerRequest}
+        onClose={closeVariantPicker}
+        onSelect={handleVariantSelect}
+        onFallback={handleVariantFallback}
       />
 
       <TextInput

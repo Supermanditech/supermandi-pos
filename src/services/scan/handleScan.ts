@@ -36,6 +36,13 @@ export type AddStoreProductRequest = {
   priceMinor: number;
 };
 
+// T-059: Variant picker request for LOOSE_BULK products
+export type VariantPickerRequest = {
+  barcode: string;
+  format?: string;
+  product: StoreLookupProduct;
+};
+
 export type ScanRuntime = {
   intent: ScanIntent;
   mode: ScanMode;
@@ -45,6 +52,9 @@ export type ScanRuntime = {
   onNotice?: (notice: ScanNotice | null) => void;
   onSellFirstOnboarding?: (request: SellFirstOnboardingRequest) => void;
   onAddStoreProduct?: (request: AddStoreProductRequest) => void;
+  // T-059: Variant picker for LOOSE_BULK products
+  onVariantPicker?: (request: VariantPickerRequest) => void;
+  variantPickerActive?: boolean;
   sellFirstOnboardingActive?: boolean;
   addStoreProductActive?: boolean;
   onDeviceAuthError?: (error: ApiError) => Promise<boolean> | boolean;
@@ -429,6 +439,18 @@ async function handleScan(
           }
           console.log(`scan_needs_onboarding:${trimmed},sellPrice=${storeProduct.sell_price},isNew=${storeProduct.is_first_time_in_store}`);
           runtime.onSellFirstOnboarding?.({ barcode: trimmed, format, product: storeProduct });
+          return;
+        }
+
+        // T-059: If LOOSE_BULK product has variants, show variant picker instead of direct cart add
+        if (
+          storeProduct.product_mode === 'LOOSE_BULK' &&
+          storeProduct.store_product_id &&
+          runtime.onVariantPicker &&
+          !runtime.variantPickerActive
+        ) {
+          console.log(`scan_variant_picker:${trimmed},mode=LOOSE_BULK,spId=${storeProduct.store_product_id}`);
+          runtime.onVariantPicker({ barcode: trimmed, format, product: storeProduct });
           return;
         }
 
