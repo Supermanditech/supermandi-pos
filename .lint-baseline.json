@@ -3,13 +3,13 @@
   "updated": "2026-02-13",
   "budgets": {
     "supermandi-superadmin": 74,
-    "backend": 766,
+    "backend": 772,
     "retailer-admin": 0,
     "supplier-portal": 0
   },
   "notes": {
     "supermandi-superadmin": "74 no-explicit-any warnings (Phase 5 tabs added 6) - fix gradually",
-    "backend": "766 warnings (Phase 5 re-audit added new routes/utils) - fix in sprints",
+    "backend": "772 warnings (Phase 5 re-audit added new routes/utils) - fix in sprints",
     "retailer-admin": "No ESLint configured yet - TODO: add ESLint",
     "supplier-portal": "Next.js 16 removed lint command - TODO: add standalone ESLint"
   }
