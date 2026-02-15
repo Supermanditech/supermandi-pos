@@ -76,7 +76,7 @@ jobs:
       id-token: write  # Required for WIF
     env:
       SHA: ${{ needs.gate.outputs.sha_short }}
-      BUILD_TIME: ${{ github.event.head_commit.timestamp || github.event.workflow_run.created_at }}
+      BUILD_TIME: ${{ github.event.workflow_run.head_commit.timestamp || github.event.workflow_run.created_at }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

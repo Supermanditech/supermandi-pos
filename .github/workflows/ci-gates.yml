@@ -671,7 +671,62 @@ jobs:
           bash scripts/gates/security-deep-scan.sh
 
   # ==========================================================================
-  # JOB 14: ZRP Routing Spec Validation
+  # JOB 15: SonarCloud Code Quality Analysis
+  # ==========================================================================
+  sonarcloud:
+    name: "Code Quality: SonarCloud"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for blame info
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: |
+            retailer-admin/pnpm-lock.yaml
+            supermandi-superadmin/pnpm-lock.yaml
+
+      - name: Install dependencies (all portals)
+        run: |
+          cd retailer-admin && pnpm install --frozen-lockfile && cd ..
+          cd supermandi-superadmin && pnpm install --frozen-lockfile && cd ..
+          cd supplier-portal && pnpm install --frozen-lockfile && cd ..
+          pnpm install --frozen-lockfile
+
+      - name: Run tests with coverage (retailer-admin)
+        working-directory: retailer-admin
+        run: npx vitest run --coverage --coverage.reporter=lcov
+
+      - name: Run tests with coverage (superadmin)
+        working-directory: supermandi-superadmin
+        run: npx vitest run --coverage --coverage.reporter=lcov
+
+      - name: Run tests with coverage (supplier-portal)
+        working-directory: supplier-portal
+        run: npx jest --coverage --coverageReporters=lcov
+
+      - name: Run tests with coverage (POS app)
+        run: npx jest --coverage --coverageReporters=lcov
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+
+  # ==========================================================================
+  # JOB 16: ZRP Routing Spec Validation
   # ==========================================================================
   routing-validation:
     name: "ZRP-L: Routing Validation"
@@ -694,7 +749,7 @@ jobs:
     needs: [typecheck, lint, test, build-verify, local-smoke,
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
-            routing-validation]
+            routing-validation, sonarcloud]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -750,6 +805,15 @@ jobs:
             fi
           done
 
+          # SonarCloud (BLOCKING — must pass)
+          SONAR_RESULT="${{ needs.sonarcloud.result }}"
+          if [ "$SONAR_RESULT" != "success" ]; then
+            echo "FAIL: sonarcloud = $SONAR_RESULT"
+            ZRP_FAILED=$((ZRP_FAILED + 1))
+          else
+            echo "PASS: sonarcloud (code quality)"
+          fi
+
           TOTAL_FAILED=$((CORE_FAILED + ZRP_FAILED))
           echo ""
           if [ "$TOTAL_FAILED" -gt 0 ]; then
@@ -760,7 +824,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (5 core + 9 ZRP)"
+          echo "ALL CI GATES PASSED (5 core + 9 ZRP + SonarCloud)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

@@ -155,6 +155,7 @@ scripts/laptop-speedup.ps1
 # Firebase service account keys (NEVER commit)
 firebase-service-account*.json
 *-firebase-adminsdk-*.json
+google-services.json
 retailer-admin/coverage/
 supermandi-superadmin/coverage/
 supplier-portal/coverage/
