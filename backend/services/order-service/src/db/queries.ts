@@ -301,6 +301,22 @@ export async function markPendingReordersApproved(
   );
 }
 
+// T-250: Mark linked pending_reorders as 'fulfilled' when PO is delivered via GRN
+export async function markPendingReordersFulfilled(
+  client: PoolClient,
+  purchaseOrderId: string
+): Promise<number> {
+  const result = await client.query(
+    `UPDATE reorder.pending_reorders
+     SET status = 'fulfilled',
+         updated_at = NOW()
+     WHERE purchase_order_id = $1
+       AND status = 'approved'`,
+    [purchaseOrderId]
+  );
+  return result.rowCount ?? 0;
+}
+
 // =============================================================================
 // PURCHASE ORDER TYPES
 // =============================================================================

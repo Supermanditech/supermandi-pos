@@ -291,7 +291,7 @@ export default function ReorderPage() {
                       <td style={{ fontWeight: 600, color: '#2563eb' }}>{p.suggestedQuantity}</td>
                       <td>{p.supplierName || '\u2014'}</td>
                       <td>{formatCurrency(p.unitPrice)}</td>
-                      <td><span className="badge badge-warning">{p.status}</span></td>
+                      <td><span className={`badge ${p.status === 'fulfilled' ? 'badge-success' : p.status === 'approved' ? 'badge-info' : p.status === 'expired' || p.status === 'dismissed' ? 'badge-secondary' : 'badge-warning'}`}>{p.status}</span></td>
                     </tr>
                   ))}
                 </tbody>

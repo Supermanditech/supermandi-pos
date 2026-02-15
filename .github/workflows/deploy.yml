@@ -588,7 +588,8 @@ jobs:
           DOCUMENT_STORAGE_DIR=/tmp/documents,\
           GCS_DOCUMENTS_BUCKET=supermandi-pos-documents,\
           GCS_IMAGES_BUCKET=supermandi-pos-images,\
-          GCP_PROJECT_ID=${{ env.GCP_PROJECT }}" \
+          GCP_PROJECT_ID=${{ env.GCP_PROJECT }},\
+          FEATURE_REORDER_ENABLED=true" \
             --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest" \
             --allow-unauthenticated \
             --quiet

@@ -505,6 +505,15 @@ export default function GRNScreen({
           <Text style={styles.headerSubtitle}>
             {formatOrderNumber(order.orderNumber)} | {order.supplierName}
           </Text>
+          {/* T-249: Reorder context badge */}
+          {order.orderType === "reorder" && (
+            <View style={styles.reorderBadge}>
+              <MaterialCommunityIcons name="autorenew" size={12} color="#6366f1" />
+              <Text style={styles.reorderBadgeText}>
+                Auto Reorder{order.sourceReorderIds?.length ? ` (${order.sourceReorderIds.length} items)` : ""}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -724,6 +733,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: theme.colors.textTertiary,
     marginTop: 2,
+  },
+  // T-249: Reorder context badge
+  reorderBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+    backgroundColor: "#eef2ff",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+  },
+  reorderBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6366f1",
   },
   loadingContainer: {
     flex: 1,

@@ -42,6 +42,7 @@ export interface PurchaseOrder {
   supplierId: string;
   supplierName: string;
   orderType: OrderType;
+  sourceReorderIds?: string[];  // T-249: linked pending reorder IDs
   status: OrderStatus;
   totalAmount: number;
   itemCount: number;

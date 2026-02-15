@@ -14,6 +14,7 @@ import {
   updateOrderStatus,
   createOrderEvent,
   writeToOutbox,
+  markPendingReordersFulfilled,
   PurchaseOrder,
   PurchaseOrderItem,
   ReceiveRecord,
@@ -320,6 +321,14 @@ export async function receiveGoods(
           receiveNumber,
         },
       });
+
+      // T-250: Auto-close linked pending_reorders when PO is fully delivered
+      if (newStatus === 'delivered' && order.sourceReorderIds && order.sourceReorderIds.length > 0) {
+        const fulfilledCount = await markPendingReordersFulfilled(client, input.orderId);
+        if (fulfilledCount > 0) {
+          console.log(`[GRN] T-250: Auto-closed ${fulfilledCount} pending_reorders for PO ${order.orderNumber}`);
+        }
+      }
     }
 
     // Log the GRN event
@@ -346,6 +355,8 @@ export async function receiveGoods(
         storeId: input.storeId,
         supplierId: order.supplierId,
         orderNumber: order.orderNumber,
+        orderType: order.orderType,
+        sourceReorderIds: order.sourceReorderIds ?? [],
         receiveRecordId: receiveRecord.id,
         receiveNumber,
         previousStatus: order.status,
