@@ -109,7 +109,7 @@ export function LoginGate({ onLogin }: { onLogin: () => void }) {
 
         {step === "otp" && (
           <form onSubmit={handleVerifyOtp}>
-            <div className="loginInfo" style={{ marginBottom: 16, background: "#1e293b", borderRadius: 8, padding: 12 }}>
+            <div className="loginInfo" style={{ marginBottom: 16, background: "#e0f2fe", color: "#0c4a6e", borderRadius: 8, padding: 12 }}>
               OTP sent to <strong>{email}</strong>
             </div>
 

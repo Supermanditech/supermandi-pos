@@ -2234,99 +2234,119 @@ export default function App() {
         </div>
       )}
 
-      <nav className="tabs">
-        <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>
-          Events
-        </button>
-        <button className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>
-          Devices
-        </button>
-        <button className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>
-          Stores
-        </button>
-        <button className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>
-          Suppliers
-          {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
-            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
-              {pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}
-            </span>
-          )}
-        </button>
-        {/* STAGING-FIX-014: Applications approval tab */}
-        <button className={tab === "applications" ? "tab tabActive" : "tab"} onClick={() => setTab("applications")}>
-          Applications
-          {applicationsTotal > 0 && (
-            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
-              {applicationsTotal}
-            </span>
-          )}
-        </button>
-        <button className={tab === "analytics" ? "tab tabActive" : "tab"} onClick={() => setTab("analytics")}>
-          Analytics
-        </button>
-        <button className={tab === "payments" ? "tab tabActive" : "tab"} onClick={() => setTab("payments")}>
-          Payments
-        </button>
-        <button
-          className={`tab ${aiPanelOpen ? "tabActive" : ""}`}
-          onClick={() => setAiPanelOpen(true)}
-          title="Open AI Assistant Panel"
-        >
-          <span className="brandPill">SuperMandi</span>
-          AI
-          {aiAnswer && <span style={{ marginLeft: 4 }}>💬</span>}
-        </button>
-        <button className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>
-          Users
-        </button>
-        <button className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>
-          Settings
-        </button>
-        {/* DOCS-001: Documents verification tab */}
-        <button className={tab === "documents" ? "tab tabActive" : "tab"} onClick={() => setTab("documents")}>
-          Documents
-          {pendingDocuments.length > 0 && (
-            <span className="badge badgeWarn" style={{ marginLeft: 6 }}>
-              {pendingDocsTotal}
-            </span>
-          )}
-        </button>
-        {/* GO-LIVE-011: Audit logs tab */}
-        <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>
-          Audit Logs
-        </button>
-        {/* RO-007: Registration events tab + DR-010: badge */}
-        <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>
-          Registrations
-          {tab !== "registrations" && regEventsTotal > regEventsLastSeenTotal && (
-            <span style={{ marginLeft: 6, background: "#ef4444", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 600 }}>
-              {regEventsTotal - regEventsLastSeenTotal}
-            </span>
-          )}
-        </button>
+      {/* T-015: Grouped sidebar navigation */}
+      <div className="pageLayout">
+        <aside className="sidebar">
+          {/* Operations */}
+          <div className="sidebarGroup">
+            <div className="sidebarGroupLabel">Operations</div>
+            <button className={`sidebarItem ${tab === "events" ? "sidebarItemActive" : ""}`} onClick={() => setTab("events")}>
+              Events
+            </button>
+            <button className={`sidebarItem ${tab === "stores" ? "sidebarItemActive" : ""}`} onClick={() => setTab("stores")}>
+              Stores
+            </button>
+            <button className={`sidebarItem ${tab === "devices" ? "sidebarItemActive" : ""}`} onClick={() => setTab("devices")}>
+              Devices
+            </button>
+            <button className={`sidebarItem ${tab === "staff" ? "sidebarItemActive" : ""}`} onClick={() => setTab("staff")}>
+              Staff
+            </button>
+            <button className={`sidebarItem ${tab === "grn-alerts" ? "sidebarItemActive" : ""}`} onClick={() => setTab("grn-alerts")}>
+              <span>GRN Alerts</span>
+              {grnAlertsOpenCount > 0 && <span className="sidebarBadge">{grnAlertsOpenCount}</span>}
+            </button>
+          </div>
 
-        {/* SA-P1-001: Staff management tab */}
-        <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>
-          Staff
-        </button>
+          {/* Onboarding */}
+          <div className="sidebarGroup">
+            <div className="sidebarGroupLabel">Onboarding</div>
+            <button className={`sidebarItem ${tab === "applications" ? "sidebarItemActive" : ""}`} onClick={() => setTab("applications")}>
+              <span>Applications</span>
+              {applicationsTotal > 0 && <span className="sidebarBadge">{applicationsTotal}</span>}
+            </button>
+            <button className={`sidebarItem ${tab === "registrations" ? "sidebarItemActive" : ""}`} onClick={() => setTab("registrations")}>
+              <span>Registrations</span>
+              {tab !== "registrations" && regEventsTotal > regEventsLastSeenTotal && (
+                <span className="sidebarBadge sidebarBadgeError">{regEventsTotal - regEventsLastSeenTotal}</span>
+              )}
+            </button>
+            <button className={`sidebarItem ${tab === "documents" ? "sidebarItemActive" : ""}`} onClick={() => setTab("documents")}>
+              <span>Documents</span>
+              {pendingDocuments.length > 0 && <span className="sidebarBadge">{pendingDocsTotal}</span>}
+            </button>
+          </div>
 
-        {/* SA-P1-004: GRN Alerts tab */}
-        <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>
-          GRN Alerts
-          {grnAlertsOpenCount > 0 && (
-            <span style={{ marginLeft: 6, background: "#f59e0b", color: "#fff", borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 600 }}>
-              {grnAlertsOpenCount}
-            </span>
-          )}
-        </button>
+          {/* Commerce */}
+          <div className="sidebarGroup">
+            <div className="sidebarGroupLabel">Commerce</div>
+            <button className={`sidebarItem ${tab === "suppliers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("suppliers")}>
+              <span>Suppliers</span>
+              {(pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length) > 0 && (
+                <span className="sidebarBadge">{pendingSuppliers.filter(s => s.status === "pending").length + pendingProducts.length + bankChanges.length}</span>
+              )}
+            </button>
+            <button className={`sidebarItem ${tab === "payments" ? "sidebarItemActive" : ""}`} onClick={() => setTab("payments")}>
+              Payments
+            </button>
+          </div>
 
-        <div className="tabsRight muted">
-          {eventsLoading && <span style={{ marginRight: 8 }}>Refreshing…</span>}
-          {lastRefreshAt ? `Last refresh: ${new Date(lastRefreshAt).toLocaleTimeString()}` : ""}
-        </div>
-      </nav>
+          {/* Monitoring */}
+          <div className="sidebarGroup">
+            <div className="sidebarGroupLabel">Monitoring</div>
+            <button className={`sidebarItem ${tab === "analytics" ? "sidebarItemActive" : ""}`} onClick={() => setTab("analytics")}>
+              Analytics
+            </button>
+            <button className={`sidebarItem ${tab === "audit" ? "sidebarItemActive" : ""}`} onClick={() => setTab("audit")}>
+              Audit Logs
+            </button>
+          </div>
 
-      <section className="controls">
+          {/* Platform */}
+          <div className="sidebarGroup">
+            <div className="sidebarGroupLabel">Platform</div>
+            <button className={`sidebarItem ${tab === "users" ? "sidebarItemActive" : ""}`} onClick={() => setTab("users")}>
+              Users
+            </button>
+            <button className={`sidebarItem ${tab === "settings" ? "sidebarItemActive" : ""}`} onClick={() => setTab("settings")}>
+              Settings
+            </button>
+            <button
+              className={`sidebarItem ${aiPanelOpen ? "sidebarItemActive" : ""}`}
+              onClick={() => setAiPanelOpen(true)}
+            >
+              <span><span className="brandPill" style={{ fontSize: 10, marginRight: 4 }}>SM</span> AI Assistant</span>
+              {aiAnswer && <span>💬</span>}
+            </button>
+          </div>
+
+          <div className="sidebarFooter">
+            {eventsLoading && <div>Refreshing…</div>}
+            {lastRefreshAt ? `Last: ${new Date(lastRefreshAt).toLocaleTimeString()}` : ""}
+          </div>
+        </aside>
+
+        {/* Mobile fallback: flat tabs */}
+        <nav className="tabs">
+          <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>Events</button>
+          <button className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>Stores</button>
+          <button className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>Devices</button>
+          <button className={tab === "suppliers" ? "tab tabActive" : "tab"} onClick={() => setTab("suppliers")}>Suppliers</button>
+          <button className={tab === "applications" ? "tab tabActive" : "tab"} onClick={() => setTab("applications")}>Applications</button>
+          <button className={tab === "analytics" ? "tab tabActive" : "tab"} onClick={() => setTab("analytics")}>Analytics</button>
+          <button className={tab === "payments" ? "tab tabActive" : "tab"} onClick={() => setTab("payments")}>Payments</button>
+          <button className={tab === "users" ? "tab tabActive" : "tab"} onClick={() => setTab("users")}>Users</button>
+          <button className={tab === "settings" ? "tab tabActive" : "tab"} onClick={() => setTab("settings")}>Settings</button>
+          <button className={tab === "documents" ? "tab tabActive" : "tab"} onClick={() => setTab("documents")}>Documents</button>
+          <button className={tab === "audit" ? "tab tabActive" : "tab"} onClick={() => setTab("audit")}>Audit</button>
+          <button className={tab === "registrations" ? "tab tabActive" : "tab"} onClick={() => setTab("registrations")}>Registrations</button>
+          <button className={tab === "staff" ? "tab tabActive" : "tab"} onClick={() => setTab("staff")}>Staff</button>
+          <button className={tab === "grn-alerts" ? "tab tabActive" : "tab"} onClick={() => setTab("grn-alerts")}>GRN</button>
+        </nav>
+
+        <div className="mainContent">
+      {/* T-013: Events filter controls — only visible on Events tab */}
+      {tab === "events" && <section className="controls">
         <div className="control">
           <label>Device ID</label>
           <input value={deviceIdFilter} onChange={(e) => setDeviceIdFilter(e.target.value)} placeholder="e.g. dev-1" />
@@ -2394,7 +2414,7 @@ export default function App() {
             Export CSV
           </button>
         </div>
-      </section>
+      </section>}
 
       {/* SA-001: Tab content — extracted to separate components */}
       {tab === "events" && (
@@ -2730,6 +2750,9 @@ export default function App() {
           handleGrnAlertAction={confirmedGrnAlertAction}
         />
       )}
+
+        </div>{/* end mainContent */}
+      </div>{/* end pageLayout */}
 
       {/* SA-001: Confirmation modals — extracted to components/ConfirmationModals */}
       <ConfirmationModals
