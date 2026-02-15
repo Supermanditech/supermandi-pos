@@ -839,13 +839,53 @@ jobs:
           bash scripts/gates/artifact-hygiene.sh
 
   # ==========================================================================
+  # ZRP-L: Routing Infrastructure + Smoke Verification
+  # Validates GCP LB/URL map/NEGs match ROUTING_SPEC.json, then hits
+  # every portal + POS API through staging.supermandi.tech domain.
+  # ==========================================================================
+  routing-verification:
+    name: "ZRP-L: Routing Verification"
+    needs: [gate, deploy-staging]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: "ZRP-L-023..030: Routing infra validation (BLOCKING)"
+        env:
+          GCP_PROJECT: ${{ env.GCP_PROJECT }}
+          GCP_REGION: ${{ env.GCP_REGION }}
+        run: |
+          chmod +x scripts/gates/routing-infra-validate.sh
+          bash scripts/gates/routing-infra-validate.sh
+
+      - name: "ZRP-L-031..047: Routing smoke tests (BLOCKING)"
+        env:
+          STAGING_DOMAIN: "https://staging.supermandi.tech"
+          CURL_TIMEOUT: "15"
+          MAX_RETRIES: "3"
+          RETRY_DELAY: "10"
+        run: |
+          chmod +x scripts/gates/routing-smoke.sh
+          bash scripts/gates/routing-smoke.sh
+
+  # ==========================================================================
   # STAGE-017: Hardened smoke tests — every check has retries, timeouts,
   # body validation, and explicit BLOCKING behavior. No silent WARNs.
   # Learned from 3 pipeline failures: cold-start, redirects, SHA lag.
   # ==========================================================================
   smoke-test:
     name: Staging Smoke Test
-    needs: [gate, deploy-staging, artifact-verification]
+    needs: [gate, deploy-staging, artifact-verification, routing-verification]
     runs-on: ubuntu-latest
     permissions:
       contents: read

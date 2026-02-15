@@ -1,0 +1,68 @@
+{
+  "version": "1.0",
+  "description": "Canonical routing specification for SuperMandi POS. All CI/CD gates validate against this file. Any routing change MUST update this spec first.",
+  "domain": "staging.supermandi.tech",
+  "gcpProject": "supermandi-backend",
+  "gcpRegion": "asia-south1",
+  "urlMap": "supermandi-staging-urlmap",
+  "sslCert": "supermandi-staging-cert",
+
+  "services": {
+    "landing":         { "cloudRunService": "landing",         "pathPrefix": "/",          "basePath": "/",          "port": 80,   "framework": "nginx-static" },
+    "retailer-admin":  { "cloudRunService": "retailer-admin",  "pathPrefix": "/retailer",  "basePath": "/retailer/", "port": 80,   "framework": "vite-nginx"   },
+    "supplier-portal": { "cloudRunService": "supplier-portal", "pathPrefix": "/supplier",  "basePath": "/supplier/", "port": 3001, "framework": "nextjs"       },
+    "superadmin":      { "cloudRunService": "superadmin",      "pathPrefix": "/admin",     "basePath": "/admin/",    "port": 80,   "framework": "vite-nginx"   },
+    "api-gateway":     { "cloudRunService": "api-gateway",     "pathPrefix": "/api",       "basePath": "/api/",      "port": 3000, "framework": "express"      },
+    "main-backend":    { "cloudRunService": "main-backend",    "pathPrefix": null,         "basePath": null,         "port": 3010, "framework": "express",     "internal": true }
+  },
+
+  "routes": [
+    { "path": "/",                    "target": "landing",         "expect": 200,             "method": "GET",  "note": "Landing page root" },
+    { "path": "/privacy",             "target": "landing",         "expect": 200,             "method": "GET",  "note": "Privacy policy" },
+    { "path": "/terms",               "target": "landing",         "expect": 200,             "method": "GET",  "note": "Terms of service" },
+    { "path": "/pos",                 "target": "landing",         "expect": 200,             "method": "GET",  "note": "POS app download page" },
+
+    { "path": "/retailer/",           "target": "retailer-admin",  "expect": 200,             "method": "GET",  "contentContains": "<div id=\"root\">", "note": "Retailer portal SPA" },
+    { "path": "/retailer",            "target": "retailer-admin",  "expect": [301,302,308],   "redirectTo": "/retailer/", "note": "Trailing slash redirect" },
+    { "path": "/retailer/dashboard",  "target": "retailer-admin",  "expect": 200,             "method": "GET",  "note": "SPA deep link" },
+
+    { "path": "/supplier/",           "target": "supplier-portal", "expect": 200,             "method": "GET",  "note": "Supplier portal root" },
+    { "path": "/supplier",            "target": "supplier-portal", "expect": [301,302,308],   "redirectTo": "/supplier/", "note": "Trailing slash redirect" },
+    { "path": "/supplier/orders",     "target": "supplier-portal", "expect": 200,             "method": "GET",  "note": "Next.js deep link" },
+
+    { "path": "/admin/",              "target": "superadmin",      "expect": 200,             "method": "GET",  "contentContains": "<div id=\"root\">", "note": "SuperAdmin SPA" },
+    { "path": "/admin",               "target": "superadmin",      "expect": [301,302,308],   "redirectTo": "/admin/", "note": "Trailing slash redirect" },
+    { "path": "/admin/stores",        "target": "superadmin",      "expect": 200,             "method": "GET",  "note": "SPA deep link" },
+
+    { "path": "/api/v1/pos/health",   "target": "api-gateway",    "expect": [200,401,403],   "method": "GET",  "note": "POS health through gateway" },
+    { "path": "/api/v1/auth/pos/send-otp", "target": "api-gateway", "expect": [401,403,405,422], "method": "GET", "note": "POS auth route exists (GET rejected but route reachable)" },
+    { "path": "/api/v1/admin/stores", "target": "api-gateway",    "expect": [401,403],       "method": "GET",  "note": "Admin auth guard" }
+  ],
+
+  "posApp": {
+    "description": "Expo/React Native POS app — connects via API gateway, not served by LB",
+    "apiBase": "https://staging.supermandi.tech/api/v1",
+    "downloadPage": "/pos",
+    "criticalApiPrefixes": [
+      "/api/v1/pos/",
+      "/api/v1/auth/",
+      "/api/v1/orders/",
+      "/api/v1/inventory/",
+      "/api/v1/catalog/"
+    ],
+    "requiredEnvVars": ["MIN_APP_VERSION"],
+    "gatewayRoutes": ["pos", "auth", "orders", "inventory", "catalog", "voice"]
+  },
+
+  "envVarRules": {
+    "PORTAL_BASE_URL":      "https://staging.supermandi.tech",
+    "ALLOWED_ORIGINS":      "https://staging.supermandi.tech",
+    "CORS_ALLOWED_ORIGINS": "https://staging.supermandi.tech"
+  },
+
+  "configValidation": {
+    "retailer-admin/vite.config.ts":       { "field": "base",     "expected": "/retailer/" },
+    "supplier-portal/next.config.js":      { "field": "basePath", "expected": "/supplier"  },
+    "supermandi-superadmin/vite.config.ts": { "field": "base",     "expected": "/admin/"    }
+  }
+}

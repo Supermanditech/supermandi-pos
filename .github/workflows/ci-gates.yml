@@ -640,6 +640,21 @@ jobs:
           bash scripts/gates/observability-docs.sh
 
   # ==========================================================================
+  # JOB 13: ZRP Routing Spec Validation
+  # ==========================================================================
+  routing-validation:
+    name: "ZRP-L: Routing Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: "ZRP-L: Routing spec validation"
+        run: |
+          chmod +x scripts/gates/routing-spec-validate.sh
+          bash scripts/gates/routing-spec-validate.sh
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -647,7 +662,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [typecheck, lint, test, build-verify, local-smoke,
             git-discipline, security-audit, migration-safety, config-parity,
-            license-coverage, db-auth-scan, scalability-observability]
+            license-coverage, db-auth-scan, scalability-observability,
+            routing-validation]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -683,7 +699,7 @@ jobs:
             ZRP_FAILED=$((ZRP_FAILED + 1))
           fi
 
-          for job in security-audit migration-safety config-parity license-coverage db-auth-scan scalability-observability; do
+          for job in security-audit migration-safety config-parity license-coverage db-auth-scan scalability-observability routing-validation; do
             RESULT=""
             case "$job" in
               security-audit)            RESULT="${{ needs.security-audit.result }}" ;;
@@ -692,6 +708,7 @@ jobs:
               license-coverage)          RESULT="${{ needs.license-coverage.result }}" ;;
               db-auth-scan)              RESULT="${{ needs.db-auth-scan.result }}" ;;
               scalability-observability)  RESULT="${{ needs.scalability-observability.result }}" ;;
+              routing-validation)        RESULT="${{ needs.routing-validation.result }}" ;;
             esac
             if [ "$RESULT" != "success" ]; then
               echo "FAIL: $job = $RESULT"
@@ -711,7 +728,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (5 core + 7 ZRP)"
+          echo "ALL CI GATES PASSED (5 core + 8 ZRP)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

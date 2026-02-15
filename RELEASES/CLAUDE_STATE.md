@@ -1483,6 +1483,76 @@ gcloud run services update-traffic <service> --to-revisions=<previous>=100
 
 ---
 
+# PART 17: ROUTING ENFORCEMENT (Canonical Routing Spec + Automated Gates)
+
+> **Rule:** The routing spec (`RELEASES/ROUTING_SPEC.json`) is the SINGLE SOURCE OF TRUTH for all URL routing. Any routing change (base path, URL map, NEG, Cloud Run service, nginx config) MUST update the spec first, then the implementation. CI and CD gates enforce the spec automatically.
+
+## 17.1 Architecture
+
+```
+Internet → staging.supermandi.tech (SSL)
+  ├── /                    → landing          (Cloud Run, nginx-static, port 80)
+  ├── /privacy, /terms     → landing
+  ├── /pos                 → landing          (POS app download page)
+  ├── /retailer/*          → retailer-admin   (Cloud Run, vite-nginx, port 80)
+  ├── /supplier/*          → supplier-portal  (Cloud Run, nextjs, port 3001)
+  ├── /admin/*             → superadmin       (Cloud Run, vite-nginx, port 80)
+  ├── /api/*               → api-gateway      (Cloud Run, express, port 3000)
+  └── api-gateway          → main-backend     (internal, express, port 3010)
+
+POS App (Expo/React Native) → https://staging.supermandi.tech/api/v1/pos/*
+                             → https://staging.supermandi.tech/api/v1/auth/*
+```
+
+## 17.2 The Three Routing Gates (ZRP Category L)
+
+| Gate Script | When | What | Gate IDs |
+|-------------|------|------|----------|
+| `routing-spec-validate.sh` | CI (every PR) | Static validation: configs match spec | L-001..L-022 |
+| `routing-infra-validate.sh` | CD (post-deploy) | GCP validation: URL map, NEGs, services | L-023..L-030 |
+| `routing-smoke.sh` | CD (post-deploy) | Live validation: hit every URL through LB | L-031..L-047 |
+
+**All gates are BLOCKING.** Routing correctness is not optional.
+
+## 17.3 POS App Routing Rules
+
+The POS app is a mobile app (Expo/React Native), NOT a web portal. It does not have a base path on the load balancer. Its routing rules are:
+
+1. **API Base**: POS connects to `https://staging.supermandi.tech/api/v1/`
+2. **Critical prefixes**: `/api/v1/pos/*`, `/api/v1/auth/*`, `/api/v1/orders/*`, `/api/v1/inventory/*`, `/api/v1/catalog/*`
+3. **Gateway config**: All POS prefixes MUST exist in `api-gateway/src/config.ts`
+4. **MIN_APP_VERSION**: MUST be set in `deploy.yml` for version gating
+5. **Download page**: `/pos` on the landing site MUST return 200
+6. **Auth flow**: POS uses OTP via `/api/v1/auth/pos/send-otp` — gateway MUST proxy this
+
+## 17.4 Claude's Routing Obligations
+
+When Claude changes ANY of these files, Claude MUST:
+
+| File Changed | Also Verify |
+|-------------|-------------|
+| `vite.config.ts` (any portal) | Base path matches `ROUTING_SPEC.json` |
+| `next.config.js` | `basePath` and `trailingSlash` match spec |
+| `nginx.conf` (any portal) | Rewrites and SPA fallback match spec |
+| `api-gateway/src/config.ts` | All required route prefixes present |
+| `deploy.yml` (service names) | Names match spec AND GCP services (HL-006) |
+| `deploy.yml` (env vars) | PORTAL_BASE_URL, CORS, ALLOWED_ORIGINS match domain |
+| GCP URL map (via console/gcloud) | Path rules match spec → update spec if changed |
+| Dockerfile (any portal) | EXPOSE port matches spec |
+
+## 17.5 Forbidden Routing Actions
+
+| Action | FORBIDDEN Because |
+|--------|------------------|
+| Change a portal base path without updating ROUTING_SPEC.json | CI gate L-002/L-003/L-004 will block |
+| Deploy with wildcard CORS (`*`) | CI gate L-013 will block |
+| Remove POS API prefixes from gateway config | CI gate L-020 will block |
+| Deploy without MIN_APP_VERSION | CI gate L-021 will block |
+| Change Cloud Run service names | CD gate L-028 will block; HL-006 violated |
+| Change URL map path rules without updating spec | CD gate L-025 will block |
+
+---
+
 **END OF CLAUDE STATE OPERATING SYSTEM**
 
 *This file is the single source of truth. All other rule files are historical reference only.*

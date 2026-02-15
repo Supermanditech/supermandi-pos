@@ -1,7 +1,7 @@
 {
-  "version": "7.0",
-  "lastUpdated": "2026-02-15T05:45:00+05:30",
-  "currentPhase": "AUDIT FIX SPRINT COMPLETE — 47 tickets merged + deployed to staging",
+  "version": "10.0",
+  "lastUpdated": "2026-02-15T15:30:00+05:30",
+  "currentPhase": "STAGING TESTING — 53 tickets collected from operator browser testing",
   "currentTicket": null,
   "batchSprint": {
     "masterIssue": "#103",
@@ -22,12 +22,35 @@
       { "phase": 8, "name": "POS Mobile", "issues": "#142-#147", "count": 6, "priority": "P0-P1", "status": "deployed" }
     ]
   },
+  "goLiveHardening": {
+    "totalItems": 113,
+    "tickets": ["#184", "#185", "#186", "#187", "#188", "#190"],
+    "prs": {
+      "#191": { "title": "Phase 1: Backend blockers", "sha": "d46f065", "files": 10, "status": "MERGED + DEPLOYED" },
+      "#192": { "title": "Phase 2: Security hardening", "sha": "df306ec", "files": 7, "status": "MERGED + DEPLOYED" },
+      "#193": { "title": "Phase 3-6: Portal hardening", "sha": "f61a3b2", "files": 17, "status": "MERGED + DEPLOYED" }
+    },
+    "coverage": "63 Done + 11 Partial + 23 Missing + 16 Infra/NA = 113 total",
+    "status": "ALL 3 PRs MERGED + DEPLOYED TO STAGING"
+  },
+  "routingEnforcement": {
+    "spec": "RELEASES/ROUTING_SPEC.json",
+    "stateRule": "CLAUDE_STATE.md Part 17",
+    "gates": {
+      "ci": { "script": "routing-spec-validate.sh", "ids": "L-001..L-022", "count": 22, "blocking": true },
+      "cdInfra": { "script": "routing-infra-validate.sh", "ids": "L-023..L-030", "count": 8, "blocking": true },
+      "cdSmoke": { "script": "routing-smoke.sh", "ids": "L-031..L-047", "count": 17, "blocking": true }
+    },
+    "totalNewGates": 47,
+    "coverage": "Landing, Retailer, Supplier, Admin, API Gateway, POS App (download + API routes)"
+  },
   "mcpInferenceRule": "CLAUDE_STATE.md Part 16 — Query GCP/DB/GitHub BEFORE writing any code",
   "recentlyCompleted": [
-    { "id": "AUDIT-SPRINT", "pr": "#151", "summary": "47 audit fix tickets (#104-#150), 8 phases, 52 files — merged + deployed to staging" },
-    { "id": "CI-FIX", "pr": "#151", "summary": "Fixed git-discipline.sh bash integer bug, branch naming, lint budget" },
-    { "id": "CD-VERIFY", "pr": "#102", "summary": "Fix deploy-verify.sh grep crash + E2E @prod filter for staging-safe tests" },
-    { "id": "ZRP-PHASE2", "pr": "#94", "summary": "ZRP Phase 2 — all 48 deferred gates implemented (138/138 complete)" }
+    { "id": "ROUTING-ENFORCE", "summary": "47 new routing enforcement gates (ZRP-L): spec + CI static + CD infra + CD smoke. Covers all portals + POS app." },
+    { "id": "GOLIVE-PHASE1", "pr": "#191", "summary": "6 backend fixes: GCS docs, approval schema, statement timeout, IFSC fallback, daily-summary, supplier list" },
+    { "id": "GOLIVE-PHASE2", "pr": "#192", "summary": "Security hardening: CSRF headers, JWT SSE cookies, route guards, PII in URL, FormData timeouts" },
+    { "id": "GOLIVE-PHASE3-6", "pr": "#193", "summary": "Portal hardening: 15+ confirm modals, import timeout, onboarding resume, supplier order/earnings/dashboard, staff/devices/audit enhancements" },
+    { "id": "AUDIT-SPRINT", "pr": "#151", "summary": "47 audit fix tickets (#104-#150), 8 phases, 52 files — merged + deployed to staging" }
   ],
   "infraStatus": {
     "A1_WIF": "DONE — 8 IAM roles on github-actions SA",
@@ -36,51 +59,66 @@
     "Cloud_SQL": "HARDENED — backups enabled (03:00 UTC, 7 retained), deletion protection ON, SSL enforced",
     "Redis": "HARDENED — RDB persistence every 12h",
     "Artifact_Registry": "CLEAN — cleanup policy set (keep 10 tagged, delete untagged 7d)",
-    "Revisions": "6 active (new revisions from PR #151 deploy). All serving 100% traffic.",
-    "ZRP_Protocol": "COMPLETE — 138/138 gates active. 0 deferred. Full coverage across A-K categories."
+    "Revisions": "6 active (all running f61a3b2). All serving 100% traffic.",
+    "ZRP_Protocol": "ENFORCED — 185 gates active (138 A-K + 47 L-routing). 0 deferred. Full coverage A-L.",
+    "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is single source of truth. 3 gate layers: CI static + CD infra + CD smoke."
   },
   "phaseSnapshot": {
-    "completed": 101,
+    "completed": 104,
     "inProgress": 0,
     "awaitingOperator": 0,
-    "ciPasses": 15,
-    "cdPasses": 6,
+    "ciPasses": 18,
+    "cdPasses": 9,
     "gitBranches": 0,
-    "headSHA": "8c217e0",
+    "headSHA": "f61a3b2",
     "stagingLive": true,
-    "stagingSHA": "8c217e0",
-    "zrpGatesTotal": 138,
-    "zrpGatesEnforced": 138,
-    "zrpGatesBlocking": 105,
+    "stagingSHA": "f61a3b2",
+    "zrpGatesTotal": 185,
+    "zrpGatesEnforced": 185,
+    "zrpGatesBlocking": 152,
     "zrpGatesWarning": 33,
     "zrpGatesDeferred": 0
   },
   "stagingRevisions": {
-    "main-backend": "00038-lfd",
-    "api-gateway": "00029-9rf",
-    "retailer-admin": "00031-gdt",
-    "supplier-portal": "00029-xnf",
-    "superadmin": "00024-v2d",
-    "landing": "00016-qpc"
+    "main-backend": "00051-7md",
+    "api-gateway": "00041-rxl",
+    "retailer-admin": "00043-9mn",
+    "supplier-portal": "00041-rb5",
+    "superadmin": "00036-tls",
+    "landing": "00028-lv4"
   },
   "rollbackRevisions": {
-    "main-backend": "00037-525",
-    "api-gateway": "00028-lw7",
-    "retailer-admin": "00030-9dz",
-    "supplier-portal": "00028-kd9",
-    "superadmin": "00023-fgv",
-    "landing": "00015-bq5"
+    "main-backend": "00049-5nr",
+    "api-gateway": "00039-zql",
+    "retailer-admin": "00041-48j",
+    "supplier-portal": "00039-2q2",
+    "superadmin": "00034-fbt",
+    "landing": "00026-fpf"
+  },
+  "stagingTesting": {
+    "ticketFile": "RELEASES/STAGING_TICKETS.md",
+    "totalTickets": 53,
+    "p0Blockers": 3,
+    "p1Functional": 12,
+    "p2UxPolish": 38,
+    "categories": "A: Blocking Bugs (3), B: Functional Bugs (7), C: Design System (5), D: Pre-Auth Retailer (5), E: Pre-Auth Supplier (5), F: Post-Auth Retailer (10), G: Post-Auth Supplier (7), H: SuperAdmin (11)",
+    "operatorBlocker": "Cannot register new retailer due to T-001 (GSTIN saved before approval)",
+    "status": "COLLECTING — operator will add more tickets next session"
   },
   "openIssues": [
     { "id": "#152", "title": "Gateway health endpoint 404 — uptime probe failing", "priority": "P2", "preExisting": true }
   ],
+  "uncommittedWork": {
+    "routingEnforcement": "8 files created/modified for routing enforcement (47 gates). NOT yet committed or pushed.",
+    "stagingTickets": "RELEASES/STAGING_TICKETS.md created with 53 tickets."
+  },
   "lastActions": [
-    "PR #151 MERGED to main (squash, commit 8c217e0)",
-    "CI on main: 13/13 jobs PASSED",
-    "CD pipeline: 6/6 jobs PASSED (build, pre-deploy, deploy, artifact verify, smoke test)",
-    "All 6 Cloud Run services updated with new revisions",
-    "Zero errors in Cloud Run logs post-deploy",
-    "Created #152 for pre-existing gateway health 404"
+    "Operator staging browser testing: 53 tickets collected across all 3 portals",
+    "RELEASES/STAGING_TICKETS.md created — full ticket list with priorities and implementation order",
+    "Routing enforcement files created (not yet committed): ROUTING_SPEC.json + 3 gate scripts + CI/CD updates",
+    "CLAUDE_STATE.md updated with Part 17: Routing Enforcement",
+    "ZRP report v3.0: 19 categories (A-L), 185 total gates"
   ],
-  "nextAction": "Fix #152 (gateway health 404), then production promotion"
+  "gitDiscipline": "OFF — operator disabled. Work directly on main, no branch/PR/tag ceremony per ticket. Batch commits allowed.",
+  "nextAction": "1. Commit + push routing enforcement (8 files, verify CI). 2. Start implementing T-001 (P0: registration data persistence) to unblock operator testing. 3. Operator adds more tickets. 4. Implement T-012, T-014 (remaining P0s)."
 }
