@@ -331,16 +331,37 @@
     "status": "COMPLETE — tickets created",
     "date": "2026-02-15"
   },
+  "phase10_ProductionTesting": {
+    "range": "TEST-001 → TEST-052",
+    "count": 52,
+    "status": "QUEUED — Starts AFTER all 109 dev tickets (Phases 6+7+9) are completed",
+    "methodology": "3 rounds: Discovery → Regression → Stress + GO/NO-GO",
+    "codebaseSurface": {
+      "totalFiles": 1135,
+      "totalLinesOfCode": 294784,
+      "testTypes": 10,
+      "rounds": 3,
+      "totalTestExecutions": 34050
+    },
+    "phases": {
+      "A_InfraSetup": "TEST-001→010 (10 tickets, ~30h) — Install testcontainers, Snyk, Semgrep, gitleaks, axe-core, Maestro, k6 scenarios, Zod schemas, coverage thresholds, CI enhancement",
+      "B_Round1_Discovery": "TEST-011→028 (18 tickets, ~50h) — Unit tests ALL files (80%+ coverage), integration, contract, E2E web+mobile, security, visual, a11y, data integrity, load baseline",
+      "C_Round2_Regression": "TEST-029→037 (9 tickets, ~25h) — Full re-run ALL tests, zero tolerance",
+      "D_Round3_Stress": "TEST-038→052 (15 tickets, ~20h) — 100K SKU, 10K VU, 50K scans/day, DB/Redis failure, POS offline, GO/NO-GO report"
+    },
+    "goNoGoChecks": 48,
+    "estimatedEffort": "~165-185 hours"
+  },
   "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
-  "nextAction": "VS Code Claude: READ RELEASES/PHASE9_INTEGRATION_GUIDE.md FIRST — contains per-ticket SDK/API/sandbox details. Start with Wave A (UPI Core: T-253→T-262). 41 of 64 tickets need ZERO external deps. Operator: sign up Razorpay live account + RazorpayX.",
+  "nextAction": "VS Code Claude: Complete remaining Phase 6+7+9 tickets FIRST (109 tickets). Then Phase 10 testing begins (52 tickets, 3 rounds, 34,050 test executions). READ RELEASES/PHASE9_INTEGRATION_GUIDE.md for Phase 9 details.",
   "lastActions": [
+    "Phase 10 Production Testing plan created: 52 tickets (TEST-001→TEST-052), 1,135 files × 10 test types × 3 rounds = 34,050 test executions",
+    "Testing methodology: Round 1 (Discovery) → Round 2 (Regression) → Round 3 (Stress + GO/NO-GO) with 48 go/no-go checks",
+    "Tools: testcontainers, Snyk, Semgrep, gitleaks, axe-core, k6 enhanced (15 scenarios), Maestro, Zod contracts, Playwright expanded",
+    "Scale targets verified: 100K SKUs, 10K VUs, 50K scans/store/day, p95 < 200ms scan, p95 < 3s checkout",
+    "CI enhanced: 5 jobs → 13 jobs across 4 tiers (fast/medium/slow/manual)",
     "Voice/TTS conflict audit: NO code conflicts found. Phase 9 AI tickets are ADDITIVE to existing voice infra.",
-    "Fixed 14 ticket ID mismatches in PHASE9_INTEGRATION_GUIDE.md (T-303 was mapped as TTS, actually AI onboarding; T-305 is the real TTS ticket)",
-    "Corrected integration readiness: 44 CAN CODE NOW (69%) / 3 NEED API KEYS / 13 NEED PARTNERSHIP / 4 FIX EXISTING CODE",
-    "Added ALREADY EXISTS section to guide: 10 voice files exist (VoiceButton, VoiceSheet, voiceClient, voiceOrderService, etc.) — DO NOT RECREATE",
-    "Added dependency notes: T-305 (TTS) prerequisite for T-303/T-306/T-315; product search prerequisite for T-306/T-315",
-    "STT clarified: POS app → OpenAI Whisper (main path), voice-service → Anthropic Claude (port 3009)",
-    "State updated to v23.0 with voiceDependencyNotes + corrected categories"
+    "State updated to v24.0 with Phase 10 testing tickets + methodology"
   ]
 }
