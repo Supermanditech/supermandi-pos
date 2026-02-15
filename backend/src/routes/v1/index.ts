@@ -53,6 +53,7 @@ import { retailerComplianceRouter } from "./retailer-admin/compliance";
 import { retailerAdminAuthRouter } from "./retailer-admin/auth";
 import { retailerAdminSettingsRouter } from "./retailer-admin/settings";  // GL-AUD-004: Store settings
 import { retailerAdminDevicesRouter } from "./retailer-admin/devices";  // RET-WEB-002: Device activation
+import { retailerAdminVariantsRouter } from "./retailer-admin/variants";  // T-057: Retail variant CRUD
 import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
@@ -172,6 +173,7 @@ v1Router.use("/retailer-admin", retailerComplianceRouter);
 v1Router.use("/retailer-admin", retailerAdminAuthRouter);
 v1Router.use("/retailer-admin", retailerAdminSettingsRouter);  // GL-AUD-004: Store settings
 v1Router.use("/retailer-admin", retailerAdminDevicesRouter);  // RET-WEB-002: Device activation
+v1Router.use("/retailer-admin", retailerAdminVariantsRouter);  // T-057: Retail variant CRUD
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs

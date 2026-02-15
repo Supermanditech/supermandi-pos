@@ -105,6 +105,55 @@ async function fetchStoreProductByBarcode(
     };
   }
 
+  // T-057: Check variant barcodes (prefix 3) — retail selling units for LOOSE_BULK
+  const variantRes = await pool.query(
+    `
+    SELECT
+      sp.id,
+      COALESCE(sp.display_name, p.name) AS parent_name,
+      prv.barcode,
+      'INR' AS currency,
+      prv.sell_price_minor AS selling_price_minor,
+      true AS digitised_by_retailer,
+      COALESCE(sb.current_qty, sp.current_stock, 0) AS current_stock,
+      sp.product_mode,
+      sp.sold_by,
+      sp.rate_unit,
+      sp.purchase_price,
+      prv.id AS variant_id,
+      prv.variant_label,
+      prv.variant_qty,
+      prv.base_unit
+    FROM catalog.product_retail_variants prv
+    JOIN catalog.store_products sp ON sp.id = prv.store_product_id
+    JOIN catalog.products p ON p.id = sp.product_id
+    LEFT JOIN inventory.stock_balances sb
+      ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
+    WHERE prv.barcode = $1
+      AND sp.store_id = $2
+      AND prv.is_active = true
+      AND sp.is_active = true
+    LIMIT 1
+    `,
+    [lookupBarcode, storeId]
+  );
+
+  if (variantRes.rows[0]) {
+    const row = variantRes.rows[0];
+    return {
+      id: row.id,
+      name: `${row.parent_name} — ${row.variant_label}`,
+      barcode: row.barcode,
+      currency: row.currency,
+      priceMinor: row.selling_price_minor ?? null,
+      digitisedByRetailer: true,
+      productMode: row.product_mode || 'LOOSE_BULK',
+      soldBy: row.sold_by || undefined,
+      rateUnit: row.rate_unit || undefined,
+      purchasePrice: row.purchase_price ?? null,
+    };
+  }
+
   // GL-POS-002: Fallback to legacy schema for backward compatibility
   // This supports products digitised via old POS flow (barcodes → variants → retailer_variants)
   const legacyRes = await pool.query(

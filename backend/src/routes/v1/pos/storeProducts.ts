@@ -1267,3 +1267,55 @@ posStoreProductsRouter.patch("/store-products/:storeProductId/metadata", require
   }
 });
 
+// =============================================================================
+// T-057: GET /api/v1/pos/store-products/:storeProductId/variants
+// Returns retail selling variants for a LOOSE_BULK product (used by POS variant picker)
+// =============================================================================
+posStoreProductsRouter.get("/store-products/:storeProductId/variants", requireDeviceToken, async (req, res) => {
+  const { storeId } = (req as any).posDevice as { storeId: string };
+  const { storeProductId } = req.params;
+
+  const pool = getPool();
+  if (!pool) {
+    return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
+  }
+
+  try {
+    // Verify store product exists and belongs to this store
+    const spCheck = await pool.query(
+      `SELECT id, product_mode FROM catalog.store_products
+       WHERE id = $1 AND store_id = $2 AND is_active = true`,
+      [storeProductId, storeId]
+    );
+
+    if (spCheck.rows.length === 0) {
+      return res.status(404).json({ error: "NOT_FOUND", message: "Store product not found" });
+    }
+
+    if (spCheck.rows[0].product_mode !== 'LOOSE_BULK') {
+      return res.json({ success: true, data: [] });
+    }
+
+    const result = await pool.query(
+      `SELECT
+        id,
+        store_product_id AS "storeProductId",
+        variant_label AS "variantLabel",
+        variant_qty AS "variantQty",
+        base_unit AS "baseUnit",
+        sell_price_minor AS "sellPriceMinor",
+        barcode,
+        sort_order AS "sortOrder"
+      FROM catalog.product_retail_variants
+      WHERE store_product_id = $1 AND is_active = true
+      ORDER BY sort_order ASC, created_at ASC`,
+      [storeProductId]
+    );
+
+    return res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error("[storeProducts] Variants fetch error:", error);
+    return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to fetch variants" });
+  }
+});
+
