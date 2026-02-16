@@ -13,7 +13,7 @@ import {
   verifySupplierOtp,
   submitSupplierKyc,
   uploadSupplierDocument,
-  getAuthToken,
+  hasAuthCookie,
   ApiError,
 } from '@/lib/api';
 import { setupRecaptcha, sendOtp, verifyOtp, isFirebaseReady, cleanup } from '@/lib/firebase';
@@ -41,8 +41,9 @@ export default function SupplierOnboardingPage() {
   const router = useRouter();
 
   // AUDIT-SUP-001: Redirect authenticated users to dashboard
+  // FIX-023: Use cookie check instead of in-memory token (survives page reload)
   useEffect(() => {
-    if (getAuthToken()) {
+    if (hasAuthCookie()) {
       router.replace('/dashboard');
     }
   }, [router]);
