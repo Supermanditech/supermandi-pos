@@ -278,7 +278,7 @@ jobs:
       - name: "ZRP-D-003: Secret freshness check (BLOCKING)"
         run: |
           echo "=== ZRP-D-003: Secret Freshness Check ==="
-          SECRETS=(database-url postgres-password jwt-secret admin-token smtp-password)
+          SECRETS=(database-url postgres-password jwt-secret admin-token smtp-password WHATSAPP_ACCESS_TOKEN WHATSAPP_PHONE_NUMBER_ID WHATSAPP_VERIFY_TOKEN)
           FAIL=0
           for secret in "${SECRETS[@]}"; do
             # Check secret exists and has an enabled version
@@ -311,7 +311,7 @@ jobs:
             echo "BLOCKED: $FAIL secret(s) missing or disabled in Secret Manager."
             exit 1
           fi
-          echo "PASS: All 5 secrets verified in Secret Manager."
+          echo "PASS: All 8 secrets verified in Secret Manager."
 
       # ZRP-D-007: VPC connector verification — must be READY before deploy
       # Requires roles/vpcaccess.viewer on WIF SA (granted 2026-02-14)
@@ -595,7 +595,7 @@ jobs:
           SUPERMANDI_ADDRESS=166/1 Bhandu Khurd Jodhpur Rajasthan 342014,\
           SUPERMANDI_STATE=Rajasthan,\
           FRONTEND_URL=https://staging.supermandi.tech" \
-            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest" \
+            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest" \
             --allow-unauthenticated \
             --quiet
           echo "    OK: $SERVICE_NAME deployed"
