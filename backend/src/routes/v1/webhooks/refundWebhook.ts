@@ -5,6 +5,8 @@
  * - payment.refund.processed → Update refund to 'completed'
  * - payment.refund.failed → Update refund to 'failed'
  * - payment.refund.created → Update with razorpay_refund_id
+ *
+ * Security: timingSafeEqual for signature, idempotent updates, transaction wrapping
  */
 
 import { Router, Request, Response } from 'express';
@@ -13,24 +15,42 @@ import { getPool } from '../../../db/client';
 
 export const refundWebhookRouter = Router();
 
+/**
+ * Constant-time signature comparison to prevent timing attacks.
+ * Returns false (instead of crashing) when buffer lengths differ.
+ */
+function safeTimingEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 // POST /webhooks/razorpay/refund — Razorpay refund status webhook
 refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response) => {
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: 'Database unavailable' });
 
-  // Verify webhook signature
+  // Verify webhook signature — REQUIRED (reject if secret not configured)
   const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-  if (webhookSecret) {
-    const signature = req.headers['x-razorpay-signature'] as string;
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(JSON.stringify(req.body))
-      .digest('hex');
+  if (!webhookSecret) {
+    console.error('[T-219] RAZORPAY_WEBHOOK_SECRET not configured — rejecting webhook');
+    return res.status(500).json({ error: 'Webhook secret not configured' });
+  }
 
-    if (signature !== expectedSignature) {
-      console.warn('[T-219] Invalid Razorpay webhook signature');
-      return res.status(400).json({ error: 'Invalid signature' });
-    }
+  const signature = req.headers['x-razorpay-signature'] as string;
+  if (!signature) {
+    return res.status(400).json({ error: 'Missing signature header' });
+  }
+
+  const expectedSignature = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(JSON.stringify(req.body))
+    .digest('hex');
+
+  if (!safeTimingEqual(signature, expectedSignature)) {
+    console.warn('[T-219] Invalid Razorpay webhook signature');
+    return res.status(400).json({ error: 'Invalid signature' });
   }
 
   const event = req.body as {
@@ -62,15 +82,22 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
 
   console.log(`[T-219] Razorpay refund webhook: ${eventType} for payment ${paymentId}`);
 
+  // Wrap all DB updates in a transaction for atomicity
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     switch (eventType) {
       case 'refund.created': {
         if (refundEntity?.id) {
-          await pool.query(
+          // Idempotent: skip if razorpay_refund_id already set to a different value
+          await client.query(
             `UPDATE orders.refund_requests
              SET razorpay_refund_id = $1, razorpay_status = $2, status = 'processing',
                  webhook_payload = $3, updated_at = NOW()
-             WHERE razorpay_payment_id = $4 AND status IN ('initiated', 'processing')`,
+             WHERE razorpay_payment_id = $4
+               AND status IN ('initiated', 'processing')
+               AND (razorpay_refund_id IS NULL OR razorpay_refund_id = $1)`,
             [refundEntity.id, refundEntity.status || 'created', JSON.stringify(event), paymentId]
           );
         }
@@ -79,19 +106,21 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
 
       case 'refund.processed':
       case 'payment.refund.processed': {
-        await pool.query(
+        // Idempotent: only update rows not already completed
+        await client.query(
           `UPDATE orders.refund_requests
            SET status = 'completed', razorpay_status = 'processed',
                completed_at = NOW(), webhook_payload = $1, updated_at = NOW()
-           WHERE razorpay_payment_id = $2 AND status IN ('initiated', 'processing')`,
+           WHERE razorpay_payment_id = $2
+             AND status IN ('initiated', 'processing')`,
           [JSON.stringify(event), paymentId]
         );
 
-        // Also update the original payment status
-        await pool.query(
+        // Update original payment status (idempotent: skip if already refunded)
+        await client.query(
           `UPDATE orders.payments
            SET status = 'refunded', updated_at = NOW()
-           WHERE razorpay_payment_id = $1`,
+           WHERE razorpay_payment_id = $1 AND status != 'refunded'`,
           [paymentId]
         );
         break;
@@ -100,11 +129,13 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
       case 'refund.failed':
       case 'payment.refund.failed': {
         const errorDesc = refundEntity?.status || 'Refund failed';
-        await pool.query(
+        // Idempotent: only update rows not already failed/completed
+        await client.query(
           `UPDATE orders.refund_requests
            SET status = 'failed', razorpay_status = 'failed',
                failed_at = NOW(), failure_reason = $1, webhook_payload = $2, updated_at = NOW()
-           WHERE razorpay_payment_id = $3 AND status IN ('initiated', 'processing')`,
+           WHERE razorpay_payment_id = $3
+             AND status IN ('initiated', 'processing')`,
           [errorDesc, JSON.stringify(event), paymentId]
         );
         break;
@@ -113,9 +144,14 @@ refundWebhookRouter.post('/razorpay/refund', async (req: Request, res: Response)
       default:
         console.log(`[T-219] Unhandled refund webhook event: ${eventType}`);
     }
+
+    await client.query('COMMIT');
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('[T-219] Refund webhook processing error:', err);
     // Return 200 to prevent Razorpay retries for non-transient errors
+  } finally {
+    client.release();
   }
 
   return res.json({ received: true, event: eventType });

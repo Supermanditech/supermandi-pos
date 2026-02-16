@@ -4,9 +4,13 @@
 
 import { Router, Request, Response } from 'express';
 import { getPool } from '../../../db/client';
+import { requireAdminToken } from '../../../middleware/adminToken';
 import { creditRegistry } from '../../../services/credit/CreditProviderRegistry';
 
 export const adminCreditProvidersRouter = Router();
+
+// All credit provider admin routes require admin authentication
+adminCreditProvidersRouter.use(requireAdminToken);
 
 /**
  * T-281: GET /api/v1/admin/credit-providers/health

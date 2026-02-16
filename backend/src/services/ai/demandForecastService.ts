@@ -114,8 +114,9 @@ export async function getStoreForecasts(storeId: string, opts: {
   if (!pool) return [];
 
   const { productId, days = 7, limit = 50 } = opts;
-  const conditions = ['df.store_id = $1', 'df.forecast_date > CURRENT_DATE', `df.forecast_date <= CURRENT_DATE + INTERVAL '${days} days'`];
-  const params: unknown[] = [storeId];
+  const safeDays = Math.max(1, Math.min(30, Math.floor(days)));
+  const conditions = ['df.store_id = $1', 'df.forecast_date > CURRENT_DATE', `df.forecast_date <= CURRENT_DATE + ($2 || ' days')::interval`];
+  const params: unknown[] = [storeId, String(safeDays)];
 
   if (productId) {
     conditions.push(`df.product_id = $${params.length + 1}`);

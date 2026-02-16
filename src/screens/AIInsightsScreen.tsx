@@ -208,7 +208,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
       ) : (
         <FlatList
           data={data as any[]}
-          keyExtractor={(item: any) => item.id || item.productId || Math.random().toString()}
+          keyExtractor={(item: any, index: number) => item.id || item.productId || `ai-item-${index}`}
           renderItem={renderItem as any}
           contentContainerStyle={{ padding: 12 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}

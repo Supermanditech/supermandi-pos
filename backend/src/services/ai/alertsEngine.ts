@@ -48,10 +48,16 @@ export async function runAllStoreAlerts(): Promise<{ storesProcessed: number; to
   );
 
   let totalAlerts = 0;
+  let errors = 0;
   for (const row of storesResult.rows) {
-    totalAlerts += await runStoreAlerts(row.id);
+    try {
+      totalAlerts += await runStoreAlerts(row.id);
+    } catch (err) {
+      errors++;
+      console.error(`[AlertsEngine] Failed for store ${row.id}:`, err);
+    }
   }
-  return { storesProcessed: storesResult.rows.length, totalAlerts };
+  return { storesProcessed: storesResult.rows.length, totalAlerts, errors };
 }
 
 async function createAlert(

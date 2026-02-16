@@ -4,13 +4,30 @@
 // T-301: Attachment upload
 // T-302: Template management (admin)
 
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { getPool } from '../../db/client';
 import * as chatService from '../../services/chat/chatService';
 import { noopSocketManager } from '../../services/chat/socketManager';
 
 export const chatRouter = Router();
+
+// Auth middleware: require x-user-id header (set by API gateway after JWT validation)
+function requireChatAuth(req: Request, res: Response, next: NextFunction): void {
+  const userId = req.headers['x-user-id'] || req.headers['x-actor-id'];
+  if (!userId) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+  next();
+}
+
+// Apply auth middleware to all chat routes
+chatRouter.use(requireChatAuth);
+
+// UUID validation helper
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUUID(s: string): boolean { return UUID_RE.test(s); }
 
 // Multer for attachment uploads (memory storage, 10MB limit)
 const upload = multer({
@@ -115,6 +132,9 @@ chatRouter.get('/conversations/:id/messages', async (req, res) => {
   try {
     const { userId } = getUser(req);
     const conversationId = req.params.id;
+    if (!isValidUUID(conversationId)) {
+      return res.status(400).json({ error: 'Invalid conversation ID' });
+    }
     const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
     const before = req.query.before as string | undefined;
 
@@ -138,6 +158,10 @@ chatRouter.post('/conversations/:id/messages', async (req, res) => {
 
     if (!content && messageType === 'text') {
       return res.status(400).json({ error: 'Message content is required' });
+    }
+    // Content length validation — prevent abuse
+    if (content && typeof content === 'string' && content.length > 10000) {
+      return res.status(400).json({ error: 'Message too long (max 10000 characters)' });
     }
 
     const pool = getPool();

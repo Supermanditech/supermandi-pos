@@ -532,9 +532,12 @@ export async function renderTemplate(
   const tmpl = result.rows[0];
   let body = tmpl.body_template as string;
 
-  // Replace {{variable}} placeholders
+  // Replace {{variable}} placeholders — only allow alphanumeric + underscore keys
+  // to prevent regex injection via user-controlled variable names
   for (const [key, value] of Object.entries(variables)) {
-    body = body.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
+    if (!/^[a-zA-Z0-9_]+$/.test(key)) continue;
+    const safeValue = String(value).substring(0, 1000);
+    body = body.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), safeValue);
   }
 
   return { name: tmpl.name, body, category: tmpl.category };

@@ -34,6 +34,9 @@ interface ChatSocketManager {
 const onlineUsers = new Map<string, SocketUser>();
 const userSockets = new Map<string, string>(); // userId → socketId
 
+// UUID pattern for validating conversation IDs
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // =============================================================================
 // SOCKET.IO INITIALIZATION
 // =============================================================================
@@ -41,7 +44,7 @@ const userSockets = new Map<string, string>(); // userId → socketId
 /**
  * Initialize Socket.io chat server.
  * Attaches to existing HTTP server.
- * Auth via JWT token passed in handshake query/auth.
+ * Auth via JWT token passed in handshake auth.
  */
 export async function initChatSocket(
   httpServer: HttpServer,
@@ -50,10 +53,16 @@ export async function initChatSocket(
   // Dynamic import — socket.io is optional dependency
   const { Server } = await import('socket.io');
 
+  // CORS: restrict to known portal origins (not wildcard)
+  const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ? process.env.CORS_ALLOWED_ORIGINS.split(',')
+    : ['https://staging.supermandi.tech', 'https://supermandi.tech',
+       'http://localhost:5173', 'http://localhost:5174', 'http://localhost:4001'];
+
   const io = new Server(httpServer, {
     path: '/ws/chat',
     cors: {
-      origin: '*',
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
     },
     transports: ['websocket', 'polling'],
@@ -61,7 +70,7 @@ export async function initChatSocket(
     pingTimeout: 20000,
   });
 
-  // Auth middleware — validate JWT from handshake
+  // Auth middleware — verify JWT token, extract userId from claims (NEVER trust client-sent userId)
   io.use(async (socket, next) => {
     try {
       const token = socket.handshake.auth?.token || socket.handshake.query?.token;
@@ -69,16 +78,28 @@ export async function initChatSocket(
         return next(new Error('Authentication required'));
       }
 
-      // Validate token via gateway headers (in production, gateway validates JWT)
-      // For socket connections, we extract user info from token claims
-      const userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
-      const userType = socket.handshake.auth?.userType || socket.handshake.query?.userType;
+      let userId: string | undefined;
+      let userType: string | undefined;
 
-      if (!userId || !userType) {
-        return next(new Error('Missing user identification'));
+      try {
+        const jwt = await import('jsonwebtoken');
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          console.error('[ChatSocket] JWT_SECRET not configured');
+          return next(new Error('Server misconfigured'));
+        }
+        const decoded = jwt.verify(String(token), secret) as Record<string, unknown>;
+        userId = String(decoded.sub || decoded.userId || decoded.id || '');
+        userType = String(decoded.role || decoded.userType || 'retailer');
+      } catch {
+        return next(new Error('Invalid token'));
       }
 
-      // Attach user info to socket
+      if (!userId) {
+        return next(new Error('Invalid token claims'));
+      }
+
+      // Attach verified user info to socket
       (socket as any).userId = userId;
       (socket as any).userType = userType;
       next();
@@ -119,15 +140,18 @@ export async function initChatSocket(
 
     // Handle typing indicators
     socket.on('typing:start', (data: { conversationId: string; displayName: string }) => {
+      if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
+      const safeName = String(data.displayName || '').substring(0, 100);
       socket.to(`conv:${data.conversationId}`).emit('typing', {
         conversationId: data.conversationId,
         userId,
-        displayName: data.displayName,
+        displayName: safeName,
         isTyping: true,
       } as TypingEvent);
     });
 
     socket.on('typing:stop', (data: { conversationId: string }) => {
+      if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
       socket.to(`conv:${data.conversationId}`).emit('typing', {
         conversationId: data.conversationId,
         userId,
@@ -138,15 +162,28 @@ export async function initChatSocket(
 
     // Handle read receipt
     socket.on('message:read', (data: { conversationId: string }) => {
+      if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
       socket.to(`conv:${data.conversationId}`).emit('message:read', {
         conversationId: data.conversationId,
         userId,
       });
     });
 
-    // Handle join conversation room (for new conversations)
-    socket.on('conversation:join', (data: { conversationId: string }) => {
-      socket.join(`conv:${data.conversationId}`);
+    // Handle join conversation room — verify user is actually a participant
+    socket.on('conversation:join', async (data: { conversationId: string }) => {
+      if (!data?.conversationId || !UUID_RE.test(data.conversationId)) return;
+      try {
+        const check = await pool.query(
+          `SELECT 1 FROM chat.conversation_participants
+           WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`,
+          [data.conversationId, userId]
+        );
+        if (check.rows.length > 0) {
+          socket.join(`conv:${data.conversationId}`);
+        }
+      } catch (err) {
+        console.error('[ChatSocket] conversation:join error:', err);
+      }
     });
 
     // Handle disconnect

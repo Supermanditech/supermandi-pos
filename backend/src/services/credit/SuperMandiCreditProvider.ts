@@ -70,34 +70,72 @@ export class SuperMandiCreditProvider implements CreditProvider {
   }
 
   async createDrawdown(params: DrawdownParams): Promise<DrawdownResult> {
-    // Validate credit limit
-    const balance = await this.getBalance(params.storeId);
-    if (params.amountMinor > balance.availableMinor) {
-      return { success: false, drawdownId: '', status: 'rejected', message: 'Exceeds available credit' };
+    // Amount validation
+    if (!params.amountMinor || params.amountMinor <= 0) {
+      return { success: false, drawdownId: '', status: 'rejected', message: 'Invalid amount' };
     }
 
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + params.tenureDays);
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    const result = await this.pool.query(
-      `INSERT INTO payments.bnpl_drawdowns (store_id, supplier_id, purchase_order_id, principal_minor, due_date, status, provider_id)
-       VALUES ($1, $2, $3, $4, $5, 'active', $6)
-       RETURNING id`,
-      [params.storeId, params.supplierId, params.purchaseOrderId, params.amountMinor, dueDate.toISOString().split('T')[0], this.providerId]
-    );
+      // Lock the store row to prevent TOCTOU race on credit limit
+      const storeResult = await client.query(
+        `SELECT bnpl_credit_limit FROM platform.stores WHERE id = $1 FOR UPDATE`,
+        [params.storeId]
+      );
+      const limit = storeResult.rows[0]?.bnpl_credit_limit || 5000000;
 
-    return {
-      success: true,
-      drawdownId: result.rows[0].id,
-      status: 'active',
-    };
+      // Recompute outstanding under lock
+      const outstandingResult = await client.query(
+        `SELECT COALESCE(SUM(principal_minor - COALESCE(paid_amount_minor, 0)), 0) AS outstanding
+         FROM payments.bnpl_drawdowns
+         WHERE store_id = $1 AND provider_id = $2 AND status IN ('active','overdue','partial')`,
+        [params.storeId, this.providerId]
+      );
+      const used = parseInt(outstandingResult.rows[0].outstanding, 10) || 0;
+      const available = Math.max(0, limit - used);
+
+      if (params.amountMinor > available) {
+        await client.query('ROLLBACK');
+        return { success: false, drawdownId: '', status: 'rejected', message: 'Exceeds available credit' };
+      }
+
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + params.tenureDays);
+
+      const result = await client.query(
+        `INSERT INTO payments.bnpl_drawdowns (store_id, supplier_id, purchase_order_id, principal_minor, due_date, status, provider_id)
+         VALUES ($1, $2, $3, $4, $5, 'active', $6)
+         RETURNING id`,
+        [params.storeId, params.supplierId, params.purchaseOrderId, params.amountMinor, dueDate.toISOString().split('T')[0], this.providerId]
+      );
+
+      await client.query('COMMIT');
+      return {
+        success: true,
+        drawdownId: result.rows[0].id,
+        status: 'active',
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
-  async getRepaymentSchedule(drawdownId: string): Promise<RepaymentSchedule> {
-    const dd = await this.pool.query(
-      `SELECT principal_minor, due_date, paid_amount_minor, status FROM payments.bnpl_drawdowns WHERE id = $1`,
-      [drawdownId]
-    );
+  async getRepaymentSchedule(drawdownId: string, storeId?: string): Promise<RepaymentSchedule> {
+    // Include store_id filter when provided for store isolation
+    const dd = storeId
+      ? await this.pool.query(
+          `SELECT principal_minor, due_date, paid_amount_minor, status FROM payments.bnpl_drawdowns WHERE id = $1 AND store_id = $2`,
+          [drawdownId, storeId]
+        )
+      : await this.pool.query(
+          `SELECT principal_minor, due_date, paid_amount_minor, status FROM payments.bnpl_drawdowns WHERE id = $1`,
+          [drawdownId]
+        );
     if (dd.rows.length === 0) {
       return { installments: [], totalPrincipalMinor: 0, totalInterestMinor: 0, totalRepayableMinor: 0 };
     }
@@ -124,31 +162,54 @@ export class SuperMandiCreditProvider implements CreditProvider {
   }
 
   async processRepayment(params: RepaymentParams): Promise<RepaymentResult> {
-    const dd = await this.pool.query(
-      `SELECT principal_minor, paid_amount_minor, status FROM payments.bnpl_drawdowns WHERE id = $1`,
-      [params.drawdownId]
-    );
-    if (dd.rows.length === 0) {
-      return { success: false, repaymentId: '', remainingMinor: 0, status: 'failed', message: 'Drawdown not found' };
+    if (!params.amountMinor || params.amountMinor <= 0) {
+      return { success: false, repaymentId: '', remainingMinor: 0, status: 'failed', message: 'Invalid amount' };
     }
 
-    const row = dd.rows[0];
-    const newPaid = (row.paid_amount_minor || 0) + params.amountMinor;
-    const remaining = row.principal_minor - newPaid;
-    const newStatus = remaining <= 0 ? 'paid' : 'active';
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    await this.pool.query(
-      `UPDATE payments.bnpl_drawdowns SET paid_amount_minor = $1, status = $2, paid_at = CASE WHEN $2 = 'paid' THEN NOW() ELSE paid_at END, updated_at = NOW()
-       WHERE id = $3`,
-      [Math.min(newPaid, row.principal_minor), newStatus, params.drawdownId]
-    );
+      // Lock the drawdown row + include store_id filter for isolation
+      const dd = await client.query(
+        `SELECT principal_minor, paid_amount_minor, status, store_id FROM payments.bnpl_drawdowns WHERE id = $1 FOR UPDATE`,
+        [params.drawdownId]
+      );
+      if (dd.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return { success: false, repaymentId: '', remainingMinor: 0, status: 'failed', message: 'Drawdown not found' };
+      }
 
-    return {
-      success: true,
-      repaymentId: `sm-repay-${Date.now()}`,
-      remainingMinor: Math.max(0, remaining),
-      status: remaining <= 0 ? 'paid' : 'partial',
-    };
+      const row = dd.rows[0];
+      // Verify store isolation if storeId is provided in params
+      if ((params as any).storeId && row.store_id !== (params as any).storeId) {
+        await client.query('ROLLBACK');
+        return { success: false, repaymentId: '', remainingMinor: 0, status: 'failed', message: 'Drawdown not found' };
+      }
+
+      const newPaid = (row.paid_amount_minor || 0) + params.amountMinor;
+      const remaining = row.principal_minor - newPaid;
+      const newStatus = remaining <= 0 ? 'paid' : 'active';
+
+      await client.query(
+        `UPDATE payments.bnpl_drawdowns SET paid_amount_minor = $1, status = $2, paid_at = CASE WHEN $2 = 'paid' THEN NOW() ELSE paid_at END, updated_at = NOW()
+         WHERE id = $3`,
+        [Math.min(newPaid, row.principal_minor), newStatus, params.drawdownId]
+      );
+
+      await client.query('COMMIT');
+      return {
+        success: true,
+        repaymentId: `sm-repay-${Date.now()}`,
+        remainingMinor: Math.max(0, remaining),
+        status: remaining <= 0 ? 'paid' : 'partial',
+      };
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
   async getBalance(storeId: string): Promise<BalanceResult> {

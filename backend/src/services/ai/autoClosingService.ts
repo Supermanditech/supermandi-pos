@@ -47,79 +47,98 @@ export async function updateAutoClosingConfig(storeId: string, config: {
 
 /**
  * Process auto-closing for a single store (compute summary + insert closing record)
+ * Wrapped in a transaction — financial data must be atomically consistent
  */
 async function autoCloseStore(pool: any, storeId: string, date: string): Promise<boolean> {
-  // Check if already closed today
-  const existingResult = await pool.query(
-    `SELECT id FROM orders.daily_closings WHERE store_id = $1 AND closing_date = $2`,
-    [storeId, date]
-  );
-  if (existingResult.rows.length > 0) return false;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  // Compute daily summary (same logic as dailyClosing.ts)
-  const salesResult = await pool.query(
-    `SELECT
-      COALESCE(SUM(total_minor), 0)::bigint AS total_sales_minor,
-      COUNT(*)::int AS sales_count,
-      COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::bigint AS upi_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint AS due_minor,
-      COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::bigint AS card_minor
-    FROM public.sales
-    WHERE store_id = $1 AND DATE(created_at) = $2 AND status = 'completed'`,
-    [storeId, date]
-  );
+    // Check if already closed today
+    const existingResult = await client.query(
+      `SELECT id FROM orders.daily_closings WHERE store_id = $1 AND closing_date = $2`,
+      [storeId, date]
+    );
+    if (existingResult.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return false;
+    }
 
-  const refundsResult = await pool.query(
-    `SELECT COALESCE(SUM(refund_amount_minor), 0)::bigint AS refunds_minor
-     FROM orders.refunds
-     WHERE store_id = $1 AND DATE(created_at) = $2 AND status IN ('approved', 'processed')`,
-    [storeId, date]
-  );
+    // Compute daily summary (same logic as dailyClosing.ts)
+    const salesResult = await client.query(
+      `SELECT
+        COALESCE(SUM(total_minor), 0)::bigint AS total_sales_minor,
+        COUNT(*)::int AS sales_count,
+        COALESCE(SUM(CASE WHEN payment_mode = 'CASH' THEN total_minor ELSE 0 END), 0)::bigint AS cash_minor,
+        COALESCE(SUM(CASE WHEN payment_mode = 'UPI' THEN total_minor ELSE 0 END), 0)::bigint AS upi_minor,
+        COALESCE(SUM(CASE WHEN payment_mode = 'DUE' THEN total_minor ELSE 0 END), 0)::bigint AS due_minor,
+        COALESCE(SUM(CASE WHEN payment_mode = 'CARD' THEN total_minor ELSE 0 END), 0)::bigint AS card_minor
+      FROM public.sales
+      WHERE store_id = $1 AND DATE(created_at) = $2 AND status = 'completed'`,
+      [storeId, date]
+    );
 
-  const lastClosingResult = await pool.query(
-    `SELECT actual_cash_minor FROM orders.daily_closings
-     WHERE store_id = $1 AND closing_date < $2 ORDER BY closing_date DESC LIMIT 1`,
-    [storeId, date]
-  );
+    const refundsResult = await client.query(
+      `SELECT COALESCE(SUM(refund_amount_minor), 0)::bigint AS refunds_minor
+       FROM orders.refunds
+       WHERE store_id = $1 AND DATE(created_at) = $2 AND status IN ('approved', 'processed')`,
+      [storeId, date]
+    );
 
-  const sales = salesResult.rows[0];
-  const refundsMinor = BigInt(refundsResult.rows[0].refunds_minor);
-  const openingCashMinor = lastClosingResult.rows.length > 0 && lastClosingResult.rows[0].actual_cash_minor != null
-    ? BigInt(lastClosingResult.rows[0].actual_cash_minor) : BigInt(0);
-  const cashMinor = BigInt(sales.cash_minor);
-  const expectedCashMinor = openingCashMinor + cashMinor - refundsMinor;
+    const lastClosingResult = await client.query(
+      `SELECT actual_cash_minor FROM orders.daily_closings
+       WHERE store_id = $1 AND closing_date < $2 ORDER BY closing_date DESC LIMIT 1`,
+      [storeId, date]
+    );
 
-  // Auto-close: actual_cash = expected_cash (no physical count in auto mode)
-  await pool.query(
-    `INSERT INTO orders.daily_closings
-     (store_id, closing_date, opening_cash_minor, expected_cash_minor, actual_cash_minor,
-      difference_minor, total_sales_minor, total_cash_minor, total_upi_minor, total_due_minor,
-      sales_count, notes, closed_at)
-     VALUES ($1, $2, $3, $4, $4, 0, $5, $6, $7, $8, $9, 'Auto-closed by system', NOW())
-     ON CONFLICT (store_id, closing_date) DO NOTHING`,
-    [storeId, date, openingCashMinor.toString(), expectedCashMinor.toString(),
-     sales.total_sales_minor.toString(), sales.cash_minor.toString(),
-     sales.upi_minor.toString(), sales.due_minor.toString(), sales.sales_count]
-  );
+    const sales = salesResult.rows[0];
+    const refundsMinor = BigInt(refundsResult.rows[0].refunds_minor);
+    const openingCashMinor = lastClosingResult.rows.length > 0 && lastClosingResult.rows[0].actual_cash_minor != null
+      ? BigInt(lastClosingResult.rows[0].actual_cash_minor) : BigInt(0);
+    const cashMinor = BigInt(sales.cash_minor);
+    const expectedCashMinor = openingCashMinor + cashMinor - refundsMinor;
 
-  // Update last_auto_close_date
-  await pool.query(
-    `UPDATE ai.auto_closing_config SET last_auto_close_date = $2 WHERE store_id = $1`,
-    [storeId, date]
-  );
+    // Auto-close: actual_cash = expected_cash (no physical count in auto mode)
+    await client.query(
+      `INSERT INTO orders.daily_closings
+       (store_id, closing_date, opening_cash_minor, expected_cash_minor, actual_cash_minor,
+        difference_minor, total_sales_minor, total_cash_minor, total_upi_minor, total_due_minor,
+        sales_count, notes, closed_at)
+       VALUES ($1, $2, $3, $4, $4, 0, $5, $6, $7, $8, $9, 'Auto-closed by system', NOW())
+       ON CONFLICT (store_id, closing_date) DO NOTHING`,
+      [storeId, date, openingCashMinor.toString(), expectedCashMinor.toString(),
+       sales.total_sales_minor.toString(), sales.cash_minor.toString(),
+       sales.upi_minor.toString(), sales.due_minor.toString(), sales.sales_count]
+    );
 
-  return true;
+    // Update last_auto_close_date
+    await client.query(
+      `UPDATE ai.auto_closing_config SET last_auto_close_date = $2 WHERE store_id = $1`,
+      [storeId, date]
+    );
+
+    await client.query('COMMIT');
+    return true;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 /**
  * Process auto-closing for ALL stores with auto-close enabled (scheduled job)
  */
-export async function processAutoClosing(): Promise<{ storesProcessed: number; storesClosed: number }> {
+export async function processAutoClosing(): Promise<{ storesProcessed: number; storesClosed: number; errors: number }> {
   const pool = getPool();
-  if (!pool) return { storesProcessed: 0, storesClosed: 0 };
+  if (!pool) return { storesProcessed: 0, storesClosed: 0, errors: 0 };
 
-  const today = new Date().toISOString().split('T')[0];
+  // Use IST date (UTC+5:30) — at 11:30 PM IST, UTC is already next day
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + istOffset);
+  const today = istDate.toISOString().split('T')[0];
 
   const storesResult = await pool.query(
     `SELECT acc.store_id FROM ai.auto_closing_config acc
@@ -130,10 +149,16 @@ export async function processAutoClosing(): Promise<{ storesProcessed: number; s
   );
 
   let closed = 0;
+  let errors = 0;
   for (const row of storesResult.rows) {
-    const didClose = await autoCloseStore(pool, row.store_id, today);
-    if (didClose) closed++;
+    try {
+      const didClose = await autoCloseStore(pool, row.store_id, today);
+      if (didClose) closed++;
+    } catch (err) {
+      errors++;
+      console.error(`[AutoClose] Failed for store ${row.store_id}:`, err);
+    }
   }
 
-  return { storesProcessed: storesResult.rows.length, storesClosed: closed };
+  return { storesProcessed: storesResult.rows.length, storesClosed: closed, errors };
 }

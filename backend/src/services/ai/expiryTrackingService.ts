@@ -26,11 +26,12 @@ export async function getExpiringProducts(storeId: string, opts: {
 
   const { daysAhead = 30, includeExpired = true, limit = 50, offset = 0 } = opts;
 
+  const safeDaysAhead = Math.max(1, Math.min(90, Math.floor(daysAhead)));
   const conditions = [
     'sp.store_id = $1',
     'sp.is_active = true',
     'sp.expiry_date IS NOT NULL',
-    `sp.expiry_date <= CURRENT_DATE + INTERVAL '${daysAhead} days'`,
+    `sp.expiry_date <= CURRENT_DATE + ($2 || ' days')::interval`,
     'COALESCE(sb.current_qty, sp.current_stock, 0) > 0',
   ];
 
@@ -46,7 +47,7 @@ export async function getExpiringProducts(storeId: string, opts: {
      LEFT JOIN inventory.stock_balances sb ON sb.store_id = sp.store_id AND sb.product_id = sp.product_id
      WHERE ${conditions.join(' AND ')}
      ORDER BY sp.expiry_date ASC`,
-    [storeId]
+    [storeId, String(safeDaysAhead)]
   );
 
   const items: ExpiryItem[] = result.rows.map((row: any) => {

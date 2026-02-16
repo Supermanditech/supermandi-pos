@@ -52,6 +52,7 @@ export async function createRazorpayOrder(params: {
       receipt: params.receipt,
       notes: params.notes || {},
     }),
+    signal: AbortSignal.timeout(30000),
   });
 
   const data = (await response.json()) as RazorpayOrder & { error?: { description?: string } };

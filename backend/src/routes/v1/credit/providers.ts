@@ -90,6 +90,16 @@ creditProvidersRouter.post('/drawdown', async (req: Request, res: Response) => {
     res.status(400).json({ error: { code: 'INVALID_PARAMS', message: 'providerId, amountMinor, tenureDays required' } });
     return;
   }
+  const parsedAmount = parseInt(amountMinor, 10);
+  const parsedTenure = parseInt(tenureDays, 10);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    res.status(400).json({ error: { code: 'INVALID_AMOUNT', message: 'amountMinor must be a positive integer' } });
+    return;
+  }
+  if (!Number.isFinite(parsedTenure) || parsedTenure <= 0 || parsedTenure > 365) {
+    res.status(400).json({ error: { code: 'INVALID_TENURE', message: 'tenureDays must be between 1 and 365' } });
+    return;
+  }
 
   const provider = creditRegistry.get(providerId);
   if (!provider) {

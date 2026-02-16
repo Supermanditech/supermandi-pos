@@ -23,6 +23,7 @@ async function razorpayXFetch<T>(endpoint: string, body: Record<string, unknown>
       Authorization: `Basic ${auth}`,
     },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30000),
   });
 
   const data = await response.json() as T & { error?: { description?: string } };
@@ -151,10 +152,11 @@ export function verifyPaymentSignature(params: {
     .update(`${params.orderId}|${params.paymentId}`)
     .digest('hex');
 
-  return crypto.timingSafeEqual(
-    Buffer.from(params.signature),
-    Buffer.from(expectedSignature)
-  );
+  const sigBuf = Buffer.from(params.signature, 'utf8');
+  const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+  // Guard against length mismatch (timingSafeEqual throws if lengths differ)
+  if (sigBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expectedBuf);
 }
 
 /**

@@ -138,8 +138,8 @@ export function addConversationEntry(deviceId: string, transcript: string, actio
   conversationHistory.set(deviceId, history);
 }
 
-// Cleanup stale conversations every 10 minutes
-setInterval(() => {
+// Cleanup stale conversations every 10 minutes (unref to not block process exit)
+const conversationCleanupTimer = setInterval(() => {
   const cutoff = new Date(Date.now() - CONVERSATION_TIMEOUT_MS);
   for (const [deviceId, history] of conversationHistory.entries()) {
     const recent = history.filter(e => e.timestamp > cutoff);
@@ -147,6 +147,7 @@ setInterval(() => {
     else conversationHistory.set(deviceId, recent);
   }
 }, 10 * 60 * 1000);
+conversationCleanupTimer.unref();
 
 // =============================================================================
 // IDEMPOTENCY TRACKING
@@ -161,8 +162,8 @@ interface ProcessedRequest {
 
 const processedRequests = new Map<string, ProcessedRequest>();
 
-// Cleanup old entries every 10 minutes
-setInterval(() => {
+// Cleanup old entries every 10 minutes (unref to not block process exit)
+const requestCleanupTimer = setInterval(() => {
   const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
   for (const [id, req] of processedRequests.entries()) {
     if (req.processedAt < tenMinutesAgo) {
@@ -170,6 +171,7 @@ setInterval(() => {
     }
   }
 }, 10 * 60 * 1000);
+requestCleanupTimer.unref();
 
 // =============================================================================
 // PRODUCT SEARCH INTEGRATION

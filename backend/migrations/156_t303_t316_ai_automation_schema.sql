@@ -6,7 +6,7 @@ CREATE SCHEMA IF NOT EXISTS ai;
 
 -- T-307: Proactive AI alerts
 CREATE TABLE ai.alerts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   alert_type VARCHAR(50) NOT NULL,
   severity VARCHAR(20) NOT NULL DEFAULT 'info',
@@ -20,7 +20,7 @@ CREATE TABLE ai.alerts (
 
 -- T-308: Demand forecasts (per product per store per day)
 CREATE TABLE ai.demand_forecasts (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   product_id UUID NOT NULL,
   forecast_date DATE NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE ai.auto_closing_config (
 
 -- T-312: Customer insights cache (RFM analysis)
 CREATE TABLE ai.customer_insights (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   customer_phone VARCHAR(20) NOT NULL,
   rfm_recency INT,
@@ -59,7 +59,7 @@ CREATE TABLE ai.customer_insights (
 
 -- T-316: Anomaly events
 CREATE TABLE ai.anomaly_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   anomaly_type VARCHAR(50) NOT NULL,
   severity VARCHAR(20) DEFAULT 'warning',
@@ -71,7 +71,7 @@ CREATE TABLE ai.anomaly_events (
 
 -- T-303: Product recommendations
 CREATE TABLE ai.product_recommendations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   product_id UUID NOT NULL,
   recommended_product_id UUID NOT NULL,

@@ -109,6 +109,7 @@ async function callRazorpayPayoutApi(params: {
         narration: params.narration,
         queue_if_low_balance: true,
       }),
+      signal: AbortSignal.timeout(30000),
     });
 
     const data = (await response.json()) as {
