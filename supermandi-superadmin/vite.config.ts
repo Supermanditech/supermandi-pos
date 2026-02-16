@@ -19,15 +19,26 @@ function getBuildInfo() {
 const buildInfo = getBuildInfo();
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  base: '/admin/',
-  // GO-LIVE-SOP: Inject build info at compile time
-  define: {
-    'import.meta.env.VITE_BUILD_SHA': JSON.stringify(buildInfo.sha),
-    'import.meta.env.VITE_BUILD_TIME': JSON.stringify(buildInfo.time),
-  },
-  esbuild: {
-    drop: ['console', 'debugger'],
-  },
+export default defineConfig(({ command }) => {
+  // FIX-004: Fail build when VITE_API_BASE_URL is not explicitly set
+  // Empty string is valid (load-balancer relative paths). Undefined = misconfigured build.
+  if (command === 'build' && process.env.VITE_API_BASE_URL === undefined) {
+    throw new Error(
+      '[FIX-004] VITE_API_BASE_URL must be explicitly set for production builds. ' +
+      'Set VITE_API_BASE_URL="" for load-balancer relative paths, or provide a full URL.'
+    );
+  }
+
+  return {
+    plugins: [react()],
+    base: '/admin/',
+    // GO-LIVE-SOP: Inject build info at compile time
+    define: {
+      'import.meta.env.VITE_BUILD_SHA': JSON.stringify(buildInfo.sha),
+      'import.meta.env.VITE_BUILD_TIME': JSON.stringify(buildInfo.time),
+    },
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
+  };
 })
