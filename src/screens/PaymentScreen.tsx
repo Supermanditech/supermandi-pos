@@ -882,6 +882,13 @@ const PaymentScreen = () => {
     !submitting &&
     (selectedMode !== "UPI" || Boolean(paymentId));
 
+  // FIX-039: Compute stale price count for warning badge
+  const stalePriceCount = useMemo(() => {
+    return saleItems.filter(
+      (item) => item.priceFetchedAt && Date.now() - item.priceFetchedAt > PRICE_FRESHNESS_THRESHOLD_MS
+    ).length;
+  }, [saleItems]);
+
   const ctaLabel =
     selectedMode === "UPI" ? "Payment Received" : selectedMode === "DUE" ? "Mark as Due" : "Complete Payment";
 
@@ -1004,6 +1011,16 @@ const PaymentScreen = () => {
           </View>
         )}
       </View>
+
+      {/* FIX-039: Stale price warning banner */}
+      {stalePriceCount > 0 && (
+        <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 16, paddingVertical: 8, flexDirection: "row", alignItems: "center" }}>
+          <MaterialCommunityIcons name="alert-outline" size={18} color="#D97706" />
+          <Text style={{ color: "#92400E", fontSize: 13, marginLeft: 8, flex: 1 }}>
+            {stalePriceCount} item(s) have prices loaded over 4 hours ago. Prices may have changed.
+          </Text>
+        </View>
+      )}
 
       <View style={styles.footer}>
         <TouchableOpacity
