@@ -126,15 +126,19 @@ router.get(
           AND s.verification_status = 'verified'
           AND sp.approval_status = 'approved'
         ORDER BY p.category ASC
+        LIMIT 501
       `;
 
       const rows = await query<{ category: string }>(categoriesSql, [storeId]);
-      const categories = rows.map((r) => r.category);
+      // FIX-012: Cap at 500 and flag truncation to prevent memory issues
+      const truncated = rows.length > 500;
+      const categories = rows.slice(0, 500).map((r) => r.category);
 
       res.json({
         success: true,
         data: categories,
         count: categories.length,
+        truncated,
       });
     } catch (error) {
       next(error);
