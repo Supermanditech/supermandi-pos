@@ -3,8 +3,8 @@ import React, { useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { FeatureFlagProvider } from './lib/FeatureFlagContext';
 import ProtectedLayout from './components/ProtectedLayout';
-// ISSUE-MICRO-105: Global error boundary
-import { ErrorBoundary } from './components/ErrorBoundary';
+// FIX-020: Consolidated error boundary (was components/ErrorBoundary + ErrorBoundary)
+import { ErrorBoundary } from './ErrorBoundary';
 // T-094: Standardized toast notifications
 import { Toaster } from 'react-hot-toast';
 
