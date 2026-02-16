@@ -91,7 +91,9 @@ export default function VariantManager({ storeProductId, productName, onClose }:
     }
 
     const qty = parseFloat(formData.qty);
-    const price = Math.round(parseFloat(formData.sellPriceMinor) * 100); // rupees → paise
+    // FIX-018: String-based parsing to avoid floating-point rounding errors
+    const [whole = '0', frac = ''] = formData.sellPriceMinor.split('.');
+    const price = parseInt(whole, 10) * 100 + parseInt(frac.padEnd(2, '0').slice(0, 2), 10);
 
     if (isNaN(qty) || qty <= 0) {
       setError('Quantity must be a positive number');
@@ -139,7 +141,9 @@ export default function VariantManager({ storeProductId, productName, onClose }:
 
   async function handleUpdate(variantId: string) {
     const qty = parseFloat(editForm.qty);
-    const price = Math.round(parseFloat(editForm.sellPriceMinor) * 100);
+    // FIX-018: String-based parsing to avoid floating-point rounding errors
+    const [whole2 = '0', frac2 = ''] = editForm.sellPriceMinor.split('.');
+    const price = parseInt(whole2, 10) * 100 + parseInt(frac2.padEnd(2, '0').slice(0, 2), 10);
 
     if (!editForm.label.trim()) {
       setError('Label is required');

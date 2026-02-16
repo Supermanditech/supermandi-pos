@@ -493,12 +493,13 @@ export default function ProductsPage() {
       }
 
       // CRITICAL: Convert rupees to paise (integer minor units)
-      // Backend enforces integer paise, UI shows rupees
+      // FIX-018: String-based parsing to avoid floating-point rounding errors
       const rupeesToPaise = (rupees: string | undefined): number | undefined => {
         if (!rupees) return undefined;
-        const float = parseFloat(rupees);
-        if (isNaN(float)) return undefined;
-        return Math.round(float * 100); // Round to avoid floating point issues
+        const trimmed = rupees.trim();
+        if (!trimmed || isNaN(Number(trimmed))) return undefined;
+        const [whole = '0', frac = ''] = trimmed.split('.');
+        return parseInt(whole, 10) * 100 + parseInt(frac.padEnd(2, '0').slice(0, 2), 10);
       };
 
       // API-RCAT-001: New contract - no category, mode required
@@ -628,11 +629,13 @@ export default function ProductsPage() {
       const [name, barcode, brand, sellPrice, purchasePrice, mrp, unit, stock] = parts.map(p => p?.trim());
 
       // CRITICAL: Convert rupees to paise (integer minor units)
+      // FIX-018: String-based parsing to avoid floating-point rounding errors
       const rupeesToPaise = (rupees: string | undefined): number | undefined => {
         if (!rupees) return undefined;
-        const float = parseFloat(rupees);
-        if (isNaN(float)) return undefined;
-        return Math.round(float * 100);
+        const trimmed = rupees.trim();
+        if (!trimmed || isNaN(Number(trimmed))) return undefined;
+        const [whole = '0', frac = ''] = trimmed.split('.');
+        return parseInt(whole, 10) * 100 + parseInt(frac.padEnd(2, '0').slice(0, 2), 10);
       };
 
       return {
