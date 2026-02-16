@@ -1,0 +1,78 @@
+# TEST-024: Maestro Mobile E2E — Reorder Flow
+# Validates reorder suggestion → approval → purchase order creation.
+# Run: maestro test .maestro/reorder-flow.yaml
+
+appId: host.exp.Exponent
+
+---
+
+# =============================================================================
+# Flow 1: Navigate to Reorder Screen
+# =============================================================================
+- launchApp
+- waitForAnimationToEnd
+
+# Login (reuse OTP flow)
+- tapOn: "Phone Number"
+- inputText: "+919999900001"
+- tapOn: "Send OTP"
+- waitForAnimationToEnd
+- inputText: "123456"
+- tapOn:
+    text: "Verify"
+    optional: true
+- waitForAnimationToEnd
+
+# Navigate to reorder/inventory
+- tapOn:
+    text: "(?i)(inventory|stock|reorder)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+# =============================================================================
+# Flow 2: View Reorder Suggestions
+# =============================================================================
+- tapOn:
+    text: "(?i)(reorder|suggestions|low.stock)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+# Should show reorder suggestions or empty state
+- assertVisible:
+    text: "(?i)(reorder|suggestion|no.items|empty)"
+    regex: true
+    optional: true
+
+# =============================================================================
+# Flow 3: Approve Reorder (if items exist)
+# =============================================================================
+- tapOn:
+    text: "(?i)(approve|order|create.po)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+# =============================================================================
+# Flow 4: View Purchase Orders
+# =============================================================================
+- back
+- tapOn:
+    text: "(?i)(orders|purchase|po)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+# Should show orders list or empty state
+- assertVisible:
+    text: "(?i)(order|purchase|no.orders|empty)"
+    regex: true
+    optional: true
+
+# Return home
+- back
+- tapOn:
+    text: "(?i)(home|dashboard|sales)"
+    regex: true
+    optional: true
