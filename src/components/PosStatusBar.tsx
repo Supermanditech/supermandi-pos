@@ -65,8 +65,12 @@ export default function PosStatusBar({
   const popoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
+  // FIX-032: Mounted ref prevents setState after unmount if callback fires during cleanup
+  const mountedRef = useRef(true);
   useEffect(() => {
+    mountedRef.current = true;
     const unsubscribe = NetInfo.addEventListener((state) => {
+      if (!mountedRef.current) return;
       setNetworkState({
         isConnected: state.isConnected ?? null,
         isInternetReachable: state.isInternetReachable ?? null
@@ -74,6 +78,7 @@ export default function PosStatusBar({
     });
 
     return () => {
+      mountedRef.current = false;
       unsubscribe();
     };
   }, []);
