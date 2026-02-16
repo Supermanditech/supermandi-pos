@@ -962,7 +962,9 @@ const PaymentScreen = () => {
               ) : !isOnline ? (
                 <Text style={styles.qrHint}>Offline: UPI disabled.</Text>
               ) : upiIntent ? (
-                <QRCode value={upiIntent} size={220} />
+                <View accessible accessibilityLabel="UPI payment QR code. Ask customer to scan with any UPI app." accessibilityRole="image">
+                  <QRCode value={upiIntent} size={220} />
+                </View>
               ) : loadingUpi ? (
                 <View style={{ alignItems: "center", padding: 16 }}>
                   <ActivityIndicator size="large" color="#2563EB" />
