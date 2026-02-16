@@ -68,3 +68,19 @@ export async function clearHistory(storeId: string): Promise<void> {
     console.warn("[searchHistory] Failed to clear history:", error);
   }
 }
+
+/**
+ * FIX-058: Clear ALL search history across all stores.
+ * Called on device re-enrollment or logout to prevent cross-store leakage.
+ */
+export async function clearAllHistory(): Promise<void> {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const historyKeys = allKeys.filter((k) => k.startsWith(STORAGE_KEY));
+    if (historyKeys.length > 0) {
+      await AsyncStorage.multiRemove(historyKeys);
+    }
+  } catch (error) {
+    console.warn("[searchHistory] Failed to clear all history:", error);
+  }
+}
