@@ -292,3 +292,38 @@ export async function getUtrVerificationStatus(input: {
 }): Promise<UtrVerificationResponse> {
   return apiClient.get(`/api/v1/pos/payments/upi/verify-utr/${input.verificationId}/status`);
 }
+
+// =============================================================================
+// WA-001: WhatsApp Cloud API
+// =============================================================================
+
+export async function checkWhatsAppStatus(): Promise<{ configured: boolean }> {
+  if (!(await isOnline())) {
+    return { configured: false };
+  }
+  return apiClient.get("/api/v1/pos/whatsapp/status");
+}
+
+export async function sendBillWhatsApp(input: {
+  saleId: string;
+  recipientPhone: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  if (!(await isOnline())) {
+    throw new ApiError(0, "whatsapp_offline_blocked",
+      "WhatsApp requires internet. Use Share button for offline sharing.");
+  }
+  return apiClient.post("/api/v1/pos/whatsapp/send-bill", input);
+}
+
+export async function sendWhatsAppMessage(input: {
+  recipientPhone: string;
+  message: string;
+  contextType?: string;
+  contextId?: string;
+}): Promise<{ sent: boolean; error?: string }> {
+  if (!(await isOnline())) {
+    throw new ApiError(0, "whatsapp_offline_blocked",
+      "WhatsApp requires internet.");
+  }
+  return apiClient.post("/api/v1/pos/whatsapp/send", input);
+}

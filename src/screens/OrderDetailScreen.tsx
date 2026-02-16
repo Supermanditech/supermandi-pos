@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -197,6 +198,28 @@ export default function OrderDetailScreen({
       setTrackingSaving(false);
     }
   }, [storeId, order, orderId, trackingNumber]);
+
+  // WhatsApp supplier about this order
+  const handleWhatsAppSupplier = useCallback(() => {
+    if (!order) return;
+    const itemsSummary = order.items
+      .slice(0, 5)
+      .map((item) => `- ${item.productName} x${item.orderedQuantity}`)
+      .join("\n");
+    const moreItems = order.items.length > 5 ? `\n... and ${order.items.length - 5} more items` : "";
+    const message = encodeURIComponent(
+      `Hi, regarding order ${formatOrderNumber(order.orderNumber)} (${getStatusLabel(order.status)}):\n\n` +
+      `Total: ${formatMoney(order.totalAmount)}\n` +
+      `Items:\n${itemsSummary}${moreItems}\n\n` +
+      `Please update on the status. Thank you.`
+    );
+    // supplierPhone not available on PurchaseOrder type — open wa.me without phone so user picks contact
+    // wa.me universal link works on both Android and iOS (whatsapp:// is platform-inconsistent)
+    const url = `https://wa.me/?text=${message}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
+    });
+  }, [order]);
 
   // Render loading state
   if (loading) {
@@ -460,6 +483,14 @@ export default function OrderDetailScreen({
             )}
           </Pressable>
         )}
+
+        <Pressable style={styles.whatsappButton} onPress={handleWhatsAppSupplier}>
+          <MaterialCommunityIcons
+            name="whatsapp"
+            size={18}
+            color="#FFFFFF"
+          />
+        </Pressable>
 
         {isReceivable && onNavigateToGRN && (
           <Pressable style={styles.receiveButton} onPress={handleReceive}>
@@ -775,6 +806,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: theme.colors.error,
+  },
+  whatsappButton: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.lg,
+    backgroundColor: "#25D366",
+    alignItems: "center",
+    justifyContent: "center",
   },
   receiveButton: {
     flex: 1,

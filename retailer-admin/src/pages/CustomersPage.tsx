@@ -5,6 +5,7 @@ import { authFetch, safeJson } from '../lib/api';
 import { formatDateTime } from '../lib/formatters';
 import Breadcrumb from '../components/Breadcrumb';
 import EmptyState from '../components/EmptyState';
+import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { Users, RefreshCw, Search, ChevronLeft } from 'lucide-react';
 
 interface Customer {
@@ -116,7 +117,19 @@ export default function CustomersPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
           <div className="card" style={{ padding: 16 }}>
             <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Phone</div>
-            <div style={{ fontWeight: 600 }}>{selectedCustomer.phone}</div>
+            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              {selectedCustomer.phone}
+              {selectedCustomer.phone && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${selectedCustomer.phone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${selectedCustomer.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+                  title="Message on WhatsApp"
+                  aria-label="Message on WhatsApp"
+                >
+                  <WhatsAppIcon size={18} />
+                </button>
+              )}
+            </div>
           </div>
           <div className="card" style={{ padding: 16 }}>
             <div style={{ color: '#666', fontSize: 12, marginBottom: 4 }}>Total Purchases</div>
@@ -232,7 +245,19 @@ export default function CustomersPage() {
               {customers.map((c) => (
                 <tr key={c.id} onClick={() => fetchDetail(c)} style={{ cursor: 'pointer' }}>
                   <td style={{ fontWeight: 500 }}>{c.name}</td>
-                  <td>{c.phone}</td>
+                  <td style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {c.phone}
+                    {c.phone && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${c.phone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${c.name}, this is from your store.`)}`, '_blank', 'noopener,noreferrer'); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}
+                        title="Message on WhatsApp"
+                        aria-label="Message on WhatsApp"
+                      >
+                        <WhatsAppIcon size={16} />
+                      </button>
+                    )}
+                  </td>
                   <td>{formatCurrency(c.totalPurchasesMinor || 0)}</td>
                   <td>{c.visitCount || 0}</td>
                   <td>{c.lastVisitAt ? formatDateTime(c.lastVisitAt) : '\u2014'}</td>

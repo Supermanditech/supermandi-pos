@@ -100,6 +100,9 @@ import { adminScheduledJobsRouter } from "./admin/scheduledJobs";  // T-231/T-22
 import { refundWebhookRouter } from "./webhooks/refundWebhook";  // T-219: Razorpay refund webhooks
 import { adminRefundsRouter } from "./admin/refunds";  // T-219: Admin refund management
 import { qualityDashboardRouter } from "./admin/qualityDashboard";  // T-223: Quality dashboard API
+import { posWhatsAppRouter } from "./pos/whatsapp";  // WA-001: POS WhatsApp Cloud API
+import { adminWhatsAppRouter } from "./admin/whatsapp";  // WA-001: Admin WhatsApp Cloud API
+import { whatsappWebhookRouter } from "./webhooks/whatsappWebhook";  // WA-001: WhatsApp delivery webhooks
 
 export const v1Router = Router();
 
@@ -140,6 +143,7 @@ v1Router.use("/pos", posCustomersRouter);  // POS-CUST-001: Customer profiles
 v1Router.use("/pos", posSyncEventsRouter);  // T-173: SSE real-time sync
 v1Router.use("/pos", posNotificationsRouter);  // Phase 8: FCM push notifications + device token CRUD
 v1Router.use("/pos", posRefundRequestsRouter);  // T-219: UPI refund request management
+v1Router.use("/pos", posWhatsAppRouter);  // WA-001: WhatsApp Cloud API bill sharing
 v1Router.use("/pos/translations", posTranslationsRouter);
 v1Router.use("/reorder", reorderRouter);
 v1Router.use("/orders", ordersRouter);
@@ -183,6 +187,7 @@ v1Router.use("/admin", adminCreditRouter);  // CL-020: SuperAdmin credit approva
 v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GSTR-1 export
 v1Router.use("/admin", adminScheduledJobsRouter);  // T-231/T-223: Payment reminders + monitoring
 v1Router.use("/admin", adminRefundsRouter);  // T-219: Admin refund management
+v1Router.use("/admin", adminWhatsAppRouter);  // WA-001: SuperAdmin WhatsApp Cloud API
 v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
 v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
 
@@ -236,6 +241,7 @@ v1Router.use("/credit", creditProvidersRouter);  // T-263/T-274/T-275/T-276/T-27
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/webhooks", refundWebhookRouter);  // T-219: Razorpay refund status webhooks
+v1Router.use("/webhooks", whatsappWebhookRouter);  // WA-001: WhatsApp delivery status webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs
 v1Router.use("/supplier/bnpl", supplierBnplRouter);  // T-280: Supplier BNPL visibility
 v1Router.use("/chat", chatRouter);  // T-291→T-302: In-app messaging, support, templates

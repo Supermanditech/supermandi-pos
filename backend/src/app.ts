@@ -92,7 +92,13 @@ app.use(metricsMiddleware);
 // ITER4-P1-012: Now using perEndpointBodyLimit which applies different limits per endpoint
 app.use("/api", perEndpointBodyLimit());
 // Keep 1MB fallback for non-API routes (webhooks, etc.)
-app.use(express.json({ limit: "1mb" }));
+// WA-001: Capture raw body buffer for webhook signature verification (X-Hub-Signature-256)
+app.use(express.json({
+  limit: "1mb",
+  verify: (req, _res, buf) => {
+    (req as any).rawBody = buf;
+  },
+}));
 
 app.get("/health", (_req, res) => {
   // Cloud health-check contract: must be JSON { status: "ok" }

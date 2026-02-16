@@ -11,6 +11,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
+import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { FileText } from 'lucide-react';
 
 interface InvoiceListItem {
@@ -352,11 +353,29 @@ export default function InvoicesPage() {
                   </div>
                 )}
 
-                {/* Download */}
+                {/* Download + WhatsApp Share */}
                 <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
                   <button onClick={() => downloadPdf(detail.id, detail.invoiceNumber)}
                     style={{ padding: "6px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: "0.85rem" }}>
                     Download PDF
+                  </button>
+                  {/* TODO: sellerPhone needs to be added to InvoiceDetail API response for direct WhatsApp linking */}
+                  <button
+                    onClick={() => {
+                      const amount = fmt(detail.totalAmountMinor);
+                      const msg = `Regarding invoice #${detail.invoiceNumber}, amount: ${amount}. Status: ${detail.status.toUpperCase()}.`;
+                      // Opens WhatsApp with pre-filled message; user picks the contact manually
+                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    style={{
+                      padding: "6px 16px", background: "#f0fdf4", color: "#15803d",
+                      border: "1px solid #bbf7d0", borderRadius: 4, cursor: "pointer",
+                      fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "6px",
+                    }}
+                    title="Share invoice details via WhatsApp"
+                  >
+                    <WhatsAppIcon size={16} />
+                    WhatsApp
                   </button>
                 </div>
               </>

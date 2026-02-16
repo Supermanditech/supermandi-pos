@@ -11,6 +11,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import Breadcrumb from '@/components/Breadcrumb';
 // GAP-3: EmptyState component for consistent empty states
 import EmptyState from '@/components/EmptyState';
+import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 import { FileText } from 'lucide-react';
 
 export default function InvoicesPage() {
@@ -254,11 +255,26 @@ export default function InvoicesPage() {
                   </div>
                 )}
 
-                {/* Download */}
-                <div className="mt-4">
+                {/* Download + WhatsApp Payment Reminder */}
+                <div className="mt-4 flex gap-2">
                   <button onClick={() => downloadPdf(detail.id, detail.invoiceNumber)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
                     Download PDF
+                  </button>
+                  {/* TODO: buyerPhone needs to be added to SupplierInvoiceDetail API response for direct WhatsApp linking */}
+                  <button
+                    onClick={() => {
+                      const amount = `${'\u20B9'}${(detail.totalAmountMinor / 100).toFixed(2)}`;
+                      const due = detail.dueDate ? new Date(detail.dueDate).toLocaleDateString('en-IN') : 'N/A';
+                      const msg = `Payment reminder for invoice #${detail.invoiceNumber}, amount: ${amount}. Due: ${due}.`;
+                      // Opens WhatsApp with pre-filled message; user picks the contact manually
+                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg text-sm hover:bg-green-100 transition-colors"
+                    title="Send payment reminder via WhatsApp"
+                  >
+                    <WhatsAppIcon size={16} />
+                    Payment Reminder
                   </button>
                 </div>
               </>

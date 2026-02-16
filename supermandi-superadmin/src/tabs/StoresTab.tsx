@@ -3,6 +3,7 @@ import React from "react";
 import type { StoreRecord } from "../api/stores";
 import type { GlobalFeatureFlag, StoreFeatureFlag } from "../api/featureFlags";
 import { formatDateTime } from "../lib/formatters";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
 
 interface StoresTabProps {
   // Create store
@@ -400,12 +401,25 @@ export function StoresTab({
                             </div>
                             <div>
                               <label style={{ fontSize: "12px", color: "#666" }}>Phone</label>
-                              <input
-                                className="tableInput"
-                                value={contactDraft.contactPhone}
-                                onChange={(e) => updateStoreContactDraft(s.id, { contactPhone: e.target.value })}
-                                placeholder="+91..."
-                              />
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <input
+                                  className="tableInput"
+                                  value={contactDraft.contactPhone}
+                                  onChange={(e) => updateStoreContactDraft(s.id, { contactPhone: e.target.value })}
+                                  placeholder="+91..."
+                                  style={{ flex: 1 }}
+                                />
+                                {contactDraft.contactPhone && (
+                                  <button
+                                    onClick={() => window.open(`https://wa.me/${contactDraft.contactPhone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi, this is SuperMandi admin regarding your store ${s.name ?? s.storeName ?? s.id}.`)}`, '_blank', 'noopener,noreferrer')}
+                                    style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
+                                    title="Message on WhatsApp"
+                                    aria-label="Message on WhatsApp"
+                                  >
+                                    <WhatsAppIcon size={18} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <div>
                               <label style={{ fontSize: "12px", color: "#666" }}>Email</label>

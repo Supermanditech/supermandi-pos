@@ -9,6 +9,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useUrlState } from '../hooks/useUrlState';
 import EmptyState from '../components/EmptyState';
 import Modal from '../components/Modal';
+import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { Truck } from 'lucide-react';
 
 // T-180: Expected API: GET /api/v1/retailer-admin/purchase-orders?status=...&search=...&limit=...&offset=...
@@ -301,6 +302,30 @@ export default function PurchaseOrdersPage() {
                 <strong>Notes:</strong> {selectedPO.notes}
               </div>
             )}
+
+            {/* WhatsApp Follow-up Button */}
+            {/* TODO: supplierPhone needs to be added to PurchaseOrder API response for direct WhatsApp linking */}
+            <div style={{ marginBottom: '1rem' }}>
+              <button
+                onClick={() => {
+                  const expected = selectedPO.expectedDeliveryDate ? new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-IN') : 'N/A';
+                  const status = selectedPO.status.charAt(0).toUpperCase() + selectedPO.status.slice(1);
+                  const msg = `Follow-up on PO #${selectedPO.poNumber}. Status: ${status}. Expected delivery: ${expected}.`;
+                  // Opens WhatsApp with pre-filled message; user picks the contact manually
+                  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                }}
+                style={{
+                  padding: '6px 16px', background: '#f0fdf4', color: '#15803d',
+                  border: '1px solid #bbf7d0', borderRadius: 4, cursor: 'pointer',
+                  fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px',
+                }}
+                title="Follow up with supplier via WhatsApp"
+                aria-label="Message on WhatsApp"
+              >
+                <WhatsAppIcon size={16} />
+                WhatsApp Follow-up
+              </button>
+            </div>
 
             {/* Line Items */}
             {selectedPO.items && selectedPO.items.length > 0 && (

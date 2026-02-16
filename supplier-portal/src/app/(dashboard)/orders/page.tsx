@@ -14,6 +14,7 @@ import EmptyState from '@/components/EmptyState';
 import { ShoppingCart, Repeat } from 'lucide-react';
 // FIX-028: Close SSE on logout
 import { useAuth } from '@/lib/auth';
+import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -504,7 +505,21 @@ export default function OrdersPage() {
                   <p className="text-slate-400 text-xs">{orderDetail.storeCity}</p>
                 )}
                 {orderDetail?.storePhone && (
-                  <p className="text-slate-400 text-xs">{orderDetail.storePhone}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-slate-400 text-xs">{orderDetail.storePhone}</p>
+                    <button
+                      onClick={() => {
+                        const orderNum = orderDetail?.orderNumber || selectedOrder.id.slice(0, 8);
+                        const msg = `Hi, update on order #${orderNum}: ${selectedOrder.status}.`;
+                        window.open(`https://wa.me/${(orderDetail?.storePhone ?? '').replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+                      }}
+                      className="inline-flex items-center justify-center w-5 h-5 rounded-full hover:bg-green-50 transition-colors"
+                      title="Contact store on WhatsApp"
+                      aria-label="Contact store on WhatsApp"
+                    >
+                      <WhatsAppIcon size={14} />
+                    </button>
+                  </div>
                 )}
               </div>
               <div>

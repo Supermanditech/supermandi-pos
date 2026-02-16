@@ -1,6 +1,6 @@
 // T-108: Brand identity header with shortmark icon
 import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, Pressable, View, Alert, RefreshControl } from "react-native";
+import { Linking, ScrollView, StyleSheet, Text, Pressable, View, Alert, RefreshControl } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Svg, { Path } from "react-native-svg";
 import { useNavigation, CommonActions } from "@react-navigation/native";
@@ -857,6 +857,30 @@ export default function MenuScreen() {
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>
 
+      <Pressable
+        style={styles.menuItem}
+        onPress={() => {
+          const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE || "919876543210";
+          const message = encodeURIComponent(
+            `Hi SuperMandi Support,\n\nStore: ${opStatus.storeName || "N/A"}\nDevice: ${opStatus.deviceLabel || "N/A"}\n\nI need help with: `
+          );
+          // wa.me universal link works on both Android and iOS
+          const url = `https://wa.me/${supportPhone}?text=${message}`;
+          Linking.openURL(url).catch(() => {
+            Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
+          });
+        }}
+      >
+        <View style={[styles.menuIcon, styles.menuIconWhatsapp]}>
+          <MaterialCommunityIcons name={"whatsapp" as any} size={20} color="#25D366" />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>WhatsApp Support</Text>
+          <Text style={styles.menuSubtitle}>Chat with SuperMandi support team</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
       {/* Reports Section */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{t('menu.reports')}</Text>
@@ -1288,6 +1312,10 @@ const styles = StyleSheet.create({
   menuIconAi: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.primary + "15"
+  },
+  menuIconWhatsapp: {
+    borderColor: "#25D366",
+    backgroundColor: "#25D366" + "15",
   },
   languageToggle: {
     flexDirection: "row",

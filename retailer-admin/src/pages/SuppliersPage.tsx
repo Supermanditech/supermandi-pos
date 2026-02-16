@@ -8,6 +8,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useUrlState } from '../hooks/useUrlState';
 // GAP-2: EmptyState component for consistent empty states
 import EmptyState from '../components/EmptyState';
+import { WhatsAppIcon } from '../components/WhatsAppIcon';
 import { Truck } from 'lucide-react';
 
 // Debounce delay for server-side search (RCAT-SUP-API-001)
@@ -1442,7 +1443,19 @@ export default function SuppliersPage() {
                                   {supplier.supplierType || <span style={{ color: 'var(--text-muted)' }}>-</span>}
                                 </td>
                                 <td style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                                  {supplier.phone || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                                    {supplier.phone || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                    {supplier.phone && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${supplier.phone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${supplier.name}, this is regarding our order.`)}`, '_blank', 'noopener,noreferrer'); }}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                        title="Message on WhatsApp"
+                                        aria-label="Message on WhatsApp"
+                                      >
+                                        <WhatsAppIcon size={16} />
+                                      </button>
+                                    )}
+                                  </span>
                                 </td>
                                 <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>
                                   {supplier.gstin || <span style={{ color: 'var(--text-muted)' }}>-</span>}

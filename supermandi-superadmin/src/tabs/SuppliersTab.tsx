@@ -27,6 +27,7 @@ class ModalErrorBoundary extends Component<
   }
 }
 import { formatDateTime } from "../lib/formatters";
+import { WhatsAppIcon } from "../components/WhatsAppIcon";
 
 interface SuppliersTabProps {
   refreshSuppliers: () => void;
@@ -281,8 +282,18 @@ export function SuppliersTab({
                   <div>
                     <strong>GSTIN:</strong> <span className="mono">{request.requestedGstin || "-"}</span>
                   </div>
-                  <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     <strong>Phone:</strong> <span className="mono">{request.requestedPhone || "-"}</span>
+                    {request.requestedPhone && (
+                      <button
+                        onClick={() => window.open(`https://wa.me/${request.requestedPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${request.requestedName || 'there'}, this is SuperMandi admin.`)}`, '_blank', 'noopener,noreferrer')}
+                        style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
+                        title="Message on WhatsApp"
+                        aria-label="Message on WhatsApp"
+                      >
+                        <WhatsAppIcon size={14} />
+                      </button>
+                    )}
                   </div>
                   <div>
                     <strong>Email:</strong> <span className="mono">{request.requestedEmail || "-"}</span>
@@ -470,7 +481,19 @@ export function SuppliersTab({
                   </td>
                   <td className="mono">{s.gstin}</td>
                   <td>
-                    <div className="mono">{s.primaryPhone || "-"}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span className="mono">{s.primaryPhone || "-"}</span>
+                      {s.primaryPhone && (
+                        <button
+                          onClick={() => window.open(`https://wa.me/${s.primaryPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${s.businessName}, this is SuperMandi admin.`)}`, '_blank', 'noopener,noreferrer')}
+                          style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
+                          title="Message on WhatsApp"
+                          aria-label="Message on WhatsApp"
+                        >
+                          <WhatsAppIcon size={14} />
+                        </button>
+                      )}
+                    </div>
                     <div className="muted">{s.primaryEmail || ""}</div>
                   </td>
                   <td>{[s.city, s.state].filter(Boolean).join(", ") || "-"}</td>
