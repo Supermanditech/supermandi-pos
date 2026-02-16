@@ -857,6 +857,9 @@ const PaymentScreen = () => {
         ]}
         onPress={() => handlePaymentSelect(mode)}
         disabled={disabled}
+        accessibilityRole="tab"
+        accessibilityLabel={`${title} payment${selected ? ", selected" : ""}`}
+        accessibilityState={{ selected, disabled }}
       >
         <MaterialCommunityIcons
           name={icon as any}
@@ -1027,6 +1030,9 @@ const PaymentScreen = () => {
           style={[styles.primaryCta, !canSubmit && styles.primaryCtaDisabled]}
           onPress={handleCompletePayment}
           disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel={ctaLabel}
+          accessibilityState={{ disabled: !canSubmit }}
         >
           <Text style={styles.primaryCtaText}>{ctaLabel}</Text>
         </TouchableOpacity>
