@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
+import { clearAllHistory } from "./searchHistory";
 
 const SESSION_KEY = "supermandi.device.session.v1";
 
@@ -180,6 +181,8 @@ export async function clearDeviceSession(): Promise<void> {
     }
   }
   await AsyncStorage.removeItem(SESSION_KEY);
+  // FIX-058: Clear search history on session clear to prevent cross-store leakage
+  await clearAllHistory();
   console.log(`[deviceSession] Session cleared`);
 }
 
