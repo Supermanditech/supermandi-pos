@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/admin/favicon.svg" /> <!-- T-078: Brand shortmark -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- FIX-063: Content Security Policy — defense-in-depth (server CSP headers recommended too) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.run.app https://*.googleapis.com; frame-src 'none'; object-src 'none'; base-uri 'self';" />
     <title>SuperMandi SuperAdmin</title>
     <!-- GO-LIVE-099: PWA manifest -->
     <link rel="manifest" href="/admin/manifest.json" />
