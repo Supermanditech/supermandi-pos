@@ -165,7 +165,9 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
       if (pollingAbortControllerRef.current) {
         pollingAbortControllerRef.current.abort();
       }
-      pollingAbortControllerRef.current = new AbortController();
+      // FIX-034: Capture controller identity to prevent race on rapid calls
+      const myController = new AbortController();
+      pollingAbortControllerRef.current = myController;
 
       setPaymentModal((prev) => ({
         ...prev,
@@ -177,7 +179,7 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         const result = await bnplApi.pollBnplPaymentStatus(drawdownId, repaymentId, {
           intervalMs: 3000,
           maxAttempts: 60, // 3 minutes
-          signal: pollingAbortControllerRef.current.signal, // GO-LIVE-192: Pass signal for cancellation
+          signal: myController.signal, // FIX-034: Use captured controller, not ref
           onStatusUpdate: (status) => {
             if (status.status === "processing") {
               setPaymentModal((prev) => ({
@@ -193,8 +195,10 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
           },
         });
 
-        // Payment completed automatically
-        pollingAbortControllerRef.current = null;
+        // FIX-034: Only clear ref if we're still the active controller
+        if (pollingAbortControllerRef.current === myController) {
+          pollingAbortControllerRef.current = null;
+        }
         setPaymentModal((prev) => ({
           ...prev,
           isPolling: false,
@@ -217,14 +221,15 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         } else {
           console.warn("[BnplDuesScreen] Auto-polling stopped:", error);
         }
-        // Polling timed out or failed - user can still enter UTR manually
-        pollingAbortControllerRef.current = null;
+        // FIX-034: Only clear ref if we're still the active controller
+        if (pollingAbortControllerRef.current === myController) {
+          pollingAbortControllerRef.current = null;
+        }
         setPaymentModal((prev) => ({
           ...prev,
           isPolling: false,
           pollingStatus: null,
         }));
-        // Don't show error - just let user enter UTR manually
       }
     },
     [loadData]
