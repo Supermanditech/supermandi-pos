@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { Component, useEffect, Suspense, lazy } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
 import { AuthProvider, useAuth } from './lib/AuthContext';
 import { FeatureFlagProvider } from './lib/FeatureFlagContext';
 import ProtectedLayout from './components/ProtectedLayout';
@@ -61,6 +62,60 @@ const PageLoadingFallback = () => (
     <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
   </div>
 );
+
+// FIX-017: Per-route error boundary for lazy-loaded chunk failures
+// Catches network errors loading JS chunks and shows retry UI instead of crashing entire app
+class LazyErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo): void {
+    console.error('[FIX-017] Lazy route chunk load failed:', error, info.componentStack);
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <p style={{ color: '#6c757d', marginBottom: '1rem' }}>
+            Failed to load this page. Check your connection and try again.
+          </p>
+          <button
+            onClick={() => { this.setState({ hasError: false }); }}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// FIX-017: Wrapper combining ErrorBoundary + Suspense for lazy routes
+function LazyPage({ children }: { children: ReactNode }) {
+  return (
+    <LazyErrorBoundary>
+      <Suspense fallback={<PageLoadingFallback />}>
+        {children}
+      </Suspense>
+    </LazyErrorBoundary>
+  );
+}
 
 // Normalize trailing slashes
 function TrailingSlashRedirect() {
@@ -219,11 +274,11 @@ function AppRoutes() {
         {/* Auth pages - accessible without authentication */}
         <Route path="/retailer/login" element={<LoginPage />} />
         {/* RO-003: /retailer/register → instant registration (no application flow) */}
-        <Route path="/retailer/register" element={<Suspense fallback={<PageLoadingFallback />}><RegisterPage /></Suspense>} />
+        <Route path="/retailer/register" element={<LazyPage><RegisterPage /></LazyPage>} />
         {/* AUDIT-RET-002: Redirect deprecated onboard to register */}
         <Route path="/retailer/onboard" element={<Navigate to="/retailer/register" replace />} />
         {/* RET-CLEANUP-001: Forgot password page - accessible without auth */}
-        <Route path="/retailer/forgot-password" element={<Suspense fallback={<PageLoadingFallback />}><ForgotPasswordPage /></Suspense>} />
+        <Route path="/retailer/forgot-password" element={<LazyPage><ForgotPasswordPage /></LazyPage>} />
 
         {/* Legacy routes - redirect to new paths */}
         <Route path="/s/:storeCode/login" element={<Navigate to="/retailer/login" replace />} />
@@ -239,47 +294,47 @@ function AppRoutes() {
           }
         >
           {/* RET-004: All child routes wrapped with LimitedModeGuard — blocks restricted routes when not ACTIVE */}
-          <Route index element={<Suspense fallback={<PageLoadingFallback />}><DashboardPage /></Suspense>} />
-          <Route path="products" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ProductsPage /></Suspense></LimitedModeGuard>} />
-          <Route path="import" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ImportPage /></Suspense></LimitedModeGuard>} />
-          <Route path="inventory" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><InventoryPage /></Suspense></LimitedModeGuard>} />
-          <Route path="suppliers" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><SuppliersPage /></Suspense></LimitedModeGuard>} />
+          <Route index element={<LazyPage><DashboardPage /></LazyPage>} />
+          <Route path="products" element={<LimitedModeGuard><LazyPage><ProductsPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="import" element={<LimitedModeGuard><LazyPage><ImportPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="inventory" element={<LimitedModeGuard><LazyPage><InventoryPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="suppliers" element={<LimitedModeGuard><LazyPage><SuppliersPage /></LazyPage></LimitedModeGuard>} />
           {/* CA-1.4-001: Supplier Catalog - browse and add approved products */}
-          <Route path="supplier-catalog" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><SupplierCatalogPage /></Suspense></LimitedModeGuard>} />
-          <Route path="compliance" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><CompliancePage /></Suspense></LimitedModeGuard>} />
+          <Route path="supplier-catalog" element={<LimitedModeGuard><LazyPage><SupplierCatalogPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="compliance" element={<LimitedModeGuard><LazyPage><CompliancePage /></LazyPage></LimitedModeGuard>} />
           {/* GL-RJ-005: Store Settings page — allowed in limited mode */}
-          <Route path="settings" element={<Suspense fallback={<PageLoadingFallback />}><SettingsPage /></Suspense>} />
+          <Route path="settings" element={<LazyPage><SettingsPage /></LazyPage>} />
           {/* RET-WEB-003: Payments Setup page */}
-          <Route path="settings/payments" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><PaymentsPage /></Suspense></LimitedModeGuard>} />
+          <Route path="settings/payments" element={<LimitedModeGuard><LazyPage><PaymentsPage /></LazyPage></LimitedModeGuard>} />
           {/* T-073: Invoices page */}
-          <Route path="invoices" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><InvoicesPage /></Suspense></LimitedModeGuard>} />
+          <Route path="invoices" element={<LimitedModeGuard><LazyPage><InvoicesPage /></LazyPage></LimitedModeGuard>} />
           {/* T-151: Payment Reconciliation Dashboard */}
-          <Route path="reconciliation" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ReconciliationPage /></Suspense></LimitedModeGuard>} />
+          <Route path="reconciliation" element={<LimitedModeGuard><LazyPage><ReconciliationPage /></LazyPage></LimitedModeGuard>} />
           {/* T-277: Credit & Finance Dashboard */}
-          <Route path="credit" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><CreditDashboardPage /></Suspense></LimitedModeGuard>} />
-          <Route path="chat" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ChatPage /></Suspense></LimitedModeGuard>} />
+          <Route path="credit" element={<LimitedModeGuard><LazyPage><CreditDashboardPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="chat" element={<LimitedModeGuard><LazyPage><ChatPage /></LazyPage></LimitedModeGuard>} />
           {/* T-180: Purchase Orders Visibility */}
-          <Route path="purchase-orders" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><PurchaseOrdersPage /></Suspense></LimitedModeGuard>} />
+          <Route path="purchase-orders" element={<LimitedModeGuard><LazyPage><PurchaseOrdersPage /></LazyPage></LimitedModeGuard>} />
           {/* T-212: Sales Analytics Dashboard */}
-          <Route path="analytics" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><AnalyticsPage /></Suspense></LimitedModeGuard>} />
-          <Route path="customers" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><CustomersPage /></Suspense></LimitedModeGuard>} />
-          <Route path="reorder" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ReorderPage /></Suspense></LimitedModeGuard>} />
+          <Route path="analytics" element={<LimitedModeGuard><LazyPage><AnalyticsPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="customers" element={<LimitedModeGuard><LazyPage><CustomersPage /></LazyPage></LimitedModeGuard>} />
+          <Route path="reorder" element={<LimitedModeGuard><LazyPage><ReorderPage /></LazyPage></LimitedModeGuard>} />
           {/* Phase 8: Notifications center */}
-          <Route path="notifications" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><NotificationsPage /></Suspense></LimitedModeGuard>} />
+          <Route path="notifications" element={<LimitedModeGuard><LazyPage><NotificationsPage /></LazyPage></LimitedModeGuard>} />
           {/* RET-WEB-002: Device Activation page — allowed in limited mode */}
-          <Route path="devices" element={<Suspense fallback={<PageLoadingFallback />}><DeviceActivationPage /></Suspense>} />
+          <Route path="devices" element={<LazyPage><DeviceActivationPage /></LazyPage>} />
           {/* SM-024: SuperAdmin approval queue pages */}
           {/* GL-WF-033: Wrap admin routes with role check + RET-004: limited mode guard */}
-          <Route path="admin/suppliers" element={<LimitedModeGuard><AdminRoute><Suspense fallback={<PageLoadingFallback />}><SupplierQueuePage /></Suspense></AdminRoute></LimitedModeGuard>} />
-          <Route path="admin/products" element={<LimitedModeGuard><AdminRoute><Suspense fallback={<PageLoadingFallback />}><ProductQueuePage /></Suspense></AdminRoute></LimitedModeGuard>} />
+          <Route path="admin/suppliers" element={<LimitedModeGuard><AdminRoute><LazyPage><SupplierQueuePage /></LazyPage></AdminRoute></LimitedModeGuard>} />
+          <Route path="admin/products" element={<LimitedModeGuard><AdminRoute><LazyPage><ProductQueuePage /></LazyPage></AdminRoute></LimitedModeGuard>} />
           {/* P2-RD-002: QA page hidden in production */}
-          {import.meta.env.DEV && <Route path="_pages" element={<Suspense fallback={<PageLoadingFallback />}><AllPagesPage /></Suspense>} />}
+          {import.meta.env.DEV && <Route path="_pages" element={<LazyPage><AllPagesPage /></LazyPage>} />}
           {/* T-115: Store-scoped 404 — catches unknown paths under /s/:storeCode */}
-          <Route path="*" element={<Suspense fallback={<PageLoadingFallback />}><NotFoundPage /></Suspense>} />
+          <Route path="*" element={<LazyPage><NotFoundPage /></LazyPage>} />
         </Route>
 
         {/* T-115: Branded 404 catch-all — replaces blind redirect to / */}
-        <Route path="*" element={<Suspense fallback={<PageLoadingFallback />}><NotFoundPage /></Suspense>} />
+        <Route path="*" element={<LazyPage><NotFoundPage /></LazyPage>} />
       </Routes>
     </>
   );
