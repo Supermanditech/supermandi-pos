@@ -1,6 +1,6 @@
 // SA-001: Suppliers tab extracted from App.tsx
 // T-188: Batch approval/rejection for pending products
-import React, { Component, useState } from "react";
+import React, { Component, useEffect, useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
 import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
 
@@ -140,6 +140,12 @@ export function SuppliersTab({
   // T-068: Publish button state
   const [publishLoading, setPublishLoading] = useState<Record<string, boolean>>({});
   const [publishResult, setPublishResult] = useState<Record<string, string>>({});
+
+  // FIX-050: Clear stale publish state when product list refreshes
+  useEffect(() => {
+    setPublishLoading({});
+    setPublishResult({});
+  }, [pendingProducts]);
   // T-188: Batch selection state
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [batchActionLoading, setBatchActionLoading] = useState(false);
