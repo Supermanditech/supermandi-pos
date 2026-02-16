@@ -705,6 +705,7 @@ jobs:
             --exclude='scripts' \
             --exclude='*.config.*' \
             --exclude='pnpm-lock.yaml' \
+            --exclude='*.env.*example' \
             .
           echo ""
           echo "=== Semgrep SAST: PASSED ==="
