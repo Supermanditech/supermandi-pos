@@ -82,16 +82,19 @@ export interface TemplateComponent {
 export function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
 
-  if (digits.length === 10) {
+  // 10-digit Indian mobile (must start with 6-9)
+  if (digits.length === 10 && /^[6-9]/.test(digits)) {
     return `91${digits}`;
   }
-  if (digits.length === 11 && digits.startsWith("0")) {
+  // 11-digit with leading 0 (Indian local format)
+  if (digits.length === 11 && digits.startsWith("0") && /^[6-9]/.test(digits.slice(1))) {
     return `91${digits.slice(1)}`;
   }
-  if (digits.length === 12 && digits.startsWith("91")) {
+  // 12-digit with 91 prefix (already E.164)
+  if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2))) {
     return digits;
   }
-  // International number or already formatted
+  // Return as-is for other formats (will be caught by length check in callers)
   return digits;
 }
 

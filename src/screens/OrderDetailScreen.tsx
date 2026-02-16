@@ -213,8 +213,9 @@ export default function OrderDetailScreen({
       `Items:\n${itemsSummary}${moreItems}\n\n` +
       `Please update on the status. Thank you.`
     );
-    // supplierPhone not available on PurchaseOrder type — open without phone so user can pick contact
-    const url = `whatsapp://send?text=${message}`;
+    // supplierPhone not available on PurchaseOrder type — open wa.me without phone so user picks contact
+    // wa.me universal link works on both Android and iOS (whatsapp:// is platform-inconsistent)
+    const url = `https://wa.me/?text=${message}`;
     Linking.openURL(url).catch(() => {
       Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
     });

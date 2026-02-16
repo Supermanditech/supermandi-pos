@@ -31,7 +31,11 @@ export type PosEventType =
   | "PAYMENT_PENDING"
   | "PAYMENT_CONFIRMED"
   | "PAYMENT_TIMEOUT"
-  | "PAYMENT_CANCELLED";
+  | "PAYMENT_CANCELLED"
+  // WhatsApp (WA-001)
+  | "WHATSAPP_BILL_SENT"
+  | "WHATSAPP_BILL_FAILED"
+  | "WHATSAPP_BILL_ERROR";
 
 type QueuedPosEvent = {
   id: string; // local event id (not stored in DB, included inside payload for reconciliation)

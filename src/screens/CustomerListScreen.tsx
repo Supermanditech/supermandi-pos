@@ -326,7 +326,8 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                         `Hi ${selectedCustomer.name}, greetings from SuperMandi!`
                       );
                       const phone = selectedCustomer.phone.replace(/\D/g, "");
-                      const url = `whatsapp://send?phone=${phone}&text=${message}`;
+                      // wa.me universal link works on both Android and iOS
+                      const url = `https://wa.me/${phone}?text=${message}`;
                       Linking.openURL(url).catch(() => {
                         Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
                       });

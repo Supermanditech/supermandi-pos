@@ -1,14 +1,15 @@
 // WA-001: WhatsApp Webhook Handler
 // Handles: Meta webhook verification (GET) + delivery status updates (POST)
-// Pattern: refundWebhook.ts (signature verify, idempotent updates)
+// Security: X-Hub-Signature-256 verification on POST requests
 
+import crypto from "crypto";
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
 import { getWebhookVerifyToken } from "../../../services/whatsappService";
 
 export const whatsappWebhookRouter = Router();
 
-// Delivery status progression order (for idempotent updates)
+// Delivery status progression order (for atomic idempotent updates)
 const STATUS_ORDER: Record<string, number> = {
   queued: 0,
   sent: 1,
@@ -16,6 +17,8 @@ const STATUS_ORDER: Record<string, number> = {
   read: 3,
   failed: 4,
 };
+
+const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET || "";
 
 // =============================================================================
 // GET /webhooks/whatsapp — Meta webhook verification challenge
@@ -38,9 +41,35 @@ whatsappWebhookRouter.get("/whatsapp", (req: Request, res: Response) => {
 
 // =============================================================================
 // POST /webhooks/whatsapp — Delivery status updates from Meta
+// Security: Validates X-Hub-Signature-256 header using WHATSAPP_APP_SECRET
 // =============================================================================
 whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
-  // Always respond 200 immediately (Meta requirement — they retry on non-200)
+  // Verify signature if app secret is configured
+  if (WHATSAPP_APP_SECRET) {
+    const signature = req.headers["x-hub-signature-256"] as string | undefined;
+    if (!signature) {
+      console.warn("[WA-001] Webhook missing X-Hub-Signature-256 header");
+      return res.sendStatus(401);
+    }
+
+    const rawBody = JSON.stringify(req.body);
+    const expectedSig = "sha256=" + crypto
+      .createHmac("sha256", WHATSAPP_APP_SECRET)
+      .update(rawBody)
+      .digest("hex");
+
+    // Constant-time comparison to prevent timing attacks
+    const sigBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expectedSig);
+    if (sigBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(sigBuffer, expectedBuffer)) {
+      console.warn("[WA-001] Webhook signature mismatch — rejecting");
+      return res.sendStatus(403);
+    }
+  } else {
+    console.warn("[WA-001] WHATSAPP_APP_SECRET not configured — skipping signature verification");
+  }
+
+  // Always respond 200 immediately after auth (Meta requirement — they retry on non-200)
   res.sendStatus(200);
 
   try {
@@ -85,48 +114,60 @@ async function processStatusUpdate(
   const mappedStatus = mapMetaStatus(newStatus);
   if (!mappedStatus) return;
 
+  const newOrder = STATUS_ORDER[mappedStatus] ?? -1;
+
+  // Use Meta's timestamp if available (more accurate than server time)
+  const eventTime = status.timestamp
+    ? new Date(parseInt(status.timestamp, 10) * 1000)
+    : new Date();
+
   try {
-    // Idempotent update: only progress forward in status lifecycle
-    const existing = await pool.query(
-      `SELECT delivery_status FROM whatsapp.message_logs WHERE wamid = $1`,
-      [wamid]
-    );
-
-    if (existing.rows.length === 0) {
-      // Message not in our logs (possibly sent before integration)
-      return;
+    // Atomic idempotent update: single UPDATE with WHERE clause prevents race conditions
+    // Only progresses forward in lifecycle (queued→sent→delivered→read)
+    // "failed" can overwrite queued/sent but NOT delivered/read
+    if (mappedStatus === "failed") {
+      // Failed can only overwrite queued or sent (not delivered/read)
+      await pool.query(
+        `UPDATE whatsapp.message_logs
+         SET delivery_status = $1,
+             delivery_error_code = $2,
+             updated_at = NOW()
+         WHERE wamid = $3
+           AND delivery_status IN ('queued', 'sent')`,
+        [mappedStatus, status.status || null, wamid]
+      );
+    } else if (mappedStatus === "delivered") {
+      await pool.query(
+        `UPDATE whatsapp.message_logs
+         SET delivery_status = $1,
+             delivered_at = $2,
+             updated_at = NOW()
+         WHERE wamid = $3
+           AND delivery_status IN ('queued', 'sent')`,
+        [mappedStatus, eventTime, wamid]
+      );
+    } else if (mappedStatus === "read") {
+      await pool.query(
+        `UPDATE whatsapp.message_logs
+         SET delivery_status = $1,
+             read_at = $2,
+             delivered_at = COALESCE(delivered_at, $2),
+             updated_at = NOW()
+         WHERE wamid = $3
+           AND delivery_status IN ('queued', 'sent', 'delivered')`,
+        [mappedStatus, eventTime, wamid]
+      );
+    } else {
+      // sent status — only overwrite queued
+      await pool.query(
+        `UPDATE whatsapp.message_logs
+         SET delivery_status = $1,
+             updated_at = NOW()
+         WHERE wamid = $2
+           AND delivery_status = 'queued'`,
+        [mappedStatus, wamid]
+      );
     }
-
-    const currentStatus = existing.rows[0].delivery_status;
-    const currentOrder = STATUS_ORDER[currentStatus] ?? -1;
-    const newOrder = STATUS_ORDER[mappedStatus] ?? -1;
-
-    // Only update if new status is later in lifecycle (or is "failed")
-    if (newOrder <= currentOrder && mappedStatus !== "failed") {
-      return;
-    }
-
-    const updateFields: string[] = [
-      "delivery_status = $1",
-      "updated_at = NOW()",
-    ];
-    const params: unknown[] = [mappedStatus];
-    let paramIndex = 2;
-
-    if (mappedStatus === "delivered") {
-      updateFields.push(`delivered_at = $${paramIndex++}`);
-      params.push(new Date());
-    }
-    if (mappedStatus === "read") {
-      updateFields.push(`read_at = $${paramIndex++}`);
-      params.push(new Date());
-    }
-
-    params.push(wamid);
-    await pool.query(
-      `UPDATE whatsapp.message_logs SET ${updateFields.join(", ")} WHERE wamid = $${paramIndex}`,
-      params
-    );
   } catch (err) {
     console.error(`[WA-001] Failed to update status for wamid ${wamid}:`, err);
   }

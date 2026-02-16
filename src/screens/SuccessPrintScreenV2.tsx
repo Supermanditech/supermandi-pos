@@ -147,11 +147,23 @@ export default function SuccessPrintScreenV2() {
     }
   };
 
-  // WA-001: Send bill via WhatsApp Cloud API
+  // WA-001: Validate Indian mobile number (10 digits starting with 6-9)
+  const validatePhone = (raw: string): string | null => {
+    const digits = raw.replace(/\D/g, "");
+    // 10-digit Indian mobile
+    if (digits.length === 10 && /^[6-9]/.test(digits)) return digits;
+    // 11-digit with leading 0
+    if (digits.length === 11 && digits.startsWith("0") && /^[6-9]/.test(digits.slice(1))) return digits.slice(1);
+    // 12-digit with 91 prefix
+    if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2))) return digits.slice(2);
+    return null;
+  };
+
+  // WA-001: Send bill via WhatsApp Cloud API (with retry support)
   const handleWhatsAppSend = async () => {
-    const cleanPhone = waPhone.replace(/\D/g, "");
-    if (cleanPhone.length < 10) {
-      Alert.alert("Invalid Number", "Please enter a valid 10-digit phone number.");
+    const cleanPhone = validatePhone(waPhone);
+    if (!cleanPhone) {
+      Alert.alert("Invalid Number", "Please enter a valid 10-digit Indian mobile number (starting with 6-9).");
       return;
     }
 
@@ -166,14 +178,22 @@ export default function SuccessPrintScreenV2() {
 
       if (result.sent) {
         setWaStatus("sent");
+        void logPosEvent("WHATSAPP_BILL_SENT", { billId: billNumber, transactionId, phone: cleanPhone });
         Alert.alert("Sent!", "Bill sent via WhatsApp successfully.");
       } else {
         setWaStatus("failed");
+        void logPosEvent("WHATSAPP_BILL_FAILED", { billId: billNumber, transactionId, phone: cleanPhone, error: result.error });
         Alert.alert("Failed", result.error || "Could not send WhatsApp message.");
       }
-    } catch {
+    } catch (err: unknown) {
       setWaStatus("failed");
-      Alert.alert("Error", "Failed to send WhatsApp message. Check internet connection.");
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      void logPosEvent("WHATSAPP_BILL_ERROR", { billId: billNumber, transactionId, phone: cleanPhone, error: msg });
+      const isOffline = msg.includes("offline") || msg.includes("network") || msg.includes("whatsapp_offline_blocked");
+      Alert.alert(
+        isOffline ? "Offline" : "Error",
+        isOffline ? "WhatsApp requires an internet connection. Please try again when online." : `Failed to send: ${msg}`
+      );
     }
   };
 
@@ -225,7 +245,7 @@ export default function SuccessPrintScreenV2() {
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
               <MaterialCommunityIcons name="whatsapp" size={20} color="#fff" />
               <Text style={styles.btnText}>
-                {waStatus === "sending" ? "Sending..." : waStatus === "sent" ? "Sent!" : "WhatsApp Bill"}
+                {waStatus === "sending" ? "Sending..." : waStatus === "sent" ? "Sent! Tap to Resend" : waStatus === "failed" ? "Retry WhatsApp" : "WhatsApp Bill"}
               </Text>
             </View>
           </TouchableOpacity>
@@ -247,10 +267,12 @@ export default function SuccessPrintScreenV2() {
               placeholder="10-digit mobile number"
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
-              maxLength={15}
+              maxLength={10}
               value={waPhone}
-              onChangeText={setWaPhone}
+              onChangeText={(t) => setWaPhone(t.replace(/\D/g, ""))}
               autoFocus
+              returnKeyType="send"
+              onSubmitEditing={handleWhatsAppSend}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity

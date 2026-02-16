@@ -864,7 +864,8 @@ export default function MenuScreen() {
           const message = encodeURIComponent(
             `Hi SuperMandi Support,\n\nStore: ${opStatus.storeName || "N/A"}\nDevice: ${opStatus.deviceLabel || "N/A"}\n\nI need help with: `
           );
-          const url = `whatsapp://send?phone=${supportPhone}&text=${message}`;
+          // wa.me universal link works on both Android and iOS
+          const url = `https://wa.me/${supportPhone}?text=${message}`;
           Linking.openURL(url).catch(() => {
             Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
           });

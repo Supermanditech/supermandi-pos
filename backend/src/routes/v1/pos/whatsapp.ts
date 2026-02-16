@@ -36,7 +36,8 @@ posWhatsAppRouter.get("/whatsapp/status", (_req: Request, res: Response) => {
 posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response) => {
   try {
     const { saleId, recipientPhone } = req.body;
-    const storeId = (req as any).deviceContext?.storeId;
+    const storeId = (req as any).posDevice?.storeId;
+    const deviceId = (req as any).posDevice?.deviceId;
 
     if (!saleId || !recipientPhone) {
       return res.status(400).json({ sent: false, error: "saleId and recipientPhone are required" });
@@ -84,8 +85,8 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
       await pool.query(
         `INSERT INTO whatsapp.message_logs
           (store_id, sender_type, recipient_type, recipient_phone, message_type,
-           content_preview, wamid, delivery_status, context_type, context_id)
-         VALUES ($1, 'pos', 'consumer', $2, 'text', $3, $4, $5, 'bill_receipt', $6)`,
+           content_preview, wamid, delivery_status, context_type, context_id, sent_by)
+         VALUES ($1, 'pos', 'consumer', $2, 'text', $3, $4, $5, 'bill_receipt', $6, $7)`,
         [
           storeId,
           phone,
@@ -93,6 +94,7 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
           result.wamid || null,
           result.sent ? "sent" : "failed",
           saleId,
+          deviceId || null,
         ]
       );
     } catch (logErr) {
@@ -116,7 +118,8 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
 posWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) => {
   try {
     const { recipientPhone, message, contextType, contextId } = req.body;
-    const storeId = (req as any).deviceContext?.storeId;
+    const storeId = (req as any).posDevice?.storeId;
+    const deviceId = (req as any).posDevice?.deviceId;
 
     if (!recipientPhone || !message) {
       return res.status(400).json({ sent: false, error: "recipientPhone and message are required" });
@@ -143,8 +146,8 @@ posWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) => 
       await pool.query(
         `INSERT INTO whatsapp.message_logs
           (store_id, sender_type, recipient_type, recipient_phone, message_type,
-           content_preview, wamid, delivery_status, context_type, context_id)
-         VALUES ($1, 'pos', 'consumer', $2, 'text', $3, $4, $5, $6, $7)`,
+           content_preview, wamid, delivery_status, context_type, context_id, sent_by)
+         VALUES ($1, 'pos', 'consumer', $2, 'text', $3, $4, $5, $6, $7, $8)`,
         [
           storeId,
           phone,
@@ -153,6 +156,7 @@ posWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) => 
           result.sent ? "sent" : "failed",
           contextType || null,
           contextId || null,
+          deviceId || null,
         ]
       );
     } catch (logErr) {
