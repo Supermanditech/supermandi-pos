@@ -67,6 +67,7 @@ export function SyncStatusWidget() {
   const connectionStatus = useSyncStore((s) => s.connectionStatus);
   const outboxCount = useSyncStore((s) => s.outboxCount);
   const lastSyncAt = useSyncStore((s) => s.lastSyncAt);
+  const lastSyncError = useSyncStore((s) => s.lastSyncError); // FIX-033
   const deadletterCount = useSyncStore((s) => s.deadletterCount);
   const stockDrifts = useSyncStore((s) => s.stockDrifts);
   const syncing = useSyncStore((s) => s.syncing);
@@ -152,6 +153,7 @@ export function SyncStatusWidget() {
   const hasPendingItems = outboxCount > 0;
   const hasDeadletterItems = deadletterCount > 0;
   const hasDrifts = stockDrifts.length > 0;
+  const hasSyncError = !!lastSyncError; // FIX-033
 
   return (
     <View style={styles.container}>
@@ -183,6 +185,11 @@ export function SyncStatusWidget() {
           <View style={styles.driftBadge}>
             <MaterialCommunityIcons name="swap-vertical" size={10} color={theme.colors.warning} />
           </View>
+        ) : null}
+
+        {/* FIX-033: Sync error indicator in compact bar */}
+        {hasSyncError ? (
+          <MaterialCommunityIcons name="alert" size={12} color={theme.colors.error} />
         ) : null}
 
         <Text style={styles.lastSyncText}>{relativeTime}</Text>
@@ -218,6 +225,18 @@ export function SyncStatusWidget() {
             <Text style={styles.detailLabel}>Last synced</Text>
             <Text style={styles.detailValue}>{relativeTime}</Text>
           </View>
+
+          {/* FIX-033: Show sync error */}
+          {lastSyncError ? (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.colors.error }]}>
+                Sync error
+              </Text>
+              <Text style={[styles.detailValue, { color: theme.colors.error, flex: 1, textAlign: "right" }]} numberOfLines={2}>
+                {lastSyncError}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Deadletter items */}
           {hasDeadletterItems ? (
