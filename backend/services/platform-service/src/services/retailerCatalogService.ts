@@ -306,12 +306,17 @@ export async function updateStoreProductStock(
  */
 export async function linkSupplierToStoreProduct(
   storeProductId: string,
-  supplierId: string
+  supplierId: string,
+  storeId: string
 ): Promise<void> {
-  await query(
-    `UPDATE catalog.store_products SET supplier_id = $1 WHERE id = $2`,
-    [supplierId, storeProductId]
+  // FIX-005: store_id isolation — prevent cross-store supplier linking
+  const result = await query(
+    `UPDATE catalog.store_products SET supplier_id = $1 WHERE id = $2 AND store_id = $3`,
+    [supplierId, storeProductId, storeId]
   );
+  if ((result as unknown as { rowCount: number }).rowCount === 0) {
+    throw new Error('Store product not found or does not belong to this store');
+  }
 }
 
 /**
@@ -320,14 +325,19 @@ export async function linkSupplierToStoreProduct(
 export async function storeUnverifiedSupplierInfo(
   storeProductId: string,
   supplierNameRaw: string,
-  pendingSupplierRequestId: string | null
+  pendingSupplierRequestId: string | null,
+  storeId: string
 ): Promise<void> {
-  await query(
+  // FIX-005: store_id isolation — prevent cross-store unverified supplier info corruption
+  const result = await query(
     `UPDATE catalog.store_products
      SET supplier_name_raw = $1, pending_supplier_request_id = $2
-     WHERE id = $3`,
-    [supplierNameRaw, pendingSupplierRequestId, storeProductId]
+     WHERE id = $3 AND store_id = $4`,
+    [supplierNameRaw, pendingSupplierRequestId, storeProductId, storeId]
   );
+  if ((result as unknown as { rowCount: number }).rowCount === 0) {
+    throw new Error('Store product not found or does not belong to this store');
+  }
 }
 
 /**

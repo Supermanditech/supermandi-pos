@@ -858,7 +858,7 @@ router.post(
       supplierVerified = true;
 
       // Update store_product with verified supplier_id using shared service
-      await linkSupplierToStoreProduct(storeProductId, supplierId);
+      await linkSupplierToStoreProduct(storeProductId, supplierId, storeId);
 
       // Create supplier-product link using shared service
       await createSupplierProductLink(supplierId, name, brand || null, purchasePrice);
@@ -874,13 +874,13 @@ router.post(
         // Found verified supplier - link it using shared service
         supplierLinked = true;
         supplierVerified = true;
-        await linkSupplierToStoreProduct(storeProductId, matchingSupplier.id);
+        await linkSupplierToStoreProduct(storeProductId, matchingSupplier.id, storeId);
       } else {
         // No verified supplier found - create pending enrollment request using shared service
         pendingSupplierRequestId = await createPendingSupplierRequest(storeId, supplierNameRaw);
 
         // Store raw name and pending request ID using shared service
-        await storeUnverifiedSupplierInfo(storeProductId, supplierNameRaw, pendingSupplierRequestId);
+        await storeUnverifiedSupplierInfo(storeProductId, supplierNameRaw, pendingSupplierRequestId, storeId);
 
         supplierLinked = false;
         supplierVerified = false;
