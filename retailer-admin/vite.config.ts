@@ -42,28 +42,39 @@ function versionPlugin(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), versionPlugin()],
-  base: '/retailer/',
-  // GO-LIVE-SOP: Inject build info at compile time
-  define: {
-    'import.meta.env.VITE_BUILD_SHA': JSON.stringify(buildInfo.sha),
-    'import.meta.env.VITE_BUILD_TIME': JSON.stringify(buildInfo.time),
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
+export default defineConfig(({ command }) => {
+  // FIX-004: Fail build when VITE_API_BASE_URL is not explicitly set
+  // Empty string is valid (load-balancer relative paths). Undefined = misconfigured build.
+  if (command === 'build' && process.env.VITE_API_BASE_URL === undefined) {
+    throw new Error(
+      '[FIX-004] VITE_API_BASE_URL must be explicitly set for production builds. ' +
+      'Set VITE_API_BASE_URL="" for load-balancer relative paths, or provide a full URL.'
+    );
+  }
+
+  return {
+    plugins: [react(), versionPlugin()],
+    base: '/retailer/',
+    // GO-LIVE-SOP: Inject build info at compile time
+    define: {
+      'import.meta.env.VITE_BUILD_SHA': JSON.stringify(buildInfo.sha),
+      'import.meta.env.VITE_BUILD_TIME': JSON.stringify(buildInfo.time),
+    },
+    server: {
+      port: 5173,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3000',
+          changeOrigin: true,
+        },
       },
     },
-  },
-  esbuild: {
-    drop: ['console', 'debugger'],
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: false,
-  },
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
+    build: {
+      outDir: 'dist',
+      sourcemap: false,
+    },
+  };
 });

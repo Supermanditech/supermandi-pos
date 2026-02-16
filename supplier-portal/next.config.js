@@ -20,6 +20,16 @@ function getBuildInfo() {
 
 const buildInfo = getBuildInfo();
 
+// FIX-004: Fail build when NEXT_PUBLIC_API_BASE_URL is not explicitly set
+// Empty string is valid (load-balancer relative paths). Undefined = misconfigured build.
+const isNextBuild = process.argv.some(arg => arg === 'build');
+if (isNextBuild && process.env.NEXT_PUBLIC_API_BASE_URL === undefined) {
+  throw new Error(
+    '[FIX-004] NEXT_PUBLIC_API_BASE_URL must be explicitly set for production builds. ' +
+    'Set NEXT_PUBLIC_API_BASE_URL="" for load-balancer relative paths, or provide a full URL.'
+  );
+}
+
 const nextConfig = {
   // CONSOLE-STRIP-001: Strip console.log/debug from production builds (keep error+warn)
   compiler: {
