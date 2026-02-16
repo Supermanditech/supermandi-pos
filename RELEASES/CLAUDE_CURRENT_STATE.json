@@ -73,7 +73,7 @@
     "T-305": "DONE", "T-306": "DONE", "T-307": "DONE", "T-308": "DONE", "T-309": "DONE",
     "T-310": "DONE", "T-311": "DONE", "T-312": "DONE", "T-313": "DONE", "T-314": "DONE",
     "T-315": "DONE", "T-316": "DONE",
-    "TEST-001": "QUEUED", "TEST-002": "QUEUED", "TEST-003": "QUEUED", "TEST-004": "QUEUED", "TEST-005": "QUEUED",
+    "TEST-001": "DONE", "TEST-002": "QUEUED", "TEST-003": "QUEUED", "TEST-004": "QUEUED", "TEST-005": "QUEUED",
     "TEST-006": "QUEUED", "TEST-007": "QUEUED", "TEST-008": "QUEUED", "TEST-009": "QUEUED", "TEST-010": "QUEUED",
     "TEST-011": "QUEUED", "TEST-012": "QUEUED", "TEST-013": "QUEUED", "TEST-014": "QUEUED", "TEST-015": "QUEUED",
     "TEST-016": "QUEUED", "TEST-017": "QUEUED", "TEST-018": "QUEUED", "TEST-019": "QUEUED", "TEST-020": "QUEUED",
@@ -128,7 +128,7 @@
     { "phase": 40, "name": "9F: WhatsApp + In-App Chat", "tickets": ["T-291","T-292","T-293","T-294","T-295","T-296","T-297","T-298","T-299","T-300","T-301","T-302"], "status": "DONE (9/12, T-296→T-298 awaiting Meta WhatsApp API)" },
     { "phase": 41, "name": "9G: AI Automation — Voice + Core", "tickets": ["T-305","T-306","T-307","T-308","T-309","T-310","T-311"], "status": "DONE" },
     { "phase": 42, "name": "9H: AI Automation — Intelligence + Polish", "tickets": ["T-312","T-313","T-314","T-315","T-316","T-303","T-304"], "status": "DONE" },
-    { "phase": 43, "name": "10A: Test Infrastructure Setup", "tickets": ["TEST-001","TEST-002","TEST-003","TEST-004","TEST-005","TEST-006","TEST-007","TEST-008","TEST-009","TEST-010"], "status": "QUEUED" },
+    { "phase": 43, "name": "10A: Test Infrastructure Setup", "tickets": ["TEST-001","TEST-002","TEST-003","TEST-004","TEST-005","TEST-006","TEST-007","TEST-008","TEST-009","TEST-010"], "status": "IN_PROGRESS (TEST-001 DONE)" },
     { "phase": 44, "name": "10B: Round 1 — Discovery", "tickets": ["TEST-011","TEST-012","TEST-013","TEST-014","TEST-015","TEST-016","TEST-017","TEST-018","TEST-019","TEST-020","TEST-021","TEST-022","TEST-023","TEST-024","TEST-025","TEST-026","TEST-027","TEST-028"], "status": "QUEUED" },
     { "phase": 45, "name": "10C: Round 2 — Regression", "tickets": ["TEST-029","TEST-030","TEST-031","TEST-032","TEST-033","TEST-034","TEST-035","TEST-036","TEST-037"], "status": "QUEUED" },
     { "phase": 46, "name": "10D: Round 3 — Stress + GO/NO-GO", "tickets": ["TEST-038","TEST-039","TEST-040","TEST-041","TEST-042","TEST-043","TEST-044","TEST-045","TEST-046","TEST-047","TEST-048","TEST-049","TEST-050","TEST-051","TEST-052"], "status": "QUEUED" }
@@ -356,13 +356,11 @@
   "gitDiscipline": "OFF — work directly on main, batch commits allowed",
   "nextAction": "VS Code Claude: Complete remaining Phase 6+7+9 tickets FIRST (109 tickets). Then Phase 10 testing begins (52 tickets, 3 rounds, 34,050 test executions). READ RELEASES/PHASE9_INTEGRATION_GUIDE.md for Phase 9 details.",
   "lastActions": [
-    "Phase 9 Wave E COMPLETE: 15 AI Automation tickets done (T-303→T-316 + T-288)",
-    "Backend: 11 new AI services (alerts, forecasting, smart reorder, auto-closing, price comparison, customer insights, slow movers, expiry tracking, anomaly detection, recommendations, product search bridge)",
-    "Voice: TTS with expo-speech, multi-turn context (5-turn memory), Hindi/Marathi/Gujarati/Tamil NLU, CHECK_TOTAL+DAILY_CLOSING workflows",
-    "POS: AIInsightsScreen (5-tab: alerts/forecasts/slow-movers/expiry/prices), BulkPurchaseCreditScreen",
-    "SuperAdmin: AIInsightsTab (anomalies, alerts, 7 scheduled job triggers)",
-    "Migration 156: ai schema (6 tables, 7 indexes, expiry_date column on store_products)",
-    "All 45/64 codeable Phase 9 tickets DONE. 19 awaiting external partnerships/API keys.",
-    "Next: Phase 10 Production Testing (52 tickets, TEST-001→TEST-052)"
+    "Phase 9 COMPLETE: All 45/64 codeable tickets done, P0/P1 audit fixes committed + pushed",
+    "fix: Phase 9 production audit P0/P1 fixes (SQL injection, store isolation, timing attacks, input validation) — 18 files, commit 931c40d",
+    "TEST-001 DONE: testcontainers setup — PostgreSQL 15 + 162 migrations, 8 store isolation tests, commit c695231",
+    "All 7 commits pushed to origin (3f0e3f5..c695231)",
+    "Phase 10A IN_PROGRESS: TEST-002→TEST-010 remaining",
+    "Next: TEST-002 (Redis testcontainers), TEST-003 (Semgrep SAST), TEST-004 (Gitleaks), TEST-005 (Zod contracts)"
   ]
 }

@@ -1,0 +1,87 @@
+# TEST-004: Gitleaks Configuration
+# Prevents secrets, API keys, and credentials from being committed.
+# Run: gitleaks detect --config .gitleaks.toml --source .
+
+title = "SuperMandi POS Gitleaks Config"
+
+[extend]
+# Use default gitleaks rules as base
+useDefault = true
+
+# Allowlist — files/patterns that are intentionally not secrets
+[allowlist]
+  description = "Known safe patterns"
+  paths = [
+    '''\.env\.example$''',
+    '''\.env\.staging\.example$''',
+    '''\.env\.production\.example$''',
+    '''pnpm-lock\.yaml$''',
+    '''package-lock\.json$''',
+    '''\.gitleaks\.toml$''',
+    '''CLAUDE_STATE\.md$''',
+    '''CLAUDE_CURRENT_STATE\.json$''',
+    '''MEMORY\.md$''',
+    '''memory/.*\.md$''',
+    '''RELEASES/.*\.md$''',
+    '''e2e-tests/.*''',
+    '''scripts/load-tests/.*''',
+    '''tests/.*''',
+    '''__tests__/.*''',
+    '''__mocks__/.*''',
+    '''\.github/workflows/.*''',
+  ]
+  regexTarget = "line"
+  regexes = [
+    # Allow example/placeholder values
+    '''(?i)(example|placeholder|your[-_]?key|xxx|changeme|replace[-_]?me|TODO)''',
+    # Allow test fixtures with fake tokens
+    '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJ0ZXN0''',
+    # Allow GCP project IDs (not secrets)
+    '''supermandi-backend''',
+    # Allow localhost URLs
+    '''(localhost|127\.0\.0\.1|0\.0\.0\.0)''',
+  ]
+
+# Custom rules for India-specific secrets
+[[rules]]
+  id = "razorpay-key"
+  description = "Razorpay API Key"
+  regex = '''rzp_(live|test)_[A-Za-z0-9]{14,}'''
+  tags = ["payment", "razorpay"]
+
+[[rules]]
+  id = "razorpay-secret"
+  description = "Razorpay Secret Key"
+  regex = '''[A-Za-z0-9]{20,}'''
+  path = '''razorpay'''
+  tags = ["payment", "razorpay"]
+  [rules.allowlist]
+    regexes = ['''(example|placeholder|test|mock|fake)''']
+
+[[rules]]
+  id = "firebase-key"
+  description = "Firebase API Key"
+  regex = '''AIza[0-9A-Za-z\-_]{35}'''
+  tags = ["firebase", "google"]
+
+[[rules]]
+  id = "gcp-service-account"
+  description = "GCP Service Account Key"
+  regex = '''"type"\s*:\s*"service_account"'''
+  tags = ["gcp", "service-account"]
+
+[[rules]]
+  id = "india-pan"
+  description = "Indian PAN Number"
+  regex = '''[A-Z]{5}[0-9]{4}[A-Z]'''
+  tags = ["pii", "india"]
+  [rules.allowlist]
+    paths = ['''test''', '''mock''', '''example''', '''\.md$''']
+
+[[rules]]
+  id = "india-aadhaar"
+  description = "Indian Aadhaar Number"
+  regex = '''\b[2-9]\d{3}\s?\d{4}\s?\d{4}\b'''
+  tags = ["pii", "india"]
+  [rules.allowlist]
+    paths = ['''test''', '''mock''', '''example''', '''\.md$''']

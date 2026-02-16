@@ -36,6 +36,7 @@ coverage/
 coverage-container/
 .nyc_output/
 tests/containers/.container-state.json
+tests/containers/.redis-state.json
 
 # Misc
 *.tgz

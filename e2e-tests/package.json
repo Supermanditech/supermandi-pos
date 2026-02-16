@@ -12,9 +12,11 @@
     "test:debug": "playwright test --debug",
     "report": "playwright show-report",
     "verify": "playwright test --project=chromium",
-    "verify:all": "playwright test"
+    "verify:all": "playwright test",
+    "test:a11y": "playwright test --grep @a11y"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.8.0",
     "@playwright/test": "^1.41.0"
   }
 }

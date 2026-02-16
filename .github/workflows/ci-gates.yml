@@ -726,6 +726,59 @@ jobs:
           bash scripts/gates/routing-spec-validate.sh
 
   # ==========================================================================
+  # JOB 17: Gitleaks Secret Scanning (TEST-004)
+  # Prevents accidental commit of API keys, tokens, and credentials.
+  # ==========================================================================
+  gitleaks:
+    name: "Secret Scanning: Gitleaks"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # ==========================================================================
+  # JOB 18: Contract Tests (TEST-005)
+  # Validates API response shapes haven't changed.
+  # ==========================================================================
+  contract-tests:
+    name: "API Contract Tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Run contract tests
+        working-directory: backend
+        run: |
+          echo "=== API Contract Tests ==="
+          npx jest --testPathPattern='contracts/' --no-coverage --verbose
+          echo "=== Contract Tests: PASSED ==="
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -734,7 +787,7 @@ jobs:
     needs: [typecheck, lint, test, build-verify, local-smoke,
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
-            routing-validation, semgrep]
+            routing-validation, semgrep, gitleaks, contract-tests]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -798,6 +851,24 @@ jobs:
             echo "PASS: semgrep (SAST code quality)"
           fi
 
+          # Gitleaks secret scanning (TEST-004)
+          GITLEAKS_RESULT="${{ needs.gitleaks.result }}"
+          if [ "$GITLEAKS_RESULT" != "success" ]; then
+            echo "FAIL: gitleaks = $GITLEAKS_RESULT"
+            ZRP_FAILED=$((ZRP_FAILED + 1))
+          else
+            echo "PASS: gitleaks (secret scanning)"
+          fi
+
+          # Contract tests (TEST-005)
+          CONTRACT_RESULT="${{ needs.contract-tests.result }}"
+          if [ "$CONTRACT_RESULT" != "success" ]; then
+            echo "FAIL: contract-tests = $CONTRACT_RESULT"
+            CORE_FAILED=$((CORE_FAILED + 1))
+          else
+            echo "PASS: contract-tests (API shape validation)"
+          fi
+
           TOTAL_FAILED=$((CORE_FAILED + ZRP_FAILED))
           echo ""
           if [ "$TOTAL_FAILED" -gt 0 ]; then
@@ -808,7 +879,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (5 core + 9 ZRP + Semgrep)"
+          echo "ALL CI GATES PASSED (6 core + 10 ZRP + Semgrep)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."

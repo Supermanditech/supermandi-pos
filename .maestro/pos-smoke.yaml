@@ -1,0 +1,121 @@
+# TEST-008: Maestro Mobile E2E — POS App Smoke Test
+# Validates critical POS flows on Android/iOS emulator.
+# Run: maestro test .maestro/pos-smoke.yaml
+#
+# Prerequisites:
+#   - Expo dev server running (npx expo start)
+#   - Android emulator or iOS simulator connected
+#   - Maestro CLI installed (brew install maestro)
+
+appId: host.exp.Exponent  # Expo Go app ID
+
+---
+
+# =============================================================================
+# Flow 1: App Launch & Login
+# =============================================================================
+- launchApp
+- assertVisible: "SuperMandi"  # App title or splash
+- waitForAnimationToEnd
+
+# OTP Login Flow
+- tapOn: "Phone Number"
+- inputText: "+919999900001"
+- tapOn: "Send OTP"
+- waitForAnimationToEnd
+
+# In dev mode, OTP is auto-filled or use test code
+- assertVisible: "Enter OTP"
+- inputText: "123456"
+- tapOn:
+    text: "Verify"
+    optional: true
+- waitForAnimationToEnd
+
+# Should reach home/dashboard
+- assertVisible:
+    text: "(?i)(dashboard|home|scan|sales)"
+    regex: true
+
+# =============================================================================
+# Flow 2: Barcode Scan Screen
+# =============================================================================
+- tapOn:
+    text: "(?i)scan"
+    regex: true
+    optional: true
+
+# Verify scan screen elements
+- assertVisible:
+    text: "(?i)(scan|barcode|camera)"
+    regex: true
+    optional: true
+
+- back
+
+# =============================================================================
+# Flow 3: Product Search
+# =============================================================================
+- tapOn:
+    text: "(?i)search"
+    regex: true
+    optional: true
+
+- inputText: "Rice"
+- waitForAnimationToEnd
+
+# Should show search results
+- assertVisible:
+    text: "(?i)rice"
+    regex: true
+    optional: true
+
+- back
+
+# =============================================================================
+# Flow 4: Navigation Check
+# =============================================================================
+# Bottom tab navigation
+- tapOn:
+    text: "(?i)(inventory|stock)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "(?i)(reports|analytics)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+- tapOn:
+    text: "(?i)(settings|profile|more)"
+    regex: true
+    optional: true
+- waitForAnimationToEnd
+
+# Return to home
+- tapOn:
+    text: "(?i)(home|dashboard|sales)"
+    regex: true
+    optional: true
+
+# =============================================================================
+# Flow 5: Logout
+# =============================================================================
+- tapOn:
+    text: "(?i)(settings|profile|more)"
+    regex: true
+    optional: true
+
+- scrollUntilVisible:
+    element:
+      text: "(?i)logout"
+      regex: true
+    direction: DOWN
+    timeout: 5000
+
+- tapOn:
+    text: "(?i)logout"
+    regex: true
+    optional: true

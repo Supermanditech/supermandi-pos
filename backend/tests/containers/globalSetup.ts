@@ -120,6 +120,14 @@ export default async function globalSetup(): Promise<void> {
   process.env.TEST_DATABASE_URL = connectionUri;
   process.env.DATABASE_URL = connectionUri;
 
+  // Start Redis container (TEST-002)
+  try {
+    const { startRedisContainer } = await import('./redisSetup');
+    await startRedisContainer();
+  } catch (err: any) {
+    console.warn(`  ⚠️  Redis container skipped: ${err.message}`);
+  }
+
   const totalMs = Date.now() - startTime;
-  console.log(`✅ Testcontainer ready in ${totalMs}ms (container: ${containerStartMs}ms, migrations: ${migrationMs}ms)\n`);
+  console.log(`✅ Testcontainers ready in ${totalMs}ms (PG: ${containerStartMs}ms, migrations: ${migrationMs}ms)\n`);
 }
