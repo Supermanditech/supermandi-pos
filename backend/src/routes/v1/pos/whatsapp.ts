@@ -54,6 +54,7 @@ posWhatsAppRouter.post("/whatsapp/send-bill", async (req: Request, res: Response
 
     // Fetch sale data with store isolation
     const pool = getPool();
+    if (!pool) return res.status(503).json({ sent: false, error: "Database not available" });
     const saleResult = await pool.query(
       `SELECT s.id, s.bill_ref, s.total_minor, s.currency, s.status,
               st.name as store_name
@@ -143,7 +144,7 @@ posWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) => 
     // Log to audit table
     try {
       const pool = getPool();
-      await pool.query(
+      if (pool) await pool.query(
         `INSERT INTO whatsapp.message_logs
           (store_id, sender_type, recipient_type, recipient_phone, message_type,
            content_preview, wamid, delivery_status, context_type, context_id, sent_by)

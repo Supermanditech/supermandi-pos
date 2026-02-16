@@ -55,7 +55,7 @@ adminWhatsAppRouter.post("/whatsapp/send", async (req: Request, res: Response) =
     // Log to audit table
     try {
       const pool = getPool();
-      await pool.query(
+      if (pool) await pool.query(
         `INSERT INTO whatsapp.message_logs
           (store_id, sender_type, recipient_type, recipient_phone, message_type,
            content_preview, wamid, delivery_status, context_type, sent_by)
@@ -113,6 +113,7 @@ adminWhatsAppRouter.post("/whatsapp/broadcast", async (req: Request, res: Respon
     let failed = 0;
     const errors: string[] = [];
     const pool = getPool();
+    if (!pool) return res.status(503).json({ error: "Database not available" });
 
     for (const rawPhone of phones) {
       const phone = normalizePhone(String(rawPhone));

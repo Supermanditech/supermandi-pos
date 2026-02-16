@@ -108,6 +108,8 @@ async function processStatusUpdate(
   pool: ReturnType<typeof getPool>,
   status: { id?: string; status?: string; timestamp?: string }
 ): Promise<void> {
+  if (!pool) return;
+
   const wamid = status.id;
   const newStatus = status.status;
 
