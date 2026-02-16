@@ -30,6 +30,37 @@ const upload = multer({
 const router: RouterType = Router();
 
 // =============================================================================
+// FIX-010: Per-supplier rate limiting
+// =============================================================================
+
+function supplierRateLimit(opts: { windowMs: number; max: number; label: string }) {
+  const hits = new Map<string, number[]>();
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    const supplierId = (req as AuthenticatedRequest).supplier?.supplierId;
+    if (!supplierId) { next(); return; }
+
+    const now = Date.now();
+    const arr = (hits.get(supplierId) ?? []).filter(t => now - t < opts.windowMs);
+    arr.push(now);
+    hits.set(supplierId, arr);
+
+    if (arr.length > opts.max) {
+      const retryAfter = Math.ceil(opts.windowMs / 1000);
+      res.set('Retry-After', String(retryAfter));
+      res.status(429).json({
+        error: { code: 'RATE_LIMIT_EXCEEDED', message: `${opts.label}: max ${opts.max} requests per ${retryAfter}s` },
+      });
+      return;
+    }
+    next();
+  };
+}
+
+const csvUploadLimit = supplierRateLimit({ windowMs: 60 * 60 * 1000, max: 5, label: 'CSV upload' });
+const productCrudLimit = supplierRateLimit({ windowMs: 60 * 1000, max: 60, label: 'Product CRUD' });
+
+// =============================================================================
 // TYPES
 // =============================================================================
 
@@ -85,6 +116,7 @@ interface SupplierProductRow {
 router.post(
   '/products',
   supplierAuth,
+  productCrudLimit,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { supplier } = req as AuthenticatedRequest;
@@ -321,6 +353,7 @@ router.get(
 router.put(
   '/products/:productId',
   supplierAuth,
+  productCrudLimit,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { supplier } = req as AuthenticatedRequest;
@@ -444,6 +477,7 @@ router.put(
 router.patch(
   '/products/:productId/stock',
   supplierAuth,
+  productCrudLimit,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { supplier } = req as AuthenticatedRequest;
@@ -510,6 +544,7 @@ interface CsvError {
 router.post(
   '/products/csv-upload',
   supplierAuth,
+  csvUploadLimit,
   upload.single('file'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
