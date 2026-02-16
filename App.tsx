@@ -67,6 +67,9 @@ import PrinterSettingsScreen from "./src/screens/PrinterSettingsScreen";
 import OpeningStockScreen from "./src/screens/OpeningStockScreen";
 // T-199: Daily Report Screen
 import DailyReportScreen from "./src/screens/DailyReportScreen";
+// T-294: Chat Screens
+import ChatListScreen from "./src/screens/ChatListScreen";
+import ChatConversationScreen from "./src/screens/ChatConversationScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -285,6 +288,42 @@ function DailyReportWrapper() {
   );
 }
 
+// T-294: Chat List wrapper
+function ChatListWrapper() {
+  const navigation = useNavigation<any>();
+  return (
+    <ChatListScreen
+      onSelectConversation={(conv) => navigation.navigate("ChatConversation", {
+        conversationId: conv.id,
+        conversationTitle: conv.title || conv.otherParticipantName || 'Chat',
+        conversationType: conv.type,
+      })}
+      onContactSupport={() => navigation.navigate("ChatConversation", {
+        conversationId: '__new_support__',
+        conversationTitle: 'SuperMandi Support',
+        conversationType: 'support',
+      })}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
+// T-294: Chat Conversation wrapper
+function ChatConversationWrapper() {
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  return (
+    <ChatConversationScreen
+      conversationId={route.params?.conversationId || ''}
+      conversationTitle={route.params?.conversationTitle || 'Chat'}
+      conversationType={route.params?.conversationType || 'direct'}
+      currentUserId={route.params?.currentUserId || ''}
+      currentUserName={route.params?.currentUserName || 'Me'}
+      onBack={() => navigation.goBack()}
+    />
+  );
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
 // Phase 8: Push notification setup
@@ -417,6 +456,9 @@ export default function App() {
           <Stack.Screen name="OpeningStock" component={OpeningStockWrapper} />
           {/* T-199: Daily Report Screen */}
           <Stack.Screen name="DailyReport" component={DailyReportWrapper} />
+          {/* T-294: Chat Screens */}
+          <Stack.Screen name="ChatList" component={ChatListWrapper} />
+          <Stack.Screen name="ChatConversation" component={ChatConversationWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
         </ErrorBoundary>

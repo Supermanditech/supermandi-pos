@@ -94,13 +94,15 @@ import { RefundsTab } from "./tabs/RefundsTab";  // T-219: Refund management
 import { MonitoringTab } from "./tabs/MonitoringTab";  // T-223: Cloud monitoring dashboard
 import { QualityDashboardTab } from "./tabs/QualityDashboardTab";  // Quality testing dashboard
 import { CreditProvidersTab } from "./tabs/CreditProvidersTab";  // T-289/T-290: Finance monitoring
+import { SupportQueueTab } from "./tabs/SupportQueueTab";  // T-300/T-302: Support queue + templates
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
   FileCheck, UserPlus, FileText, Truck, CreditCard, BarChart3,
   Shield, UserCog, Settings2,
   Link2, Check,  // T-118: Copy deep link button icons
-  IndianRupee, ArrowLeftRight, HeartPulse, FlaskConical  // T-235, T-219, T-223, Quality icons
+  IndianRupee, ArrowLeftRight, HeartPulse, FlaskConical,  // T-235, T-219, T-223, Quality icons
+  MessageSquare,  // T-300: Support queue
 } from "lucide-react";
 import "./App.css";
 
@@ -129,6 +131,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   monitoring: "Monitoring",
   quality: "Quality Dashboard",
   "credit-providers": "Finance",
+  "support": "Support",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -2620,6 +2623,9 @@ export default function App() {
             <button className={`sidebarItem ${tab === "credit-providers" ? "sidebarItemActive" : ""}`} onClick={() => setTab("credit-providers")}>
               <span className="sidebarItemLabel"><CreditCard size={18} style={{ opacity: tab === "credit-providers" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Finance</span>
             </button>
+            <button className={`sidebarItem ${tab === "support" ? "sidebarItemActive" : ""}`} onClick={() => setTab("support")}>
+              <span className="sidebarItemLabel"><MessageSquare size={18} style={{ opacity: tab === "support" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Support</span>
+            </button>
           </div>
 
           {/* Onboarding */}
@@ -3161,6 +3167,8 @@ export default function App() {
       {tab === "quality" && <QualityDashboardTab />}
 
       {tab === "credit-providers" && <CreditProvidersTab />}
+
+      {tab === "support" && <SupportQueueTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}

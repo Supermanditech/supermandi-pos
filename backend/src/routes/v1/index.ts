@@ -73,6 +73,7 @@ import { retailerCreditDashboardRouter } from "./retailer-admin/creditDashboard"
 import { creditProvidersRouter } from "./credit/providers";  // T-263: Credit provider abstraction
 import { adminCreditProvidersRouter } from "./admin/creditProviders";  // T-281/T-290: Provider management
 import { supplierBnplRouter } from "./supplier/bnplVisibility";  // T-280: Supplier BNPL visibility
+import { chatRouter } from "./chat";  // T-291→T-302: In-app chat
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
@@ -236,5 +237,6 @@ v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/webhooks", refundWebhookRouter);  // T-219: Razorpay refund status webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs
 v1Router.use("/supplier/bnpl", supplierBnplRouter);  // T-280: Supplier BNPL visibility
+v1Router.use("/chat", chatRouter);  // T-291→T-302: In-app messaging, support, templates
 v1Router.use("/uploads", uploadsRouter);  // T-160: Image upload endpoint
 v1Router.use("/voice", voiceRouter);  // GO-LIVE: Voice order with OpenAI

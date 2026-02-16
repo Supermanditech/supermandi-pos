@@ -50,6 +50,7 @@ type RootStackParamList = {
   OpeningStock: undefined; // T-198: Opening stock ledger
   DailyReport: undefined; // T-199: Daily closing report
   PrinterSettings: undefined; // T-195: Thermal printer configuration
+  ChatList: undefined; // T-294: Chat list screen
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -383,6 +384,7 @@ export default function MenuScreen() {
   const goToOpeningStock = () => navigation.navigate("OpeningStock"); // T-198
   const goToDailyReport = () => navigation.navigate("DailyReport"); // T-199
   const goToPrinterSettings = () => navigation.navigate("PrinterSettings"); // T-195
+  const goToChat = () => navigation.navigate("ChatList"); // T-294
 
   return (
     <ScrollView
@@ -803,6 +805,22 @@ export default function MenuScreen() {
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>Overdue Dues</Text>
           <Text style={styles.menuSubtitle}>Collect overdue DUE payments and send reminders</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-294: Chat / Messaging Section */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Messages</Text>
+      </View>
+
+      <Pressable style={styles.menuItem} onPress={goToChat}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"chat-outline" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Chat</Text>
+          <Text style={styles.menuSubtitle}>Message suppliers and support</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>

@@ -34,6 +34,7 @@ const PaymentsPage = lazy(() => import('./pages/PaymentsPage'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));  // T-073
 const ReconciliationPage = lazy(() => import('./pages/ReconciliationPage'));  // T-151
 const CreditDashboardPage = lazy(() => import('./pages/CreditDashboardPage'));  // T-277
+const ChatPage = lazy(() => import('./pages/ChatPage'));  // T-294
 const PurchaseOrdersPage = lazy(() => import('./pages/PurchaseOrdersPage'));  // T-180
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));  // T-212
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));  // T-218
@@ -256,6 +257,7 @@ function AppRoutes() {
           <Route path="reconciliation" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ReconciliationPage /></Suspense></LimitedModeGuard>} />
           {/* T-277: Credit & Finance Dashboard */}
           <Route path="credit" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><CreditDashboardPage /></Suspense></LimitedModeGuard>} />
+          <Route path="chat" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><ChatPage /></Suspense></LimitedModeGuard>} />
           {/* T-180: Purchase Orders Visibility */}
           <Route path="purchase-orders" element={<LimitedModeGuard><Suspense fallback={<PageLoadingFallback />}><PurchaseOrdersPage /></Suspense></LimitedModeGuard>} />
           {/* T-212: Sales Analytics Dashboard */}
