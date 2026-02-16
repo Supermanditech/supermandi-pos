@@ -660,48 +660,82 @@ router.post(
         });
       }
 
-      // Insert valid products
+      // FIX-009: Batch INSERT instead of N+1 individual queries
+      // Process in chunks of 100 to stay within param limits
+      const BATCH_SIZE = 100;
       let imported = 0;
-      for (const product of validProducts) {
+
+      for (let batchStart = 0; batchStart < validProducts.length; batchStart += BATCH_SIZE) {
+        const batch = validProducts.slice(batchStart, batchStart + BATCH_SIZE);
+        const COLS_PER_ROW = 10;
+
+        // Build multi-row VALUES clause
+        const values: unknown[] = [];
+        const placeholders: string[] = [];
+
+        batch.forEach((product, idx) => {
+          const base = idx * COLS_PER_ROW + 1;
+          placeholders.push(
+            `($${base}, $${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, 'pending', true)`
+          );
+          values.push(
+            supplier.supplierId, product.skuCode, product.barcode, product.name,
+            product.category, product.brand, product.mrp, product.purchasePrice,
+            product.stockQty, product.moq,
+          );
+        });
+
         try {
-          const result = await queryOne<{ id: string }>(
+          const insertedRows = await query<{ id: string; supplier_sku: string }>(
             `INSERT INTO catalog.supplier_products (
               supplier_id, supplier_sku, barcode, name, category, brand,
               mrp, purchase_price, stock_quantity, moq,
               approval_status, is_active
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', true
-            ) RETURNING id`,
-            [
-              supplier.supplierId,
-              product.skuCode,
-              product.barcode,
-              product.name,
-              product.category,
-              product.brand,
-              product.mrp,
-              product.purchasePrice,
-              product.stockQty,
-              product.moq,
-            ]
+            ) VALUES ${placeholders.join(', ')}
+            ON CONFLICT DO NOTHING
+            RETURNING id, supplier_sku`,
+            values
           );
 
-          if (result) {
-            imported++;
-            // Log the bulk import submission (use 'submit' action with csv_upload flag)
+          imported += insertedRows.length;
+
+          // Batch INSERT approval logs for inserted products
+          if (insertedRows.length > 0) {
+            const logValues: unknown[] = [];
+            const logPlaceholders: string[] = [];
+
+            insertedRows.forEach((row, idx) => {
+              const base = idx * 3 + 1;
+              logPlaceholders.push(`('product', $${base}, 'submit', 'pending', $${base + 1}, $${base + 2})`);
+              logValues.push(row.id, supplier.supplierId, JSON.stringify({ source: 'csv_upload', sku: row.supplier_sku }));
+            });
+
             await query(
               `INSERT INTO supplier.approval_logs (entity_type, entity_id, action, to_status, actor_id, changes)
-               VALUES ('product', $1, 'submit', 'pending', $2, $3)`,
-              [result.id, supplier.supplierId, JSON.stringify({ source: 'csv_upload', sku: product.skuCode })]
+               VALUES ${logPlaceholders.join(', ')}`,
+              logValues
             );
           }
+
+          // Products skipped due to conflict → report as errors
+          const insertedSkus = new Set(insertedRows.map(r => r.supplier_sku));
+          for (const product of batch) {
+            if (!insertedSkus.has(product.skuCode)) {
+              errors.push({
+                row: validProducts.indexOf(product) + 2,
+                error: 'Duplicate barcode or constraint violation — product skipped',
+              });
+            }
+          }
         } catch (dbError) {
-          // If insertion fails (e.g., race condition), add to errors
+          // Entire batch failed — report all products in batch
           const errorMessage = dbError instanceof Error ? dbError.message : 'Database error';
-          errors.push({
-            row: validProducts.indexOf(product) + 2,
-            error: `Failed to insert: ${errorMessage}`,
-          });
+          for (const product of batch) {
+            errors.push({
+              row: validProducts.indexOf(product) + 2,
+              error: `Batch insert failed: ${errorMessage}`,
+            });
+          }
         }
       }
 
