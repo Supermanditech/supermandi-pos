@@ -45,6 +45,7 @@ function getEndpointCategory(path: string): string {
 
 // Rate limit state (in-memory, resets on app restart)
 const rateLimitState = new Map<string, RateLimitEntry>();
+const RATE_LIMIT_MAX_ENTRIES = 100; // FIX-037: Hard cap to prevent unbounded growth
 
 // GO-LIVE-193: Periodic cleanup of rate limit state (every 5 minutes)
 let lastRateLimitCleanup = Date.now();
@@ -52,7 +53,10 @@ const RATE_LIMIT_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 function cleanupRateLimitState(): void {
   const now = Date.now();
-  if (now - lastRateLimitCleanup < RATE_LIMIT_CLEANUP_INTERVAL) return;
+
+  // FIX-037: Force cleanup if map exceeds cap, regardless of interval
+  const forceCleanup = rateLimitState.size > RATE_LIMIT_MAX_ENTRIES;
+  if (!forceCleanup && now - lastRateLimitCleanup < RATE_LIMIT_CLEANUP_INTERVAL) return;
 
   lastRateLimitCleanup = now;
   const staleThreshold = now - 10 * 60 * 1000; // 10 minutes
@@ -61,6 +65,19 @@ function cleanupRateLimitState(): void {
     // Remove entries with no recent activity
     const latestTimestamp = Math.max(...entry.timestamps, 0);
     if (latestTimestamp < staleThreshold && entry.backoffUntil < now) {
+      rateLimitState.delete(key);
+    }
+  }
+
+  // FIX-037: If still over cap after stale cleanup, evict oldest entries (LRU)
+  if (rateLimitState.size > RATE_LIMIT_MAX_ENTRIES) {
+    const sorted = [...rateLimitState.entries()].sort((a, b) => {
+      const aLatest = Math.max(...a[1].timestamps, 0);
+      const bLatest = Math.max(...b[1].timestamps, 0);
+      return aLatest - bLatest; // oldest first
+    });
+    const toRemove = sorted.slice(0, rateLimitState.size - RATE_LIMIT_MAX_ENTRIES);
+    for (const [key] of toRemove) {
       rateLimitState.delete(key);
     }
   }
