@@ -7,6 +7,7 @@ import Link from 'next/link';
 interface BreadcrumbItem {
   label: string;
   path?: string;
+  href?: string;
 }
 
 interface BreadcrumbProps {
@@ -19,8 +20,8 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
       {items.map((item, i) => (
         <span key={i} className="flex items-center gap-2">
           {i > 0 && <span className="text-slate-300">&rsaquo;</span>}
-          {item.path ? (
-            <Link href={item.path} className="text-slate-500 hover:text-slate-700 no-underline">
+          {(item.path || item.href) ? (
+            <Link href={(item.path || item.href)!} className="text-slate-500 hover:text-slate-700 no-underline">
               {item.label}
             </Link>
           ) : (

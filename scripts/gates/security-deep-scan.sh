@@ -7,9 +7,9 @@ PASS=0
 FAIL=0
 WARN=0
 
-gate_pass() { echo "  ✅ PASS: $1"; ((PASS++)); }
-gate_fail() { echo "  ❌ FAIL: $1"; ((FAIL++)); }
-gate_warn() { echo "  ⚠️ WARN: $1"; ((WARN++)); }
+gate_pass() { echo "  ✅ PASS: $1"; PASS=$((PASS + 1)); }
+gate_fail() { echo "  ❌ FAIL: $1"; FAIL=$((FAIL + 1)); }
+gate_warn() { echo "  ⚠️ WARN: $1"; WARN=$((WARN + 1)); }
 
 echo "=== ZRP-M: Deep Security Scan ==="
 echo ""

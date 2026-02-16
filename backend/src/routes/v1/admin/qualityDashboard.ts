@@ -47,7 +47,7 @@ qualityDashboardRouter.get('/overview', async (_req: Request, res: Response) => 
   }
 
   // Table row counts for data health
-  let tableStats: Record<string, number> = {};
+  const tableStats: Record<string, number> = {};
   try {
     if (pool) {
       const tables = ['stores', 'users', 'products', 'orders', 'transactions', 'devices', 'suppliers'];

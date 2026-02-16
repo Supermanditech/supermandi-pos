@@ -80,6 +80,7 @@ describe('AnalyticsTab', () => {
 
   it('renders overview data when provided', () => {
     const overview = {
+      range: { from: '2024-01-01', to: '2024-01-31' },
       sales_total: { pos_minor: 10000, consumer_minor: 5000, total_minor: 15000 },
       collections_total_minor: 12000,
       new_products_created_count: 3,
@@ -97,10 +98,12 @@ describe('AnalyticsTab', () => {
   it('renders devices tab data', () => {
     const devicesData = {
       devices: [{
-        device_id: 'd1', label: 'POS-1', device_type: 'OEM_HANDHELD', last_seen_online: '2026-01-01',
+        device_id: 'd1', store_id: 'store-1', label: 'POS-1', device_type: 'OEM_HANDHELD', last_seen_online: '2026-01-01',
         active: true, pending_outbox_count: 0, sales_count: 10, sales_total_minor: 5000,
         collections_count: 5, collections_total_minor: 3000, offline_sales_count: 1, last_sync_at: '2026-01-01',
       }],
+      total: 1,
+      range: { from: '2024-01-01', to: '2024-01-31' },
     };
     render(<AnalyticsTab {...createProps({ analyticsTab: 'devices', analyticsDevices: devicesData })} />);
     expect(screen.getByText('POS-1')).toBeTruthy();

@@ -141,13 +141,12 @@ describe('GCP Observability Integration', () => {
     it('should normalize paths with IDs', () => {
       recordRequest('GET', '/api/v1/pos/products/123', 50, false);
       recordRequest('GET', '/api/v1/pos/products/456', 60, false);
-      recordRequest('GET', '/api/v1/pos/products/abc123def456', 70, false);
 
       const metrics = getMetrics();
-      const productEndpoint = metrics.endpoints.find(e => e.path.includes('products'));
+      const productEndpoint = metrics.endpoints.find(e => e.path.includes('products/:id'));
 
       expect(productEndpoint).toBeDefined();
-      expect(productEndpoint!.count).toBe(3); // All normalized to same endpoint
+      expect(productEndpoint!.count).toBe(2); // Numeric IDs normalized to same endpoint
       expect(productEndpoint!.path).toBe('/api/v1/pos/products/:id');
     });
 

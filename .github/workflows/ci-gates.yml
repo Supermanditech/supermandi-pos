@@ -702,7 +702,7 @@ jobs:
           cd retailer-admin && pnpm install --frozen-lockfile && cd ..
           cd supermandi-superadmin && pnpm install --frozen-lockfile && cd ..
           cd supplier-portal && pnpm install --frozen-lockfile && cd ..
-          pnpm install --frozen-lockfile
+          if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else echo "No root lockfile, skipping root install"; fi
 
       - name: Run tests with coverage (retailer-admin)
         working-directory: retailer-admin

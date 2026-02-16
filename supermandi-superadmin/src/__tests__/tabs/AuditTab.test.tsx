@@ -19,6 +19,7 @@ const makeLog = (overrides: Partial<AuditLogRecord> = {}): AuditLogRecord => ({
   resource_id: 'r1',
   actor_user_id: 'admin-1',
   actor_ip: '1.2.3.4',
+  store_id: null,
   response_status: 200,
   error_message: null,
   request_body: null,
