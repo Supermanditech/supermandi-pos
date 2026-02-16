@@ -179,8 +179,8 @@ describe('settingsStore', () => {
 
     it('setLanguage calls i18n setLanguage', () => {
       const { setLanguage } = require('../../i18n');
-      store.getState().setLanguage('mr');
-      expect(setLanguage).toHaveBeenCalledWith('mr');
+      store.getState().setLanguage('hi');
+      expect(setLanguage).toHaveBeenCalledWith('hi');
     });
   });
 

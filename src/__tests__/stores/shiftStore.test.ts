@@ -35,10 +35,18 @@ const store = useShiftStore;
 const mockShift = {
   id: 'shift-1',
   staffId: 'staff-1',
+  staffName: 'Ravi',
   startedAt: '2026-01-15T09:00:00Z',
   endedAt: null,
   openingCashMinor: 100000,
-  status: 'active',
+  closingCashMinor: null,
+  expectedCashMinor: null,
+  varianceMinor: null,
+  salesCount: 0,
+  salesTotalMinor: 0,
+  salesByPaymentType: { cashMinor: 0, upiMinor: 0, dueMinor: 0, cardMinor: 0 },
+  notes: null,
+  status: 'ACTIVE' as const,
 };
 
 const mockEndedShift = {
@@ -46,7 +54,12 @@ const mockEndedShift = {
   id: 'shift-2',
   endedAt: '2026-01-15T18:00:00Z',
   closingCashMinor: 250000,
-  status: 'ended',
+  expectedCashMinor: 240000,
+  varianceMinor: 10000,
+  salesCount: 15,
+  salesTotalMinor: 150000,
+  salesByPaymentType: { cashMinor: 100000, upiMinor: 40000, dueMinor: 10000, cardMinor: 0 },
+  status: 'CLOSED' as const,
 };
 
 beforeEach(() => {

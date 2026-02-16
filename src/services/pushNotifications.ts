@@ -94,12 +94,12 @@ export async function registerForPushNotifications(): Promise<string | null> {
 export async function registerTokenWithBackend(token: string): Promise<boolean> {
   try {
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
-    const response = await apiClient.post('/api/v1/pos/notifications/device-token', {
+    const response = await apiClient.post<{ success?: boolean }>('/api/v1/pos/notifications/device-token', {
       token,
       platform,
     });
 
-    if (response.data?.success) {
+    if (response?.success) {
       console.log('[PushNotifications] Token registered with backend');
       return true;
     }
@@ -115,9 +115,7 @@ export async function registerTokenWithBackend(token: string): Promise<boolean> 
  */
 export async function unregisterTokenFromBackend(token: string): Promise<void> {
   try {
-    await apiClient.delete('/api/v1/pos/notifications/device-token', {
-      data: { token },
-    });
+    await apiClient.post('/api/v1/pos/notifications/device-token/unregister', { token });
   } catch {
     // Non-blocking
   }
@@ -192,12 +190,12 @@ export async function fetchNotifications(
   offset = 0
 ): Promise<{ data: NotificationItem[]; total: number }> {
   try {
-    const response = await apiClient.get('/api/v1/pos/notifications', {
-      params: { limit, offset },
-    });
+    const response = await apiClient.get<{ data?: NotificationItem[]; pagination?: { total: number } }>(
+      `/api/v1/pos/notifications?limit=${limit}&offset=${offset}`
+    );
     return {
-      data: response.data?.data || [],
-      total: response.data?.pagination?.total || 0,
+      data: response?.data || [],
+      total: response?.pagination?.total || 0,
     };
   } catch {
     return { data: [], total: 0 };
@@ -209,8 +207,8 @@ export async function fetchNotifications(
  */
 export async function getUnreadCount(): Promise<number> {
   try {
-    const response = await apiClient.get('/api/v1/pos/notifications/unread-count');
-    return response.data?.count || 0;
+    const response = await apiClient.get<{ count?: number }>('/api/v1/pos/notifications/unread-count');
+    return response?.count || 0;
   } catch {
     return 0;
   }
@@ -221,7 +219,7 @@ export async function getUnreadCount(): Promise<number> {
  */
 export async function markAsRead(notificationId: string): Promise<void> {
   try {
-    await apiClient.put(`/api/v1/pos/notifications/${notificationId}/read`);
+    await apiClient.patch(`/api/v1/pos/notifications/${notificationId}/read`);
   } catch {
     // Non-blocking
   }
@@ -232,7 +230,7 @@ export async function markAsRead(notificationId: string): Promise<void> {
  */
 export async function markAllAsRead(): Promise<void> {
   try {
-    await apiClient.put('/api/v1/pos/notifications/read-all');
+    await apiClient.patch('/api/v1/pos/notifications/read-all');
   } catch {
     // Non-blocking
   }

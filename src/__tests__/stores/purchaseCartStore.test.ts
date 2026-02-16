@@ -17,7 +17,7 @@ jest.mock('../../services/storeScope', () => ({
 
 const store = usePurchaseCartStore;
 
-function makeItem(overrides: Partial<Parameters<typeof store.getState>['addItem'] extends (arg: infer T) => any ? T : never> = {}) {
+function makeItem(overrides: Record<string, unknown> = {}) {
   return {
     supplierProductId: `sp-${Math.random().toString(36).slice(2, 8)}`,
     productId: 'prod-1',

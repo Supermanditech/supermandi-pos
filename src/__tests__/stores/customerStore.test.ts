@@ -21,8 +21,12 @@ import { useCustomerStore } from '../../stores/customerStore';
 
 const store = useCustomerStore;
 
-const mockCustomer = { id: 'c1', name: 'Raj Kumar', phone: '+919876543210' };
-const mockDetail = { id: 'c1', name: 'Raj Kumar', phone: '+919876543210', totalOrders: 5, totalSpent: 100000 };
+const mockCustomer = { id: 'c1', name: 'Raj Kumar', phone: '+919876543210', totalPurchasesMinor: 50000, visitCount: 3, lastVisitAt: '2026-01-10T10:00:00Z', createdAt: '2025-12-01T09:00:00Z' };
+const mockDetail = {
+  id: 'c1', name: 'Raj Kumar', phone: '+919876543210',
+  totalPurchasesMinor: 100000, visitCount: 5, lastVisitAt: '2026-01-15T10:00:00Z', createdAt: '2025-12-01T09:00:00Z',
+  purchases: [],
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -95,7 +99,7 @@ describe('customerStore', () => {
 
   describe('createCustomer', () => {
     it('creates customer and prepends to list', async () => {
-      const newCustomer = { id: 'c2', name: 'Priya', phone: '+919999999999' };
+      const newCustomer = { id: 'c2', name: 'Priya', phone: '+919999999999', totalPurchasesMinor: 0, visitCount: 0, lastVisitAt: null, createdAt: '2026-01-16T10:00:00Z' };
       mockCreateCustomer.mockResolvedValueOnce(newCustomer);
       store.setState({ customers: [mockCustomer] });
 

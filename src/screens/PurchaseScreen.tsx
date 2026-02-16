@@ -933,7 +933,7 @@ export default function PurchaseScreen({
                           {
                             text: "Place Order",
                             onPress: async () => {
-                              const storeId = getDeviceStoreId();
+                              const storeId = await getDeviceStoreId();
                               if (!storeId) {
                                 Alert.alert("Error", "Store not configured. Please re-enroll this device.");
                                 return;

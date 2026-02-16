@@ -19,7 +19,7 @@ import { useKhataStore } from '../../stores/khataStore';
 
 const store = useKhataStore;
 
-const mockKhataCustomer = { id: 'kc1', name: 'Raj', phone: '+919876543210', balanceMinor: 50000 };
+const mockKhataCustomer = { id: 'kc1', name: 'Raj', phone: '+919876543210', balanceMinor: 50000, lastEntryAt: '2026-01-01T10:00:00Z', entryCount: 3 };
 const mockEntry = { id: 'ke1', type: 'CREDIT', amountMinor: 50000, description: 'Purchase', createdAt: '2026-01-01' };
 
 beforeEach(() => {
