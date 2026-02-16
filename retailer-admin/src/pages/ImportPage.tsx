@@ -46,6 +46,8 @@ export default function ImportPage() {
   // RET-POS-SYNC-003: Async commit progress
   const [commitProgress, setCommitProgress] = useState<{ created: number; total: number } | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // FIX-016: Mounted ref to prevent state updates after unmount
+  const mountedRef = useRef(true);
 
   // AUDIT-RET-022: 5MB file size limit for CSV imports
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -170,10 +172,13 @@ export default function ImportPage() {
     }
   };
 
-  // RET-POS-SYNC-003: Stop polling on unmount
+  // RET-POS-SYNC-003 + FIX-016: Stop polling on unmount + prevent stale state updates
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (pollingRef.current) clearInterval(pollingRef.current);
+      pollingRef.current = null;
     };
   }, []);
 
@@ -192,10 +197,17 @@ export default function ImportPage() {
     if (pollingRef.current) clearInterval(pollingRef.current);
     const startedAt = Date.now();
     pollingRef.current = setInterval(async () => {
+      // FIX-016: Skip if component unmounted
+      if (!mountedRef.current) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        pollingRef.current = null;
+        return;
+      }
       // STBT-184.11: Timeout guard
       if (Date.now() - startedAt > POLLING_TIMEOUT_MS) {
         if (pollingRef.current) clearInterval(pollingRef.current);
         pollingRef.current = null;
+        if (!mountedRef.current) return;
         setError('Import is taking longer than expected. Please check back later or contact support.');
         setIsProcessing(false);
         setStep('review');
@@ -206,8 +218,11 @@ export default function ImportPage() {
           `/api/v1/retailer-admin/products/import/status?jobId=${pollJobId}`,
           accessToken
         );
+        // FIX-016: Guard after async — component may have unmounted during fetch
+        if (!mountedRef.current) return;
         if (!resp.ok) return;
         const data = await safeJson(resp) as any;
+        if (!mountedRef.current) return;
         if (!data?.data) return;
         const { status, progress, commitResult: result } = data.data;
         setCommitProgress(progress);
