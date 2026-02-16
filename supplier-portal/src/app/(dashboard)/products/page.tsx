@@ -698,6 +698,9 @@ export default function ProductsPage() {
                     ? 'bg-primary-600 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
+                role="tab"
+                aria-pressed={statusFilter === status}
+                aria-label={`Filter by ${status === 'all' ? 'all statuses' : status}`}
               >
                 {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
               </button>
