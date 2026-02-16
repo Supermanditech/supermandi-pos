@@ -74,10 +74,20 @@ export async function createSale(input: {
   return offline;
 }
 
+// UPI-PAY-E2E: Production-grade return type with expiry and idempotency
 export async function initUpiPayment(input: {
   saleId: string;
   transactionId?: string;
-}): Promise<{ paymentId: string; billRef: string; amountMinor: number; storeName: string | null; upiVpa: string; expiresAt?: string }> {
+}): Promise<{
+  paymentId: string;
+  billRef: string;
+  amountMinor: number;
+  storeName: string | null;
+  upiVpa: string;
+  expiresAt?: string;
+  idempotent?: boolean;
+  razorpayOrderId?: string;
+}> {
   if (!(await isOnline())) {
     // GL-CRIT-0041: Clear error message explaining why UPI is unavailable offline
     throw new ApiError(
@@ -93,6 +103,16 @@ export async function confirmUpiPaymentManual(input: {
   paymentId: string;
 }): Promise<{ status: string }> {
   return apiClient.post("/api/v1/pos/payments/upi/confirm-manual", input);
+}
+
+// UPI-PAY-E2E: Poll payment status for auto-detection via webhook bridge
+export async function pollUpiPaymentStatus(paymentId: string): Promise<{
+  status: string;
+  autoDetected?: boolean;
+  confirmedAt?: string | null;
+  paymentRecorded?: boolean;
+}> {
+  return apiClient.get(`/api/v1/pos/payments/${encodeURIComponent(paymentId)}/status`);
 }
 
 export async function recordCashPayment(input: {

@@ -27,8 +27,13 @@ import {
 } from "../../../services/inventoryLedgerService";
 // GO-LIVE-034: Import stock cache invalidation for returns
 import { invalidateStockCache } from "./inventory";
+// UPI-PAY-E2E: Razorpay order tracking (optional, non-fatal)
+import { createRazorpayOrder, isRazorpayOrdersConfigured } from "../../../services/razorpayOrderService";
 
 export const posSalesRouter = Router();
+
+// UPI-PAY-E2E: QR code expiry — 5 minutes (matches payments.ts constant)
+const QR_EXPIRY_MS = 5 * 60 * 1000;
 
 type SaleItemInput = {
   productId?: string;
@@ -1682,23 +1687,20 @@ posSalesRouter.post("/sales/:saleId/return", requireDeviceToken, requireActiveSt
   }
 });
 
-// IMPORTANT:
-// UPI intent / QR must NEVER be generated on backend.
-// POS generates intent locally using upiVpa.
-// Do not add payment gateway logic here.
+// UPI-PAY-E2E: Production-grade UPI payment initialization
+// - Idempotent: returns existing pending payment if not expired
+// - Expiry: returns expiresAt for client QR countdown timer
+// - Audit: stores VPA, device, Razorpay order at payment time
+// - Gateway: optional Razorpay order for webhook-based auto-detection
 // SEC-001: POST /payments/upi/init requires ACTIVE store status
 posSalesRouter.post("/payments/upi/init", requireDeviceToken, requireActiveStore, async (req, res) => {
-  const { saleId, transactionId, upiIntent } = req.body as {
+  const { saleId, transactionId } = req.body as {
     saleId?: string;
     transactionId?: string;
-    upiIntent?: string;
   };
 
   if (typeof saleId !== "string" || saleId.trim().length === 0) {
     return res.status(400).json({ error: "saleId is required" });
-  }
-  if (typeof upiIntent === "string" && upiIntent.trim().length > 0) {
-    return res.status(400).json({ error: "upi_intent_not_allowed" });
   }
 
   const pool = getPool();
@@ -1723,28 +1725,95 @@ posSalesRouter.post("/payments/upi/init", requireDeviceToken, requireActiveStore
     return res.status(404).json({ error: "sale not found" });
   }
 
-  const providerRef =
-    typeof transactionId === "string" && transactionId.trim().length > 0
-      ? transactionId.trim()
-      : null;
+  // UPI-PAY-E2E: Idempotency — check for existing pending UPI payment
+  try {
+    const existingResult = await pool.query(
+      `SELECT id, expires_at, created_at
+       FROM payments
+       WHERE sale_id = $1 AND store_id = $2::uuid
+         AND mode = 'UPI' AND status = 'PENDING'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [saleId, storeId]
+    );
 
-  const paymentId = randomUUID();
-  await pool.query(
-    `
-    INSERT INTO payments (id, sale_id, store_id, mode, status, amount_minor, provider_ref)
-    VALUES ($1, $2, $3::uuid, $4, $5, $6, $7)
-    `,
-    [paymentId, saleId, storeId, "UPI", "PENDING", sale.total_minor, providerRef]
-  );
+    if (existingResult.rows.length > 0) {
+      const existing = existingResult.rows[0];
+      const expiresAt = existing.expires_at
+        ? new Date(existing.expires_at)
+        : new Date(new Date(existing.created_at).getTime() + QR_EXPIRY_MS);
 
-  return res.json({
-    paymentId,
-    saleId,
-    billRef: sale.bill_ref,
-    amountMinor: sale.total_minor,
-    storeName: store.name,
-    upiVpa: store.upi_vpa
-  });
+      if (expiresAt > new Date()) {
+        // Return existing non-expired payment (idempotent)
+        return res.json({
+          paymentId: existing.id,
+          saleId,
+          billRef: sale.bill_ref,
+          amountMinor: sale.total_minor,
+          storeName: store.name,
+          upiVpa: store.upi_vpa,
+          expiresAt: expiresAt.toISOString(),
+          idempotent: true,
+        });
+      }
+
+      // Expired — mark it and create fresh payment below
+      await pool.query(
+        `UPDATE payments SET status = 'EXPIRED' WHERE id = $1 AND status = 'PENDING'`,
+        [existing.id]
+      );
+    }
+
+    // UPI-PAY-E2E: Optional Razorpay order for gateway tracking
+    let razorpayOrderId: string | null = null;
+    if (isRazorpayOrdersConfigured()) {
+      try {
+        const rzpOrder = await createRazorpayOrder({
+          amountPaise: sale.total_minor,
+          receipt: `sale_${saleId.substring(0, 8)}_${Date.now().toString(36)}`,
+          notes: { saleId, storeId, deviceId },
+        });
+        if (rzpOrder) {
+          razorpayOrderId = rzpOrder.id;
+          console.log(`[UPI-INIT] Razorpay order created: ${rzpOrder.id} for sale ${saleId}`);
+        }
+      } catch (rzpErr) {
+        // Non-fatal — proceed without gateway tracking
+        console.warn("[UPI-INIT] Razorpay order creation failed, proceeding without:", rzpErr);
+      }
+    }
+
+    const expiresAt = new Date(Date.now() + QR_EXPIRY_MS);
+    const idempotencyKey = `upi_init_${saleId}_${storeId}`;
+    const providerRef =
+      typeof transactionId === "string" && transactionId.trim().length > 0
+        ? transactionId.trim()
+        : null;
+
+    const paymentId = randomUUID();
+    await pool.query(
+      `INSERT INTO payments (id, sale_id, store_id, mode, status, amount_minor,
+         provider_ref, expires_at, upi_vpa, razorpay_order_id, idempotency_key, device_id)
+       VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL
+       DO NOTHING`,
+      [paymentId, saleId, storeId, "UPI", "PENDING", sale.total_minor,
+       providerRef, expiresAt, store.upi_vpa, razorpayOrderId, idempotencyKey, deviceId]
+    );
+
+    return res.json({
+      paymentId,
+      saleId,
+      billRef: sale.bill_ref,
+      amountMinor: sale.total_minor,
+      storeName: store.name,
+      upiVpa: store.upi_vpa,
+      expiresAt: expiresAt.toISOString(),
+    });
+  } catch (err: any) {
+    console.error("[UPI-INIT] Error:", err);
+    return res.status(500).json({ error: "failed to initialize UPI payment" });
+  }
 });
 
 // GO-LIVE-037: UPI confirmation with idempotency
@@ -2479,8 +2548,10 @@ posSalesRouter.get("/sales/:saleId/payment-status", requireDeviceToken, async (r
 /**
  * GET /api/v1/pos/payments/:paymentId/status
  *
- * Check the status of a specific payment after a network drop.
- * Useful when the POS has the paymentId but lost connection.
+ * UPI-PAY-E2E: Payment status polling with expiry check + webhook bridge.
+ * - Auto-expires PENDING payments past their expires_at
+ * - Bridges to payments.sell_payments via razorpay_order_id for webhook auto-detection
+ * - Returns autoDetected:true when payment was confirmed by Razorpay webhook
  */
 posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req, res) => {
   const paymentId = typeof req.params.paymentId === "string" ? req.params.paymentId.trim() : "";
@@ -2495,19 +2566,66 @@ posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req
 
   try {
     const paymentRes = await pool.query(
-      `
-      SELECT p.id, p.mode, p.status, p.amount_minor, p.confirmed_at, p.created_at,
-             s.id as sale_id, s.status as sale_status, s.bill_ref
-      FROM payments p
-      JOIN sales s ON s.id = p.sale_id
-      WHERE p.id = $1 AND s.store_id = $2
-      `,
+      `SELECT p.id, p.mode, p.status, p.amount_minor, p.confirmed_at, p.created_at,
+              p.expires_at, p.razorpay_order_id,
+              s.id as sale_id, s.status as sale_status, s.bill_ref
+       FROM payments p
+       JOIN sales s ON s.id = p.sale_id
+       WHERE p.id = $1 AND s.store_id = $2`,
       [paymentId, storeId]
     );
 
     const payment = paymentRes.rows[0];
     if (!payment) {
       return res.status(404).json({ error: "payment_not_found" });
+    }
+
+    // UPI-PAY-E2E: Auto-expire pending payments past their expiry
+    if (payment.status === "PENDING" && payment.expires_at && new Date(payment.expires_at) < new Date()) {
+      await pool.query(
+        `UPDATE payments SET status = 'EXPIRED' WHERE id = $1 AND status = 'PENDING'`,
+        [paymentId]
+      );
+      return res.json({
+        paymentId: String(payment.id),
+        saleId: String(payment.sale_id),
+        billRef: String(payment.bill_ref),
+        mode: String(payment.mode),
+        status: "EXPIRED",
+        saleStatus: String(payment.sale_status),
+        amountMinor: Number(payment.amount_minor ?? 0),
+        confirmedAt: null,
+        paymentRecorded: false,
+      });
+    }
+
+    // UPI-PAY-E2E: Webhook bridge — check if Razorpay webhook already confirmed
+    // this payment in the sell_payments table via the shared razorpay_order_id
+    if (payment.status === "PENDING" && payment.razorpay_order_id) {
+      try {
+        const sellPaymentCheck = await pool.query(
+          `SELECT status FROM payments.sell_payments
+           WHERE upi_order_id = $1 AND status = 'completed'
+           LIMIT 1`,
+          [payment.razorpay_order_id]
+        );
+        if (sellPaymentCheck.rows.length > 0) {
+          return res.json({
+            paymentId: String(payment.id),
+            saleId: String(payment.sale_id),
+            billRef: String(payment.bill_ref),
+            mode: String(payment.mode),
+            status: "GATEWAY_CONFIRMED",
+            saleStatus: String(payment.sale_status),
+            amountMinor: Number(payment.amount_minor ?? 0),
+            confirmedAt: null,
+            paymentRecorded: false,
+            autoDetected: true,
+          });
+        }
+      } catch {
+        // sell_payments table may not exist or query may fail — non-fatal
+      }
     }
 
     return res.json({
@@ -2519,7 +2637,7 @@ posSalesRouter.get("/payments/:paymentId/status", requireDeviceToken, async (req
       saleStatus: String(payment.sale_status),
       amountMinor: Number(payment.amount_minor ?? 0),
       confirmedAt: payment.confirmed_at ? new Date(payment.confirmed_at).toISOString() : null,
-      paymentRecorded: payment.status === "PAID" || payment.status === "DUE"
+      paymentRecorded: payment.status === "PAID" || payment.status === "DUE",
     });
   } catch (error) {
     console.error("[payments/status] Error:", error);

@@ -25,6 +25,7 @@ import {
   cancelSale,
   createSale,
   initUpiPayment,
+  pollUpiPaymentStatus,
 } from "../services/api/posApi";
 import { completeCheckout, validateCartStock, formatStockValidationWarning } from "../services/checkoutService";
 import { getStockBatch } from "../services/api/inventoryApi";
@@ -588,6 +589,52 @@ const PaymentScreen = () => {
     return () => clearInterval(intervalId);
   }, [qrExpiresAt, selectedMode]);
 
+  // UPI-PAY-E2E: Auto-detect payment via polling (works when Razorpay webhook confirms)
+  const [pollingActive, setPollingActive] = useState(false);
+  useEffect(() => {
+    if (selectedMode !== "UPI" || !paymentId || !upiIntent || submitting || finalized.current) return;
+
+    let cancelled = false;
+    setPollingActive(true);
+
+    const pollInterval = setInterval(async () => {
+      if (cancelled) return;
+      try {
+        const result = await pollUpiPaymentStatus(paymentId);
+        if (cancelled) return;
+
+        if (result.status === "GATEWAY_CONFIRMED" || result.status === "PAID") {
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          // Auto-detected via webhook — trigger completion
+          console.log(`[Payment] UPI-PAY-E2E: Payment auto-detected (${result.status})`);
+          Alert.alert(
+            "Payment Received",
+            "UPI payment has been detected. Completing sale...",
+            [{ text: "OK" }]
+          );
+          // Trigger the same flow as "Payment Received" button
+          handleCompletePayment();
+        } else if (result.status === "EXPIRED" || result.status === "FAILED") {
+          clearInterval(pollInterval);
+          setPollingActive(false);
+          // Clear QR to show "Tap to regenerate"
+          setUpiIntent(null);
+          setQrExpiresAt(null);
+          setQrSecondsLeft(null);
+        }
+      } catch {
+        // Polling error is non-fatal — next tick will retry
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollInterval);
+      setPollingActive(false);
+    };
+  }, [selectedMode, paymentId, upiIntent, submitting]);
+
   useEffect(() => {
     return () => {
       if (!finalized.current && saleId) {
@@ -995,6 +1042,21 @@ const PaymentScreen = () => {
             )}
             {formattedStoreName && (
               <Text style={styles.storeName}>{formattedStoreName}</Text>
+            )}
+            {/* UPI-PAY-E2E: Show VPA for manual pay fallback */}
+            {upiVpa && (
+              <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 4, textAlign: "center" }}>
+                UPI: {upiVpa}
+              </Text>
+            )}
+            {/* UPI-PAY-E2E: Show polling indicator while waiting for payment */}
+            {pollingActive && upiIntent && (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 8 }}>
+                <ActivityIndicator size="small" color="#94A3B8" />
+                <Text style={{ fontSize: 12, color: "#94A3B8", marginLeft: 6 }}>
+                  Waiting for payment...
+                </Text>
+              </View>
             )}
           </View>
         ) : (
