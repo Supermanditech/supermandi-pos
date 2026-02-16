@@ -33,7 +33,7 @@ function versionPlugin(): Plugin {
       const distPath = join(__dirname, 'dist');
       try {
         mkdirSync(distPath, { recursive: true });
-        writeFileSync(join(distPath, 'version.json'), JSON.stringify(versionData, null, 2));
+        writeFileSync(join(distPath, '_version.json'), JSON.stringify(versionData, null, 2));
         console.log('[version-plugin] Wrote _version.json:', versionData);
       } catch (err) {
         console.error('[version-plugin] Failed to write _version.json:', err);
