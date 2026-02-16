@@ -38,7 +38,7 @@ interface SuppliersTabProps {
   setProductRejectReason: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   productActionLoading: Record<string, boolean>;
   handleOpenEditProduct: (product: PendingProduct) => void;
-  handleApproveProduct: (productId: string) => void;
+  handleApproveProduct: (productId: string) => void | Promise<void>;
   handleRejectProduct: (productId: string) => void;
   // Product edit modal
   editingProduct: PendingProduct | null;
@@ -666,9 +666,9 @@ export function SuppliersTab({
                   </button>
                   <button
                     onClick={async () => {
-                      handleApproveProduct(product.id);
-                      // Wait briefly for approval to complete, then publish
-                      setTimeout(() => handlePublishProduct(product.id), 1500);
+                      // FIX-047: Await approval before publishing (was setTimeout race)
+                      await handleApproveProduct(product.id);
+                      await handlePublishProduct(product.id);
                     }}
                     disabled={productActionLoading[product.id] || publishLoading[product.id]}
                     style={{ background: "#2563eb", color: "white" }}
