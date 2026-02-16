@@ -74,6 +74,9 @@ export interface VoiceActionResult {
 // =============================================================================
 
 let currentRecording: Audio.Recording | null = null;
+let maxDurationTimer: ReturnType<typeof setTimeout> | null = null;
+const MAX_RECORDING_DURATION_MS = 60_000; // FIX-040: Auto-stop after 60 seconds
+let onAutoStopCallback: (() => void) | null = null;
 
 // Recording preset optimized for speech
 const RECORDING_OPTIONS: Audio.RecordingOptions = {
@@ -132,6 +135,15 @@ export async function startRecording(): Promise<boolean> {
     const { recording } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
     currentRecording = recording;
 
+    // FIX-040: Auto-stop after max duration
+    if (maxDurationTimer) clearTimeout(maxDurationTimer);
+    maxDurationTimer = setTimeout(async () => {
+      console.log("[voiceClient] Max recording duration reached, auto-stopping");
+      maxDurationTimer = null;
+      await stopRecording();
+      onAutoStopCallback?.();
+    }, MAX_RECORDING_DURATION_MS);
+
     console.log("[voiceClient] Recording started");
     return true;
   } catch (error) {
@@ -148,6 +160,12 @@ export async function startRecording(): Promise<boolean> {
  * @returns URI of the recorded audio file, or null if failed
  */
 export async function stopRecording(): Promise<string | null> {
+  // FIX-040: Clear auto-stop timer
+  if (maxDurationTimer) {
+    clearTimeout(maxDurationTimer);
+    maxDurationTimer = null;
+  }
+
   if (!currentRecording) {
     console.log("[voiceClient] No recording to stop");
     return null;
@@ -175,6 +193,12 @@ export async function stopRecording(): Promise<string | null> {
  * Cancel recording without saving.
  */
 export async function cancelRecording(): Promise<void> {
+  // FIX-040: Clear auto-stop timer
+  if (maxDurationTimer) {
+    clearTimeout(maxDurationTimer);
+    maxDurationTimer = null;
+  }
+
   if (!currentRecording) {
     return;
   }
@@ -192,6 +216,11 @@ export async function cancelRecording(): Promise<void> {
 /**
  * Check if currently recording.
  */
+// FIX-040: Register callback for auto-stop notification
+export function setOnAutoStop(callback: (() => void) | null): void {
+  onAutoStopCallback = callback;
+}
+
 export function isRecording(): boolean {
   return currentRecording !== null;
 }
