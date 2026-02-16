@@ -59,7 +59,8 @@ export async function fetchAnalyticsOverview(params: { storeId?: string; from?: 
   if (params.storeId) qs.set("storeId", params.storeId);
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return getJson<OverviewResponse>(`/api/v1/admin/analytics/overview?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<OverviewResponse>(`/api/v1/admin/analytics/overview${query ? `?${query}` : ""}`);
 }
 
 export type DevicesResponse = {
@@ -88,7 +89,8 @@ export async function fetchAnalyticsDevices(params: { storeId?: string; from?: s
   if (params.storeId) qs.set("storeId", params.storeId);
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return getJson<DevicesResponse>(`/api/v1/admin/analytics/devices?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<DevicesResponse>(`/api/v1/admin/analytics/devices${query ? `?${query}` : ""}`);
 }
 
 export type ProductsResponse = {
@@ -118,7 +120,8 @@ export async function fetchAnalyticsProducts(params: { storeId?: string; from?: 
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
   if (params.groupBy) qs.set("groupBy", params.groupBy);
-  return getJson<ProductsResponse>(`/api/v1/admin/analytics/products?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<ProductsResponse>(`/api/v1/admin/analytics/products${query ? `?${query}` : ""}`);
 }
 
 // SA-P0-004: Stock-in breakdown types
@@ -164,7 +167,8 @@ export async function fetchAnalyticsPurchases(params: { storeId?: string; from?:
   if (params.storeId) qs.set("storeId", params.storeId);
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return getJson<PurchasesResponse>(`/api/v1/admin/analytics/purchases?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<PurchasesResponse>(`/api/v1/admin/analytics/purchases${query ? `?${query}` : ""}`);
 }
 
 export type ConsumerSalesResponse = {
@@ -182,7 +186,8 @@ export async function fetchAnalyticsConsumerSales(params: { storeId?: string; fr
   if (params.storeId) qs.set("storeId", params.storeId);
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return getJson<ConsumerSalesResponse>(`/api/v1/admin/analytics/consumer-sales?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<ConsumerSalesResponse>(`/api/v1/admin/analytics/consumer-sales${query ? `?${query}` : ""}`);
 }
 
 // P2-SADM-001: Activity Logs
@@ -206,7 +211,8 @@ export async function fetchAnalyticsActivity(params: { storeId?: string; from?: 
   if (params.storeId) qs.set("storeId", params.storeId);
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return getJson<ActivityResponse>(`/api/v1/admin/analytics/activity?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<ActivityResponse>(`/api/v1/admin/analytics/activity${query ? `?${query}` : ""}`);
 }
 
 // P2-SADM-002: Dues Tracking
@@ -236,5 +242,6 @@ export async function fetchAnalyticsDues(params: { storeId?: string; from?: stri
   if (params.storeId) qs.set("storeId", params.storeId);
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return getJson<DuesResponse>(`/api/v1/admin/analytics/dues?${qs.toString()}`);
+  const query = qs.toString();
+  return getJson<DuesResponse>(`/api/v1/admin/analytics/dues${query ? `?${query}` : ""}`);
 }
