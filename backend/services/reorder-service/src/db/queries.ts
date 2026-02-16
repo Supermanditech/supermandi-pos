@@ -783,6 +783,7 @@ export async function getStoreProductsForReorder(
   minStock: number;
   targetStock: number;
   preferredSupplierId: string | null;
+  maxReorderQty: number | null;
   currentStock: number;
 }>> {
   const rows = await query<{
