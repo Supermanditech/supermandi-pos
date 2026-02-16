@@ -1447,9 +1447,10 @@ export default function SuppliersPage() {
                                     {supplier.phone || <span style={{ color: 'var(--text-muted)' }}>-</span>}
                                     {supplier.phone && (
                                       <button
-                                        onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${supplier.phone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${supplier.name}, this is regarding our order.`)}`); }}
+                                        onClick={(e) => { e.stopPropagation(); window.open(`https://wa.me/${supplier.phone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${supplier.name}, this is regarding our order.`)}`, '_blank', 'noopener,noreferrer'); }}
                                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
                                         title="Message on WhatsApp"
+                                        aria-label="Message on WhatsApp"
                                       >
                                         <WhatsAppIcon size={16} />
                                       </button>

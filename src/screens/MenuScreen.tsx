@@ -860,7 +860,7 @@ export default function MenuScreen() {
       <Pressable
         style={styles.menuItem}
         onPress={() => {
-          const supportPhone = "919876543210"; // Placeholder SuperMandi support number
+          const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE || "919876543210";
           const message = encodeURIComponent(
             `Hi SuperMandi Support,\n\nStore: ${opStatus.storeName || "N/A"}\nDevice: ${opStatus.deviceLabel || "N/A"}\n\nI need help with: `
           );

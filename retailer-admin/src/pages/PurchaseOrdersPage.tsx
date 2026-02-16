@@ -320,6 +320,7 @@ export default function PurchaseOrdersPage() {
                   fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '6px',
                 }}
                 title="Follow up with supplier via WhatsApp"
+                aria-label="Message on WhatsApp"
               >
                 <WhatsAppIcon size={16} />
                 WhatsApp Follow-up

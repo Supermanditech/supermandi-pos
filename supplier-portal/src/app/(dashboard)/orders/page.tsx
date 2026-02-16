@@ -511,7 +511,7 @@ export default function OrdersPage() {
                       onClick={() => {
                         const orderNum = orderDetail?.orderNumber || selectedOrder.id.slice(0, 8);
                         const msg = `Hi, update on order #${orderNum}: ${selectedOrder.status}.`;
-                        window.open(`https://wa.me/${(orderDetail?.storePhone ?? '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
+                        window.open(`https://wa.me/${(orderDetail?.storePhone ?? '').replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                       }}
                       className="inline-flex items-center justify-center w-5 h-5 rounded-full hover:bg-green-50 transition-colors"
                       title="Contact store on WhatsApp"

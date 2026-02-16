@@ -52,10 +52,13 @@ whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
       return res.sendStatus(401);
     }
 
-    const rawBody = JSON.stringify(req.body);
+    // Use raw body buffer captured by express.json verify callback (preserves exact bytes Meta signed)
+    // Fallback to JSON.stringify if rawBody not available (e.g., different middleware chain)
+    const rawBody = (req as any).rawBody as Buffer | undefined;
+    const bodyForHmac = rawBody || Buffer.from(JSON.stringify(req.body));
     const expectedSig = "sha256=" + crypto
       .createHmac("sha256", WHATSAPP_APP_SECRET)
-      .update(rawBody)
+      .update(bodyForHmac)
       .digest("hex");
 
     // Constant-time comparison to prevent timing attacks

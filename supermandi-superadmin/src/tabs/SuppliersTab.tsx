@@ -286,9 +286,10 @@ export function SuppliersTab({
                     <strong>Phone:</strong> <span className="mono">{request.requestedPhone || "-"}</span>
                     {request.requestedPhone && (
                       <button
-                        onClick={() => window.open(`https://wa.me/${request.requestedPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${request.requestedName || 'there'}, this is SuperMandi admin.`)}`)}
+                        onClick={() => window.open(`https://wa.me/${request.requestedPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${request.requestedName || 'there'}, this is SuperMandi admin.`)}`, '_blank', 'noopener,noreferrer')}
                         style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
                         title="Message on WhatsApp"
+                        aria-label="Message on WhatsApp"
                       >
                         <WhatsAppIcon size={14} />
                       </button>
@@ -484,9 +485,10 @@ export function SuppliersTab({
                       <span className="mono">{s.primaryPhone || "-"}</span>
                       {s.primaryPhone && (
                         <button
-                          onClick={() => window.open(`https://wa.me/${s.primaryPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${s.businessName}, this is SuperMandi admin.`)}`)}
+                          onClick={() => window.open(`https://wa.me/${s.primaryPhone!.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi ${s.businessName}, this is SuperMandi admin.`)}`, '_blank', 'noopener,noreferrer')}
                           style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
                           title="Message on WhatsApp"
+                          aria-label="Message on WhatsApp"
                         >
                           <WhatsAppIcon size={14} />
                         </button>

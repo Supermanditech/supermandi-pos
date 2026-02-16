@@ -411,9 +411,10 @@ export function StoresTab({
                                 />
                                 {contactDraft.contactPhone && (
                                   <button
-                                    onClick={() => window.open(`https://wa.me/${contactDraft.contactPhone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi, this is SuperMandi admin regarding your store ${s.name ?? s.storeName ?? s.id}.`)}`)}
+                                    onClick={() => window.open(`https://wa.me/${contactDraft.contactPhone.replace(/[^0-9+]/g, '')}?text=${encodeURIComponent(`Hi, this is SuperMandi admin regarding your store ${s.name ?? s.storeName ?? s.id}.`)}`, '_blank', 'noopener,noreferrer')}
                                     style={{ background: "none", border: "none", cursor: "pointer", padding: 2, display: "flex", alignItems: "center" }}
                                     title="Message on WhatsApp"
+                                    aria-label="Message on WhatsApp"
                                   >
                                     <WhatsAppIcon size={18} />
                                   </button>

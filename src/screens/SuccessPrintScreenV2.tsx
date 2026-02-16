@@ -264,12 +264,13 @@ export default function SuccessPrintScreenV2() {
             <Text style={styles.modalSub}>Enter customer's phone number</Text>
             <TextInput
               style={styles.phoneInput}
-              placeholder="10-digit mobile number"
+              placeholder="9876543210"
               placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
               maxLength={10}
               value={waPhone}
               onChangeText={(t) => setWaPhone(t.replace(/\D/g, ""))}
+              editable={waStatus !== "sending"}
               autoFocus
               returnKeyType="send"
               onSubmitEditing={handleWhatsAppSend}
@@ -278,16 +279,18 @@ export default function SuccessPrintScreenV2() {
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnCancel]}
                 onPress={() => { setShowPhoneModal(false); setWaStatus("idle"); }}
+                disabled={waStatus === "sending"}
               >
                 <Text style={styles.modalBtnCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, styles.btnWhatsApp]}
+                style={[styles.modalBtn, styles.btnWhatsApp, waStatus === "sending" && styles.btnDisabled]}
                 onPress={handleWhatsAppSend}
+                disabled={waStatus === "sending"}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <MaterialCommunityIcons name="whatsapp" size={18} color="#fff" />
-                  <Text style={styles.btnText}>Send</Text>
+                  <Text style={styles.btnText}>{waStatus === "sending" ? "Sending..." : "Send"}</Text>
                 </View>
               </TouchableOpacity>
             </View>
