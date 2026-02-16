@@ -3,7 +3,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import type { Router as RouterType } from 'express';
-import { ApiError, ERROR_CODES } from '@supermandi/common';
+import { ApiError, ERROR_CODES, createIdempotencyMiddleware } from '@supermandi/common';
 import {
   receiveGoods,
   getReceiveRecords,
@@ -41,6 +41,8 @@ interface ReceiveGoodsBody {
  */
 router.post(
   '/stores/:storeId/orders/:orderId/receive',
+  // FIX-008: Require idempotency key to prevent duplicate stock entries on retry
+  createIdempotencyMiddleware({ required: true }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { storeId, orderId } = req.params;
