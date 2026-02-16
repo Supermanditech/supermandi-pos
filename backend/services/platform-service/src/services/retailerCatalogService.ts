@@ -441,7 +441,8 @@ export async function createSupplierProductLink(
      VALUES ($1, $2, NULL, $3, $4, true)
      ON CONFLICT DO NOTHING`,
     [supplierId, name, brand, purchasePrice]
-  ).catch(() => {
-    // Table might not exist yet, silently ignore
+  ).catch((err) => {
+    // FIX-014: Log instead of silently swallowing — helps debug catalog issues
+    console.warn('[retailerCatalogService] createSupplierProductLink failed:', err?.message || err);
   });
 }
