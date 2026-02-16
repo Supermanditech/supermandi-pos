@@ -12,6 +12,8 @@ import { useUrlState } from '@/hooks/useUrlState';
 // GAP-3: EmptyState component for consistent empty states
 import EmptyState from '@/components/EmptyState';
 import { ShoppingCart, Repeat } from 'lucide-react';
+// FIX-028: Close SSE on logout
+import { useAuth } from '@/lib/auth';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -53,6 +55,8 @@ const CARRIERS = [
 
 export default function OrdersPage() {
   const queryClient = useQueryClient();
+  // FIX-028: Close SSE when auth state changes (logout)
+  const { isAuthenticated } = useAuth();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   // T-121: Sync status filter with URL for back/forward persistence
   const [statusFilter, setStatusFilter] = useUrlState('status', 'all');
@@ -98,8 +102,10 @@ export default function OrdersPage() {
   }, []);
 
   // SUP-POS-012: SSE real-time order updates
+  // FIX-028: Close SSE when isAuthenticated changes to false (logout)
   const eventSourceRef = useRef<EventSource | null>(null);
   useEffect(() => {
+    if (!isAuthenticated) return;
     const streamUrl = getOrderStreamUrl();
     if (!streamUrl) return;
 
@@ -124,7 +130,7 @@ export default function OrdersPage() {
       es.close();
       eventSourceRef.current = null;
     };
-  }, [queryClient]);
+  }, [queryClient, isAuthenticated]);
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: Order['status'] }) =>
