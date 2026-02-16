@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   Modal,
   Pressable,
   RefreshControl,
@@ -316,7 +317,25 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                   </Text>
                 </View>
                 <Text style={styles.profileName}>{selectedCustomer.name}</Text>
-                <Text style={styles.profilePhone}>{selectedCustomer.phone}</Text>
+                <View style={styles.profilePhoneRow}>
+                  <Text style={styles.profilePhone}>{selectedCustomer.phone}</Text>
+                  <Pressable
+                    style={styles.whatsappIconButton}
+                    onPress={() => {
+                      const message = encodeURIComponent(
+                        `Hi ${selectedCustomer.name}, greetings from SuperMandi!`
+                      );
+                      const phone = selectedCustomer.phone.replace(/\D/g, "");
+                      const url = `whatsapp://send?phone=${phone}&text=${message}`;
+                      Linking.openURL(url).catch(() => {
+                        Alert.alert("WhatsApp Not Found", "Please install WhatsApp to use this feature.");
+                      });
+                    }}
+                    hitSlop={8}
+                  >
+                    <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
+                  </Pressable>
+                </View>
                 {selectedCustomer.email && (
                   <Text style={styles.profileEmail}>{selectedCustomer.email}</Text>
                 )}
@@ -694,10 +713,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: theme.colors.textPrimary,
   },
+  profilePhoneRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
   profilePhone: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+  },
+  whatsappIconButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
   },
   profileEmail: {
     fontSize: 13,

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { RouteProp, useNavigation, useRoute } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../theme";
 import { useCartStore } from "../stores/cartStore";
@@ -13,6 +14,7 @@ import { syncOutbox } from "../services/offline/sync";
 import { formatMoney } from "../utils/money";
 import { formatDateTime } from "../i18n/formatters";
 import { getDeviceStoreId } from "../services/deviceSession";
+import { checkWhatsAppStatus, sendBillWhatsApp } from "../services/api/posApi";
 
 type RootStackParamList = {
   Splash: undefined;
@@ -49,8 +51,18 @@ export default function SuccessPrintScreenV2() {
   const [printStatus, setPrintStatus] = useState<"idle" | "printing" | "success" | "failed">("idle");
   const [operatorStoreId, setOperatorStoreId] = useState<string | null>(null);
 
+  // WA-001: WhatsApp state
+  const [waConfigured, setWaConfigured] = useState(false);
+  const [waStatus, setWaStatus] = useState<"idle" | "prompting" | "sending" | "sent" | "failed">("idle");
+  const [waPhone, setWaPhone] = useState("");
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+
   useEffect(() => {
     getDeviceStoreId().then(setOperatorStoreId);
+    // WA-001: Check if WhatsApp Cloud API is configured
+    checkWhatsAppStatus()
+      .then((res) => setWaConfigured(res.configured))
+      .catch(() => setWaConfigured(false));
   }, []);
 
   // POS-PRINT-001: Snapshot discount from cart (fallback to route params)
@@ -135,6 +147,36 @@ export default function SuccessPrintScreenV2() {
     }
   };
 
+  // WA-001: Send bill via WhatsApp Cloud API
+  const handleWhatsAppSend = async () => {
+    const cleanPhone = waPhone.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      Alert.alert("Invalid Number", "Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    setWaStatus("sending");
+    setShowPhoneModal(false);
+
+    try {
+      const result = await sendBillWhatsApp({
+        saleId: transactionId,
+        recipientPhone: cleanPhone,
+      });
+
+      if (result.sent) {
+        setWaStatus("sent");
+        Alert.alert("Sent!", "Bill sent via WhatsApp successfully.");
+      } else {
+        setWaStatus("failed");
+        Alert.alert("Failed", result.error || "Could not send WhatsApp message.");
+      }
+    } catch {
+      setWaStatus("failed");
+      Alert.alert("Error", "Failed to send WhatsApp message. Check internet connection.");
+    }
+  };
+
   const handleSkip = () => {
     // GL-CRIT-0094: Navigate first, then unlock cart after navigation completes
     // This prevents race conditions where cart is unlocked while still on this screen
@@ -172,10 +214,64 @@ export default function SuccessPrintScreenV2() {
         >
           <Text style={styles.btnText}>Print Receipt</Text>
         </TouchableOpacity>
+
+        {/* WA-001: WhatsApp Bill button — shown when Cloud API configured */}
+        {waConfigured && (
+          <TouchableOpacity
+            style={[styles.btn, styles.btnWhatsApp, waStatus === "sending" && styles.btnDisabled]}
+            onPress={() => { setShowPhoneModal(true); setWaStatus("prompting"); }}
+            disabled={waStatus === "sending"}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <MaterialCommunityIcons name="whatsapp" size={20} color="#fff" />
+              <Text style={styles.btnText}>
+                {waStatus === "sending" ? "Sending..." : waStatus === "sent" ? "Sent!" : "WhatsApp Bill"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity style={[styles.btn, styles.btnSecondary]} onPress={handleSkip}>
           <Text style={[styles.btnText, styles.btnTextSecondary]}>No Print</Text>
         </TouchableOpacity>
       </View>
+
+      {/* WA-001: Phone number input modal */}
+      <Modal visible={showPhoneModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Send Bill via WhatsApp</Text>
+            <Text style={styles.modalSub}>Enter customer's phone number</Text>
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="10-digit mobile number"
+              placeholderTextColor="#94A3B8"
+              keyboardType="phone-pad"
+              maxLength={15}
+              value={waPhone}
+              onChangeText={setWaPhone}
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => { setShowPhoneModal(false); setWaStatus("idle"); }}
+              >
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.btnWhatsApp]}
+                onPress={handleWhatsAppSend}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <MaterialCommunityIcons name="whatsapp" size={18} color="#fff" />
+                  <Text style={styles.btnText}>Send</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -208,9 +304,73 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border
   },
+  btnWhatsApp: {
+    backgroundColor: "#25D366",
+  },
   btnDisabled: {
     opacity: 0.6
   },
   btnText: { color: theme.colors.textInverse, fontSize: 16, fontWeight: "800" },
-  btnTextSecondary: { color: theme.colors.textPrimary }
+  btnTextSecondary: { color: theme.colors.textPrimary },
+  // WA-001: Phone modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
+  },
+  modalSub: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  phoneInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 18,
+    fontWeight: "700",
+    color: theme.colors.textPrimary,
+    textAlign: "center",
+    letterSpacing: 1,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  modalBtnCancel: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalBtnCancelText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: theme.colors.textSecondary,
+  },
 });
