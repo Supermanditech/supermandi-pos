@@ -61,6 +61,12 @@ export default function OrdersPage() {
   const pageSize = 20;
   // AUDIT-SUP-018: Debounce timer for quantity input mutations
   const qtyDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // FIX-025: Clear debounce on unmount to prevent stale mutation after navigation
+  useEffect(() => {
+    return () => {
+      if (qtyDebounceRef.current) clearTimeout(qtyDebounceRef.current);
+    };
+  }, []);
   // GL-WF-039: Shipment tracking state
   // GO-LIVE-029: Added shipment date fields
   const [showShipmentForm, setShowShipmentForm] = useState(false);
