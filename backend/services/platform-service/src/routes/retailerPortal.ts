@@ -4,7 +4,7 @@
 
 import crypto from 'crypto';
 import { Router, Request, Response, NextFunction } from 'express';
-import { ApiError, query } from '@supermandi/common';
+import { ApiError, query, withTransaction } from '@supermandi/common';
 import { config } from '../config';
 import {
   generateSignedUploadUrl,
@@ -1100,37 +1100,40 @@ router.patch(
     }
 
     // Stock update: openingStockQty sets absolute stock level via ledger entry
+    // FIX-007: All 3 writes (ledger + stock_balances + store_products) in single transaction
     if (openingStockQty !== undefined && typeof openingStockQty === 'number') {
-      const currentStockRows = await query<{ current_qty: number }>(
-        `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
-        [storeId, id]
-      );
-      const stockBefore = currentStockRows[0]?.current_qty || 0;
-      const delta = openingStockQty - stockBefore;
-
-      if (delta !== 0) {
-        // Ledger-first: write audit entry
-        await query(
-          `INSERT INTO inventory.inventory_ledger
-           (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
-           VALUES ($1, $2, $3, 'adjustment', $4, $5, $6, 'RETAILER_PORTAL', 'Stock updated from retailer dashboard')`,
-          [storeId, id, delta, stockBefore, openingStockQty, purchasePrice || 0]
+      await withTransaction(async (tx) => {
+        const currentStockRows = await tx.query<{ current_qty: number }>(
+          `SELECT current_qty FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2 FOR UPDATE`,
+          [storeId, id]
         );
+        const stockBefore = currentStockRows[0]?.current_qty || 0;
+        const delta = openingStockQty - stockBefore;
 
-        // Update authoritative stock
-        await query(
-          `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
-          [storeId, id, openingStockQty]
-        );
+        if (delta !== 0) {
+          // Ledger-first: write audit entry
+          await tx.query(
+            `INSERT INTO inventory.inventory_ledger
+             (store_id, product_id, delta_qty, transaction_type, stock_before, stock_after, unit_cost, source, notes)
+             VALUES ($1, $2, $3, 'adjustment', $4, $5, $6, 'RETAILER_PORTAL', 'Stock updated from retailer dashboard')`,
+            [storeId, id, delta, stockBefore, openingStockQty, purchasePrice || 0]
+          );
 
-        // Update denormalized stock for fast reads
-        await query(
-          `UPDATE catalog.store_products SET current_stock = $3 WHERE store_id = $1 AND product_id = $2`,
-          [storeId, id, openingStockQty]
-        );
-      }
+          // Update authoritative stock
+          await tx.query(
+            `INSERT INTO inventory.stock_balances (store_id, product_id, current_qty)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (store_id, product_id) DO UPDATE SET current_qty = $3, updated_at = NOW()`,
+            [storeId, id, openingStockQty]
+          );
+
+          // Update denormalized stock for fast reads
+          await tx.query(
+            `UPDATE catalog.store_products SET current_stock = $3 WHERE store_id = $1 AND product_id = $2`,
+            [storeId, id, openingStockQty]
+          );
+        }
+      });
     }
 
     res.json({
