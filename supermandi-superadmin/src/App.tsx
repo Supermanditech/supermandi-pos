@@ -1607,6 +1607,27 @@ export default function App() {
     }
   }
 
+  // FIX-049: Load more applications (append to existing list)
+  async function loadMoreApplications() {
+    if (applicationsInFlightRef.current) return;
+    applicationsInFlightRef.current = true;
+    setApplicationsLoading(true);
+    try {
+      const data = await fetchApplications({
+        entityType: appEntityFilter || undefined,
+        limit: 100,
+        offset: applications.length,
+      });
+      setApplications(prev => [...prev, ...data.items]);
+      setApplicationsTotal(data.total);
+    } catch (e: any) {
+      setApplicationsError(e?.message ? String(e.message) : "Failed to load more applications");
+    } finally {
+      applicationsInFlightRef.current = false;
+      setApplicationsLoading(false);
+    }
+  }
+
   async function handleApproveApplication(appId: string) {
     setAppActionLoading((prev) => ({ ...prev, [appId]: true }));
     setApplicationsError("");
@@ -2985,6 +3006,7 @@ export default function App() {
           refreshApplications={refreshApplications}
           handleApproveApplication={confirmedApproveApplication}
           handleRejectApplication={confirmedRejectApplication}
+          onLoadMore={loadMoreApplications}
         />
       )}
 
