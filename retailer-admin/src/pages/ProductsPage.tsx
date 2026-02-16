@@ -262,11 +262,11 @@ export default function ProductsPage() {
   };
 
   // ISSUE-MICRO-079: AbortController cancels in-flight requests on unmount/re-render
+  // FIX-021: Removed fetchProducts from init effect — category effect (below) handles it on mount
   useEffect(() => {
     if (!accessToken) return;
     const controller = new AbortController();
 
-    fetchProducts(undefined, { signal: controller.signal });
     fetchSuppliers(controller.signal);
 
     // FE-RETAILER-CAT-001: Load categories from POS taxonomy
@@ -297,7 +297,7 @@ export default function ProductsPage() {
     return () => controller.abort();
   }, [accessToken]);
 
-  // RCAT-CAT-001: Re-fetch products when category changes
+  // RCAT-CAT-001: Re-fetch products when category changes (also fires on mount)
   // ISSUE-MICRO-079: AbortController cancels stale category fetches
   useEffect(() => {
     if (!accessToken) return;
@@ -306,16 +306,20 @@ export default function ProductsPage() {
     return () => controller.abort();
   }, [selectedCategory, accessToken]);
 
+  // FIX-021: Ref to avoid re-registering visibility handler on every category change
+  const selectedCategoryRef = useRef(selectedCategory);
+  selectedCategoryRef.current = selectedCategory;
+
   // RCAT-SYNC-001: Auto-refresh products when tab regains focus (detect POS edits)
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && accessToken) {
-        fetchProducts(selectedCategory);
+        fetchProducts(selectedCategoryRef.current);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [accessToken, selectedCategory]);
+  }, [accessToken]); // FIX-021: Removed selectedCategory dep — uses ref instead
 
   // ISSUE-MICRO-092: Category select handler — syncs state + URL for back-button support
   const handleCategorySelect = (catId: string) => {
