@@ -17,6 +17,7 @@ export {
   stopRecording,
   cancelRecording,
   isRecording,
+  setOnAutoStop,
   interpretVoice,
   executeVoiceAction,
   submitVoiceCommand,
