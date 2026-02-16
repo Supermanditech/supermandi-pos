@@ -1,12 +1,16 @@
 {
-  "version": "26.0",
-  "lastUpdated": "2026-02-17T01:50:00+05:30",
-  "currentPhase": "Phase 11: Production Hardening (FIX-001 → FIX-067) + WA-001",
+  "version": "27.0",
+  "lastUpdated": "2026-02-17T14:30:00+05:30",
+  "currentPhase": "Phase 11 (19 remaining) + Phase 12: Test Quality Hardening (TQ-001 → TQ-020)",
   "currentTicket": null,
   "ticketQueue": [
     "FIX-001","FIX-016","FIX-022","FIX-024","FIX-026","FIX-029","FIX-031",
     "FIX-043","FIX-044","FIX-046",
-    "FIX-051","FIX-053","FIX-055","FIX-059","FIX-060","FIX-063","FIX-064","FIX-065","FIX-067"
+    "FIX-051","FIX-053","FIX-055","FIX-059","FIX-060","FIX-063","FIX-064","FIX-065","FIX-067",
+    "TQ-001","TQ-002","TQ-003","TQ-004","TQ-005","TQ-006",
+    "TQ-007","TQ-008","TQ-009","TQ-010","TQ-011","TQ-012","TQ-013",
+    "TQ-014","TQ-015","TQ-016","TQ-017",
+    "TQ-018","TQ-019","TQ-020"
   ],
   "ticketStatus": {
     "T-054": "DONE", "T-055": "DONE",
@@ -91,7 +95,11 @@
     "FIX-022": "QUEUED", "FIX-023": "DONE", "FIX-024": "QUEUED", "FIX-025": "DONE", "FIX-026": "QUEUED", "FIX-027": "DONE", "FIX-028": "DONE", "FIX-029": "QUEUED", "FIX-030": "DONE",
     "FIX-031": "QUEUED", "FIX-032": "DONE", "FIX-033": "DONE", "FIX-034": "DONE", "FIX-035": "DONE", "FIX-036": "DONE", "FIX-037": "DONE", "FIX-038": "DONE", "FIX-039": "DONE", "FIX-040": "DONE", "FIX-041": "DONE", "FIX-042": "DONE",
     "FIX-043": "QUEUED", "FIX-044": "QUEUED", "FIX-045": "DONE", "FIX-046": "QUEUED", "FIX-047": "DONE", "FIX-048": "DONE", "FIX-049": "DONE", "FIX-050": "DONE",
-    "FIX-051": "QUEUED", "FIX-052": "DONE", "FIX-053": "QUEUED", "FIX-054": "DONE", "FIX-055": "QUEUED", "FIX-056": "DONE", "FIX-057": "DONE", "FIX-058": "DONE", "FIX-059": "QUEUED", "FIX-060": "QUEUED", "FIX-061": "DONE", "FIX-062": "DONE", "FIX-063": "QUEUED", "FIX-064": "QUEUED", "FIX-065": "QUEUED", "FIX-066": "DONE", "FIX-067": "QUEUED"
+    "FIX-051": "QUEUED", "FIX-052": "DONE", "FIX-053": "QUEUED", "FIX-054": "DONE", "FIX-055": "QUEUED", "FIX-056": "DONE", "FIX-057": "DONE", "FIX-058": "DONE", "FIX-059": "QUEUED", "FIX-060": "QUEUED", "FIX-061": "DONE", "FIX-062": "DONE", "FIX-063": "QUEUED", "FIX-064": "QUEUED", "FIX-065": "QUEUED", "FIX-066": "DONE", "FIX-067": "QUEUED",
+    "TQ-001": "QUEUED", "TQ-002": "QUEUED", "TQ-003": "QUEUED", "TQ-004": "QUEUED", "TQ-005": "QUEUED", "TQ-006": "QUEUED",
+    "TQ-007": "QUEUED", "TQ-008": "QUEUED", "TQ-009": "QUEUED", "TQ-010": "QUEUED", "TQ-011": "QUEUED", "TQ-012": "QUEUED", "TQ-013": "QUEUED",
+    "TQ-014": "QUEUED", "TQ-015": "QUEUED", "TQ-016": "QUEUED", "TQ-017": "QUEUED",
+    "TQ-018": "QUEUED", "TQ-019": "QUEUED", "TQ-020": "QUEUED"
   },
   "executionPhases": [
     { "phase": 1, "name": "Retailer → POS Sync", "tickets": ["T-054", "T-055"], "status": "DONE" },
@@ -148,7 +156,11 @@
     { "phase": 52, "name": "11F: POS App P0-P1 — Scanner, Offline, Data", "tickets": ["FIX-031","FIX-032","FIX-033","FIX-034","FIX-035","FIX-036","FIX-037","FIX-038","FIX-039","FIX-040","FIX-041","FIX-042"], "status": "DONE (11/12 — FIX-031 remaining)" },
     { "phase": 53, "name": "11G: SuperAdmin P0-P1 — RBAC & Dashboard", "tickets": ["FIX-043","FIX-044","FIX-045","FIX-046","FIX-047","FIX-048","FIX-049","FIX-050"], "status": "DONE (5/8 — FIX-043,044,046 remaining)" },
     { "phase": 54, "name": "11H: P2 Polish — Cross-Platform", "tickets": ["FIX-051","FIX-052","FIX-053","FIX-054","FIX-055","FIX-056","FIX-057","FIX-058","FIX-059","FIX-060","FIX-061","FIX-062","FIX-063","FIX-064","FIX-065","FIX-066","FIX-067"], "status": "DONE (8/17 — FIX-051,053,055,059,060,063,064,065,067 remaining)" },
-    { "phase": 55, "name": "WA-001: WhatsApp Business Cloud API", "tickets": ["WA-001"], "status": "DONE — PR #243 merged, 105 tests, prestage tag applied" }
+    { "phase": 55, "name": "WA-001: WhatsApp Business Cloud API", "tickets": ["WA-001"], "status": "DONE — PR #243 merged, 105 tests, prestage tag applied" },
+    { "phase": 56, "name": "12A: Critical Gap Closure — Auth, UI, CI", "tickets": ["TQ-001","TQ-002","TQ-003","TQ-004","TQ-005","TQ-006"], "status": "QUEUED — 0/6" },
+    { "phase": 57, "name": "12B: Theater Removal & Rewrite", "tickets": ["TQ-007","TQ-008","TQ-009","TQ-010","TQ-011","TQ-012","TQ-013"], "status": "QUEUED — 0/7" },
+    { "phase": 58, "name": "12C: Test Infrastructure Fixes", "tickets": ["TQ-014","TQ-015","TQ-016","TQ-017"], "status": "QUEUED — 0/4" },
+    { "phase": 59, "name": "12D: Stress & Resilience Tests", "tickets": ["TQ-018","TQ-019","TQ-020"], "status": "QUEUED — 0/3" }
   ],
   "completedPhase1": {
     "range": "T-001 → T-053",
@@ -272,6 +284,31 @@
     "auditRounds": 2,
     "securityFeatures": ["HMAC-SHA256 webhook verification", "Store isolation", "Rate limiting", "Phone normalization", "Input validation"]
   },
+  "phase12_TestQualityHardening": {
+    "range": "TQ-001 → TQ-020",
+    "count": 20,
+    "status": "QUEUED — 0/20",
+    "auditMethod": "Full test-suite read of all 250+ test files across entire repo",
+    "auditDate": "2026-02-17",
+    "breakdown": {
+      "P0_criticalGaps": 4,
+      "P1_theaterRewrite": 10,
+      "P2_infrastructure": 6
+    },
+    "findings": {
+      "productionGrade": "184 files (~40%)",
+      "usefulButLimited": "30 files (~30%)",
+      "theater": "37 files (~30%)",
+      "criticalGaps": 7
+    },
+    "tiers": {
+      "12A_CriticalGaps": "0/6 (TQ-001→TQ-006)",
+      "12B_TheaterRemoval": "0/7 (TQ-007→TQ-013)",
+      "12C_InfrastructureFixes": "0/4 (TQ-014→TQ-017)",
+      "12D_StressResilience": "0/3 (TQ-018→TQ-020)"
+    },
+    "backlogFile": "AUDIT_BACKLOG.md (Phase 12 section)"
+  },
   "infraStatus": {
     "A1_WIF": "DONE",
     "A2_SECRETS": "DONE (10 additional secrets needed for Phase 9 features + 3 WhatsApp secrets added)",
@@ -299,12 +336,12 @@
   },
   "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
   "gitDiscipline": "ON — one ticket = one branch = one PR = one tag",
-  "nextAction": "Phase 10 testing of FIX tickets and WA-001, then continue remaining 19 FIX tickets",
+  "nextAction": "Continue remaining 19 FIX tickets + begin Phase 12 TQ tickets (P0 first: TQ-001→TQ-004)",
   "lastActions": [
+    "Phase 12 CREATED: Full test-suite audit (250+ files) → 20 TQ tickets in AUDIT_BACKLOG.md + CLAUDE_CURRENT_STATE.json",
+    "TEST QUALITY AUDIT: Found ~40% production-grade, ~30% useful-but-limited, ~30% theater across all test suites",
+    "7 CRITICAL GAPS IDENTIFIED: No real auth E2E, zero POS UI tests, stock cap mocked, no authenticated browser tests, stress tests never run, resilience tests non-functional, portals never hit real backend",
     "WA-001 MERGED: WhatsApp Business Cloud API — PR #243 merged as 41fb09b, prestage tag applied",
-    "GIT DISCIPLINE: 48 prestage tags created for all done FIX tickets + WA-001, pushed to origin",
-    "Phase 11 EXECUTION: 48/67 FIX tickets done via 46 PRs (#195→#241), proper branch/PR/tag discipline",
-    "Phase 11 AUDIT COMPLETE: 5-platform deep-scan audit generated 67 production-hardening tickets",
-    "Phase 10D COMPLETE: All 52 test tickets done (TEST-001→TEST-052), 3416 tests, GO/NO-GO complete"
+    "Phase 11 EXECUTION: 48/67 FIX tickets done via 46 PRs (#195→#241), proper branch/PR/tag discipline"
   ]
 }

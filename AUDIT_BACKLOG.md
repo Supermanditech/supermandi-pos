@@ -1,12 +1,15 @@
-# SuperMandi Production Hardening Backlog — Phase 11
+# SuperMandi Production Hardening Backlog — Phase 11 + Phase 12
 
-> **Generated:** 2026-02-16 | **Audit:** 5 parallel deep-scan agents + GCP MCP parity check
-> **Scope:** Retailer Admin + Supplier Portal + POS App + SuperAdmin + Backend + GCP Infrastructure
-> **Total Tickets:** 67 | **Execution Model:** One ticket = one branch = one PR = one tag
+> **Generated:** 2026-02-16 (Phase 11), 2026-02-17 (Phase 12)
+> **Audit:** 5 parallel deep-scan agents + GCP MCP parity check + full test-suite audit (250+ files read)
+> **Scope:** Retailer Admin + Supplier Portal + POS App + SuperAdmin + Backend + GCP Infrastructure + Test Quality
+> **Total Tickets:** 87 (67 Phase 11 + 20 Phase 12) | **Execution Model:** One ticket = one branch = one PR = one tag
 
 ---
 
 ## Executive Summary
+
+### Phase 11: Production Hardening (FIX-001 → FIX-067) — 48/67 DONE
 
 | Platform | Total | P0 | P1 | P2 |
 |----------|-------|----|----|------|
@@ -18,6 +21,16 @@
 | SuperAdmin | 8 | 4 | 3 | 1 |
 | P2 Polish (cross-platform) | 17 | 0 | 0 | 17 |
 | **TOTAL** | **67** | **16** | **26** | **25** |
+
+### Phase 12: Test Quality Hardening (TQ-001 → TQ-020) — 0/20 DONE
+
+| Category | Total | P0 | P1 | P2 |
+|----------|-------|----|----|------|
+| Critical Gaps (auth, UI, CI) | 6 | 3 | 3 | 0 |
+| Theater Removal & Rewrite | 7 | 0 | 4 | 3 |
+| Test Infrastructure Fixes | 4 | 1 | 2 | 1 |
+| Stress & Resilience | 3 | 0 | 1 | 2 |
+| **TOTAL** | **20** | **4** | **10** | **6** |
 
 ### GCP Parity Findings
 - All 6 Cloud Run services deployed at GIT_SHA `f61a3b2` — **37 commits behind** main HEAD `e52adf7`
@@ -612,6 +625,257 @@ Phase 11H (Tier 7): FIX-051→FIX-067  — P2 Polish
 
 ---
 
+## Phase 12: Test Quality Hardening (TQ-001 → TQ-020)
+
+> **Generated:** 2026-02-17 | **Audit:** Full test-suite read of every test file in repo
+> **Goal:** Eliminate test theater, close critical gaps, achieve "close eyes and ship" confidence
+> **Scope:** Backend + POS + Retailer Admin + Supplier Portal + SuperAdmin + E2E
+> **Total Tickets:** 20 | **Execution Model:** One ticket = one branch = one PR = one tag
+
+### Phase 12 Summary
+
+| Category | Total | P0 | P1 | P2 |
+|----------|-------|----|----|------|
+| Critical Gaps (auth, UI, CI) | 6 | 3 | 3 | 0 |
+| Theater Removal & Rewrite | 7 | 0 | 4 | 3 |
+| Test Infrastructure Fixes | 4 | 1 | 2 | 1 |
+| Stress & Resilience | 3 | 0 | 1 | 2 |
+| **TOTAL** | **20** | **4** | **10** | **6** |
+
+### Audit Findings (Input for Tickets)
+
+| Verdict | Backend | POS App | Portals | E2E | Total |
+|---------|---------|---------|---------|-----|-------|
+| PRODUCTION-GRADE | 10 files (~143 tests) | 24 files | 137 files | 13 files | 184 files |
+| USEFUL-BUT-LIMITED | 8 files (~69 tests) | 12 files | — | 10 files | 30 files |
+| THEATER | 4 files (~51 tests) | ~25 files | — | 3 files + 5 root e2e/ | 37 files |
+
+**7 Critical Gaps Identified:**
+1. No test ever logs in through real auth (all E2E bypass JWT)
+2. Zero UI rendering tests for POS app (67 files, zero `render()` calls)
+3. Cart store mocks away stock capping (the #1 business invariant)
+4. Portal tests never hit a real backend (137 files, all mocked APIs)
+5. Stress tests have never been run (no infrastructure exists)
+6. No authenticated browser flows (Playwright only visits login pages)
+7. Resilience tests non-functional (db-failure/redis-failure always skip)
+
+---
+
+### Tier 8: Critical Gap Closure — Auth & Security (Phase 12A)
+
+#### TQ-001: Add real auth E2E test — phone login → JWT → authenticated request
+- **Priority:** P0
+- **Platform:** E2E (Playwright)
+- **Scope:** Auth flow, JWT validation, token refresh
+- **Description:** EVERY E2E test currently bypasses authentication using `x-actor-id` / `x-device-token` headers instead of going through the real JWT login flow. OTP is always bypassed via `otpProof: "dev-mode-skip"`. If the gateway has a bug validating tokens, all tests pass but production is insecure. Need at least one test per role (retailer, supplier, admin) that does: real phone input → OTP (test-mode) → receive JWT → make authenticated API call → verify JWT is validated by middleware → test token refresh → test expired token rejection.
+- **Acceptance:** 3 new E2E tests (retailer, supplier, admin) that go through real `POST /auth/login` → receive JWT → use JWT in Authorization header → verify 401 on expired/invalid token. No `x-actor-id` header shortcuts.
+- **Files:** `e2e-tests/tests/auth/real-auth-flow.spec.ts` (new), `e2e-tests/tests/auth/helpers.ts` (new)
+- **Gap:** GAP-1
+
+#### TQ-002: Add POS app component render tests for critical screens
+- **Priority:** P0
+- **Platform:** POS App
+- **Scope:** React Native Testing Library, 5 critical screens
+- **Description:** The POS app has 67 test files but ZERO component render tests. No `render()`, no `screen.getByText()`, no React Native Testing Library usage. If a button disappears, a screen crashes, or navigation breaks — nothing catches it. The three web portals have render tests but POS (the primary user-facing app) has none. Need render tests for the 5 highest-traffic screens: SellScanScreen, PaymentScreen, SuccessPrintScreenV2, MenuScreen, CartBottomSheet.
+- **Acceptance:** 5 new test files using `@testing-library/react-native`. Each test: renders without crash, critical buttons exist, critical text visible, tap triggers expected action (mocked navigation/store). UX 4-state coverage (loading/success/empty/error) for screens that have those states.
+- **Files:** `src/__tests__/screens/SellScanScreen.test.tsx` (new), `src/__tests__/screens/PaymentScreen.test.tsx` (new), `src/__tests__/screens/SuccessPrintScreen.test.tsx` (new), `src/__tests__/screens/MenuScreen.test.tsx` (new), `src/__tests__/screens/CartBottomSheet.test.tsx` (new)
+- **Gap:** GAP-2
+
+#### TQ-003: Fix cartStore test — stop mocking away stock cap
+- **Priority:** P0
+- **Platform:** POS App
+- **Scope:** `src/__tests__/stores/cartStore.test.ts`
+- **Description:** The Jest `cartStore.test.ts` mocks `capAddQuantity` to always succeed (`jest.mock('../services/stockCap')`). This means the most critical business invariant (don't oversell) is mocked away in the standard test suite. The real stock cap test exists in `src/services/stockCap.integration.test.js` but it's outside Jest's `testMatch` and doesn't run with `pnpm test`. The cart store test gives false confidence that cart operations are tested while silently allowing overselling.
+- **Acceptance:** (A) `cartStore.test.ts` updated to test WITH real stock cap logic (at least 3 tests: add within stock, reject above stock, reject out-of-stock). (B) `stockCap.integration.test.js` path added to Jest `testMatch` OR converted to a Jest test file so it runs with `pnpm test`.
+- **Files:** `src/__tests__/stores/cartStore.test.ts`, `src/services/stockCap.integration.test.js`, `jest.config.js`
+- **Gap:** GAP-3
+
+#### TQ-004: Move Tier 3 backend tests (goldenPath, auth) to CI
+- **Priority:** P0
+- **Platform:** Backend CI
+- **Scope:** jest.config.ts, CI workflow
+- **Description:** The two most valuable backend tests — `goldenPath.test.ts` (13 tests, full purchase cycle against real API + DB) and `auth.test.ts` (8 tests, real JWT flow) — only run in Tier 3, which requires a manually started API gateway. They are NOT part of CI. CI default is Tier 2. These tests catch authentication bypasses, state machine violations, inventory miscalculations — but nobody runs them. Need to add a CI job that spins up testcontainers + API gateway and runs Tier 3 tests.
+- **Acceptance:** GitHub Actions workflow includes a `test-tier3` job that: starts PostgreSQL + Redis via testcontainers, starts API gateway, runs `TEST_TIER=3 pnpm test`. Job runs on every PR to main.
+- **Files:** `.github/workflows/ci.yml` (modify), `backend/jest.config.ts` (verify Tier 3 config), `backend/tests/containers/globalSetup.ts`
+- **Gap:** GAP-3 (backend aspect)
+
+#### TQ-005: Add authenticated Playwright browser tests for all 3 portals
+- **Priority:** P1
+- **Platform:** E2E (Playwright)
+- **Scope:** Retailer Admin, Supplier Portal, SuperAdmin
+- **Description:** Every Playwright browser test only visits login/public pages. Nobody ever logs in and navigates authenticated dashboards, views products, creates orders, or uses any real feature through the browser. Need at least one smoke test per portal that: logs in with test credentials → navigates to main dashboard → verifies data loads → navigates to 2-3 key pages → logs out. This tests the real frontend-to-backend integration in a browser.
+- **Acceptance:** 3 new Playwright spec files. Each: (1) loads portal login page, (2) enters test credentials, (3) reaches authenticated dashboard, (4) verifies at least 1 API-driven data load, (5) navigates to 2 sub-pages, (6) logs out successfully. No `x-actor-id` shortcuts — real browser auth.
+- **Files:** `e2e-tests/tests/authenticated/retailer-dashboard.spec.ts` (new), `e2e-tests/tests/authenticated/supplier-dashboard.spec.ts` (new), `e2e-tests/tests/authenticated/admin-dashboard.spec.ts` (new)
+- **Gap:** GAP-6
+
+#### TQ-006: Add portal-to-backend integration contract tests
+- **Priority:** P1
+- **Platform:** Retailer Admin, Supplier Portal, SuperAdmin
+- **Scope:** API response shape validation
+- **Description:** All 137 portal test files use mocked API responses. They verify the UI calls the right endpoints with right payloads, but never verify the backend returns what the frontend expects. A backend response shape change would break portals silently. Need contract tests that: call the real backend API → validate the response matches the Zod/TypeScript shape the portal expects. These can run against the same testcontainers backend from TQ-004.
+- **Acceptance:** 3 new test files (one per portal) that make real HTTP calls to the backend and validate response shapes against the portal's expected types. At minimum: auth endpoint, product list, order list, config-status.
+- **Files:** `e2e-tests/tests/contracts/retailer-api-contract.spec.ts` (new), `e2e-tests/tests/contracts/supplier-api-contract.spec.ts` (new), `e2e-tests/tests/contracts/admin-api-contract.spec.ts` (new)
+- **Gap:** GAP-4
+
+---
+
+### Tier 9: Theater Removal & Rewrite (Phase 12B)
+
+#### TQ-007: Rewrite backend security.unit.test.ts — test real middleware
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** `backend/tests/security.unit.test.ts` (14 tests)
+- **Description:** Every test creates local objects and asserts against them. The SQL injection test does `expect(maliciousInput).toContain("'")` — asserting a string literal has a quote. The XSS test does a manual `.replace()` unrelated to actual escaping. The RBAC test defines local role arrays. The storeId test compares two local variables. ZERO imports from actual codebase. If someone removes all authentication from every route, these 14 tests still pass.
+- **Acceptance:** Rewrite to import and test real middleware: (A) `enforceStoreIsolation` with tampered storeId → verify rejection. (B) Real Express route with `requireDeviceToken` → verify 401 without token. (C) Real input validation middleware with SQL injection payload → verify sanitized. Delete any test that doesn't import real application code.
+- **Files:** `backend/tests/security.unit.test.ts`
+- **Verdict:** Currently THEATER → must become PRODUCTION-GRADE
+
+#### TQ-008: Rewrite backend dataIntegrity.unit.test.ts — test real functions
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** `backend/tests/dataIntegrity.unit.test.ts` (12 tests)
+- **Description:** Tests JavaScript arithmetic: `expect(10 + 20).toBe(30)`. The "sale cannot create negative stock" test does `if (condition) expect(true).toBe(true)`. The "ledger entries immutable" test asserts a local object has a field it was just given. No application code imported. Zero production bug detection capability.
+- **Acceptance:** Rewrite to import real functions: (A) Test `formatMoney` with edge cases. (B) Test `normalizeScan` with real barcodes. (C) Test `applyInventoryMovement` with boundary values. (D) Test real order state machine transitions. Delete any test that only asserts local arithmetic.
+- **Files:** `backend/tests/dataIntegrity.unit.test.ts`
+- **Verdict:** Currently THEATER → must become PRODUCTION-GRADE
+
+#### TQ-009: Rewrite backend crossServiceIntegration.unit.test.ts — test real flows
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** `backend/tests/crossServiceIntegration.unit.test.ts` (8 tests)
+- **Description:** Despite name "Cross-Service Integration," nothing crosses services. Every test creates local data and asserts `expect(95).toBeLessThanOrEqual(100)`. None import application code. Name gives false confidence of integration coverage that doesn't exist.
+- **Acceptance:** Either: (A) Rewrite as real cross-service tests that call scan → create sale → verify inventory deduction via actual service functions. OR (B) Delete file entirely (the real integration testing is done by `goldenPath.test.ts` in Tier 3). No in-between — no local arithmetic masquerading as integration tests.
+- **Files:** `backend/tests/crossServiceIntegration.unit.test.ts`
+- **Verdict:** Currently THEATER → delete or rewrite
+
+#### TQ-010: Rewrite POS fixPOS.test.ts — test actual code, not copies
+- **Priority:** P1
+- **Platform:** POS App
+- **Scope:** `src/__tests__/fixes/fixPOS.test.ts` (~35 tests across 13 describe blocks)
+- **Description:** Each FIX test re-implements the fix logic inline (in the test file) and tests the inline copy. FIX-035 literally sets a boolean to true and asserts it's true. FIX-056/057 create objects with hardcoded strings and check they exist. FIX-037 implements LRU eviction from scratch. None import from `src/`. If real code drifts, tests still pass green.
+- **Acceptance:** For each FIX block: (A) If the fix is in a pure function (e.g., LRU eviction in apiClient), import and test the REAL function. (B) If the fix is a UI pattern (mounted ref, cleanup), convert to a component render test. (C) If the fix is trivially correct (set boolean), delete the test. Every remaining test must have at least one `import` from `src/`.
+- **Files:** `src/__tests__/fixes/fixPOS.test.ts`
+- **Verdict:** Currently THEATER → rewrite or delete
+
+#### TQ-011: Remove/rewrite POS API export-only tests
+- **Priority:** P2
+- **Platform:** POS App
+- **Scope:** ~20 files in `src/__tests__/services/api/*.test.ts`
+- **Description:** Every API test file just checks `typeof function === 'function'` and creates TypeScript objects to verify `.field === 'value'`. TypeScript compilation already catches this. Example: `expect(typeof createSale).toBe('function')` — this is the test. If createSale throws on every call, the test passes.
+- **Acceptance:** Either: (A) Add real tests per file — mock fetch, verify correct URL/method/headers/body sent. OR (B) Delete these files and rely on TypeScript + the real integration tests. Minimum: any remaining test must assert behavior, not just existence.
+- **Files:** `src/__tests__/services/api/posApi.test.ts`, `src/__tests__/services/api/scanApi.test.ts`, and ~18 more in same directory
+- **Verdict:** Currently THEATER → rewrite or delete
+
+#### TQ-012: Delete root e2e/ theater tests
+- **Priority:** P2
+- **Platform:** POS App
+- **Scope:** `e2e/` directory (5 files)
+- **Description:** Files claim "E2E" but contain only arithmetic: `expect(10000 * 2).toBe(20000)`, array filters, and string comparisons. Comments admit: "for full UI E2E testing, use Maestro flows." Zero HTTP calls, zero browser automation, zero DB. Real E2E is in `e2e-tests/` directory. These mislead contributors into thinking E2E coverage exists.
+- **Acceptance:** Delete `e2e/` directory entirely (not `e2e-tests/` — that's the real one). Or rename to `e2e/README.md` explaining these are deprecated stubs.
+- **Files:** `e2e/sellFlow.test.ts`, `e2e/buyFlow.test.ts`, `e2e/reorderFlow.test.ts`, `e2e/grnFlow.test.ts`, `e2e/batchKInvariants.test.ts`, `e2e/jest.config.js`
+- **Verdict:** Currently THEATER → delete
+
+#### TQ-013: Rewrite backend voiceOrderService boundary tests — import real code
+- **Priority:** P2
+- **Platform:** Backend
+- **Scope:** `backend/src/services/ai/__tests__/voiceOrderService.test.ts` (boundary section)
+- **Description:** The `enforceBoundaries` function tested on lines 13-42 is a LOCAL COPY defined inside the test file. It has zero connection to the real `voiceOrderService.ts`. If someone changes the real service's boundary logic, these tests keep passing with the old copied logic. The schema validation and idempotency sections are separate and acceptable.
+- **Acceptance:** Import `enforceBoundaries` from the actual service file (or its extracted utility). Delete the local copy. If the function isn't exported, export it. Every assertion must reference imported code.
+- **Files:** `backend/src/services/ai/__tests__/voiceOrderService.test.ts`
+- **Verdict:** Boundary section THEATER → rewrite
+
+---
+
+### Tier 10: Test Infrastructure Fixes (Phase 12C)
+
+#### TQ-014: Include standalone POS integration tests in Jest testMatch
+- **Priority:** P1
+- **Platform:** POS App
+- **Scope:** `jest.config.js`, 5 standalone test files
+- **Description:** The 5 most valuable POS tests — `stockCap.integration.test.js`, `sellFirstOnboarding.integration.test.js`, `stockService.integration.test.js`, `saleScope.test.js`, `purchaseDraftLogic.test.ts` — use `node:assert` and `vm.runInNewContext` with manual TypeScript transpilation. They are NOT in Jest's `testMatch` pattern (`<rootDir>/src/__tests__/**/*`) and don't run with `pnpm test`. They must be executed individually via `node src/services/stockCap.test.js`. They are invisible to the standard test runner.
+- **Acceptance:** Either: (A) Move files into `src/__tests__/` and convert to Jest assertions. OR (B) Add a second testMatch pattern: `<rootDir>/src/**/*.integration.test.{js,ts}`. OR (C) Add an npm script `test:integration` that runs them separately. The standalone tests MUST be discoverable by at least one `pnpm test*` command.
+- **Files:** `jest.config.js`, `src/services/stockCap.integration.test.js`, `src/services/scan/sellFirstOnboarding.integration.test.js`, `src/services/stockService.integration.test.js`, `src/services/saleScope.test.js`, `src/stores/purchaseDraftLogic.test.ts`
+
+#### TQ-015: Fix E2E accessibility-deep.spec.ts broken assertion
+- **Priority:** P2
+- **Platform:** E2E (Playwright)
+- **Scope:** `e2e-tests/tests/accessibility-deep.spec.ts`
+- **Description:** The focus indicator test does `expect(typeof hasVisibleFocus).toBe('boolean')` — this assertion ALWAYS passes. It checks the type is boolean, not that focus IS visible. Should be `expect(hasVisibleFocus).toBe(true)`. This means the focus indicator check provides zero value.
+- **Acceptance:** Change assertion to `expect(hasVisibleFocus).toBe(true)`. If the test then fails because focus indicators are missing, fix the CSS. Don't weaken the assertion back.
+- **Files:** `e2e-tests/tests/accessibility-deep.spec.ts`
+
+#### TQ-016: Fix backend contract tests — import Zod schemas from app code
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** `backend/tests/contracts/posApi.unit.test.ts`, `backend/tests/contracts/inventoryApi.unit.test.ts`
+- **Description:** Both files define Zod schemas inside the test file that are disconnected from actual API code. If the real API returns a different shape, these tests don't know. They test "does Zod work?" not "does our API match the contract?" Need to either import schemas from the app code OR generate schemas from actual response types.
+- **Acceptance:** Schemas imported from actual API service files or shared types. If no shared schemas exist, create them in a `backend/src/contracts/` directory and import from both route handlers and tests. Every schema must have a clear link to the route it validates.
+- **Files:** `backend/tests/contracts/posApi.unit.test.ts`, `backend/tests/contracts/inventoryApi.unit.test.ts`
+
+#### TQ-017: Add test coverage reporting to CI
+- **Priority:** P1
+- **Platform:** All
+- **Scope:** CI workflow, jest/vitest configs
+- **Description:** No coverage reporting exists in CI. Theater tests inflate perceived coverage. Need actual coverage numbers visible on every PR to track progress and prevent regression. Coverage thresholds exist in portal configs (30% statements) but are never enforced.
+- **Acceptance:** CI workflow runs tests with `--coverage`. Coverage report attached to PR as comment. Coverage thresholds enforced: fail if coverage drops below current baseline. Coverage badge in README.
+- **Files:** `.github/workflows/ci.yml`, `jest.config.js`, `backend/jest.config.ts`, `retailer-admin/vitest.config.ts`, `supermandi-superadmin/vitest.config.ts`, `supplier-portal/jest.config.js`
+
+---
+
+### Tier 11: Stress & Resilience Tests (Phase 12D)
+
+#### TQ-018: Fix E2E db-failure and redis-failure tests — implement real failure simulation
+- **Priority:** P1
+- **Platform:** E2E (Playwright)
+- **Scope:** `e2e-tests/stress/tests/db-failure.spec.ts`, `e2e-tests/stress/tests/redis-failure.spec.ts`
+- **Description:** Both files have the right intent but critical tests are behind `test.skip()` with manual env flags (`DB_DOWN=true`, `REDIS_DOWN=true`). The `simulateDbFailure()` function is literally `console.log()` — it doesn't actually stop any services. The only tests that run are trivial health checks. Real resilience testing requires using testcontainers to actually stop/restart DB/Redis.
+- **Acceptance:** Rewrite using testcontainers: (A) Start PostgreSQL + Redis. (B) Run baseline test. (C) Stop PostgreSQL container. (D) Verify API returns 503 (not crash). (E) Restart PostgreSQL. (F) Verify recovery. Same pattern for Redis. Remove `test.skip()` and env flag gates. Tests must actually run.
+- **Files:** `e2e-tests/stress/tests/db-failure.spec.ts`, `e2e-tests/stress/tests/redis-failure.spec.ts`
+
+#### TQ-019: Set up k6 stress test infrastructure
+- **Priority:** P2
+- **Platform:** E2E (k6)
+- **Scope:** k6 scripts, seed data, CI integration
+- **Description:** 6 well-designed k6 stress scripts exist but require: k6 installed, staging deployment, seeded 100K-product database, Razorpay sandbox, multiple auth tokens. No evidence this infrastructure has ever been assembled. The `seed-production-data.ts` script exists but requires direct DB access. Need a runnable setup that can execute stress tests against staging after deploy.
+- **Acceptance:** (A) Docker-based k6 setup (or k6 cloud config). (B) `seed-production-data.ts` runnable against staging Cloud SQL. (C) Auth token generation script for k6 scenarios. (D) CI job that runs k6 suite after staging deploy (can be manual trigger). (E) At least one stress test (scan-stress) verifiable locally.
+- **Files:** `e2e-tests/stress/k6/*.js`, `e2e-tests/stress/seed-production-data.ts`, `.github/workflows/stress-test.yml` (new)
+
+#### TQ-020: Replace go-no-go-report.ts with computed report
+- **Priority:** P2
+- **Platform:** E2E
+- **Scope:** `e2e-tests/stress/go-no-go-report.ts`
+- **Description:** Current script prints 20 hardcoded "PASS" values that are developer assertions, not computed from actual test runs. The 28 "MANUAL" entries have no tracking mechanism. This is a documentation artifact masquerading as an automated gate.
+- **Acceptance:** Rewrite to: (A) Read actual test results from Jest/Playwright/k6 JSON output files. (B) Compute PASS/FAIL from real data. (C) Track MANUAL items with explicit staging verification checkboxes. (D) Output machine-readable JSON for CI gating. Zero hardcoded PASS values.
+- **Files:** `e2e-tests/stress/go-no-go-report.ts`
+
+---
+
+### Phase 12 Execution Order & Gates
+
+```
+Phase 12A (Tier 8): TQ-001→TQ-006  — Critical Gap Closure
+  Gate: Real auth E2E passes, POS render tests pass, cartStore tests enforce stock cap
+
+Phase 12B (Tier 9): TQ-007→TQ-013  — Theater Removal
+  Gate: Zero theater tests remain. Every test file imports real application code.
+
+Phase 12C (Tier 10): TQ-014→TQ-017  — Infrastructure Fixes
+  Gate: All standalone tests discoverable by pnpm test, CI coverage reporting active
+
+Phase 12D (Tier 11): TQ-018→TQ-020  — Stress & Resilience
+  Gate: db-failure + redis-failure tests actually run, k6 scan-stress verifiable
+```
+
+### Phase 12 Execution Rules
+1. **One ticket = one branch = one PR = one tag** — no mixed scope
+2. **TQ-001→TQ-004 are blockers** — these close the critical security/integrity gaps
+3. **Theater removal (TQ-007→TQ-013) can run in parallel** — independent files
+4. **TQ-014 (Jest testMatch) must come before TQ-003** — standalone tests need to be in Jest first
+5. **TQ-017 (coverage CI) should be early** — establishes baseline before rewrites
+6. **Delete > Rewrite** — if a theater test has no salvageable logic, delete it. Don't polish garbage.
+
+---
+
 ## Audit Source Files
 
 | Platform | Agent Output |
@@ -622,3 +886,4 @@ Phase 11H (Tier 7): FIX-051→FIX-067  — P2 Polish
 | SuperAdmin (25 bugs) | `tasks/ac3323b.output` |
 | Backend (15 bugs) | `tasks/aa762b7.output` |
 | GCP Infrastructure | MCP queries (gcloud, staging-db) |
+| **Test Quality Audit** | **Full-repo read of all 250+ test files, 2026-02-17** |
