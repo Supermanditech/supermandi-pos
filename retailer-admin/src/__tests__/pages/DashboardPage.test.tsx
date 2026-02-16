@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import DashboardPage from '../../pages/DashboardPage';
-import React from 'react';
 
 // Mock AuthContext
 vi.mock('../../lib/AuthContext', () => ({
@@ -262,7 +261,7 @@ describe('Categories', () => {
 
     await waitFor(() => {
       // "All" with sortOrder=0 should be filtered out
-      const allCategories = screen.queryAllByText('All');
+      screen.queryAllByText('All');
       // If "All" appears, it should NOT be from the category cards
       // The category section should only show Staples and Beverages
       expect(screen.getByText('Staples')).toBeInTheDocument();

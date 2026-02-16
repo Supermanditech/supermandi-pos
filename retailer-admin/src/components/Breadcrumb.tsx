@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   label: string;
   path?: string;
+  onClick?: () => void;
 }
 
 interface BreadcrumbProps {
@@ -17,6 +18,8 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
           {i > 0 && <span style={{ color: '#CBD5E1' }}>&rsaquo;</span>}
           {item.path ? (
             <Link to={item.path} style={{ color: '#64748B', textDecoration: 'none' }}>{item.label}</Link>
+          ) : item.onClick ? (
+            <a onClick={item.onClick} style={{ color: '#64748B', textDecoration: 'none', cursor: 'pointer' }}>{item.label}</a>
           ) : (
             <span style={{ color: '#0F172A', fontWeight: 500 }}>{item.label}</span>
           )}

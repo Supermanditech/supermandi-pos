@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { useEscapeKey, useAriaLabel, useFocusTrap } from '../../lib/hooks';
 import React from 'react';

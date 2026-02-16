@@ -184,7 +184,7 @@ describe('ErrorBoundary', () => {
 
   describe('error boundary state', () => {
     it('starts with hasError: false', () => {
-      const { container } = render(
+      render(
         <ErrorBoundary>
           <div>Normal content</div>
         </ErrorBoundary>

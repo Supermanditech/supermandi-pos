@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import ProtectedLayout from '../../components/ProtectedLayout';
-import React from 'react';
 
 // Mock AuthContext
 const mockLogout = vi.fn();
@@ -43,7 +42,7 @@ vi.mock('../../components/BuildStamp', () => ({
 }));
 
 vi.mock('../../components/Modal', () => ({
-  default: ({ isOpen, onClose, title, children, actions }: any) => {
+  default: ({ isOpen, title, children, actions }: any) => {
     if (!isOpen) return null;
     return (
       <div data-testid="modal" role="dialog">

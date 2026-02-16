@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import InventoryPage from '../pages/InventoryPage';
 
@@ -18,7 +18,7 @@ vi.mock('../components/EmptyState', () => ({
 }));
 
 vi.mock('../hooks/useUrlState', () => ({
-  useUrlState: (key: string, defaultValue: string = '') => {
+  useUrlState: (_key: string, defaultValue: string = '') => {
     const { useState } = require('react');
     return useState(defaultValue);
   },

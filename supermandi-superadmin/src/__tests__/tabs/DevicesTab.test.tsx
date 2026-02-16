@@ -18,7 +18,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 vi.mock('../../components/EnrollmentCountdown', () => ({
-  EnrollmentCountdown: ({ expiresAt }: { expiresAt: string }) => <span>5m 00s</span>,
+  EnrollmentCountdown: () => <span>5m 00s</span>,
 }));
 
 function createProps(overrides: Partial<Parameters<typeof DevicesTab>[0]> = {}) {

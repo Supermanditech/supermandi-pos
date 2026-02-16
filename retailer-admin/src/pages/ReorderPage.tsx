@@ -4,7 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import Breadcrumb from '../components/Breadcrumb';
 import EmptyState from '../components/EmptyState';
-import { PackageCheck, RefreshCw, Settings, AlertTriangle, CreditCard } from 'lucide-react';
+import { PackageCheck, RefreshCw, Settings, AlertTriangle } from 'lucide-react';
 
 // =============================================================================
 // TYPES (matching T-243 backend response)
@@ -64,7 +64,7 @@ export default function ReorderPage() {
   const [activeTab, setActiveTab] = useState<'suggestions' | 'pending' | 'settings'>('suggestions');
 
   // Settings state (matches canonical schema)
-  const [settings, setSettings] = useState<ReorderSettings | null>(null);
+  const [_settings, setSettings] = useState<ReorderSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsSaving, setSettingsSaving] = useState(false);

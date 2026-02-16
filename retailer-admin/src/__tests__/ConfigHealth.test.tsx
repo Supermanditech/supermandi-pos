@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ConfigHealth, getConfigInfo, useConfigHealth } from '../components/ConfigHealth';
-
-// Mock import.meta.env
-const mockEnv: Record<string, unknown> = {};
+import { ConfigHealth, getConfigInfo } from '../components/ConfigHealth';
 
 vi.mock('../components/ConfigHealth', async () => {
   const actual = await vi.importActual('../components/ConfigHealth');

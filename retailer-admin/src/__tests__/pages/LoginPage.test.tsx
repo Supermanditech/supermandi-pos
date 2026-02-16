@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import LoginPage from '../../pages/LoginPage';
-import React from 'react';
 
 // Mock navigate
 const mockNavigate = vi.fn();
@@ -56,7 +55,7 @@ import { safeJson } from '../../lib/api';
 const mockedSendOtp = vi.mocked(sendOtp);
 const mockedVerifyOtp = vi.mocked(verifyOtp);
 const mockedIsFirebaseReady = vi.mocked(isFirebaseReady);
-const mockedSafeJson = vi.mocked(safeJson);
+vi.mocked(safeJson);
 
 function renderLoginPage() {
   return render(

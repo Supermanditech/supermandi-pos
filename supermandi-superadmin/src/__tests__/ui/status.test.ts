@@ -1,7 +1,7 @@
 // SuperAdmin — Test status utility functions
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isDeviceOnline, getDeviceTone, composeDeviceMessage } from '../../ui/status';
-import type { DeviceStatus, StatusTone } from '../../ui/status';
+import type { DeviceStatus } from '../../ui/status';
 
 describe('isDeviceOnline', () => {
   beforeEach(() => { vi.useFakeTimers(); });

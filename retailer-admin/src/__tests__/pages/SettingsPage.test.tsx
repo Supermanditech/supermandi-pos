@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import SettingsPage from '../../pages/SettingsPage';
-import React from 'react';
 
 // Mock AuthContext
 vi.mock('../../lib/AuthContext', () => ({
@@ -54,14 +53,6 @@ const mockSettingsResponse = {
     showTaxBreakdown: false,
   },
 };
-
-function createMockResponse(ok = true, status = 200) {
-  return {
-    ok,
-    status,
-    json: () => Promise.resolve(mockSettingsResponse),
-  };
-}
 
 function renderSettings(path = '/s/STORE1/settings') {
   return render(
@@ -281,7 +272,7 @@ describe('UPI VPA validation', () => {
   });
 
   it('accepts valid UPI VPA', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -309,7 +300,7 @@ describe('UPI VPA validation', () => {
   });
 
   it('accepts empty UPI VPA (optional)', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -376,7 +367,7 @@ describe('Tax rate validation', () => {
   });
 
   it('accepts tax rate of 0', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -425,7 +416,7 @@ describe('Phone validation', () => {
   });
 
   it('accepts valid phone number starting with 6-9', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -453,7 +444,7 @@ describe('Phone validation', () => {
   });
 
   it('accepts empty phone (optional)', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -504,7 +495,7 @@ describe('GST number validation', () => {
   });
 
   it('accepts empty GST number (optional)', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -536,7 +527,7 @@ describe('GST number validation', () => {
 
 describe('Save settings', () => {
   it('calls API with PATCH method on save', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -568,7 +559,7 @@ describe('Save settings', () => {
   });
 
   it('shows success message after saving', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -593,7 +584,7 @@ describe('Save settings', () => {
   });
 
   it('shows error message when save fails', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({
           ok: false,
@@ -622,7 +613,7 @@ describe('Save settings', () => {
   });
 
   it('shows error when save throws network error', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.reject(new Error('Network error'));
       }
@@ -649,7 +640,7 @@ describe('Save settings', () => {
   it('includes receiptSettings in save payload', async () => {
     let savedPayload: any = null;
 
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         savedPayload = JSON.parse(options.body);
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
@@ -769,8 +760,8 @@ describe('Change password', () => {
   });
 
   it('successfully changes password', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
-      if (url.includes('change-password') && options?.method === 'POST') {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
+      if (_url.includes('change-password') && options?.method === 'POST') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
       return Promise.resolve({
@@ -798,8 +789,8 @@ describe('Change password', () => {
   });
 
   it('clears password fields after successful change', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
-      if (url.includes('change-password') && options?.method === 'POST') {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
+      if (_url.includes('change-password') && options?.method === 'POST') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
       return Promise.resolve({
@@ -836,8 +827,8 @@ describe('Change password', () => {
   });
 
   it('shows error when change password API fails', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
-      if (url.includes('change-password') && options?.method === 'POST') {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
+      if (_url.includes('change-password') && options?.method === 'POST') {
         return Promise.resolve({
           ok: false,
           status: 400,
@@ -871,8 +862,8 @@ describe('Change password', () => {
   it('sends correct payload to change password API', async () => {
     let capturedPayload: any = null;
 
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
-      if (url.includes('change-password') && options?.method === 'POST') {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
+      if (_url.includes('change-password') && options?.method === 'POST') {
         capturedPayload = JSON.parse(options.body);
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }
@@ -981,7 +972,7 @@ describe('Error state on load', () => {
 
 describe('Field interaction', () => {
   it('clears success message when a field is changed', async () => {
-    mockAuthFetch.mockImplementation((url: string, _token: string, options?: any) => {
+    mockAuthFetch.mockImplementation((_url: string, _token: string, options?: any) => {
       if (options?.method === 'PATCH') {
         return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
       }

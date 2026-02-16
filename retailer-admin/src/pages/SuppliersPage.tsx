@@ -1316,7 +1316,7 @@ export default function SuppliersPage() {
         ) : suppliers.length === 0 && !searchTerm ? (
           <div className="card">
             <EmptyState
-              icon={Truck}
+              icon={<Truck size={24} />}
               title="No suppliers yet"
               description="Add your first supplier to start managing your supply chain."
               action={

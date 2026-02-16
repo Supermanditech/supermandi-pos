@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../../lib/AuthContext';
-import React from 'react';
 
 // Mock api module
 vi.mock('../../lib/api', () => ({
@@ -15,11 +14,10 @@ vi.mock('../../lib/api', () => ({
   safeJson: vi.fn(),
 }));
 
-import { logoutApi, hasAuthCookie, safeJson } from '../../lib/api';
+import { logoutApi, hasAuthCookie } from '../../lib/api';
 
 const mockedHasAuthCookie = vi.mocked(hasAuthCookie);
 const mockedLogoutApi = vi.mocked(logoutApi);
-const mockedSafeJson = vi.mocked(safeJson);
 
 // Test consumer component
 function TestConsumer() {

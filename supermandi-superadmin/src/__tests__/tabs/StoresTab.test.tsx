@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { StoresTab } from '../../tabs/StoresTab';
 import type { StoreRecord } from '../../api/stores';
-import type { GlobalFeatureFlag, StoreFeatureFlag } from '../../api/featureFlags';
+
 import React from 'react';
 
 vi.mock('../../lib/formatters', () => ({

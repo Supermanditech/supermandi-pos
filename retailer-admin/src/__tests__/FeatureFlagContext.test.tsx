@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, renderHook } from '@testing-library/react';
-import { FeatureFlagProvider, useFeatureFlags, useFeatureFlag } from '../lib/FeatureFlagContext';
+import { render, screen, waitFor } from '@testing-library/react';
+import { FeatureFlagProvider, useFeatureFlags } from '../lib/FeatureFlagContext';
 
 const mockAuthFetch = vi.fn();
 

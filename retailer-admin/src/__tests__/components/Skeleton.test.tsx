@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { Skeleton } from '../../components/Skeleton';
 import TableSkeleton from '../../components/TableSkeleton';
-import React from 'react';
 
 // ── Skeleton ─────────────────────────────────────────────────────────────
 
@@ -60,8 +59,6 @@ describe('Skeleton', () => {
 describe('TableSkeleton', () => {
   it('renders default 5 rows and 4 columns', () => {
     const { container } = render(<TableSkeleton />);
-    // 1 header row + 5 data rows = 6 flex rows
-    const rows = container.querySelectorAll('div > div');
     // Header row has cols skeleton elements
     const skeletons = container.querySelectorAll('.skeleton');
     // 4 columns in header + 5 rows * 4 cols = 4 + 20 = 24
@@ -98,6 +95,6 @@ describe('TableSkeleton', () => {
   it('has header row with border-bottom', () => {
     const { container } = render(<TableSkeleton />);
     const firstRow = container.querySelector('.card > div');
-    expect(firstRow?.style.borderBottom).toContain('1px solid');
+    expect((firstRow as HTMLElement)?.style.borderBottom).toContain('1px solid');
   });
 });

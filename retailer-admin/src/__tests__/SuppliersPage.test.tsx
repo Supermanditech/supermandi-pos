@@ -18,7 +18,7 @@ vi.mock('../components/EmptyState', () => ({
 }));
 
 vi.mock('../hooks/useUrlState', () => ({
-  useUrlState: (key: string, defaultValue: string = '') => {
+  useUrlState: (_key: string, defaultValue: string = '') => {
     const { useState } = require('react');
     return useState(defaultValue);
   },

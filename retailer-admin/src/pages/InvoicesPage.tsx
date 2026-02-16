@@ -184,7 +184,7 @@ export default function InvoicesPage() {
       {/* Table */}
       {!loading && invoices.length === 0 && (
         <EmptyState
-          icon={FileText}
+          icon={<FileText size={24} />}
           title="No invoices yet"
           description="Invoices will appear here once orders are processed and billed."
         />

@@ -1,7 +1,6 @@
 // SuperAdmin — Test health API client
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchHealth } from '../../api/health';
-import type { HealthResponse } from '../../api/health';
 
 // Mock the authToken module
 vi.mock('../../api/authToken', () => ({

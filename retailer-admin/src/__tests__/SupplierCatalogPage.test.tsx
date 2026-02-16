@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import SupplierCatalogPage from '../pages/SupplierCatalogPage';
 
@@ -54,7 +54,7 @@ describe('SupplierCatalogPage', () => {
     mockAuthFetch.mockReturnValue(new Promise(() => {}));
     renderPage();
     // Should have a search or loading indicator
-    const searchInput = screen.queryByPlaceholderText(/search/i);
+    screen.queryByPlaceholderText(/search/i);
     // Either search exists or we're in a loading state
     expect(document.body).toBeTruthy();
   });

@@ -1590,7 +1590,7 @@ Loose Rice,, , 45, 40, , KG, 25`}
               {error
                 ? <div style={{ padding: '2rem', textAlign: 'center', color: '#dc2626' }}>Could not load products. Please try again.</div>
                 : <EmptyState
-                    icon={Package}
+                    icon={<Package size={24} />}
                     title={searchTerm ? 'No products match your search' : 'No products yet'}
                     description={searchTerm
                       ? 'Try a different search term or clear the search.'

@@ -191,7 +191,7 @@ export default function PurchaseOrdersPage() {
             </div>
           ) : orders.length === 0 ? (
             <EmptyState
-              icon={Truck}
+              icon={<Truck size={24} />}
               title={statusFilter || searchTerm ? 'No matching purchase orders' : 'No purchase orders yet'}
               description={statusFilter || searchTerm
                 ? 'Try changing the filter or search term.'

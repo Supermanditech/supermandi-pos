@@ -336,7 +336,7 @@ export default function InventoryPage() {
                   {/* GL-CRIT-0073: Contextual empty state based on filter — GAP-2: Using EmptyState component */}
                   <td colSpan={6}>
                     <EmptyState
-                      icon={ClipboardList}
+                      icon={<ClipboardList size={24} />}
                       title={
                         filter === 'INWARD' ? 'No inward entries found'
                         : filter === 'OUTWARD' ? 'No sales recorded yet'

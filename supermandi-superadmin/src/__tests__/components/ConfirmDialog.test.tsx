@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ConfirmDialog, EnrollmentResultModal } from '../../components/ConfirmDialog';
-import type { ConfirmDialogConfig, EnrollmentResult } from '../../components/ConfirmDialog';
+import type { EnrollmentResult } from '../../components/ConfirmDialog';
 
 describe('ConfirmDialog', () => {
   const defaultProps = {

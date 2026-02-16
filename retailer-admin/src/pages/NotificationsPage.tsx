@@ -3,10 +3,10 @@
  * In-app notification center showing push notification history
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch } from '../lib/api';
-import { Bell, Check, CheckCheck, RefreshCw, AlertTriangle, Package, CreditCard, Truck } from 'lucide-react';
+import { Bell, CheckCheck, RefreshCw, AlertTriangle, Package, CreditCard, Truck } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -20,7 +20,7 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
-  const { token } = useAuth();
+  const { accessToken } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -28,10 +28,10 @@ export default function NotificationsPage() {
   const limit = 20;
 
   const fetchNotifications = useCallback(async () => {
-    if (!token) return;
+    if (!accessToken) return;
     setLoading(true);
     try {
-      const res = await authFetch(`/api/v1/retailer-admin/notifications?limit=${limit}&offset=${offset}`, token);
+      const res = await authFetch(`/api/v1/retailer-admin/notifications?limit=${limit}&offset=${offset}`, accessToken);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.data || []);
@@ -42,22 +42,22 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, offset]);
+  }, [accessToken, offset]);
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   const markAsRead = async (id: string) => {
-    if (!token) return;
+    if (!accessToken) return;
     try {
-      await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, token, { method: 'PUT' });
+      await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, accessToken, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
     } catch { /* ignore */ }
   };
 
   const markAllAsRead = async () => {
-    if (!token) return;
+    if (!accessToken) return;
     try {
-      await authFetch('/api/v1/retailer-admin/notifications/read-all', token, { method: 'PUT' });
+      await authFetch('/api/v1/retailer-admin/notifications/read-all', accessToken, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
     } catch { /* ignore */ }
   };

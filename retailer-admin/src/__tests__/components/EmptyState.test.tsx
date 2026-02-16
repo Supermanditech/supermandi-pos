@@ -7,7 +7,7 @@ describe('EmptyState', () => {
   it('renders title text', () => {
     render(
       <EmptyState
-        icon={Package}
+        icon={<Package size={24} />}
         title="No products found"
         description="Add your first product to get started"
       />
@@ -19,7 +19,7 @@ describe('EmptyState', () => {
   it('renders description text', () => {
     render(
       <EmptyState
-        icon={Package}
+        icon={<Package size={24} />}
         title="No products found"
         description="Add your first product to get started"
       />
@@ -31,7 +31,7 @@ describe('EmptyState', () => {
   it('renders icon component', () => {
     const { container } = render(
       <EmptyState
-        icon={Package}
+        icon={<Package size={24} />}
         title="No products found"
         description="Add your first product to get started"
       />
@@ -45,7 +45,7 @@ describe('EmptyState', () => {
   it('renders without action button when not provided', () => {
     render(
       <EmptyState
-        icon={Package}
+        icon={<Package size={24} />}
         title="No products found"
         description="Add your first product to get started"
       />
@@ -58,7 +58,7 @@ describe('EmptyState', () => {
   it('renders action button when provided', () => {
     render(
       <EmptyState
-        icon={Package}
+        icon={<Package size={24} />}
         title="No products found"
         description="Add your first product to get started"
         action={<button>Add Product</button>}
@@ -71,7 +71,7 @@ describe('EmptyState', () => {
   it('renders custom action node', () => {
     render(
       <EmptyState
-        icon={Package}
+        icon={<Package size={24} />}
         title="No products found"
         description="Add your first product to get started"
         action={<a href="/add">Add Product Link</a>}

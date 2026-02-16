@@ -1,7 +1,7 @@
 // SuperAdmin — Test monitoring API client
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fetchHealthStatus, triggerTokenCleanup } from '../../api/monitoring';
-import type { HealthResponse, TokenCleanupResult } from '../../api/monitoring';
+import type { HealthResponse } from '../../api/monitoring';
 
 // Mock the authToken module
 vi.mock('../../api/authToken', () => ({

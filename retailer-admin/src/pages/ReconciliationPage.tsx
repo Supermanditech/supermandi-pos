@@ -253,7 +253,7 @@ export default function ReconciliationPage() {
                 <tr>
                   <td colSpan={6}>
                     <EmptyState
-                      icon={IndianRupee}
+                      icon={<IndianRupee size={24} />}
                       title="No reconciliation data"
                       description="No payment data found for the selected date range. Try expanding the date range."
                     />
