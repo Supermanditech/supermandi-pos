@@ -671,58 +671,43 @@ jobs:
           bash scripts/gates/security-deep-scan.sh
 
   # ==========================================================================
-  # JOB 15: SonarCloud Code Quality Analysis
+  # JOB 15: Semgrep SAST (Security & Code Quality)
+  # Free, open-source, no line limits. Replaces SonarCloud.
   # ==========================================================================
-  sonarcloud:
-    name: "Code Quality: SonarCloud"
+  semgrep:
+    name: "Code Quality: Semgrep SAST"
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    container:
+      image: semgrep/semgrep
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for blame info
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-          cache-dependency-path: |
-            retailer-admin/pnpm-lock.yaml
-            supermandi-superadmin/pnpm-lock.yaml
-
-      - name: Install dependencies (all portals)
+      - name: Semgrep Scan
         run: |
-          cd retailer-admin && pnpm install --frozen-lockfile && cd ..
-          cd supermandi-superadmin && pnpm install --frozen-lockfile && cd ..
-          cd supplier-portal && pnpm install --frozen-lockfile && cd ..
-
-      - name: Run tests with coverage (retailer-admin)
-        working-directory: retailer-admin
-        run: npx vitest run --coverage --coverage.reporter=lcov
-
-      - name: Run tests with coverage (superadmin)
-        working-directory: supermandi-superadmin
-        run: npx vitest run --coverage --coverage.reporter=lcov
-
-      - name: Run tests with coverage (supplier-portal)
-        working-directory: supplier-portal
-        run: npx jest --coverage --coverageReporters=lcov || echo "Supplier portal tests skipped (no jest config)"
-
-      - name: Run tests with coverage (POS app)
-        run: npx jest --coverage --coverageReporters=lcov || echo "POS tests skipped (root deps not installed in SonarCloud job)"
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
+          echo "=== Semgrep SAST Scan ==="
+          echo "Rules: auto (security, correctness, best-practices)"
+          echo ""
+          semgrep scan \
+            --config auto \
+            --error \
+            --severity ERROR \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='build' \
+            --exclude='.next' \
+            --exclude='coverage' \
+            --exclude='*.test.*' \
+            --exclude='*.spec.*' \
+            --exclude='__tests__' \
+            --exclude='__mocks__' \
+            --exclude='e2e-tests' \
+            --exclude='scripts' \
+            --exclude='*.config.*' \
+            --exclude='pnpm-lock.yaml' \
+            .
+          echo ""
+          echo "=== Semgrep SAST: PASSED ==="
 
   # ==========================================================================
   # JOB 16: ZRP Routing Spec Validation
@@ -748,7 +733,7 @@ jobs:
     needs: [typecheck, lint, test, build-verify, local-smoke,
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
-            routing-validation, sonarcloud]
+            routing-validation, semgrep]
     if: always()
     steps:
       - name: Check all jobs passed
@@ -804,12 +789,12 @@ jobs:
             fi
           done
 
-          # SonarCloud (NON-BLOCKING until project is configured in SonarCloud dashboard)
-          SONAR_RESULT="${{ needs.sonarcloud.result }}"
-          if [ "$SONAR_RESULT" != "success" ]; then
-            echo "WARN: sonarcloud = $SONAR_RESULT (non-blocking — configure SonarCloud project to enable)"
+          # Semgrep SAST (code quality + security)
+          SEMGREP_RESULT="${{ needs.semgrep.result }}"
+          if [ "$SEMGREP_RESULT" != "success" ]; then
+            echo "WARN: semgrep = $SEMGREP_RESULT (non-blocking)"
           else
-            echo "PASS: sonarcloud (code quality)"
+            echo "PASS: semgrep (SAST code quality)"
           fi
 
           TOTAL_FAILED=$((CORE_FAILED + ZRP_FAILED))
@@ -822,7 +807,7 @@ jobs:
           fi
 
           echo "════════════════════════════════════════════════════════════"
-          echo "ALL CI GATES PASSED (5 core + 9 ZRP + SonarCloud)"
+          echo "ALL CI GATES PASSED (5 core + 9 ZRP + Semgrep)"
           echo "════════════════════════════════════════════════════════════"
           echo ""
           echo "This PR/commit is safe to merge."
