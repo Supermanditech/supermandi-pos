@@ -6,7 +6,12 @@
  * When VITE_API_BASE_URL is set (e.g. the local dev server), all relative
  * API paths are prefixed with it. When empty, relative paths are used (requires Nginx proxy).
  */
-export const API_GATEWAY_BASE = import.meta.env.VITE_API_BASE_URL || '';
+// FIX-019: Enforce HTTPS in production — reject http:// API base URLs
+const _rawApiBase = import.meta.env.VITE_API_BASE_URL || '';
+if (_rawApiBase && _rawApiBase.startsWith('http:') && import.meta.env.PROD) {
+  throw new Error('[FIX-019] VITE_API_BASE_URL must use HTTPS in production. Got: ' + _rawApiBase);
+}
+export const API_GATEWAY_BASE = _rawApiBase;
 
 /**
  * Event system for auth state changes
