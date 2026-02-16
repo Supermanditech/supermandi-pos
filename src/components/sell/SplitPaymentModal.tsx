@@ -11,6 +11,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import QRCode from "react-native-qrcode-svg";
@@ -118,8 +119,9 @@ export function SplitPaymentModal({
       setManualUtrVisible(false);
       setManualUtr("");
     }
-    // Cleanup polling on unmount
+    // FIX-035: Dismiss keyboard + cleanup polling on close/unmount
     return () => {
+      Keyboard.dismiss();
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
         pollIntervalRef.current = null;
