@@ -1,8 +1,31 @@
 // SA-001: Suppliers tab extracted from App.tsx
 // T-188: Batch approval/rejection for pending products
-import { useState } from "react";
+import React, { Component, useState } from "react";
 import type { PendingSupplierRequest, VerifiedSupplier, PendingProduct, BankChangeEntry } from "../api/suppliers";
 import { toggleAutoApproval, publishProduct, batchProductAction } from "../api/suppliers";
+
+// FIX-048: Light error boundary for modal dialogs — shows close button instead of crashing app
+class ModalErrorBoundary extends Component<
+  { children: React.ReactNode; onClose: () => void },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[FIX-048] Modal error boundary caught:", error, info.componentStack);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: "2rem", textAlign: "center" }}>
+          <p style={{ color: "#991b1b", marginBottom: 12 }}>Error loading data</p>
+          <button onClick={this.props.onClose} style={{ padding: "6px 16px", cursor: "pointer" }}>Close</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { formatDateTime } from "../lib/formatters";
 
 interface SuppliersTabProps {
@@ -753,6 +776,8 @@ export function SuppliersTab({
               <button className="btnGhost" onClick={handleCloseEditProduct} aria-label="Close product editor">&times;</button>
             </div>
 
+            {/* FIX-048: Error boundary prevents malformed data from crashing entire app */}
+            <ModalErrorBoundary onClose={handleCloseEditProduct}>
             <div className="modalBody">
               {/* T-162: Larger product image preview (200x200) in detail modal */}
               <div style={{ marginBottom: 16, textAlign: "center" }}>
@@ -927,7 +952,7 @@ export function SuppliersTab({
             </div>
 
             <div className="modalFooter">
-              <button className="btnGhost" onClick={() => setEditingProduct(null)}>Cancel</button>
+              <button className="btnGhost" onClick={handleCloseEditProduct}>Cancel</button>
               <button
                 onClick={handleSubmitEditProduct}
                 disabled={editProductLoading}
@@ -936,6 +961,7 @@ export function SuppliersTab({
                 {editProductLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
+            </ModalErrorBoundary>
           </div>
         </div>
       )}
