@@ -221,10 +221,10 @@ function RegisterPage() {
     }
   }, [resendCooldown]);
 
-  // Validate phone number
+  // FIX-030: Validate phone — enforce Indian format (+91 prefix + 10 digits starting 6-9)
   const validatePhone = (value: string): boolean => {
     const cleaned = value.replace(/[\s-]/g, '');
-    return /^(\+91)?[6-9]\d{9}$/.test(cleaned) || /^\+?[0-9]{10,13}$/.test(cleaned);
+    return /^(\+91)?[6-9]\d{9}$/.test(cleaned);
   };
 
   // Validate GSTIN format (GL-CRIT-0031)
@@ -244,7 +244,7 @@ function RegisterPage() {
     setError('');
 
     if (!validatePhone(phone)) {
-      setError('Please enter a valid phone number');
+      setError('Please enter a valid Indian mobile number (e.g. +919876543210 or 9876543210)');
       return;
     }
 
