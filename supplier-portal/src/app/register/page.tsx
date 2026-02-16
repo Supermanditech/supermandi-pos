@@ -131,6 +131,16 @@ function RegisterPage() {
     setMounted(true);
   }, []);
 
+  // FIX-027: Revoke all blob URLs on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      Object.values(documents).forEach(doc => {
+        if (doc.preview) URL.revokeObjectURL(doc.preview);
+      });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // T-005: Persist registration state to sessionStorage on key changes
   useEffect(() => {
     if (step === 'success') {
@@ -477,10 +487,15 @@ function RegisterPage() {
       preview = URL.createObjectURL(file);
     }
 
-    setDocuments(prev => ({
-      ...prev,
-      [docType]: { file, preview, status: 'pending', error: undefined }
-    }));
+    // FIX-027: Revoke old blob URL before replacing with new one
+    setDocuments(prev => {
+      const old = prev[docType]?.preview;
+      if (old) URL.revokeObjectURL(old);
+      return {
+        ...prev,
+        [docType]: { file, preview, status: 'pending', error: undefined },
+      };
+    });
   }, []);
 
   // Upload a single document
