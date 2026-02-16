@@ -163,6 +163,58 @@ export async function getCreditApplications(): Promise<CreditApplicationsRespons
 }
 
 // =============================================================================
+// T-274: Multi-Provider Credit Offers (from CreditProviderRegistry)
+// =============================================================================
+
+export interface ProviderOffer {
+  offerId: string;
+  providerId: string;
+  providerName: string;
+  mode: string;
+  amountMinor: number;
+  tenureDays: number;
+  interestRateAnnual: number;
+  emiMinor?: number;
+  totalRepayableMinor: number;
+  validUntil: string;
+  terms?: string;
+}
+
+export interface ProviderOffersResponse {
+  success: boolean;
+  offers: ProviderOffer[];
+  balance: {
+    totalCreditLimitMinor: number;
+    usedMinor: number;
+    availableMinor: number;
+    activeDrawdowns: number;
+    overdueDrawdowns: number;
+  };
+  providerCount: number;
+}
+
+/**
+ * T-274: Get aggregated credit offers from ALL active providers
+ * Sorted by total cost (cheapest first)
+ */
+export async function getProviderOffers(): Promise<ProviderOffersResponse> {
+  return apiClient.get<ProviderOffersResponse>("/api/v1/credit/offers");
+}
+
+/**
+ * T-274: Create a drawdown from a specific provider
+ */
+export async function createProviderDrawdown(params: {
+  providerId: string;
+  amountMinor: number;
+  tenureDays: number;
+  supplierId?: string;
+  purchaseOrderId?: string;
+}): Promise<{ success: boolean; drawdownId: string; status: string; message?: string }> {
+  return apiClient.post("/api/v1/credit/drawdown", params);
+}
+
+// =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 

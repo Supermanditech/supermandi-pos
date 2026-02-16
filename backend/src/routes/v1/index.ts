@@ -69,6 +69,10 @@ import { retailerBnplRouter } from "./retailer-admin/bnpl";  // CL-019: Retailer
 import { retailerAdminCustomersRouter } from "./retailer-admin/customers";  // T-218: Customer CRM
 import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
 import { retailerReconciliationRouter } from "./retailer-admin/reconciliation";  // T-260: Payment reconciliation
+import { retailerCreditDashboardRouter } from "./retailer-admin/creditDashboard";  // T-277: Credit dashboard
+import { creditProvidersRouter } from "./credit/providers";  // T-263: Credit provider abstraction
+import { adminCreditProvidersRouter } from "./admin/creditProviders";  // T-281/T-290: Provider management
+import { supplierBnplRouter } from "./supplier/bnplVisibility";  // T-280: Supplier BNPL visibility
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
@@ -178,6 +182,7 @@ v1Router.use("/admin", adminGstComplianceRouter);  // T-235: GST compliance + GS
 v1Router.use("/admin", adminScheduledJobsRouter);  // T-231/T-223: Payment reminders + monitoring
 v1Router.use("/admin", adminRefundsRouter);  // T-219: Admin refund management
 v1Router.use("/admin/quality", qualityDashboardRouter);  // T-223: Quality dashboard API
+v1Router.use("/admin/credit-providers", adminCreditProvidersRouter);  // T-281/T-289/T-290: Provider health + management
 
 // DOCS-001: Document storage routes (public upload, auth required for download)
 v1Router.use("/documents", documentsRouter);
@@ -224,9 +229,12 @@ v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL v
 v1Router.use("/retailer-admin", retailerAdminCustomersRouter);  // T-218: Customer CRM
 v1Router.use("/retailer-admin", retailerNotificationsRouter);  // Phase 8: In-app notification center
 v1Router.use("/retailer-admin", retailerReconciliationRouter);  // T-260: Payment reconciliation
+v1Router.use("/retailer-admin", retailerCreditDashboardRouter);  // T-277: Credit dashboard
+v1Router.use("/credit", creditProvidersRouter);  // T-263/T-274/T-275/T-276/T-278: Credit provider APIs
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/webhooks", refundWebhookRouter);  // T-219: Razorpay refund status webhooks
 v1Router.use("/supplier", supplierRouter);  // SM-005, SM-006, SM-007: Supplier portal APIs
+v1Router.use("/supplier/bnpl", supplierBnplRouter);  // T-280: Supplier BNPL visibility
 v1Router.use("/uploads", uploadsRouter);  // T-160: Image upload endpoint
 v1Router.use("/voice", voiceRouter);  // GO-LIVE: Voice order with OpenAI
