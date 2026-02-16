@@ -486,10 +486,17 @@ export async function deleteMapping(input: DeleteMappingInput): Promise<void> {
       [storeId, mapping.supplier_id, mapping.supplier_product_id, mapping.product_id, userId]
     );
 
-    // Delete the mapping
+    // FIX-006: Delete with store ownership verification (defense-in-depth)
+    // The SELECT above already validated ownership, but the DELETE also checks via JOIN
     await client.query(
-      `DELETE FROM catalog.supplier_product_map WHERE id = $1`,
-      [mapId]
+      `DELETE FROM catalog.supplier_product_map spm
+       USING catalog.supplier_products sp
+       JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
+       WHERE spm.id = $1
+         AND spm.supplier_product_id = sp.id
+         AND ssl.store_id = $2
+         AND ssl.status = 'active'`,
+      [mapId, storeId]
     );
 
     await client.query('COMMIT');
@@ -641,22 +648,28 @@ export async function getMappingById(
  */
 export async function verifyMapping(
   mapId: string,
-  userId?: string
+  userId?: string,
+  storeId?: string
 ): Promise<SupplierProductMap> {
   if (!mapId) {
     throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'mapId is required');
   }
 
+  // FIX-005: store_id isolation — verify ownership through supplier_store_links chain
   const result = await query<MappingRow>(
-    `UPDATE catalog.supplier_product_map
-     SET is_verified = true, mapped_by_user_id = COALESCE($2, mapped_by_user_id), updated_at = NOW()
-     WHERE id = $1
-     RETURNING *`,
-    [mapId, userId]
+    `UPDATE catalog.supplier_product_map spm
+     SET is_verified = true, mapped_by_user_id = COALESCE($2, spm.mapped_by_user_id), updated_at = NOW()
+     FROM catalog.supplier_products sp
+     JOIN supplier.supplier_store_links ssl ON ssl.supplier_id = sp.supplier_id
+     WHERE spm.id = $1
+       AND spm.supplier_product_id = sp.id
+       AND ($3::uuid IS NULL OR (ssl.store_id = $3 AND ssl.status = 'active'))
+     RETURNING spm.*`,
+    [mapId, userId, storeId || null]
   );
 
   if (result.length === 0) {
-    throw new ApiError(404, ERROR_CODES.NOT_FOUND, 'Mapping not found');
+    throw new ApiError(404, ERROR_CODES.NOT_FOUND, 'Mapping not found or not accessible by this store');
   }
 
   const row = result[0]!;

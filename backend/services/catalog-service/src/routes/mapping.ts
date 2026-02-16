@@ -216,12 +216,13 @@ router.post(
   requireStoreAccess,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { mapId } = req.params;
+      const { storeId, mapId } = req.params;
 
       // Get user ID from request (if authenticated)
       const userId = (req as Request & { userId?: string }).userId;
 
-      const mapping = await verifyMapping(mapId, userId);
+      // FIX-005: Pass storeId for store ownership verification
+      const mapping = await verifyMapping(mapId, userId, storeId);
 
       res.json({
         success: true,
