@@ -762,7 +762,7 @@ export default function App() {
     try {
       const [pendingRes, verifiedRes, products, bankChangesRes] = await Promise.all([
         fetchPendingSuppliers(),
-        fetchVerifiedSuppliers({ search: supplierSearch || undefined }),
+        fetchVerifiedSuppliers({ search: supplierSearch?.trim() || undefined }),
         fetchPendingProducts(),
         fetchBankChanges()
       ]);
