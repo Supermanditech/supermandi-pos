@@ -170,7 +170,10 @@ export async function cacheGetOrSet<T>(
   const value = await fetchFn();
 
   // Store in cache (fire and forget)
-  cacheSet(namespace, key, value, ttlSeconds).catch(() => {});
+  // FIX-014: Log cache write failures instead of silently swallowing
+  cacheSet(namespace, key, value, ttlSeconds).catch((err) => {
+    console.warn(`[cache] Failed to set ${namespace}:${key}:`, err?.message || err);
+  });
 
   return value;
 }
