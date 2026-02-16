@@ -148,8 +148,13 @@ export async function startRecording(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("[voiceClient] Failed to start recording:", error);
-    // Reset state on error
+    // FIX-042: Reset audio session + state on error to unblock other audio
     currentRecording = null;
+    if (maxDurationTimer) {
+      clearTimeout(maxDurationTimer);
+      maxDurationTimer = null;
+    }
+    await resetAudioSession();
     return false;
   }
 }
