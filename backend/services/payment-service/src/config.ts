@@ -1,6 +1,8 @@
 // Payment Service Configuration
 // SM-004: Environment config for Razorpay integration
-// ENV-FAILFAST-001: Crash in production if required env vars are missing
+// FIX-002: Razorpay vars use graceful degradation (warn + disable), not process.exit().
+//   Core POS must run even when Razorpay is not configured.
+//   DATABASE_URL still crashes in production (no fallback possible).
 
 const IS_PROD = process.env['NODE_ENV'] === 'production';
 
@@ -12,6 +14,8 @@ export interface PaymentConfig {
     keySecret: string;
     accountNumber: string;
     webhookSecret: string;
+    /** true when all 3 required Razorpay keys are present */
+    configured: boolean;
   };
   database: {
     connectionString: string;
@@ -27,7 +31,7 @@ function getEnvIntOrDefault(key: string, defaultValue: number): number {
   return value ? parseInt(value, 10) : defaultValue;
 }
 
-/** ENV-FAILFAST-001: Require env var in production; use dev default otherwise */
+/** Require env var in production; use dev default otherwise. Crashes on missing. */
 function requireEnv(key: string, devDefault: string): string {
   const value = process.env[key];
   if (value) return value;
@@ -38,18 +42,37 @@ function requireEnv(key: string, devDefault: string): string {
   return devDefault;
 }
 
+const razorpayKeyId = getEnvOrDefault('RAZORPAY_KEY_ID', '');
+const razorpayKeySecret = getEnvOrDefault('RAZORPAY_KEY_SECRET', '');
+const razorpayAccountNumber = getEnvOrDefault('RAZORPAY_ACCOUNT_NUMBER', '');
+const razorpayConfigured = !!(razorpayKeyId && razorpayKeySecret && razorpayAccountNumber);
+
+// FIX-002: Log clear startup warning instead of crashing
+if (!razorpayConfigured) {
+  const missing = [
+    !razorpayKeyId && 'RAZORPAY_KEY_ID',
+    !razorpayKeySecret && 'RAZORPAY_KEY_SECRET',
+    !razorpayAccountNumber && 'RAZORPAY_ACCOUNT_NUMBER',
+  ].filter(Boolean);
+  console.warn(
+    `[payment-service] WARNING: Razorpay not configured (missing: ${missing.join(', ')}). ` +
+    `UPI payments, payouts, and webhook verification are DISABLED. ` +
+    `Core POS (scan, checkout, cash) will work normally.`
+  );
+}
+
 export const config: PaymentConfig = {
   // CR-HEALTH-001: Cloud Run sets PORT; fall back to service-specific var
   port: parseInt(process.env['PORT'] || '') || getEnvIntOrDefault('PAYMENT_SERVICE_PORT', 3011),
   env: getEnvOrDefault('NODE_ENV', 'development'),
-  // ENV-FAILFAST-001: Razorpay keys are CRITICAL in production
   razorpay: {
-    keyId: requireEnv('RAZORPAY_KEY_ID', ''),
-    keySecret: requireEnv('RAZORPAY_KEY_SECRET', ''),
-    accountNumber: requireEnv('RAZORPAY_ACCOUNT_NUMBER', ''),
+    keyId: razorpayKeyId,
+    keySecret: razorpayKeySecret,
+    accountNumber: razorpayAccountNumber,
     webhookSecret: getEnvOrDefault('RAZORPAY_WEBHOOK_SECRET', ''),
+    configured: razorpayConfigured,
   },
-  // ENV-FAILFAST-001: DATABASE_URL required in production
+  // DATABASE_URL is truly critical — no service can run without it
   database: {
     connectionString: requireEnv(
       'DATABASE_URL',
