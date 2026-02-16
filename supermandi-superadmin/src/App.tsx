@@ -95,6 +95,7 @@ import { MonitoringTab } from "./tabs/MonitoringTab";  // T-223: Cloud monitorin
 import { QualityDashboardTab } from "./tabs/QualityDashboardTab";  // Quality testing dashboard
 import { CreditProvidersTab } from "./tabs/CreditProvidersTab";  // T-289/T-290: Finance monitoring
 import { SupportQueueTab } from "./tabs/SupportQueueTab";  // T-300/T-302: Support queue + templates
+import { AIInsightsTab } from "./tabs/AIInsightsTab";  // T-316: AI intelligence dashboard
 // T-083: Lucide sidebar icons
 import {
   Activity, Store, Smartphone, Users, AlertTriangle, Receipt,
@@ -103,6 +104,7 @@ import {
   Link2, Check,  // T-118: Copy deep link button icons
   IndianRupee, ArrowLeftRight, HeartPulse, FlaskConical,  // T-235, T-219, T-223, Quality icons
   MessageSquare,  // T-300: Support queue
+  Brain,  // T-316: AI Insights
 } from "lucide-react";
 import "./App.css";
 
@@ -132,6 +134,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   quality: "Quality Dashboard",
   "credit-providers": "Finance",
   "support": "Support",
+  "ai-insights": "AI Intelligence",
 };
 
 // T-114: Valid tab keys for hash routing
@@ -2626,6 +2629,9 @@ export default function App() {
             <button className={`sidebarItem ${tab === "support" ? "sidebarItemActive" : ""}`} onClick={() => setTab("support")}>
               <span className="sidebarItemLabel"><MessageSquare size={18} style={{ opacity: tab === "support" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />Support</span>
             </button>
+            <button className={`sidebarItem ${tab === "ai-insights" ? "sidebarItemActive" : ""}`} onClick={() => setTab("ai-insights")}>
+              <span className="sidebarItemLabel"><Brain size={18} style={{ opacity: tab === "ai-insights" ? 1 : 0.6, marginRight: 10, flexShrink: 0 }} />AI Intelligence</span>
+            </button>
           </div>
 
           {/* Onboarding */}
@@ -3169,6 +3175,8 @@ export default function App() {
       {tab === "credit-providers" && <CreditProvidersTab />}
 
       {tab === "support" && <SupportQueueTab />}
+
+      {tab === "ai-insights" && <AIInsightsTab />}
 
         </div>{/* end mainContent */}
       </div>{/* end pageLayout */}

@@ -70,6 +70,10 @@ import DailyReportScreen from "./src/screens/DailyReportScreen";
 // T-294: Chat Screens
 import ChatListScreen from "./src/screens/ChatListScreen";
 import ChatConversationScreen from "./src/screens/ChatConversationScreen";
+// T-303→T-316: AI Insights Screen
+import AIInsightsScreen from "./src/screens/AIInsightsScreen";
+// T-288: Bulk Purchase Credit Screen
+import BulkPurchaseCreditScreen from "./src/screens/BulkPurchaseCreditScreen";
 import { theme } from "./src/theme";
 import { useRoute, useNavigation } from "@react-navigation/native";
 
@@ -324,6 +328,18 @@ function ChatConversationWrapper() {
   );
 }
 
+// T-303→T-316: AI Insights wrapper
+function AIInsightsWrapper() {
+  const navigation = useNavigation<any>();
+  return <AIInsightsScreen onBack={() => navigation.goBack()} />;
+}
+
+// T-288: Bulk Purchase Credit wrapper
+function BulkPurchaseCreditWrapper() {
+  const navigation = useNavigation<any>();
+  return <BulkPurchaseCreditScreen onBack={() => navigation.goBack()} />;
+}
+
 import { startScanIntentListener } from "./src/services/scan/scanIntent";
 import { useProductsStore } from "./src/stores/productsStore";
 // Phase 8: Push notification setup
@@ -459,6 +475,10 @@ export default function App() {
           {/* T-294: Chat Screens */}
           <Stack.Screen name="ChatList" component={ChatListWrapper} />
           <Stack.Screen name="ChatConversation" component={ChatConversationWrapper} />
+          {/* T-303→T-316: AI Insights */}
+          <Stack.Screen name="AIInsights" component={AIInsightsWrapper} />
+          {/* T-288: Bulk Purchase Credit */}
+          <Stack.Screen name="BulkPurchaseCredit" component={BulkPurchaseCreditWrapper} />
         </Stack.Navigator>
       </NavigationContainer>
         </ErrorBoundary>

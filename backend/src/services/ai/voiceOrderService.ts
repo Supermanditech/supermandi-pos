@@ -36,6 +36,8 @@ export type CartActionType =
   | "SWITCH_MODE"
   | "SEARCH"
   | "CHECK_STOCK"
+  | "CHECK_TOTAL"       // T-315: Voice workflow — ask for bill total
+  | "DAILY_CLOSING"     // T-315: Voice workflow — trigger daily close
   | "NEEDS_CLARIFICATION"
   | "UNKNOWN";
 
@@ -86,6 +88,65 @@ export interface VoiceOrderRequest {
   userRole?: "cashier" | "manager" | "owner";
   ip?: string;
 }
+
+// =============================================================================
+// T-306: CONVERSATION CONTEXT MEMORY
+// =============================================================================
+
+interface ConversationEntry {
+  transcript: string;
+  actions: CartAction[];
+  timestamp: Date;
+}
+
+// Per-device conversation history (last N turns for multi-turn voice)
+const conversationHistory = new Map<string, ConversationEntry[]>();
+const MAX_CONVERSATION_TURNS = 5;
+const CONVERSATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Get recent conversation context for a device
+ */
+export function getConversationContext(deviceId: string): string {
+  const history = conversationHistory.get(deviceId);
+  if (!history || history.length === 0) return '';
+
+  // Filter out stale entries
+  const cutoff = new Date(Date.now() - CONVERSATION_TIMEOUT_MS);
+  const recent = history.filter(e => e.timestamp > cutoff);
+  if (recent.length === 0) return '';
+
+  return recent.map(e =>
+    `User said: "${e.transcript}" → Actions: ${e.actions.map(a => `${a.type}(${a.productName || ''})`).join(', ')}`
+  ).join('\n');
+}
+
+/**
+ * Add an entry to conversation history
+ */
+export function addConversationEntry(deviceId: string, transcript: string, actions: CartAction[]): void {
+  let history = conversationHistory.get(deviceId) || [];
+
+  // Trim old entries
+  const cutoff = new Date(Date.now() - CONVERSATION_TIMEOUT_MS);
+  history = history.filter(e => e.timestamp > cutoff);
+
+  history.push({ transcript, actions, timestamp: new Date() });
+  if (history.length > MAX_CONVERSATION_TURNS) {
+    history = history.slice(-MAX_CONVERSATION_TURNS);
+  }
+  conversationHistory.set(deviceId, history);
+}
+
+// Cleanup stale conversations every 10 minutes
+setInterval(() => {
+  const cutoff = new Date(Date.now() - CONVERSATION_TIMEOUT_MS);
+  for (const [deviceId, history] of conversationHistory.entries()) {
+    const recent = history.filter(e => e.timestamp > cutoff);
+    if (recent.length === 0) conversationHistory.delete(deviceId);
+    else conversationHistory.set(deviceId, recent);
+  }
+}, 10 * 60 * 1000);
 
 // =============================================================================
 // IDEMPOTENCY TRACKING
@@ -149,21 +210,29 @@ async function searchProducts(query: string, storeId: string): Promise<ProductCa
 
 const VOICE_ORDER_SYSTEM_PROMPT = `You are a voice command parser for an Indian retail POS (Point of Sale) system.
 
-Your task is to parse voice commands (in Hindi, Hinglish, or English) into structured cart actions.
+Your task is to parse voice commands (in Hindi, Hinglish, English, Marathi, Gujarati, or Tamil) into structured cart actions.
 
 IMPORTANT RULES:
 1. Extract product names, quantities, and units accurately
 2. Support Hindi numbers: ek=1, do=2, teen=3, char=4, paanch=5, chhe=6, saat=7, aath=8, nau=9, das=10, baara=12, bees=20
-3. Support units: kg/kilo, gram/g, litre/liter/l, ml, pcs/piece/packet, dozen/darjan
-4. Recognize action keywords:
-   - ADD: add, chahiye, dedo, dena, dijiye, lagao, डालो, चाहिए
-   - REMOVE: remove, hatao, nikalo, हटाओ
+3. Support Marathi numbers: ek=1, don=2, teen=3, char=4, paach=5, saha=6, saat=7, aath=8, nau=9, daha=10
+4. Support Gujarati numbers: ek=1, be=2, tran=3, char=4, paanch=5, chha=6, saat=7, aath=8, nav=9, das=10
+5. Support Tamil numbers: onnu=1, rendu=2, moonu=3, naalu=4, anju=5, aaru=6, yezhu=7, ettu=8, ombadhu=9, pathu=10
+6. Support units: kg/kilo, gram/g, litre/liter/l, ml, pcs/piece/packet, dozen/darjan
+7. Recognize action keywords:
+   - ADD (Hindi): chahiye, dedo, dena, dijiye, lagao, डालो, चाहिए
+   - ADD (Marathi): dyaa, dya, hava, pahije, द्या, हवं, पाहिजे
+   - ADD (Gujarati): aapo, apo, joyie, આપો, જોઈએ
+   - ADD (Tamil): kudu, venum, கொடு, வேணும்
+   - REMOVE: remove, hatao, nikalo, हटाओ, kaadha (काढा, Marathi), eduthudu (Tamil)
    - QUANTITY: change, badlo, update
-   - SEARCH: search, dikhao, khojo, दिखाओ
-   - STOCK: stock, kitna, available, स्टॉक
-5. Default quantity is 1 if not specified
-6. Default unit is "pcs" if not specified
-7. If product name is ambiguous or unclear, use NEEDS_CLARIFICATION
+   - SEARCH: search, dikhao, khojo, दिखाओ, shoda (शोधा, Marathi), thodho (Gujarati), thedi (Tamil)
+   - STOCK: stock, kitna, available, स्टॉक, kiiti (Marathi), ketla (Gujarati), evvalavu (Tamil)
+   - DAILY_CLOSING: close, band karo, dukan band, divas sanpla (Marathi), dukaan bandh karo
+   - CHECK_TOTAL: total, kitna hua, kul, bill
+8. Default quantity is 1 if not specified
+9. Default unit is "pcs" if not specified
+10. If product name is ambiguous or unclear, use NEEDS_CLARIFICATION
 
 You MUST respond with valid JSON in this exact format:
 {

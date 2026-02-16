@@ -51,6 +51,8 @@ type RootStackParamList = {
   DailyReport: undefined; // T-199: Daily closing report
   PrinterSettings: undefined; // T-195: Thermal printer configuration
   ChatList: undefined; // T-294: Chat list screen
+  AIInsights: undefined; // T-307: AI Insights screen
+  BulkPurchaseCredit: undefined; // T-288: Bulk purchase credit screen
 };
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -385,6 +387,8 @@ export default function MenuScreen() {
   const goToDailyReport = () => navigation.navigate("DailyReport"); // T-199
   const goToPrinterSettings = () => navigation.navigate("PrinterSettings"); // T-195
   const goToChat = () => navigation.navigate("ChatList"); // T-294
+  const goToAIInsights = () => navigation.navigate("AIInsights"); // T-307
+  const goToBulkPurchaseCredit = () => navigation.navigate("BulkPurchaseCredit"); // T-288
 
   return (
     <ScrollView
@@ -805,6 +809,34 @@ export default function MenuScreen() {
         <View style={styles.menuText}>
           <Text style={styles.menuTitle}>Overdue Dues</Text>
           <Text style={styles.menuSubtitle}>Collect overdue DUE payments and send reminders</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-307: AI & Intelligence Section */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>AI & Intelligence</Text>
+      </View>
+
+      <Pressable style={styles.menuItem} onPress={goToAIInsights}>
+        <View style={[styles.menuIcon, styles.menuIconAi]}>
+          <MaterialCommunityIcons name={"brain" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>AI Insights</Text>
+          <Text style={styles.menuSubtitle}>Alerts, forecasts, slow movers, expiry tracking</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
+      </Pressable>
+
+      {/* T-288: Bulk Purchase Credit */}
+      <Pressable style={styles.menuItem} onPress={goToBulkPurchaseCredit}>
+        <View style={styles.menuIcon}>
+          <MaterialCommunityIcons name={"cash-multiple" as any} size={20} color={theme.colors.primary} />
+        </View>
+        <View style={styles.menuText}>
+          <Text style={styles.menuTitle}>Bulk Purchase Credit</Text>
+          <Text style={styles.menuSubtitle}>Browse and apply for credit offers</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={22} color={theme.colors.textSecondary} />
       </Pressable>
@@ -1252,6 +1284,10 @@ const styles = StyleSheet.create({
   menuIconBnpl: {
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.accent + "15"
+  },
+  menuIconAi: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary + "15"
   },
   languageToggle: {
     flexDirection: "row",
