@@ -10,7 +10,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  BackHandler
+  BackHandler,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -952,19 +953,19 @@ const PaymentScreen = () => {
                 <Text style={styles.qrHint}>Offline: UPI disabled.</Text>
               ) : upiIntent ? (
                 <QRCode value={upiIntent} size={220} />
+              ) : loadingUpi ? (
+                <View style={{ alignItems: "center", padding: 16 }}>
+                  <ActivityIndicator size="large" color="#2563EB" />
+                  <Text style={[styles.qrHint, { marginTop: 8 }]}>Generating QR...</Text>
+                </View>
               ) : (
                 <TouchableOpacity onPress={() => {
                   // T-261: Clear state to trigger re-generation via useEffect
-                  if (!loadingUpi) {
-                    setUpiIntent(null);
-                    setQrExpiresAt(null);
-                    setQrSecondsLeft(null);
-                    setLoadingUpi(false);
-                  }
+                  setUpiIntent(null);
+                  setQrExpiresAt(null);
+                  setQrSecondsLeft(null);
                 }}>
-                  <Text style={styles.qrHint}>
-                    {loadingUpi ? "Generating QR..." : "QR expired — Tap to regenerate"}
-                  </Text>
+                  <Text style={styles.qrHint}>QR expired — Tap to regenerate</Text>
                 </TouchableOpacity>
               )}
             </View>
