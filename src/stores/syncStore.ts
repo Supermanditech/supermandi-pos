@@ -20,6 +20,7 @@ type SyncState = {
   connectionStatus: ConnectionStatus;
   outboxCount: number;
   lastSyncAt: Date | null;
+  lastSyncError: string | null; // FIX-033: Surface sync errors to UI
   deadletterCount: number;
   stockDrifts: StockDrift[];
   syncing: boolean;
@@ -38,6 +39,7 @@ export const useSyncStore = create<SyncState>((set, get) => ({
   connectionStatus: "disconnected",
   outboxCount: 0,
   lastSyncAt: null,
+  lastSyncError: null,
   deadletterCount: 0,
   stockDrifts: [],
   syncing: false,
@@ -68,19 +70,22 @@ export const useSyncStore = create<SyncState>((set, get) => ({
       return;
     }
 
-    set({ syncing: true });
+    set({ syncing: true, lastSyncError: null });
     try {
       await syncOutbox();
       const count = await pendingOutboxCount();
       set({
         outboxCount: count,
         lastSyncAt: new Date(),
+        lastSyncError: null,
         syncing: false,
       });
       console.log("[SyncStore] Manual sync complete");
     } catch (error) {
-      console.error("[SyncStore] Manual sync failed:", error);
-      set({ syncing: false });
+      // FIX-033: Surface sync error to UI instead of swallowing
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error("[SyncStore] Manual sync failed:", errorMsg);
+      set({ syncing: false, lastSyncError: errorMsg });
     }
   },
 }));
