@@ -252,9 +252,10 @@
       "11H_P2Polish": "FIX-051→067 (17 tickets) — Cross-platform polish"
     },
     "gcpParityFindings": {
-      "stagingSHA": "f61a3b2",
-      "mainHEAD": "e52adf7",
-      "commitsBehind": 37,
+      "stagingSHA": "f61a3b2 (pre-ticket era — before T-001)",
+      "mainHEAD": "8812f62",
+      "commitsBehind": 101,
+      "note": "101 git commits = ALL 373 completed tickets (Phases 1-10). Zero ticket work has ever been deployed to GCP staging.",
       "missingSecrets": ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_ACCOUNT_NUMBER", "RAZORPAY_WEBHOOK_SECRET", "OPENAI_API_KEY", "PAYOUT_PROCESS_API_KEY", "GCS_IMAGES_BUCKET", "GCS_CHAT_BUCKET", "CREDIT_ENABLED", "SUPERMANDI_COLLECTION_VPA"],
       "dependabotAlerts": 20
     }
@@ -262,7 +263,7 @@
   "infraStatus": {
     "A1_WIF": "DONE",
     "A2_SECRETS": "DONE (10 additional secrets needed for Phase 9 features)",
-    "A3_DEPLOY": "DONE — All 6 services live on staging (37 commits behind)",
+    "A3_DEPLOY": "STALE — GCP staging at pre-ticket SHA f61a3b2. All 373 tickets (101 commits) need first deploy.",
     "Cloud_SQL": "HARDENED",
     "Redis": "HARDENED",
     "ZRP_Protocol": "ENFORCED — 185 gates active",
