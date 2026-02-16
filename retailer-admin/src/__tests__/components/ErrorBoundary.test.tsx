@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { ErrorBoundary } from '../../components/ErrorBoundary';
+// FIX-020: Consolidated to root-level ErrorBoundary
+import { ErrorBoundary } from '../../ErrorBoundary';
 
 // Component that throws an error for testing
 function ThrowError({ shouldThrow }: { shouldThrow: boolean }) {
@@ -65,9 +66,8 @@ describe('ErrorBoundary', () => {
     );
 
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('[ErrorBoundary] Uncaught error:'),
-      expect.any(Error),
-      expect.any(String)
+      expect.stringContaining('[GO-LIVE-172] React Error Boundary caught error:'),
+      expect.any(Error)
     );
 
     consoleErrorSpy.mockRestore();
