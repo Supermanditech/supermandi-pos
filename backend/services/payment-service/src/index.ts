@@ -44,7 +44,7 @@ const startServer = async () => {
     app.listen(config.port, () => {
       console.log(`Payment service running on port ${config.port}`);
       console.log(`Environment: ${config.env}`);
-      console.log(`Razorpay configured: ${config.razorpay.keyId ? 'yes' : 'no'}`);
+      console.log(`Razorpay configured: ${config.razorpay.configured ? 'yes' : 'no'}`);
     });
   } catch (error) {
     console.error('Failed to start payment service:', error);

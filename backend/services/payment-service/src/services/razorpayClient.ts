@@ -14,6 +14,9 @@ const RAZORPAY_API_BASE = 'https://api.razorpay.com/v1';
  * Pattern matches supplierPayoutService.ts for consistency.
  */
 async function razorpayXFetch<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
+  if (!config.razorpay.configured) {
+    throw new Error('Razorpay credentials not configured — UPI payment features are disabled');
+  }
   const auth = Buffer.from(`${config.razorpay.keyId}:${config.razorpay.keySecret}`).toString('base64');
 
   const response = await fetch(`${RAZORPAY_API_BASE}${endpoint}`, {
@@ -41,11 +44,12 @@ let razorpayInstance: Razorpay | null = null;
 
 /**
  * Get Razorpay instance (lazy initialization)
+ * FIX-002: Throws descriptive error when Razorpay is not configured
  */
 function getRazorpay(): Razorpay {
   if (!razorpayInstance) {
-    if (!config.razorpay.keyId || !config.razorpay.keySecret) {
-      throw new Error('Razorpay credentials not configured');
+    if (!config.razorpay.configured) {
+      throw new Error('Razorpay credentials not configured — UPI payment features are disabled');
     }
     razorpayInstance = new Razorpay({
       key_id: config.razorpay.keyId,
@@ -60,13 +64,10 @@ function getRazorpay(): Razorpay {
  */
 export async function checkRazorpayConnection(): Promise<boolean> {
   try {
-    if (!config.razorpay.keyId || !config.razorpay.keySecret) {
+    if (!config.razorpay.configured) {
       return false;
     }
-    // Try to fetch account details to verify connection
     const rp = getRazorpay();
-    // Note: In production, we'd call an actual API to verify
-    // For now, we just check credentials are present
     return !!rp;
   } catch (error) {
     console.error('[RazorpayClient] Connection check failed:', error);
