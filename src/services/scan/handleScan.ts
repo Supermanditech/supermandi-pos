@@ -394,7 +394,13 @@ export async function onBarcodeScanned(rawText: string, format?: string, source:
     await handleScan(trimmed, format, "SELL", source);
   } catch (err) {
     console.error("onBarcodeScanned error:", err);
-    notify({ tone: "error", message: "Scan failed. Please try again." });
+    // FIX-038: Differentiate offline vs generic scan errors
+    const online = await isOnline();
+    if (!online) {
+      notify({ tone: "error", message: "Offline — scan will process when back online." });
+    } else {
+      notify({ tone: "error", message: "Scan failed. Please try again." });
+    }
   }
 }
 
@@ -732,10 +738,15 @@ async function handleScan(
         return;
       }
     }
-    // Log non-API errors for debugging
-    if (!(error instanceof ApiError)) {
+    // FIX-038: Differentiate offline vs API vs unknown errors
+    const online = await isOnline();
+    if (!online) {
+      notify({ tone: "error", message: "Offline — scan will process when back online." });
+    } else if (error instanceof ApiError) {
+      notify({ tone: "error", message: `Scan error: ${error.message}` });
+    } else {
       console.error("handleScan non-API error:", String(error));
+      notify({ tone: "error", message: "Could not resolve scan. Check connection." });
     }
-    notify({ tone: "error", message: "Could not resolve scan. Check connection." });
   }
 }
