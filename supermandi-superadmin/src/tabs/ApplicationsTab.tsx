@@ -15,6 +15,7 @@ interface ApplicationsTabProps {
   refreshApplications: () => void;
   handleApproveApplication: (id: string) => void;
   handleRejectApplication: (id: string) => void;
+  onLoadMore?: () => void;
 }
 
 export function ApplicationsTab({
@@ -30,6 +31,7 @@ export function ApplicationsTab({
   refreshApplications,
   handleApproveApplication,
   handleRejectApplication,
+  onLoadMore,
 }: ApplicationsTabProps) {
   return (
     <section className="card">
@@ -174,8 +176,18 @@ export function ApplicationsTab({
         </div>
       )}
 
-      <div style={{ padding: "12px 16px", fontSize: 12, color: "#666" }}>
-        Showing {applications.length} of {applicationsTotal} pending applications
+      <div style={{ padding: "12px 16px", fontSize: 12, color: "#666", display: "flex", alignItems: "center", gap: 12 }}>
+        <span>Showing {applications.length} of {applicationsTotal} pending applications</span>
+        {/* FIX-049: Load More button when more applications exist */}
+        {applications.length < applicationsTotal && onLoadMore && (
+          <button
+            onClick={onLoadMore}
+            disabled={applicationsLoading}
+            style={{ fontSize: 12, padding: "4px 12px", cursor: "pointer" }}
+          >
+            {applicationsLoading ? "Loading..." : "Load More"}
+          </button>
+        )}
       </div>
     </section>
   );
