@@ -23,7 +23,15 @@ export default function LoginPage() {
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
+  // FIX-064: Persist cooldown to sessionStorage so remount can't bypass it
+  const COOLDOWN_KEY = 'supplier_otp_cooldown_until';
+  const [resendCooldown, setResendCooldown] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const stored = sessionStorage.getItem(COOLDOWN_KEY);
+    if (!stored) return 0;
+    const remaining = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+    return remaining > 0 ? remaining : 0;
+  });
   // AUTH-OTP-001: OTP expiry countdown (Firebase OTP ~5 min)
   const [otpExpirySeconds, setOtpExpirySeconds] = useState(0);
   const recaptchaInitialized = useRef(false);
@@ -56,11 +64,13 @@ export default function LoginPage() {
     };
   }, [step, authMode]);
 
-  // Resend cooldown timer
+  // FIX-064: Resend cooldown timer — clear sessionStorage when done
   useEffect(() => {
     if (resendCooldown > 0) {
       const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
       return () => clearTimeout(timer);
+    } else if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(COOLDOWN_KEY);
     }
   }, [resendCooldown]);
 
@@ -130,6 +140,8 @@ export default function LoginPage() {
 
       await sendOtp(phone);
       setStep('otp');
+      // FIX-064: Persist cooldown end timestamp
+      sessionStorage.setItem(COOLDOWN_KEY, String(Date.now() + 60 * 1000));
       setResendCooldown(60);
       setOtpExpirySeconds(300);
     } catch (err) {
@@ -211,6 +223,8 @@ export default function LoginPage() {
       recaptchaInitialized.current = true;
 
       await sendOtp(phone);
+      // FIX-064: Persist cooldown end timestamp
+      sessionStorage.setItem(COOLDOWN_KEY, String(Date.now() + 60 * 1000));
       setResendCooldown(60);
       setOtpExpirySeconds(300); // AUTH-OTP-001: Reset expiry on resend
       toast.success('OTP sent successfully!');
