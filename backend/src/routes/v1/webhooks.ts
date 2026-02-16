@@ -14,7 +14,10 @@ import {
   getScheduledPayouts,
   isRazorpayConfigured,
   isPayoutsEnabled,
+  processPayoutRetries,
 } from "../../services/supplierPayoutService";
+// T-262: Payment event outbox for downstream consumers
+import { writePaymentEvent, PaymentEventTypes } from "../../services/paymentOutboxWorker";
 
 // =============================================================================
 // T-211: Redis-backed Webhook Idempotency (cluster-safe)
@@ -83,6 +86,11 @@ interface RazorpayPaymentEntity {
   vpa?: string;
   error_code?: string;
   error_description?: string;
+  // T-255: UTR data from Razorpay for gateway verification
+  acquirer_data?: {
+    utr?: string;
+    rrn?: string;
+  };
 }
 
 /**
@@ -101,7 +109,10 @@ async function handleSellPaymentWebhook(
     return { success: false, error: "Missing payment entity" };
   }
 
-  const { order_id, id: razorpayPaymentId, status, error_code, error_description } = payment;
+  const { order_id, id: razorpayPaymentId, status, error_code, error_description, vpa, acquirer_data } = payment;
+  // T-255: Extract UTR from acquirer_data for gateway-verified UTR matching
+  const gatewayUtr = acquirer_data?.utr || acquirer_data?.rrn || null;
+  const payerVpa = vpa || null;
 
   if (!order_id) {
     console.warn("[GL-AUD-002] Missing order_id in payment entity");
@@ -156,15 +167,18 @@ async function handleSellPaymentWebhook(
 
     // Update sell_payment status
     // DATA-002: Add store_id filter for store isolation
+    // T-255: Also store gateway UTR + payer VPA for verification
     await client.query(
       `UPDATE payments.sell_payments
        SET status = $1,
            upi_payment_id = $2,
            failure_reason = $3,
            completed_at = CASE WHEN $1 = 'completed' THEN NOW() ELSE completed_at END,
-           webhook_payload = $6::jsonb
+           webhook_payload = $6::jsonb,
+           upi_txn_ref = COALESCE($7, upi_txn_ref),
+           upi_payer_vpa = COALESCE($8, upi_payer_vpa)
        WHERE id = $4 AND store_id = $5`,
-      [newStatus, razorpayPaymentId, failureReason, sellPayment.id, sellPayment.store_id, JSON.stringify(payload)]
+      [newStatus, razorpayPaymentId, failureReason, sellPayment.id, sellPayment.store_id, JSON.stringify(payload), gatewayUtr, payerVpa]
     );
 
     // If payment completed, update the sale status
@@ -179,6 +193,20 @@ async function handleSellPaymentWebhook(
         [sellPayment.sale_id, sellPayment.store_id]
       );
     }
+
+    // T-262: Write payment event to outbox (same transaction for consistency)
+    const outboxEventType = newStatus === 'completed'
+      ? PaymentEventTypes.PAYMENT_COMPLETED
+      : PaymentEventTypes.PAYMENT_FAILED;
+    await writePaymentEvent(client, outboxEventType, sellPayment.id, {
+      saleId: sellPayment.sale_id,
+      storeId: sellPayment.store_id,
+      razorpayPaymentId,
+      orderId: order_id,
+      status: newStatus,
+      failureReason,
+      gatewayUtr,
+    });
 
     await client.query("COMMIT");
 
@@ -253,6 +281,38 @@ webhooksRouter.post("/razorpay", async (req: Request, res: Response) => {
     if (success) {
       // ITER4-P0-007: Mark as processed after successful handling
       await markWebhookEventProcessed(idempotencyKey);
+
+      // T-262: Write payout event to outbox (best-effort, separate connection)
+      try {
+        const payoutId = payoutEntity?.id || 'unknown';
+        const outboxType = event === 'payout.processed'
+          ? PaymentEventTypes.PAYOUT_COMPLETED
+          : event === 'payout.failed'
+            ? PaymentEventTypes.PAYOUT_FAILED
+            : null; // ignore queued/reversed for outbox
+        if (outboxType) {
+          const outboxClient = await pool.connect();
+          try {
+            await outboxClient.query("BEGIN");
+            await writePaymentEvent(outboxClient, outboxType, payoutId, {
+              razorpayPayoutId: payoutId,
+              event,
+              amount: payoutEntity?.amount,
+              status: payoutEntity?.status,
+            });
+            await outboxClient.query("COMMIT");
+          } catch (e) {
+            await outboxClient.query("ROLLBACK").catch(() => {});
+            throw e;
+          } finally {
+            outboxClient.release();
+          }
+        }
+      } catch (outboxErr) {
+        // Non-fatal: payout was already processed successfully
+        console.warn("[T-262] Failed to write payout outbox event:", outboxErr instanceof Error ? outboxErr.message : outboxErr);
+      }
+
       return res.json({ status: "ok", event });
     } else {
       return res.status(422).json({ error: "Failed to process webhook" });
@@ -430,6 +490,37 @@ webhooksRouter.get("/payouts/pending", async (req: Request, res: Response) => {
       success: false,
       error: "Failed to get pending payouts",
     });
+  }
+});
+
+/**
+ * POST /api/v1/webhooks/payouts/process-retries
+ * T-258: Process pending payout retries (called by cron or admin)
+ */
+webhooksRouter.post("/payouts/process-retries", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const apiKey = req.headers["x-api-key"] as string | undefined;
+  const expectedKey = process.env.PAYOUT_PROCESS_API_KEY;
+  if (!expectedKey) {
+    return res.status(503).json({ error: "Payout API key not configured" });
+  }
+  if (apiKey !== expectedKey) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const result = await processPayoutRetries(pool);
+    console.log(`[T-258] Retry processing complete: ${result.processed} processed, ${result.succeeded} succeeded, ${result.failed} failed`);
+
+    return res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error: any) {
+    console.error("[T-258] Retry processing error:", error.message);
+    return res.status(500).json({ success: false, error: "Failed to process retries" });
   }
 });
 

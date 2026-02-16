@@ -252,11 +252,13 @@ export async function processScheduledPayout(
       await client.query("COMMIT");
       console.log(`[SM-018] Payout completed: payoutId=${payout.id}, razorpayId=${result.payoutId}, utr=${result.utr}`);
     } else {
-      // GO-LIVE-120: Handle retryable vs permanent failures differently
+      // GO-LIVE-120 + T-258: Handle retryable vs permanent failures
       if (result.isRetryable) {
-        // Retryable error - ROLLBACK to keep 'scheduled' status for retry
+        // T-258: Retryable error — schedule retry with exponential backoff
         await client.query("ROLLBACK");
-        console.warn(`[SM-018] GO-LIVE-120: Retryable payout error, will retry: payoutId=${payout.id}, error=${result.error}`);
+        console.warn(`[SM-018] GO-LIVE-120: Retryable payout error: payoutId=${payout.id}, error=${result.error}`);
+        // Schedule retry (uses its own transaction)
+        await schedulePayoutRetry(pool, payout.id, result.error || 'Unknown retryable error');
       } else {
         // Permanent failure - mark as failed
         await client.query(
@@ -477,6 +479,173 @@ export async function handlePayoutWebhook(
   }
 }
 
+// =============================================================================
+// T-258: Payout Retry Queue — Exponential Backoff
+// =============================================================================
+
+const RETRY_BACKOFF_MS = [60_000, 300_000, 1_800_000]; // 1min, 5min, 30min
+const MAX_RETRY_ATTEMPTS = 3;
+
+/**
+ * T-258: Schedule a retry for a failed payout with exponential backoff
+ */
+export async function schedulePayoutRetry(
+  pool: Pool,
+  payoutId: string,
+  errorMessage: string
+): Promise<{ scheduled: boolean; attempt: number; scheduledFor: Date | null }> {
+  const client = await pool.connect();
+  try {
+    // Get current retry count
+    const countResult = await client.query(
+      `SELECT retry_count FROM payments.supplier_payouts WHERE id = $1`,
+      [payoutId]
+    );
+
+    const currentRetries = countResult.rows[0]?.retry_count || 0;
+
+    if (currentRetries >= MAX_RETRY_ATTEMPTS) {
+      // Exhausted all retries — mark payout as permanently failed
+      await client.query(
+        `UPDATE payments.supplier_payouts
+         SET status = 'failed', failure_reason = $1
+         WHERE id = $2`,
+        [`Exhausted ${MAX_RETRY_ATTEMPTS} retries. Last error: ${errorMessage}`, payoutId]
+      );
+      console.error(`[T-258] ALERT: Payout ${payoutId} exhausted all ${MAX_RETRY_ATTEMPTS} retries. Manual intervention required.`);
+      return { scheduled: false, attempt: currentRetries, scheduledFor: null };
+    }
+
+    const nextAttempt = currentRetries + 1;
+    const backoffMs = RETRY_BACKOFF_MS[currentRetries] || RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
+    const scheduledFor = new Date(Date.now() + backoffMs);
+
+    await client.query("BEGIN");
+
+    // Insert retry record
+    await client.query(
+      `INSERT INTO payments.payout_retries (payout_id, attempt_number, scheduled_for, error_message)
+       VALUES ($1, $2, $3, $4)`,
+      [payoutId, nextAttempt, scheduledFor, errorMessage]
+    );
+
+    // Update payout retry count and keep it in 'scheduled' status for retry
+    await client.query(
+      `UPDATE payments.supplier_payouts
+       SET retry_count = $1, last_retry_at = NOW(), status = 'scheduled'
+       WHERE id = $2`,
+      [nextAttempt, payoutId]
+    );
+
+    await client.query("COMMIT");
+    console.log(`[T-258] Payout ${payoutId} retry ${nextAttempt}/${MAX_RETRY_ATTEMPTS} scheduled for ${scheduledFor.toISOString()}`);
+
+    return { scheduled: true, attempt: nextAttempt, scheduledFor };
+  } catch (error: any) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error(`[T-258] Failed to schedule retry for payout ${payoutId}:`, error.message);
+    return { scheduled: false, attempt: 0, scheduledFor: null };
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * T-258: Process pending payout retries that are due
+ */
+export async function processPayoutRetries(pool: Pool): Promise<{
+  processed: number;
+  succeeded: number;
+  failed: number;
+}> {
+  if (!isPayoutsEnabled()) {
+    return { processed: 0, succeeded: 0, failed: 0 };
+  }
+
+  try {
+    // Find pending retries that are due
+    const dueRetries = await pool.query(
+      `SELECT pr.id as retry_id, pr.payout_id, pr.attempt_number
+       FROM payments.payout_retries pr
+       WHERE pr.status = 'pending'
+         AND pr.scheduled_for <= NOW()
+       ORDER BY pr.scheduled_for ASC
+       LIMIT 50`
+    );
+
+    if (dueRetries.rowCount === 0) {
+      return { processed: 0, succeeded: 0, failed: 0 };
+    }
+
+    console.log(`[T-258] Processing ${dueRetries.rowCount} due payout retries`);
+
+    let succeeded = 0;
+    let failed = 0;
+
+    for (const retry of dueRetries.rows) {
+      // Mark retry as processing
+      await pool.query(
+        `UPDATE payments.payout_retries SET status = 'processing', attempted_at = NOW() WHERE id = $1`,
+        [retry.retry_id]
+      );
+
+      // Fetch the payout to retry
+      const payoutResult = await pool.query(
+        `SELECT
+           sp.id, sp.supplier_id as "supplierId", sp.purchase_order_id as "purchaseOrderId",
+           sp.payment_id as "paymentId", sp.amount_minor as "amountMinor",
+           sp.payout_method as "payoutMethod", sp.payout_account_id as "payoutAccountId",
+           s.upi_vpa as "supplierUpiVpa",
+           COALESCE(s.business_name, s.trade_name, 'Supplier') as "supplierName",
+           s.razorpay_fund_account_id as "razorpayFundAccountId",
+           s.razorpay_contact_id as "razorpayContactId"
+         FROM payments.supplier_payouts sp
+         JOIN supplier.suppliers s ON s.id = sp.supplier_id
+         WHERE sp.id = $1`,
+        [retry.payout_id]
+      );
+
+      if (payoutResult.rowCount === 0) {
+        await pool.query(
+          `UPDATE payments.payout_retries SET status = 'failed', error_message = 'Payout not found' WHERE id = $1`,
+          [retry.retry_id]
+        );
+        failed++;
+        continue;
+      }
+
+      const result = await processScheduledPayout(pool, payoutResult.rows[0]);
+
+      if (result.success) {
+        await pool.query(
+          `UPDATE payments.payout_retries SET status = 'succeeded' WHERE id = $1`,
+          [retry.retry_id]
+        );
+        succeeded++;
+      } else {
+        await pool.query(
+          `UPDATE payments.payout_retries SET status = 'failed', error_message = $1 WHERE id = $2`,
+          [result.error || 'Unknown error', retry.retry_id]
+        );
+
+        // Schedule next retry if retryable and not exhausted
+        if (result.isRetryable) {
+          await schedulePayoutRetry(pool, retry.payout_id, result.error || 'Unknown error');
+        }
+        failed++;
+      }
+
+      // Rate limit between retries
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
+    return { processed: dueRetries.rowCount || 0, succeeded, failed };
+  } catch (error: any) {
+    console.error("[T-258] Process payout retries error:", error.message);
+    return { processed: 0, succeeded: 0, failed: 0 };
+  }
+}
+
 export default {
   isRazorpayConfigured,
   isPayoutsEnabled,
@@ -485,4 +654,6 @@ export default {
   processAllScheduledPayouts,
   verifyWebhookSignature,
   handlePayoutWebhook,
+  schedulePayoutRetry,
+  processPayoutRetries,
 };

@@ -1,8 +1,39 @@
 // Razorpay Client Wrapper
 // SM-004: Razorpay SDK integration for payments and payouts
+// T-253: Fixed timing attack in signature verification + replaced undefined SDK methods with raw fetch()
 
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 import { config } from '../config';
+
+const RAZORPAY_API_BASE = 'https://api.razorpay.com/v1';
+
+/**
+ * T-253: Helper for RazorpayX API calls (contacts, fund_accounts, payouts)
+ * These endpoints are NOT available on the razorpay npm SDK — must use raw fetch().
+ * Pattern matches supplierPayoutService.ts for consistency.
+ */
+async function razorpayXFetch<T>(endpoint: string, body: Record<string, unknown>): Promise<T> {
+  const auth = Buffer.from(`${config.razorpay.keyId}:${config.razorpay.keySecret}`).toString('base64');
+
+  const response = await fetch(`${RAZORPAY_API_BASE}${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${auth}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await response.json() as T & { error?: { description?: string } };
+
+  if (!response.ok) {
+    const errorMsg = (data as any)?.error?.description || `RazorpayX API error: ${response.status}`;
+    throw new Error(errorMsg);
+  }
+
+  return data;
+}
 
 // Initialize Razorpay instance
 let razorpayInstance: Razorpay | null = null;
@@ -113,15 +144,17 @@ export function verifyPaymentSignature(params: {
   paymentId: string;
   signature: string;
 }): boolean {
-  const razorpay = getRazorpay();
-  const crypto = require('crypto');
-
+  // T-253: Use crypto.timingSafeEqual() to prevent timing attack
+  // Pattern matches supplierPayoutService.ts:381
   const expectedSignature = crypto
     .createHmac('sha256', config.razorpay.keySecret)
     .update(`${params.orderId}|${params.paymentId}`)
     .digest('hex');
 
-  return expectedSignature === params.signature;
+  return crypto.timingSafeEqual(
+    Buffer.from(params.signature),
+    Buffer.from(expectedSignature)
+  );
 }
 
 /**
@@ -144,11 +177,13 @@ export async function createPayout(params: {
   status: string;
   utr?: string;
 }> {
-  const razorpay = getRazorpay();
-
-  // Note: Payout API requires RazorpayX account
-  // This is a placeholder for the actual implementation
-  const payout = await (razorpay as any).payouts?.create({
+  // T-253: RazorpayX Payouts API — not available on SDK, use raw fetch()
+  const data = await razorpayXFetch<{
+    id: string;
+    entity: string;
+    status: string;
+    utr?: string;
+  }>('/payouts', {
     account_number: config.razorpay.accountNumber,
     fund_account_id: params.fundAccountId,
     amount: params.amount,
@@ -157,17 +192,18 @@ export async function createPayout(params: {
     purpose: 'vendor_bill',
     reference_id: params.referenceId,
     narration: params.narration || 'SuperMandi Payment',
+    queue_if_low_balance: true,
   });
 
   return {
-    id: payout?.id || 'mock_payout_' + Date.now(),
-    entity: payout?.entity || 'payout',
+    id: data.id,
+    entity: data.entity,
     fundAccountId: params.fundAccountId,
     amount: params.amount,
     currency: 'INR',
     mode: params.mode,
-    status: payout?.status || 'processing',
-    utr: payout?.utr,
+    status: data.status,
+    utr: data.utr,
   };
 }
 
@@ -191,33 +227,34 @@ export async function createFundAccount(params: {
   accountType: string;
   active: boolean;
 }> {
-  const razorpay = getRazorpay();
-
-  // Note: Fund Account API requires RazorpayX account
-  const fundAccountData: any = {
+  // T-253: RazorpayX Fund Accounts API — not available on SDK, use raw fetch()
+  const body: Record<string, unknown> = {
     contact_id: params.contactId,
     account_type: params.accountType,
   };
 
   if (params.accountType === 'bank_account' && params.bankAccount) {
-    fundAccountData.bank_account = {
+    body.bank_account = {
       name: params.bankAccount.name,
       ifsc: params.bankAccount.ifsc,
       account_number: params.bankAccount.accountNumber,
     };
   } else if (params.accountType === 'vpa' && params.vpa) {
-    fundAccountData.vpa = {
+    body.vpa = {
       address: params.vpa.address,
     };
   }
 
-  const fundAccount = await (razorpay as any).fundAccount?.create(fundAccountData);
+  const data = await razorpayXFetch<{
+    id: string;
+    active: boolean;
+  }>('/fund_accounts', body);
 
   return {
-    id: fundAccount?.id || 'mock_fa_' + Date.now(),
+    id: data.id,
     contactId: params.contactId,
     accountType: params.accountType,
-    active: fundAccount?.active ?? true,
+    active: data.active,
   };
 }
 
@@ -237,10 +274,12 @@ export async function createContact(params: {
   type: string;
   active: boolean;
 }> {
-  const razorpay = getRazorpay();
-
-  // Note: Contact API requires RazorpayX account
-  const contact = await (razorpay as any).contacts?.create({
+  // T-253: RazorpayX Contacts API — not available on SDK, use raw fetch()
+  const data = await razorpayXFetch<{
+    id: string;
+    entity: string;
+    active: boolean;
+  }>('/contacts', {
     name: params.name,
     email: params.email,
     contact: params.contact,
@@ -249,11 +288,11 @@ export async function createContact(params: {
   });
 
   return {
-    id: contact?.id || 'mock_cont_' + Date.now(),
-    entity: contact?.entity || 'contact',
+    id: data.id,
+    entity: data.entity,
     name: params.name,
     type: params.type,
-    active: contact?.active ?? true,
+    active: data.active,
   };
 }
 

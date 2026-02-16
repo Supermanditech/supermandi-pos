@@ -953,9 +953,17 @@ const PaymentScreen = () => {
               ) : upiIntent ? (
                 <QRCode value={upiIntent} size={220} />
               ) : (
-                <TouchableOpacity onPress={() => { /* reset to trigger re-generate */ setLoadingUpi(false); }}>
+                <TouchableOpacity onPress={() => {
+                  // T-261: Clear state to trigger re-generation via useEffect
+                  if (!loadingUpi) {
+                    setUpiIntent(null);
+                    setQrExpiresAt(null);
+                    setQrSecondsLeft(null);
+                    setLoadingUpi(false);
+                  }
+                }}>
                   <Text style={styles.qrHint}>
-                    {loadingUpi ? "Generating QR..." : "QR expired. Tap to regenerate."}
+                    {loadingUpi ? "Generating QR..." : "QR expired — Tap to regenerate"}
                   </Text>
                 </TouchableOpacity>
               )}

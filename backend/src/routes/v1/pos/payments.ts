@@ -12,6 +12,8 @@ import { requireDeviceToken, type PosDeviceContext } from "../../../middleware/d
 import { requireActiveStore } from "../../../middleware/storeStatusGate";
 // AUDIT-API-035: Rate limit UPI generate to prevent QR abuse
 import { financialOperationsRateLimiter } from "../../../middleware/posRateLimiter";
+// T-254: Razorpay order creation for real UPI payment tracking
+import { createRazorpayOrder, isRazorpayOrdersConfigured } from "../../../services/razorpayOrderService";
 
 export const posPaymentsRouter = Router();
 
@@ -201,16 +203,52 @@ posPaymentsRouter.post(
         );
       }
 
-      // 4. Generate order ID and QR data
-      const orderId = generateOrderId();
+      // 4. T-254: Create Razorpay order for gateway tracking (falls back to local UPI intent)
+      let orderId: string;
+      let qrData: string;
       const amountRupees = amountMinor / 100;
-      const qrData = generateUpiIntentString({
-        vpa: store.upi_vpa,
-        payeeName: store.name || 'SuperMandi Store',
-        amountRupees,
-        txnRef: orderId,
-        note: `Sale ${saleId.substring(0, 8)}`
-      });
+
+      if (isRazorpayOrdersConfigured()) {
+        // Gateway-tracked: create Razorpay order → webhook confirms payment
+        const rzpOrder = await createRazorpayOrder({
+          amountPaise: amountMinor,
+          receipt: `sale_${saleId.substring(0, 8)}_${Date.now().toString(36)}`,
+          notes: { saleId, storeId, deviceId },
+        });
+
+        if (rzpOrder) {
+          orderId = rzpOrder.id;
+          // QR still uses UPI intent for direct scan, but txnRef = Razorpay order_id
+          qrData = generateUpiIntentString({
+            vpa: store.upi_vpa,
+            payeeName: store.name || 'SuperMandi Store',
+            amountRupees,
+            txnRef: rzpOrder.id,
+            note: `Sale ${saleId.substring(0, 8)}`
+          });
+          console.log(`[T-254] Razorpay order created: ${rzpOrder.id} for sale ${saleId}`);
+        } else {
+          // Razorpay call returned null (shouldn't happen if configured, but safe fallback)
+          orderId = generateOrderId();
+          qrData = generateUpiIntentString({
+            vpa: store.upi_vpa,
+            payeeName: store.name || 'SuperMandi Store',
+            amountRupees,
+            txnRef: orderId,
+            note: `Sale ${saleId.substring(0, 8)}`
+          });
+        }
+      } else {
+        // No Razorpay: local UPI intent (manual UTR verification)
+        orderId = generateOrderId();
+        qrData = generateUpiIntentString({
+          vpa: store.upi_vpa,
+          payeeName: store.name || 'SuperMandi Store',
+          amountRupees,
+          txnRef: orderId,
+          note: `Sale ${saleId.substring(0, 8)}`
+        });
+      }
 
       // 5. T-149: Calculate expiry using QR_EXPIRY_MS constant
       const expiresAt = new Date(Date.now() + QR_EXPIRY_MS);
@@ -493,16 +531,35 @@ posPaymentsRouter.post(
         paymentIds.push(paymentId);
 
         if (p.mode === 'UPI') {
-          // Generate UPI QR
-          const orderId = generateOrderId();
+          // T-254: Generate UPI QR with Razorpay order tracking when configured
+          let orderId: string;
+          let qrData: string;
           const amountRupees = p.amountMinor / 100;
-          const qrData = generateUpiIntentString({
-            vpa: store.upi_vpa,
-            payeeName: store.name || 'SuperMandi Store',
-            amountRupees,
-            txnRef: orderId,
-            note: `Split ${saleId.substring(0, 8)}`
-          });
+
+          if (isRazorpayOrdersConfigured()) {
+            const rzpOrder = await createRazorpayOrder({
+              amountPaise: p.amountMinor,
+              receipt: `split_${saleId.substring(0, 8)}_${Date.now().toString(36)}`,
+              notes: { saleId, storeId, type: 'split' },
+            });
+            orderId = rzpOrder?.id || generateOrderId();
+            qrData = generateUpiIntentString({
+              vpa: store.upi_vpa,
+              payeeName: store.name || 'SuperMandi Store',
+              amountRupees,
+              txnRef: orderId,
+              note: `Split ${saleId.substring(0, 8)}`
+            });
+          } else {
+            orderId = generateOrderId();
+            qrData = generateUpiIntentString({
+              vpa: store.upi_vpa,
+              payeeName: store.name || 'SuperMandi Store',
+              amountRupees,
+              txnRef: orderId,
+              note: `Split ${saleId.substring(0, 8)}`
+            });
+          }
 
           const expiresAt = new Date(Date.now() + QR_EXPIRY_MS);
           const idempotencyKey = `split_upi_${saleId}_${Date.now()}`;
@@ -942,22 +999,8 @@ posPaymentsRouter.post(
         // (fall through to gateway check)
       }
 
-      // POS-UPI-001: UTR verification is format-only for MVP.
-      // All UTR confirmations are logged with full details for manual audit.
-      // Gateway integration (Razorpay/PayU) will replace format-only check when ready.
+      // Validate UTR format
       const isValidFormat = /^[A-Z0-9]{12,22}$/.test(normalizedUtr);
-
-      // POS-UPI-001: Structured audit log for every UTR verification attempt
-      console.log(JSON.stringify({
-        event: "UTR_VERIFICATION_ATTEMPT",
-        storeId,
-        utr: normalizedUtr,
-        amountMinor,
-        paymentId: paymentId || null,
-        formatValid: isValidFormat,
-        verificationMethod: "format_only",
-        timestamp: new Date().toISOString(),
-      }));
 
       if (!isValidFormat) {
         await client.query("COMMIT");
@@ -968,7 +1011,47 @@ posPaymentsRouter.post(
         } as UtrVerifyResponse);
       }
 
-      // Record the verification attempt
+      // T-255: Gateway-verified UTR matching
+      // If Razorpay is configured, check if this UTR matches any gateway-confirmed payment
+      let verificationMethod: 'gateway_match' | 'format_only' = 'format_only';
+      let gatewayMatch: { paymentId: string; payerVpa: string | null } | null = null;
+
+      if (isRazorpayOrdersConfigured()) {
+        // Look for a gateway-confirmed sell_payment with matching UTR in this store
+        const gatewayResult = await client.query(
+          `SELECT id, upi_txn_ref, upi_payer_vpa, amount_minor
+           FROM payments.sell_payments
+           WHERE store_id = $1::uuid
+             AND upi_txn_ref = $2
+             AND status = 'completed'
+           LIMIT 1`,
+          [storeId, normalizedUtr]
+        );
+
+        if (gatewayResult.rowCount && gatewayResult.rowCount > 0) {
+          const gw = gatewayResult.rows[0];
+          // Verify amount matches
+          if (gw.amount_minor === amountMinor) {
+            verificationMethod = 'gateway_match';
+            gatewayMatch = { paymentId: gw.id, payerVpa: gw.upi_payer_vpa };
+          }
+        }
+      }
+
+      // Structured audit log
+      console.log(JSON.stringify({
+        event: "UTR_VERIFICATION_ATTEMPT",
+        storeId,
+        utr: normalizedUtr,
+        amountMinor,
+        paymentId: paymentId || null,
+        formatValid: isValidFormat,
+        verificationMethod,
+        gatewayMatch: !!gatewayMatch,
+        timestamp: new Date().toISOString(),
+      }));
+
+      // Record the verification
       const verificationId = randomUUID();
       const verifiedAt = new Date().toISOString();
 
@@ -980,14 +1063,14 @@ posPaymentsRouter.post(
            verified = true,
            verified_at = $5,
            amount_minor = $4`,
-        [verificationId, storeId, normalizedUtr, amountMinor, verifiedAt, paymentId || null]
+        [verificationId, storeId, normalizedUtr, amountMinor, verifiedAt, paymentId || gatewayMatch?.paymentId || null]
       );
 
       // If paymentId was provided, update the payment record
       if (paymentId) {
         await client.query(
           `UPDATE payments.sell_payments
-           SET utr = $1, status = 'completed', updated_at = NOW()
+           SET upi_txn_ref = $1, status = 'completed', updated_at = NOW()
            WHERE id = $2 AND store_id = $3::uuid`,
           [normalizedUtr, paymentId, storeId]
         );
@@ -995,7 +1078,6 @@ posPaymentsRouter.post(
 
       await client.query("COMMIT");
 
-      // POS-UPI-001: Structured audit log for successful UTR verification
       console.log(JSON.stringify({
         event: "UTR_VERIFICATION_SUCCESS",
         storeId,
@@ -1003,7 +1085,8 @@ posPaymentsRouter.post(
         amountMinor,
         paymentId: paymentId || null,
         verificationId,
-        verificationMethod: "format_only",
+        verificationMethod,
+        gatewayMatch: !!gatewayMatch,
         timestamp: verifiedAt,
       }));
 
@@ -1012,6 +1095,7 @@ posPaymentsRouter.post(
         status: 'SUCCESS',
         transactionId: verificationId,
         verifiedAt,
+        payerVpa: gatewayMatch?.payerVpa || undefined,
         amountMinor
       } as UtrVerifyResponse);
 

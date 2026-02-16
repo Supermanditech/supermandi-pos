@@ -68,6 +68,7 @@ import { retailerReorderRouter } from "./retailer-admin/reorder";  // CL-017: Re
 import { retailerBnplRouter } from "./retailer-admin/bnpl";  // CL-019: Retailer BNPL view
 import { retailerAdminCustomersRouter } from "./retailer-admin/customers";  // T-218: Customer CRM
 import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
+import { retailerReconciliationRouter } from "./retailer-admin/reconciliation";  // T-260: Payment reconciliation
 import { demoRouter } from "./demo";
 import { microserviceHealthRouter } from "./microserviceHealth";
 import { webhooksRouter } from "./webhooks";  // SM-018: Razorpay payout webhooks
@@ -222,6 +223,7 @@ v1Router.use("/retailer-admin", retailerReorderRouter);  // CL-017: Retailer reo
 v1Router.use("/retailer-admin", retailerBnplRouter);  // CL-019: Retailer BNPL view
 v1Router.use("/retailer-admin", retailerAdminCustomersRouter);  // T-218: Customer CRM
 v1Router.use("/retailer-admin", retailerNotificationsRouter);  // Phase 8: In-app notification center
+v1Router.use("/retailer-admin", retailerReconciliationRouter);  // T-260: Payment reconciliation
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks
 v1Router.use("/webhooks", refundWebhookRouter);  // T-219: Razorpay refund status webhooks
