@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { authFetch } from '../lib/api';
+import { authFetch, safeJson } from '../lib/api';
 import { Bell, CheckCheck, RefreshCw, AlertTriangle, Package, CreditCard, Truck } from 'lucide-react';
 
 interface Notification {
@@ -33,9 +33,9 @@ export default function NotificationsPage() {
     try {
       const res = await authFetch(`/api/v1/retailer-admin/notifications?limit=${limit}&offset=${offset}`, accessToken);
       if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.data || []);
-        setTotal(data.pagination?.total || 0);
+        const data = await safeJson<{ data?: any[]; pagination?: { total?: number } }>(res, { data: [], pagination: { total: 0 } });
+        setNotifications(data?.data || []);
+        setTotal(data?.pagination?.total || 0);
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);

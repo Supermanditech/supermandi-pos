@@ -174,8 +174,8 @@ export default function ProductQueuePage() {
         );
 
         if (!editResponse.ok) {
-          const data = await editResponse.json();
-          throw new Error(data.error || 'Failed to save product edits');
+          const data = await safeJson<{ error?: string }>(editResponse, { error: 'Failed to save product edits' });
+          throw new Error(data?.error || 'Failed to save product edits');
         }
       }
 
@@ -187,8 +187,8 @@ export default function ProductQueuePage() {
       );
 
       if (!approveResponse.ok) {
-        const data = await approveResponse.json();
-        throw new Error(data.error || 'Failed to approve product');
+        const data = await safeJson<{ error?: string }>(approveResponse, { error: 'Failed to approve product' });
+        throw new Error(data?.error || 'Failed to approve product');
       }
 
       setSuccess(`Product "${editForm.editedName || selectedProduct.productName}" approved successfully!`);

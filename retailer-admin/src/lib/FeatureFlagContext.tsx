@@ -3,7 +3,7 @@
 // Matches POS feature flag resolution: global defaults + store overrides
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { authFetch } from './api';
+import { authFetch, safeJson } from './api';
 import { useAuth } from './AuthContext';
 
 interface FeatureFlags {
@@ -54,7 +54,7 @@ export function FeatureFlagProvider({ children }: { children: React.ReactNode })
         accessToken
       );
       if (res.ok) {
-        const json = await res.json();
+        const json = await safeJson(res, {} as any);
         if (json.success && json.data?.features) {
           setFlags({ ...DEFAULT_FLAGS, ...json.data.features });
         }
