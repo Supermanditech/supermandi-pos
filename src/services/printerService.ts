@@ -91,6 +91,11 @@ class PrinterService {
   /**
    * Get current printer status.
    */
+  // FIX-041: Manual error clearing
+  clearError(): void {
+    this.status.error = undefined;
+  }
+
   getStatus(): PrinterStatus {
     return { ...this.status };
   }
@@ -169,6 +174,9 @@ class PrinterService {
         contentLength: content.length,
         method: "expo-print",
       });
+
+      // FIX-041: Clear error state on successful print
+      this.status.error = undefined;
 
       return true;
     } catch (e: any) {
