@@ -146,7 +146,7 @@ export async function createPurchaseOrderFromCart(
       throw new ApiError(
         400,
         ERROR_CODES.VALIDATION_ERROR,
-        `Order total ${orderTotal.toFixed(2)} is below minimum order value ${minOrderValue.toFixed(2)} for this supplier`
+        `Order total ₹${(orderTotal / 100).toFixed(2)} is below minimum order value ₹${(minOrderValue / 100).toFixed(2)} for this supplier`
       );
     }
   }
