@@ -33,7 +33,9 @@ pnpm-debug.log*
 
 # Test
 coverage/
+coverage-container/
 .nyc_output/
+tests/containers/.container-state.json
 
 # Misc
 *.tgz
