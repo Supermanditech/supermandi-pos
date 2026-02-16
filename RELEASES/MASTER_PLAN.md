@@ -565,11 +565,13 @@ BATCH-007 POS ───────┘                                          
 | BATCH-013 | Prod Testing + Infra Hardening | `WRITTEN` | ALL | Claude | f7cb90d | 2026-02-06 |
 | BATCH-014 | Production Grade Polish | `WRITTEN` | 10/10 | Claude | 609d875 | 2026-02-07 |
 | SA-MERGED | SuperAdmin Tickets (merged) | `WRITTEN` | 8/8 | Claude | bd90493 | 2026-02-10 |
-| **SA-GOLIVE** | **SuperAdmin Critical Go-Live** | **`IN_PROGRESS`** | **2/17** | **Claude** | — | **2026-02-10** |
+| SA-GOLIVE | SuperAdmin Critical Go-Live | `DONE` | 17/17 | Claude | e52adf7 | 2026-02-16 |
 | SA-DEFERRED | SuperAdmin Post Go-Live | `DEFERRED` | 0/8 | — | — | 2026-02-10 |
 | DEFERRED | Deferred Tickets (P1+P2+P3) | `WRITTEN` | 7/7 | Claude | 609d875 | 2026-02-06 |
 | BATCH-010 | Staging Deploy | `PENDING` | 1/6 | Claude+Operator | — | 2026-02-10 |
 | BATCH-011 | Go-Live | `PENDING` | 0/4 | Operator | — | 2026-02-10 |
+| **PHASE-5→10** | **Dev Tickets + Testing** | **`DONE`** | **T-128→TEST-052** | **Claude** | **e52adf7** | **2026-02-16** |
+| **PHASE-11** | **Production Hardening** | **`QUEUED`** | **FIX-001→FIX-067 (67)** | **Claude** | **—** | **2026-02-16** |
 
 ### Note on Batch Statuses
 
@@ -583,11 +585,11 @@ All batches 004 through SA-GOLIVE are merged on `main`. The single RC_SHA for st
 
 | Field | Value |
 |-------|-------|
-| **RC_SHA** | *(set after SA-GOLIVE code-complete + gates pass)* |
-| **Includes** | BATCH-004, 005, 006, 007, 008, 009, 012, 013, 014, SA-MERGED, SA-GOLIVE, DEFERRED |
-| **Gate Status** | `PENDING` |
+| **RC_SHA** | `e52adf7` *(main HEAD after Phase 10 complete, Phase 11 hardening pending)* |
+| **Includes** | BATCH-004→014, SA-MERGED, SA-GOLIVE, DEFERRED, Phase 5→10 (T-128→TEST-052) |
+| **Gate Status** | `PENDING` — Phase 11 (FIX-001→FIX-067) must complete before RC tag |
 | **Evidence** | `RELEASES/EVIDENCE/` — per-batch folders + combined gate artifacts |
-| **CI Run** | *(set after CI green)* |
+| **CI Run** | *(set after Phase 11 + CI green)* |
 
 **Rules:**
 1. RC_SHA is the `git rev-parse HEAD` of `main` after SA-GOLIVE is complete

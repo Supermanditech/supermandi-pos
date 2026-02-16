@@ -1,419 +1,624 @@
-# SUPERSEDED
+# SuperMandi Production Hardening Backlog — Phase 11
 
-> **This file is superseded by [`RELEASES/STAGING_TICKETS.md`](RELEASES/STAGING_TICKETS.md).**
-> All actionable items from this backlog have been triaged into T-001 → T-073 + 28 CL audit tickets.
-> Do NOT use this file for ticket planning.
-
----
-
-# SuperMandi Cross-Platform Audit Backlog (HISTORICAL)
-
-> **Generated:** 2026-02-12 | **Total Issues:** 320 | **Audited by:** 5 parallel agents
-> **Scope:** Retailer Admin + Supplier Portal + SuperAdmin + POS Mobile + Backend API
+> **Generated:** 2026-02-16 | **Audit:** 5 parallel deep-scan agents + GCP MCP parity check
+> **Scope:** Retailer Admin + Supplier Portal + POS App + SuperAdmin + Backend + GCP Infrastructure
+> **Total Tickets:** 67 | **Execution Model:** One ticket = one branch = one PR = one tag
 
 ---
 
 ## Executive Summary
 
-| Portal | Total | P0 | P1 | P2 | P3 |
-|--------|-------|----|----|----|----|
-| Retailer Admin | 68 | 2 | 19 | 47 | 0 |
-| Supplier Portal | 65 | 6 | 20 | 38 | 1 |
-| SuperAdmin | 64 | 2 | 20 | 42 | 0 |
-| POS Mobile | 60 | 3 | 16 | 41 | 0 |
-| Backend API | 63 | 7 | 14 | 42 | 0 |
-| **TOTAL** | **320** | **20** | **89** | **210** | **1** |
+| Platform | Total | P0 | P1 | P2 |
+|----------|-------|----|----|------|
+| Infrastructure/GCP | 4 | 2 | 2 | 0 |
+| Backend | 10 | 4 | 6 | 0 |
+| Retailer Admin | 7 | 0 | 5 | 2 |
+| Supplier Portal | 9 | 3 | 4 | 2 |
+| POS App | 12 | 3 | 6 | 3 |
+| SuperAdmin | 8 | 4 | 3 | 1 |
+| P2 Polish (cross-platform) | 17 | 0 | 0 | 17 |
+| **TOTAL** | **67** | **16** | **26** | **25** |
+
+### GCP Parity Findings
+- All 6 Cloud Run services deployed at GIT_SHA `f61a3b2` — **37 commits behind** main HEAD `e52adf7`
+- Missing secrets: RAZORPAY_*, OPENAI_API_KEY, PAYOUT_PROCESS_API_KEY, GCS_IMAGES_BUCKET, GCS_CHAT_BUCKET
+- 20 Dependabot vulnerability alerts (nodemailer, multer, axios, undici, tar, esbuild)
 
 ---
 
-## P0 ISSUES (20) — Must Fix Before Go-Live
+## Tier 0: Infrastructure & Deploy Blockers (Phase 11A)
 
-### Backend API P0s (7)
+> Must fix BEFORE any staging deploy. These are deployment prerequisites.
 
-| ID | Summary | File | Impact |
-|----|---------|------|--------|
-| AUDIT-API-001 | SQL template literal interpolation in enroll.ts — `${tableName}` in query string | `backend/src/routes/v1/pos/enroll.ts` | SQL injection risk |
-| AUDIT-API-002 | SQL template literal interpolation in tokenSecurity.ts | `backend/src/routes/v1/pos/tokenSecurity.ts` | SQL injection risk |
-| AUDIT-API-003 | JWT_SECRET first 10 chars logged to console in production | `backend/services/api-gateway/src/middleware/jwtAuth.ts:168` | Secret leak in logs |
-| AUDIT-API-004 | Hardcoded `sm_payout_dev_key` fallback for payout API key | `backend/src/routes/v1/webhooks.ts:334,374` | Auth bypass in production |
-| AUDIT-API-005 | Demo seed endpoint has no auth — publicly accessible data wipe | `backend/src/routes/v1/demo.ts` | Unauthenticated data destruction |
-| AUDIT-API-006 | Voice endpoint bypasses store isolation — missing storeId filter | `backend/src/routes/v1/pos/voice.ts` | Cross-store data access |
-| AUDIT-API-007 | `dev-secret-change-in-prod` fallback in 5+ JWT/gateway files | Multiple files | Auth bypass if env vars missing |
+### FIX-001: Deploy main HEAD to staging (37 commits behind)
+- **Priority:** P0
+- **Platform:** GCP
+- **Scope:** All 6 Cloud Run services
+- **Description:** GCP staging is at `f61a3b2`, main HEAD is `e52adf7`. Phase 9 (UPI, B2B, WhatsApp, AI) and Phase 10 (3400+ tests) are NOT deployed. Trigger CI deploy to staging.
+- **Acceptance:** All 6 services show GIT_SHA matching main HEAD. Health checks pass.
+- **Files:** `.github/workflows/deploy.yml`
 
-### Supplier Portal P0s (6)
+### FIX-002: Add missing GCP secrets for Phase 9 features
+- **Priority:** P0
+- **Platform:** GCP
+- **Scope:** Secret Manager + Cloud Run env vars
+- **Description:** Code references RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_ACCOUNT_NUMBER, RAZORPAY_WEBHOOK_SECRET, OPENAI_API_KEY, PAYOUT_PROCESS_API_KEY, GCS_IMAGES_BUCKET, GCS_CHAT_BUCKET, CREDIT_ENABLED, SUPERMANDI_COLLECTION_VPA — none exist in GCP. Services will crash on these code paths.
+- **Acceptance:** All referenced env vars either exist in Secret Manager OR code gracefully handles missing vars (fail-fast with clear error, not silent undefined).
+- **Files:** `backend/services/*/src/**`, Secret Manager console
 
-| ID | Summary | File | Impact |
-|----|---------|------|--------|
-| AUDIT-SUP-001 | `/supplier/onboard` page accessible without auth — leaks registration form | `supplier-portal/src/app/(auth)/onboard/page.tsx` | Unauth access |
-| AUDIT-SUP-002 | Dead `forgot-password` link in login page — page doesn't exist | `supplier-portal/src/app/(auth)/login/page.tsx` | 404 in production |
-| AUDIT-SUP-003 | `error.tsx` shows raw error message + stack trace in production | `supplier-portal/src/app/error.tsx` | Info leak |
-| AUDIT-SUP-004 | `global-error.tsx` shows full error details in production | `supplier-portal/src/app/global-error.tsx` | Info leak |
-| AUDIT-SUP-005 | Root `/supplier/` page shows loading state forever (no auth redirect) | `supplier-portal/src/app/page.tsx` | Broken UX |
-| AUDIT-SUP-006 | Upload page exists at `/supplier/upload` but is not linked anywhere | `supplier-portal/src/app/(dashboard)/upload/page.tsx` | Orphan page |
+### FIX-003: Fix Dependabot critical vulnerabilities
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** package.json dependencies
+- **Description:** 20 open Dependabot alerts: multer (8 high DoS), nodemailer (2 high DoS + 2 medium), axios (1 high prototype pollution), tar (3 high path traversal), undici (3 medium), esbuild (1 medium dev SSRF).
+- **Acceptance:** `gh api repos/.../dependabot/alerts --jq '[.[] | select(.state=="open")] | length'` returns 0 for high/critical.
+- **Files:** `backend/package.json`, `backend/services/*/package.json`
 
-### POS Mobile P0s (3)
-
-| ID | Summary | File | Impact |
-|----|---------|------|--------|
-| AUDIT-POS-001 | PurchaseHistoryScreen uses placeholder `deltaQty * 10000` for value display | `src/screens/PurchaseHistoryScreen.tsx` | Wrong monetary values shown |
-| AUDIT-POS-002 | PurchaseScreen "Review Order" button has no handler — dead button | `src/screens/PurchaseScreen.tsx` | Feature doesn't work |
-| AUDIT-POS-003 | BnplDuesScreen dispute shows success toast on API error | `src/screens/BnplDuesScreen.tsx` | Financial/legal risk — false confirmation |
-
-### Retailer Admin P0s (2)
-
-| ID | Summary | File | Impact |
-|----|---------|------|--------|
-| AUDIT-RET-003 | LoginPage firebase-otp-login fetch missing `credentials: 'include'` | `retailer-admin/src/pages/LoginPage.tsx:408` | Auth cookies silently ignored |
-| AUDIT-RET-030 | DeviceActivationPage uses `useState` as side-effect launcher | `retailer-admin/src/pages/DeviceActivationPage.tsx:106-110` | Breaks in React concurrent mode |
-
-### SuperAdmin P0s (2)
-
-| ID | Summary | File | Impact |
-|----|---------|------|--------|
-| AUDIT-SA-001 | Entire 6,256-line portal in single App.tsx monolith | `supermandi-superadmin/src/App.tsx` | Unmaintainable, performance |
-| AUDIT-SA-008 | No responsive/mobile layout — completely unusable on tablet/phone | `supermandi-superadmin/src/App.tsx` | Zero mobile support |
+### FIX-004: Validate VITE_API_BASE_URL in all portals
+- **Priority:** P1
+- **Platform:** Retailer, Supplier, SuperAdmin
+- **Scope:** Build config + API modules
+- **Description:** All 3 portals default API_BASE to empty string `''` if env var missing. Behind load balancer, relative paths `/api/...` will 404. Must fail-fast at build time if VITE_API_BASE_URL is unset in production.
+- **Acceptance:** `pnpm -r build` with VITE_API_BASE_URL unset fails with clear error. Build succeeds when set.
+- **Files:** `retailer-admin/src/lib/api.ts:9`, `supplier-portal/src/lib/api.ts`, `supermandi-superadmin/src/api/*.ts`, all `vite.config.ts`
+- **Ref:** BUG-R-029, BUG-A-006
 
 ---
 
-## P1 ISSUES (89) — Should Fix Before Go-Live
+## Tier 1: Backend P0 — Store Isolation & Data Integrity (Phase 11B)
 
-### Backend API P1s (14)
+> Critical security and data integrity fixes. Must be done before any user-facing testing.
 
-| ID | Summary | File |
-|----|---------|------|
-| AUDIT-API-008 | csvImport.ts: 4 `pool.connect()` but only 2 `client.release()` — connection leak | `backend/src/routes/v1/retailer-admin/csvImport.ts` |
-| AUDIT-API-009 | Supplier registration `POST /create` missing phone format validation | `backend/src/routes/v1/supplier/registration.ts` |
-| AUDIT-API-010 | BNPL payment: status always set to `paid` even for partial payments | `backend/src/routes/v1/pos/bnpl.ts:273-301` |
-| AUDIT-API-011 | Stock-in endpoint missing idempotency key — double-submit creates duplicate stock | `backend/src/routes/v1/retailer-admin/stockIn.ts` |
-| AUDIT-API-012 | Webhook Razorpay signature verification has timing-unsafe comparison | `backend/src/routes/v1/webhooks.ts` |
-| AUDIT-API-013 | 67 pool.connect() vs 65 client.release() across entire backend — 2 leaks | Cross-cutting (AUDIT-XC-002) |
-| AUDIT-API-014 | All security env vars have `dev-secret` fallbacks instead of fail-fast | Cross-cutting (AUDIT-XC-001) |
-| AUDIT-API-015 | Admin audit logs store full request bodies with PII (PAN, Aadhaar) | `backend/src/routes/v1/admin/audit.ts:95` |
-| AUDIT-API-016 | DUE split payment allows null customer_phone — unrecoverable dues | `backend/src/routes/v1/pos/payments.ts:528-534` |
-| AUDIT-API-017 | Store isolation missing on BNPL buy_payment UPDATE queries | `backend/src/routes/v1/pos/bnpl.ts:282-285,402-405` |
-| AUDIT-API-018 | UPI payment status check missing store_id filter | `backend/src/routes/v1/pos/payments.ts:650-654` |
-| AUDIT-API-019 | Gateway trusts x-user-id headers without JWT if backend accessed directly | `backend/src/middleware/validateGatewayHeaders.ts` |
-| AUDIT-API-020 | Sale creation SERIALIZABLE transaction returns generic 500 on conflict | `backend/src/routes/v1/pos/sales.ts` |
-| AUDIT-API-021 | Voice endpoint stores temp files without cleanup on process crash | `backend/src/routes/v1/pos/voice.ts:34-60` |
+### FIX-005: Fix store_id isolation in UPDATE queries
+- **Priority:** P0
+- **Platform:** Backend
+- **Scope:** catalog-service, platform-service
+- **Description:** `linkSupplierToStoreProduct` updates `catalog.store_products` without `WHERE store_id = $N`. Attacker could modify another store's product mappings. Cross-store data corruption risk.
+- **Acceptance:** All UPDATE/DELETE queries on store-scoped tables include `AND store_id = $token.storeId`. Integration test proves cross-store mutation fails with 403.
+- **Files:** `backend/services/platform-service/src/services/retailerCatalogService.ts:312`
+- **Ref:** BUG-B-001
 
-### Retailer Admin P1s (19)
+### FIX-006: Fix store_id isolation in DELETE queries
+- **Priority:** P0
+- **Platform:** Backend
+- **Scope:** catalog-service
+- **Description:** `unmapProduct` deletes from `catalog.supplier_product_map` using only mapping ID without store ownership verification. Any authenticated user could delete another store's mappings.
+- **Acceptance:** DELETE query includes store ownership join/check. Test proves cross-store delete returns 403.
+- **Files:** `backend/services/catalog-service/src/services/mappingService.ts:491`
+- **Ref:** BUG-B-005
 
-| ID | Summary | File |
-|----|---------|------|
-| AUDIT-RET-002 | 1,386-line deprecated RetailerOnboardingPage still routed | `retailer-admin/src/pages/RetailerOnboardingPage.tsx` |
-| AUDIT-RET-011 | Dashboard inventory table has no pagination — breaks at scale | `retailer-admin/src/pages/DashboardPage.tsx` |
-| AUDIT-RET-014 | Debug banner/footer visible in production exposing API URLs and store IDs | `retailer-admin/src/components/ProtectedLayout.tsx` |
-| AUDIT-RET-015 | Sidebar uses `<a>` tags instead of `<Link>` — full page reloads on every navigation | `retailer-admin/src/components/ProtectedLayout.tsx` |
-| AUDIT-RET-019 | Products page edit modal has no form validation | `retailer-admin/src/pages/ProductsPage.tsx` |
-| AUDIT-RET-022 | ImportPage upload has no file size limit on client side | `retailer-admin/src/pages/ImportPage.tsx` |
-| AUDIT-RET-039 | Admin queue pages use wrong API prefix — 401s won't trigger auth handler | `retailer-admin/src/pages/admin/SupplierQueuePage.tsx` |
-| AUDIT-RET-041 | Direct `response.json()` calls without safeJson in 12+ locations | Multiple pages |
-| AUDIT-RET-046 | UPI VPA validation regex differs between SettingsPage and UpiInput component | `retailer-admin/src/pages/SettingsPage.tsx:87` |
-| AUDIT-RET-050 | authFetch timeout hardcoded to 30s — CSV imports may timeout | `retailer-admin/src/lib/api.ts:81` |
-| AUDIT-RET-051 | Registration API calls missing `credentials: 'include'` | `retailer-admin/src/lib/api.ts:231-331` |
-| AUDIT-RET-054 | Token refresh race condition — multiple 401s trigger multiple refreshes | `retailer-admin/src/lib/AuthContext.tsx` |
-| AUDIT-RET-057 | Limited mode users can access all pages despite "blocked actions" list | `retailer-admin/src/components/ProtectedLayout.tsx` |
-| AUDIT-RET-062 | localStorage stores user/store metadata in plaintext, may persist after logout | `retailer-admin/src/lib/AuthContext.tsx` |
-| AUDIT-RET-066 | isActive check for `settings` also matches `settings/payments` — double highlight | `retailer-admin/src/components/ProtectedLayout.tsx:41` |
-| AUDIT-RET-052 | Registration API throws raw objects instead of Error instances | `retailer-admin/src/lib/api.ts:240-242` |
-| AUDIT-RET-004 | LoginPage has no loading skeleton — white flash on mount | `retailer-admin/src/pages/LoginPage.tsx` |
-| AUDIT-RET-008 | DashboardPage stats cards have no empty state | `retailer-admin/src/pages/DashboardPage.tsx` |
-| AUDIT-RET-036 | SupplierCatalogPage fetch fires on every keystroke — no debounce | `retailer-admin/src/pages/SupplierCatalogPage.tsx` |
+### FIX-007: Wrap stock update in transaction
+- **Priority:** P0
+- **Platform:** Backend
+- **Scope:** platform-service
+- **Description:** Stock update writes to `inventory.inventory_ledger`, `inventory.stock_balances`, and `catalog.store_products` as 3 separate queries without transaction. If 3rd UPDATE fails, ledger is inconsistent.
+- **Acceptance:** All 3 writes wrapped in BEGIN/COMMIT. Simulated failure test shows rollback.
+- **Files:** `backend/services/platform-service/src/routes/retailerPortal.ts:1113-1133`
+- **Ref:** BUG-B-010
 
-### Supplier Portal P1s (20)
-
-| ID | Summary | File |
-|----|---------|------|
-| AUDIT-SUP-007 | Dashboard page has 5 dead/unused imports (formatDate, PieChart, etc.) | `supplier-portal/src/app/(dashboard)/dashboard/page.tsx` |
-| AUDIT-SUP-008 | Profile page shows stale data after save — no query invalidation | `supplier-portal/src/app/(dashboard)/profile/page.tsx` |
-| AUDIT-SUP-009 | Orders page pagination not URL-synced — refresh resets to page 1 | `supplier-portal/src/app/(dashboard)/orders/page.tsx` |
-| AUDIT-SUP-010 | Products page edit form allows empty product name submission | `supplier-portal/src/app/(dashboard)/products/page.tsx` |
-| AUDIT-SUP-011 | Earnings page has no error state for failed API calls | `supplier-portal/src/app/(dashboard)/earnings/page.tsx` |
-| AUDIT-SUP-012 | Dashboard layout sidebar has no active state for sub-routes | `supplier-portal/src/app/(dashboard)/layout.tsx` |
-| AUDIT-SUP-013 | Bank details form has no IFSC validation | `supplier-portal/src/app/(dashboard)/profile/page.tsx` |
-| AUDIT-SUP-014 | Products page allows negative purchase price | `supplier-portal/src/app/(dashboard)/products/page.tsx` |
-| AUDIT-SUP-015 | `handle401Response()` redirects to `/login` bypassing basePath `/supplier` | `supplier-portal/src/lib/api.ts:156` |
-| AUDIT-SUP-016 | Auth token stored in localStorage — no HttpOnly cookie option | `supplier-portal/src/lib/auth.tsx` |
-| AUDIT-SUP-017 | KYC page has no retry mechanism for failed document uploads | `supplier-portal/src/app/(dashboard)/kyc/page.tsx` |
-| AUDIT-SUP-018 | Order detail modal item status fires mutation on every keystroke | `supplier-portal/src/app/(dashboard)/orders/page.tsx:517-528` |
-| AUDIT-SUP-019 | Dead code: `formatDate` imported but `formatDateTime` used instead | `supplier-portal/src/app/(dashboard)/dashboard/page.tsx` |
-| AUDIT-SUP-020 | `formatPrice` returns '-' for zero prices (treats 0 as falsy) | `supplier-portal/src/app/(dashboard)/products/page.tsx:17-20` |
-| AUDIT-SUP-021 | Three different price formatters across portal | Orders, Products, lib/formatters |
-| AUDIT-SUP-022 | Three different date formatters across portal | Orders, Dashboard, lib/formatters |
-| AUDIT-SUP-023 | Verification pending banner AND LimitedModeBanner render simultaneously | `supplier-portal/src/app/(dashboard)/layout.tsx:191-217` |
-| AUDIT-SUP-024 | Resubmit loading state is global — all buttons show loading | `supplier-portal/src/app/(dashboard)/products/page.tsx:627-635` |
-| AUDIT-SUP-025 | Token refresh retry has no timeout — can hang indefinitely | `supplier-portal/src/lib/api.ts:223-227` |
-| AUDIT-SUP-037 | 401 redirect uses `window.location.replace('/login')` not `/supplier/login` | `supplier-portal/src/lib/api.ts:148-157` |
-
-### SuperAdmin P1s (20)
-
-| ID | Summary | File |
-|----|---------|------|
-| AUDIT-SA-002 | `X-Admin-Token` header sent in every request even when not needed | `supermandi-superadmin/src/api/authToken.ts` |
-| AUDIT-SA-003 | `abortActiveRequests()` cancels ALL requests on tab switch | `supermandi-superadmin/src/api/authToken.ts:202-211` |
-| AUDIT-SA-004 | Product edit modal allows negative margin values | `supermandi-superadmin/src/App.tsx:800-804` |
-| AUDIT-SA-005 | User creation allows admin without email (needed for OTP login) | `supermandi-superadmin/src/App.tsx:817-822` |
-| AUDIT-SA-009 | All tabs show "Loading..." text instead of skeletons — layout shifts | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-010 | No loading skeleton for any data table | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-013 | Supplier suspension uses no confirmation modal | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-014 | Document rejection allows single-character reason | `supermandi-superadmin/src/App.tsx:1566-1569` |
-| AUDIT-SA-016 | Error states persist across tab switches — stale errors shown | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-019 | 100+ useState calls in single component — excessive re-renders | `supermandi-superadmin/src/App.tsx:700-950` |
-| AUDIT-SA-022 | Bank verification approval has no confirmation step | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-024 | Store search is client-side only — won't scale to 10K stores | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-028 | Settings error state has no retry button | `supermandi-superadmin/src/App.tsx` |
-| AUDIT-SA-035 | ErrorBoundary import path mismatch between main.tsx and components/ | `supermandi-superadmin/src/main.tsx:5` |
-| AUDIT-SA-039 | JWT token expiry hardcoded to 24h, ignoring server-provided expiry | `supermandi-superadmin/src/api/authToken.ts:356-364` |
-| AUDIT-SA-043 | No route-level auth guard — 401 race condition shows stale data | `supermandi-superadmin/src/api/authToken.ts:260-271` |
-| AUDIT-SA-049 | ErrorBoundary only catches React render errors, not async errors | `supermandi-superadmin/src/components/ErrorBoundary.tsx` |
-| AUDIT-SA-053 | parseError duplicated across 6 API modules | `supermandi-superadmin/src/api/*.ts` |
-| AUDIT-SA-032 | Error sanitizer logs detection to console (aids attackers) | `supermandi-superadmin/src/api/errorSanitizer.ts:65,84` |
-| AUDIT-SA-033 | Staff tab depends on storeDirectory loaded by Stores tab | `supermandi-superadmin/src/App.tsx:5579` |
-
-### POS Mobile P1s (16)
-
-| ID | Summary | File |
-|----|---------|------|
-| AUDIT-POS-004 | RegisterStoreScreen hardcodes `status: 'active'` bypassing approval flow | `src/screens/RegisterStoreScreen.tsx` |
-| AUDIT-POS-005 | EnrollDeviceScreen missing retry logic for activation code timeout | `src/screens/EnrollDeviceScreen.tsx` |
-| AUDIT-POS-006 | InwardWrapper bypasses store active status check | `src/screens/InwardScreen.tsx` |
-| AUDIT-POS-007 | PaymentScreen UPI polling has no maximum retry limit | `src/screens/PaymentScreen.tsx` |
-| AUDIT-POS-008 | SellScanScreen barcode handler can fire multiple times for same scan | `src/screens/SellScanScreen.tsx` |
-| AUDIT-POS-025 | PurchaseHistoryScreen shows truncated UUIDs instead of product names | `src/screens/PurchaseHistoryScreen.tsx` |
-| AUDIT-POS-028 | `ToastAndroid.show()` used directly in 4 files — crashes on iOS | Multiple files |
-| AUDIT-POS-032 | apiClient logs device token prefix in production | `src/services/api/apiClient.ts:250` |
-| AUDIT-POS-033 | apiClient logs request bodies (PAN, phone, Aadhaar) in production | `src/services/api/apiClient.ts:251` |
-| AUDIT-POS-034 | apiClient logs response bodies in production | `src/services/api/apiClient.ts:297` |
-| AUDIT-POS-035 | InwardScreen stock check failure silently continues | `src/screens/InwardScreen.tsx` |
-| AUDIT-POS-042 | productsStore fallback to hardcoded sample products on error | `src/stores/productsStore.ts` |
-| AUDIT-POS-043 | phoneOtp dev bypass accepts "123456" OTP | `src/services/phoneOtp.ts:144-149` |
-| AUDIT-POS-049 | No Error Boundary — any render crash kills entire POS app | `App.tsx` |
-| AUDIT-POS-009 | MenuScreen role checks inconsistent with backend RBAC | `src/screens/MenuScreen.tsx` |
-| AUDIT-POS-010 | BarcodeSheetScreen has no pagination for large barcode sets | `src/screens/BarcodeSheetScreen.tsx` |
+### FIX-008: Add idempotency key to GRN receive endpoint
+- **Priority:** P0
+- **Platform:** Backend
+- **Scope:** order-service
+- **Description:** POST `/stores/:storeId/orders/:orderId/receive` performs inventory mutations without idempotency key. Retry creates duplicate stock entries. Comment acknowledges this but no enforcement exists.
+- **Acceptance:** Endpoint requires `Idempotency-Key` header. Duplicate key returns 409 with original response. Test proves retry safety.
+- **Files:** `backend/services/order-service/src/routes/receive.ts:42-50`
+- **Ref:** BUG-B-006
 
 ---
 
-## P2 ISSUES (210) — Fix After Go-Live / During Hardening
+## Tier 2: Backend P1 — Performance & Validation (Phase 11C)
 
-> P2 issues are organized by category across all portals. Full details in the raw agent output files.
+### FIX-009: Fix N+1 query in CSV bulk upload
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** supplier-service
+- **Description:** CSV upload loops 1000 products with individual INSERT queries. 1000 serial DB round-trips. Use batch INSERT.
+- **Acceptance:** Bulk insert uses single multi-row INSERT or batched prepared statements. Upload of 1000 products < 5 seconds.
+- **Files:** `backend/services/supplier-service/src/routes/products.ts:665-687`
+- **Ref:** BUG-B-008
 
-### Security (15 P2s)
-- AUDIT-SA-007: Error sanitizer console.warn aids attackers
-- AUDIT-SA-031: Error sanitizer logs sensitive pattern type
-- AUDIT-SA-056: JWT expiry hardcoded client-side
-- AUDIT-SUP-047: Firebase config committed to source control
-- AUDIT-SUP-062: Idle timeout uses localStorage (manipulable)
-- AUDIT-API-036: Audit logs store request bodies with PII
-- AUDIT-API-037: Device metadata update accepts unbounded strings
-- AUDIT-API-038: POS events accept any eventType string
-- AUDIT-API-043: CSRF protection doesn't exempt webhook paths
-- AUDIT-API-047: GRN alerts builds SQL with string concatenation
-- AUDIT-API-049: Audit stats endpoint missing permission check
-- AUDIT-API-053: Gateway forwards master admin token too broadly
-- AUDIT-API-057: In-memory rate limiting resets on restart
-- AUDIT-API-062: Backend trusts gateway headers without re-verification
-- AUDIT-POS-044: PosStatusBar camera icon uses `as any` cast
+### FIX-010: Add rate limiting to supplier product endpoints
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** supplier-service
+- **Description:** CSV upload allows 1000 products per request with only gateway's general 30 req/min limit. Need endpoint-specific throttle.
+- **Acceptance:** CSV upload: max 5 per hour per supplier. Product CRUD: max 60 per minute per supplier.
+- **Files:** `backend/services/supplier-service/src/routes/products.ts:510`
+- **Ref:** BUG-B-009
 
-### Store Isolation (5 P2s)
-- AUDIT-API-046: UPI completion check missing store_id
-- AUDIT-API-050: BNPL buy_payment UPDATE missing store_id
-- AUDIT-API-051: BNPL cash pay UPDATE missing store_id
-- AUDIT-API-040: Credit offers generated without actual store history
-- AUDIT-POS-053: BuyScreen stock filtering is client-side only
+### FIX-011: Add index on refresh_tokens.token_hash
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** auth-service, migrations
+- **Description:** `findRefreshTokenByHash` queries on every token refresh (high frequency) without verified index on `token_hash`. Full table scan on token refresh.
+- **Acceptance:** Migration adds `CREATE INDEX idx_refresh_tokens_hash ON auth.refresh_tokens(token_hash) WHERE revoked_at IS NULL`. Query EXPLAIN shows index scan.
+- **Files:** `backend/services/auth-service/src/db/tokenQueries.ts:90-96`, `backend/migrations/`
+- **Ref:** BUG-B-013
 
-### Missing Rate Limiting (6 P2s)
-- AUDIT-API-035: UPI payment initiation has no rate limit
-- AUDIT-API-039: POS sync endpoint has no rate limit
-- AUDIT-API-041: Credit application has no rate limit
-- AUDIT-API-054: UTR verification has no rate limit
-- AUDIT-API-061: Device enrollment missing progressive lockout
-- AUDIT-API-063: BNPL dispute has no rate limit
+### FIX-012: Add LIMIT to unbounded catalog categories query
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** catalog-service
+- **Description:** SELECT DISTINCT categories has no LIMIT. Malicious data could return hundreds of categories causing memory issues.
+- **Acceptance:** Query has `LIMIT 500`. Response includes `truncated: true` flag if limit hit.
+- **Files:** `backend/services/catalog-service/src/routes/catalog.ts:115-129`
+- **Ref:** BUG-B-011
 
-### UX 4-State Coverage (25+ P2s)
-- Missing loading skeletons across all portals (SA-009, SA-010, SA-038, RET-004, SUP-041, SUP-043, SUP-052)
-- Missing error states (SA-028, SUP-040, SUP-042, RET-008)
-- Missing empty states (SA-017, SA-020, SA-026, SA-027, SA-063, RET-008)
-- Missing retry buttons (SA-028, SUP-017)
-- Stale data after mutations (SA-016, SA-036, SUP-008, SUP-061)
+### FIX-013: Fix toFixed financial calculation in purchase orders
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** order-service
+- **Description:** `toFixed(2)` used on financial amounts. Verify underlying calculation uses integer paisa arithmetic per project rules.
+- **Acceptance:** All calculations use integer arithmetic. `toFixed` only used for display strings, never for comparisons.
+- **Files:** `backend/services/order-service/src/services/purchaseOrderService.ts:149`
+- **Ref:** BUG-B-004
 
-### Accessibility (20+ P2s)
-- Missing ARIA labels (SA-011, SA-021, SA-034, SA-042, SA-051, SA-058, SA-060, RET-049, SUP-038, SUP-059)
-- No focus management in modals (SA-051)
-- Missing color contrast WCAG AA (SUP-059)
-- No `prefers-reduced-motion` support (RET-049)
-- Screen reader incompatibilities across all portals
-
-### Navigation & Routing (10+ P2s)
-- Double redirects (RET-063)
-- basePath issues (SUP-015, SUP-037)
-- Missing breadcrumbs (RET-058)
-- Client-side-only pagination (SA-040, SUP-009, SUP-044)
-
-### Performance & Scalability (15+ P2s)
-- Client-side filtering (SA-024, SA-054, POS-053)
-- N+1 queries (API-030, API-033, API-042)
-- Unbounded in-memory maps (API-031)
-- Events table allows 1000 rows (SA-040)
-- Missing pagination (API-044, API-045, POS-010)
-- 335 console.log calls in POS codebase
-
-### Code Quality & Dead Code (15+ P2s)
-- Duplicated code (SA-053, SA-055, SUP-021, SUP-022, POS-027)
-- Unused imports/exports (SUP-007, SUP-019, RET-053)
-- Deprecated pages still routed (RET-002)
-- Feature flags permanently disabled (POS-038)
-- Hardcoded values (POS-029, POS-051, API-045)
-
-### Missing i18n (10+ P2s)
-- GRNScreen zero i18n coverage (POS-030)
-- 10+ screens with partial i18n (POS-031)
-- Indian number formatting fallback wrong (POS-059)
-
-### Mobile Responsiveness (5+ P2s)
-- SuperAdmin zero mobile support (SA-008 already P0)
-- Tables not horizontally scrollable (RET-044)
-- Grid responsive breakpoint too aggressive (RET-055)
-- No dark mode (SA-062, RET-056)
+### FIX-014: Replace empty catch blocks with logging
+- **Priority:** P1
+- **Platform:** Backend
+- **Scope:** catalog-service, platform-service
+- **Description:** Multiple `.catch(() => {})` silently swallow errors. Makes production debugging impossible.
+- **Acceptance:** All catch blocks log error context. No empty catch blocks in production code. Grep for `catch\s*\(\s*\)\s*\{\s*\}` returns 0.
+- **Files:** `backend/services/catalog-service/src/cache/redis.ts:173`, `backend/services/platform-service/src/services/retailerCatalogService.ts:434`
+- **Ref:** BUG-B-002, BUG-B-003
 
 ---
 
-## Implementation Priority Order
+## Tier 3: Retailer Admin P1 (Phase 11D)
 
-Per governance rules (bottom-up, dependency-aware):
+### FIX-015: Fix bare response.json() calls — use safeJson everywhere
+- **Priority:** P1
+- **Platform:** Retailer Admin
+- **Description:** FeatureFlagContext and 12+ other locations use raw `response.json()` instead of `safeJson()`. HTML error responses from backend will crash the app with JSON parse error.
+- **Acceptance:** Grep for `\.json\(\)` in retailer-admin returns 0 outside of safeJson definition. All API responses use safeJson.
+- **Files:** `retailer-admin/src/lib/FeatureFlagContext.tsx:57`, multiple pages
+- **Ref:** BUG-R-001
 
-### Phase 1: SECURITY (P0 + P1 Security)
-> **15 tickets** — Schema/Backend first, must fix before any deploy
+### FIX-016: Fix memory leak in ImportPage polling
+- **Priority:** P1
+- **Platform:** Retailer Admin
+- **Description:** `pollingRef` interval never cleaned up on unmount. Navigating away during CSV import causes memory leak and state updates on unmounted component.
+- **Acceptance:** useEffect cleanup clears interval. React strict mode double-mount test passes.
+- **Files:** `retailer-admin/src/pages/ImportPage.tsx:48`
+- **Ref:** BUG-R-005
 
-1. AUDIT-API-001/002: Fix SQL template literal interpolation
-2. AUDIT-API-003: Remove JWT secret from logs
-3. AUDIT-API-004: Remove hardcoded payout key fallback
-4. AUDIT-API-005: Add auth to demo seed endpoint
-5. AUDIT-API-006: Fix voice endpoint store isolation
-6. AUDIT-API-007: Fail-fast on missing security env vars
-7. AUDIT-API-008/013: Fix DB connection leaks (csvImport + others)
-8. AUDIT-API-017/018/046/050/051: Add store_id to all BNPL/payment queries
-9. AUDIT-API-019: Validate gateway trust model
-10. AUDIT-POS-032/033/034: Gate apiClient debug logging behind `__DEV__`
-11. AUDIT-POS-043: Strengthen OTP dev bypass safeguards
-12. AUDIT-SA-032: Remove error sanitizer console.warn
-13. AUDIT-SUP-003/004: Strip error details in production
-14. AUDIT-API-015: Redact PII from audit logs
-15. AUDIT-API-012: Fix webhook signature timing comparison
+### FIX-017: Add error boundary for lazy-loaded routes
+- **Priority:** P1
+- **Platform:** Retailer Admin
+- **Description:** Lazy-loaded pages in Suspense have no fallback for chunk load failures (network error). Entire app crashes with no recovery.
+- **Acceptance:** Each lazy route wrapped in ErrorBoundary with "Failed to load page — Retry" UI. Chunk load error triggers retry.
+- **Files:** `retailer-admin/src/App.tsx:15-49`
+- **Ref:** BUG-R-015
 
-### Phase 2: BROKEN FUNCTIONALITY (P0 + P1 Functional)
-> **20 tickets** — Features that don't work or produce wrong results
+### FIX-018: Fix price rounding — use Math.floor for rupees-to-paise
+- **Priority:** P1
+- **Platform:** Retailer Admin
+- **Description:** `Math.round(float * 100)` for paise conversion. 99.995 rounds to 10000 paise (Rs 100) instead of 9999. Should use `Math.floor`.
+- **Acceptance:** All rupees-to-paise conversions use `Math.floor`. Unit test covers edge cases (99.995, 99.994, 0.001).
+- **Files:** `retailer-admin/src/pages/ProductsPage.tsx:501`
+- **Ref:** BUG-R-016
 
-1. AUDIT-POS-001: Fix PurchaseHistory placeholder value calculation
-2. AUDIT-POS-002: Wire PurchaseScreen "Review Order" button
-3. AUDIT-POS-003: Fix BnplDues false success on error
-4. AUDIT-RET-003: Add `credentials: 'include'` to login fetch
-5. AUDIT-RET-030: Fix DeviceActivation useState anti-pattern
-6. AUDIT-SUP-001: Gate onboard page behind auth
-7. AUDIT-SUP-002: Fix or remove forgot-password link
-8. AUDIT-SUP-005: Fix root page infinite loading
-9. AUDIT-POS-049: Add Error Boundary to POS app
-10. AUDIT-POS-042: Remove hardcoded sample products fallback
-11. AUDIT-POS-028: Replace ToastAndroid with cross-platform showToast
-12. AUDIT-POS-025: Show product names instead of truncated UUIDs
-13. AUDIT-RET-015: Replace sidebar `<a>` tags with `<Link>` components
-14. AUDIT-RET-014: Gate debug banner behind `import.meta.env.DEV`
-15. AUDIT-RET-039: Fix admin queue API prefix
-16. AUDIT-SUP-015/037: Fix 401 redirect to include basePath
-17. AUDIT-RET-057: Add limited mode route guards
-18. AUDIT-API-010: Fix BNPL partial payment status
-19. AUDIT-API-016: Validate customer_phone for DUE payments
-20. AUDIT-API-020: Add retry logic for sale serialization conflicts
+### FIX-019: Enforce HTTPS in API base URL
+- **Priority:** P1
+- **Platform:** Retailer Admin
+- **Description:** API_GATEWAY_BASE can be http:// in production. Auth tokens sent over unencrypted connection.
+- **Acceptance:** Production build fails if VITE_API_BASE_URL starts with `http:`. Dev mode allows http.
+- **Files:** `retailer-admin/src/lib/api.ts:9`
+- **Ref:** BUG-R-010
 
-### Phase 3: DATA INTEGRITY & AUTH (P1 Auth/Validation)
-> **15 tickets** — Prevents data corruption and auth bypass
+### FIX-020: Duplicate ErrorBoundary consolidation
+- **Priority:** P2
+- **Platform:** Retailer Admin
+- **Description:** Two ErrorBoundary files exist (root + components/). Different implementations cause import confusion.
+- **Acceptance:** Single ErrorBoundary at root level. All imports consolidated. `components/ErrorBoundary.tsx` deleted.
+- **Files:** `retailer-admin/src/ErrorBoundary.tsx`, `retailer-admin/src/components/ErrorBoundary.tsx`
+- **Ref:** BUG-R-004
 
-1. AUDIT-RET-054: Token refresh mutex
-2. AUDIT-RET-051: Add credentials to registration API calls
-3. AUDIT-SA-039: Use server-provided JWT expiry
-4. AUDIT-SA-043: Immediate login gate on 401
-5. AUDIT-SA-035: Fix ErrorBoundary import path
-6. AUDIT-SA-049: Add global unhandled rejection handler
-7. AUDIT-RET-046: Unify UPI VPA validation
-8. AUDIT-SUP-013: Add IFSC validation
-9. AUDIT-SUP-010: Add product name validation
-10. AUDIT-SA-004: Validate margin >= 0
-11. AUDIT-SA-005: Require email for admin users
-12. AUDIT-SA-014: Minimum 10-char rejection reason
-13. AUDIT-API-009: Validate phone format in supplier registration
-14. AUDIT-API-011: Add idempotency key to stock-in
-15. AUDIT-RET-062: Audit and clean localStorage on logout
-
-### Phase 4: UX & POLISH (P1 UX + Top P2s)
-> **25 tickets** — Loading states, empty states, error handling
-
-1. AUDIT-RET-041: Replace raw response.json with safeJson
-2. AUDIT-RET-050: Configurable fetch timeout
-3. AUDIT-SA-009/010: Add skeleton loaders to SuperAdmin
-4. AUDIT-SA-016: Clear errors on tab switch
-5. AUDIT-SA-033: Load storeDirectory independently of Stores tab
-6. AUDIT-SUP-008: Invalidate profile query after save
-7. AUDIT-SUP-018: Debounce order item status mutation
-8. AUDIT-SUP-023: Remove duplicate status banners
-9. AUDIT-SUP-024: Per-product resubmit loading state
-10. AUDIT-SUP-025: Add timeout to token refresh retry
-11. AUDIT-POS-035: Block inward on stock check failure
-12. AUDIT-POS-005: Add retry logic to device enrollment
-13. AUDIT-POS-007: Add max retry limit to UPI polling
-14. AUDIT-POS-008: Debounce barcode scan handler
-15. AUDIT-RET-011: Add pagination to dashboard inventory
-16. AUDIT-RET-036: Debounce catalog search
-17. AUDIT-RET-022: Add client-side file size limit
-18. AUDIT-SA-024: Server-side store search
-19. AUDIT-SA-040: Server-side events pagination
-20. AUDIT-SA-019: Extract per-tab state to reduce re-renders
-21. AUDIT-SUP-009/044: URL-sync pagination
-22. AUDIT-SUP-040/042: Add error states to Orders and KYC
-23. AUDIT-SUP-041/043: Add loading skeletons
-24. AUDIT-RET-052: Throw proper Error instances from API
-25. AUDIT-RET-066: Fix double-highlight navigation
-
-### Phase 5: HARDENING (P2s)
-> **~200 remaining P2 tickets** — Accessibility, i18n, performance, code quality
-
-Grouped into sub-phases:
-- 5A: Accessibility (WCAG AA compliance) — ~20 tickets
-- 5B: Performance & Scalability (pagination, caching, N+1) — ~15 tickets
-- 5C: Code Quality (dedup, dead code, imports) — ~15 tickets
-- 5D: i18n Coverage (POS screens) — ~10 tickets
-- 5E: Mobile Responsiveness — ~5 tickets
-- 5F: Remaining UX polish — ~remaining
+### FIX-021: Fix DashboardPage double-fetch on category change
+- **Priority:** P2
+- **Platform:** Retailer Admin
+- **Description:** Two useEffect hooks listen for `selectedCategory` changes — one refetches products, another auto-refreshes on tab focus. Triggers fetchProducts twice on category change.
+- **Acceptance:** Single combined effect or deduplication flag. Network tab shows 1 fetch per category change.
+- **Files:** `retailer-admin/src/pages/ProductsPage.tsx:302-318`
+- **Ref:** BUG-R-018
 
 ---
 
-## Raw Audit Output Files
+## Tier 4: Supplier Portal P0-P1 (Phase 11E)
 
-Full detailed findings with exact line numbers, repro steps, expected vs actual, and acceptance criteria:
+### FIX-022: Add root error boundary
+- **Priority:** P0
+- **Platform:** Supplier Portal
+- **Description:** Root layout has no error boundary. If AuthProvider or QueryClientProvider throw during init, entire app crashes with no recovery.
+- **Acceptance:** `error.tsx` exists at root level with recovery UI. Test simulates provider crash.
+- **Files:** `supplier-portal/src/app/layout.tsx:16-28`
+- **Ref:** BUG-S-001
 
-| Portal | Output File |
-|--------|-------------|
-| Retailer Admin (68 issues) | `C:\WINDOWS\TEMP\claude\c--supermandi-pos\tasks\ae863d9.output` |
-| Supplier Portal (65 issues) | `C:\WINDOWS\TEMP\claude\c--supermandi-pos\tasks\ac49ed0.output` |
-| SuperAdmin (64 issues) | `C:\WINDOWS\TEMP\claude\c--supermandi-pos\tasks\ac4494b.output` |
-| POS Mobile (60 issues) | `C:\WINDOWS\TEMP\claude\c--supermandi-pos\tasks\a6defea.output` |
-| Backend API (63 issues) | `C:\WINDOWS\TEMP\claude\c--supermandi-pos\tasks\aea40f8.output` |
+### FIX-023: Fix auth check — use cookie not in-memory token
+- **Priority:** P0
+- **Platform:** Supplier Portal
+- **Description:** Root page redirect uses `getAuthToken()` (in-memory) instead of `hasAuthCookie()`. After page reload, in-memory token is null, authenticated users redirected to login.
+- **Acceptance:** Auth check uses `hasAuthCookie()`. Page reload preserves auth state. Test covers refresh scenario.
+- **Files:** `supplier-portal/src/app/page.tsx:11`
+- **Ref:** BUG-S-002
 
-Each issue in the raw files includes:
-- Severity (P0/P1/P2)
-- Screen/Endpoint
-- Category (UI-ELEMENT, UI-WIRING, NAV-GUARD, UX-4STATE, SECURITY, VALIDATION, etc.)
-- Summary
-- Repro steps
-- Expected vs Actual
-- File path with line numbers
-- Acceptance criteria
+### FIX-024: Fix auth profile refresh race condition
+- **Priority:** P0
+- **Platform:** Supplier Portal
+- **Description:** `refreshProfile` callback has missing dependency (`hasAuthCookie`). Stale closures cause inconsistent auth state.
+- **Acceptance:** All dependencies in refreshProfile's useCallback. ESLint exhaustive-deps passes.
+- **Files:** `supplier-portal/src/lib/auth.tsx:38-73`
+- **Ref:** BUG-S-003
+
+### FIX-025: Fix infinite loop in order quantity debounce
+- **Priority:** P1
+- **Platform:** Supplier Portal
+- **Description:** Debounced quantity update mutation doesn't cancel on unmount. Stale state reference fires after component unmount.
+- **Acceptance:** useEffect cleanup clears `qtyDebounceRef`. No state update warnings in React strict mode.
+- **Files:** `supplier-portal/src/app/(dashboard)/orders/page.tsx:599-614`
+- **Ref:** BUG-S-004
+
+### FIX-026: Fix pagination state sync with URL
+- **Priority:** P1
+- **Platform:** Supplier Portal
+- **Description:** Products page pagination uses both URL params and useState. Direct setCurrentPage calls bypass URL sync, breaking browser back button.
+- **Acceptance:** currentPage derived from URL only (no useState). All pagination controls use router.replace.
+- **Files:** `supplier-portal/src/app/(dashboard)/products/page.tsx:71-72`
+- **Ref:** BUG-S-006
+
+### FIX-027: Fix blob URL memory leak in image upload
+- **Priority:** P1
+- **Platform:** Supplier Portal
+- **Description:** `URL.createObjectURL` called for image previews but `URL.revokeObjectURL` never called. Memory leaks accumulate with repeated uploads.
+- **Acceptance:** All createObjectURL calls paired with revokeObjectURL in cleanup. Memory profiler shows no blob leak after 10 upload/replace cycles.
+- **Files:** `supplier-portal/src/app/(dashboard)/products/page.tsx:277-282`
+- **Ref:** BUG-S-007
+
+### FIX-028: Close SSE connection on logout
+- **Priority:** P1
+- **Platform:** Supplier Portal
+- **Description:** Orders page EventSource cleanup only runs on unmount, not logout. Multiple SSE connections accumulate on re-login.
+- **Acceptance:** SSE closes when `isAuthenticated` changes to false. Network tab shows single SSE connection.
+- **Files:** `supplier-portal/src/app/(dashboard)/orders/page.tsx:94-121`
+- **Ref:** BUG-S-009
+
+### FIX-029: Fix 401 redirect to include basePath /supplier
+- **Priority:** P1
+- **Platform:** Supplier Portal
+- **Description:** `handle401Response()` redirects to `/login` instead of `/supplier/login`. After load balancer routing, users hit 404.
+- **Acceptance:** All redirects use basePath prefix. Test: logged-out redirect goes to `/supplier/login`.
+- **Files:** `supplier-portal/src/lib/api.ts:148-157`
+- **Ref:** BUG-S-015, BUG-S-037 from old audit
+
+### FIX-030: Fix phone validation — enforce Indian format
+- **Priority:** P2
+- **Platform:** Supplier Portal
+- **Description:** Phone validation accepts any 10-13 digit number including non-Indian formats. India-specific app should enforce +91 prefix + 10 digits.
+- **Acceptance:** Validation enforces `/^\+91[6-9]\d{9}$/` after normalization. Error message shows expected format.
+- **Files:** `supplier-portal/src/app/register/page.tsx:215-218`
+- **Ref:** BUG-S-010
 
 ---
 
-## Execution Rules (Non-Negotiable)
+## Tier 5: POS App P0-P1 (Phase 11F)
 
-Per operator directive:
+### FIX-031: Fix payment double-submit race condition
+- **Priority:** P0
+- **Platform:** POS App
+- **Description:** `submittingRef` check-then-set pattern has race window. Between if-check and assignment, another tap can pass through. Must use atomic guard.
+- **Acceptance:** Set `submittingRef.current = true` BEFORE the if-check, unset on early return. Test: rapid double-tap creates only 1 payment.
+- **Files:** `src/screens/PaymentScreen.tsx:717-719, 1029-1032`
+- **Ref:** BUG-P-002
+
+### FIX-032: Fix network listener memory leak
+- **Priority:** P0
+- **Platform:** POS App
+- **Description:** Network status useEffect callback can fire with stale state after unmount. Missing mounted ref guard causes setState on unmounted component.
+- **Acceptance:** Add mounted ref. Cleanup runs before unmount. No "Can't perform React state update" warnings.
+- **Files:** `src/screens/PaymentScreen.tsx:219-248`
+- **Ref:** BUG-P-003
+
+### FIX-033: Fix offline sync error swallowing
+- **Priority:** P0
+- **Platform:** POS App
+- **Description:** `syncOutbox` silently catches batch errors. Users have no indication of failed syncs. Offline sales could be lost.
+- **Acceptance:** Sync errors exposed to UI with retry button. Pending sync count visible in status bar.
+- **Files:** `src/services/offline/sync.ts:149-183`
+- **Ref:** BUG-P-001
+
+### FIX-034: Fix BNPL polling abort controller race
+- **Priority:** P1
+- **Platform:** POS App
+- **Description:** `pollingAbortControllerRef` accessed and mutated across async ops without lock. Rapid calls create dangling references.
+- **Acceptance:** Polling uses controller identity check. New poll waits for previous to complete. Test: rapid startAutoPolling calls don't leak.
+- **Files:** `src/screens/BnplDuesScreen.tsx:163-231`
+- **Ref:** BUG-P-004
+
+### FIX-035: Add keyboard dismiss on modal close
+- **Priority:** P1
+- **Platform:** POS App
+- **Description:** SplitPaymentModal cleanup doesn't dismiss keyboard. Keyboard stays visible after modal closes if TextInput was focused.
+- **Acceptance:** `Keyboard.dismiss()` called in cleanup. Test: focus amount input → close modal → keyboard hidden.
+- **Files:** `src/components/sell/SplitPaymentModal.tsx:104-128`
+- **Ref:** BUG-P-005
+
+### FIX-036: Add loading state for QR regeneration
+- **Priority:** P1
+- **Platform:** POS App
+- **Description:** QR regeneration shows brief blank state. No loading indicator during new UPI intent generation.
+- **Acceptance:** ActivityIndicator shown while `loadingUpi` is true. No blank flash.
+- **Files:** `src/screens/PaymentScreen.tsx:956-967`
+- **Ref:** BUG-P-006
+
+### FIX-037: Cap in-memory rate limit state growth
+- **Priority:** P1
+- **Platform:** POS App
+- **Description:** `rateLimitState` Map grows indefinitely. On 24/7 device, hundreds of categories accumulate.
+- **Acceptance:** Map capped at 100 entries with LRU eviction. Cleanup runs on every access.
+- **Files:** `src/services/api/apiClient.ts:47, 53-67`
+- **Ref:** BUG-P-007
+
+### FIX-038: Surface offline scan errors to user
+- **Priority:** P1
+- **Platform:** POS App
+- **Description:** `handleScan` shows generic "Scan failed" for all errors. Offline scans should show "Offline — scan will process when online".
+- **Acceptance:** Error messages differentiate network errors from API errors. Offline state shows appropriate message.
+- **Files:** `src/services/scan/handleScan.ts:366-399`
+- **Ref:** BUG-P-008
+
+### FIX-039: Add stale price warning before payment screen
+- **Priority:** P1
+- **Platform:** POS App
+- **Description:** Cart price staleness only checked when payment button tapped (too late). 4-hour threshold hardcoded.
+- **Acceptance:** Warning badge on cart/checkout button when items > 4 hours old. Threshold configurable via env var.
+- **Files:** `src/screens/PaymentScreen.tsx:693-714`
+- **Ref:** BUG-P-009
+
+### FIX-040: Add max recording duration for voice
+- **Priority:** P2
+- **Platform:** POS App
+- **Description:** Voice recording runs indefinitely. No auto-stop. Device storage/battery drain risk.
+- **Acceptance:** Auto-stop at 60 seconds with notification. Progress bar shows remaining time.
+- **Files:** `src/services/voice/voiceClient.ts:112-143`
+- **Ref:** BUG-P-011
+
+### FIX-041: Fix printer error state not clearing
+- **Priority:** P2
+- **Platform:** POS App
+- **Description:** `printerService.status.error` set on failure but never cleared. Blocks future prints even after fix.
+- **Acceptance:** Error auto-clears on successful connectivity check. Manual clearError method exposed.
+- **Files:** `src/services/printerService.ts:139-194`
+- **Ref:** BUG-P-012
+
+### FIX-042: Fix voice audio session not reset on error
+- **Priority:** P2
+- **Platform:** POS App
+- **Description:** If recording createAsync fails, audio session stays in recording mode. Blocks other audio.
+- **Acceptance:** `resetAudioSession()` called in catch block. Test: failed recording doesn't block audio.
+- **Files:** `src/services/voice/voiceClient.ts:137-142`
+- **Ref:** BUG-P-019
+
+---
+
+## Tier 6: SuperAdmin P0-P1 (Phase 11G)
+
+### FIX-043: Fix LoginGate error state — stay on email step on failure
+- **Priority:** P0
+- **Platform:** SuperAdmin
+- **Description:** When `sendAdminOtp()` fails, step is still set to "otp". User can submit invalid OTP against failed request.
+- **Acceptance:** Step only advances to "otp" on successful API call. Error shown on email step.
+- **Files:** `supermandi-superadmin/src/components/LoginGate.tsx:38-47`
+- **Ref:** BUG-A-001
+
+### FIX-044: Fix analytics 401 — dispatch auth-expired event
+- **Priority:** P0
+- **Platform:** SuperAdmin
+- **Description:** Analytics `getJson()` throws generic "Unauthorized" on 401 but doesn't dispatch auth-expired event. User stuck with expired token.
+- **Acceptance:** Analytics uses `fetchWithTimeout` (which dispatches event) OR `getJson` dispatches event on 401.
+- **Files:** `supermandi-superadmin/src/api/analytics.ts:10-34`
+- **Ref:** BUG-A-004
+
+### FIX-045: Fix empty string params in analytics API
+- **Priority:** P0
+- **Platform:** SuperAdmin
+- **Description:** Analytics URLSearchParams appends `storeId=""` when empty. Backend may reject or return wrong data.
+- **Acceptance:** Only append to searchParams if value is truthy and non-empty. Test: empty storeId excluded from request.
+- **Files:** `supermandi-superadmin/src/api/analytics.ts:59-62`
+- **Ref:** BUG-A-002
+
+### FIX-046: Remove dead modal persistence code
+- **Priority:** P0
+- **Platform:** SuperAdmin
+- **Description:** `loadModalState`/`saveModalState` exist but are never used (modalDirty guard prevents restoration). Dead code confuses debugging.
+- **Acceptance:** Dead code removed. OR: implement properly if persistence is needed. No unused functions.
+- **Files:** `supermandi-superadmin/src/App.tsx:180-201`
+- **Ref:** BUG-A-003
+
+### FIX-047: Fix SuppliersTab approve+publish setTimeout race
+- **Priority:** P1
+- **Platform:** SuperAdmin
+- **Description:** "Approve & Publish" uses `setTimeout(handlePublishProduct, 1500)`. If approval takes >1.5s, publish fires before approval completes.
+- **Acceptance:** Publish awaits approval promise completion (no setTimeout). Test: slow approval still publishes correctly.
+- **Files:** `supermandi-superadmin/src/tabs/SuppliersTab.tsx:668-672`
+- **Ref:** BUG-A-014
+
+### FIX-048: Add error boundary around modal dialogs
+- **Priority:** P1
+- **Platform:** SuperAdmin
+- **Description:** Product edit modal renders 200+ lines of JSX with calculations but no error boundary. Malformed data crashes entire app.
+- **Acceptance:** Modal wrapped in ErrorBoundary with "Error loading data — Close" fallback.
+- **Files:** `supermandi-superadmin/src/tabs/SuppliersTab.tsx:748-941`
+- **Ref:** BUG-A-010
+
+### FIX-049: Fix missing pagination in ApplicationsTab
+- **Priority:** P1
+- **Platform:** SuperAdmin
+- **Description:** Shows "X of Y applications" but no way to load more. API supports limit/offset but UI doesn't expose pagination.
+- **Acceptance:** "Load More" button or page controls. All applications accessible.
+- **Files:** `supermandi-superadmin/src/tabs/ApplicationsTab.tsx:178-179`
+- **Ref:** BUG-A-011
+
+### FIX-050: Fix memory leak in SuppliersTab publish state
+- **Priority:** P2
+- **Platform:** SuperAdmin
+- **Description:** `publishLoading`/`publishResult` state grows unbounded. Never cleared on unmount or list refresh.
+- **Acceptance:** State cleared on tab unmount and product list refresh. Memory stable after 50 publish operations.
+- **Files:** `supermandi-superadmin/src/tabs/SuppliersTab.tsx:118-119, 201-213`
+- **Ref:** BUG-A-008
+
+---
+
+## Tier 7: P2 Cross-Platform Polish (Phase 11H)
+
+### FIX-051: Strip console.log from production builds
+- **Platform:** SuperAdmin, POS App
+- **Description:** Console logs remain in production. SuperAdmin vite drop config doesn't catch template literals. POS has 335+ console.log calls.
+- **Files:** `supermandi-superadmin/vite.config.ts:30-32`, POS `src/**`
+- **Ref:** BUG-A-005
+
+### FIX-052: Fix version.json filename convention
+- **Platform:** Retailer Admin
+- **Description:** Plugin writes `version.json` but should be `_version.json` to match backend convention and avoid indexing.
+- **Files:** `retailer-admin/vite.config.ts:36`
+- **Ref:** BUG-R-003
+
+### FIX-053: Add Firebase config build-time validation
+- **Platform:** Retailer Admin
+- **Description:** Missing Firebase env vars only detected at runtime login. Build should fail if VITE_FIREBASE_* unset.
+- **Files:** `retailer-admin/src/lib/firebase.ts:12-28`, `retailer-admin/vite.config.ts`
+- **Ref:** BUG-R-028
+
+### FIX-054: Fix profile page 404 in Supplier Portal nav
+- **Platform:** Supplier Portal
+- **Description:** Nav links to `/profile` but no page exists at that route. Users get 404.
+- **Files:** `supplier-portal/src/app/(dashboard)/layout.tsx:27`
+- **Ref:** BUG-S-020
+
+### FIX-055: Fix formatPrice treating 0 as falsy
+- **Platform:** Supplier Portal
+- **Description:** `formatPrice` returns '-' for zero prices (treats 0 as falsy). Free products show dash instead of Rs 0.
+- **Files:** `supplier-portal/src/app/(dashboard)/products/page.tsx:17-20`
+- **Ref:** BUG-S-020 (old audit)
+
+### FIX-056: Add ARIA labels to payment mode tabs
+- **Platform:** POS App
+- **Description:** Payment mode tabs and primary CTA lack accessibilityLabel/accessibilityHint. Screen readers announce "Button" with no context.
+- **Files:** `src/screens/PaymentScreen.tsx:847-875, 1008-1014`
+- **Ref:** BUG-P-022
+
+### FIX-057: Fix QR code accessibility
+- **Platform:** POS App
+- **Description:** QRCode component has no accessibilityLabel. Visually impaired cashiers can't process UPI payments.
+- **Files:** `src/screens/PaymentScreen.tsx:954`
+- **Ref:** BUG-P-025
+
+### FIX-058: Clear search history on store change
+- **Platform:** POS App
+- **Description:** Search history persists across store changes and device re-enrollment. Previous store's history visible.
+- **Files:** `src/services/searchHistory.ts`
+- **Ref:** BUG-P-021
+
+### FIX-059: Fix cart auto-unlock not accounting for backgrounding
+- **Platform:** POS App
+- **Description:** Cart lock timeout uses Date.now() but doesn't pause when app is backgrounded. Lock expires silently.
+- **Files:** `src/stores/cartStore.ts:702-714`
+- **Ref:** BUG-P-020
+
+### FIX-060: Fix sync retry — add manual retry UI
+- **Platform:** POS App
+- **Description:** Failed syncs have no retry mechanism. User has no way to trigger manual sync retry.
+- **Files:** `src/services/offline/sync.ts:149-183`
+- **Ref:** BUG-P-017
+
+### FIX-061: Fix missing ARIA labels on product status filters
+- **Platform:** Supplier Portal
+- **Description:** Status filter buttons lack aria-pressed attributes. Screen readers don't know active filter.
+- **Files:** `supplier-portal/src/app/(dashboard)/products/page.tsx:685-704`
+- **Ref:** BUG-S-028
+
+### FIX-062: Fix input sanitization in supplier search
+- **Platform:** SuperAdmin
+- **Description:** Search input sent to API without sanitization. Special regex chars could break backend search.
+- **Files:** `supermandi-superadmin/src/tabs/SuppliersTab.tsx:401-404`
+- **Ref:** BUG-A-015
+
+### FIX-063: Add CSP meta tag to SuperAdmin
+- **Platform:** SuperAdmin
+- **Description:** No Content-Security-Policy. Inline service worker script would be blocked by strict CSP.
+- **Files:** `supermandi-superadmin/index.html`
+- **Ref:** BUG-A-013
+
+### FIX-064: Fix OTP resend cooldown — persist in sessionStorage
+- **Platform:** Supplier Portal
+- **Description:** Cooldown lost on component remount. User can bypass by forcing remount.
+- **Files:** `supplier-portal/src/app/(auth)/login/page.tsx:26, 60-65`
+- **Ref:** BUG-S-024
+
+### FIX-065: Fix document upload — add progress indicator
+- **Platform:** Supplier Portal
+- **Description:** Document upload shows "uploading" but no progress percentage. Large files appear frozen.
+- **Files:** `supplier-portal/src/app/register/page.tsx:487-530`
+- **Ref:** BUG-S-026
+
+### FIX-066: Fix useUrlState debounce for search
+- **Platform:** Supplier Portal
+- **Description:** `setValue` calls `router.replace` on every keystroke. Creates excessive history entries.
+- **Files:** `supplier-portal/src/hooks/useUrlState.ts:25-34`
+- **Ref:** BUG-S-030
+
+### FIX-067: Standardize error parsing across SuperAdmin API modules
+- **Platform:** SuperAdmin
+- **Description:** Some modules use `parseError(res)`, analytics uses custom parsing. Inconsistent error UX.
+- **Files:** `supermandi-superadmin/src/api/analytics.ts`, `supermandi-superadmin/src/api/suppliers.ts`, etc.
+- **Ref:** BUG-A-016
+
+---
+
+## Execution Order & Gates
+
+```
+Phase 11A (Tier 0): FIX-001→FIX-004  — Infra/Deploy
+  Gate: All 6 services healthy at latest SHA, build passes
+
+Phase 11B (Tier 1): FIX-005→FIX-008  — Backend P0
+  Gate: Store isolation integration tests pass, idempotency test passes
+
+Phase 11C (Tier 2): FIX-009→FIX-014  — Backend P1
+  Gate: pnpm -r typecheck && pnpm test:contract && pnpm test:integration
+
+Phase 11D (Tier 3): FIX-015→FIX-021  — Retailer P1
+  Gate: pnpm -r typecheck && retailer-admin build && Playwright smoke
+
+Phase 11E (Tier 4): FIX-022→FIX-030  — Supplier P0-P1
+  Gate: pnpm -r typecheck && supplier-portal build && Playwright smoke
+
+Phase 11F (Tier 5): FIX-031→FIX-042  — POS P0-P1
+  Gate: pnpm -r typecheck && POS build && API smoke tests
+
+Phase 11G (Tier 6): FIX-043→FIX-050  — SuperAdmin P0-P1
+  Gate: pnpm -r typecheck && superadmin build && Playwright smoke
+
+Phase 11H (Tier 7): FIX-051→FIX-067  — P2 Polish
+  Gate: Full E2E suite passes, all builds clean, zero typecheck errors
+```
+
+### Execution Rules (Non-Negotiable)
 1. **One ticket = one branch = one PR = one tag** — no mixed scope
-2. **Cascading E2E Hardening** — full E2E on production-grade local-prod, fix regressions, re-run until ZERO failures
-3. **One-click pre-staging discipline** — `pnpm -r typecheck` + `pnpm -r build` + E2E must all pass
-4. **Operator E2E gate mandatory** before merge/push
-5. **Promotion only after ALL portals + POS verified** on staging
+2. **Bottom-up**: Lower tiers MUST complete before higher tiers start
+3. **Gate before advance**: Run gate checks after each tier completes
+4. **Operator E2E gate**: After automated gates pass, provide verification script before merge
+5. **No partial fixes**: Each ticket must be UI-to-DB complete with tests
+
+---
+
+## Audit Source Files
+
+| Platform | Agent Output |
+|----------|-------------|
+| Retailer Admin (29 bugs) | `tasks/accd549.output` |
+| Supplier Portal (30 bugs) | `tasks/a08fce6.output` |
+| POS App (25 bugs) | `tasks/ad1d72f.output` |
+| SuperAdmin (25 bugs) | `tasks/ac3323b.output` |
+| Backend (15 bugs) | `tasks/aa762b7.output` |
+| GCP Infrastructure | MCP queries (gcloud, staging-db) |
