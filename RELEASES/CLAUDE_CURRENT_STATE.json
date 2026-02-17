@@ -374,7 +374,7 @@
   "phase13_ProductionReadinessAudit": {
     "range": "PRA-001 → PRA-090",
     "count": 90,
-    "status": "IN_PROGRESS — Wave 1+2+3+4 complete (32/90 done), 58 remaining",
+    "status": "IN_PROGRESS — All P0 complete (37/90 done), 53 remaining (P1+P2)",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": { "range": "PRA-001→PRA-015", "count": 15, "P0": 4, "P1": 8, "P2": 3 },
@@ -387,11 +387,11 @@
     "executionWaves": 9,
     "gitDiscipline": "ENFORCED — rules embedded in audit file header"
   },
-  "nextAction": "Wave 4+5 done. Remaining P0: PRA-003, PRA-004, PRA-015, PRA-018, PRA-022. Then Wave 6 P1 Features.",
+  "nextAction": "ALL P0 DONE (37/90). Execute Wave 6 P1 Features: PRA-005→009, PRA-019, PRA-021, PRA-023→024, PRA-033→041, PRA-050, PRA-052→057",
   "lastActions": [
-    "Wave 4 DONE: 17 tickets (PRA-002/017/020/030/031/032/046/047/048/049/051/066/067/068/069/070/071), 1 PR (#278)",
-    "PRA-070: Fixed store suspension not propagating to retailer limited mode — 3 login endpoints now include platform.stores.status",
-    "PRA-071: FALSE POSITIVE — supplier-catalog already filters by s.verification_status='verified' AND s.status='active'",
-    "All other 15 tickets passed deep-scan audit without code changes needed"
+    "ALL P0 COMPLETE: 37 tickets audited, 4 PRs total (#266-#268, #270-#278)",
+    "Remaining P0 batch: PRA-003/004/015/018/022 all PASS — no code changes needed",
+    "Wave 4+5 summary: 22 tickets, 1 fix (PRA-070 store status → limited mode, PR #278), 1 false positive (PRA-071)",
+    "Next: Wave 6 (P1 Features) = 33 tickets across all platforms"
   ]
 }

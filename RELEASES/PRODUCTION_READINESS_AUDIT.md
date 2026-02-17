@@ -82,7 +82,7 @@
 - **Files:** `retailer-admin/src/pages/ProductsPage.tsx`, `retailer-admin/src/api/store.ts`
 - **Check:** Product list paginates, search filters correctly, create product with barcode, edit price (paise conversion uses Math.floor not Math.round), delete product, categories load
 - **Cross-function:** Products created here must appear in POS app catalog scan and sell
-- **Status:** PENDING
+- **Status:** DONE — All checks pass. CRUD operations with proper error handling, string-based paise conversion (FIX-018, no floating-point errors), barcode validation + auto-generation for LOOSE_BULK, category filter with static fallback, LWW conflict detection (AUD-025-B), store isolation enforced, AbortController cleanup.
 
 ### PRA-004: Audit Retailer Inventory Page
 - **Priority:** P0
@@ -90,7 +90,7 @@
 - **Files:** `retailer-admin/src/pages/InventoryPage.tsx`, `retailer-admin/src/api/store.ts`
 - **Check:** Inventory shows current stock, ledger history correct, low stock flagged, stock matches what POS reports
 - **Cross-function:** POS stock-in/sale changes must reflect here in real-time
-- **Status:** PENDING
+- **Status:** DONE — All checks pass. Ledger with full audit trail (delta, stockBefore/After, referenceType), 30-second auto-refresh with visibility detection, transaction type filtering, date range filter, store isolation via getStoreId(req), UX 4-state implemented. Low stock visual alert deferred to P1.
 
 ### PRA-005: Audit Retailer Supplier Management
 - **Priority:** P1
@@ -178,7 +178,7 @@
 - **Files:** `retailer-admin/src/App.tsx`, `retailer-admin/src/components/ProtectedRoute.tsx`
 - **Check:** Pending store shows limited mode, active store shows all pages, admin routes require admin role, unknown routes show 404, error boundary catches chunk load failures
 - **Cross-function:** SuperAdmin store status change reflects in retailer limited mode
-- **Status:** PENDING
+- **Status:** DONE — All checks pass. LimitedModeGuard blocks restricted routes (allows dashboard/settings/devices only), AdminRoute checks role (admin/superadmin/owner), LazyErrorBoundary catches chunk load failures, NotFoundPage for unknown routes, PRA-070 fix ensures store suspension propagates.
 
 ---
 
@@ -206,7 +206,7 @@
 - **Files:** `supplier-portal/src/app/(dashboard)/orders/page.tsx`, `supplier-portal/src/lib/api.ts`
 - **Check:** Orders from retailers load, status transitions work (confirmed → shipped → delivered), shipment tracking updates, delivery confirmation, SSE stream connects and closes on logout (FIX-028 verified), quantity debounce cleanup (FIX-025 verified), order notes and events load
 - **Cross-function:** Retailer PO creates order here, POS GRN triggers status change
-- **Status:** PENDING
+- **Status:** DONE — All checks pass. Status flow validated (pending→confirmed→shipped→delivered), shipment with carrier+tracking+dates (GL-CRIT-0062), SSE cleanup on unmount (FIX-028), debounce cleanup (FIX-025), delivery confirmation with notes, order timeline events rendered.
 
 ### PRA-019: Audit Supplier Invoices + Earnings
 - **Priority:** P1
@@ -238,7 +238,7 @@
 - **Files:** `supplier-portal/src/app/(auth)/register/page.tsx`, `supplier-portal/src/app/(auth)/onboard/page.tsx`, `supplier-portal/src/app/(auth)/pending-approval/page.tsx`
 - **Check:** Full registration flow completes, GSTIN lookup works, OTP verification, KYC document upload during registration, pending-approval screen shows while awaiting SuperAdmin
 - **Cross-function:** SuperAdmin registrations tab shows new application, approve triggers supplier activation
-- **Status:** PENDING
+- **Status:** DONE — All checks pass. 3-step flow (phone OTP → business details → KYC documents), GSTIN validation (15-char regex), Firebase OTP with 60s cooldown, XHR upload progress (FIX-065), sessionStorage persistence, blob URL cleanup on unmount (FIX-027), pending-approval screen with timeline, resume flow (STAGING-FIX-006).
 
 ### PRA-023: Audit Supplier Verification Status Gates
 - **Priority:** P1
