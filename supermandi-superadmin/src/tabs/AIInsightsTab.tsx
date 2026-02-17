@@ -2,6 +2,8 @@
 // Shows AI-powered anomalies, alerts, and customer insights across stores
 
 import { useState, useEffect, useCallback } from 'react';
+// UIUX-SA-002: Use centralized auth (getSessionToken + fetchWithTimeout)
+import { getSessionToken, fetchWithTimeout } from '../api/authToken';
 
 interface AnomalyEvent {
   id: string;
@@ -25,9 +27,10 @@ interface Alert {
   createdAt: string;
 }
 
+// UIUX-SA-002: Fixed auth key (was 'superadmin_token', correct is 'supermandi_admin_session')
 async function apiFetch(url: string, options?: RequestInit) {
-  const token = localStorage.getItem('superadmin_token') || '';
-  const res = await fetch(url, {
+  const token = getSessionToken() || '';
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
   });

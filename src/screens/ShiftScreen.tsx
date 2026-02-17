@@ -95,20 +95,20 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
 
   useEffect(() => {
     void fetchCurrentShift();
-  }, []);
+  }, [fetchCurrentShift]);
 
   useEffect(() => {
     if (activeTab === "HISTORY") {
       void fetchHistory();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchHistory]);
 
   useEffect(() => {
     if (error) {
       Alert.alert("Error", error);
       clearError();
     }
-  }, [error]);
+  }, [error, clearError]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);

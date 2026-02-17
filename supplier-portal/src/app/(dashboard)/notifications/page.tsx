@@ -8,6 +8,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, CheckCheck, RefreshCw, Truck, Package, AlertTriangle } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumb';
+// UIUX-SUP-005: Use centralized apiFetch (cookie-based auth, 401 redirect, timeout)
+import { apiFetch } from '@/lib/api';
 
 interface Notification {
   id: string;
@@ -19,7 +21,10 @@ interface Notification {
   createdAt: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+interface NotificationsResponse {
+  data: Notification[];
+  pagination?: { total: number };
+}
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -28,21 +33,15 @@ export default function NotificationsPage() {
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
+  // UIUX-SUP-005: Use apiFetch (cookie auth) instead of deprecated supplier_token
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('supplier_token') : null;
-      if (!token) return;
-
-      const res = await fetch(`${API_BASE}/api/v1/supplier/notifications?limit=${limit}&offset=${offset}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.data || []);
-        setTotal(data.pagination?.total || 0);
-      }
+      const data = await apiFetch<NotificationsResponse>(
+        `/api/v1/supplier/notifications?limit=${limit}&offset=${offset}`
+      );
+      setNotifications(data.data || []);
+      setTotal(data.pagination?.total || 0);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
     } finally {
@@ -52,26 +51,17 @@ export default function NotificationsPage() {
 
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
+  // UIUX-SUP-005: Use apiFetch (cookie auth) instead of deprecated supplier_token
   const markAsRead = async (id: string) => {
-    const token = localStorage.getItem('supplier_token');
-    if (!token) return;
     try {
-      await fetch(`${API_BASE}/api/v1/supplier/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiFetch(`/api/v1/supplier/notifications/${id}/read`, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
     } catch { /* ignore */ }
   };
 
   const markAllAsRead = async () => {
-    const token = localStorage.getItem('supplier_token');
-    if (!token) return;
     try {
-      await fetch(`${API_BASE}/api/v1/supplier/notifications/read-all`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiFetch(`/api/v1/supplier/notifications/read-all`, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch { /* ignore */ }
   };

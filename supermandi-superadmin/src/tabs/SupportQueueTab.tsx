@@ -3,6 +3,8 @@
 // T-302: Message template management UI
 
 import { useState, useEffect, useCallback } from 'react';
+// UIUX-SA-001: Use centralized auth (getSessionToken + fetchWithTimeout)
+import { getSessionToken, fetchWithTimeout } from '../api/authToken';
 
 interface SupportConversation {
   id: string;
@@ -35,9 +37,11 @@ interface MessageTemplate {
   isActive: boolean;
 }
 
+// UIUX-SA-001: Fixed auth key (was 'superadmin_token', correct is 'supermandi_admin_session')
+// UIUX-SA-004: Fixed API paths (was /api/v1/chat/, correct is /api/v1/admin/chat/)
 async function apiFetch(url: string, options?: RequestInit) {
-  const token = localStorage.getItem('superadmin_token') || '';
-  const res = await fetch(url, {
+  const token = getSessionToken() || '';
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
   });
@@ -70,7 +74,7 @@ export function SupportQueueTab() {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiFetch(`/api/v1/chat/support/queue?status=${statusFilter}&limit=100`);
+      const result = await apiFetch(`/api/v1/admin/chat/support/queue?status=${statusFilter}&limit=100`);
       setConversations(result.conversations || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load');
@@ -81,7 +85,7 @@ export function SupportQueueTab() {
 
   const fetchTemplates = useCallback(async () => {
     try {
-      const result = await apiFetch('/api/v1/chat/templates');
+      const result = await apiFetch('/api/v1/admin/chat/templates');
       setTemplates(result.templates || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
@@ -96,7 +100,7 @@ export function SupportQueueTab() {
   const selectConversation = async (convId: string) => {
     setSelectedConvId(convId);
     try {
-      const result = await apiFetch(`/api/v1/chat/conversations/${convId}/messages?limit=100`);
+      const result = await apiFetch(`/api/v1/admin/chat/conversations/${convId}/messages?limit=100`);
       setMessages((result.messages || []).slice().reverse());
     } catch {
       setMessages([]);
@@ -106,7 +110,7 @@ export function SupportQueueTab() {
   const sendReply = async () => {
     if (!replyText.trim() || !selectedConvId) return;
     try {
-      await apiFetch(`/api/v1/chat/conversations/${selectedConvId}/messages`, {
+      await apiFetch(`/api/v1/admin/chat/conversations/${selectedConvId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content: replyText.trim(), messageType: 'text' }),
       });
@@ -120,7 +124,7 @@ export function SupportQueueTab() {
 
   const assignToMe = async (convId: string) => {
     try {
-      await apiFetch(`/api/v1/chat/support/${convId}/assign`, {
+      await apiFetch(`/api/v1/admin/chat/support/${convId}/assign`, {
         method: 'POST',
         body: JSON.stringify({ agentName: 'Admin' }),
       });
@@ -133,7 +137,7 @@ export function SupportQueueTab() {
 
   const resolveConversation = async (convId: string) => {
     try {
-      await apiFetch(`/api/v1/chat/support/${convId}/resolve`, { method: 'POST' });
+      await apiFetch(`/api/v1/admin/chat/support/${convId}/resolve`, { method: 'POST' });
       fetchQueue();
       setSelectedConvId(null);
       setMessages([]);

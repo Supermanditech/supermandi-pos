@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Send, ArrowLeft, Search, Headphones } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+// UIUX-SUP-006: Use centralized apiFetch (cookie auth, 401 redirect, timeout)
+import { apiFetch as globalApiFetch } from '@/lib/api';
 
 interface Conversation {
   id: string;
@@ -35,14 +37,10 @@ interface ChatMessage {
   createdAt: string;
 }
 
-async function apiFetch(url: string, options?: RequestInit) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('supplier_token') || '' : '';
-  const res = await fetch(url, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+// UIUX-SUP-006: Replaced local apiFetch (deprecated supplier_token) with global cookie-based auth
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function apiFetch(url: string, options?: RequestInit): Promise<any> {
+  return globalApiFetch(url, options);
 }
 
 function formatTime(iso: string | null): string {

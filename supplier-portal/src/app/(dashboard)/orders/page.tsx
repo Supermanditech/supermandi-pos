@@ -17,6 +17,7 @@ import { useAuth } from '@/lib/auth';
 import { WhatsAppIcon } from '@/components/WhatsAppIcon';
 
 const statusColors: Record<string, string> = {
+  submitted: 'bg-orange-100 text-orange-700',
   pending: 'bg-yellow-100 text-yellow-700',
   confirmed: 'bg-blue-100 text-blue-700',
   shipped: 'bg-purple-100 text-purple-700',
@@ -34,6 +35,7 @@ const itemStatusColors: Record<string, string> = {
 
 // GL-CRIT-0062: Allow shipment entry for pending status (not just confirmed)
 const statusFlow: Record<string, string[]> = {
+  submitted: ['confirmed', 'cancelled'],
   pending: ['confirmed', 'shipped', 'cancelled'],
   confirmed: ['shipped', 'cancelled'],
   shipped: ['delivered'],
@@ -299,7 +301,7 @@ export default function OrdersPage() {
       {/* Status Filters */}
       <div className="card mb-6">
         <div className="flex flex-wrap gap-2">
-          {['all', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map(
+          {['all', 'submitted', 'pending', 'confirmed', 'shipped', 'delivered', 'cancelled'].map(
             (status) => (
               <button
                 key={status}

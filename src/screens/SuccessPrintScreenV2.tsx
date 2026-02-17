@@ -39,14 +39,18 @@ export default function SuccessPrintScreenV2() {
   const route = useRoute<Rt>();
   const { items, total, subtotal, discountAmount, discount, clearCart, unlockCart } = useCartStore();
 
+  // UIUX-POS-001: Move useRef to top level (unconditional) to comply with Rules of Hooks
+  const fallbackBillRef = useRef(Date.now().toString().slice(-6));
+  const fallbackTxnRef = useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
   const saleItems = route.params?.saleItems ?? items;
   const saleTotalMinor = route.params?.saleTotalMinor ?? total;
   const currency = route.params?.saleCurrency ?? saleItems[0]?.currency ?? "INR";
   const paymentMode = route.params?.paymentMode ?? "CASH";
-  const billNumber = route.params?.billId ?? useRef(Date.now().toString().slice(-6)).current;
+  const billNumber = route.params?.billId ?? fallbackBillRef.current;
   const isPartialSale = route.params?.partialSale === true;
   // For reconciliation: tie receipt/print outcomes to a bill id.
-  const transactionId = route.params?.transactionId ?? useRef(`${Date.now()}-${Math.random().toString(16).slice(2)}`).current;
+  const transactionId = route.params?.transactionId ?? fallbackTxnRef.current;
 
   const [printStatus, setPrintStatus] = useState<"idle" | "printing" | "success" | "failed">("idle");
   const [operatorStoreId, setOperatorStoreId] = useState<string | null>(null);
