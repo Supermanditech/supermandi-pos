@@ -24,7 +24,12 @@ import { useUrlState } from '../../hooks/useUrlState';
 describe('useUrlState', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     currentSearchParams = new URLSearchParams();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('returns default value when param not in URL', () => {
@@ -43,11 +48,16 @@ describe('useUrlState', () => {
     expect(result.current[0]).toBe('');
   });
 
-  it('calls router.replace when setValue is called', () => {
+  it('calls router.replace when setValue is called (after debounce)', () => {
     const { result } = renderHook(() => useUrlState('status', 'all'));
 
     act(() => {
       result.current[1]('pending');
+    });
+
+    // FIX-066: Hook debounces URL updates by 300ms
+    act(() => {
+      jest.advanceTimersByTime(300);
     });
 
     expect(mockReplace).toHaveBeenCalledWith(
@@ -64,6 +74,10 @@ describe('useUrlState', () => {
       result.current[1]('all');
     });
 
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
     expect(mockReplace).toHaveBeenCalledWith(
       '/supplier/products',
       { scroll: false }
@@ -78,6 +92,10 @@ describe('useUrlState', () => {
       result.current[1]('');
     });
 
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
     expect(mockReplace).toHaveBeenCalledWith(
       '/supplier/products',
       { scroll: false }
@@ -90,6 +108,10 @@ describe('useUrlState', () => {
 
     act(() => {
       result.current[1]('pending');
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
     });
 
     expect(mockReplace).toHaveBeenCalledWith(

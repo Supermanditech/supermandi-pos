@@ -125,7 +125,7 @@ describe('DashboardLayout', () => {
     expect(screen.getByText('KYC Documents')).toBeInTheDocument();
     expect(screen.getByText('Earnings')).toBeInTheDocument();
     expect(screen.getByText('Invoices')).toBeInTheDocument();
-    expect(screen.getByText('Profile')).toBeInTheDocument();
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
   });
 
   it('renders supplier business name', () => {

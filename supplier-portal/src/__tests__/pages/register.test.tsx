@@ -121,7 +121,7 @@ describe('RegisterPageWrapper (Registration Page)', () => {
     render(<RegisterPageWrapper />);
     fireEvent.click(screen.getByText('Send OTP'));
     await waitFor(() => {
-      expect(screen.getByText('Please enter a valid phone number')).toBeInTheDocument();
+      expect(screen.getByText('Please enter a valid Indian mobile number (e.g. +919876543210 or 9876543210)')).toBeInTheDocument();
     });
   });
 });
