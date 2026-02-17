@@ -30,8 +30,8 @@ const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_PER_MIN = 3;
 const RATE_LIMIT_PER_HOUR = 10;
 
-// Clean up old entries every 10 minutes
-setInterval(() => {
+// Clean up old entries every 10 minutes (unref to not block process exit)
+const cleanupTimer = setInterval(() => {
   const cutoff = Date.now() - 3600_000;
   for (const [phone, timestamps] of rateLimitMap) {
     const recent = timestamps.filter((t) => t > cutoff);
@@ -42,6 +42,9 @@ setInterval(() => {
     }
   }
 }, 600_000);
+if (typeof cleanupTimer === "object" && "unref" in cleanupTimer) {
+  cleanupTimer.unref();
+}
 
 function checkRateLimit(phone: string): boolean {
   const now = Date.now();
@@ -157,6 +160,10 @@ export async function sendTextMessage(params: {
 
   if (!checkRateLimit(phone)) {
     return { sent: false, errorCode: "RATE_LIMITED", errorMessage: "Too many messages to this number" };
+  }
+
+  if (params.body.length > 4096) {
+    return { sent: false, errorCode: "MESSAGE_TOO_LONG", errorMessage: "Message exceeds 4096 character limit" };
   }
 
   const body = {

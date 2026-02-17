@@ -34,11 +34,20 @@ export interface WhatsAppStats {
   last7d: number;
 }
 
+async function parseErrorBody(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    return body?.error || body?.message || `HTTP ${res.status}`;
+  } catch {
+    return `HTTP ${res.status}`;
+  }
+}
+
 export async function fetchWhatsAppStatus(): Promise<{ configured: boolean }> {
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/whatsapp/status`, {
     headers: { ...getAuthHeaders() },
   });
-  if (!res.ok) throw new Error(`Failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseErrorBody(res));
   return res.json();
 }
 
@@ -46,7 +55,7 @@ export async function fetchWhatsAppStats(): Promise<WhatsAppStats> {
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/whatsapp/stats`, {
     headers: { ...getAuthHeaders() },
   });
-  if (!res.ok) throw new Error(`Failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseErrorBody(res));
   return res.json();
 }
 
@@ -69,7 +78,7 @@ export async function fetchWhatsAppLogs(params?: {
   const res = await fetchWithTimeout(`${API_BASE}/api/v1/admin/whatsapp/logs?${qs}`, {
     headers: { ...getAuthHeaders() },
   });
-  if (!res.ok) throw new Error(`Failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseErrorBody(res));
   return res.json();
 }
 
@@ -87,7 +96,9 @@ export async function sendWhatsAppMessage(params: {
     },
     body: JSON.stringify(params),
   });
-  return res.json();
+  const data = await res.json();
+  if (!res.ok && !data.error) data.error = `HTTP ${res.status}`;
+  return data;
 }
 
 export async function sendWhatsAppBroadcast(params: {
@@ -103,5 +114,6 @@ export async function sendWhatsAppBroadcast(params: {
     },
     body: JSON.stringify(params),
   });
+  if (!res.ok) throw new Error(await parseErrorBody(res));
   return res.json();
 }

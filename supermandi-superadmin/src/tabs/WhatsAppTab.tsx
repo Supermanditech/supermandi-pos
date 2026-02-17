@@ -269,11 +269,11 @@ export function WhatsAppTab() {
             </select>
             <button
               onClick={handleBroadcast}
-              disabled={broadcasting}
+              disabled={broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()}
               style={{
                 padding: "6px 16px", background: "#f59e0b", color: "#fff", border: "none",
-                borderRadius: 4, cursor: broadcasting ? "default" : "pointer", fontSize: "0.85rem",
-                fontWeight: 600, opacity: broadcasting ? 0.6 : 1,
+                borderRadius: 4, cursor: (broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()) ? "default" : "pointer", fontSize: "0.85rem",
+                fontWeight: 600, opacity: (broadcasting || !broadcastPhones.trim() || !broadcastMessage.trim()) ? 0.6 : 1,
               }}
             >
               {broadcasting ? "Sending..." : "Send Broadcast"}
@@ -360,8 +360,8 @@ export function WhatsAppTab() {
                       <span style={{
                         padding: "2px 8px", borderRadius: 10, fontSize: "0.7rem", fontWeight: 600,
                         background: sc.bg, color: sc.color,
-                      }}>
-                        {log.deliveryStatus}
+                      }} title={log.deliveryErrorCode || undefined}>
+                        {log.deliveryStatus}{log.deliveryStatus === "failed" && log.deliveryErrorCode ? ` (${log.deliveryErrorCode})` : ""}
                       </span>
                     </td>
                     <td style={{ padding: "6px 8px", fontSize: "0.75rem", color: "#64748b" }}>{log.contextType || "—"}</td>

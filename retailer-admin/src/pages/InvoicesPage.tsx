@@ -362,12 +362,14 @@ export default function InvoicesPage() {
                     Download PDF
                   </button>
                   {/* WA-002: sellerPhone now included in API response for direct WhatsApp linking */}
+                  {detail.sellerPhone && (
                   <button
                     onClick={() => {
                       const amount = fmt(detail.totalAmountMinor);
                       const msg = `Regarding invoice #${detail.invoiceNumber}, amount: ${amount}. Status: ${detail.status.toUpperCase()}.`;
-                      const phone = detail.sellerPhone ? detail.sellerPhone.replace(/\D/g, '') : '';
-                      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                      const phone = detail.sellerPhone!.replace(/\D/g, '');
+                      if (phone.length < 10) return;
+                      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                     }}
                     style={{
                       padding: "6px 16px", background: "#f0fdf4", color: "#15803d",
@@ -379,6 +381,7 @@ export default function InvoicesPage() {
                     <WhatsAppIcon size={16} />
                     WhatsApp
                   </button>
+                  )}
                 </div>
               </>
             )}
