@@ -70,6 +70,7 @@ import { retailerAdminCustomersRouter } from "./retailer-admin/customers";  // T
 import { retailerRegistrationRouter } from "./retailer-admin/registration";  // REG-AUTH-201: Registration API
 import { retailerReconciliationRouter } from "./retailer-admin/reconciliation";  // T-260: Payment reconciliation
 import { retailerCreditDashboardRouter } from "./retailer-admin/creditDashboard";  // T-277: Credit dashboard
+import { retailerPurchaseOrdersRouter } from "./retailer-admin/purchaseOrders";  // T-180: Purchase order visibility
 import { creditProvidersRouter } from "./credit/providers";  // T-263: Credit provider abstraction
 import { adminCreditProvidersRouter } from "./admin/creditProviders";  // T-281/T-290: Provider management
 import { supplierBnplRouter } from "./supplier/bnplVisibility";  // T-280: Supplier BNPL visibility
@@ -237,6 +238,7 @@ v1Router.use("/retailer-admin", retailerAdminCustomersRouter);  // T-218: Custom
 v1Router.use("/retailer-admin", retailerNotificationsRouter);  // Phase 8: In-app notification center
 v1Router.use("/retailer-admin", retailerReconciliationRouter);  // T-260: Payment reconciliation
 v1Router.use("/retailer-admin", retailerCreditDashboardRouter);  // T-277: Credit dashboard
+v1Router.use("/retailer-admin", retailerPurchaseOrdersRouter);  // T-180: Purchase order visibility
 v1Router.use("/credit", creditProvidersRouter);  // T-263/T-274/T-275/T-276/T-278: Credit provider APIs
 v1Router.use("/demo", demoRouter);
 v1Router.use("/webhooks", webhooksRouter);  // SM-018: Razorpay payout webhooks

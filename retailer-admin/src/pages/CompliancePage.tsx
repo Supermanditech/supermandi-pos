@@ -29,6 +29,7 @@ export default function CompliancePage() {
   const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const [showUpload, setShowUpload] = useState(false);
+  const [uploadEnabled, setUploadEnabled] = useState(false);
   const [selectedType, setSelectedType] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -36,18 +37,21 @@ export default function CompliancePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
 
-  // Fetch existing documents on mount
+  // Fetch existing documents on mount — XWIRE-004: use correct endpoint /compliance
   useEffect(() => {
     if (!accessToken) return;
 
     const fetchDocuments = async () => {
       setIsLoading(true);
       try {
-        const response = await authFetch('/api/v1/retailer-admin/compliance/documents', accessToken);
+        const response = await authFetch('/api/v1/retailer-admin/compliance', accessToken);
         if (response.ok) {
           const data = await safeJson(response);
-          setDocuments(data.data || []);
+          setDocuments(data.data?.documents || []);
+          setUploadEnabled(data.data?.uploadEnabled ?? false);
+          if (data.data?.message) setStatusMessage(data.data.message);
         }
       } catch (err) {
         console.error('Failed to fetch documents:', err);
@@ -94,7 +98,7 @@ export default function CompliancePage() {
       formData.append('document', selectedFile);
       formData.append('type', selectedType);
 
-      const response = await authFetch('/api/v1/retailer-admin/compliance/upload', accessToken, {
+      const response = await authFetch('/api/v1/retailer-admin/compliance', accessToken, {
         method: 'POST',
         body: formData,
         // Don't set Content-Type header - browser will set it with boundary for FormData
@@ -163,9 +167,11 @@ export default function CompliancePage() {
       <header className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1 className="page-title">Compliance Documents</h1>
-          <button className="btn btn-primary" onClick={() => setShowUpload(!showUpload)}>
-            {showUpload ? 'Cancel' : '📤 Upload Document'}
-          </button>
+          {uploadEnabled && (
+            <button className="btn btn-primary" onClick={() => setShowUpload(!showUpload)}>
+              {showUpload ? 'Cancel' : 'Upload Document'}
+            </button>
+          )}
         </div>
       </header>
 
@@ -212,8 +218,22 @@ export default function CompliancePage() {
           </div>
         </div>
 
+        {/* Status Message from backend */}
+        {statusMessage && !uploadEnabled && (
+          <div style={{
+            background: '#fef3c7',
+            color: '#92400e',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.375rem',
+            marginBottom: '1rem',
+            fontSize: '0.875rem'
+          }}>
+            {statusMessage}
+          </div>
+        )}
+
         {/* Upload Form */}
-        {showUpload && (
+        {showUpload && uploadEnabled && (
           <div className="card" style={{ marginBottom: '1.5rem' }}>
             <h3 className="card-title">Upload New Document</h3>
             <form onSubmit={handleUpload}>

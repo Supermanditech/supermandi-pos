@@ -259,14 +259,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const activeStoreId = localStorage.getItem(ACTIVE_STORE_KEY);
     if (!activeStoreId) {
-      console.log('[Auth] No active store for token refresh');
+      // No active store for token refresh
       isRefreshingRef.current = false;
       return false;
     }
 
     // AUTH-STORAGE-001: Check for auth cookie (refresh token is in HttpOnly cookie)
     if (!hasAuthCookie()) {
-      console.log('[Auth] No auth cookie, cannot refresh');
+      // No auth cookie, cannot refresh
       isRefreshingRef.current = false;
       return false;
     }
@@ -300,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tokenExpiresAtRef.current = expiresAt;
           localStorage.setItem(getNamespacedKey(activeStoreId, KEY_TOKEN_EXPIRES_AT), String(expiresAt));
         }
-        console.log('[Auth] Token refreshed successfully');
+        // Token refreshed successfully
         return true;
       }
 
@@ -338,7 +338,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // immediately logout on failure — the user may have just logged in and the expiry
       // ref hasn't been set yet. Only logout if we also don't have an auth cookie.
       if (!expiresAt || expiresAt === 0) {
-        console.log('[Auth] No known token expiry, refreshing to get fresh token...');
+        // No known token expiry, refreshing to get fresh token
         const success = await refreshAccessToken();
         if (!success && !hasAuthCookie()) {
           console.warn('[Auth] Token refresh failed and no auth cookie — logging out');
@@ -351,14 +351,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Refresh if token expires within the buffer time
       if (timeUntilExpiry > 0 && timeUntilExpiry <= TOKEN_EXPIRY_BUFFER_MS) {
-        console.log('[Auth] Token expires soon, refreshing...');
+        // Token expires soon, refreshing
         const success = await refreshAccessToken();
         if (!success) {
           console.warn('[Auth] Token refresh failed, user may need to re-login');
         }
       } else if (timeUntilExpiry <= 0) {
         // Token already expired - try to refresh, logout if fails
-        console.log('[Auth] Token expired, attempting refresh...');
+        // Token expired, attempting refresh
         const success = await refreshAccessToken();
         if (!success) {
           logout();

@@ -116,7 +116,7 @@ export async function refreshAccessToken(): Promise<boolean> {
 
       if (newAccessToken) {
         setAuthToken(newAccessToken); // In-memory only
-        console.log('[AUTH-EXPIRY-002] Token refreshed successfully');
+        // Token refreshed successfully
         return true;
       }
 

@@ -218,11 +218,33 @@ export default function App() {
   // T-119: Guard function — warns before losing unsaved modal changes
   function guardModalDirty(action: () => void) {
     if (modalDirty) {
-      if (!window.confirm("You have unsaved changes. Discard?")) return;
+      showConfirm("Unsaved Changes", "You have unsaved changes. Discard?", "Discard", "warning", () => {
+        setModalDirty(false);
+        action();
+      });
+      return;
     }
     setModalDirty(false);
     action();
   }
+
+  // Helper: perform tab switch (clear errors, abort requests, update hash)
+  const performTabSwitch = (newTab: TabKey) => {
+    abortActiveRequests();
+    setEventsError(""); setHealthError(""); setAiError(""); setStoreError("");
+    setStoreDirectoryError(""); setStoreNameError(""); setCreateStoreError("");
+    setBarcodeSheetError(""); setDevicesError(""); setDeviceActionError("");
+    setEnrollError(""); setAnalyticsError(""); setSuppliersError("");
+    setSupplierActionError(""); setStoreSuspendError(""); setProductActionError("");
+    setEditProductError(""); setUsersError(""); setUserActionError("");
+    setCreateUserError(""); setSettingsError(""); setAuditLogsError("");
+    setRegEventsError(""); setDocumentsError(""); setStaffError("");
+    setGrnAlertsError(""); setFeatureFlagsError(""); setApplicationsError("");
+    setStaffSuccess(""); setConfirmDialog(null);
+    setTabRaw(newTab);
+    setHashParams({});
+    window.history.pushState(null, "", `#${newTab}`);
+  };
 
   // ISSUE-MICRO-063: Abort in-flight requests when switching tabs
   // AUDIT-SA-016: Clear error states on tab switch to prevent stale errors
@@ -230,25 +252,14 @@ export default function App() {
     if (newTab !== tab) {
       // T-119: Warn if modal is open with unsaved changes
       if (modalDirty) {
-        if (!window.confirm("You have unsaved changes. Discard?")) return;
-        setModalDirty(false);
+        showConfirm("Unsaved Changes", "You have unsaved changes. Discard?", "Discard", "warning", () => {
+          setModalDirty(false);
+          performTabSwitch(newTab);
+        });
+        return;
       }
-      abortActiveRequests();
-      setEventsError(""); setHealthError(""); setAiError(""); setStoreError("");
-      setStoreDirectoryError(""); setStoreNameError(""); setCreateStoreError("");
-      setBarcodeSheetError(""); setDevicesError(""); setDeviceActionError("");
-      setEnrollError(""); setAnalyticsError(""); setSuppliersError("");
-      setSupplierActionError(""); setStoreSuspendError(""); setProductActionError("");
-      setEditProductError(""); setUsersError(""); setUserActionError("");
-      setCreateUserError(""); setSettingsError(""); setAuditLogsError("");
-      setRegEventsError(""); setDocumentsError(""); setStaffError("");
-      setGrnAlertsError(""); setFeatureFlagsError(""); setApplicationsError("");
-      setStaffSuccess(""); setConfirmDialog(null);
+      performTabSwitch(newTab);
     }
-    setTabRaw(newTab);
-    // T-118: Update URL hash when tab changes (no query params on manual switch)
-    setHashParams({});
-    window.history.pushState(null, "", `#${newTab}`);
   };
 
   // T-114: Listen for browser back/forward navigation (popstate)
@@ -258,12 +269,14 @@ export default function App() {
       if (hashTab && hashTab !== tab) {
         // T-119: Warn if modal is open with unsaved changes
         if (modalDirty) {
-          if (!window.confirm("You have unsaved changes. Discard?")) {
-            // Re-push current state to prevent navigation
-            window.history.pushState(null, "", buildHash(tab));
-            return;
-          }
-          setModalDirty(false);
+          showConfirm("Unsaved Changes", "You have unsaved changes. Discard?", "Discard", "warning", () => {
+            setModalDirty(false);
+            setTabRaw(hashTab);
+            setHashParams(params);
+          });
+          // Re-push current state to prevent navigation until confirmed
+          window.history.pushState(null, "", buildHash(tab));
+          return;
         }
         setTabRaw(hashTab);
         setHashParams(params);
