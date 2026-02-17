@@ -11,6 +11,7 @@
     "test:watch": "jest --config jest.config.js --watch",
     "test:coverage": "jest --config jest.config.js --coverage",
     "test:e2e": "npx playwright test --config e2e-tests/playwright.config.ts",
+    "test:integration": "node src/services/stockCap.integration.test.js && node src/services/scan/sellFirstOnboarding.integration.test.js && node src/services/stockService.integration.test.js && node src/services/saleScope.test.js && npx tsx src/stores/purchaseDraftLogic.test.ts",
     "pre-commit-check": "node scripts/pre-commit-check.js",
     "build:check": "node scripts/build-check.js",
     "apk:check": "node scripts/apk-readiness-check.js",
