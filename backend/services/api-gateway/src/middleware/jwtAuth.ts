@@ -79,6 +79,8 @@ const JWT_REQUIRED_PREFIXES = [
   '/api/v1/platform',
   '/api/v1/suppliers',
   '/api/v1/documents',
+  '/api/v1/chat',     // PRA-082: Chat routes need JWT for x-user-id/x-actor-id headers
+  '/api/v1/credit',   // PRA-082: Credit provider routes need JWT for store context
 ];
 
 // Public paths within JWT-required prefixes (no auth needed)
