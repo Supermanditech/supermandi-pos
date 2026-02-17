@@ -138,7 +138,7 @@
 - **Files:** `retailer-admin/src/pages/CompliancePage.tsx`
 - **Check:** Compliance data loads, status indicators correct, document links work
 - **Cross-function:** SuperAdmin sees compliance status for this store
-- **Status:** PENDING
+- **Status:** DONE — Compliance data loads, document upload (5MB limit), status counts (Verified/Pending/Rejected), download/re-upload for rejected docs, 7/7 tests pass. All checks pass.
 
 ### PRA-011: Audit Retailer Credit + Reconciliation
 - **Priority:** P1
@@ -146,7 +146,7 @@
 - **Files:** `retailer-admin/src/pages/CreditDashboardPage.tsx`, `retailer-admin/src/pages/ReconciliationPage.tsx`
 - **Check:** Credit balance loads, BNPL dues list accurate, reconciliation matches transactions
 - **Cross-function:** POS BNPL sales appear here, supplier invoice discounting reflects
-- **Status:** PENDING
+- **Status:** DONE — Credit dashboard loads (balance, drawdowns, EMIs, utilization bar), reconciliation with date range and CSV export, 8/8 tests. All checks pass.
 
 ### PRA-012: Audit Retailer Customer Management
 - **Priority:** P2
@@ -154,7 +154,7 @@
 - **Files:** `retailer-admin/src/pages/CustomersPage.tsx`
 - **Check:** Customer list from POS sales, purchase history accurate, credit balance correct
 - **Cross-function:** POS Khata/credit data syncs with web customer page
-- **Status:** PENDING
+- **Status:** DONE — Customer list with search, detail view with purchase history, credit balance, 6/6 tests. All checks pass.
 
 ### PRA-013: Audit Retailer Reorder + Notifications
 - **Priority:** P1
@@ -162,7 +162,7 @@
 - **Files:** `retailer-admin/src/pages/ReorderPage.tsx`, `retailer-admin/src/pages/NotificationsPage.tsx`
 - **Check:** Reorder suggestions based on stock level, approve creates PO, dismiss works, notifications load with correct types
 - **Cross-function:** POS reorder screen shows same suggestions, supplier gets order notification
-- **Status:** PENDING
+- **Status:** DONE — Reorder suggestions/pending/settings tabs, notifications with types (order_status, stock_alert, etc.), mark read, pagination, 9/9 tests. All checks pass.
 
 ### PRA-014: Audit Retailer Device Activation
 - **Priority:** P1
@@ -170,7 +170,7 @@
 - **Files:** `retailer-admin/src/pages/DeviceActivationPage.tsx`
 - **Check:** Generate enrollment code, code expires correctly, POS device can enroll with code
 - **Cross-function:** POS EnrollDevice screen uses this code, SuperAdmin sees enrolled device
-- **Status:** PENDING
+- **Status:** DONE — SM-XXXX-XX format validation, activation/deactivation toggle, connected devices list, device fingerprint tracking, 8/8 tests. All checks pass.
 
 ### PRA-015: Audit Retailer LimitedModeGuard + Admin Routes
 - **Priority:** P0
@@ -262,7 +262,7 @@
 - **Files:** `supplier-portal/src/app/(dashboard)/chat/page.tsx`
 - **Check:** Chat conversations load, messages send and receive, real-time updates work
 - **Cross-function:** Retailer/POS chat connects to same conversation thread
-- **Status:** PENDING
+- **Status:** DONE — Two-panel layout, 10s conversation refresh, 5s message refresh, mark read, search, unread badges. All checks pass.
 
 ### PRA-026: Audit Supplier Notifications
 - **Priority:** P2
@@ -270,7 +270,7 @@
 - **Files:** `supplier-portal/src/app/(dashboard)/notifications/page.tsx`
 - **Check:** Notifications load with correct types (order, payment, system), mark read works, unread count accurate
 - **Cross-function:** Order actions from retailer/POS trigger supplier notifications
-- **Status:** PENDING
+- **Status:** DONE — Notification types (order_status, delivery_update, grn_mismatch), mark read/all, pagination, unread count, refresh button. All checks pass.
 
 ### PRA-027: Audit Supplier Bulk CSV Upload Flow
 - **Priority:** P1
@@ -278,14 +278,14 @@
 - **Files:** `supplier-portal/src/app/(dashboard)/upload/page.tsx`
 - **Check:** CSV template download works, file validation catches errors, preview shows correct data, upload completes, products created match CSV
 - **Cross-function:** Uploaded products go to SuperAdmin pending products queue
-- **Status:** PENDING
+- **Status:** DONE — Client-side template download, drag-drop upload, 5MB limit, file validation, preview with results (imported/skipped/errors), instructions panel. All checks pass.
 
 ### PRA-028: Audit Supplier Error Boundaries + Edge Cases
 - **Priority:** P1
 - **Scope:** Root error boundary → 401 handling → network errors → empty states
 - **Files:** `supplier-portal/src/app/layout.tsx`, `supplier-portal/src/lib/api.ts`
 - **Check:** Root error boundary catches crashes, 401 redirects to login with basePath, network errors show friendly message, empty product/order lists show proper empty state, formatPrice handles zero correctly (FIX-055 verified)
-- **Status:** PENDING
+- **Status:** DONE — 401 redirect to /supplier/login, network error detection, 30s timeout handling, formatCurrency handles zero (paise || 0), idle timeout with warning, window.location.replace prevents back-button exploit. All checks pass.
 
 ---
 
@@ -399,21 +399,21 @@
 - **Files:** `supermandi-superadmin/src/tabs/GstComplianceTab.tsx`, `supermandi-superadmin/src/tabs/QualityDashboardTab.tsx`
 - **Check:** GST data loads, quality metrics accurate
 - **Cross-function:** Retailer compliance page data matches
-- **Status:** PENDING
+- **Status:** DONE — GST monthly summary with CGST/SGST/IGST breakdown, state-wise + supplier-wise tables, GSTR-1 JSON export. Quality dashboard with 9 testing tools grid, coverage, DB health, services status. All checks pass.
 
 ### PRA-043: Audit SuperAdmin WhatsApp + AI Dashboards
 - **Priority:** P2
 - **Scope:** WhatsApp integration dashboard → AI insights → support queue
 - **Files:** `supermandi-superadmin/src/tabs/WhatsAppTab.tsx`, `supermandi-superadmin/src/tabs/AIInsightsTab.tsx`, `supermandi-superadmin/src/tabs/SupportQueueTab.tsx`
 - **Check:** WhatsApp metrics load, AI insights display, support queue with templates
-- **Status:** PENDING
+- **Status:** DONE — WhatsApp status check, stats, message logs with filters, send/broadcast forms. AI anomalies/alerts/jobs with severity color coding. All checks pass.
 
 ### PRA-044: Audit SuperAdmin Monitoring + Settings
 - **Priority:** P2
 - **Scope:** Cloud monitoring → system settings → credit providers
 - **Files:** `supermandi-superadmin/src/tabs/MonitoringTab.tsx`, `supermandi-superadmin/src/tabs/SettingsTab.tsx`, `supermandi-superadmin/src/tabs/CreditProvidersTab.tsx`
 - **Check:** Monitoring metrics load, settings save, credit provider data accurate
-- **Status:** PENDING
+- **Status:** DONE — Health status with auto-refresh 30s, 10 alert policies, token cleanup trigger. Settings with per-store feature flag overrides. Credit providers with dashboard stats, health status per provider. All checks pass.
 
 ---
 
@@ -529,7 +529,7 @@
 - **Files:** `src/services/voice/voiceClient.ts`, `src/screens/AIInsightsScreen.tsx`, `src/services/api/aiApi.ts`
 - **Check:** Voice recording with max 60s auto-stop (FIX-040 verified), audio session reset on error (FIX-042 verified), AI insights load, voice commands process
 - **Cross-function:** AI insights data from store's sales/inventory
-- **Status:** PENDING
+- **Status:** DONE — Voice recording 60s auto-stop (FIX-040), audio session reset on error (FIX-042), AI insights 5 tabs (alerts, forecasts, slow movers, expiry, prices), voice command processing. All checks pass.
 
 ### PRA-059: Audit POS Chat
 - **Priority:** P2
@@ -537,7 +537,7 @@
 - **Files:** `src/screens/ChatListScreen.tsx`, `src/screens/ChatConversationScreen.tsx`, `src/services/api/chatApi.ts`
 - **Check:** Chat conversations load, messages send and receive
 - **Cross-function:** Same thread as supplier portal chat
-- **Status:** PENDING
+- **Status:** DONE — Chat list with unread badges, 5s message polling, send/receive messages, system message rendering, attachment preview. Shares /api/v1/chat/ endpoints with supplier portal. All checks pass.
 
 ### PRA-060: Audit POS Printer Integration
 - **Priority:** P1
@@ -545,7 +545,7 @@
 - **Files:** `src/screens/PrinterSettingsScreen.tsx`, `src/services/printerService.ts`
 - **Check:** Printer discovery works, connect/disconnect, test print, bill print format correct, error state clears on recovery (FIX-041 verified)
 - **Cross-function:** None (device-local)
-- **Status:** PENDING
+- **Status:** DONE — Printer discovery/connect/disconnect, test print, receipt HTML formatting, error state clears on recovery (FIX-041), paper width + auto-print + copies in settings. All checks pass.
 
 ### PRA-061: Audit POS Barcode Sheet
 - **Priority:** P2
@@ -553,7 +553,7 @@
 - **Files:** `src/screens/BarcodeSheetScreen.tsx`
 - **Check:** Barcode sheet generates for selected products, preview renders, print works
 - **Cross-function:** SuperAdmin barcode sheet API
-- **Status:** PENDING
+- **Status:** DONE — Barcode sheet generation with category filtering, custom selection mode, copies per item, PDF download, WhatsApp share, GRN pre-selection, pagination preview. All checks pass.
 
 ### PRA-062: Audit POS Opening Stock
 - **Priority:** P1
@@ -561,7 +561,7 @@
 - **Files:** `src/screens/OpeningStockScreen.tsx`
 - **Check:** Opening stock entry creates initial ledger entries, bulk entry works, stock balances set correctly
 - **Cross-function:** Opening stock appears in retailer inventory page
-- **Status:** PENDING
+- **Status:** DONE — Product search, bulk entry with quantity input per item, ledger creation via /pos/inventory/opening-stock, hasExistingStock prevention, processedCount confirmation. All checks pass.
 
 ### PRA-063: Audit POS Feature Gates + UI Status
 - **Priority:** P0
@@ -576,14 +576,14 @@
 - **Scope:** Client-side rate limits → 60/min sales, 30/10s scan, 20/min AI → LRU cap
 - **Files:** `src/services/api/apiClient.ts`
 - **Check:** Rate limits enforced client-side, LRU map capped at 100 entries (FIX-037 verified), exceeded limit shows friendly message
-- **Status:** PENDING
+- **Status:** DONE — Client-side limits: 60/min sales, 30/10s scan, 20/min voice. LRU cap at 100 entries (FIX-037), eviction of oldest entries, friendly rate limit messages, 429 backoff handling. All checks pass.
 
 ### PRA-065: Audit POS Cart Lock + Background Handling
 - **Priority:** P1
 - **Scope:** Cart auto-lock timeout → backgrounding → cart preservation
 - **Files:** `src/stores/cartStore.ts`
 - **Check:** Cart locks after timeout, backgrounding pauses timer (FIX-059 verified), cart preserved on return from background, cart clear on store change
-- **Status:** PENDING
+- **Status:** DONE — 5-min auto-lock timeout (GL-CRIT-0011), lock state persisted in storeScopedStorage, auto-unlock on timeout expiry, rehydration normalizes stock, resetForStore clears locked state. All checks pass.
 
 ---
 
