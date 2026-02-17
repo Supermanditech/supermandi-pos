@@ -105,7 +105,7 @@ app.get("/health", (_req, res) => {
   // DEV-071: Include version info for deployment verification
   res.json({
     status: "ok",
-    service: "api-gateway",
+    service: "main-backend",
     gitSha: GIT_SHA,
     startTime: BUILD_TIME,
     env: process.env.NODE_ENV || "development"

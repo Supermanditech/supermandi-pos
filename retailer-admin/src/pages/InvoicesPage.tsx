@@ -96,6 +96,7 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useUrlState('status');
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const limit = 20;
 
   const loadInvoices = useCallback(async () => {
@@ -124,13 +125,15 @@ export default function InvoicesPage() {
   const openDetail = async (invoiceId: string) => {
     if (!accessToken) return;
     setDetailLoading(true);
+    setDetailError(null);
     try {
       const res = await authFetch(`/api/v1/retailer-admin/invoices/${invoiceId}`, accessToken);
       if (!res.ok) throw new Error("Failed to load invoice detail");
       const json = await safeJson(res);
       setDetail(json?.data || null);
-    } catch {
+    } catch (e: any) {
       setDetail(null);
+      setDetailError(e.message || "Failed to load invoice detail");
     } finally {
       setDetailLoading(false);
     }
@@ -257,12 +260,19 @@ export default function InvoicesPage() {
       )}
 
       {/* Detail Modal */}
-      {(detail || detailLoading) && (
+      {(detail || detailLoading || detailError) && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: "5vh", zIndex: 1000 }}
-          onClick={() => { setDetail(null); }}>
+          onClick={() => { setDetail(null); setDetailError(null); }}>
           <div style={{ background: "#fff", borderRadius: 8, width: "90%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "1.5rem" }}
             onClick={e => e.stopPropagation()}>
             {detailLoading && <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>}
+            {detailError && !detailLoading && (
+              <div style={{ padding: "2rem", textAlign: "center" }}>
+                <p style={{ color: "#dc2626", fontWeight: 600 }}>Failed to load invoice</p>
+                <p style={{ color: "#64748b", fontSize: "0.85rem", marginTop: "0.5rem" }}>{detailError}</p>
+                <button onClick={() => setDetailError(null)} style={{ marginTop: "1rem", padding: "0.5rem 1rem", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}>Close</button>
+              </div>
+            )}
             {detail && (
               <>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>

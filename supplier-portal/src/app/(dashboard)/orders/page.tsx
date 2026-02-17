@@ -89,7 +89,8 @@ export default function OrdersPage() {
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
 
   // GL-WF-063: Paginated orders query
-  const { data: ordersResponse, isLoading } = useQuery({
+  // PRA-REAUDIT: Added isError + refetch to prevent API failure showing as empty state
+  const { data: ordersResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ['orders', currentPage, pageSize],
     queryFn: () => getOrders({ page: currentPage, limit: pageSize }),
   });
@@ -338,6 +339,14 @@ export default function OrdersPage() {
                 <div className="h-4 bg-slate-200 rounded animate-pulse" style={{ width: '10%' }} />
               </div>
             ))}
+          </div>
+        ) : isError ? (
+          <div className="p-8 text-center">
+            <p className="text-red-600 font-medium">Failed to load orders</p>
+            <p className="text-sm text-slate-500 mt-1">Please check your connection and try again.</p>
+            <button onClick={() => refetch()} className="mt-3 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+              Retry
+            </button>
           </div>
         ) : filteredOrders && filteredOrders.length > 0 ? (
           <table className="w-full">

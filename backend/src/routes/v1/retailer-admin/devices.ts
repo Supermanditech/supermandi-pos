@@ -282,19 +282,13 @@ retailerAdminDevicesRouter.patch("/devices/:deviceId", async (req: Request, res:
   }
 
   try {
-    // First verify the device belongs to this store
+    // PRA-REAUDIT: DB-level store isolation (defense-in-depth, not just app-level check)
     const deviceCheck = await pool.query(
-      `SELECT id, store_id, active, label, token_revoked_at FROM public.pos_devices WHERE id = $1`,
-      [deviceId]
+      `SELECT id, store_id, active, label, token_revoked_at FROM public.pos_devices WHERE id = $1 AND store_id = $2`,
+      [deviceId, storeId]
     );
 
     if (deviceCheck.rowCount === 0) {
-      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Device not found" } });
-    }
-
-    const device = deviceCheck.rows[0];
-    if (device.store_id !== storeId) {
-      // Security: Don't reveal that the device exists for another store
       return res.status(404).json({ error: { code: "NOT_FOUND", message: "Device not found" } });
     }
 
@@ -325,11 +319,12 @@ retailerAdminDevicesRouter.patch("/devices/:deviceId", async (req: Request, res:
 
     updates.push(`updated_at = NOW()`);
     params.push(deviceId);
+    params.push(storeId);
 
     const result = await pool.query(
       `UPDATE public.pos_devices
        SET ${updates.join(', ')}
-       WHERE id = $${paramIndex}
+       WHERE id = $${paramIndex} AND store_id = $${paramIndex + 1}
        RETURNING
          id,
          device_fingerprint as "fingerprint",
