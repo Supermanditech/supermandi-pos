@@ -44,13 +44,19 @@
 
 ## Execution Waves
 
-| Wave | Tickets | Focus | Count |
-|------|---------|-------|-------|
-| 1 | P0 all portals | Crashes, broken auth, data corruption | 13 |
-| 2 | P1 wiring bugs | Wrong endpoints, stale closures, missing auth | 15 |
-| 3 | P1 UX safety | Missing confirmations, double-tap risk, trapped loading | 18 |
-| 4 | P1 UI/nav | BackHandler, SafeArea, KeyboardAvoidingView | 19 |
-| 5 | P2 all portals | Polish, minor wiring, edge cases | 50 |
+| Wave | Tickets | Focus | Count | Status |
+|------|---------|-------|-------|--------|
+| 1 | P0 all portals | Crashes, broken auth, data corruption | 15 | DONE (PR #282) |
+| 2 | P1 wiring bugs | Wrong endpoints, stale closures, missing auth | 16 | DONE (PR #283) |
+| 3 | P1 UX safety | Missing confirmations, double-tap risk, trapped loading | 17 | DONE (PR #284, SUP-011 dropped) |
+| 4 | P1 UI/nav | BackHandler, SafeArea, KeyboardAvoidingView, remaining P1 | 10 | IN PROGRESS |
+| 5 | P2 all portals | Polish, minor wiring, edge cases | 50+ | PENDING |
+
+### Wave 4 Remaining P1 Tickets
+- RET-003, SUP-007, SUP-009
+- POS-004 (BackHandler 15 screens), POS-005 (BackHeader SafeArea), POS-006 (custom header SafeArea)
+- POS-023 (KeyboardAvoidingView), POS-024 (KeyboardAvoidingView)
+- POS-025 (ReorderScreen error handling), POS-026 (ChatConversation polling)
 
 ---
 
