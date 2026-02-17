@@ -34,6 +34,8 @@ export default function KycPage() {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   // AUDIT-SUP-017: Track last attempted file per doc type for retry on failure
   const [failedUploads, setFailedUploads] = useState<Record<string, File>>({});
+  // UIUX-SUP-015: Two-click delete confirmation state
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   // Bank verification form state
   const [bankForm, setBankForm] = useState({
@@ -339,11 +341,20 @@ export default function KycPage() {
                     <div className="flex items-center gap-2">
                       {existingDoc && (
                         <button
-                          onClick={() => deleteMutation.mutate(existingDoc.id)}
-                          className="text-red-600 hover:text-red-700 text-sm"
+                          onClick={() => {
+                            // UIUX-SUP-015: Confirm before deleting KYC document
+                            if (pendingDelete === existingDoc.id) {
+                              deleteMutation.mutate(existingDoc.id);
+                              setPendingDelete(null);
+                            } else {
+                              setPendingDelete(existingDoc.id);
+                            }
+                          }}
+                          className={`text-sm ${pendingDelete === existingDoc.id ? 'text-white bg-red-600 px-2 py-0.5 rounded' : 'text-red-600 hover:text-red-700'}`}
                           disabled={deleteMutation.isPending}
+                          onBlur={() => setPendingDelete(null)}
                         >
-                          Delete
+                          {pendingDelete === existingDoc.id ? 'Confirm Delete' : 'Delete'}
                         </button>
                       )}
 

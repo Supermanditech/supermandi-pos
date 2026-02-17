@@ -8,6 +8,8 @@ import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 // T-112: Breadcrumb navigation
 import Breadcrumb from '../components/Breadcrumb';
+// UIUX-RET-002: Styled modal instead of window.confirm
+import Modal from '../components/Modal';
 
 interface Device {
   id: string;
@@ -44,6 +46,8 @@ export default function DeviceActivationPage() {
   const [deactivatingDeviceId, setDeactivatingDeviceId] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // UIUX-RET-002: Styled confirmation modal for device toggle
+  const [toggleConfirm, setToggleConfirm] = useState<{ deviceId: string; currentlyActive: boolean } | null>(null);
 
   // Format activation code as user types (SM-XXXX-XX)
   const formatActivationCode = useCallback((value: string): string => {
@@ -174,13 +178,18 @@ export default function DeviceActivationPage() {
   };
 
   // RET-AUD-027: Handle device deactivation/reactivation
+  // UIUX-RET-002: Show styled Modal instead of window.confirm
   const handleToggleDevice = async (deviceId: string, currentlyActive: boolean) => {
     if (!accessToken) return;
 
+    setToggleConfirm({ deviceId, currentlyActive });
+  };
+
+  const confirmToggleDevice = async () => {
+    if (!toggleConfirm || !accessToken) return;
+    const { deviceId, currentlyActive } = toggleConfirm;
+    setToggleConfirm(null);
     const action = currentlyActive ? 'deactivate' : 'reactivate';
-    if (!window.confirm(`Are you sure you want to ${action} this device?${currentlyActive ? ' The device will need to be re-enrolled to use the POS again.' : ''}`)) {
-      return;
-    }
 
     setDeactivatingDeviceId(deviceId);
     setError(null);
@@ -216,6 +225,27 @@ export default function DeviceActivationPage() {
       background: 'linear-gradient(180deg, #f0f9ff 0%, #f8fafc 100%)',
       padding: '2rem',
     }}>
+      {/* UIUX-RET-002: Styled confirmation modal for device toggle */}
+      <Modal
+        isOpen={!!toggleConfirm}
+        onClose={() => setToggleConfirm(null)}
+        title={toggleConfirm?.currentlyActive ? 'Deactivate Device' : 'Reactivate Device'}
+        actions={
+          <>
+            <button className="btn-secondary" onClick={() => setToggleConfirm(null)}>Cancel</button>
+            <button className="btn-danger" onClick={confirmToggleDevice}>
+              {toggleConfirm?.currentlyActive ? 'Deactivate' : 'Reactivate'}
+            </button>
+          </>
+        }
+      >
+        <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.5 }}>
+          {toggleConfirm?.currentlyActive
+            ? 'Are you sure you want to deactivate this device? The device will need to be re-enrolled to use the POS again.'
+            : 'Are you sure you want to reactivate this device?'}
+        </p>
+      </Modal>
+
       {/* T-112: Breadcrumb navigation */}
       <Breadcrumb items={[{ label: 'Home', path: `/s/${storeCode}` }, { label: 'Devices' }]} />
       {/* Header */}

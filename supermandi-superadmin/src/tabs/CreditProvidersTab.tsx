@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSessionToken, fetchWithTimeout } from '../api/authToken';
 // UIUX-SA-007: Use parseError for sanitized error messages instead of generic 'API error: {status}'
 import { parseError } from '../api/errorSanitizer';
+// UIUX-SA-011: Styled confirmation dialog for provider toggle
+import { ConfirmDialog, type ConfirmDialogConfig } from '../components/ConfirmDialog';
 
 interface ProviderConfig {
   id: string;
@@ -61,6 +63,8 @@ export function CreditProvidersTab() {
   const [health, setHealth] = useState<HealthStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // UIUX-SA-011: Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -83,16 +87,28 @@ export function CreditProvidersTab() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const toggleProvider = async (providerId: string, currentActive: boolean) => {
-    try {
-      await apiFetch(`/api/v1/admin/credit-providers/${providerId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ is_active: !currentActive }),
-      });
-      fetchAll();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to update');
-    }
+  const toggleProvider = (providerId: string, currentActive: boolean) => {
+    const provName = providers.find(p => p.provider_id === providerId)?.provider_name || providerId;
+    setConfirmDialog({
+      title: currentActive ? 'Disable Credit Provider' : 'Enable Credit Provider',
+      message: currentActive
+        ? `Disable "${provName}"? This will stop all new credit applications through this provider.`
+        : `Enable "${provName}"? This will allow new credit applications through this provider.`,
+      confirmLabel: currentActive ? 'Disable' : 'Enable',
+      variant: currentActive ? 'danger' : 'info',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await apiFetch(`/api/v1/admin/credit-providers/${providerId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_active: !currentActive }),
+          });
+          fetchAll();
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : 'Failed to update');
+        }
+      },
+    });
   };
 
   if (loading) return <div style={{ padding: '2rem', color: '#64748b' }}>Loading finance dashboard...</div>;
@@ -106,6 +122,7 @@ export function CreditProvidersTab() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} />}
       <h2 style={{ margin: '0 0 1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>Finance & Credit Providers</h2>
 
       {error && (

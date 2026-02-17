@@ -11,6 +11,8 @@ import {
   type WhatsAppStats,
 } from "../api/whatsapp";
 import { formatDateTime } from "../lib/formatters";
+// UIUX-SA-012: Styled confirmation dialog for broadcast
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   sent:      { bg: "#dbeafe", color: "#1e40af" },
@@ -48,6 +50,8 @@ export function WhatsAppTab() {
   const [broadcastType, setBroadcastType] = useState<"retailer" | "supplier">("retailer");
   const [broadcasting, setBroadcasting] = useState(false);
   const [broadcastResult, setBroadcastResult] = useState<string | null>(null);
+  // UIUX-SA-012: Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const limit = 25;
 
@@ -104,10 +108,7 @@ export function WhatsAppTab() {
     }
   };
 
-  const handleBroadcast = async () => {
-    const phones = broadcastPhones.split(/[,\n]/).map(p => p.trim()).filter(Boolean);
-    if (phones.length === 0 || !broadcastMessage.trim()) return;
-    if (phones.length > 50) { setBroadcastResult("Max 50 recipients"); return; }
+  const executeBroadcast = async (phones: string[]) => {
     setBroadcasting(true);
     setBroadcastResult(null);
     try {
@@ -125,11 +126,30 @@ export function WhatsAppTab() {
     }
   };
 
+  // UIUX-SA-012: Show confirmation before sending broadcast (WhatsApp messages are irrevocable)
+  const handleBroadcast = () => {
+    const phones = broadcastPhones.split(/[,\n]/).map(p => p.trim()).filter(Boolean);
+    if (phones.length === 0 || !broadcastMessage.trim()) return;
+    if (phones.length > 50) { setBroadcastResult("Max 50 recipients"); return; }
+    setConfirmDialog({
+      title: "Send WhatsApp Broadcast",
+      message: `Send this message to ${phones.length} recipient${phones.length > 1 ? "s" : ""}? WhatsApp messages cannot be unsent.`,
+      detail: `Preview: "${broadcastMessage.trim().slice(0, 80)}${broadcastMessage.trim().length > 80 ? "..." : ""}"`,
+      confirmLabel: `Send to ${phones.length}`,
+      variant: "warning",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        executeBroadcast(phones);
+      },
+    });
+  };
+
   const totalPages = Math.ceil(total / limit);
   const currentPage = Math.floor(offset / limit) + 1;
 
   return (
     <div style={{ padding: "0.5rem 0" }}>
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={broadcasting} />}
       {/* Status Banner */}
       <div style={{
         display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem",

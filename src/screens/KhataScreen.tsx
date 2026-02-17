@@ -1,6 +1,6 @@
 // T-154: Khata (Credit Book) Screen
 // Main list of customers with credit/debit balance, ledger view, add credit/payment modals
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -63,6 +63,8 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
   } = useKhataStore();
 
   const [searchQuery, setSearchQuery] = useState("");
+  // UIUX-POS-020: Debounce search to avoid firing API on every keystroke
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
   const [showCreditModal, setShowCreditModal] = useState(false);
@@ -92,10 +94,16 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
     }
   }, [error]);
 
+  // UIUX-POS-020: 300ms debounced search to reduce API calls
   const handleSearch = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      void fetchCustomers(text || undefined);
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+      searchTimerRef.current = setTimeout(() => {
+        void fetchCustomers(text || undefined);
+      }, 300);
     },
     [fetchCustomers]
   );

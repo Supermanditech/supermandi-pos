@@ -1,6 +1,6 @@
 // T-155: Customer Profiles Screen
 // List of all customers, search, detail view with purchase history, add/edit customer
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -64,6 +64,8 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
 
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  // UIUX-POS-020: Debounce search timer ref
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -86,10 +88,16 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
     }
   }, [error]);
 
+  // UIUX-POS-020: 300ms debounced search to reduce API calls
   const handleSearch = useCallback(
     (text: string) => {
       setSearchQuery(text);
-      void fetchCustomers(text || undefined);
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+      searchTimerRef.current = setTimeout(() => {
+        void fetchCustomers(text || undefined);
+      }, 300);
     },
     [fetchCustomers]
   );

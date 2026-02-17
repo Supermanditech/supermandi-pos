@@ -201,6 +201,8 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
   // ==========================================================================
 
   const handleProcessReturn = useCallback(async () => {
+    // UIUX-POS-019: Guard against double-tap — reject if already processing
+    if (processing) return;
     if (!sale || !reason || !refundMethod || selectedItems.length === 0) return;
 
     setProcessing(true);
@@ -225,7 +227,7 @@ export default function ReturnScreen({ onBack }: ReturnScreenProps) {
     } finally {
       setProcessing(false);
     }
-  }, [sale, reason, refundMethod, selectedItems, returnQuantities]);
+  }, [sale, reason, refundMethod, selectedItems, returnQuantities, processing]);
 
   // ==========================================================================
   // STEP 4: SUCCESS

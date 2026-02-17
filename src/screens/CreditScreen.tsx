@@ -499,14 +499,25 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
     []
   );
 
-  // Loading state
+  // UIUX-POS-021: Show header with back button during loading (don't trap user)
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>
-          {t("credit.loading", "Loading Credit Info...")}
-        </Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          {onBack && (
+            <Pressable style={styles.backButton} onPress={onBack}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+            </Pressable>
+          )}
+          <Text style={styles.headerTitle}>{t("credit.title", "Credit")}</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>
+            {t("credit.loading", "Loading Credit Info...")}
+          </Text>
+        </View>
       </View>
     );
   }

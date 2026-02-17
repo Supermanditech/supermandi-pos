@@ -522,12 +522,23 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     [handlePayDrawdown, handleOpenDispute]
   );
 
-  // Loading state
+  // UIUX-POS-021: Show header with back button during loading (don't trap user)
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading BNPL Dues...</Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          {onBack && (
+            <Pressable style={styles.backButton} onPress={onBack}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
+            </Pressable>
+          )}
+          <Text style={styles.headerTitle}>{t("bnpl.title", "BNPL Dues")}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={styles.loadingText}>Loading BNPL Dues...</Text>
+        </View>
       </View>
     );
   }
