@@ -106,13 +106,20 @@ export default function CustomerManagementScreen({
   }, [fetchCustomers, searchQuery]);
 
   // Open customer detail
+  // UIUX-POS-014: Close modal on detail fetch failure instead of leaving it open/empty
   const handleOpenDetail = useCallback(
     async (customer: Customer) => {
       setDetailVisible(true);
       setEditMode(false);
       await fetchCustomerDetail(customer.id);
+      // If fetch failed (error set, no selectedCustomer), close modal
+      const state = useCustomerStore.getState();
+      if (state.error && !state.selectedCustomer) {
+        setDetailVisible(false);
+        Alert.alert(t("common.error"), state.error);
+      }
     },
-    [fetchCustomerDetail]
+    [fetchCustomerDetail, t]
   );
 
   // Close detail
@@ -194,9 +201,11 @@ export default function CustomerManagementScreen({
       setAddCreditLimit("");
       Alert.alert(t("common.success"), t("common.done"));
     } else {
-      Alert.alert(t("common.error"), error || t("common.tryAgain"));
+      // UIUX-POS-010: Read fresh error from store to avoid stale closure
+      const freshError = useCustomerStore.getState().error;
+      Alert.alert(t("common.error"), freshError || t("common.tryAgain"));
     }
-  }, [addName, addPhone, addEmail, addAddress, createCustomer, error]);
+  }, [addName, addPhone, addEmail, addAddress, createCustomer, t]);
 
   // Render customer card
   const renderCustomerItem = useCallback(

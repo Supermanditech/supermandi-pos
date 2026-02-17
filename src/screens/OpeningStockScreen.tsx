@@ -1,7 +1,7 @@
 // T-198: Opening Stock Ledger Creation from POS
 // Initialize stock for products not yet in inventory via search/scan + quantity entry
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -78,6 +78,8 @@ export default function OpeningStockScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  // UIUX-POS-018: useRef for debounce timer so it can be properly cancelled
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Entries to submit
   const [entries, setEntries] = useState<OpeningStockEntry[]>([]);
@@ -108,12 +110,17 @@ export default function OpeningStockScreen({
   }, [searchQuery]);
 
   // Debounced search
+  // UIUX-POS-018: Use ref for timeout ID so previous timer is properly cancelled
   const handleSearchQueryChange = useCallback(
     (text: string) => {
       setSearchQuery(text);
+      // Cancel previous timer
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = null;
+      }
       if (text.trim().length >= 2) {
-        // Auto-search after 500ms
-        const timer = setTimeout(async () => {
+        searchTimerRef.current = setTimeout(async () => {
           setSearching(true);
           try {
             const results = await searchProducts(text.trim());
@@ -124,7 +131,6 @@ export default function OpeningStockScreen({
             setSearching(false);
           }
         }, 500);
-        return () => clearTimeout(timer);
       } else {
         setSearchResults([]);
       }

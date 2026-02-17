@@ -5,8 +5,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Alert as RNAlert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../theme';
-import { API_BASE_URL } from '../config/api';
-import { getDeviceToken } from '../services/deviceSession';
+// UIUX-POS-009: Use apiClient instead of raw fetch (handles auth refresh, rate limiting, error handling)
+import { apiClient } from '../services/api/apiClient';
 
 interface CreditOffer {
   id: string;
@@ -23,19 +23,7 @@ interface Props {
   onBack: () => void;
 }
 
-async function creditFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = await getDeviceToken();
-  const res = await fetch(`${API_BASE_URL}/api/v1${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
-    },
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json();
-}
+// UIUX-POS-009: Replaced raw fetch with apiClient (auth refresh, rate limiting, error handling)
 
 export default function BulkPurchaseCreditScreen({ onBack }: Props) {
   const [offers, setOffers] = useState<CreditOffer[]>([]);
@@ -46,7 +34,7 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
   const fetchOffers = useCallback(async () => {
     setError(null);
     try {
-      const res = await creditFetch<{ offers: CreditOffer[] }>('/pos/credit/offers');
+      const res = await apiClient.get<{ offers: CreditOffer[] }>('/api/v1/pos/credit/offers');
       setOffers(res.offers || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load');
@@ -66,10 +54,7 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
         text: 'Apply',
         onPress: async () => {
           try {
-            await creditFetch('/pos/credit/apply', {
-              method: 'POST',
-              body: JSON.stringify({ offerId }),
-            });
+            await apiClient.post('/api/v1/pos/credit/apply', { offerId });
             RNAlert.alert('Success', 'Application submitted. You will be notified of the status.');
             fetchOffers();
           } catch {

@@ -254,7 +254,9 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
   }, [applyModal.applicationId, applyModal.panNumber, applyModal.aadhaarLast4, t]);
 
   // Close apply modal
+  // UIUX-POS-012: Capture step before reset to avoid reading stale/reset state
   const handleCloseApplyModal = useCallback(() => {
+    const wasSuccess = applyModal.step === "success";
     setApplyModal({
       visible: false,
       offer: null,
@@ -266,7 +268,7 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
       loading: false,
       error: null,
     });
-    if (applyModal.step === "success") {
+    if (wasSuccess) {
       void loadData();
     }
   }, [applyModal.step, loadData]);
@@ -441,14 +443,24 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
             </View>
           </View>
 
-          <View style={styles.loanProgress}>
-            <View style={styles.loanProgressBar}>
-              <View style={[styles.loanProgressFill, { width: "10%" }]} />
-            </View>
-            <Text style={styles.loanProgressText}>
-              1/{app.tenureMonths} {t("credit.emisPaid", "EMIs paid")}
-            </Text>
-          </View>
+          {/* UIUX-POS-011: Compute progress from disbursement date instead of hardcoding */}
+          {(() => {
+            const monthsElapsed = app.disbursedAt
+              ? Math.max(1, Math.ceil((Date.now() - new Date(app.disbursedAt).getTime()) / (30.44 * 24 * 60 * 60 * 1000)))
+              : 0;
+            const emisPaid = Math.min(monthsElapsed, app.tenureMonths);
+            const pct = app.tenureMonths > 0 ? Math.round((emisPaid / app.tenureMonths) * 100) : 0;
+            return (
+              <View style={styles.loanProgress}>
+                <View style={styles.loanProgressBar}>
+                  <View style={[styles.loanProgressFill, { width: `${pct}%` }]} />
+                </View>
+                <Text style={styles.loanProgressText}>
+                  {emisPaid}/{app.tenureMonths} {t("credit.emisPaid", "EMIs paid")}
+                </Text>
+              </View>
+            );
+          })()}
         </View>
       );
     },

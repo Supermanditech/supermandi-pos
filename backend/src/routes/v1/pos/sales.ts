@@ -655,7 +655,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
       FROM sale_items si
       JOIN sales s ON s.id = si.sale_id
       WHERE s.store_id = $1
-        AND s.status IN ('PAID_CASH', 'PAID_UPI', 'DUE')
+        AND s.status IN ('PAID_CASH', 'PAID_UPI', 'DUE', 'completed', 'SPLIT')
         AND s.created_at::date = $2::date
       GROUP BY si.variant_id, si.name
       ORDER BY quantity_sold DESC

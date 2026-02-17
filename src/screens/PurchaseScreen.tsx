@@ -463,7 +463,8 @@ export default function PurchaseScreen({
       return;
     }
     proceedWithSubmit();
-  }, [stockInReady, stockInBlocker, retryStockIn]);
+    // UIUX-POS-013: proceedWithSubmit must be in deps to avoid stale closure
+  }, [stockInReady, stockInBlocker, retryStockIn, proceedWithSubmit]);
 
   const proceedWithSubmit = useCallback(async () => {
     if (quickItems.length === 0) {

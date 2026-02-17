@@ -93,6 +93,11 @@ export default function StockStatementScreen({ onBack }: StockStatementScreenPro
       // This returns real transactional inventory, not cached/supplier stock
       const response = await getStockStatement(200, true);
 
+      // UIUX-POS-016: Show offline indicator instead of error when offline
+      if (!response.success && response.meta?.source === 'offline') {
+        setError("You are offline. Stock data will appear when connected.");
+        return;
+      }
       if (!response.success && response.data.length === 0) {
         throw new Error("Failed to load inventory data");
       }
