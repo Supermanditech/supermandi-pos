@@ -698,23 +698,36 @@ ordersRouter.delete("/stores/:storeId/orders/:orderId", requireDeviceToken, asyn
       });
     }
 
-    // Delete order items first
-    await pool.query(
-      `DELETE FROM orders.purchase_order_items WHERE order_id = $1`,
-      [orderId]
-    );
+    // PRA-086: Wrap all deletes in a transaction to prevent partial orphans
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    // Delete order events
-    await pool.query(
-      `DELETE FROM orders.order_events WHERE purchase_order_id = $1`,
-      [orderId]
-    );
+      // Delete order items first
+      await client.query(
+        `DELETE FROM orders.purchase_order_items WHERE order_id = $1`,
+        [orderId]
+      );
 
-    // Delete the order
-    await pool.query(
-      `DELETE FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
-      [orderId, storeId]
-    );
+      // Delete order events
+      await client.query(
+        `DELETE FROM orders.order_events WHERE purchase_order_id = $1`,
+        [orderId]
+      );
+
+      // Delete the order
+      await client.query(
+        `DELETE FROM orders.purchase_orders WHERE id = $1 AND store_id = $2`,
+        [orderId, storeId]
+      );
+
+      await client.query("COMMIT");
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
+    }
 
     // GL-PO-001: Return 204 No Content on successful delete
     return res.status(204).send();

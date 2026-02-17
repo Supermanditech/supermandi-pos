@@ -483,26 +483,38 @@ adminApplicationsRouter.post(
         });
       }
 
-      // Update application
-      const adminNote = `Rejected by ${adminId}: ${rejectionReason.trim()}`;
-      await pool.query(
-        `UPDATE auth.applications
-         SET status = 'NEEDS_FIX',
-             rejection_reason = $1,
-             admin_notes = $2,
-             reviewed_at = NOW(),
-             needs_fix_at = NOW(),
-             expires_at = NOW() + INTERVAL '30 days'
-         WHERE id = $3`,
-        [rejectionReason.trim(), adminNote, id]
-      );
+      // PRA-086: Wrap UPDATE + status log INSERT in transaction
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
 
-      // Log status change
-      await pool.query(
-        `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
-         VALUES ($1, $2, 'NEEDS_FIX', $3)`,
-        [id, app.status, rejectionReason.trim()]
-      ).catch(() => { /* status_log table may not exist yet */ });
+        const adminNote = `Rejected by ${adminId}: ${rejectionReason.trim()}`;
+        await client.query(
+          `UPDATE auth.applications
+           SET status = 'NEEDS_FIX',
+               rejection_reason = $1,
+               admin_notes = $2,
+               reviewed_at = NOW(),
+               needs_fix_at = NOW(),
+               expires_at = NOW() + INTERVAL '30 days'
+           WHERE id = $3`,
+          [rejectionReason.trim(), adminNote, id]
+        );
+
+        // Log status change (table may not exist yet — handle gracefully)
+        await client.query(
+          `INSERT INTO auth.application_status_log (application_id, old_status, new_status, change_reason)
+           VALUES ($1, $2, 'NEEDS_FIX', $3)`,
+          [id, app.status, rejectionReason.trim()]
+        ).catch(() => { /* status_log table may not exist yet */ });
+
+        await client.query("COMMIT");
+      } catch (txErr) {
+        await client.query("ROLLBACK");
+        throw txErr;
+      } finally {
+        client.release();
+      }
 
       res.json({
         success: true,

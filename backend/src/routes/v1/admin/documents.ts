@@ -206,42 +206,57 @@ router.patch("/:id/verify", async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    const result = await pool.query(
-      `UPDATE platform.documents
-       SET status = 'approved',
-           verified_by = $2::uuid,
-           verified_at = NOW(),
-           rejection_reason = NULL,
-           updated_at = NOW()
-       WHERE id = $1::uuid AND deleted_at IS NULL
-       RETURNING id, entity_type, entity_id, document_type, status`,
-      [id, adminId]
-    );
+    // PRA-086: Wrap verify + entity status update in transaction
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
 
-    if (result.rows.length === 0) {
-      res.status(404).json({
-        error: 'NOT_FOUND',
-        message: 'Document not found or already deleted',
+      const result = await client.query(
+        `UPDATE platform.documents
+         SET status = 'approved',
+             verified_by = $2::uuid,
+             verified_at = NOW(),
+             rejection_reason = NULL,
+             updated_at = NOW()
+         WHERE id = $1::uuid AND deleted_at IS NULL
+         RETURNING id, entity_type, entity_id, document_type, status`,
+        [id, adminId]
+      );
+
+      if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
+        client.release();
+        res.status(404).json({
+          error: 'NOT_FOUND',
+          message: 'Document not found or already deleted',
+        });
+        return;
+      }
+
+      const doc = result.rows[0];
+
+      // Update entity kyc_complete flag if all docs approved
+      await updateEntityDocumentStatus(client, doc.entity_type, doc.entity_id);
+
+      await client.query("COMMIT");
+
+      res.json({
+        success: true,
+        document: {
+          id: doc.id,
+          entity_type: doc.entity_type,
+          entity_id: doc.entity_id,
+          document_type: doc.document_type,
+          status: doc.status,
+        },
+        message: 'Document approved successfully',
       });
-      return;
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
     }
-
-    const doc = result.rows[0];
-
-    // Update entity kyc_complete flag if all docs approved
-    await updateEntityDocumentStatus(pool, doc.entity_type, doc.entity_id);
-
-    res.json({
-      success: true,
-      document: {
-        id: doc.id,
-        entity_type: doc.entity_type,
-        entity_id: doc.entity_id,
-        document_type: doc.document_type,
-        status: doc.status,
-      },
-      message: 'Document approved successfully',
-    });
   } catch (error) {
     next(error);
   }
@@ -271,30 +286,46 @@ router.patch("/:id/reject", async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    const result = await pool.query(
-      `UPDATE platform.documents
-       SET status = 'rejected',
-           verified_by = $2::uuid,
-           verified_at = NOW(),
-           rejection_reason = $3,
-           updated_at = NOW()
-       WHERE id = $1::uuid AND deleted_at IS NULL
-       RETURNING id, entity_type, entity_id, document_type, status, rejection_reason`,
-      [id, adminId, reason.trim()]
-    );
+    // PRA-086: Wrap reject + entity status update in transaction
+    const client = await pool.connect();
+    let doc: any;
+    try {
+      await client.query("BEGIN");
 
-    if (result.rows.length === 0) {
-      res.status(404).json({
-        error: 'NOT_FOUND',
-        message: 'Document not found or already deleted',
-      });
-      return;
+      const result = await client.query(
+        `UPDATE platform.documents
+         SET status = 'rejected',
+             verified_by = $2::uuid,
+             verified_at = NOW(),
+             rejection_reason = $3,
+             updated_at = NOW()
+         WHERE id = $1::uuid AND deleted_at IS NULL
+         RETURNING id, entity_type, entity_id, document_type, status, rejection_reason`,
+        [id, adminId, reason.trim()]
+      );
+
+      if (result.rows.length === 0) {
+        await client.query("ROLLBACK");
+        client.release();
+        res.status(404).json({
+          error: 'NOT_FOUND',
+          message: 'Document not found or already deleted',
+        });
+        return;
+      }
+
+      doc = result.rows[0];
+
+      // Update entity kyc_complete flag
+      await updateEntityDocumentStatus(client, doc.entity_type, doc.entity_id);
+
+      await client.query("COMMIT");
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
     }
-
-    const doc = result.rows[0];
-
-    // Update entity kyc_complete flag
-    await updateEntityDocumentStatus(pool, doc.entity_type, doc.entity_id);
 
     res.json({
       success: true,
