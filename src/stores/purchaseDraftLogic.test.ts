@@ -39,3 +39,7 @@ export function runPurchaseDraftLogicTests(): void {
   assert(items.length === 1, "Expected barcode fallback to merge when productId is new");
   assert(items[0].quantity === 2, "Expected quantity to increment via barcode fallback");
 }
+
+// Self-execute when run directly (e.g., via `npx tsx`)
+runPurchaseDraftLogicTests();
+console.log("[PASS] purchaseDraftLogic — all assertions passed");
