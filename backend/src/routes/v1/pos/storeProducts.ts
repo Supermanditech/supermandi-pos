@@ -1009,6 +1009,11 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
     });
   }
 
+  // PRA-080/CONC-001: Warn when LWW timestamp missing (helps identify clients needing update)
+  if (!validIncomingTimestamp) {
+    console.warn(`[METADATA] LWW timestamp missing for product update (store=${storeId}, barcode=${barcode || 'N/A'}, productId=${productId || 'N/A'})`);
+  }
+
   const pool = getPool();
   if (!pool) {
     return res.status(503).json({ error: "SERVICE_UNAVAILABLE", message: "Database unavailable" });
@@ -1079,6 +1084,7 @@ posStoreProductsRouter.patch("/store-products/metadata", requireDeviceToken, req
         params
       );
     } else {
+      // PRA-080/CONC-001: Barcode path uses fallback query — wrap in transaction for atomicity
       // Lookup by barcode via store_product_barcodes
       params.push(storeId);
       params.push(barcode);
