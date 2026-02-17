@@ -503,24 +503,27 @@ ordersRouter.get("/stores/:storeId/orders/:orderId/events", requireDeviceToken, 
   const pool = getPool();
   if (!pool) return res.status(503).json({ error: "database unavailable" });
 
+  const storeId = getStoreIdFromDevice(req);
   const { orderId } = req.params;
 
   try {
+    // PRA-078: JOIN with purchase_orders to enforce store isolation
     const result = await pool.query(
       `SELECT
-        id,
-        purchase_order_id as "orderId",
-        event_type as "eventType",
-        from_status as "fromStatus",
-        to_status as "toStatus",
-        actor_id as "actorId",
-        actor_type as "actorType",
-        metadata,
-        created_at as "createdAt"
-      FROM orders.order_events
-      WHERE purchase_order_id = $1
-      ORDER BY created_at ASC`,
-      [orderId]
+        oe.id,
+        oe.purchase_order_id as "orderId",
+        oe.event_type as "eventType",
+        oe.from_status as "fromStatus",
+        oe.to_status as "toStatus",
+        oe.actor_id as "actorId",
+        oe.actor_type as "actorType",
+        oe.metadata,
+        oe.created_at as "createdAt"
+      FROM orders.order_events oe
+      JOIN orders.purchase_orders po ON po.id = oe.purchase_order_id
+      WHERE oe.purchase_order_id = $1 AND po.store_id = $2
+      ORDER BY oe.created_at ASC`,
+      [orderId, storeId]
     );
 
     return res.json({
