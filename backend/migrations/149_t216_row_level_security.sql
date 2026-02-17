@@ -65,42 +65,64 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE;
 
--- Public schema policies
+-- Public schema policies (DROP IF EXISTS for idempotency — re-run safe)
+DROP POLICY IF EXISTS rls_sales_store ON public.sales;
 CREATE POLICY rls_sales_store ON public.sales FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_collections_store ON public.collections;
 CREATE POLICY rls_collections_store ON public.collections FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_bill_sequences_store ON public.bill_sequences;
 CREATE POLICY rls_bill_sequences_store ON public.bill_sequences FOR ALL USING (rls_store_check(store_id));
 
 -- Platform schema policies
+DROP POLICY IF EXISTS rls_customer_profiles_store ON platform.customer_profiles;
 CREATE POLICY rls_customer_profiles_store ON platform.customer_profiles FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_compliance_documents_store ON platform.compliance_documents;
 CREATE POLICY rls_compliance_documents_store ON platform.compliance_documents FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_staff_shifts_store ON platform.staff_shifts;
 CREATE POLICY rls_staff_shifts_store ON platform.staff_shifts FOR ALL USING (rls_store_check(store_id));
 
 -- Catalog schema policies
+DROP POLICY IF EXISTS rls_store_products_store ON catalog.store_products;
 CREATE POLICY rls_store_products_store ON catalog.store_products FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_catalog_mapping_log_store ON catalog.catalog_mapping_log;
 CREATE POLICY rls_catalog_mapping_log_store ON catalog.catalog_mapping_log FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_translation_overrides_store ON catalog.translation_overrides;
 CREATE POLICY rls_translation_overrides_store ON catalog.translation_overrides FOR ALL USING (rls_store_check(store_id));
 
 -- Inventory schema policies
+DROP POLICY IF EXISTS rls_inventory_ledger_store ON inventory.inventory_ledger;
 CREATE POLICY rls_inventory_ledger_store ON inventory.inventory_ledger FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_stock_balances_store ON inventory.stock_balances;
 CREATE POLICY rls_stock_balances_store ON inventory.stock_balances FOR ALL USING (rls_store_check(store_id));
 
 -- Orders schema policies
+DROP POLICY IF EXISTS rls_order_sequences_store ON orders.order_sequences;
 CREATE POLICY rls_order_sequences_store ON orders.order_sequences FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_purchase_orders_store ON orders.purchase_orders;
 CREATE POLICY rls_purchase_orders_store ON orders.purchase_orders FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_daily_closings_store ON orders.daily_closings;
 CREATE POLICY rls_daily_closings_store ON orders.daily_closings FOR ALL USING (rls_store_check(store_id));
 
 -- Supplier schema policies
+DROP POLICY IF EXISTS rls_supplier_store_links_store ON supplier.supplier_store_links;
 CREATE POLICY rls_supplier_store_links_store ON supplier.supplier_store_links FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_supplier_requests_store ON supplier.supplier_requests;
 CREATE POLICY rls_supplier_requests_store ON supplier.supplier_requests FOR ALL USING (rls_store_check(store_id));
 
 -- Payments schema policies
+DROP POLICY IF EXISTS rls_sell_payments_store ON payments.sell_payments;
 CREATE POLICY rls_sell_payments_store ON payments.sell_payments FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_buy_payments_store ON payments.buy_payments;
 CREATE POLICY rls_buy_payments_store ON payments.buy_payments FOR ALL USING (rls_store_check(store_id));
 
 -- Reorder schema policies
+DROP POLICY IF EXISTS rls_store_reorder_settings_store ON reorder.store_reorder_settings;
 CREATE POLICY rls_store_reorder_settings_store ON reorder.store_reorder_settings FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_reorder_policies_store ON reorder.reorder_policies;
 CREATE POLICY rls_reorder_policies_store ON reorder.reorder_policies FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_pending_reorders_store ON reorder.pending_reorders;
 CREATE POLICY rls_pending_reorders_store ON reorder.pending_reorders FOR ALL USING (rls_store_check(store_id));
+DROP POLICY IF EXISTS rls_reorder_runs_store ON reorder.reorder_runs;
 CREATE POLICY rls_reorder_runs_store ON reorder.reorder_runs FOR ALL USING (rls_store_check(store_id));
 
 -- =============================================================================

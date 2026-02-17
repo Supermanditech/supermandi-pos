@@ -12,14 +12,22 @@ CREATE TABLE IF NOT EXISTS payments.payout_retries (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Constraint: max 3 retry attempts per payout, status must be valid
-ALTER TABLE payments.payout_retries
-  ADD CONSTRAINT chk_payout_retries_status
-  CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'exhausted'));
+-- Constraint: max 3 retry attempts per payout, status must be valid (idempotent)
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payout_retries_status') THEN
+    ALTER TABLE payments.payout_retries
+      ADD CONSTRAINT chk_payout_retries_status
+      CHECK (status IN ('pending', 'processing', 'succeeded', 'failed', 'exhausted'));
+  END IF;
+END $$;
 
-ALTER TABLE payments.payout_retries
-  ADD CONSTRAINT chk_payout_retries_attempt
-  CHECK (attempt_number BETWEEN 1 AND 3);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_payout_retries_attempt') THEN
+    ALTER TABLE payments.payout_retries
+      ADD CONSTRAINT chk_payout_retries_attempt
+      CHECK (attempt_number BETWEEN 1 AND 3);
+  END IF;
+END $$;
 
 -- Index for cron job: find pending retries that are due
 CREATE INDEX IF NOT EXISTS idx_payout_retries_pending

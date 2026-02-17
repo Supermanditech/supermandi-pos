@@ -60,8 +60,8 @@ RUN npm install --omit=dev
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./
 
-# Copy public directory if it exists (optional)
-RUN mkdir -p ./public
+# Copy public directory from builder (contains brand logos, favicon)
+COPY --from=builder /app/public ./public
 
 # Set ownership
 RUN chown -R nodejs:nodejs /app

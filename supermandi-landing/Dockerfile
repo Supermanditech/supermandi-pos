@@ -8,6 +8,8 @@ COPY index.html /usr/share/nginx/html/index.html
 COPY privacy.html /usr/share/nginx/html/privacy.html
 COPY terms.html /usr/share/nginx/html/terms.html
 COPY pos.html /usr/share/nginx/html/pos.html
+COPY favicon.svg /usr/share/nginx/html/favicon.svg
+COPY brand/ /usr/share/nginx/html/brand/
 
 # Add health check file
 RUN echo "OK" > /usr/share/nginx/html/health.txt

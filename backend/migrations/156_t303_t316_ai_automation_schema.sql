@@ -5,7 +5,7 @@
 CREATE SCHEMA IF NOT EXISTS ai;
 
 -- T-307: Proactive AI alerts
-CREATE TABLE ai.alerts (
+CREATE TABLE IF NOT EXISTS ai.alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   alert_type VARCHAR(50) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE ai.alerts (
 );
 
 -- T-308: Demand forecasts (per product per store per day)
-CREATE TABLE ai.demand_forecasts (
+CREATE TABLE IF NOT EXISTS ai.demand_forecasts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   product_id UUID NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE ai.demand_forecasts (
 );
 
 -- T-310: Auto daily closing config (per store)
-CREATE TABLE ai.auto_closing_config (
+CREATE TABLE IF NOT EXISTS ai.auto_closing_config (
   store_id UUID PRIMARY KEY REFERENCES platform.stores(id),
   enabled BOOLEAN DEFAULT false,
   close_time TIME DEFAULT '23:00',
@@ -41,7 +41,7 @@ CREATE TABLE ai.auto_closing_config (
 );
 
 -- T-312: Customer insights cache (RFM analysis)
-CREATE TABLE ai.customer_insights (
+CREATE TABLE IF NOT EXISTS ai.customer_insights (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   customer_phone VARCHAR(20) NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE ai.customer_insights (
 );
 
 -- T-316: Anomaly events
-CREATE TABLE ai.anomaly_events (
+CREATE TABLE IF NOT EXISTS ai.anomaly_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   anomaly_type VARCHAR(50) NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE ai.anomaly_events (
 );
 
 -- T-303: Product recommendations
-CREATE TABLE ai.product_recommendations (
+CREATE TABLE IF NOT EXISTS ai.product_recommendations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   store_id UUID NOT NULL REFERENCES platform.stores(id),
   product_id UUID NOT NULL,
@@ -84,11 +84,11 @@ CREATE TABLE ai.product_recommendations (
 -- T-314: Add expiry_date to store_products for expiry tracking
 ALTER TABLE catalog.store_products ADD COLUMN IF NOT EXISTS expiry_date DATE;
 
--- Indexes
-CREATE INDEX idx_ai_alerts_store ON ai.alerts(store_id, created_at DESC);
-CREATE INDEX idx_ai_alerts_unread ON ai.alerts(store_id, is_read, is_dismissed) WHERE NOT is_read AND NOT is_dismissed;
-CREATE INDEX idx_ai_forecasts_store ON ai.demand_forecasts(store_id, product_id, forecast_date DESC);
-CREATE INDEX idx_ai_insights_store ON ai.customer_insights(store_id, customer_phone);
-CREATE INDEX idx_ai_anomalies_store ON ai.anomaly_events(store_id, detected_at DESC);
-CREATE INDEX idx_ai_recs_store ON ai.product_recommendations(store_id, product_id, score DESC);
-CREATE INDEX idx_store_products_expiry ON catalog.store_products(store_id, expiry_date) WHERE expiry_date IS NOT NULL;
+-- Indexes (IF NOT EXISTS for idempotency)
+CREATE INDEX IF NOT EXISTS idx_ai_alerts_store ON ai.alerts(store_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_alerts_unread ON ai.alerts(store_id, is_read, is_dismissed) WHERE NOT is_read AND NOT is_dismissed;
+CREATE INDEX IF NOT EXISTS idx_ai_forecasts_store ON ai.demand_forecasts(store_id, product_id, forecast_date DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_insights_store ON ai.customer_insights(store_id, customer_phone);
+CREATE INDEX IF NOT EXISTS idx_ai_anomalies_store ON ai.anomaly_events(store_id, detected_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_recs_store ON ai.product_recommendations(store_id, product_id, score DESC);
+CREATE INDEX IF NOT EXISTS idx_store_products_expiry ON catalog.store_products(store_id, expiry_date) WHERE expiry_date IS NOT NULL;

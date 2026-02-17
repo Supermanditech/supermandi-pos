@@ -656,17 +656,20 @@ jobs:
           echo "    OK: $SERVICE_NAME traffic → LATEST"
 
       # STAGE-002: Portal deploy failure = pipeline failure (no silent swallow)
-      - name: Deploy frontend portals to staging
+      # REGRESSION-FIX-001: Nginx portals need --port=80 (nginx listens on 80, not Cloud Run default 8080).
+      # supplier-portal (Next.js) uses Cloud Run's PORT env var (8080) automatically.
+      - name: Deploy nginx portals to staging (port 80)
         run: |
-          PORTALS=(retailer-admin supplier-portal superadmin landing)
+          NGINX_PORTALS=(retailer-admin superadmin landing)
           FAILED=0
-          for portal in "${PORTALS[@]}"; do
+          for portal in "${NGINX_PORTALS[@]}"; do
             SERVICE_NAME="${portal}"
             IMAGE="${{ env.AR_REPO }}/${portal}:${{ env.SHA }}"
-            echo "--- Deploying: $SERVICE_NAME"
+            echo "--- Deploying: $SERVICE_NAME (nginx, port 80)"
             if ! gcloud run deploy "$SERVICE_NAME" \
               --image="$IMAGE" \
               --region="${{ env.GCP_REGION }}" \
+              --port=80 \
               --memory=256Mi \
               --cpu=1 \
               --min-instances=0 \
@@ -679,7 +682,6 @@ jobs:
               FAILED=$((FAILED + 1))
             else
               echo "    OK: $SERVICE_NAME deployed"
-              # STAGE-023: Ensure traffic routes to latest revision
               gcloud run services update-traffic "$SERVICE_NAME" \
                 --to-latest \
                 --region="${{ env.GCP_REGION }}" \
@@ -688,9 +690,36 @@ jobs:
             fi
           done
           if [ $FAILED -gt 0 ]; then
-            echo "BLOCKED: $FAILED portal(s) failed to deploy. Pipeline cannot continue."
+            echo "BLOCKED: $FAILED nginx portal(s) failed to deploy."
             exit 1
           fi
+          echo "All 3 nginx portals deployed."
+
+      - name: Deploy supplier-portal to staging (Next.js)
+        run: |
+          SERVICE_NAME="supplier-portal"
+          IMAGE="${{ env.AR_REPO }}/supplier-portal:${{ env.SHA }}"
+          echo "--- Deploying: $SERVICE_NAME (Next.js, default port)"
+          if ! gcloud run deploy "$SERVICE_NAME" \
+            --image="$IMAGE" \
+            --region="${{ env.GCP_REGION }}" \
+            --memory=256Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=3 \
+            --startup-probe="" \
+            --set-env-vars="GIT_SHA=${{ env.SHA }}" \
+            --allow-unauthenticated \
+            --quiet; then
+            echo "FATAL: supplier-portal deploy FAILED"
+            exit 1
+          fi
+          echo "    OK: $SERVICE_NAME deployed"
+          gcloud run services update-traffic "$SERVICE_NAME" \
+            --to-latest \
+            --region="${{ env.GCP_REGION }}" \
+            --quiet
+          echo "    OK: $SERVICE_NAME traffic → LATEST"
           echo "All 4 portals deployed successfully."
 
       # STAGE-022: Post-deploy traffic routing verification (BLOCKING).
