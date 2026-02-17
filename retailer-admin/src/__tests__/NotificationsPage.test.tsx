@@ -21,6 +21,7 @@ vi.mock('lucide-react', () => ({
 const mockAuthFetch = vi.fn();
 vi.mock('../lib/api', () => ({
   authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+  safeJson: (res: { json: () => Promise<unknown> }) => res.json(),
 }));
 
 describe('NotificationsPage', () => {

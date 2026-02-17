@@ -120,7 +120,6 @@ export function SuppliersTab({
   handleApproveProduct,
   handleRejectProduct,
   editingProduct,
-  setEditingProduct,
   handleCloseEditProduct,
   onModalDirty,
   editProductForm,

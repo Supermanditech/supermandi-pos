@@ -5,7 +5,7 @@
  *         FIX-062 (trim search input)
  * Tier 1 — no DB required. Pure logic and pattern verification.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // =============================================================================
 // FIX-047: Await Approval Before Publish (No setTimeout Race)

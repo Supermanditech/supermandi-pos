@@ -2,7 +2,7 @@
  * Phase 10 Testing: FIX-015 safeJson + safeJsonWithError
  * Tests safe JSON parsing helpers that prevent crashes on 500 HTML responses.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { safeJson, safeJsonWithError } from "../../lib/api";
 
 // Helper to create a mock Response
