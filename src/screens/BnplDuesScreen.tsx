@@ -6,7 +6,9 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   Linking,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -42,6 +44,16 @@ interface BnplDuesScreenProps {
 export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  // UIUX-POS-004: Android hardware back button support
+  useEffect(() => {
+    if (Platform.OS !== "android" || !onBack) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
 
   // State
   const [loading, setLoading] = useState(true);

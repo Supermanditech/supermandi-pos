@@ -2,8 +2,9 @@
 // Shows alerts, forecasts, slow movers, expiring products, price comparisons
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import * as aiApi from '../services/api/aiApi';
 
@@ -14,6 +15,18 @@ interface Props {
 }
 
 export default function AIInsightsScreen({ onBack }: Props) {
+  const insets = useSafeAreaInsets();
+
+  // UIUX-POS-004: Android hardware back button support
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
   const [tab, setTab] = useState<Tab>('alerts');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -174,7 +187,7 @@ export default function AIInsightsScreen({ onBack }: Props) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable onPress={onBack} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>

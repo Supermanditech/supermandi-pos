@@ -176,15 +176,22 @@ export default function ReorderScreen({ onNavigateToBuy }: ReorderScreenProps) {
     async (id: string, reason: string) => {
       if (!storeId) return;
 
-      await reorderApi.dismissPendingReorder(storeId, id, reason);
+      try {
+        await reorderApi.dismissPendingReorder(storeId, id, reason);
 
-      // Remove from list
-      setPendingReorders((prev) => prev.filter((p) => p.id !== id));
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
+        // Remove from list
+        setPendingReorders((prev) => prev.filter((p) => p.id !== id));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      } catch (err) {
+        Alert.alert(
+          "Dismiss Failed",
+          err instanceof Error ? err.message : "Could not dismiss reorder. Please try again."
+        );
+      }
     },
     [storeId]
   );

@@ -181,7 +181,7 @@ export default function UploadPage() {
               />
             </label>
             <p className="text-sm text-slate-400 mt-4">
-              Supported format: CSV (max 10MB)
+              Supported format: CSV (max 5MB)
             </p>
           </div>
         )}
