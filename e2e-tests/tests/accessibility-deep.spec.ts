@@ -123,9 +123,7 @@ test.describe('Deep Accessibility @a11y', () => {
         return outline !== 'none' || (boxShadow !== 'none' && boxShadow !== '');
       });
 
-      // Note: some frameworks use custom focus styles
-      // This is a best-effort check
-      expect(typeof hasVisibleFocus).toBe('boolean');
+      expect(hasVisibleFocus).toBe(true);
     }
   });
 
