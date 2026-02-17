@@ -3,6 +3,8 @@
 // T-281: Provider Health Monitoring
 
 import { useState, useEffect, useCallback } from 'react';
+// UIUX-SA-003: Use centralized auth instead of wrong 'superadmin_token' key
+import { getSessionToken, fetchWithTimeout } from '../api/authToken';
 
 interface ProviderConfig {
   id: string;
@@ -40,9 +42,10 @@ function fmt(minorStr: string | number): string {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0 }).format((minor || 0) / 100);
 }
 
+// UIUX-SA-003: Centralized auth via getSessionToken (reads 'supermandi_admin_session')
 async function apiFetch(url: string, options?: RequestInit) {
-  const token = localStorage.getItem('superadmin_token') || '';
-  const res = await fetch(url, {
+  const token = getSessionToken() || '';
+  const res = await fetchWithTimeout(url, {
     ...options,
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
   });

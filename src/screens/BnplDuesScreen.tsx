@@ -298,7 +298,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
         setPaymentModal((prev) => ({ ...prev, paying: false }));
       }
     },
-    [paymentModal.drawdown, loadData, startAutoPolling]
+    // UIUX-POS-002: payAmountText is read inside callback — must be in deps to avoid stale closure
+    [paymentModal.drawdown, paymentModal.payAmountText, loadData, startAutoPolling]
   );
 
   // Confirm UPI payment with UTR

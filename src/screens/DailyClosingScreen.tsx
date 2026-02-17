@@ -77,22 +77,23 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
   const [actualCash, setActualCash] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
+  // UIUX-POS-003: All deps that are read inside the callback must be listed
   useEffect(() => {
     void fetchSummary(selectedDate);
-  }, [selectedDate]);
+  }, [selectedDate, fetchSummary]);
 
   useEffect(() => {
     if (activeTab === "HISTORY") {
       void fetchHistory();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchHistory]);
 
   useEffect(() => {
     if (error) {
       Alert.alert(t("common.error"), error);
       clearError();
     }
-  }, [error]);
+  }, [error, t, clearError]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);

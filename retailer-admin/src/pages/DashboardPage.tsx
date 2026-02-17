@@ -664,7 +664,7 @@ export default function DashboardPage() {
                 textAlign: 'center',
               }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669' }}>
-                  {formatRupees(dailySummary.totalSales)}
+                  {formatCurrency(dailySummary.totalSales)}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Total Sales</div>
               </div>
@@ -690,7 +690,7 @@ export default function DashboardPage() {
                 textAlign: 'center',
               }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706' }}>
-                  {formatRupees(dailySummary.averageBillValue)}
+                  {formatCurrency(dailySummary.averageBillValue)}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>Avg Bill</div>
               </div>
@@ -722,17 +722,17 @@ export default function DashboardPage() {
                 <span style={{ color: '#64748b', fontWeight: '500' }}>Payment Modes:</span>
                 {dailySummary.paymentBreakdown.cash > 0 && (
                   <span style={{ color: '#059669' }}>
-                    💵 Cash: {formatRupees(dailySummary.paymentBreakdown.cash)}
+                    💵 Cash: {formatCurrency(dailySummary.paymentBreakdown.cash)}
                   </span>
                 )}
                 {dailySummary.paymentBreakdown.upi > 0 && (
                   <span style={{ color: '#2563eb' }}>
-                    📱 UPI: {formatRupees(dailySummary.paymentBreakdown.upi)}
+                    📱 UPI: {formatCurrency(dailySummary.paymentBreakdown.upi)}
                   </span>
                 )}
                 {dailySummary.paymentBreakdown.card > 0 && (
                   <span style={{ color: '#7c3aed' }}>
-                    💳 Card: {formatRupees(dailySummary.paymentBreakdown.card)}
+                    💳 Card: {formatCurrency(dailySummary.paymentBreakdown.card)}
                   </span>
                 )}
               </div>
