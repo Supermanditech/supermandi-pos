@@ -389,8 +389,8 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
     setDisputeModal((prev) => ({ ...prev, submitting: true }));
 
     try {
-      // Call dispute API (or mock it)
-      await bnplApi.submitBnplDispute?.(
+      // POS-029: removed optional chaining — function always exists
+      await bnplApi.submitBnplDispute(
         disputeModal.drawdown.id,
         disputeModal.reason,
         disputeModal.description

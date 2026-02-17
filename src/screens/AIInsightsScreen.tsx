@@ -75,7 +75,17 @@ export default function AIInsightsScreen({ onBack }: Props) {
     }
   }, [tab]);
 
-  useEffect(() => { setLoading(true); fetchData(); }, [fetchData]);
+  // POS-041: Only show spinner if tab has no cached data
+  useEffect(() => {
+    const hasCache =
+      (tab === 'alerts' && alerts.length > 0) ||
+      (tab === 'forecasts' && forecasts.length > 0) ||
+      (tab === 'slow' && slowMovers.length > 0) ||
+      (tab === 'expiry' && expiryItems.length > 0) ||
+      (tab === 'prices' && priceComparisons.length > 0);
+    if (!hasCache) setLoading(true);
+    fetchData();
+  }, [fetchData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
@@ -98,7 +108,13 @@ export default function AIInsightsScreen({ onBack }: Props) {
   const renderAlert = ({ item }: { item: aiApi.Alert }) => (
     <Pressable
       style={[styles.card, !item.isRead && styles.unreadCard]}
-      onPress={() => aiApi.markAlertRead(item.id).then(fetchData)}
+      onPress={() => {
+        // POS-040: Optimistic update + error handling
+        setAlerts(prev => prev.map(a => a.id === item.id ? { ...a, isRead: true } : a));
+        aiApi.markAlertRead(item.id).catch(() => {
+          setAlerts(prev => prev.map(a => a.id === item.id ? { ...a, isRead: false } : a));
+        });
+      }}
     >
       <View style={[styles.severityDot, { backgroundColor: severityColor(item.severity) }]} />
       <View style={{ flex: 1 }}>

@@ -185,6 +185,7 @@ retailerAdminInventoryRouter.get("/daily-summary", async (req: Request, res: Res
           upi: Number(salesRow.upiTotal) || 0,
           card: Number(salesRow.cardTotal) || 0,
           credit: Number(salesRow.creditTotal) || 0,
+          split: Number(salesRow.splitTotal) || 0, // XPLAT-005
         },
         itemsSold,
         topSellingItems,

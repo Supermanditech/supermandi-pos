@@ -398,6 +398,7 @@ export default function OpeningStockScreen({
           data={entries}
           keyExtractor={(item) => item.productId}
           contentContainerStyle={styles.entriesContent}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <View style={styles.entryCard}>
               <View style={styles.entryInfo}>

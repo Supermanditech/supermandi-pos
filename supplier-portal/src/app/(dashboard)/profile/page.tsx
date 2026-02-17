@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/lib/auth';
@@ -38,6 +38,26 @@ export default function ProfilePage() {
     ifscCode: supplier?.bankDetails?.ifscCode || '',
     bankName: supplier?.bankDetails?.bankName || '',
   });
+
+  // SUP-017: Sync form state when supplier data loads
+  useEffect(() => {
+    if (!supplier) return;
+    setProfileData({
+      contactName: supplier.contactName || '',
+      email: supplier.email || '',
+      phone: supplier.phone || '',
+      address: supplier.address || '',
+      city: supplier.city || '',
+      state: supplier.state || '',
+      pincode: supplier.pincode || '',
+    });
+    setBankData({
+      accountName: supplier.bankDetails?.accountName || '',
+      accountNumber: supplier.bankDetails?.accountNumber || '',
+      ifscCode: supplier.bankDetails?.ifscCode || '',
+      bankName: supplier.bankDetails?.bankName || '',
+    });
+  }, [supplier]);
 
   const updateProfileMutation = useMutation({
     mutationFn: updateSupplierProfile,

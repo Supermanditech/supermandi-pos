@@ -685,6 +685,7 @@ posSalesRouter.get("/daily-summary", requireDeviceToken, async (req, res) => {
           upi: Number(row.upi_total || 0),
           card: 0,
           credit: Number(row.due_total || 0),
+          split: Number(row.split_total || 0), // XPLAT-004
         },
         itemsSold,
         topSellingItems,

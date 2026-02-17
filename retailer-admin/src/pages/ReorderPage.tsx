@@ -124,6 +124,7 @@ export default function ReorderPage() {
       if (!response.ok) throw new Error('Failed to save settings');
       const data = await safeJson<{ data: ReorderSettings }>(response);
       if (data?.data) setSettings(data.data);
+      alert('Reorder settings saved successfully');
     } catch (e: any) {
       setSettingsError(e?.message || 'Failed to save');
     } finally {
@@ -176,7 +177,7 @@ export default function ReorderPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Reorder Suggestions' }]} />
+      <Breadcrumb items={[{ label: 'Home', path: '.' }, { label: 'Reorder Suggestions' }]} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h2 style={{ margin: 0 }}>Reorder Suggestions</h2>
       </div>
@@ -327,7 +328,7 @@ export default function ReorderPage() {
                   <span>Notify on low stock</span>
                 </label>
                 <div>
-                  <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Auto-approve threshold (amount in paise, leave blank to disable)</label>
+                  <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 4 }}>Auto-approve threshold (amount in ₹, leave blank to disable)</label>
                   <input type="number" min={0} value={editAutoApproveThreshold} onChange={(e) => setEditAutoApproveThreshold(e.target.value)} placeholder="No auto-approve" style={{ width: 180 }} />
                   <span style={{ fontSize: 11, color: '#888', marginLeft: 8 }}>Orders below this value auto-approve</span>
                 </div>

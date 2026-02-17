@@ -5,7 +5,9 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -416,13 +418,14 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
         </View>
       </Modal>
 
-      {/* Add Credit Modal */}
+      {/* Add Credit Modal — POS-027: KeyboardAvoidingView */}
       <Modal
         visible={showCreditModal}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setShowCreditModal(false)}
       >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={() => setShowCreditModal(false)}>
@@ -487,15 +490,17 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             </Pressable>
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
-      {/* Record Payment Modal */}
+      {/* Record Payment Modal — POS-027: KeyboardAvoidingView */}
       <Modal
         visible={showPaymentModal}
         animationType="slide"
         presentationStyle="pageSheet"
         onRequestClose={() => setShowPaymentModal(false)}
       >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable style={styles.modalCloseButton} onPress={() => setShowPaymentModal(false)}>
@@ -586,6 +591,7 @@ export default function KhataScreen({ onBack }: KhataScreenProps) {
             </Pressable>
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

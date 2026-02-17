@@ -39,7 +39,7 @@ export default function CustomersPage() {
   const { accessToken } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();

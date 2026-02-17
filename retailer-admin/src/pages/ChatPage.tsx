@@ -66,7 +66,11 @@ export default function ChatPage() {
     }
   }, [accessToken]);
 
-  useEffect(() => { fetchConversations(); }, [fetchConversations]);
+  useEffect(() => {
+    fetchConversations();
+    const interval = setInterval(fetchConversations, 15000);
+    return () => clearInterval(interval);
+  }, [fetchConversations]);
 
   const selectConversation = async (convId: string) => {
     if (!accessToken) return;

@@ -86,6 +86,14 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
   const [activeTab, setActiveTab] = useState<TabView>("CURRENT");
   const [refreshing, setRefreshing] = useState(false);
 
+  // POS-035: Live duration ticker — re-render every 60s while shift is active
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!currentShift) return;
+    const id = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(id);
+  }, [currentShift]);
+
   // Start shift state
   const [openingCash, setOpeningCash] = useState("");
 
@@ -274,6 +282,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -394,6 +403,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     value={closingCash}
                     onChangeText={setClosingCash}
                     keyboardType="decimal-pad"
+                    returnKeyType="done"
                   />
                 </View>
 
@@ -477,6 +487,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
                     value={openingCash}
                     onChangeText={setOpeningCash}
                     keyboardType="decimal-pad"
+                    returnKeyType="done"
                   />
                 </View>
 
@@ -503,6 +514,7 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

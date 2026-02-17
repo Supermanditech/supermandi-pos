@@ -6,8 +6,18 @@ const pages = [
   { path: 'import', name: 'Import (CSV)', description: 'Bulk import products from CSV' },
   { path: 'inventory', name: 'Inventory', description: 'View inventory ledger' },
   { path: 'suppliers', name: 'Suppliers', description: 'Manage suppliers' },
+  { path: 'supplier-catalog', name: 'Supplier Catalog', description: 'Browse supplier products' },
+  { path: 'invoices', name: 'Invoices', description: 'View purchase invoices' },
+  { path: 'customers', name: 'Customers', description: 'Customer CRM' },
+  { path: 'orders', name: 'Orders', description: 'Order management' },
+  { path: 'analytics', name: 'Analytics', description: 'Sales analytics dashboard' },
+  { path: 'reorder', name: 'Reorder', description: 'Reorder suggestions & settings' },
+  { path: 'chat', name: 'Messages', description: 'Chat with suppliers & support' },
+  { path: 'notifications', name: 'Notifications', description: 'Notification center' },
+  { path: 'settings', name: 'Settings', description: 'Store settings' },
+  { path: 'settings/payments', name: 'Payment Settings', description: 'UPI & bank config' },
   { path: 'compliance', name: 'Compliance', description: 'Upload compliance documents' },
-  { path: 'login', name: 'Login (Public)', description: 'Phone OTP authentication' },
+  { path: 'login', name: 'Login (Public)', description: 'Phone OTP authentication', isPublic: true },
 ];
 
 export default function AllPagesPage() {
@@ -42,7 +52,7 @@ export default function AllPagesPage() {
           {pages.map((page) => (
             <Link
               key={page.path}
-              to={page.path === 'login' ? `/s/${storeCode}/login` : `/s/${storeCode}/${page.path}`}
+              to={(page as any).isPublic ? `/retailer/login` : `/s/${storeCode}/${page.path}`}
               className="page-link-card"
             >
               <span className="page-link-title">{page.name}</span>
@@ -69,7 +79,7 @@ export default function AllPagesPage() {
               {pages.map((page) => (
                 <tr key={page.path}>
                   <td style={{ fontFamily: 'monospace' }}>/s/:storeCode/{page.path || '(index)'}</td>
-                  <td>{page.path === 'login' ? 'No' : 'Yes'}</td>
+                  <td>{(page as any).isPublic ? 'No' : 'Yes'}</td>
                   <td><span className="badge badge-success">Implemented</span></td>
                 </tr>
               ))}

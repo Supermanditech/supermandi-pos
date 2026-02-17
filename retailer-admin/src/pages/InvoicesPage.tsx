@@ -155,6 +155,7 @@ export default function InvoicesPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("PDF download failed:", err);
+      alert("Failed to download PDF. Please try again.");
     }
   };
 
@@ -262,7 +263,9 @@ export default function InvoicesPage() {
       {/* Detail Modal */}
       {(detail || detailLoading || detailError) && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "flex-start", paddingTop: "5vh", zIndex: 1000 }}
-          onClick={() => { setDetail(null); setDetailError(null); }}>
+          onClick={() => { setDetail(null); setDetailError(null); }}
+          onKeyDown={e => { if (e.key === 'Escape') { setDetail(null); setDetailError(null); } }}
+          tabIndex={-1} ref={(el: HTMLDivElement | null) => el?.focus()}>
           <div style={{ background: "#fff", borderRadius: 8, width: "90%", maxWidth: 700, maxHeight: "85vh", overflow: "auto", padding: "1.5rem" }}
             onClick={e => e.stopPropagation()}>
             {detailLoading && <div style={{ padding: "2rem", textAlign: "center" }}>Loading...</div>}

@@ -6,8 +6,10 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  KeyboardAvoidingView,
   Linking,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -83,15 +85,9 @@ export default function CustomerManagementScreen({
   const [addPhone, setAddPhone] = useState("");
   const [addEmail, setAddEmail] = useState("");
   const [addAddress, setAddAddress] = useState("");
-  const [addCreditLimit, setAddCreditLimit] = useState("");
   const [addSaving, setAddSaving] = useState(false);
 
-  // Load customers on mount
-  useEffect(() => {
-    void fetchCustomers();
-  }, [fetchCustomers]);
-
-  // Search with debounce
+  // POS-032: Single fetch effect — debounced search covers initial mount too
   useEffect(() => {
     const timer = setTimeout(() => {
       void fetchCustomers(searchQuery || undefined);
@@ -198,7 +194,6 @@ export default function CustomerManagementScreen({
       setAddPhone("");
       setAddEmail("");
       setAddAddress("");
-      setAddCreditLimit("");
       Alert.alert(t("common.success"), t("common.done"));
     } else {
       // UIUX-POS-010: Read fresh error from store to avoid stale closure
@@ -504,6 +499,7 @@ export default function CustomerManagementScreen({
         presentationStyle="pageSheet"
         onRequestClose={() => setAddVisible(false)}
       >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable
@@ -567,15 +563,7 @@ export default function CustomerManagementScreen({
               numberOfLines={3}
             />
 
-            <Text style={styles.editFieldLabel}>Credit Limit</Text>
-            <TextInput
-              style={styles.editFieldInput}
-              value={addCreditLimit}
-              onChangeText={setAddCreditLimit}
-              placeholder="Credit limit in rupees (optional)"
-              placeholderTextColor={theme.colors.textTertiary}
-              keyboardType="numeric"
-            />
+            {/* POS-031: Credit limit field removed — not sent to API */}
 
             <Pressable
               style={[
@@ -597,6 +585,7 @@ export default function CustomerManagementScreen({
             </Pressable>
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

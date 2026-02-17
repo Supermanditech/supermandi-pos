@@ -130,15 +130,20 @@ export function CreditScreen({ onBack }: CreditScreenProps) {
   }, [loadData]);
 
   // GO-LIVE-238: Auto-refresh when there's a pending application
+  // POS-030: Max 20 polls (10 minutes) to prevent battery drain
   useEffect(() => {
-    // Only auto-refresh if there's an active application with pending status
     if (!activeApplication || activeApplication.status === "approved" || activeApplication.status === "rejected") {
       return;
     }
 
-    // Poll every 30 seconds
+    let pollCount = 0;
+    const maxPolls = 20;
     const pollInterval = setInterval(() => {
-      console.log("[CreditScreen] GO-LIVE-238: Auto-refreshing for pending application");
+      pollCount++;
+      if (pollCount > maxPolls) {
+        clearInterval(pollInterval);
+        return;
+      }
       void loadData();
     }, 30000);
 
