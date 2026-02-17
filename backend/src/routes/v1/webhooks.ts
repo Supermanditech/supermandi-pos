@@ -3,6 +3,7 @@
 // GL-AUD-002: Added SELL UPI payment webhook handler
 // ITER4-P0-007: Added idempotency tracking to prevent duplicate processing
 
+import crypto from "crypto";
 import { Router, Request, Response } from "express";
 import { getPool } from "../../db/client";
 import { getRedis } from "../../db/redis";
@@ -222,6 +223,17 @@ async function handleSellPaymentWebhook(
   }
 }
 
+// PRA-089: Timing-safe API key comparison to prevent timing attacks
+function timingSafeKeyEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    crypto.timingSafeEqual(bufA, bufA); // constant-time even on length mismatch
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 export const webhooksRouter = Router();
 
 /**
@@ -420,7 +432,7 @@ webhooksRouter.post("/payouts/process", async (req: Request, res: Response) => {
     return res.status(503).json({ error: "Payout API key not configured" });
   }
 
-  if (apiKey !== expectedKey) {
+  if (!apiKey || !timingSafeKeyEqual(apiKey, expectedKey)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -463,7 +475,7 @@ webhooksRouter.get("/payouts/pending", async (req: Request, res: Response) => {
     return res.status(503).json({ error: "Payout API key not configured" });
   }
 
-  if (apiKey !== expectedKey) {
+  if (!apiKey || !timingSafeKeyEqual(apiKey, expectedKey)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -506,7 +518,7 @@ webhooksRouter.post("/payouts/process-retries", async (req: Request, res: Respon
   if (!expectedKey) {
     return res.status(503).json({ error: "Payout API key not configured" });
   }
-  if (apiKey !== expectedKey) {
+  if (!apiKey || !timingSafeKeyEqual(apiKey, expectedKey)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
