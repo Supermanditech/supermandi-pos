@@ -1,7 +1,8 @@
 // T-212: Sales Analytics Dashboard for Retailer Admin
+// PRA-007: Added category breakdown via shared analyticsService
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { fetchSalesAnalytics, SalesAnalytics } from '../api/store';
+import { fetchSalesAnalytics, SalesAnalytics, fetchProductAnalytics, ProductAnalytics } from '../api/store';
 import Breadcrumb from '../components/Breadcrumb';
 import { formatCurrency } from '../lib/formatters';
 
@@ -20,6 +21,7 @@ export default function AnalyticsPage() {
   const [from, setFrom] = useState(defaults.from);
   const [to, setTo] = useState(defaults.to);
   const [data, setData] = useState<SalesAnalytics | null>(null);
+  const [categoryData, setCategoryData] = useState<ProductAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,8 +30,12 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchSalesAnalytics(accessToken, from, to);
-      setData(result.data);
+      const [salesResult, categoryResult] = await Promise.all([
+        fetchSalesAnalytics(accessToken, from, to),
+        fetchProductAnalytics(accessToken, from, to, 'category'),
+      ]);
+      setData(salesResult.data);
+      setCategoryData(categoryResult.data);
     } catch (e: any) {
       setError(e.message || 'Failed to load analytics');
     } finally {
@@ -201,6 +207,43 @@ export default function AnalyticsPage() {
               )}
             </div>
           </div>
+
+          {/* PRA-007: Category Breakdown */}
+          {categoryData && categoryData.salesByGroup.length > 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
+              <h2 className="font-semibold text-slate-700 mb-4">Sales by Category</h2>
+              {categoryData.missingFields.includes('variants.category') && (
+                <p className="text-xs text-amber-600 mb-3">
+                  Category data is incomplete — some products may appear as &quot;Uncategorized&quot;.
+                </p>
+              )}
+              <div className="space-y-2">
+                {categoryData.salesByGroup.map((cat, i) => {
+                  const maxTotal = categoryData.salesByGroup[0]?.total_minor || 1;
+                  const pct = Math.round((cat.total_minor / maxTotal) * 100);
+                  return (
+                    <div key={cat.group || i} className="flex items-center gap-3">
+                      <span className="text-sm text-slate-600 w-32 truncate shrink-0" title={cat.group}>
+                        {cat.group}
+                      </span>
+                      <div className="flex-1 bg-slate-100 rounded-full h-5 overflow-hidden">
+                        <div
+                          className="bg-indigo-500 h-full rounded-full transition-all"
+                          style={{ width: `${Math.max(pct, 2)}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-slate-700 w-24 text-right shrink-0">
+                        {formatCurrency(cat.total_minor)}
+                      </span>
+                      <span className="text-xs text-slate-400 w-16 text-right shrink-0">
+                        {cat.quantity} sold
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
 

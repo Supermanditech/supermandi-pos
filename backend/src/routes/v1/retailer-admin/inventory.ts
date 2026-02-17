@@ -5,6 +5,7 @@
 
 import { Router, Request, Response } from "express";
 import { getPool } from "../../../db/client";
+import { fetchProductsAnalytics } from "../../../services/analytics/analyticsService";
 
 // Git SHA and build time for health endpoint
 const GIT_SHA = process.env['GIT_SHA'] || 'dev';
@@ -349,6 +350,83 @@ retailerAdminInventoryRouter.get("/analytics/sales", async (req: Request, res: R
       });
     }
     return res.status(500).json({ success: false, error: { code: "ANALYTICS_FAILED", message: "Failed to load analytics" } });
+  }
+});
+
+// =============================================================================
+// PRA-007: PRODUCT ANALYTICS WITH CATEGORY BREAKDOWN
+// Ports superadmin groupBy=category to retailer via shared analyticsService
+// =============================================================================
+
+/**
+ * GET /api/v1/retailer-admin/analytics/products
+ * PRA-007: Product analytics with category breakdown for retailer dashboard
+ *
+ * Query params:
+ * - from: ISO date string (YYYY-MM-DD), defaults to 7 days ago
+ * - to: ISO date string (YYYY-MM-DD), defaults to today
+ * - groupBy: 'category' | 'day' | 'hour' (default 'category')
+ *
+ * Returns: top products, sales by group (category/time), new products created
+ * Store isolation: storeId derived from JWT via x-actor-id (never from query)
+ */
+retailerAdminInventoryRouter.get("/analytics/products", async (req: Request, res: Response) => {
+  const pool = getPool();
+  if (!pool) return res.status(503).json({ error: "database unavailable" });
+
+  const storeId = getStoreId(req);
+  if (!storeId) {
+    return res.status(401).json({ error: "Store not identified" });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0];
+  const fromDate = (req.query.from as string) || weekAgo;
+  const toDate = (req.query.to as string) || today;
+  const groupBy = (req.query.groupBy as string) || 'category';
+
+  // Validate dates
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDate) || !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+    return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD." });
+  }
+
+  try {
+    // Reuse shared analytics service — storeId from JWT ensures store isolation
+    const result = await fetchProductsAnalytics({
+      storeId,
+      from: fromDate,
+      to: toDate,
+      groupBy,
+      limit: 20,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        from: result.range.from,
+        to: result.range.to,
+        groupBy: result.group_by,
+        salesByGroup: result.sales_by_group,
+        topProducts: result.top_products.map(p => ({
+          productId: p.product_id,
+          productName: p.name,
+          category: p.category,
+          qtySold: p.quantity,
+          totalAmount: p.total_minor,
+        })),
+        newProductsCount: result.new_products_created_count,
+        missingFields: result.missing_fields,
+      },
+    });
+  } catch (error: any) {
+    console.error("[PRA-007] Product analytics error:", error.message);
+    if (error.message === "database unavailable") {
+      return res.status(503).json({ error: "database unavailable" });
+    }
+    return res.status(500).json({
+      success: false,
+      error: { code: "ANALYTICS_FAILED", message: "Failed to load product analytics" },
+    });
   }
 });
 
