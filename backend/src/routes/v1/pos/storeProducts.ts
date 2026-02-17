@@ -898,9 +898,9 @@ posStoreProductsRouter.patch("/store-products/stock", requireDeviceToken, requir
 
     await client.query("BEGIN");
 
-    // Get current stock + updated_at for LWW check
+    // PRA-080: Get current stock with FOR UPDATE to prevent concurrent stock overwrites
     const stockResult = await client.query(
-      `SELECT current_qty, updated_at FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2`,
+      `SELECT current_qty, updated_at FROM inventory.stock_balances WHERE store_id = $1 AND product_id = $2 FOR UPDATE`,
       [storeId, resolvedProductId]
     );
     const stockBefore = stockResult.rows[0]?.current_qty ?? 0;
