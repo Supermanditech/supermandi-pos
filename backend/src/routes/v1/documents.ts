@@ -170,6 +170,17 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
       return;
     }
 
+    // PRA-079: Unauthenticated uploads restricted to 'application' entity type only
+    // Store/supplier document uploads require an authenticated session
+    const isAuthenticated = !!(req.headers['authorization'] || req.headers['x-admin-token'] || req.headers['x-device-token']);
+    if (!isAuthenticated && entity_type !== 'application') {
+      res.status(401).json({
+        error: 'AUTH_REQUIRED',
+        message: 'Authentication required for store/supplier document uploads',
+      });
+      return;
+    }
+
     // Validate document type
     const validTypes = getValidDocTypes(entity_type);
     if (!validTypes.includes(document_type)) {

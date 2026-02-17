@@ -359,6 +359,7 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
     const refreshPayload = {
       sub: user.id,
       type: 'refresh',
+      actorType: 'STORE',             // PRA-079: Prevent cross-platform refresh token reuse
       storeId: store.id,
       jti: refreshJti,                 // GO-LIVE-137: JWT ID for refresh token revocation
     };
@@ -555,6 +556,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
     const refreshPayload = {
       sub: user.id,
       type: 'refresh',
+      actorType: 'STORE',             // PRA-079: Prevent cross-platform refresh token reuse
       jti: refreshJti,
     };
 
@@ -890,6 +892,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
     const refreshPayload = {
       sub: user.id,
       type: 'refresh',
+      actorType: 'STORE',             // PRA-079: Prevent cross-platform refresh token reuse
       storeId: store.id,
       jti: refreshJti,
     };
@@ -1130,6 +1133,12 @@ router.post("/auth/refresh", async (req: Request, res: Response, next: NextFunct
 
     if (decoded.type !== 'refresh') {
       res.status(401).json({ error: "Invalid token type" });
+      return;
+    }
+
+    // PRA-079: Reject refresh tokens from other platforms (backward-compat: allow missing actorType)
+    if (decoded.actorType && decoded.actorType !== 'STORE') {
+      res.status(401).json({ error: "Invalid token for this endpoint" });
       return;
     }
 
