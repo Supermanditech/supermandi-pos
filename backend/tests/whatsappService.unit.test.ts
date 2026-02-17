@@ -4,9 +4,6 @@
  * Tier 1 — no DB or external dependencies required.
  */
 
-// Prevent setInterval from keeping Jest open
-jest.useFakeTimers();
-
 // Mock fetch globally
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
@@ -21,6 +18,9 @@ beforeAll(() => {
     WHATSAPP_PHONE_NUMBER_ID: "968976229638443",
     WHATSAPP_VERIFY_TOKEN: "test-verify-token",
   };
+  // Prevent setInterval (rate-limit cleanup) from keeping Jest open.
+  // Must be AFTER setup.ts beforeAll (which needs real timers for DB pool).
+  jest.useFakeTimers();
 });
 
 afterAll(() => {

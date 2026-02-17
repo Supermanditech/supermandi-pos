@@ -431,6 +431,8 @@ jobs:
       # Retailer Admin (Vite)
       - name: Build retailer-admin
         working-directory: retailer-admin
+        env:
+          VITE_API_BASE_URL: ""
         run: |
           pnpm install --frozen-lockfile
           pnpm run build
@@ -447,6 +449,8 @@ jobs:
       # SuperAdmin (Vite)
       - name: Build supermandi-superadmin
         working-directory: supermandi-superadmin
+        env:
+          VITE_API_BASE_URL: ""
         run: |
           pnpm install --frozen-lockfile
           pnpm run build
