@@ -49,8 +49,8 @@
 | 1 | P0 all portals | Crashes, broken auth, data corruption | 15 | DONE (PR #282) |
 | 2 | P1 wiring bugs | Wrong endpoints, stale closures, missing auth | 16 | DONE (PR #283) |
 | 3 | P1 UX safety | Missing confirmations, double-tap risk, trapped loading | 17 | DONE (PR #284, SUP-011 dropped) |
-| 4 | P1 UI/nav | BackHandler, SafeArea, KeyboardAvoidingView, remaining P1 | 10 | IN PROGRESS |
-| 5 | P2 all portals | Polish, minor wiring, edge cases | 50+ | PENDING |
+| 4 | P1 UI/nav | BackHandler, SafeArea, KeyboardAvoidingView, remaining P1 | 10 | DONE (PR #285) |
+| 5 | P2 all portals | Polish, minor wiring, edge cases | 54 | IN PROGRESS |
 
 ### Wave 4 Remaining P1 Tickets
 - RET-003, SUP-007, SUP-009
