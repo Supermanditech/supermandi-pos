@@ -319,11 +319,13 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                 <Text style={styles.profileName}>{selectedCustomer.name}</Text>
                 <View style={styles.profilePhoneRow}>
                   <Text style={styles.profilePhone}>{selectedCustomer.phone}</Text>
+                  {selectedCustomer.phone && selectedCustomer.phone.replace(/\D/g, "").length >= 10 && (
                   <Pressable
                     style={styles.whatsappIconButton}
                     onPress={() => {
+                      const name = selectedCustomer.name || "Customer";
                       const message = encodeURIComponent(
-                        `Hi ${selectedCustomer.name}, greetings from SuperMandi!`
+                        `Hi ${name}, greetings from SuperMandi!`
                       );
                       const phone = selectedCustomer.phone.replace(/\D/g, "");
                       // wa.me universal link works on both Android and iOS
@@ -336,6 +338,7 @@ export default function CustomerListScreen({ onBack }: CustomerListScreenProps) 
                   >
                     <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
                   </Pressable>
+                  )}
                 </View>
                 {selectedCustomer.email && (
                   <Text style={styles.profileEmail}>{selectedCustomer.email}</Text>

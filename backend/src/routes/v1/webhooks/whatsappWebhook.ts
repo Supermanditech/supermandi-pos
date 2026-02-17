@@ -9,15 +9,6 @@ import { getWebhookVerifyToken } from "../../../services/whatsappService";
 
 export const whatsappWebhookRouter = Router();
 
-// Delivery status progression order (for atomic idempotent updates)
-const STATUS_ORDER: Record<string, number> = {
-  queued: 0,
-  sent: 1,
-  delivered: 2,
-  read: 3,
-  failed: 4,
-};
-
 const WHATSAPP_APP_SECRET = process.env.WHATSAPP_APP_SECRET || "";
 
 // =============================================================================
@@ -106,7 +97,12 @@ whatsappWebhookRouter.post("/whatsapp", async (req: Request, res: Response) => {
 
 async function processStatusUpdate(
   pool: ReturnType<typeof getPool>,
-  status: { id?: string; status?: string; timestamp?: string }
+  status: {
+    id?: string;
+    status?: string;
+    timestamp?: string;
+    errors?: Array<{ code?: number; title?: string }>;
+  }
 ): Promise<void> {
   if (!pool) return;
 
@@ -119,8 +115,6 @@ async function processStatusUpdate(
   const mappedStatus = mapMetaStatus(newStatus);
   if (!mappedStatus) return;
 
-  const newOrder = STATUS_ORDER[mappedStatus] ?? -1;
-
   // Use Meta's timestamp if available (more accurate than server time)
   const eventTime = status.timestamp
     ? new Date(parseInt(status.timestamp, 10) * 1000)
@@ -131,6 +125,10 @@ async function processStatusUpdate(
     // Only progresses forward in lifecycle (queued→sent→delivered→read)
     // "failed" can overwrite queued/sent but NOT delivered/read
     if (mappedStatus === "failed") {
+      // Extract error code from Meta's errors array (e.g., 131026 = "Message Undeliverable")
+      const errorCode = status.errors?.[0]?.code
+        ? String(status.errors[0].code)
+        : status.errors?.[0]?.title || "unknown";
       // Failed can only overwrite queued or sent (not delivered/read)
       await pool.query(
         `UPDATE whatsapp.message_logs
@@ -139,7 +137,7 @@ async function processStatusUpdate(
              updated_at = NOW()
          WHERE wamid = $3
            AND delivery_status IN ('queued', 'sent')`,
-        [mappedStatus, status.status || null, wamid]
+        [mappedStatus, errorCode, wamid]
       );
     } else if (mappedStatus === "delivered") {
       await pool.query(

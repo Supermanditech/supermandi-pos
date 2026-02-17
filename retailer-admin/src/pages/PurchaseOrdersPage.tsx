@@ -305,14 +305,16 @@ export default function PurchaseOrdersPage() {
             )}
 
             {/* WA-002: WhatsApp Follow-up Button — uses supplierPhone from API when available */}
+            {selectedPO.supplierPhone && (
             <div style={{ marginBottom: '1rem' }}>
               <button
                 onClick={() => {
                   const expected = selectedPO.expectedDeliveryDate ? new Date(selectedPO.expectedDeliveryDate).toLocaleDateString('en-IN') : 'N/A';
                   const status = selectedPO.status.charAt(0).toUpperCase() + selectedPO.status.slice(1);
                   const msg = `Follow-up on PO #${selectedPO.poNumber}. Status: ${status}. Expected delivery: ${expected}.`;
-                  const phone = selectedPO.supplierPhone ? selectedPO.supplierPhone.replace(/\D/g, '') : '';
-                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                  const phone = selectedPO.supplierPhone!.replace(/\D/g, '');
+                  if (phone.length < 10) return;
+                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
                 }}
                 style={{
                   padding: '6px 16px', background: '#f0fdf4', color: '#15803d',
@@ -326,6 +328,7 @@ export default function PurchaseOrdersPage() {
                 WhatsApp Follow-up
               </button>
             </div>
+            )}
 
             {/* Line Items */}
             {selectedPO.items && selectedPO.items.length > 0 && (

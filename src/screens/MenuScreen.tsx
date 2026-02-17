@@ -860,7 +860,11 @@ export default function MenuScreen() {
       <Pressable
         style={styles.menuItem}
         onPress={() => {
-          const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE || "919876543210";
+          const supportPhone = process.env.EXPO_PUBLIC_SUPPORT_PHONE;
+          if (!supportPhone) {
+            Alert.alert("Support Unavailable", "Support phone not configured. Please contact support via email.");
+            return;
+          }
           const message = encodeURIComponent(
             `Hi SuperMandi Support,\n\nStore: ${opStatus.storeName || "N/A"}\nDevice: ${opStatus.deviceLabel || "N/A"}\n\nI need help with: `
           );
