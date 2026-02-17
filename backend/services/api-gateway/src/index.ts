@@ -76,6 +76,12 @@ app.use((req, res, next) => {
 
   // Check if the origin is allowed
   // STAGING-FIX-005: Support '*' wildcard in CORS_ALLOWED_ORIGINS
+  // PRA-REAUDIT: Block wildcard + credentials in production (any-origin auth bypass)
+  if (config.env === 'production' && allowedOrigins.includes('*')) {
+    console.error('[CORS] FATAL: Wildcard CORS_ALLOWED_ORIGINS is forbidden in production');
+    res.status(500).json({ error: 'Server misconfiguration' });
+    return;
+  }
   if (origin && (allowedOrigins.includes('*') || allowedOrigins.includes(origin))) {
     res.header('Access-Control-Allow-Origin', origin);
     originAllowed = true;
@@ -195,10 +201,13 @@ app.use(requestTimeout({
 app.use(rateLimiterMiddleware);
 
 // T1-011: Stricter rate limit for auth endpoints (5/min vs 30/min general)
-import { authRateLimiter } from './middleware/rateLimiter';
+import { authRateLimiter, adminRateLimiter } from './middleware/rateLimiter';
 app.use('/api/v1/auth', authRateLimiter);
 app.use('/api/v1/retailer-admin/auth', authRateLimiter);
 app.use('/api/v1/supplier/auth', authRateLimiter);
+
+// PRA-REAUDIT: Mount admin rate limiter (was exported but never used)
+app.use('/api/v1/admin', adminRateLimiter);
 
 // Strip any client-provided auth headers (prevents spoofing)
 app.use(stripClientAuthHeaders);

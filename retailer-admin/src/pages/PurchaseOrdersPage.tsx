@@ -85,6 +85,7 @@ export default function PurchaseOrdersPage() {
   // Detail modal
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     if (!accessToken) return;
@@ -120,13 +121,15 @@ export default function PurchaseOrdersPage() {
   const openDetail = async (orderId: string) => {
     if (!accessToken) return;
     setDetailLoading(true);
+    setDetailError(null);
     try {
       const res = await authFetch(`/api/v1/retailer-admin/purchase-orders/${orderId}`, accessToken);
       if (!res.ok) throw new Error('Failed to load PO detail');
       const json = await safeJson<PODetailResponse>(res);
       setSelectedPO(json?.data || null);
-    } catch {
+    } catch (e: any) {
       setSelectedPO(null);
+      setDetailError(e.message || 'Failed to load purchase order detail');
     } finally {
       setDetailLoading(false);
     }
@@ -277,16 +280,22 @@ export default function PurchaseOrdersPage() {
 
       {/* Detail Modal */}
       <Modal
-        isOpen={!!selectedPO || detailLoading}
-        onClose={() => setSelectedPO(null)}
-        title={selectedPO ? `PO: ${selectedPO.poNumber}` : 'Loading...'}
+        isOpen={!!selectedPO || detailLoading || !!detailError}
+        onClose={() => { setSelectedPO(null); setDetailError(null); }}
+        title={selectedPO ? `PO: ${selectedPO.poNumber}` : detailError ? 'Error' : 'Loading...'}
         actions={
-          <button onClick={() => setSelectedPO(null)} className="modal-btn modal-btn-primary">
+          <button onClick={() => { setSelectedPO(null); setDetailError(null); }} className="modal-btn modal-btn-primary">
             Close
           </button>
         }
       >
         {detailLoading && <div style={{ padding: '2rem', textAlign: 'center' }}>Loading purchase order details...</div>}
+        {!detailLoading && detailError && (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>
+            <p style={{ color: '#991b1b', fontWeight: 500 }}>{detailError}</p>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem', marginTop: '0.25rem' }}>Please try again.</p>
+          </div>
+        )}
         {selectedPO && (
           <div style={{ fontSize: '0.875rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
