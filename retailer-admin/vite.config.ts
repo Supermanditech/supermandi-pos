@@ -70,7 +70,6 @@ export default defineConfig(({ command }) => {
       },
     },
     esbuild: {
-      tsconfig: './tsconfig.json',
       drop: ['console', 'debugger'],
     },
     build: {
