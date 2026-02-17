@@ -374,7 +374,7 @@
   "phase13_ProductionReadinessAudit": {
     "range": "PRA-001 → PRA-090",
     "count": 90,
-    "status": "IN_PROGRESS — Wave 1 complete (PRA-078→080), 87 remaining",
+    "status": "IN_PROGRESS — Wave 1+2 complete (PRA-078→082, 084, 086→087, 089→090), 80 remaining",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": { "range": "PRA-001→PRA-015", "count": 15, "P0": 4, "P1": 8, "P2": 3 },
@@ -387,12 +387,15 @@
     "executionWaves": 9,
     "gitDiscipline": "ENFORCED — rules embedded in audit file header"
   },
-  "nextAction": "Wave 1 done. Execute Wave 2 P0 Infra: PRA-081→082, PRA-084, PRA-086→087, PRA-089→090",
+  "nextAction": "Wave 2 done. Execute Wave 3 P0 Auth: PRA-001, PRA-016, PRA-029, PRA-045, PRA-063",
   "lastActions": [
-    "Wave 1 DONE: PRA-078 (store isolation, PR #266), PRA-079 (auth boundaries, PR #267), PRA-080 (concurrency, PR #268)",
-    "8 findings total: 3 MEDIUM fixed, 5 LOW fixed/deferred. 0 CRITICAL.",
-    "PRA-078: 47 files audited, 1 fix (order events store_id JOIN)",
-    "PRA-079: 3 fixes (actorType in refresh tokens, document upload auth, test route NODE_ENV guard)",
-    "PRA-080: 3 fixes (advisory lock stock-in idempotency, FOR UPDATE on stock set, CHECK constraint migration 160)"
+    "Wave 2 DONE: 7 tickets, 7 PRs (#270-#276), 24 findings (2 CRITICAL, 13 MEDIUM, 9 LOW)",
+    "PRA-086 (CRITICAL): 4 multi-write ops wrapped in transactions (orders, docs, apps)",
+    "PRA-087 (CRITICAL): store_id EXISTS subquery on order child-table DELETEs",
+    "PRA-081: POS chatApi /api/v1 prefix fix (8 endpoints)",
+    "PRA-082: chat + credit added to JWT_REQUIRED_PREFIXES",
+    "PRA-084: migration 160 idempotent + migration 161 RLS on 8 missed tables",
+    "PRA-089: timing-safe comparison in 3 payout webhook endpoints",
+    "PRA-090: main-backend HEALTHCHECK + supplier-portal port fix"
   ]
 }

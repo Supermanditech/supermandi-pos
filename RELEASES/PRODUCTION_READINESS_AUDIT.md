@@ -702,14 +702,14 @@
 - **Scope:** Every frontend API call has corresponding gateway route → backend handler
 - **Files:** `backend/services/api-gateway/src/config.ts`, `backend/services/api-gateway/src/routes/proxy.ts`
 - **Check:** Map every portal/POS API call to its gateway route → backend handler → DB query. No dead routes, no missing routes.
-- **Status:** PENDING
+- **Status:** DONE — PR #272, fixed POS chatApi.ts missing /api/v1 prefix on all 8 chat endpoints
 
 ### PRA-082: Audit Gateway Auth Enforcement
 - **Priority:** P0
 - **Scope:** JWT required on all protected routes, public routes correctly open
 - **Files:** `backend/services/api-gateway/src/middleware/jwtAuth.ts`, `backend/services/api-gateway/src/middleware/adminAuth.ts`
 - **Check:** Protected routes reject requests without valid JWT, public routes (auth, registration, webhooks) accessible without token, admin routes require admin session/master token, correlation ID injected on every request
-- **Status:** PENDING
+- **Status:** DONE — PR #273, added /api/v1/chat and /api/v1/credit to JWT_REQUIRED_PREFIXES
 
 ### PRA-083: Audit Gateway Rate Limiting
 - **Priority:** P1
@@ -723,7 +723,7 @@
 - **Scope:** All 18 new migrations apply cleanly, especially 149 (RLS on 27 tables)
 - **Files:** `backend/migrations/`
 - **Check:** Migrations apply in order, rollback possible, RLS policies correct, indexes created (FIX-011 refresh_tokens), backup taken before migration 149
-- **Status:** PENDING
+- **Status:** DONE — PR #274, fixed migration 160 idempotency + migration 161 adds RLS to 8 missed tables
 
 ### PRA-085: Audit Backend Error Handling Chain
 - **Priority:** P1
@@ -735,13 +735,13 @@
 - **Priority:** P0
 - **Scope:** Multi-write operations wrapped in transactions
 - **Check:** Stock update uses transaction (FIX-007 verified), GRN receive uses transaction + idempotency (FIX-008 verified), sale creation atomic, no partial writes possible
-- **Status:** PENDING
+- **Status:** DONE — PR #270, wrapped 4 multi-write operations in transactions (order delete, doc upload, doc verify/reject, app reject)
 
 ### PRA-087: Audit Backend Store Isolation Queries
 - **Priority:** P0
 - **Scope:** Every UPDATE/DELETE includes store_id WHERE clause
 - **Check:** All store-scoped UPDATE queries include `AND store_id` (FIX-005 + FIX-006 verified), no cross-store data leaks possible
-- **Status:** PENDING
+- **Status:** DONE — PR #271, added store_id EXISTS subquery to order child-table DELETEs
 
 ### PRA-088: Audit Backend CORS + Security Headers
 - **Priority:** P1
@@ -753,13 +753,13 @@
 - **Priority:** P0
 - **Scope:** All 9+ secrets in GCP Secret Manager, graceful handling when missing
 - **Check:** database-url, postgres-password, jwt-secret, admin-token, smtp-password, WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_VERIFY_TOKEN, WHATSAPP_APP_SECRET all exist, code gracefully handles missing optional vars (FIX-002 verified)
-- **Status:** PENDING
+- **Status:** DONE — PR #275, fixed timing-safe comparison in 3 payout webhook endpoints
 
 ### PRA-090: Audit Cloud Run Service Deployment Config
 - **Priority:** P0
 - **Scope:** 6 services match GCP names, deploy order correct, health checks pass
 - **Check:** Service names exactly: `main-backend`, `api-gateway`, `retailer-admin`, `supplier-portal`, `superadmin`, `landing` (HL-006), deploy order: main-backend → api-gateway → portals parallel (HL-008), health endpoints respond 200
-- **Status:** PENDING
+- **Status:** DONE — PR #276, added HEALTHCHECK to main-backend Dockerfile + fixed supplier-portal port
 
 ---
 
