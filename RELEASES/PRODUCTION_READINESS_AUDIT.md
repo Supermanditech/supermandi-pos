@@ -679,19 +679,19 @@
 - **Scope:** Two stores cannot see each other's data anywhere
 - **Check:** Store A data NEVER visible in Store B's POS, retailer portal, or API responses. Test with: products, inventory, sales, orders, customers, staff, devices
 - **Key invariant:** Every query includes `WHERE store_id = $token.storeId`
-- **Status:** PENDING
+- **Status:** DONE — PR #266, 47 files audited, 1 LOW fix (order events store_id JOIN)
 
 ### PRA-079: Auth Token Cross-Platform Verification
 - **Priority:** P0
 - **Scope:** Token from one role cannot access another role's endpoints
 - **Check:** Retailer JWT cannot access supplier endpoints, supplier JWT cannot access admin endpoints, POS device token cannot access web portal endpoints, expired tokens rejected everywhere, refresh tokens work per platform
-- **Status:** PENDING
+- **Status:** DONE — PR #267, 3 findings fixed (actorType in refresh tokens, document upload auth, test route guard)
 
 ### PRA-080: Concurrent Operation Safety
 - **Priority:** P0
 - **Scope:** Simultaneous operations don't corrupt data
 - **Check:** Two POS devices selling same product simultaneously → stock never goes negative (stock cap), two users editing same product → no silent overwrite, GRN receive idempotency key prevents double-stock (FIX-008)
-- **Status:** PENDING
+- **Status:** DONE — PR #268, 3 findings fixed (advisory lock for stock-in, FOR UPDATE on stock set, CHECK constraint on legacy table)
 
 ---
 

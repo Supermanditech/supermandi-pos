@@ -374,7 +374,7 @@
   "phase13_ProductionReadinessAudit": {
     "range": "PRA-001 → PRA-090",
     "count": 90,
-    "status": "CREATED — 90 tickets across 6 parts, awaiting execution",
+    "status": "IN_PROGRESS — Wave 1 complete (PRA-078→080), 87 remaining",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": { "range": "PRA-001→PRA-015", "count": 15, "P0": 4, "P1": 8, "P2": 3 },
@@ -387,12 +387,12 @@
     "executionWaves": 9,
     "gitDiscipline": "ENFORCED — rules embedded in audit file header"
   },
-  "nextAction": "Phase 13 PRA audit created (90 tickets). Execute Wave 1 P0 blockers first: PRA-078→080 (isolation/auth/concurrency)",
+  "nextAction": "Wave 1 done. Execute Wave 2 P0 Infra: PRA-081→082, PRA-084, PRA-086→087, PRA-089→090",
   "lastActions": [
-    "Phase 13 CREATED: Production Readiness Audit — 90 tickets (31 P0, 42 P1, 17 P2) across 6 parts",
-    "Cross-function audit covers: POS↔Retailer, POS↔Supplier, POS↔SuperAdmin, Retailer↔Supplier, SuperAdmin↔all",
-    "Git discipline rules embedded in audit file — Claude reads EVERY session",
-    "Part 18 WRITTEN: Mega-Batch Deployment Discipline — 5 phases, 64+ gates, rollback protocol",
-    "DEPLOY-READY: Only FIX-001 (GCP staging deploy) remains — operator triggers when ready"
+    "Wave 1 DONE: PRA-078 (store isolation, PR #266), PRA-079 (auth boundaries, PR #267), PRA-080 (concurrency, PR #268)",
+    "8 findings total: 3 MEDIUM fixed, 5 LOW fixed/deferred. 0 CRITICAL.",
+    "PRA-078: 47 files audited, 1 fix (order events store_id JOIN)",
+    "PRA-079: 3 fixes (actorType in refresh tokens, document upload auth, test route NODE_ENV guard)",
+    "PRA-080: 3 fixes (advisory lock stock-in idempotency, FOR UPDATE on stock set, CHECK constraint migration 160)"
   ]
 }
