@@ -171,6 +171,50 @@ export async function fetchSalesAnalytics(accessToken: string, from?: string, to
   return data;
 }
 
+// PRA-007: Product analytics with category breakdown
+export interface CategorySalesGroup {
+  group: string;
+  total_minor: number;
+  quantity: number;
+}
+
+export interface ProductAnalytics {
+  from: string;
+  to: string;
+  groupBy: 'category' | 'day' | 'hour';
+  salesByGroup: CategorySalesGroup[];
+  topProducts: Array<{
+    productId: string;
+    productName: string;
+    category: string | null;
+    qtySold: number;
+    totalAmount: number;
+  }>;
+  newProductsCount: number;
+  missingFields: string[];
+}
+
+export async function fetchProductAnalytics(
+  accessToken: string,
+  from?: string,
+  to?: string,
+  groupBy: string = 'category'
+): Promise<ApiResponse<ProductAnalytics>> {
+  const params = new URLSearchParams();
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  params.set('groupBy', groupBy);
+  const qs = params.toString();
+  const response = await authFetch(`${API_BASE}/analytics/products?${qs}`, accessToken);
+
+  if (response.status === 401) throw new Error('Unauthorized');
+  if (!response.ok) throw new Error('Failed to fetch product analytics');
+
+  const data = await safeJson<ApiResponse<ProductAnalytics>>(response);
+  if (!data) throw new Error('Invalid response from server');
+  return data;
+}
+
 // FE-RETAILER-CAT-001: Categories from FMCG taxonomy
 export interface FmcgCategory {
   id: string;
