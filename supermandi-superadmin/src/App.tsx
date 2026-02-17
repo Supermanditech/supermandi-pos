@@ -2730,7 +2730,7 @@ export default function App() {
         </aside>
 
         {/* Mobile fallback: flat tabs */}
-        <nav className="tabs" aria-label="Main navigation">
+        <nav className="tabs" aria-label="Main navigation" style={{ overflowX: "auto", whiteSpace: "nowrap" }}>
           <button className={tab === "events" ? "tab tabActive" : "tab"} onClick={() => setTab("events")}>Events</button>
           <button className={tab === "stores" ? "tab tabActive" : "tab"} onClick={() => setTab("stores")}>Stores</button>
           <button className={tab === "devices" ? "tab tabActive" : "tab"} onClick={() => setTab("devices")}>Devices</button>

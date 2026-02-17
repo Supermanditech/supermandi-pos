@@ -92,7 +92,7 @@ export function AnalyticsTab({
           </div>
         </div>
 
-        <div className="subTabs" style={{ marginTop: 12 }}>
+        <div className="subTabs" style={{ marginTop: 12, overflowX: "auto", whiteSpace: "nowrap" }}>
           {(["overview", "devices", "products", "payments", "purchases", "consumer", "activity", "dues"] as AnalyticsTabKey[]).map((key) => (
             <button
               key={key}

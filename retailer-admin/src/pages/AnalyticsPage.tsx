@@ -1,6 +1,7 @@
 // T-212: Sales Analytics Dashboard for Retailer Admin
 // PRA-007: Added category breakdown via shared analyticsService
 import { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../lib/AuthContext';
 import { fetchSalesAnalytics, SalesAnalytics, fetchProductAnalytics, ProductAnalytics } from '../api/store';
 import Breadcrumb from '../components/Breadcrumb';
@@ -16,6 +17,7 @@ function getDefaultDateRange(): { from: string; to: string } {
 }
 
 export default function AnalyticsPage() {
+  const { storeCode } = useParams<{ storeCode: string }>();
   const { accessToken } = useAuth();
   const defaults = getDefaultDateRange();
   const [from, setFrom] = useState(defaults.from);
@@ -56,7 +58,7 @@ export default function AnalyticsPage() {
 
   return (
     <div>
-      <Breadcrumb items={[{ label: 'Dashboard', path: '.' }, { label: 'Sales Analytics' }]} />
+      <Breadcrumb items={[{ label: 'Dashboard', path: `/s/${storeCode}` }, { label: 'Sales Analytics' }]} />
 
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <h1 className="text-2xl font-bold text-slate-800">Sales Analytics</h1>

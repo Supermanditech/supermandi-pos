@@ -145,7 +145,7 @@ export function StaffTab({
                   <td style={{ fontSize: 12 }}>{formatDateTime(s.created_at)}</td>
                   <td>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button className={s.is_active ? "btnDanger btnSm" : "btnSuccess btnSm"} onClick={() => handleToggleStaffActive(s.id, s.is_active)} disabled={staffActionLoading === s.id} style={{ fontSize: 11, padding: "2px 8px" }}>
+                      <button className={s.is_active ? "btnDanger btnSm" : "btnSuccess btnSm"} onClick={() => { if (s.is_active && !confirm(`Deactivate staff member "${s.display_name}"?`)) return; handleToggleStaffActive(s.id, s.is_active); }} disabled={staffActionLoading === s.id} style={{ fontSize: 11, padding: "2px 8px" }}>
                         {s.is_active ? "Deactivate" : "Activate"}
                       </button>
                       <button className="btn btnSm" onClick={() => { setResetPinStaffId(s.id); setResetPinValue(""); }} disabled={staffActionLoading === s.id} style={{ fontSize: 11, padding: "2px 8px" }}>

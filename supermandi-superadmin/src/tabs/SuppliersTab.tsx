@@ -798,7 +798,7 @@ export function SuppliersTab({
       {/* Product Edit Modal (SA-1.3-003) + T-119: Dirty guard on close */}
       {editingProduct && (
         <div className="modalOverlay" onClick={handleCloseEditProduct}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500 }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 500, maxHeight: "85vh", overflowY: "auto" }}>
             <div className="modalHeader">
               <h3 style={{ margin: 0 }}>Edit Product - Set Margin & BNPL</h3>
               <button className="btnGhost" onClick={handleCloseEditProduct} aria-label="Close product editor">&times;</button>

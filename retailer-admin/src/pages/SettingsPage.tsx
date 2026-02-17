@@ -55,6 +55,7 @@ export default function SettingsPage() {
   // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -96,6 +97,7 @@ export default function SettingsPage() {
         }
       } catch (err) {
         console.error('Failed to load settings:', err);
+        setLoadError('Failed to load settings. Some fields may show defaults.');
         // Use store defaults
         setSettings(prev => ({
           ...prev,
@@ -299,6 +301,13 @@ export default function SettingsPage() {
           Configure your store's payment, tax, and display preferences
         </p>
       </div>
+
+      {/* Load Error Banner */}
+      {loadError && (
+        <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem' }}>
+          {loadError}
+        </div>
+      )}
 
       {/* Success/Error Messages */}
       {saveSuccess && (

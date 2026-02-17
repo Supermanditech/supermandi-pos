@@ -88,13 +88,12 @@ export default function ChatConversationScreen({
     if (!trimmed || sending) return;
 
     setSending(true);
-    setText('');
     try {
       const result = await chatApi.sendMessage(conversationId, trimmed, currentUserName);
+      setText(''); // POS-038: Only clear on success to avoid losing typed text
       setMessages(prev => [result.message, ...prev]);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to send');
-      setText(trimmed); // Restore text on failure
     } finally {
       setSending(false);
     }
@@ -188,10 +187,18 @@ export default function ChatConversationScreen({
         </View>
       </View>
 
-      {/* Error */}
+      {/* Error — POS-039: retry/dismiss buttons */}
       {error && (
         <View style={styles.errorBar}>
           <Text style={styles.errorText}>{error}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, marginTop: 4 }}>
+            <Pressable onPress={() => { setError(null); fetchMessages(); }}>
+              <Text style={{ color: '#991b1b', fontSize: 12, fontWeight: '600' }}>Retry</Text>
+            </Pressable>
+            <Pressable onPress={() => setError(null)}>
+              <Text style={{ color: '#64748b', fontSize: 12 }}>Dismiss</Text>
+            </Pressable>
+          </View>
         </View>
       )}
 
@@ -218,7 +225,7 @@ export default function ChatConversationScreen({
       )}
 
       {/* Input */}
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: 8 + insets.bottom }]}>
         <TextInput
           style={styles.input}
           value={text}

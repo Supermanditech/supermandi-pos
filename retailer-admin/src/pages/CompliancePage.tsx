@@ -51,6 +51,7 @@ export default function CompliancePage() {
         }
       } catch (err) {
         console.error('Failed to fetch documents:', err);
+        setError('Failed to load compliance documents. Please refresh the page.');
       } finally {
         setIsLoading(false);
       }

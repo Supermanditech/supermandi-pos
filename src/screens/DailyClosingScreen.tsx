@@ -90,8 +90,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
 
   useEffect(() => {
     if (error) {
-      Alert.alert(t("common.error"), error);
-      clearError();
+      Alert.alert(t("common.error"), error, [{ text: "OK", onPress: clearError }]);
     }
   }, [error, t, clearError]);
 
@@ -231,6 +230,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -350,6 +350,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
                     value={actualCash}
                     onChangeText={setActualCash}
                     keyboardType="decimal-pad"
+                    returnKeyType="done"
                   />
                 </View>
 
@@ -424,6 +425,7 @@ export default function DailyClosingScreen({ onBack }: DailyClosingScreenProps) 
         <ScrollView
           style={styles.content}
           contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

@@ -30,6 +30,7 @@ export default function PaymentsPage() {
   // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [statusTransitioned, setStatusTransitioned] = useState(false);
@@ -52,6 +53,7 @@ export default function PaymentsPage() {
         }
       } catch (err) {
         console.error('Failed to load payment settings:', err);
+        setLoadError('Failed to load payment settings. Please refresh the page.');
       } finally {
         setLoading(false);
       }
@@ -198,6 +200,13 @@ export default function PaymentsPage() {
           Configure your payment methods to receive payments from customers
         </p>
       </div>
+
+      {/* Load Error Banner */}
+      {loadError && (
+        <div style={{ padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', marginBottom: '1rem', color: '#991b1b', fontSize: '0.9rem' }}>
+          {loadError}
+        </div>
+      )}
 
       {/* Success Message */}
       {saveSuccess && (

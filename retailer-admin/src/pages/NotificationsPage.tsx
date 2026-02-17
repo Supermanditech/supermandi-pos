@@ -24,6 +24,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
@@ -39,6 +40,7 @@ export default function NotificationsPage() {
       }
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
+      setError('Failed to load notifications. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,9 @@ export default function NotificationsPage() {
     try {
       await authFetch(`/api/v1/retailer-admin/notifications/${id}/read`, accessToken, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
-    } catch { /* ignore */ }
+    } catch {
+      alert('Failed to mark notification as read');
+    }
   };
 
   const markAllAsRead = async () => {
@@ -59,7 +63,9 @@ export default function NotificationsPage() {
     try {
       await authFetch('/api/v1/retailer-admin/notifications/read-all', accessToken, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
-    } catch { /* ignore */ }
+    } catch {
+      alert('Failed to mark all as read');
+    }
   };
 
   const getIcon = (type: string) => {
@@ -101,9 +107,16 @@ export default function NotificationsPage() {
         </div>
       </div>
 
+      {error && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ color: '#991b1b', fontSize: '0.875rem' }}>{error}</p>
+          <button onClick={() => { setError(null); fetchNotifications(); }} style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+        </div>
+      )}
+
       {loading ? (
         <div style={{ textAlign: 'center', padding: '3rem', color: '#9ca3af' }}>Loading notifications...</div>
-      ) : notifications.length === 0 ? (
+      ) : notifications.length === 0 && !error ? (
         <div style={{ textAlign: 'center', padding: '3rem' }}>
           <Bell size={48} style={{ color: '#d1d5db', margin: '0 auto 1rem' }} />
           <p style={{ color: '#6b7280', fontSize: '0.9375rem' }}>No notifications yet</p>
