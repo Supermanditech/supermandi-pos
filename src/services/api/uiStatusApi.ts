@@ -65,7 +65,7 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
       features: {
         scan_lookup_v2: (features.scanLookupV2 as boolean) ?? true,
         reorderEnabled: (features.reorderEnabled as boolean) ?? true,
-        buyEnabled: true,
+        buyEnabled: (features.buyEnabled as boolean) ?? true,
         inventoryEnabled: true,
         suppliersEnabled: true,
         ordersEnabled: true,
@@ -92,7 +92,7 @@ function parseUiStatusResponse(raw: unknown): UiStatusResponse {
     // SA-P2-003: Version enforcement from flat format
     forceUpdate: (obj.forceUpdate as boolean) ?? false,
     minAppVersion: (obj.minAppVersion as string) ?? null,
-    features: obj.features as UiStatusResponse['features'],
+    features: (obj.features as UiStatusResponse['features']) ?? getDefaultUiStatus().features,
   };
 }
 
