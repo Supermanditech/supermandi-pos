@@ -1,0 +1,84 @@
+name: Stress Tests (k6)
+
+# Manual trigger only — runs k6 load tests against staging
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Target URL (staging)'
+        required: true
+        default: 'https://staging.supermandi.tech'
+      auth_token:
+        description: 'Device JWT for authenticated endpoints'
+        required: true
+      test_scenario:
+        description: 'Which stress test to run'
+        required: true
+        type: choice
+        options:
+          - scan-stress
+          - search-stress
+          - checkout-stress
+          - concurrent-users
+          - payment-stress
+          - background-load
+          - all
+      duration_override:
+        description: 'Override test duration (e.g., 5m for quick check)'
+        required: false
+        default: ''
+
+jobs:
+  k6-stress:
+    name: "k6: ${{ github.event.inputs.test_scenario }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D68
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6 -y
+
+      - name: Run stress test
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url }}
+          AUTH_TOKEN: ${{ github.event.inputs.auth_token }}
+          K6_DURATION: ${{ github.event.inputs.duration_override }}
+        run: |
+          SCENARIO="${{ github.event.inputs.test_scenario }}"
+
+          run_test() {
+            local script="$1"
+            echo "=== Running: $script ==="
+            EXTRA_ARGS=""
+            if [ -n "$K6_DURATION" ]; then
+              EXTRA_ARGS="--duration $K6_DURATION"
+            fi
+            k6 run \
+              --env BASE_URL="$BASE_URL" \
+              --env AUTH_TOKEN="$AUTH_TOKEN" \
+              --summary-export="results-$(basename $script .js).json" \
+              $EXTRA_ARGS \
+              "e2e-tests/stress/k6/$script" || true
+          }
+
+          if [ "$SCENARIO" = "all" ]; then
+            for f in e2e-tests/stress/k6/*.js; do
+              run_test "$(basename $f)"
+            done
+          else
+            run_test "${SCENARIO}.js"
+          fi
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.event.inputs.test_scenario }}
+          path: results-*.json
+          retention-days: 30
