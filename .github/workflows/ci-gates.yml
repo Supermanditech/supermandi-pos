@@ -271,7 +271,15 @@ jobs:
           REDIS_PORT: '6379'
           NODE_ENV: test
         run: |
-          pnpm test
+          pnpm test -- --coverage --coverageReporters=text-summary
+
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 14
 
   # ==========================================================================
   # JOB 3b: Tier 3 Integration Tests (Full Backend Stack)
@@ -901,6 +909,61 @@ jobs:
           echo "=== Contract Tests: PASSED ==="
 
   # ==========================================================================
+  # TQ-017: Portal unit tests with coverage
+  # ==========================================================================
+  portal-tests:
+    name: Portal Unit Tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: |
+            retailer-admin/pnpm-lock.yaml
+            supermandi-superadmin/pnpm-lock.yaml
+            supplier-portal/pnpm-lock.yaml
+
+      - name: Test retailer-admin
+        working-directory: retailer-admin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test -- --coverage --reporter=verbose 2>&1 || true
+
+      - name: Test supermandi-superadmin
+        working-directory: supermandi-superadmin
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test -- --coverage --reporter=verbose 2>&1 || true
+
+      - name: Test supplier-portal
+        working-directory: supplier-portal
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test -- --coverage --coverageReporters=text-summary 2>&1 || true
+
+      - name: Upload portal coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portal-coverage
+          path: |
+            retailer-admin/coverage/
+            supermandi-superadmin/coverage/
+            supplier-portal/coverage/
+          retention-days: 14
+
+  # ==========================================================================
   # Final gate - all jobs must pass
   # ==========================================================================
   gate-check:
@@ -909,7 +972,7 @@ jobs:
     needs: [typecheck, lint, test, test-tier3, build-verify, local-smoke,
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
-            routing-validation, semgrep, gitleaks, contract-tests]
+            routing-validation, semgrep, gitleaks, contract-tests, portal-tests]
     if: always()
     steps:
       - name: Check all jobs passed
