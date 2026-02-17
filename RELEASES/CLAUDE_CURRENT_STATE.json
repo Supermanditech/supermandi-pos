@@ -390,7 +390,7 @@
   "phase14_UIUXProductionAudit": {
     "range": "UIUX-RET-001→020, UIUX-SUP-001→020, UIUX-SA-001→027, UIUX-POS-001→042, UIUX-XPLAT-001→006",
     "count": 115,
-    "status": "TICKETS GENERATED (v2 Opus reaudit) — awaiting execution",
+    "status": "Wave 1 DONE (15 P0 fixes, PR #282). Wave 2 IN PROGRESS (P1 wiring fixes).",
     "auditFile": "RELEASES/UIUX_PRODUCTION_AUDIT.md",
     "rawFindings": 176,
     "afterTriage": 115,
@@ -422,11 +422,10 @@
       "UIUX-XPLAT-002: Retailer dashboard displays all amounts 100x too large"
     ]
   },
-  "nextAction": "Phase 14 UI/UX audit v2 COMPLETE (Opus). 115 tickets in 5 waves. Execute Wave 1 (13 P0 critical fixes) first.",
+  "nextAction": "Execute Wave 2 (P1 wiring fixes): SA-005/006/007/014, POS-007→018, XPLAT-003",
   "lastActions": [
-    "PHASE 14 UI/UX AUDIT v2 (Opus): 8 Opus agents scanned 176 raw findings → 115 verified tickets (vs 52 from haiku run)",
-    "Key P0: Supplier Portal 3 pages unreachable + 3 pages bypass auth. SuperAdmin 3 tabs use wrong auth key.",
-    "Key P0: POS SuccessPrintScreenV2 Rules of Hooks violation. BnplDuesScreen stale closure (wrong payment amount).",
-    "Key P0 Cross-Platform: Supplier can't act on submitted orders. Retailer dashboard amounts 100x wrong."
+    "Wave 1 DONE: 15 P0 fixes merged (PR #282, tag prestage-UIUX-W1-2026-02-18_1200IST). SUP-007/014 also fixed as side effects.",
+    "Wave 2 IN PROGRESS: P1 wiring bugs — wrong endpoints, stale closures, missing auth.",
+    "Backend wiring audit: 67/67 endpoints verified, 10/10 services PASS. 1 P0 gateway CORS, 4 P1 gateway gaps identified."
   ]
 }

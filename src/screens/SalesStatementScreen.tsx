@@ -59,12 +59,15 @@ function groupEntriesByDate(entries: LedgerEntry[]): DailySales[] {
   for (const entry of entries) {
     const date = new Date(entry.createdAt);
     const dateKey = date.toISOString().split("T")[0];
+    // UIUX-POS-015: Compute totalValue from unitCost * abs(deltaQty)
+    const entryValue = Math.abs(entry.deltaQty) * (entry.unitCost || 0);
 
     const existing = groups.get(dateKey);
 
     if (existing) {
       existing.transactions += 1;
       existing.totalQty += Math.abs(entry.deltaQty);
+      existing.totalValue += entryValue;
       existing.entries.push(entry);
     } else {
       groups.set(dateKey, {
@@ -72,7 +75,7 @@ function groupEntriesByDate(entries: LedgerEntry[]): DailySales[] {
         dateLabel: formatDateLabel(entry.createdAt),
         transactions: 1,
         totalQty: Math.abs(entry.deltaQty),
-        totalValue: 0, // Will calculate after
+        totalValue: entryValue,
         entries: [entry],
       });
     }
@@ -96,17 +99,18 @@ function SalesDayCard({ day }: { day: DailySales }) {
       </View>
 
       <View style={styles.cardBody}>
+        {/* UIUX-POS-015: Show daily revenue */}
+        <View style={styles.cardStat}>
+          <Text style={styles.cardStatValue}>{formatMoney(day.totalValue)}</Text>
+          <Text style={styles.cardStatLabel}>Revenue</Text>
+        </View>
         <View style={styles.cardStat}>
           <Text style={styles.cardStatValue}>{day.transactions}</Text>
           <Text style={styles.cardStatLabel}>Sales</Text>
         </View>
-        <View style={styles.cardStat}>
-          <Text style={styles.cardStatValue}>{day.totalQty}</Text>
-          <Text style={styles.cardStatLabel}>Items Sold</Text>
-        </View>
         <View style={[styles.cardStat, styles.cardStatRight]}>
-          <Text style={styles.cardStatValue}>{day.entries.length}</Text>
-          <Text style={styles.cardStatLabel}>Products</Text>
+          <Text style={styles.cardStatValue}>{day.totalQty}</Text>
+          <Text style={styles.cardStatLabel}>Items</Text>
         </View>
       </View>
     </View>
@@ -148,6 +152,8 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
   const totalDays = dailySales.length;
   const totalTransactions = dailySales.reduce((sum, d) => sum + d.transactions, 0);
   const totalQtySold = dailySales.reduce((sum, d) => sum + d.totalQty, 0);
+  // UIUX-POS-015: Compute total revenue from daily totalValue
+  const totalRevenue = dailySales.reduce((sum, d) => sum + d.totalValue, 0);
 
   return (
     <View style={styles.container}>
@@ -162,21 +168,21 @@ export default function SalesStatementScreen({ onBack, onNavigateToSell }: Sales
         </Pressable>
       </View>
 
-      {/* Summary Bar */}
+      {/* Summary Bar — UIUX-POS-015: Added total revenue */}
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
+          <Text style={styles.summaryValue}>{formatMoney(totalRevenue)}</Text>
+          <Text style={styles.summaryLabel}>Revenue</Text>
+        </View>
+        <View style={styles.summaryDivider} />
+        <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalTransactions}</Text>
-          <Text style={styles.summaryLabel}>Total Sales</Text>
+          <Text style={styles.summaryLabel}>Sales</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{totalQtySold}</Text>
-          <Text style={styles.summaryLabel}>Items Sold</Text>
-        </View>
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{totalDays}</Text>
-          <Text style={styles.summaryLabel}>Days</Text>
+          <Text style={styles.summaryLabel}>Items</Text>
         </View>
       </View>
 

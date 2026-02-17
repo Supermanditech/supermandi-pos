@@ -249,8 +249,13 @@ export default function DailyReportScreen({
       const data = await fetchDailyReport(date);
       setReport(data);
     } catch (e: any) {
-      console.error("[DailyReportScreen] Failed to load report:", e);
-      setError(e?.message || "Failed to load daily report");
+      // UIUX-POS-017: 404 means no data for this date — show empty state, not error
+      if (e?.message?.includes("404") || e?.status === 404) {
+        setReport(null);
+      } else {
+        console.error("[DailyReportScreen] Failed to load report:", e);
+        setError(e?.message || "Failed to load daily report");
+      }
     } finally {
       setLoading(false);
     }

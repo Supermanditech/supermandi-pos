@@ -578,18 +578,20 @@ export function BnplDuesScreen({ onBack }: BnplDuesScreenProps) {
               style={[
                 styles.creditUsed,
                 {
-                  width: `${Math.min(
+                  // UIUX-POS-008: Guard against division by zero when creditLimit is 0
+                  width: `${summary.creditLimit > 0 ? Math.min(
                     100,
                     ((summary.creditLimit - summary.availableCredit) / summary.creditLimit) * 100
-                  )}%`,
+                  ) : 0}%`,
                 },
               ]}
             />
           </View>
           <Text style={styles.creditHint}>
-            {Math.round(
+            {/* UIUX-POS-008: Guard against division by zero */}
+            {summary.creditLimit > 0 ? Math.round(
               ((summary.creditLimit - summary.availableCredit) / summary.creditLimit) * 100
-            )}
+            ) : 0}
             % of credit used
           </Text>
         </View>

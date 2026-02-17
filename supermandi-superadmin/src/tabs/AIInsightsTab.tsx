@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback } from 'react';
 // UIUX-SA-002: Use centralized auth instead of wrong 'superadmin_token' key
 import { getSessionToken, fetchWithTimeout } from '../api/authToken';
+// UIUX-SA-006: Use parseError for sanitized error messages instead of generic 'API error: {status}'
+import { parseError } from '../api/errorSanitizer';
 
 interface AnomalyEvent {
   id: string;
@@ -34,7 +36,7 @@ async function apiFetch(url: string, options?: RequestInit) {
     ...options,
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
   });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) throw new Error(await parseError(res));
   return res.json();
 }
 
