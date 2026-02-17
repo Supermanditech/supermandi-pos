@@ -244,54 +244,68 @@ router.post("/upload", upload.single('file'), async (req: Request, res: Response
     // Get uploaded_by from auth context
     const uploadedBy = (req as any).userId || (req as any).storeId || (req as any).supplierId || null;
 
-    // Upsert document (replace existing if same type)
-    const result = await pool.query(
-      `INSERT INTO platform.documents (
-        entity_type,
-        entity_id,
-        document_type,
-        file_path,
-        file_name,
-        file_size,
-        content_type,
-        status,
-        uploaded_by,
-        uploaded_at
-      ) VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, 'pending', $8::uuid, NOW())
-      ON CONFLICT (entity_type, entity_id, document_type) WHERE deleted_at IS NULL
-      DO UPDATE SET
-        file_path = EXCLUDED.file_path,
-        file_name = EXCLUDED.file_name,
-        file_size = EXCLUDED.file_size,
-        content_type = EXCLUDED.content_type,
-        status = 'pending',
-        rejection_reason = NULL,
-        verified_by = NULL,
-        verified_at = NULL,
-        uploaded_by = EXCLUDED.uploaded_by,
-        uploaded_at = NOW(),
-        updated_at = NOW()
-      RETURNING id, entity_type, entity_id, document_type, file_name, file_size, content_type, status, created_at`,
-      [
-        entity_type,
-        entity_id,
-        document_type,
-        gcsObjectKey,
-        req.file.originalname,
-        req.file.size,
-        req.file.mimetype,
-        uploadedBy
-      ]
-    );
+    // PRA-086: Wrap document upsert + audit log in transaction
+    const client = await pool.connect();
+    let doc: any;
+    try {
+      await client.query("BEGIN");
 
-    const doc = result.rows[0];
+      // Upsert document (replace existing if same type)
+      const result = await client.query(
+        `INSERT INTO platform.documents (
+          entity_type,
+          entity_id,
+          document_type,
+          file_path,
+          file_name,
+          file_size,
+          content_type,
+          status,
+          uploaded_by,
+          uploaded_at
+        ) VALUES ($1, $2::uuid, $3, $4, $5, $6, $7, 'pending', $8::uuid, NOW())
+        ON CONFLICT (entity_type, entity_id, document_type) WHERE deleted_at IS NULL
+        DO UPDATE SET
+          file_path = EXCLUDED.file_path,
+          file_name = EXCLUDED.file_name,
+          file_size = EXCLUDED.file_size,
+          content_type = EXCLUDED.content_type,
+          status = 'pending',
+          rejection_reason = NULL,
+          verified_by = NULL,
+          verified_at = NULL,
+          uploaded_by = EXCLUDED.uploaded_by,
+          uploaded_at = NOW(),
+          updated_at = NOW()
+        RETURNING id, entity_type, entity_id, document_type, file_name, file_size, content_type, status, created_at`,
+        [
+          entity_type,
+          entity_id,
+          document_type,
+          gcsObjectKey,
+          req.file.originalname,
+          req.file.size,
+          req.file.mimetype,
+          uploadedBy
+        ]
+      );
 
-    // Log the upload action
-    await pool.query(
-      `INSERT INTO platform.document_audit (document_id, action, new_status, actor_id, actor_type)
-       VALUES ($1, 'uploaded', 'pending', $2::uuid, 'user')`,
-      [doc.id, uploadedBy]
-    );
+      doc = result.rows[0];
+
+      // Log the upload action
+      await client.query(
+        `INSERT INTO platform.document_audit (document_id, action, new_status, actor_id, actor_type)
+         VALUES ($1, 'uploaded', 'pending', $2::uuid, 'user')`,
+        [doc.id, uploadedBy]
+      );
+
+      await client.query("COMMIT");
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
+    }
 
     res.status(201).json({
       document_id: doc.id,
