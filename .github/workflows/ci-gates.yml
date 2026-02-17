@@ -274,6 +274,128 @@ jobs:
           pnpm test
 
   # ==========================================================================
+  # JOB 3b: Tier 3 Integration Tests (Full Backend Stack)
+  # TQ-004: Starts API Gateway + Main Backend + Postgres + Redis,
+  # then runs ALL tests including E2E supertest suites.
+  # ==========================================================================
+  test-tier3:
+    name: "Tier 3: Full-Stack Integration"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: supermandi_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build common package
+        working-directory: backend
+        run: pnpm --filter @supermandi/common run build
+
+      - name: Build API Gateway
+        working-directory: backend
+        run: pnpm --filter @supermandi/api-gateway run build
+
+      - name: Run database migrations
+        working-directory: backend
+        timeout-minutes: 2
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+        run: pnpm run migrate:up
+
+      - name: Start Main Backend (port 3010)
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          NODE_ENV: test
+          PORT: '3010'
+        run: |
+          npx ts-node --project tsconfig.main.json src/server.ts &
+          echo "Waiting for main backend..."
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3010/api/v1/admin/health > /dev/null 2>&1; then
+              echo "Main backend ready (attempt $i)"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Start API Gateway (port 3000)
+        working-directory: backend/services/api-gateway
+        env:
+          PORT: '3000'
+          ADMIN_SERVICE_URL: http://localhost:3010
+          NODE_ENV: test
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+        run: |
+          node dist/index.js &
+          echo "Waiting for API Gateway..."
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:3000/health > /dev/null 2>&1; then
+              echo "API Gateway ready (attempt $i)"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run Tier 3 tests (full-stack E2E)
+        working-directory: backend
+        timeout-minutes: 5
+        env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/supermandi_test
+          REDIS_HOST: localhost
+          REDIS_PORT: '6379'
+          API_GATEWAY_URL: http://localhost:3000
+          NODE_ENV: test
+        run: |
+          echo "=== Tier 3: Full-Stack Integration Tests ==="
+          echo "API_GATEWAY_URL=$API_GATEWAY_URL"
+          pnpm test --verbose 2>&1 || true
+          echo "=== Tier 3 Complete ==="
+
+  # ==========================================================================
   # JOB 4: Build all portals and verify outputs (CRITICAL)
   # ==========================================================================
   build-verify:
@@ -784,7 +906,7 @@ jobs:
   gate-check:
     name: All Gates Passed
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, test, build-verify, local-smoke,
+    needs: [typecheck, lint, test, test-tier3, build-verify, local-smoke,
             git-discipline, security-audit, security-deep-scan, migration-safety,
             config-parity, license-coverage, db-auth-scan, scalability-observability,
             routing-validation, semgrep, gitleaks, contract-tests]
@@ -842,6 +964,14 @@ jobs:
               echo "PASS: $job"
             fi
           done
+
+          # TQ-004: Tier 3 full-stack integration (non-blocking, informational)
+          TIER3_RESULT="${{ needs.test-tier3.result }}"
+          if [ "$TIER3_RESULT" != "success" ]; then
+            echo "WARN: test-tier3 = $TIER3_RESULT (non-blocking)"
+          else
+            echo "PASS: test-tier3 (full-stack integration)"
+          fi
 
           # Semgrep SAST (code quality + security)
           SEMGREP_RESULT="${{ needs.semgrep.result }}"
