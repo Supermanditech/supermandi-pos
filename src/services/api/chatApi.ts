@@ -45,7 +45,7 @@ export interface ChatMessage {
 
 export async function getConversations(limit = 50, offset = 0) {
   return apiClient.get<{ conversations: Conversation[]; total: number }>(
-    `/chat/conversations?limit=${limit}&offset=${offset}`
+    `/api/v1/chat/conversations?limit=${limit}&offset=${offset}`
   );
 }
 
@@ -57,19 +57,19 @@ export async function getOrCreateDirectConversation(
   otherUserType: string,
   otherUserName: string,
 ) {
-  return apiClient.post<{ conversation: Conversation }>('/chat/conversations/direct', {
+  return apiClient.post<{ conversation: Conversation }>('/api/v1/chat/conversations/direct', {
     supplierId, storeId, displayName, otherUserId, otherUserType, otherUserName,
   });
 }
 
 export async function createSupportConversation(displayName: string, storeId?: string) {
-  return apiClient.post<{ conversation: Conversation }>('/chat/conversations/support', {
+  return apiClient.post<{ conversation: Conversation }>('/api/v1/chat/conversations/support', {
     displayName, storeId,
   });
 }
 
 export async function getMessages(conversationId: string, limit = 50, before?: string) {
-  let url = `/chat/conversations/${conversationId}/messages?limit=${limit}`;
+  let url = `/api/v1/chat/conversations/${conversationId}/messages?limit=${limit}`;
   if (before) url += `&before=${encodeURIComponent(before)}`;
   return apiClient.get<{ messages: ChatMessage[] }>(url);
 }
@@ -81,23 +81,23 @@ export async function sendMessage(
   replyToId?: string,
 ) {
   return apiClient.post<{ message: ChatMessage }>(
-    `/chat/conversations/${conversationId}/messages`,
+    `/api/v1/chat/conversations/${conversationId}/messages`,
     { content, messageType: 'text', displayName, replyToId }
   );
 }
 
 export async function markAsRead(conversationId: string) {
   return apiClient.patch<{ success: boolean }>(
-    `/chat/conversations/${conversationId}/read`, {}
+    `/api/v1/chat/conversations/${conversationId}/read`, {}
   );
 }
 
 export async function toggleMute(conversationId: string) {
   return apiClient.patch<{ isMuted: boolean }>(
-    `/chat/conversations/${conversationId}/mute`, {}
+    `/api/v1/chat/conversations/${conversationId}/mute`, {}
   );
 }
 
 export async function getUnreadCount() {
-  return apiClient.get<{ unreadCount: number }>('/chat/unread-count');
+  return apiClient.get<{ unreadCount: number }>('/api/v1/chat/unread-count');
 }
