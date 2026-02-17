@@ -175,7 +175,6 @@ export function CreditProvidersTab() {
         </thead>
         <tbody>
           {providers.map(p => {
-            const stat = stats.find(s => s.provider_id === p.provider_id);
             return (
               <tr key={p.provider_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                 <td style={{ padding: '0.5rem' }}>

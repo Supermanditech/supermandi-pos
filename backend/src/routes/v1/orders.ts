@@ -414,6 +414,7 @@ ordersRouter.get("/stores/:storeId/orders/:orderId", requireDeviceToken, async (
         po.store_id as "storeId",
         po.supplier_id as "supplierId",
         COALESCE(s.name, 'Unknown Supplier') as "supplierName",
+        s.phone as "supplierPhone",
         po.order_type as "orderType",
         po.status,
         po.total_amount as "totalAmount",

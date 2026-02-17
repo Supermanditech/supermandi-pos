@@ -180,7 +180,7 @@ describe('BullMQ Queue & Worker', () => {
       await worker.close();
     }
     if (queue) {
-      await queue.obliterate({ force: true });
+      try { await queue.obliterate({ force: true }); } catch { /* queue may already be cleaned */ }
       await queue.close();
     }
   });
@@ -280,8 +280,8 @@ describe('BullMQ Queue & Worker', () => {
     // Cleanup
     await catalogWorker.close();
     await reorderWorker.close();
-    await catalogQueue.obliterate({ force: true });
-    await reorderQueue.obliterate({ force: true });
+    try { await catalogQueue.obliterate({ force: true }); } catch { /* cleanup */ }
+    try { await reorderQueue.obliterate({ force: true }); } catch { /* cleanup */ }
     await catalogQueue.close();
     await reorderQueue.close();
   });

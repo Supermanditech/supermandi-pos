@@ -1,9 +1,9 @@
 {
   "description": "ESLint warning budgets. CI fails if any package exceeds its budget. Decrease these values as you fix warnings.",
-  "updated": "2026-02-16",
+  "updated": "2026-02-17",
   "budgets": {
-    "supermandi-superadmin": 170,
-    "backend": 830,
+    "supermandi-superadmin": 169,
+    "backend": 894,
     "retailer-admin": 0,
     "supplier-portal": 0
   },

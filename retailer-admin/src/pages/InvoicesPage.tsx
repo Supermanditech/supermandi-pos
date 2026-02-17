@@ -35,8 +35,10 @@ interface InvoiceListItem {
 interface InvoiceDetail extends InvoiceListItem {
   sellerGstin?: string;
   sellerAddress?: string;
+  sellerPhone?: string;  // WA-002: For direct WhatsApp linking
   buyerGstin?: string;
   buyerAddress?: string;
+  buyerPhone?: string;   // WA-002: For direct WhatsApp linking
   taxableAmountMinor: number;
   discountMinor: number;
   cgstMinor: number;
@@ -359,13 +361,13 @@ export default function InvoicesPage() {
                     style={{ padding: "6px 16px", background: "#2563eb", color: "#fff", border: "none", borderRadius: 4, cursor: "pointer", fontSize: "0.85rem" }}>
                     Download PDF
                   </button>
-                  {/* TODO: sellerPhone needs to be added to InvoiceDetail API response for direct WhatsApp linking */}
+                  {/* WA-002: sellerPhone now included in API response for direct WhatsApp linking */}
                   <button
                     onClick={() => {
                       const amount = fmt(detail.totalAmountMinor);
                       const msg = `Regarding invoice #${detail.invoiceNumber}, amount: ${amount}. Status: ${detail.status.toUpperCase()}.`;
-                      // Opens WhatsApp with pre-filled message; user picks the contact manually
-                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+                      const phone = detail.sellerPhone ? detail.sellerPhone.replace(/\D/g, '') : '';
+                      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
                     }}
                     style={{
                       padding: "6px 16px", background: "#f0fdf4", color: "#15803d",

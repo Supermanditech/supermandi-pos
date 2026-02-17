@@ -6,7 +6,7 @@
  *         FIX-045 (analytics trailing ?), FIX-052 (version file naming)
  * Tier 1 — no DB required. Pure logic and pattern verification.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // =============================================================================
 // FIX-004: Build-Time Env Validation
@@ -198,7 +198,7 @@ describe("FIX-021: eliminate double-fetch on category change", () => {
   it("pagination reset happens within same effect (not separate)", () => {
     function handleCategoryChange(
       newCategory: string,
-      currentPage: number
+      _currentPage: number
     ): { category: string; page: number; fetchNeeded: boolean } {
       // FIX-021: Reset page to 1 AND fetch in same handler
       return { category: newCategory, page: 1, fetchNeeded: true };

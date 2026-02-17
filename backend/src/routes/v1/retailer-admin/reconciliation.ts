@@ -114,7 +114,7 @@ retailerReconciliationRouter.get(
         GROUP BY DATE(rr.created_at)
       `;
 
-      let refundMap = new Map<string, number>();
+      const refundMap = new Map<string, number>();
       try {
         const refundResult = await pool.query(refundQuery, refundParams);
         for (const row of refundResult.rows) {

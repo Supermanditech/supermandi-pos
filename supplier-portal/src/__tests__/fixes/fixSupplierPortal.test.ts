@@ -21,7 +21,7 @@ describe("FIX-025: clear qty debounce timer on unmount", () => {
 
   it("debounce timer fires after delay", () => {
     const callback = jest.fn();
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timer: ReturnType<typeof setTimeout> | number | null = null;
 
     timer = setTimeout(callback, 500);
 
@@ -34,7 +34,7 @@ describe("FIX-025: clear qty debounce timer on unmount", () => {
 
   it("timer cleared on unmount prevents stale mutation", () => {
     const callback = jest.fn();
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timer: ReturnType<typeof setTimeout> | number | null = null;
 
     timer = setTimeout(callback, 500);
 
@@ -50,7 +50,7 @@ describe("FIX-025: clear qty debounce timer on unmount", () => {
 
   it("rapid changes only fire last value", () => {
     const callback = jest.fn();
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timer: ReturnType<typeof setTimeout> | number | null = null;
 
     function debouncedSetQty(qty: number) {
       if (timer) clearTimeout(timer);

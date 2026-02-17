@@ -496,8 +496,32 @@ export async function getInvoice(pool: Pool, invoiceId: string): Promise<any> {
     [invoiceId]
   );
 
+  const invoice = invoiceResult.rows[0];
+
+  // WA-002: Resolve seller/buyer phone numbers for WhatsApp linking
+  let sellerPhone: string | null = null;
+  let buyerPhone: string | null = null;
+
+  if (invoice.sellerType === "supplier" && invoice.sellerId) {
+    const sp = await pool.query(
+      `SELECT phone FROM supplier.suppliers WHERE id = $1::uuid`,
+      [invoice.sellerId]
+    );
+    sellerPhone = sp.rows[0]?.phone || null;
+  }
+
+  if (invoice.buyerType === "store" && invoice.buyerId) {
+    const bp = await pool.query(
+      `SELECT phone FROM platform.stores WHERE id = $1::uuid`,
+      [invoice.buyerId]
+    );
+    buyerPhone = bp.rows[0]?.phone || null;
+  }
+
   return {
-    ...invoiceResult.rows[0],
+    ...invoice,
+    sellerPhone,
+    buyerPhone,
     items: itemsResult.rows,
     payments: paymentsResult.rows,
   };
