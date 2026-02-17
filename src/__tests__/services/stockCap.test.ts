@@ -36,12 +36,10 @@ describe('stockCap', () => {
       expect(result.capped).toBe(true);
     });
 
-    it('treats null stock as 0 (Number(null)===0) — out of stock', () => {
-      // normalizeStock(null) = Math.max(0, Math.floor(Number(null))) = 0
+    it('treats null stock as unknown — caps to current qty', () => {
+      // T1-015: null stock = unknown (not 0), so unknownStock=true and addedQty=0
       const result = capAddQuantity(0, 5, null);
-      expect(result.outOfStock).toBe(true);
-      expect(result.capped).toBe(true);
-      expect(result.unknownStock).toBe(false);
+      expect(result.unknownStock).toBe(true);
       expect(result.addedQty).toBe(0);
       expect(result.nextQty).toBe(0);
     });
@@ -126,10 +124,12 @@ describe('stockCap', () => {
       expect(result.capped).toBe(false);
     });
 
-    it('treats null stock as 0 — out of stock', () => {
+    it('treats null stock as unknown — caps increase to current qty', () => {
+      // T1-015: null stock = unknown (same as undefined), caps increase to current
       const result = capRequestedQuantity(3, 10, null);
-      expect(result.nextQty).toBe(0);
-      expect(result.outOfStock).toBe(true);
+      expect(result.nextQty).toBe(3);
+      expect(result.unknownStock).toBe(true);
+      expect(result.capped).toBe(true);
     });
 
     it('normalizes NaN to 0', () => {

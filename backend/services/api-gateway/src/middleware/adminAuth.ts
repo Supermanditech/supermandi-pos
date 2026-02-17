@@ -92,7 +92,7 @@ function clearFailedAttempts(ip: string): void {
  * - curl with valid x-admin-token → passes through (deprecated)
  * - 6+ failed attempts in 1 minute → 429
  */
-export function adminAuthMiddleware(req: Request, res: Response, next: NextFunction): void {
+export async function adminAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   // Only apply to admin routes
   if (!req.path.startsWith('/api/v1/admin')) {
     return next();
@@ -135,7 +135,7 @@ export function adminAuthMiddleware(req: Request, res: Response, next: NextFunct
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const sessionToken = authHeader.substring(7);
-    const session = verifyAdminSession(sessionToken);
+    const session = await verifyAdminSession(sessionToken);
 
     if (session) {
       clearFailedAttempts(clientIp);

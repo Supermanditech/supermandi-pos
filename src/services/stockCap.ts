@@ -22,6 +22,8 @@ const normalizeQuantity = (value: unknown): number => {
 };
 
 const normalizeStock = (value: unknown): number | null => {
+  // T1-015: Number(null) === 0, so null/undefined must be caught before Number()
+  if (value === null || value === undefined) return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
   return Math.max(0, Math.floor(parsed));

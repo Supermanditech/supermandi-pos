@@ -295,10 +295,19 @@ uploadsRouter.post("/image", requireDeviceToken, (req: Request, res: Response) =
       const ext = path.extname(fileName);
       const baseName = fileName.replace(ext, "");
 
-      // Try GCS first, fall back to local storage
+      // T1-005: GCS is required on Cloud Run (ephemeral filesystem loses files on restart)
       let imageUrl = await tryUploadToGcs(file.buffer, fileName, file.mimetype);
       if (!imageUrl) {
-        imageUrl = saveToLocal(file.buffer, fileName);
+        // T1-005: In development, allow local fallback; in production/staging, return 503
+        if (process.env.NODE_ENV === 'development') {
+          imageUrl = saveToLocal(file.buffer, fileName);
+        } else {
+          console.error('[T1-005] GCS upload failed and local fallback disabled in production');
+          return res.status(503).json({
+            success: false,
+            error: { code: 'STORAGE_UNAVAILABLE', message: 'Image storage is temporarily unavailable' },
+          });
+        }
       }
 
       // T-164: Generate optimized variants (thumb, medium, large)
@@ -308,8 +317,8 @@ uploadsRouter.post("/image", requireDeviceToken, (req: Request, res: Response) =
         if (variants.size > 0) {
           // Try GCS variants first
           variantUrls = await uploadVariantsToGcs(variants, baseName, ext, file.mimetype);
-          if (Object.keys(variantUrls).length === 0) {
-            // GCS failed — save variants locally
+          if (Object.keys(variantUrls).length === 0 && process.env.NODE_ENV === 'development') {
+            // T1-005: Local variant fallback only in development
             variantUrls = saveVariantsToLocal(variants, baseName, ext);
           }
         }

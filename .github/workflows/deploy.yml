@@ -574,6 +574,7 @@ jobs:
           FIREBASE_ENABLED=true,\
           FIREBASE_PROJECT_ID=supermandi-pos,\
           SMS_DISABLED=true,\
+          SUPPLIER_PORTAL_URL=https://staging.supermandi.tech/supplier,\
           RATE_LIMIT_MULTIPLIER=100,\
           EMAIL_PROVIDER=smtp,\
           SMTP_HOST=smtp.gmail.com,\
@@ -595,7 +596,7 @@ jobs:
           SUPERMANDI_ADDRESS=166/1 Bhandu Khurd Jodhpur Rajasthan 342014,\
           SUPERMANDI_STATE=Rajasthan,\
           FRONTEND_URL=https://staging.supermandi.tech" \
-            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest" \
+            --set-secrets="DATABASE_URL=database-url:latest,DB_PASSWORD=postgres-password:latest,JWT_SECRET=jwt-secret:latest,ADMIN_TOKEN=admin-token:latest,SMTP_PASS=smtp-password:latest,WHATSAPP_ACCESS_TOKEN=WHATSAPP_ACCESS_TOKEN:latest,WHATSAPP_PHONE_NUMBER_ID=WHATSAPP_PHONE_NUMBER_ID:latest,WHATSAPP_VERIFY_TOKEN=WHATSAPP_VERIFY_TOKEN:latest,WHATSAPP_APP_SECRET=WHATSAPP_APP_SECRET:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest" \
             --allow-unauthenticated \
             --quiet
           echo "    OK: $SERVICE_NAME deployed"

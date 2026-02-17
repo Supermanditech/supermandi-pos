@@ -194,6 +194,12 @@ app.use(requestTimeout({
 // Rate limiting
 app.use(rateLimiterMiddleware);
 
+// T1-011: Stricter rate limit for auth endpoints (5/min vs 30/min general)
+import { authRateLimiter } from './middleware/rateLimiter';
+app.use('/api/v1/auth', authRateLimiter);
+app.use('/api/v1/retailer-admin/auth', authRateLimiter);
+app.use('/api/v1/supplier/auth', authRateLimiter);
+
 // Strip any client-provided auth headers (prevents spoofing)
 app.use(stripClientAuthHeaders);
 

@@ -17,7 +17,12 @@ jest.mock("../../services/cloudEventLogger", () => ({
   startCloudEventLogger: jest.fn(),
 }));
 jest.mock("../../services/printerService", () => ({
-  printerService: { init: jest.fn().mockResolvedValue(undefined) },
+  printerService: {
+    initialize: jest.fn().mockResolvedValue(true),
+    checkConnectivity: jest.fn().mockResolvedValue({ connected: false }),
+    getStatus: jest.fn().mockReturnValue({ connected: false }),
+    print: jest.fn().mockResolvedValue(true),
+  },
 }));
 jest.mock("../../services/syncService", () => ({
   startAutoSync: jest.fn(),

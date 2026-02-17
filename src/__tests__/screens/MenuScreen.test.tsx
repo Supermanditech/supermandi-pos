@@ -100,7 +100,12 @@ jest.mock("../../utils/money", () => ({
 }));
 
 jest.mock("../../services/printerService", () => ({
-  printerService: { getStatus: jest.fn().mockResolvedValue({ connected: false }) },
+  printerService: {
+    getStatus: jest.fn().mockReturnValue({ connected: false, model: '', ip: '' }),
+    initialize: jest.fn().mockResolvedValue(true),
+    checkConnectivity: jest.fn().mockResolvedValue({ connected: false, model: '', ip: '' }),
+    print: jest.fn().mockResolvedValue(true),
+  },
 }));
 
 jest.mock("../../config/api", () => ({
@@ -152,6 +157,6 @@ describe("MenuScreen", () => {
   it("shows Settings section", () => {
     render(<MenuScreen />);
     // The menu has language/printer/settings items
-    expect(screen.getByText("menu.language")).toBeTruthy();
+    expect(screen.getByText(/menu\.language/)).toBeTruthy();
   });
 });

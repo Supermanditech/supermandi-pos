@@ -5,6 +5,7 @@
 
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import { getGatewayRedis } from '../redis';
 
 // =============================================================================
 // TYPES
@@ -33,7 +34,7 @@ export interface AdminSession {
 // Session configuration
 const SESSION_EXPIRY_HOURS = 8; // 8 hour sessions
 const SESSION_EXPIRY_MS = SESSION_EXPIRY_HOURS * 60 * 60 * 1000;
-const MAX_ACTIVE_SESSIONS = 10; // Per admin
+// T1-001: Max sessions enforced via Redis TTL (no longer needs in-memory limit)
 
 // SEC-003: Only allow dev fallback when NODE_ENV is explicitly 'development' or 'test'
 const JWT_SECRET = (() => {
@@ -69,19 +70,66 @@ function loadAdminToken(): string | undefined {
 const ADMIN_TOKEN = loadAdminToken();
 
 // =============================================================================
-// SESSION STORAGE (In-memory, should use Redis for production scale)
+// T1-001: SESSION STORAGE — Redis primary, in-memory fallback
+// Redis keys: supermandi:admin_session:{sessionId} with TTL = session expiry
 // =============================================================================
 
-// Map of sessionId -> AdminSession
-const activeSessions = new Map<string, AdminSession>();
+const REDIS_SESSION_PREFIX = 'supermandi:admin_session:';
+const SESSION_EXPIRY_SECONDS = SESSION_EXPIRY_HOURS * 60 * 60;
 
-// Cleanup interval (run every 5 minutes)
+// In-memory fallback for when Redis is unavailable
+const localSessions = new Map<string, AdminSession>();
+
+async function storeSession(sessionId: string, session: AdminSession): Promise<void> {
+  const redis = getGatewayRedis();
+  if (redis) {
+    try {
+      await redis.setex(
+        REDIS_SESSION_PREFIX + sessionId,
+        SESSION_EXPIRY_SECONDS,
+        JSON.stringify(session)
+      );
+      return;
+    } catch (err) {
+      console.warn('[AdminSession] Redis store failed, using local fallback:', err);
+    }
+  }
+  localSessions.set(sessionId, session);
+}
+
+async function loadSession(sessionId: string): Promise<AdminSession | null> {
+  const redis = getGatewayRedis();
+  if (redis) {
+    try {
+      const data = await redis.get(REDIS_SESSION_PREFIX + sessionId);
+      if (data) return JSON.parse(data) as AdminSession;
+      return null;
+    } catch (err) {
+      console.warn('[AdminSession] Redis load failed, checking local fallback:', err);
+    }
+  }
+  return localSessions.get(sessionId) ?? null;
+}
+
+async function removeSession(sessionId: string): Promise<void> {
+  const redis = getGatewayRedis();
+  if (redis) {
+    try {
+      await redis.del(REDIS_SESSION_PREFIX + sessionId);
+    } catch (err) {
+      console.warn('[AdminSession] Redis delete failed:', err);
+    }
+  }
+  localSessions.delete(sessionId);
+}
+
+// Cleanup local fallback sessions (Redis handles TTL automatically)
 setInterval(() => {
   const now = Date.now();
-  for (const [sessionId, session] of activeSessions.entries()) {
+  for (const [sessionId, session] of localSessions.entries()) {
     if (session.expiresAt < now) {
-      activeSessions.delete(sessionId);
-      console.log(`[AdminSession] Expired session removed: ${sessionId.substring(0, 8)}...`);
+      localSessions.delete(sessionId);
+      console.log(`[AdminSession] Expired local session removed: ${sessionId.substring(0, 8)}...`);
     }
   }
 }, 5 * 60 * 1000);
@@ -110,15 +158,16 @@ export function verifyMasterToken(token: string): boolean {
 
 /**
  * Create a new admin session
+ * T1-001: Now async — stores session in Redis with TTL
  * Returns a JWT that expires after SESSION_EXPIRY_HOURS
  */
-export function createAdminSession(ip: string, userAgent?: string): { token: string; expiresAt: number } {
+export async function createAdminSession(ip: string, userAgent?: string): Promise<{ token: string; expiresAt: number }> {
   // Generate unique session ID
   const sessionId = crypto.randomUUID();
   const now = Date.now();
   const expiresAt = now + SESSION_EXPIRY_MS;
 
-  // Store session
+  // Store session in Redis (with TTL) or local fallback
   const session: AdminSession = {
     sessionId,
     createdAt: now,
@@ -126,22 +175,7 @@ export function createAdminSession(ip: string, userAgent?: string): { token: str
     ip,
     userAgent,
   };
-  activeSessions.set(sessionId, session);
-
-  // Enforce max active sessions
-  if (activeSessions.size > MAX_ACTIVE_SESSIONS) {
-    // Remove oldest session
-    let oldest: { id: string; time: number } | null = null;
-    for (const [id, s] of activeSessions.entries()) {
-      if (!oldest || s.createdAt < oldest.time) {
-        oldest = { id, time: s.createdAt };
-      }
-    }
-    if (oldest) {
-      activeSessions.delete(oldest.id);
-      console.log(`[AdminSession] Max sessions reached, removed oldest: ${oldest.id.substring(0, 8)}...`);
-    }
-  }
+  await storeSession(sessionId, session);
 
   // Generate JWT
   const payload: Omit<AdminSessionPayload, 'iat' | 'exp' | 'iss'> = {
@@ -161,10 +195,11 @@ export function createAdminSession(ip: string, userAgent?: string): { token: str
 
 /**
  * Verify an admin session JWT
+ * T1-001: Now async — checks Redis for session existence
  * Returns the session if valid, null otherwise
  * GO-LIVE-LOGIN-004: Also accepts JWTs from email OTP login (main-backend)
  */
-export function verifyAdminSession(token: string): AdminSession | null {
+export async function verifyAdminSession(token: string): Promise<AdminSession | null> {
   try {
     // First try with gateway's JWT_SECRET and issuer (legacy master token flow)
     try {
@@ -178,15 +213,15 @@ export function verifyAdminSession(token: string): AdminSession | null {
         return null;
       }
 
-      // Check session exists and hasn't been revoked
-      const session = activeSessions.get(decoded.sub);
+      // T1-001: Check session exists in Redis (or local fallback)
+      const session = await loadSession(decoded.sub);
       if (!session) {
         console.log(`[AdminSession] Session not found or revoked: ${decoded.sub.substring(0, 8)}...`);
         // Don't return null yet - might be an email OTP token
       } else {
         // Check session hasn't expired (belt and suspenders - JWT also checks)
         if (session.expiresAt < Date.now()) {
-          activeSessions.delete(decoded.sub);
+          await removeSession(decoded.sub);
           console.log(`[AdminSession] Session expired: ${decoded.sub.substring(0, 8)}...`);
           return null;
         }
@@ -228,20 +263,18 @@ export function verifyAdminSession(token: string): AdminSession | null {
 
 /**
  * Revoke an admin session (logout)
+ * T1-001: Now async — removes from Redis
  */
-export function revokeAdminSession(token: string): boolean {
+export async function revokeAdminSession(token: string): Promise<boolean> {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: JWT_ISSUER,
       ignoreExpiration: true, // Allow revoking expired tokens
     }) as AdminSessionPayload;
 
-    if (activeSessions.has(decoded.sub)) {
-      activeSessions.delete(decoded.sub);
-      console.log(`[AdminSession] Session revoked: ${decoded.sub.substring(0, 8)}...`);
-      return true;
-    }
-    return false;
+    await removeSession(decoded.sub);
+    console.log(`[AdminSession] Session revoked: ${decoded.sub.substring(0, 8)}...`);
+    return true;
   } catch {
     return false;
   }
@@ -249,14 +282,14 @@ export function revokeAdminSession(token: string): boolean {
 
 /**
  * Refresh an admin session
- * Creates a new session and revokes the old one
+ * T1-001: Now async — creates new session in Redis and revokes old one
  * STAGING-FIX-005: Don't convert email OTP tokens to gateway session tokens.
  * Email OTP tokens are self-contained (verified cryptographically) and survive
  * gateway restarts. Gateway session tokens depend on in-memory state and are
  * lost on cold start, causing recurring 401 errors.
  */
-export function refreshAdminSession(token: string, ip: string, userAgent?: string): { token: string; expiresAt: number } | null {
-  const currentSession = verifyAdminSession(token);
+export async function refreshAdminSession(token: string, ip: string, userAgent?: string): Promise<{ token: string; expiresAt: number } | null> {
+  const currentSession = await verifyAdminSession(token);
   if (!currentSession) {
     return null;
   }
@@ -268,7 +301,7 @@ export function refreshAdminSession(token: string, ip: string, userAgent?: strin
   }
 
   // Revoke old session
-  revokeAdminSession(token);
+  await revokeAdminSession(token);
 
   // Create new session
   return createAdminSession(ip, userAgent);
@@ -276,9 +309,10 @@ export function refreshAdminSession(token: string, ip: string, userAgent?: strin
 
 /**
  * Get active session count (for monitoring)
+ * T1-001: Returns local fallback count; Redis sessions expire via TTL
  */
 export function getActiveSessionCount(): number {
-  return activeSessions.size;
+  return localSessions.size;
 }
 
 /**

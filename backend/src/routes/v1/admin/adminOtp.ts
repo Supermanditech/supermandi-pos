@@ -4,31 +4,66 @@
 import { Router, Request, Response } from "express";
 import { requireAdminToken } from "../../../middleware/adminToken";
 import crypto from "crypto";
+import { getRedis } from "../../../db/redis";
 
 export const adminOtpRouter = Router();
 
-// In-memory OTP store (in production, use Redis)
-// Key: email, Value: { otp, expiresAt, purpose }
-const otpStore = new Map<string, { otp: string; expiresAt: number; purpose: string }>();
+// =============================================================================
+// T1-002: Redis-backed OTP storage with in-memory fallback
+// Redis keys use prefix "supermandi:otp:" with TTL auto-expiry
+// =============================================================================
 
-// OTP configuration
-const OTP_LENGTH = 6;
 const OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_EXPIRY_S = 600;
 const OTP_RATE_LIMIT_MS = 60 * 1000; // 1 minute between requests
-const lastOtpRequest = new Map<string, number>();
-// GO-LIVE-135: Stricter rate limiting for OTP verification to prevent brute force
-// Previous settings allowed ~600 attempts in 10 minutes (1 sec rate limit)
-// New settings: 5 second delay, 5 attempts max, 30 min lockout = max 120 attempts/10min
-// Combined with 5-attempt lockout = effectively max 5 attempts
-const OTP_VERIFY_RATE_LIMIT_MS = 5000; // GO-LIVE-135: 5 seconds between verify attempts (was 1 sec)
-const lastOtpVerify = new Map<string, number>();
-const otpVerifyFailures = new Map<string, { count: number; lockedUntil: number }>();
+const OTP_VERIFY_RATE_LIMIT_MS = 5000; // GO-LIVE-135: 5 seconds between verify attempts
 const MAX_OTP_VERIFY_FAILURES = 5;
-const OTP_LOCKOUT_MS = 30 * 60 * 1000; // GO-LIVE-135: 30 minute lockout (was 15 min)
-// GO-LIVE-135: IP-based rate limiting to prevent distributed attacks
-const ipOtpAttempts = new Map<string, { count: number; windowStart: number }>();
+const OTP_LOCKOUT_MS = 30 * 60 * 1000; // GO-LIVE-135: 30 minute lockout
 const IP_OTP_WINDOW_MS = 10 * 60 * 1000; // 10 minute window
-const IP_OTP_MAX_ATTEMPTS = 10; // Max 10 OTP verifications per IP per 10 minutes
+const IP_OTP_MAX_ATTEMPTS = 10;
+
+// In-memory fallback Maps (used only when Redis unavailable)
+const _otpStore = new Map<string, { otp: string; expiresAt: number; purpose: string }>();
+const _lastOtpRequest = new Map<string, number>();
+const _lastOtpVerify = new Map<string, number>();
+const _otpVerifyFailures = new Map<string, { count: number; lockedUntil: number }>();
+const _ipOtpAttempts = new Map<string, { count: number; windowStart: number }>();
+
+// Redis key helpers
+const R = {
+  otp: (email: string) => `supermandi:otp:data:${email}`,
+  otpRate: (email: string) => `supermandi:otp:rate:${email}`,
+  verifyRate: (email: string) => `supermandi:otp:vrate:${email}`,
+  failures: (email: string) => `supermandi:otp:fail:${email}`,
+  ip: (ip: string) => `supermandi:otp:ip:${ip}`,
+  token2fa: (token: string) => `supermandi:otp:2fa:${token}`,
+};
+
+// Generic Redis get/set with fallback
+async function rGet<T>(key: string): Promise<T | null> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      const v = await redis.get(key);
+      return v ? JSON.parse(v) : null;
+    } catch { /* fall through */ }
+  }
+  return null;
+}
+async function rSet(key: string, value: unknown, ttlS: number): Promise<boolean> {
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.setex(key, ttlS, JSON.stringify(value));
+      return true;
+    } catch { /* fall through */ }
+  }
+  return false; // caller should use local fallback
+}
+async function rDel(key: string): Promise<void> {
+  const redis = getRedis();
+  if (redis) { try { await redis.del(key); } catch { /* ignore */ } }
+}
 
 // ITER4-P0-003: Timing-safe comparison for OTP to prevent timing attacks
 function timingSafeCompare(a: string, b: string): boolean {
@@ -74,8 +109,8 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "purpose_required" });
   }
 
-  // Rate limiting
-  const lastRequest = lastOtpRequest.get(email) || 0;
+  // T1-002: Rate limiting (Redis-backed with Map fallback)
+  const lastRequest = (await rGet<number>(R.otpRate(email))) || _lastOtpRequest.get(email) || 0;
   if (Date.now() - lastRequest < OTP_RATE_LIMIT_MS) {
     const waitSeconds = Math.ceil((OTP_RATE_LIMIT_MS - (Date.now() - lastRequest)) / 1000);
     return res.status(429).json({
@@ -88,9 +123,15 @@ adminOtpRouter.post("/otp/request", async (req: Request, res: Response) => {
   const otp = generateOtp();
   const expiresAt = Date.now() + OTP_EXPIRY_MS;
 
-  // Store OTP
-  otpStore.set(email, { otp, expiresAt, purpose });
-  lastOtpRequest.set(email, Date.now());
+  // T1-002: Store OTP in Redis (TTL=10min) with Map fallback
+  const otpData = { otp, expiresAt, purpose };
+  if (!(await rSet(R.otp(email), otpData, OTP_EXPIRY_S))) {
+    _otpStore.set(email, otpData);
+  }
+  const now = Date.now();
+  if (!(await rSet(R.otpRate(email), now, 60))) {
+    _lastOtpRequest.set(email, now);
+  }
 
   // ITER3-P1-001: Only log OTP in development, never in production
   if (process.env.NODE_ENV !== 'production') {
@@ -156,13 +197,12 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     return res.status(400).json({ error: "email_otp_purpose_required" });
   }
 
-  // GO-LIVE-135: IP-based rate limiting to prevent distributed attacks
+  // T1-002: IP-based rate limiting (Redis-backed with Map fallback)
   const clientIp = req.ip || req.socket?.remoteAddress || 'unknown';
   const now = Date.now();
-  let ipAttempts = ipOtpAttempts.get(clientIp);
+  let ipAttempts = (await rGet<{ count: number; windowStart: number }>(R.ip(clientIp))) || _ipOtpAttempts.get(clientIp) || null;
   if (!ipAttempts || now - ipAttempts.windowStart > IP_OTP_WINDOW_MS) {
     ipAttempts = { count: 0, windowStart: now };
-    ipOtpAttempts.set(clientIp, ipAttempts);
   }
 
   if (ipAttempts.count >= IP_OTP_MAX_ATTEMPTS) {
@@ -174,9 +214,12 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     });
   }
   ipAttempts.count += 1;
+  if (!(await rSet(R.ip(clientIp), ipAttempts, 600))) {
+    _ipOtpAttempts.set(clientIp, ipAttempts);
+  }
 
-  // ITER4-P1-003: Check if email is locked out due to too many failures
-  const failures = otpVerifyFailures.get(email);
+  // T1-002: Check if email is locked out (Redis-backed)
+  const failures = (await rGet<{ count: number; lockedUntil: number }>(R.failures(email!))) || _otpVerifyFailures.get(email!) || null;
   if (failures && Date.now() < failures.lockedUntil) {
     const waitSeconds = Math.ceil((failures.lockedUntil - Date.now()) / 1000);
     return res.status(429).json({
@@ -185,8 +228,8 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
     });
   }
 
-  // GO-LIVE-135: Rate limit verify attempts (5 seconds between attempts per email)
-  const lastVerify = lastOtpVerify.get(email) || 0;
+  // T1-002: Rate limit verify attempts (Redis-backed)
+  const lastVerify = (await rGet<number>(R.verifyRate(email!))) || _lastOtpVerify.get(email!) || 0;
   if (Date.now() - lastVerify < OTP_VERIFY_RATE_LIMIT_MS) {
     const waitSeconds = Math.ceil((OTP_VERIFY_RATE_LIMIT_MS - (Date.now() - lastVerify)) / 1000);
     return res.status(429).json({
@@ -194,16 +237,20 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
       message: `Please wait ${waitSeconds} seconds before trying again.`
     });
   }
-  lastOtpVerify.set(email, Date.now());
+  if (!(await rSet(R.verifyRate(email!), Date.now(), 5))) {
+    _lastOtpVerify.set(email!, Date.now());
+  }
 
-  const stored = otpStore.get(email);
+  // T1-002: Load OTP from Redis with Map fallback
+  const stored = (await rGet<{ otp: string; expiresAt: number; purpose: string }>(R.otp(email!))) || _otpStore.get(email!);
 
   if (!stored) {
     return res.status(400).json({ error: "otp_not_found", message: "No OTP found for this email. Please request a new one." });
   }
 
   if (Date.now() > stored.expiresAt) {
-    otpStore.delete(email);
+    await rDel(R.otp(email!));
+    _otpStore.delete(email!);
     return res.status(400).json({ error: "otp_expired", message: "OTP has expired. Please request a new one." });
   }
 
@@ -214,33 +261,36 @@ adminOtpRouter.post("/otp/verify", async (req: Request, res: Response) => {
 
   // ITER4-P0-003: Use timing-safe comparison for OTP to prevent timing attacks
   if (!timingSafeCompare(stored.otp, otp)) {
-    // Track failures for lockout
-    const currentFailures = otpVerifyFailures.get(email) || { count: 0, lockedUntil: 0 };
+    // T1-002: Track failures in Redis with Map fallback
+    const currentFailures = (await rGet<{ count: number; lockedUntil: number }>(R.failures(email!))) || _otpVerifyFailures.get(email!) || { count: 0, lockedUntil: 0 };
     currentFailures.count += 1;
     if (currentFailures.count >= MAX_OTP_VERIFY_FAILURES) {
       currentFailures.lockedUntil = Date.now() + OTP_LOCKOUT_MS;
       console.warn(`[GL-CRIT-0053] OTP verify locked out for ${email} after ${currentFailures.count} failures`);
     }
-    otpVerifyFailures.set(email, currentFailures);
+    if (!(await rSet(R.failures(email!), currentFailures, 1800))) {
+      _otpVerifyFailures.set(email!, currentFailures);
+    }
     return res.status(400).json({ error: "invalid_otp", message: "Invalid OTP. Please check and try again." });
   }
 
-  // Clear failures on success
-  otpVerifyFailures.delete(email);
+  // T1-002: Clear failures on success (Redis + Map)
+  await rDel(R.failures(email!));
+  _otpVerifyFailures.delete(email!);
 
   // OTP is valid - delete it (single use)
-  otpStore.delete(email);
+  await rDel(R.otp(email!));
+  _otpStore.delete(email!);
 
   // Generate a verification token (valid for 5 minutes)
   const verificationToken = crypto.randomBytes(32).toString("hex");
   const tokenExpiry = Date.now() + 5 * 60 * 1000;
 
-  // Store verification token (in production, use Redis)
-  verifiedTokens.set(verificationToken, {
-    email,
-    purpose,
-    expiresAt: tokenExpiry
-  });
+  // T1-002: Store verification token in Redis (TTL=5min) with Map fallback
+  const tokenData = { email, purpose, expiresAt: tokenExpiry };
+  if (!(await rSet(R.token2fa(verificationToken), tokenData, 300))) {
+    verifiedTokens.set(verificationToken, tokenData);
+  }
 
   console.log(`[GL-CRIT-0053] OTP verified for ${email} (${purpose})`);
 
@@ -259,7 +309,7 @@ const verifiedTokens = new Map<string, { email: string; purpose: string; expires
  * Use this in routes that require 2FA
  */
 export function require2FA(purpose: string) {
-  return (req: Request, res: Response, next: Function) => {
+  return async (req: Request, res: Response, next: Function) => {
     const token = req.headers["x-2fa-token"] as string;
 
     if (!token) {
@@ -269,13 +319,15 @@ export function require2FA(purpose: string) {
       });
     }
 
-    const verified = verifiedTokens.get(token);
+    // T1-002: Check Redis first, then Map fallback
+    const verified = (await rGet<{ email: string; purpose: string; expiresAt: number }>(R.token2fa(token))) || verifiedTokens.get(token) || null;
 
     if (!verified) {
       return res.status(403).json({ error: "invalid_2fa_token", message: "Invalid or expired 2FA token." });
     }
 
     if (Date.now() > verified.expiresAt) {
+      await rDel(R.token2fa(token));
       verifiedTokens.delete(token);
       return res.status(403).json({ error: "2fa_token_expired", message: "2FA token has expired. Please verify again." });
     }
@@ -285,6 +337,7 @@ export function require2FA(purpose: string) {
     }
 
     // Token is valid - consume it (single use)
+    await rDel(R.token2fa(token));
     verifiedTokens.delete(token);
 
     // Add verified info to request
@@ -297,33 +350,19 @@ export function require2FA(purpose: string) {
   };
 }
 
-// Cleanup expired tokens periodically
+// T1-002: Cleanup local fallback Maps (Redis handles TTL automatically)
 setInterval(() => {
   const now = Date.now();
-
-  for (const [key, value] of otpStore.entries()) {
-    if (now > value.expiresAt) {
-      otpStore.delete(key);
-    }
+  for (const [key, value] of _otpStore.entries()) {
+    if (now > value.expiresAt) _otpStore.delete(key);
   }
-
   for (const [key, value] of verifiedTokens.entries()) {
-    if (now > value.expiresAt) {
-      verifiedTokens.delete(key);
-    }
+    if (now > value.expiresAt) verifiedTokens.delete(key);
   }
-
-  // GO-LIVE-135: Cleanup old IP rate limit entries
-  for (const [ip, data] of ipOtpAttempts.entries()) {
-    if (now - data.windowStart > IP_OTP_WINDOW_MS) {
-      ipOtpAttempts.delete(ip);
-    }
+  for (const [ip, data] of _ipOtpAttempts.entries()) {
+    if (now - data.windowStart > IP_OTP_WINDOW_MS) _ipOtpAttempts.delete(ip);
   }
-
-  // GO-LIVE-135: Cleanup old lockouts that have expired
-  for (const [email, data] of otpVerifyFailures.entries()) {
-    if (data.lockedUntil && now > data.lockedUntil) {
-      otpVerifyFailures.delete(email);
-    }
+  for (const [email, data] of _otpVerifyFailures.entries()) {
+    if (data.lockedUntil && now > data.lockedUntil) _otpVerifyFailures.delete(email);
   }
-}, 60000); // Run every minute
+}, 60000);

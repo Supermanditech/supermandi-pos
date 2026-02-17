@@ -111,7 +111,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
 // SERVER STARTUP
 // =============================================================================
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`
 ====================================================
   SuperMandi Order Service v3.0.9
@@ -119,4 +119,14 @@ app.listen(config.port, () => {
   Environment: ${config.env}
 ====================================================
   `);
+});
+
+// T1-003: Graceful shutdown for Cloud Run SIGTERM
+process.on('SIGTERM', () => {
+  console.log('[order-service] SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('[order-service] Server closed');
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
 });

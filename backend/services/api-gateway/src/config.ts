@@ -352,6 +352,33 @@ export const config: GatewayConfig = {
       pathPrefix: '/api/v1/payments',
       stripPrefix: false,
     },
+    // ==========================================================================
+    // T1-010: Missing gateway routes — added for production completeness
+    // ==========================================================================
+    {
+      name: 'chat',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/chat',
+      stripPrefix: false,
+    },
+    {
+      name: 'credit',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/credit',
+      stripPrefix: false,
+    },
+    {
+      name: 'uploads',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/uploads',
+      stripPrefix: false,
+    },
+    {
+      name: 'retailer',
+      url: getMainBackendUrl(),
+      pathPrefix: '/api/v1/retailer',
+      stripPrefix: false,
+    },
   ],
 };
 

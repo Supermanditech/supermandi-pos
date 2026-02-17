@@ -53,9 +53,11 @@ jest.mock("../../stores/cartStore", () => ({
       clearCart: jest.fn(),
       lockCart: jest.fn(),
       unlockCart: jest.fn(),
+      autoUnlockIfExpired: jest.fn(),
       isLocked: false,
       discount: null,
       discountAmount: 0,
+      mutationHistory: [],
     };
     return selector ? selector(state) : state;
   },
@@ -69,8 +71,79 @@ jest.mock("../../stores/productsStore", () => ({
       searchQuery: "",
       setSearchQuery: jest.fn(),
       isSearching: false,
+      loadProducts: jest.fn().mockResolvedValue([]),
     };
     return selector ? selector(state) : state;
+  },
+}));
+
+jest.mock("../../stores/settingsStore", () => ({
+  useSettingsStore: (selector?: (s: any) => any) => {
+    const state = {
+      buyEnabled: true,
+      reorderEnabled: true,
+      language: "en" as const,
+      setLanguage: jest.fn(),
+      bnplEnabled: false,
+      upiCollectionEnabled: true,
+    };
+    return selector ? selector(state) : state;
+  },
+}));
+
+jest.mock("../../stores/staffSessionStore", () => ({
+  useStaffSessionStore: (selector?: (s: any) => any) => {
+    const state = { activeStaff: null };
+    return selector ? selector(state) : state;
+  },
+}));
+
+// Mock voice services (prevents expo-av native module chain)
+jest.mock("../../services/voice", () => ({
+  startRecording: jest.fn(),
+  stopRecording: jest.fn().mockResolvedValue(null),
+  cancelRecording: jest.fn(),
+  submitVoiceCommand: jest.fn().mockResolvedValue(null),
+}));
+
+jest.mock("../../components/voice", () => {
+  const React = require("react");
+  return {
+    VoiceSheet: () => null,
+  };
+});
+
+jest.mock("../../services/api/catalogApi", () => ({
+  getFmcgCategories: jest.fn().mockResolvedValue([]),
+  getCategoryProducts: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock("../../utils/featureFlags", () => ({
+  useFeatureEnabled: jest.fn().mockReturnValue(false),
+}));
+
+jest.mock("../../config/pagination", () => ({
+  PRODUCTS_PAGE_SIZE: 20,
+  MAX_PAGINATION_PAGE: 50,
+}));
+
+jest.mock("../../utils/showToast", () => ({
+  showToast: jest.fn(),
+}));
+
+jest.mock("../../services/searchHistory", () => ({
+  getRecentSearches: jest.fn().mockResolvedValue([]),
+  saveRecentSearch: jest.fn().mockResolvedValue(undefined),
+  clearRecentSearches: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock("../../services/printerService", () => ({
+  printerService: {
+    printReceipt: jest.fn().mockResolvedValue(undefined),
+    initialize: jest.fn().mockResolvedValue(true),
+    checkConnectivity: jest.fn().mockResolvedValue({ connected: false, model: '', ip: '' }),
+    getStatus: jest.fn().mockReturnValue({ connected: false, model: '', ip: '' }),
+    print: jest.fn().mockResolvedValue(true),
   },
 }));
 
@@ -96,6 +169,7 @@ jest.mock("../../services/offline/scan", () => ({
 jest.mock("../../services/offline/localDb", () => ({
   offlineDb: {
     getAll: jest.fn().mockResolvedValue([]),
+    all: jest.fn().mockResolvedValue([]),
     run: jest.fn().mockResolvedValue(undefined),
   },
 }));
@@ -128,6 +202,11 @@ jest.mock("../../utils/money", () => ({
   formatMoney: (minor: number) => `₹${(minor / 100).toFixed(2)}`,
 }));
 
+jest.mock("../../config/api", () => ({
+  BUILD_INFO: { version: "1.0.0", buildDate: "2026-02-17" },
+  API_BASE_URL: "http://localhost:3010",
+}));
+
 jest.mock("../../services/cloudEventLogger", () => ({
   logPosEvent: jest.fn(),
 }));
@@ -151,11 +230,18 @@ import SellScanScreen from "../../screens/SellScanScreen";
 
 describe("SellScanScreen", () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it("renders without crashing", () => {
-    // SellScanScreen takes navigation params, provide empty ones
-    render(<SellScanScreen navigation={{} as any} route={{ params: {} } as any} />);
+    const { unmount } = render(
+      <SellScanScreen navigation={{} as any} route={{ params: {} } as any} />
+    );
+    unmount();
   });
 });

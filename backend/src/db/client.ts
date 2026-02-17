@@ -5,12 +5,12 @@ let pool: Pool | undefined;
 let db: NodePgDatabase | undefined;
 
 // ITER4-P1-006: Connection pool configuration
-// GO-LIVE-076: Increased default max from 20 to 50 for 10,000 stores scale
+// T1-004: Reduced default max from 50 to 20 — Cloud SQL basic tier = 100 connections,
+// main-backend has Drizzle pool + common pool. 20 + 10 = 30 per instance is safe.
 const POOL_CONFIG = {
-  // Minimum number of connections to keep open (increased for production load)
-  min: parseInt(process.env.DB_POOL_MIN || '5', 10),
-  // Maximum number of connections (50 for production, scale as needed)
-  max: parseInt(process.env.DB_POOL_MAX || '50', 10),
+  min: parseInt(process.env.DB_POOL_MIN || '2', 10),
+  // T1-004: 20 default (Cloud SQL basic=100, leave headroom for multiple instances)
+  max: parseInt(process.env.DB_POOL_MAX || '20', 10),
   // Close idle connections after this many milliseconds
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
   // Connection timeout in milliseconds
@@ -33,6 +33,11 @@ export function getDb(): NodePgDatabase | undefined {
 
   // ITER4-P1-006: Configure connection pool with bounded limits
   // GO-LIVE-076: Enhanced pool configuration for production scale
+  // T1-009: SSL configuration for Cloud SQL (required for non-Unix-socket connections)
+  const sslConfig = process.env.DB_SSL === 'false' ? false
+    : process.env.NODE_ENV === 'development' ? false
+    : { rejectUnauthorized: false }; // Cloud SQL proxy handles cert verification
+
   pool = new Pool({
     connectionString: url,
     min: POOL_CONFIG.min,
@@ -42,6 +47,8 @@ export function getDb(): NodePgDatabase | undefined {
     allowExitOnIdle: POOL_CONFIG.allowExitOnIdle,
     // GO-LIVE-076: Statement timeout to prevent runaway queries
     statement_timeout: POOL_CONFIG.statement_timeout,
+    // T1-009: SSL for Cloud SQL (disabled in dev, auto for prod via Cloud SQL proxy)
+    ...(sslConfig && { ssl: sslConfig }),
   });
 
   // Log pool errors

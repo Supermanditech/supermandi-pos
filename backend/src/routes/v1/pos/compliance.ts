@@ -179,16 +179,21 @@ posComplianceRouter.post("/compliance/upload", requireDeviceToken, (req: Request
           file.mimetype
         );
         fileUrl = `gcs://${process.env.GCS_DOCUMENTS_BUCKET || 'supermandi-pos-documents'}/${objectKey}`;
-      } catch {
-        // Local fallback
-        const fs = await import("fs");
-        const path = await import("path");
-        const uploadsDir = path.resolve(__dirname, "../../../../uploads/compliance");
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
+      } catch (gcsErr) {
+        // T1-005: Local fallback only in development; production returns 503
+        if (process.env.NODE_ENV === 'development') {
+          const fs = await import("fs");
+          const path = await import("path");
+          const uploadsDir = path.resolve(__dirname, "../../../../uploads/compliance");
+          if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true });
+          }
+          fs.writeFileSync(path.join(uploadsDir, fileName), file.buffer);
+          fileUrl = `/uploads/compliance/${fileName}`;
+        } else {
+          console.error("[T1-005] GCS document upload failed in production:", gcsErr);
+          return res.status(503).json({ error: "Document storage is temporarily unavailable" });
         }
-        fs.writeFileSync(path.join(uploadsDir, fileName), file.buffer);
-        fileUrl = `/uploads/compliance/${fileName}`;
       }
 
       // Upsert document record

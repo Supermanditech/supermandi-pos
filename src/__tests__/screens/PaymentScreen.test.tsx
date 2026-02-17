@@ -78,7 +78,7 @@ jest.mock("../../services/api/posApi", () => ({
   checkWhatsAppStatus: jest.fn().mockResolvedValue({ configured: false }),
 }));
 
-jest.mock("../../services/offline/offlineSale", () => ({
+jest.mock("../../services/offline/sales", () => ({
   createOfflineSale: jest.fn().mockResolvedValue({ offlineSaleId: "off-1", billRef: "OFF-001" }),
 }));
 
@@ -88,6 +88,7 @@ jest.mock("../../services/offline/sync", () => ({
 
 jest.mock("../../services/networkStatus", () => ({
   isOnline: jest.fn().mockResolvedValue(true),
+  subscribeNetworkStatus: jest.fn(() => jest.fn()),
 }));
 
 jest.mock("../../services/cloudEventLogger", () => ({
@@ -97,6 +98,11 @@ jest.mock("../../services/cloudEventLogger", () => ({
 
 jest.mock("../../services/eventLogger", () => ({
   eventLogger: { log: jest.fn() },
+}));
+
+jest.mock("../../config/api", () => ({
+  BUILD_INFO: { version: "1.0.0", buildDate: "2026-02-17" },
+  API_BASE_URL: "http://localhost:3010",
 }));
 
 jest.mock("../../utils/money", () => ({
@@ -109,11 +115,6 @@ jest.mock("../../i18n/formatters", () => ({
 
 jest.mock("../../services/printerService", () => ({
   printerService: { printReceipt: jest.fn().mockResolvedValue(undefined) },
-}));
-
-jest.mock("../../services/api/razorpayApi", () => ({
-  createRazorpayOrder: jest.fn(),
-  verifyRazorpayPayment: jest.fn(),
 }));
 
 jest.mock("../../services/stockService", () => ({

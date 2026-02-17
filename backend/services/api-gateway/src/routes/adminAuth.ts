@@ -57,7 +57,7 @@ export const adminAuthRouter: Router = Router();
  * Body: { "token": "master-admin-token" }
  * Response: { "sessionToken": "jwt...", "expiresAt": 1234567890 }
  */
-adminAuthRouter.post('/login', (req: Request, res: Response): void => {
+adminAuthRouter.post('/login', async (req: Request, res: Response): Promise<void> => {
   const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
   const userAgent = req.headers['user-agent'];
 
@@ -118,8 +118,8 @@ adminAuthRouter.post('/login', (req: Request, res: Response): void => {
   // Clear rate limit on successful auth
   clearLoginAttempts(clientIp);
 
-  // Create session
-  const session = createAdminSession(clientIp, userAgent);
+  // T1-001: Create session (async — Redis-backed)
+  const session = await createAdminSession(clientIp, userAgent);
 
   console.log(`[AdminAuth] Admin login successful from IP: ${clientIp}`);
 
@@ -136,7 +136,7 @@ adminAuthRouter.post('/login', (req: Request, res: Response): void => {
  *
  * Header: Authorization: Bearer <session-token>
  */
-adminAuthRouter.post('/logout', (req: Request, res: Response): void => {
+adminAuthRouter.post('/logout', async (req: Request, res: Response): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -151,7 +151,7 @@ adminAuthRouter.post('/logout', (req: Request, res: Response): void => {
   }
 
   const token = authHeader.substring(7);
-  const revoked = revokeAdminSession(token);
+  const revoked = await revokeAdminSession(token);
 
   if (revoked) {
     console.log(`[AdminAuth] Session revoked`);
@@ -169,7 +169,7 @@ adminAuthRouter.post('/logout', (req: Request, res: Response): void => {
  * Header: Authorization: Bearer <session-token>
  * Response: { "sessionToken": "jwt...", "expiresAt": 1234567890 }
  */
-adminAuthRouter.post('/refresh', (req: Request, res: Response): void => {
+adminAuthRouter.post('/refresh', async (req: Request, res: Response): Promise<void> => {
   const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
   const userAgent = req.headers['user-agent'];
   const authHeader = req.headers.authorization;
@@ -186,7 +186,7 @@ adminAuthRouter.post('/refresh', (req: Request, res: Response): void => {
   }
 
   const token = authHeader.substring(7);
-  const newSession = refreshAdminSession(token, clientIp, userAgent);
+  const newSession = await refreshAdminSession(token, clientIp, userAgent);
 
   if (!newSession) {
     res.status(401).json({
