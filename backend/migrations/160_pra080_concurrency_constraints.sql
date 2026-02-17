@@ -1,9 +1,19 @@
 -- PRA-080: Add missing concurrency safety constraints
 -- CONC-004: Add CHECK constraint on legacy store_inventory table
 -- Prevents negative stock at database level (defense-in-depth)
+-- PRA-084: Made idempotent with DO $$ guard
 
-ALTER TABLE store_inventory
-  ADD CONSTRAINT chk_store_inventory_qty CHECK (available_qty >= 0);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'chk_store_inventory_qty'
+      AND table_name = 'store_inventory'
+  ) THEN
+    ALTER TABLE store_inventory
+      ADD CONSTRAINT chk_store_inventory_qty CHECK (available_qty >= 0);
+  END IF;
+END $$;
 
 -- CONC-002: Add unique index for stock-in idempotency (belt-and-suspenders with advisory lock)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_ledger_stockin_idempotency
