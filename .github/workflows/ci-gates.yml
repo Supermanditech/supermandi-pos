@@ -522,10 +522,14 @@ jobs:
       # Build portals
       - name: Build retailer-admin
         working-directory: retailer-admin
+        env:
+          VITE_API_BASE_URL: ""
         run: pnpm install --frozen-lockfile && pnpm run build
 
       - name: Build supermandi-superadmin
         working-directory: supermandi-superadmin
+        env:
+          VITE_API_BASE_URL: ""
         run: pnpm install --frozen-lockfile && pnpm run build
 
       # Serve static files and test
