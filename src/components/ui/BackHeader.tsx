@@ -2,6 +2,7 @@
 import React, { useEffect } from "react";
 import { BackHandler, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { theme } from "../../theme";
@@ -13,6 +14,7 @@ interface BackHeaderProps {
 
 export function BackHeader({ title, onBack }: BackHeaderProps) {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
 
   const handleBack = () => {
     if (onBack) {
@@ -35,7 +37,7 @@ export function BackHeader({ title, onBack }: BackHeaderProps) {
   }, [onBack]);
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingTop: 8 + insets.top }]}>
       <TouchableOpacity
         onPress={handleBack}
         style={styles.backButton}

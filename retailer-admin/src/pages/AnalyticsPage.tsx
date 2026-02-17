@@ -50,8 +50,8 @@ export default function AnalyticsPage() {
 
   // Payment breakdown percentages
   const paymentTotal = data ? (data.paymentBreakdown.cash + data.paymentBreakdown.upi + data.paymentBreakdown.credit) : 0;
-  const cashPct = paymentTotal > 0 ? Math.round((data!.paymentBreakdown.cash / paymentTotal) * 100) : 0;
-  const upiPct = paymentTotal > 0 ? Math.round((data!.paymentBreakdown.upi / paymentTotal) * 100) : 0;
+  const cashPct = paymentTotal > 0 && data ? Math.round((data.paymentBreakdown.cash / paymentTotal) * 100) : 0;
+  const upiPct = paymentTotal > 0 && data ? Math.round((data.paymentBreakdown.upi / paymentTotal) * 100) : 0;
   const creditPct = paymentTotal > 0 ? 100 - cashPct - upiPct : 0;
 
   return (

@@ -4,9 +4,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, BackHandler, AppState,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 import * as chatApi from '../services/api/chatApi';
 
@@ -23,6 +24,18 @@ export default function ChatConversationScreen({
   conversationId, conversationTitle, conversationType,
   currentUserId, currentUserName, onBack,
 }: Props) {
+  const insets = useSafeAreaInsets();
+
+  // UIUX-POS-004: Android hardware back button support
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
   const [messages, setMessages] = useState<chatApi.ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -30,15 +43,26 @@ export default function ChatConversationScreen({
   const [error, setError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
-  const fetchMessages = useCallback(async () => {
-    setError(null);
+  const hasMarkedRead = useRef(false);
+  const appStateRef = useRef(AppState.currentState);
+
+  const fetchMessages = useCallback(async (isPolling = false) => {
+    if (!isPolling) setError(null);
     try {
       const result = await chatApi.getMessages(conversationId);
-      setMessages(result.messages || []);
-      // Mark as read
-      chatApi.markAsRead(conversationId).catch(() => {});
+      const newMessages = result.messages || [];
+      // Only update state if message list actually changed (prevents scroll jump)
+      setMessages(prev => {
+        if (prev.length === newMessages.length && prev[0]?.id === newMessages[0]?.id) return prev;
+        return newMessages;
+      });
+      // Mark as read only once on mount, not every poll
+      if (!hasMarkedRead.current) {
+        hasMarkedRead.current = true;
+        chatApi.markAsRead(conversationId).catch(() => {});
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load messages');
+      if (!isPolling) setError(err instanceof Error ? err.message : 'Failed to load messages');
     } finally {
       setLoading(false);
     }
@@ -46,9 +70,17 @@ export default function ChatConversationScreen({
 
   useEffect(() => {
     fetchMessages();
-    // Poll for new messages every 5 seconds (Socket.io will replace this)
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
+    // UIUX-POS-026: Poll every 15s (was 5s), pause when app backgrounded
+    const interval = setInterval(() => {
+      if (appStateRef.current === 'active') fetchMessages(true);
+    }, 15000);
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      appStateRef.current = state;
+    });
+    return () => {
+      clearInterval(interval);
+      appStateSub.remove();
+    };
   }, [fetchMessages]);
 
   const handleSend = useCallback(async () => {
@@ -144,7 +176,7 @@ export default function ChatConversationScreen({
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable onPress={onBack} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>

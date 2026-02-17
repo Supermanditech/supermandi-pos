@@ -2,7 +2,10 @@
 import React, { useState, useRef } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -60,7 +63,14 @@ export default function StaffLoginScreen({ storeName }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
       <View style={styles.card}>
         <View style={styles.iconWrap}>
           <MaterialCommunityIcons name="account-lock" size={48} color={theme.colors.primary} />
@@ -113,7 +123,8 @@ export default function StaffLoginScreen({ storeName }: Props) {
           </Text>
         </Pressable>
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -121,6 +132,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
   },

@@ -16,6 +16,7 @@ import {
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
 
 import { useCartStore } from "../stores/cartStore";
@@ -132,6 +133,7 @@ const computeSaleTotals = (items: CartItem[], cartDiscount: CartDiscount | null)
 const PaymentScreen = () => {
   const navigation = useNavigation<PaymentScreenNavigationProp>();
   const route = useRoute<PaymentScreenRouteProp>();
+  const insets = useSafeAreaInsets();
   const { items, lockCart, unlockCart, locked, discount, removeItem } = useCartStore();
   const [selectedMode, setSelectedMode] = useState<PaymentMode>("UPI");
   const [saleId, setSaleId] = useState<string | null>(null);
@@ -899,7 +901,7 @@ const PaymentScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 16 + insets.top }]}>
         <View>
           <Text style={styles.headerTitle}>Payment</Text>
           {billRef && <Text style={styles.billRef}>Bill #{billRef}</Text>}

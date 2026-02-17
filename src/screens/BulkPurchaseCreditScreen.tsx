@@ -2,8 +2,9 @@
 // Browse available credit offers and apply for bulk purchase financing
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Alert as RNAlert } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Alert as RNAlert, BackHandler, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme } from '../theme';
 // UIUX-POS-009: Use apiClient instead of raw fetch (handles auth refresh, rate limiting, error handling)
 import { apiClient } from '../services/api/apiClient';
@@ -26,6 +27,18 @@ interface Props {
 // UIUX-POS-009: Replaced raw fetch with apiClient (auth refresh, rate limiting, error handling)
 
 export default function BulkPurchaseCreditScreen({ onBack }: Props) {
+  const insets = useSafeAreaInsets();
+
+  // UIUX-POS-004: Android hardware back button support
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
   const [offers, setOffers] = useState<CreditOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -115,7 +128,7 @@ export default function BulkPurchaseCreditScreen({ onBack }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
         <Pressable onPress={onBack} style={styles.backBtn}>
           <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.textPrimary} />
         </Pressable>

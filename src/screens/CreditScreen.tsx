@@ -5,6 +5,8 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -46,6 +48,16 @@ type TabId = "offers" | "loans" | "history";
 export function CreditScreen({ onBack }: CreditScreenProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  // UIUX-POS-004: Android hardware back button support
+  useEffect(() => {
+    if (Platform.OS !== "android" || !onBack) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabId>("offers");

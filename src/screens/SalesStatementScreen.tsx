@@ -10,6 +10,8 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  BackHandler,
+  Platform,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -119,6 +121,17 @@ function SalesDayCard({ day }: { day: DailySales }) {
 
 export default function SalesStatementScreen({ onBack, onNavigateToSell }: SalesStatementScreenProps) {
   const insets = useSafeAreaInsets();
+
+  // UIUX-POS-004: Android hardware back button support
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      onBack();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onBack]);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dailySales, setDailySales] = useState<DailySales[]>([]);
