@@ -93,22 +93,23 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
   const [closingCash, setClosingCash] = useState("");
   const [endNotes, setEndNotes] = useState("");
 
+  // UIUX-POS-003: All deps that are read inside the callback must be listed
   useEffect(() => {
     void fetchCurrentShift();
-  }, []);
+  }, [fetchCurrentShift]);
 
   useEffect(() => {
     if (activeTab === "HISTORY") {
       void fetchHistory();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchHistory]);
 
   useEffect(() => {
     if (error) {
       Alert.alert("Error", error);
       clearError();
     }
-  }, [error]);
+  }, [error, clearError]);
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);

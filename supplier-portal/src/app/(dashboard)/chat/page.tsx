@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Send, ArrowLeft, Search, Headphones } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
+// UIUX-SUP-006: Use centralized apiFetch (auth via HttpOnly cookies, 401 redirect, 30s timeout)
+import { apiFetch as globalApiFetch } from '@/lib/api';
 
 interface Conversation {
   id: string;
@@ -35,14 +37,9 @@ interface ChatMessage {
   createdAt: string;
 }
 
-async function apiFetch(url: string, options?: RequestInit) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('supplier_token') || '' : '';
-  const res = await fetch(url, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...options?.headers },
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+// UIUX-SUP-006: Thin wrapper adapting globalApiFetch to the JSON-in/JSON-out shape used by react-query below
+async function chatApiFetch(url: string, options?: RequestInit): Promise<unknown> {
+  return globalApiFetch(url, options);
 }
 
 function formatTime(iso: string | null): string {
@@ -66,7 +63,7 @@ export default function SupplierChatPage() {
   // Fetch conversations
   const { data: convData, isLoading: convLoading } = useQuery({
     queryKey: ['supplier-conversations'],
-    queryFn: () => apiFetch('/api/v1/chat/conversations?limit=100'),
+    queryFn: () => chatApiFetch('/api/v1/chat/conversations?limit=100'),
     refetchInterval: 10000,
   });
 
@@ -76,7 +73,7 @@ export default function SupplierChatPage() {
   // Fetch messages for selected conversation
   const { data: msgData, isLoading: msgLoading } = useQuery({
     queryKey: ['supplier-messages', selectedConvId],
-    queryFn: () => selectedConvId ? apiFetch(`/api/v1/chat/conversations/${selectedConvId}/messages?limit=100`) : null,
+    queryFn: () => selectedConvId ? chatApiFetch(`/api/v1/chat/conversations/${selectedConvId}/messages?limit=100`) : null,
     enabled: !!selectedConvId,
     refetchInterval: 5000,
   });
@@ -86,7 +83,7 @@ export default function SupplierChatPage() {
   // Mark as read when selecting conversation
   useEffect(() => {
     if (selectedConvId) {
-      apiFetch(`/api/v1/chat/conversations/${selectedConvId}/read`, { method: 'PATCH' }).catch(() => {});
+      chatApiFetch(`/api/v1/chat/conversations/${selectedConvId}/read`, { method: 'PATCH' }).catch(() => {});
     }
   }, [selectedConvId]);
 
@@ -98,7 +95,7 @@ export default function SupplierChatPage() {
   // Send message
   const sendMutation = useMutation({
     mutationFn: async (text: string) => {
-      return apiFetch(`/api/v1/chat/conversations/${selectedConvId}/messages`, {
+      return chatApiFetch(`/api/v1/chat/conversations/${selectedConvId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content: text, messageType: 'text' }),
       });

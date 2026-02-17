@@ -3,11 +3,13 @@
 /**
  * Phase 8: Supplier Portal Notifications Page
  * In-app notification center for suppliers
+ * UIUX-SUP-005: Replaced deprecated localStorage supplier_token with apiFetch
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, CheckCheck, RefreshCw, Truck, Package, AlertTriangle } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumb';
+import { apiFetch } from '@/lib/api';
 
 interface Notification {
   id: string;
@@ -19,32 +21,25 @@ interface Notification {
   createdAt: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
   const limit = 20;
 
   const fetchNotifications = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('supplier_token') : null;
-      if (!token) return;
-
-      const res = await fetch(`${API_BASE}/api/v1/supplier/notifications?limit=${limit}&offset=${offset}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.data || []);
-        setTotal(data.pagination?.total || 0);
-      }
+      const data = await apiFetch<{ data: Notification[]; pagination?: { total: number } }>(
+        `/api/v1/supplier/notifications?limit=${limit}&offset=${offset}`
+      );
+      setNotifications(data.data || []);
+      setTotal(data.pagination?.total || 0);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch notifications');
     } finally {
       setLoading(false);
     }
@@ -53,27 +48,21 @@ export default function NotificationsPage() {
   useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
   const markAsRead = async (id: string) => {
-    const token = localStorage.getItem('supplier_token');
-    if (!token) return;
     try {
-      await fetch(`${API_BASE}/api/v1/supplier/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiFetch(`/api/v1/supplier/notifications/${id}/read`, { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
-    } catch { /* ignore */ }
+    } catch {
+      // Silently handle — notification still appears read in UI
+    }
   };
 
   const markAllAsRead = async () => {
-    const token = localStorage.getItem('supplier_token');
-    if (!token) return;
     try {
-      await fetch(`${API_BASE}/api/v1/supplier/notifications/read-all`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiFetch('/api/v1/supplier/notifications/read-all', { method: 'PUT' });
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch { /* ignore */ }
+    } catch {
+      // Silently handle
+    }
   };
 
   const getIcon = (type: string) => {
@@ -118,6 +107,17 @@ export default function NotificationsPage() {
 
       {loading ? (
         <div className="text-center py-12 text-gray-400">Loading notifications...</div>
+      ) : error ? (
+        <div className="text-center py-12">
+          <AlertTriangle size={48} className="text-red-300 mx-auto mb-4" />
+          <p className="text-red-600 mb-2">{error}</p>
+          <button
+            onClick={fetchNotifications}
+            className="text-sm px-3 py-1.5 border border-slate-200 rounded hover:bg-slate-50"
+          >
+            Retry
+          </button>
+        </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-12">
           <Bell size={48} className="text-gray-300 mx-auto mb-4" />
