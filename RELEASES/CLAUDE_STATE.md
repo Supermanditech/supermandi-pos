@@ -1553,6 +1553,443 @@ When Claude changes ANY of these files, Claude MUST:
 
 ---
 
+# PART 18: MEGA-BATCH DEPLOYMENT DISCIPLINE (437-Ticket Deploy Protocol)
+
+> **Context:** 437 tickets (176 commits, 67 PRs, 18 new migrations, +119K lines) need to deploy from main HEAD to GCP staging. This is a MEGA-BATCH — the largest single deploy in project history. These rules ensure ZERO regression, ZERO data loss, and ONE-CLICK operator deployment.
+
+## 18.1 The 5-Phase Deploy Pipeline
+
+```
+Phase A: PRE-DEPLOY AUDIT (Claude validates, Operator reviews)
+   ↓
+Phase B: DATABASE MIGRATION (Irreversible — backup required)
+   ↓
+Phase C: SERVICE DEPLOYMENT (Reversible — Cloud Run revisions)
+   ↓
+Phase D: POST-DEPLOY VERIFICATION (Automated + Operator)
+   ↓
+Phase E: SIGN-OFF or ROLLBACK (Operator decision)
+```
+
+**The operator triggers ONE action (CI workflow dispatch). Everything else is automated with gates.**
+
+---
+
+## 18.2 Phase A: Pre-Deploy Audit (20 Gates)
+
+### A.1 Code Integrity Gates (Claude runs BEFORE pushing deploy tag)
+
+| Gate | Command/Check | PASS Criteria | Blocking? |
+|------|--------------|---------------|-----------|
+| A-001 | `git status` | Clean working tree, on main | YES |
+| A-002 | `git log --oneline -5` | HEAD matches expected SHA | YES |
+| A-003 | `pnpm -r typecheck` | Zero errors across all packages | YES |
+| A-004 | `pnpm -r build` | All 6 services build successfully | YES |
+| A-005 | `pnpm test` | All unit/integration tests pass | YES |
+| A-006 | CI-GATES workflow | All 30+ CI gates green on HEAD | YES |
+
+### A.2 Secret Freshness Gates (CI deploy.yml ZRP-D-003 validates)
+
+| Gate | Secret | Where Used | Blocking? |
+|------|--------|-----------|-----------|
+| A-007 | `database-url` | Backend DB connection | YES |
+| A-008 | `postgres-password` | Backend DB auth | YES |
+| A-009 | `jwt-secret` | Auth token signing | YES |
+| A-010 | `admin-token` | Internal service auth | YES |
+| A-011 | `smtp-password` | Email sending | YES |
+| A-012 | `WHATSAPP_ACCESS_TOKEN` | WhatsApp Cloud API | YES |
+| A-013 | `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp sender ID | YES |
+| A-014 | `WHATSAPP_VERIFY_TOKEN` | Webhook verification | YES |
+| A-015 | `WHATSAPP_APP_SECRET` | Webhook HMAC validation | YES |
+
+**All 9 secrets must have enabled versions in GCP Secret Manager.**
+
+### A.3 Infrastructure Readiness Gates (CI deploy.yml validates)
+
+| Gate | Check | PASS Criteria | Blocking? |
+|------|-------|---------------|-----------|
+| A-016 | Cloud SQL instance | Status = RUNNABLE | YES |
+| A-017 | VPC Connector | Status = READY | YES |
+| A-018 | Artifact Registry | Accessible + writable | YES |
+| A-019 | Cloud SQL backup | Backup created successfully | YES (first deploy) |
+| A-020 | Redis connectivity | Memorystore reachable | WARNING |
+
+---
+
+## 18.3 Phase B: Database Migration (18 New Migrations)
+
+### B.1 Migration Inventory
+
+```
+NEW MIGRATIONS SINCE LAST DEPLOY (141 → 159):
+
+141 — Batch/lot expiry tracking (T-144)
+142 — Purchase cart drafts (T-145)
+143 — Refunds table + approval workflow (T-150)
+144 — Stock version for optimistic concurrency (T-177)
+145 — Daily closings / EOD reconciliation (T-191)
+146 — Staff shifts + bundled Phase 5A columns (T-192)
+147 — GIN trigram indexes for fuzzy search (T-132)
+148 — Store bank account fields (T-202)
+149 — Row-Level Security on 27 tables (T-216) ← CRITICAL
+150 — Reorder schema unification (T-236, T-237)
+151 — Pending reorder fulfilled status (T-250)
+152 — Notifications + payment reminders + GST (T-219, T-231, T-232, T-235)
+153 — Payout retry queue (T-258)
+154 — Credit provider abstraction layer (T-263, T-275, T-276, T-278)
+155 — Chat schema (T-291, T-301, T-302)
+156 — AI automation schema (T-303–T-316)
+157 — Refresh token hash index (FIX-011)
+159 — WhatsApp message log (WA-001)
+```
+
+### B.2 Migration Safety Protocol
+
+```
+STEP 1: Cloud SQL backup BEFORE any migration
+   → gcloud sql backups create --instance=supermandi-staging
+   → WAIT for backup to complete (do NOT proceed while running)
+
+STEP 2: Dry-run preview
+   → List all pending migrations
+   → Review for DROP/RENAME/ALTER TYPE (FORBIDDEN in mega-batch)
+   → Verify all are additive (CREATE TABLE, ADD COLUMN, CREATE INDEX)
+
+STEP 3: Execute migrations in order (141 → 159)
+   → Run sequentially (NOT in parallel)
+   → Verify each migration exits cleanly (no errors)
+   → Migration 149 (RLS) is the most critical — verify all 27 tables get policies
+
+STEP 4: Post-migration verification
+   → Verify new schemas exist: whatsapp, notifications, chat, ai
+   → Verify RLS policies active on 27 tables
+   → Verify new indexes exist (trigram, token_hash, wamid)
+   → Verify new tables: refunds, daily_closings, staff_shifts, etc.
+```
+
+### B.3 Migration Rollback Plan
+
+```
+IF migration fails mid-way:
+  → Note which migration failed and at what step
+  → DO NOT continue with remaining migrations
+  → DO NOT deploy new containers
+  → Restore Cloud SQL backup from Step 1
+  → Fix the failing migration → new commit → re-run from Phase A
+
+IF migration succeeds but data is wrong:
+  → Restore Cloud SQL backup
+  → Containers revert to old revisions (Phase E rollback)
+```
+
+---
+
+## 18.4 Phase C: Service Deployment (6 Services, Dependency Order)
+
+### C.1 Deployment Order (STRICT — No Parallel for First Deploy)
+
+```
+TIER 1 (Database-dependent — deploy first):
+  ① main-backend        ← All 10 microservices, connects to DB + Redis
+     → Health check: GET /health → 200
+     → Version check: GET /version → { sha: "<deployed-SHA>" }
+
+TIER 2 (Routes to backend — deploy second):
+  ② api-gateway         ← Proxies all API traffic to main-backend
+     → Health check: GET /api/v1/health → 200
+     → Routing check: All POS/auth/admin prefixes proxy correctly
+
+TIER 3 (Static frontends — deploy in parallel):
+  ③ retailer-admin      ← Vite SPA, serves /retailer/*
+  ④ supplier-portal     ← Next.js, serves /supplier/*
+  ⑤ superadmin          ← Vite SPA, serves /admin/*
+  ⑥ landing             ← Static HTML, serves /
+
+Each portal health check: GET /<base-path>/ → 200
+```
+
+### C.2 Per-Service Deploy Verification
+
+For EACH service deployed, CI MUST verify:
+
+| Check | Method | PASS Criteria |
+|-------|--------|---------------|
+| Revision created | `gcloud run revisions list` | New revision appears |
+| Traffic routed | `gcloud run services describe` | 100% traffic to new revision |
+| Health check | `curl /health` or `curl /<base>/` | HTTP 200 |
+| GIT_SHA match | `curl /version` | SHA matches deployed commit |
+| Startup logs clean | Cloud Run logs | No ERROR/FATAL in first 30s |
+
+### C.3 Image Integrity
+
+```
+RULE: All 6 images MUST be built from the SAME git SHA
+RULE: Image digests are recorded by CI at build time
+RULE: Post-deploy parity check verifies deployed digest = built digest
+RULE: NEVER deploy :latest — always @sha256:<digest> or :<git-sha>
+```
+
+---
+
+## 18.5 Phase D: Post-Deploy Verification (44 Automated Gates)
+
+### D.1 Smoke Tests (11 gates — deploy.yml)
+
+| Gate | Test | Expected |
+|------|------|----------|
+| D-001 | api-gateway /health | 200 + JSON body |
+| D-002 | main-backend /health | 200 + JSON body |
+| D-003 | api-gateway /version SHA | Matches deployed SHA |
+| D-004 | main-backend /version SHA | Matches deployed SHA |
+| D-005 | retailer-admin / | 200 |
+| D-006 | supplier-portal / | 200 |
+| D-007 | superadmin / | 200 |
+| D-008 | landing / | 200 |
+| D-009 | Auth guard (unauthenticated) | 401 or 403 |
+| D-010 | Gateway→Backend proxy | API responds through gateway |
+| D-011 | Health latency | < 2 seconds |
+
+### D.2 Routing Verification (17 gates — routing-infra-validate.sh + routing-smoke.sh)
+
+| Gate | Test | Expected |
+|------|------|----------|
+| D-012 | URL map path rules | Match ROUTING_SPEC.json |
+| D-013 | NEG backend mappings | 6 NEGs → 6 Cloud Run services |
+| D-014 | /retailer/* routes | retailer-admin serves |
+| D-015 | /supplier/* routes | supplier-portal serves |
+| D-016 | /admin/* routes | superadmin serves |
+| D-017 | /api/* routes | api-gateway serves |
+| D-018 | / (default) routes | landing serves |
+| D-019 | POS API prefixes | /api/v1/pos/*, /api/v1/auth/* reachable |
+| D-020 | CORS headers | Correct origins, no wildcard |
+| D-021 | Security headers | X-Content-Type-Options, etc. |
+| D-022–D-028 | Per-portal smoke | Each portal returns valid HTML |
+
+### D.3 Deploy-Verify Pipeline (deploy-verify.yml — Triggered After Deploy)
+
+| Gate | Test | Blocking? |
+|------|------|-----------|
+| D-029 | API verification script | YES |
+| D-030 | Playwright E2E (chromium, @prod) | YES |
+| D-031 | Token refresh lifecycle | YES |
+| D-032 | ZRP gatekeeper aggregation | YES |
+
+### D.4 New Feature Verification (Mega-Batch Specific)
+
+| Feature | Verification | Blocking? |
+|---------|-------------|-----------|
+| WhatsApp status | GET /api/v1/admin/whatsapp/status → configured:true | YES |
+| WhatsApp webhook | GET /webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=... | YES |
+| Chat schema | SELECT count(*) FROM chat.conversations (table exists) | YES |
+| RLS active | SELECT polname FROM pg_policies LIMIT 5 (policies exist) | YES |
+| Notifications schema | SELECT count(*) FROM notifications.devices (table exists) | YES |
+| Refunds table | SELECT count(*) FROM refunds (table exists) | YES |
+| Reorder unified | SELECT count(*) FROM purchase_orders (table exists + new columns) | YES |
+| AI schema | SELECT count(*) FROM ai.demand_forecasts (table exists) | YES |
+
+---
+
+## 18.6 Phase E: Sign-Off or Rollback
+
+### E.1 Operator Sign-Off Checklist
+
+After ALL automated gates pass, operator MUST verify:
+
+```
+[ ] All 6 portals load in browser (visual check)
+    → https://staging.supermandi.tech/              (landing)
+    → https://staging.supermandi.tech/retailer/      (retailer-admin)
+    → https://staging.supermandi.tech/supplier/       (supplier-portal)
+    → https://staging.supermandi.tech/admin/          (superadmin)
+
+[ ] Login works on each portal
+    → Retailer: login with test credentials
+    → Supplier: login with test credentials
+    → SuperAdmin: login with admin credentials
+
+[ ] Critical flows work
+    → Retailer: view products, view orders, view invoices
+    → Supplier: view orders, update status
+    → SuperAdmin: view stores, view suppliers, WhatsApp tab loads
+
+[ ] POS API responds
+    → curl /api/v1/health → 200
+    → curl /api/v1/pos/products (with auth) → data
+
+[ ] No console errors in browser DevTools (each portal)
+```
+
+### E.2 Rollback Protocol (If Anything Fails)
+
+```
+LEVEL 1 — Service Rollback (Instant, seconds):
+   For each broken service:
+   gcloud run services update-traffic <service> \
+     --to-revisions=<pre-deploy-revision>=100 \
+     --region=asia-south1
+
+   CI records pre-deploy revisions automatically.
+   Rollback = restore traffic to previous revision.
+   All 6 services can be rolled back independently.
+
+LEVEL 2 — Full Rollback (All services):
+   Roll back ALL 6 services to pre-deploy revisions.
+   Order: portals first, then gateway, then backend.
+   ⑥ landing → ⑤ superadmin → ④ supplier-portal →
+   ③ retailer-admin → ② api-gateway → ① main-backend
+
+LEVEL 3 — Database Rollback (Nuclear — data loss risk):
+   Restore Cloud SQL backup from Phase B Step 1.
+   THEN roll back all containers (Level 2).
+   WARNING: Any data written after migration is LOST.
+   Use ONLY if migration caused data corruption.
+```
+
+### E.3 Post-Rollback Verification
+
+```
+After any rollback:
+  1. Verify all 6 services healthy (health checks pass)
+  2. Verify old revisions serving traffic
+  3. Verify no 503/502 errors in Cloud Run logs
+  4. Verify uptime-probe.yml shows GREEN within 5 minutes
+  5. Create incident ticket with root cause
+```
+
+---
+
+## 18.7 Env Var & Secret Reference (Complete for Mega-Batch)
+
+### Secrets in GCP Secret Manager (9 required, CI-enforced):
+
+| Secret Name | Purpose | Added By |
+|-------------|---------|----------|
+| `database-url` | PostgreSQL connection string | Original deploy |
+| `postgres-password` | DB password | Original deploy |
+| `jwt-secret` | JWT signing key | Original deploy |
+| `admin-token` | Internal service auth | Original deploy |
+| `smtp-password` | Email sending (SMTP) | Original deploy |
+| `WHATSAPP_ACCESS_TOKEN` | Meta Graph API token | WA-001 |
+| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp sender phone ID | WA-001 |
+| `WHATSAPP_VERIFY_TOKEN` | Webhook verify token | WA-001 |
+| `WHATSAPP_APP_SECRET` | Webhook HMAC secret | WA-001 |
+
+### Env Vars Set in deploy.yml (32 vars on main-backend):
+
+```
+NODE_ENV, GIT_SHA, MIN_APP_VERSION,
+DB_HOST, DB_PORT, DB_NAME, DB_USER,
+REDIS_HOST, REDIS_PORT, REDIS_URL,
+FIREBASE_ENABLED, FIREBASE_PROJECT_ID, SMS_DISABLED,
+RATE_LIMIT_MULTIPLIER, EMAIL_PROVIDER, SMTP_HOST, SMTP_PORT,
+SMTP_USER, EMAIL_FROM, PORTAL_BASE_URL, POS_APP_DOWNLOAD_URL,
+ADMIN_EMAIL_ALLOWLIST, ALLOWED_ORIGINS, CORS_ALLOWED_ORIGINS,
+DOCUMENT_STORAGE_DIR, GCS_DOCUMENTS_BUCKET, GCS_IMAGES_BUCKET,
+GCP_PROJECT_ID, FEATURE_REORDER_ENABLED,
+SUPERMANDI_ENTITY_NAME, SUPERMANDI_GSTIN, SUPERMANDI_ADDRESS,
+SUPERMANDI_STATE, FRONTEND_URL
+```
+
+### Env Vars NOT Yet in deploy.yml (Awaiting External APIs):
+
+| Var | Feature | Status |
+|-----|---------|--------|
+| `RAZORPAY_KEY_ID` | UPI payments | AWAITING_RAZORPAY_API |
+| `RAZORPAY_KEY_SECRET` | UPI payments | AWAITING_RAZORPAY_API |
+| `RAZORPAY_ACCOUNT_NUMBER` | Supplier payouts | AWAITING_RAZORPAY_API |
+| `RAZORPAY_WEBHOOK_SECRET` | Payment callbacks | AWAITING_RAZORPAY_API |
+| `OPENAI_API_KEY` | AI automation | Optional (graceful degradation) |
+
+**These features have graceful degradation — they work without the vars (disabled state).**
+
+---
+
+## 18.8 One-Click Operator Deployment
+
+### What Operator Does:
+
+```
+1. VERIFY: Claude confirms all Phase A gates pass (typecheck, build, tests, CI)
+2. VERIFY: Claude confirms all 9 secrets exist in GCP Secret Manager
+3. TRIGGER: Operator runs deploy.yml workflow (manual dispatch or push to main)
+4. WAIT: CI runs Phase B (migrations), Phase C (deploy), Phase D (verification)
+5. REVIEW: Operator checks Phase E sign-off checklist in browser
+6. DONE: If all green → staging is live with 437 tickets
+```
+
+### What Is Automated (Operator Does NOT Do):
+
+```
+- Building Docker images (CI does it)
+- Pushing to Artifact Registry (CI does it)
+- Running migrations (CI does it via deploy.yml)
+- Deploying to Cloud Run (CI does it)
+- Running 44 smoke/routing/verification gates (CI does it)
+- Recording pre-deploy revisions for rollback (CI does it)
+- Auto-rollback on smoke failure (CI does it)
+```
+
+### What Claude Does Before Operator Triggers:
+
+```
+1. Run pnpm -r typecheck → report result
+2. Run pnpm -r build → report result (builds are CI-only, this is verification)
+3. Run pnpm test → report result
+4. Verify CI-GATES green on HEAD
+5. List all 9 secrets and their status in GCP
+6. List all 18 new migrations
+7. Provide operator with Phase E sign-off checklist
+8. Announce: "DEPLOY-READY: All Phase A gates PASS. Operator may trigger deploy."
+```
+
+---
+
+## 18.9 Forbidden Deploy Actions (Absolute)
+
+| Action | FORBIDDEN Because |
+|--------|------------------|
+| Deploy without Cloud SQL backup | Migration is irreversible without backup |
+| Deploy from branch (not main) | deploy.yml builds from main only |
+| Skip secret freshness check | Services crash on missing secrets |
+| Deploy services out of order | Backend must be ready before gateway |
+| Hot-patch staging (gcloud CLI deploy) | Bypasses all CI gates |
+| Delete old Cloud Run revisions before sign-off | Destroys rollback safety net |
+| Run migrations manually via psql | Bypasses CI tracking + logging |
+| Deploy with pending uncommitted changes | Code drift between local and CI |
+| Re-trigger deploy while previous is running | Race condition on revisions |
+| Ignore smoke test failures | "It's probably fine" violates Law 6 |
+
+---
+
+## 18.10 Post-Deploy Monitoring
+
+### Uptime Probe (Automatic — Every 5 Minutes)
+
+```
+uptime-probe.yml runs automatically after deploy:
+  - Gateway health (/api/v1/health)
+  - Retailer portal (/retailer/)
+  - Admin portal (/admin/)
+  - Supplier portal (/supplier/)
+  - Version fingerprints
+  - Health latency < 5s
+
+On failure → GitHub issue created automatically (label: uptime-alert)
+On recovery → Issue auto-closed
+```
+
+### First 24 Hours After Mega-Deploy
+
+```
+HOUR 0-1:   Operator monitors all portals (browser)
+HOUR 1-4:   Uptime probes running (automated)
+HOUR 4-24:  Background monitoring only
+DAY 2:      Weekly ZRP-SCHEDULED.yml runs (chaos + business logic tests)
+DAY 3+:     Normal monitoring cadence
+```
+
+---
+
 **END OF CLAUDE STATE OPERATING SYSTEM**
 
 *This file is the single source of truth. All other rule files are historical reference only.*

@@ -1,7 +1,7 @@
 {
-  "version": "29.0",
-  "lastUpdated": "2026-02-18T00:45:00+05:30",
-  "currentPhase": "Phase 12 COMPLETE (20/20) — ALL TQ tickets done. Next: FIX-001 deploy to GCP staging",
+  "version": "30.0",
+  "lastUpdated": "2026-02-18T01:30:00+05:30",
+  "currentPhase": "DEPLOY-READY — Part 18 deployment discipline written. 437 tickets awaiting GCP staging deploy.",
   "currentTicket": null,
   "ticketQueue": [
     "FIX-001"
@@ -310,12 +310,48 @@
   },
   "infraStatus": {
     "A1_WIF": "DONE",
-    "A2_SECRETS": "DONE (10 additional secrets needed for Phase 9 features + 3 WhatsApp secrets added)",
-    "A3_DEPLOY": "STALE — GCP staging at pre-ticket SHA f61a3b2. All work needs first deploy.",
+    "A2_SECRETS": "DONE — 9 secrets in GCP Secret Manager (5 original + 4 WhatsApp)",
+    "A3_DEPLOY": "DEPLOY-READY — Part 18 discipline written. Awaiting operator trigger.",
     "Cloud_SQL": "HARDENED",
     "Redis": "HARDENED",
     "ZRP_Protocol": "ENFORCED — 185 gates active",
     "Routing_Spec": "ENFORCED — ROUTING_SPEC.json is source of truth"
+  },
+  "deployGateStatus": {
+    "phaseA_preDeployAudit": {
+      "A001_cleanGit": "PASS — main branch, up to date with origin",
+      "A002_headSHA": "PASS — HEAD is 575a2d3 (WA-003 hardening)",
+      "A003_typecheck": "PASS — all 4 packages zero errors (backend, retailer, supplier, superadmin)",
+      "A004_build": "PENDING — CI does actual Docker builds",
+      "A005_tests": "PENDING — CI runs full test suite",
+      "A006_ciGates": "PENDING — CI-GATES workflow on deploy commit",
+      "A007_A015_secrets": "PASS — all 9 secrets verified in GCP Secret Manager",
+      "A016_cloudSQL": "PASS — supermandi-staging state=RUNNABLE",
+      "A017_vpcConnector": "PASS — supermandi-connector state=READY",
+      "A018_artifactRegistry": "PENDING — verified at deploy time",
+      "A019_cloudSQLBackup": "PENDING — create before migration",
+      "A020_redis": "PASS — Memorystore 10.107.71.27:6379 configured"
+    },
+    "phaseB_migrations": {
+      "status": "PENDING — 18 new migrations (141→159)",
+      "migrationCount": 18,
+      "criticalMigration": "149_row_level_security (RLS on 27 tables)",
+      "backupRequired": true
+    },
+    "phaseC_serviceDeployment": {
+      "status": "PENDING — 6 services in dependency order",
+      "order": ["main-backend", "api-gateway", "retailer-admin", "supplier-portal", "superadmin", "landing"]
+    },
+    "phaseD_verification": {
+      "status": "PENDING — 44 automated gates",
+      "smokeTests": 11,
+      "routingGates": 17,
+      "deployVerify": 4,
+      "featureVerify": 8
+    },
+    "phaseE_signoff": {
+      "status": "PENDING — operator browser verification"
+    }
   },
   "goLiveAudit": {
     "status": "COMPLETE",
@@ -335,12 +371,12 @@
   },
   "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
   "gitDiscipline": "ON — one ticket = one branch = one PR = one tag",
-  "nextAction": "FIX-001: Deploy main HEAD to GCP staging — ALL code complete, only deploy remains",
+  "nextAction": "FIX-001: Run Phase A gates (typecheck, build, tests) → Operator triggers deploy.yml",
   "lastActions": [
+    "Part 18 WRITTEN: Mega-Batch Deployment Discipline — 5 phases, 64+ gates, rollback protocol",
+    "Deploy gate checklist added to state file (phaseA→phaseE with per-gate status)",
     "Phase 12 COMPLETE: All 20 TQ tickets resolved — 17 code fixes (14 PRs #250→#263), 3 false positives",
-    "TQ PRs merged: TQ-001(#250), TQ-002(#251), TQ-003(#252), TQ-004(#253), TQ-005(#254), TQ-006(#255), TQ-007/008/009(#256), TQ-012/015(#257), TQ-013(#258), TQ-014(#259), TQ-017(#260), TQ-018(#261), TQ-019(#262), TQ-020(#263)",
-    "Phase 11 COMPLETE: 67 FIX tickets — 52 code fixes, 14 false positives, FIX-001 deploy pending",
-    "WA-001 MERGED: WhatsApp Business Cloud API — PR #243",
-    "ALL PHASES 1-12 CODE-COMPLETE: Only FIX-001 (GCP staging deploy) remains"
+    "ALL PHASES 1-12 CODE-COMPLETE: 437 tickets done, 18 new migrations, 67 PRs merged",
+    "DEPLOY-READY: Only FIX-001 (GCP staging deploy) remains — operator triggers when ready"
   ]
 }
