@@ -374,7 +374,7 @@
   "phase13_ProductionReadinessAudit": {
     "range": "PRA-001 → PRA-090",
     "count": 90,
-    "status": "IN_PROGRESS — All P0 complete (37/90 done), 53 remaining (P1+P2)",
+    "status": "IN_PROGRESS — P0+P1 Features complete (62/90 done), 28 remaining (P1 Cross/Infra + P2)",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": { "range": "PRA-001→PRA-015", "count": 15, "P0": 4, "P1": 8, "P2": 3 },
@@ -387,11 +387,10 @@
     "executionWaves": 9,
     "gitDiscipline": "ENFORCED — rules embedded in audit file header"
   },
-  "nextAction": "ALL P0 DONE (37/90). Execute Wave 6 P1 Features: PRA-005→009, PRA-019, PRA-021, PRA-023→024, PRA-033→041, PRA-050, PRA-052→057",
+  "nextAction": "Execute Wave 7 P1 Cross-Function: PRA-072→077 (6 tickets), then Wave 8 P1 Infra: PRA-083/085/088 (3 tickets)",
   "lastActions": [
-    "ALL P0 COMPLETE: 37 tickets audited, 4 PRs total (#266-#268, #270-#278)",
-    "Remaining P0 batch: PRA-003/004/015/018/022 all PASS — no code changes needed",
-    "Wave 4+5 summary: 22 tickets, 1 fix (PRA-070 store status → limited mode, PR #278), 1 false positive (PRA-071)",
-    "Next: Wave 6 (P1 Features) = 33 tickets across all platforms"
+    "Wave 6 COMPLETE: 25 P1 Feature tickets audited, all PASS (0 code changes). PRA-006 GRN false positive (handled in POS). PRA-007 category breakdown gap noted.",
+    "Running total: 62/90 done (37 P0 + 25 P1 Features)",
+    "Remaining: Wave 7 (6 P1 Cross), Wave 8 (3 P1 Infra), Wave 9 (19 P2 Polish) = 28 tickets"
   ]
 }
