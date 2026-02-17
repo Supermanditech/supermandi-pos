@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { InvoiceListItem, InvoiceDetail, InvoiceListFilters, InvoiceModel, InvoiceType, InvoiceStatus } from "../api/invoices";
 import { listInvoices, getInvoice, issueInvoice, cancelInvoice, downloadInvoicePdf } from "../api/invoices";
 import { formatDateTime } from "../lib/formatters";
+// UIUX-SA-008: Styled confirmation dialog instead of bare confirm()
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 function formatMinor(minor: number): string {
   return "\u20B9" + (minor / 100).toFixed(2);
@@ -30,6 +32,8 @@ export function InvoicesTab() {
   // Detail modal
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  // UIUX-SA-008: Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -80,18 +84,26 @@ export function InvoicesTab() {
     }
   };
 
-  const handleCancel = async (id: string) => {
-    if (!confirm("Cancel this invoice?")) return;
-    setActionLoading(true);
-    try {
-      await cancelInvoice(id);
-      await refresh();
-      if (detail?.id === id) setDetail(null);
-    } catch (err: any) {
-      setError(err.message || "Failed to cancel invoice");
-    } finally {
-      setActionLoading(false);
-    }
+  const handleCancel = (id: string) => {
+    setConfirmDialog({
+      title: "Cancel Invoice",
+      message: "Are you sure you want to cancel this invoice? This action is irreversible.",
+      confirmLabel: "Cancel Invoice",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setActionLoading(true);
+        try {
+          await cancelInvoice(id);
+          await refresh();
+          if (detail?.id === id) setDetail(null);
+        } catch (err: any) {
+          setError(err.message || "Failed to cancel invoice");
+        } finally {
+          setActionLoading(false);
+        }
+      },
+    });
   };
 
   const handleDownload = async (id: string, invoiceNumber: string) => {
@@ -104,6 +116,8 @@ export function InvoicesTab() {
 
   return (
     <section className="card">
+      {/* UIUX-SA-008: Confirmation dialog */}
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={actionLoading} />}
       <div className="cardHeader">
         <div className="cardTitle">Invoices</div>
         <div className="muted">GST invoices across buy-resell and platform-fee models</div>

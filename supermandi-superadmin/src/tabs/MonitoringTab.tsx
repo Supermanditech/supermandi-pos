@@ -1,6 +1,8 @@
 // T-223: Cloud Monitoring Dashboard for SuperAdmin
 import { useState, useEffect, useCallback } from "react";
 import { fetchHealthStatus, triggerTokenCleanup, type HealthResponse, type TokenCleanupResult } from "../api/monitoring";
+// UIUX-SA-009: Styled confirmation dialog instead of bare confirm()
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 export function MonitoringTab() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
@@ -9,6 +11,8 @@ export function MonitoringTab() {
   const [cleanupResult, setCleanupResult] = useState<TokenCleanupResult | null>(null);
   const [cleaningUp, setCleaningUp] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+  // UIUX-SA-009: Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const loadHealth = useCallback(async () => {
     setLoading(true);
@@ -32,18 +36,27 @@ export function MonitoringTab() {
     return () => clearInterval(interval);
   }, [autoRefresh, loadHealth]);
 
-  const handleCleanup = async () => {
-    if (!confirm("This will deactivate tokens unused for 90+ days and delete tokens inactive for 180+ days. Continue?")) return;
-    setCleaningUp(true);
-    setCleanupResult(null);
-    try {
-      const result = await triggerTokenCleanup();
-      setCleanupResult(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Token cleanup failed");
-    } finally {
-      setCleaningUp(false);
-    }
+  const handleCleanup = () => {
+    setConfirmDialog({
+      title: "Clean Up Expired Tokens",
+      message: "This will deactivate tokens unused for 90+ days and delete tokens inactive for 180+ days.",
+      detail: "This is a bulk auth operation affecting all stores.",
+      confirmLabel: "Run Cleanup",
+      variant: "warning",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setCleaningUp(true);
+        setCleanupResult(null);
+        try {
+          const result = await triggerTokenCleanup();
+          setCleanupResult(result);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Token cleanup failed");
+        } finally {
+          setCleaningUp(false);
+        }
+      },
+    });
   };
 
   const formatUptime = (seconds: number) => {
@@ -89,6 +102,7 @@ export function MonitoringTab() {
 
   return (
     <div style={{ padding: 24 }}>
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={cleaningUp} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>System Monitoring</h2>

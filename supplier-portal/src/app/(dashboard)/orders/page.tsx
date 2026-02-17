@@ -90,6 +90,8 @@ export default function OrdersPage() {
   // T-246: Delivery confirmation state
   const [deliveryNotes, setDeliveryNotes] = useState('');
   const [showDeliveryForm, setShowDeliveryForm] = useState(false);
+  // UIUX-SUP-010: Confirmation state for shipping with pending items
+  const [pendingShipConfirm, setPendingShipConfirm] = useState<{ count: number } | null>(null);
 
   // GL-WF-063: Paginated orders query
   // PRA-REAUDIT: Added isError + refetch to prevent API failure showing as empty state
@@ -943,8 +945,28 @@ export default function OrdersPage() {
               )}
             </div>
 
+            {/* UIUX-SUP-010: Styled confirmation for shipping with pending items */}
+            {pendingShipConfirm && (
+              <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm font-medium text-amber-800 mb-2">
+                  {pendingShipConfirm.count} item(s) have not been marked as received.
+                </p>
+                <p className="text-xs text-amber-600 mb-3">Ship anyway? This cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPendingShipConfirm(null)}
+                    className="px-3 py-1.5 text-xs border border-slate-200 rounded-md bg-white hover:bg-slate-50"
+                  >Cancel</button>
+                  <button
+                    onClick={() => { setPendingShipConfirm(null); setShowShipmentForm(true); }}
+                    className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded-md hover:bg-amber-700"
+                  >Ship Anyway</button>
+                </div>
+              </div>
+            )}
+
             {/* Status Actions */}
-            {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && !showDeliveryForm && (
+            {statusFlow[selectedOrder.status]?.length > 0 && !showShipmentForm && !showDeliveryForm && !pendingShipConfirm && (
               <div className="mt-4">
                 <p className="text-sm text-slate-500 mb-3">Update Status</p>
                 <div className="flex gap-3">
@@ -955,12 +977,11 @@ export default function OrdersPage() {
                         // GL-CRIT-0062: Allow shipment from pending or confirmed status
                         if (newStatus === 'shipped' && (selectedOrder.status === 'confirmed' || selectedOrder.status === 'pending')) {
                           // GL-CRIT-0063: Warn if any items still pending
+                          // UIUX-SUP-010: Use styled confirmation instead of window.confirm
                           const pendingItems = selectedOrder.items.filter(item => item.status === 'pending' || !item.receivedQuantity);
                           if (pendingItems.length > 0) {
-                            const confirm = window.confirm(
-                              `${pendingItems.length} item(s) have not been marked as received. Ship anyway?`
-                            );
-                            if (!confirm) return;
+                            setPendingShipConfirm({ count: pendingItems.length });
+                            return;
                           }
                           // GL-WF-039: Show shipment form instead of directly updating
                           setShowShipmentForm(true);

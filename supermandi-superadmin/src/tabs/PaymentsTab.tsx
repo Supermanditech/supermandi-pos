@@ -5,9 +5,12 @@ import { formatDateTime } from "../lib/formatters";
 
 interface PaymentsTabProps {
   paymentEvents: PosEvent[];
+  // UIUX-SA-013: Accept loading/error from parent to avoid misleading empty state
+  loading?: boolean;
+  error?: string | null;
 }
 
-export function PaymentsTab({ paymentEvents }: PaymentsTabProps) {
+export function PaymentsTab({ paymentEvents, loading, error }: PaymentsTabProps) {
   return (
     <section className="card">
       <div className="cardHeader">
@@ -15,7 +18,12 @@ export function PaymentsTab({ paymentEvents }: PaymentsTabProps) {
         <div className="muted">Events where eventType starts with PAYMENT_</div>
       </div>
 
-      {paymentEvents.length === 0 ? (
+      {/* UIUX-SA-013: Show loading/error states instead of misleading empty state */}
+      {loading ? (
+        <div className="empty" style={{ color: '#64748b' }}>Loading payment events...</div>
+      ) : error ? (
+        <div className="empty" style={{ color: '#dc2626' }}>{error}</div>
+      ) : paymentEvents.length === 0 ? (
         <div className="empty">No payment events found for the current filters.</div>
       ) : (
         <div className="tableWrap">

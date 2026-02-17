@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuth } from '../lib/AuthContext';
 import { authFetch, safeJson } from '../lib/api';
 import { useEscapeKey } from '../lib/hooks';
@@ -918,7 +919,7 @@ export default function DashboardPage() {
             onClick={() => {
               // GL-WF-031: Export inventory to CSV
               if (!inventory || inventory.length === 0) {
-                alert('No inventory data to export');
+                toast.error('No inventory data to export');
                 return;
               }
               const headers = ['Product Name', 'Barcode', 'Stock Qty', 'Purchase Value (Rs)', 'Sell Revenue (Rs)'];

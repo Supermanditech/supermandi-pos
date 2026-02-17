@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { getSupplierInvoices, getSupplierInvoiceDetail, type SupplierInvoice, type SupplierInvoiceDetail } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 // T-113: Breadcrumb navigation
@@ -63,6 +64,8 @@ export default function InvoicesPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('PDF download failed:', err);
+      // UIUX-SUP-013: Show user feedback on PDF download failure
+      toast.error('Failed to download PDF. Please try again.');
     }
   };
 

@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { MessageSquare, Send, ArrowLeft, Search, Headphones } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 // UIUX-SUP-006: Use centralized apiFetch (auth via HttpOnly cookies, 401 redirect, 30s timeout)
@@ -104,6 +105,10 @@ export default function SupplierChatPage() {
       setMessageText('');
       queryClient.invalidateQueries({ queryKey: ['supplier-messages', selectedConvId] });
       queryClient.invalidateQueries({ queryKey: ['supplier-conversations'] });
+    },
+    // UIUX-SUP-008: Show error feedback instead of silently losing message
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send message. Please try again.');
     },
   });
 

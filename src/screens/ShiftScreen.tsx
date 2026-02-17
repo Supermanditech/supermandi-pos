@@ -118,18 +118,31 @@ export default function ShiftScreen({ onBack }: ShiftScreenProps) {
     promise.finally(() => setRefreshing(false));
   }, [activeTab, fetchCurrentShift, fetchHistory]);
 
-  const handleStartShift = useCallback(async () => {
+  // UIUX-POS-022: Confirm before starting shift (records opening cash + timestamp)
+  const handleStartShift = useCallback(() => {
     const cashStr = openingCash.trim();
     const openingCashMinor = Math.round(parseFloat(cashStr) * 100);
     if (!cashStr || isNaN(openingCashMinor) || openingCashMinor < 0) {
       Alert.alert("Invalid Amount", "Please enter the opening cash amount.");
       return;
     }
-    const success = await startShift({ openingCashMinor });
-    if (success) {
-      setOpeningCash("");
-      Alert.alert("Shift Started", "Your shift has been started successfully.");
-    }
+    Alert.alert(
+      "Start Shift",
+      `Start shift with opening cash of \u20B9${(openingCashMinor / 100).toFixed(2)}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Start",
+          onPress: async () => {
+            const success = await startShift({ openingCashMinor });
+            if (success) {
+              setOpeningCash("");
+              Alert.alert("Shift Started", "Your shift has been started successfully.");
+            }
+          },
+        },
+      ]
+    );
   }, [openingCash, startShift]);
 
   const handleEndShift = useCallback(async () => {

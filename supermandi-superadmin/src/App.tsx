@@ -3042,7 +3042,7 @@ export default function App() {
       )}
 
       {tab === "payments" && (
-        <PaymentsTab paymentEvents={paymentEvents} />
+        <PaymentsTab paymentEvents={paymentEvents} loading={eventsLoading} error={eventsError || null} />
       )}
 
       {tab === "users" && (

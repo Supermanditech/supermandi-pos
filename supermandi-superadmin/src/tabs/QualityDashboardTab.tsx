@@ -8,6 +8,8 @@ import {
   type TestResults,
   type ToolStatus,
 } from "../api/quality";
+// UIUX-SA-010: Styled confirmation dialog instead of bare confirm()
+import { ConfirmDialog, type ConfirmDialogConfig } from "../components/ConfirmDialog";
 
 export function QualityDashboardTab() {
   const [overview, setOverview] = useState<QualityOverview | null>(null);
@@ -16,6 +18,8 @@ export function QualityDashboardTab() {
   const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [resettingMetrics, setResettingMetrics] = useState(false);
+  // UIUX-SA-010: Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -45,17 +49,26 @@ export function QualityDashboardTab() {
     return () => clearInterval(interval);
   }, [autoRefresh, loadData]);
 
-  const handleResetMetrics = async () => {
-    if (!confirm("This will reset all request metrics counters. Continue?")) return;
-    setResettingMetrics(true);
-    try {
-      await resetMetrics();
-      await loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Metrics reset failed");
-    } finally {
-      setResettingMetrics(false);
-    }
+  const handleResetMetrics = () => {
+    setConfirmDialog({
+      title: "Reset Metrics",
+      message: "This will reset all request metrics counters to zero.",
+      detail: "Historical reporting data will be lost.",
+      confirmLabel: "Reset Metrics",
+      variant: "danger",
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        setResettingMetrics(true);
+        try {
+          await resetMetrics();
+          await loadData();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Metrics reset failed");
+        } finally {
+          setResettingMetrics(false);
+        }
+      },
+    });
   };
 
   const formatUptime = (seconds: number) => {
@@ -162,6 +175,7 @@ export function QualityDashboardTab() {
 
   return (
     <div style={{ padding: 24 }}>
+      {confirmDialog && <ConfirmDialog {...confirmDialog} onCancel={() => setConfirmDialog(null)} loading={resettingMetrics} />}
       {/* Header */}
       <div
         style={{
