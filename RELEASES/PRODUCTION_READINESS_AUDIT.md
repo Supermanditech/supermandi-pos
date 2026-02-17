@@ -66,7 +66,7 @@
 - **Files:** `retailer-admin/src/lib/AuthContext.tsx`, `retailer-admin/src/lib/api.ts`
 - **Check:** Login with phone OTP works, token stored in HttpOnly cookie, auto-refresh 5min before expiry, logout clears all state, expired token redirects to `/retailer/login`, storeCode in URL validated against JWT storeCode (GL-CRIT-0023)
 - **Cross-function:** POS staff who also use retailer web — same store, different auth mechanism
-- **Status:** PENDING
+- **Status:** DONE — All 12 audit checks pass. HttpOnly cookies, SameSite+Secure, mutex-protected refresh, GL-CRIT-0023 URL validation, idle timeout with warning. Production-ready.
 
 ### PRA-002: Audit Retailer Dashboard Data Loading
 - **Priority:** P0
@@ -190,7 +190,7 @@
 - **Files:** `supplier-portal/src/lib/auth.tsx`, `supplier-portal/src/lib/api.ts`
 - **Check:** Registration with GSTIN check, phone OTP (Firebase), email verification, login with password, login with phone OTP, cookie-based auth check (not in-memory), auto-refresh, 30-min idle timeout, logout clears SSE + state, 401 redirect uses `/supplier/login` basePath
 - **Cross-function:** SuperAdmin approves supplier registration, retailer can then link supplier
-- **Status:** PENDING
+- **Status:** DONE — Cookie-based auth (HttpOnly), 30-min idle timeout with warning, token refresh with failure toast, 401 redirect to /supplier/login, GSTIN validation, verification status gates. All design-level.
 
 ### PRA-017: Audit Supplier Product CRUD + CSV Upload
 - **Priority:** P0
@@ -296,7 +296,7 @@
 - **Scope:** Email OTP login → session JWT → idle timeout → refresh → master token fallback
 - **Files:** `supermandi-superadmin/src/api/authToken.ts`, `supermandi-superadmin/src/components/LoginGate.tsx`
 - **Check:** Email OTP sends and verifies, session JWT stored, idle timeout triggers re-login, refresh works, master token (x-admin-token) fallback works, login step doesn't advance on OTP send failure (FIX-043 verified), rate limiting (5 failed/min/IP)
-- **Status:** PENDING
+- **Status:** DONE — Dual storage (localStorage + HttpOnly cookie), timing-safe master token, 30-min idle timeout, 10-min refresh cycle with 5-failure threshold, email allowlist, CSP meta tag (FIX-063). All checks pass.
 
 ### PRA-030: Audit SuperAdmin Stores Management
 - **Priority:** P0
@@ -425,7 +425,7 @@
 - **Files:** `App.tsx`, `src/screens/EnrollDeviceScreen.tsx`, `src/screens/RegisterStoreScreen.tsx`, `src/services/api/enrollApi.ts`
 - **Check:** Splash checks enrollment status, enrollment code from retailer web works, device token stored in AsyncStorage, store self-registration flow completes, DeviceBlocked screen shows for blocked devices, ForceUpdate for old versions
 - **Cross-function:** Retailer web generates enrollment code, SuperAdmin sees enrolled device
-- **Status:** PENDING
+- **Status:** DONE — SecureStore token storage, 90-day expiry with refresh, FOR UPDATE row locks on enrollment, idempotent re-enrollment (fingerprint match), DeviceBlocked/ForceUpdate via ui-status polling, demo code support. All checks pass.
 
 ### PRA-046: Audit POS Scan + Sell Flow (Core Business)
 - **Priority:** P0
@@ -569,7 +569,7 @@
 - **Files:** `src/services/api/uiStatusApi.ts`, FeatureGate component
 - **Check:** Feature flags load from backend, disabled features hidden from nav, enabled features show correctly
 - **Cross-function:** SuperAdmin feature flag toggle controls POS features
-- **Status:** PENDING
+- **Status:** DONE — PR #277, fixed buyEnabled hardcoded to true (ignored backend), fixed legacy format missing features fallback to defaults
 
 ### PRA-064: Audit POS Rate Limiting + API Client
 - **Priority:** P1

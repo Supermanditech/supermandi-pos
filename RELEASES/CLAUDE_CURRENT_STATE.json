@@ -374,7 +374,7 @@
   "phase13_ProductionReadinessAudit": {
     "range": "PRA-001 → PRA-090",
     "count": 90,
-    "status": "IN_PROGRESS — Wave 1+2 complete (PRA-078→082, 084, 086→087, 089→090), 80 remaining",
+    "status": "IN_PROGRESS — Wave 1+2+3 complete (15/90 done), 75 remaining",
     "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
     "breakdown": {
       "A_RetailerAdmin": { "range": "PRA-001→PRA-015", "count": 15, "P0": 4, "P1": 8, "P2": 3 },
@@ -387,15 +387,13 @@
     "executionWaves": 9,
     "gitDiscipline": "ENFORCED — rules embedded in audit file header"
   },
-  "nextAction": "Wave 2 done. Execute Wave 3 P0 Auth: PRA-001, PRA-016, PRA-029, PRA-045, PRA-063",
+  "nextAction": "Wave 3 done. Execute Wave 4 P0 Data: PRA-002, PRA-017, PRA-020, PRA-030, PRA-031, PRA-032, PRA-046, PRA-047, PRA-048, PRA-049, PRA-051, PRA-066, PRA-067, PRA-068, PRA-069, PRA-070, PRA-071",
   "lastActions": [
-    "Wave 2 DONE: 7 tickets, 7 PRs (#270-#276), 24 findings (2 CRITICAL, 13 MEDIUM, 9 LOW)",
-    "PRA-086 (CRITICAL): 4 multi-write ops wrapped in transactions (orders, docs, apps)",
-    "PRA-087 (CRITICAL): store_id EXISTS subquery on order child-table DELETEs",
-    "PRA-081: POS chatApi /api/v1 prefix fix (8 endpoints)",
-    "PRA-082: chat + credit added to JWT_REQUIRED_PREFIXES",
-    "PRA-084: migration 160 idempotent + migration 161 RLS on 8 missed tables",
-    "PRA-089: timing-safe comparison in 3 payout webhook endpoints",
-    "PRA-090: main-backend HEALTHCHECK + supplier-portal port fix"
+    "Wave 3 DONE: 5 tickets (PRA-001, PRA-016, PRA-029, PRA-045, PRA-063), 1 PR (#277)",
+    "PRA-001 (Retailer Auth): ALL OK — HttpOnly cookies, SameSite, mutex refresh, GL-CRIT-0023, idle timeout",
+    "PRA-016 (Supplier Auth): ALL OK — cookie auth, idle timeout, token refresh, GSTIN validation, verification gates",
+    "PRA-029 (SuperAdmin Auth): ALL OK — dual storage, timing-safe master token, email allowlist, CSP, FIX-043/044",
+    "PRA-045 (POS Enrollment): ALL OK — SecureStore, 90-day expiry, FOR UPDATE locks, idempotent re-enrollment",
+    "PRA-063 (POS Feature Gates): Fixed buyEnabled hardcoded to true + legacy format features fallback"
   ]
 }
