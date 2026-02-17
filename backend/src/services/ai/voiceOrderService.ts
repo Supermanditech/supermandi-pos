@@ -271,7 +271,7 @@ interface ParsedActions {
   confidence: number;
 }
 
-function isValidParsedActions(obj: unknown): obj is ParsedActions {
+export function isValidParsedActions(obj: unknown): obj is ParsedActions {
   if (!obj || typeof obj !== "object") return false;
   const o = obj as Record<string, unknown>;
   if (!Array.isArray(o.actions)) return false;
@@ -337,7 +337,7 @@ Return the structured actions as JSON.`;
 // BOUNDARY ENFORCEMENT
 // =============================================================================
 
-function enforceBoundaries(
+export function enforceBoundaries(
   actions: CartAction[],
   currentMode: "SELL" | "BUY",
   userRole?: string
