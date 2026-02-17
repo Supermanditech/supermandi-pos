@@ -273,7 +273,7 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
 
     // Get store by code
     const storeResult = await pool.query(
-      `SELECT id, code, name, retailer_portal_enabled, retailer_portal_phone
+      `SELECT id, code, name, status, retailer_portal_enabled, retailer_portal_phone
        FROM platform.stores
        WHERE code = $1`,
       [storeCode.toUpperCase()]
@@ -384,7 +384,13 @@ router.post("/auth/firebase-login", enhancedAuthProtection(), authRateLimiter, a
       `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
       [phoneNormalized]
     );
-    const applicationStatus = appStatusResult.rows[0]?.status || 'ACTIVE';
+    let applicationStatus = appStatusResult.rows[0]?.status || 'ACTIVE';
+
+    // PRA-070: Store operational status overrides application status for limited-mode gating
+    // When SuperAdmin suspends a store, platform.stores.status changes but auth.applications stays ACTIVE
+    if (store.status && store.status !== 'ACTIVE') {
+      applicationStatus = store.status;
+    }
 
     res.json({
       success: true,
@@ -508,7 +514,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
 
     // Get all stores this user has access to
     const storesResult = await pool.query(
-      `SELECT s.id, s.code, s.name
+      `SELECT s.id, s.code, s.name, s.status
        FROM platform.stores s
        INNER JOIN auth.store_users su ON s.id = su.store_id
        WHERE su.user_id = $1 AND su.is_active = true AND s.retailer_portal_enabled = true
@@ -518,7 +524,7 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
 
     // Also check for stores where phone is the retailer_portal_phone (legacy)
     const storesByPhoneResult = await pool.query(
-      `SELECT s.id, s.code, s.name
+      `SELECT s.id, s.code, s.name, s.status
        FROM platform.stores s
        WHERE s.retailer_portal_enabled = true
        AND s.retailer_portal_phone = $1
@@ -579,7 +585,13 @@ router.post("/auth/firebase-otp-login", enhancedAuthProtection(), authRateLimite
       `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
       [phoneNormalized]
     );
-    const otpApplicationStatus = otpAppStatusResult.rows[0]?.status || 'ACTIVE';
+    let otpApplicationStatus = otpAppStatusResult.rows[0]?.status || 'ACTIVE';
+
+    // PRA-070: Store operational status overrides application status for limited-mode gating
+    // Use primary store (first in list / JWT-bound store) status
+    if (stores.length > 0 && stores[0].status && stores[0].status !== 'ACTIVE') {
+      otpApplicationStatus = stores[0].status;
+    }
 
     console.log(`[RetailerAuth] GO-LIVE-RET-AUTH-001: OTP login successful for ***${phoneNormalized.slice(-4)}, ${stores.length} stores`);
 
@@ -818,7 +830,7 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
 
     // Get store by code
     const storeResult = await pool.query(
-      `SELECT id, code, name, retailer_portal_enabled
+      `SELECT id, code, name, status, retailer_portal_enabled
        FROM platform.stores
        WHERE code = $1`,
       [storeCode.toUpperCase()]
@@ -917,7 +929,12 @@ router.post("/auth/login", enhancedAuthProtection(), authRateLimiter, async (req
       `SELECT status FROM auth.applications WHERE phone = $1 AND entity_type = 'retailer' ORDER BY created_at DESC LIMIT 1`,
       [phoneNormalized]
     );
-    const pwApplicationStatus = pwAppStatusResult.rows[0]?.status || 'ACTIVE';
+    let pwApplicationStatus = pwAppStatusResult.rows[0]?.status || 'ACTIVE';
+
+    // PRA-070: Store operational status overrides application status for limited-mode gating
+    if (store.status && store.status !== 'ACTIVE') {
+      pwApplicationStatus = store.status;
+    }
 
     console.log(`[RetailerAuth] GO-LIVE-LOGIN: Password login successful for store ${storeCode}`);
 
