@@ -371,12 +371,28 @@
   },
   "launchGeography": "India — INR, +91, IST, DD/MM/YYYY",
   "gitDiscipline": "ON — one ticket = one branch = one PR = one tag",
-  "nextAction": "FIX-001: Run Phase A gates (typecheck, build, tests) → Operator triggers deploy.yml",
+  "phase13_ProductionReadinessAudit": {
+    "range": "PRA-001 → PRA-090",
+    "count": 90,
+    "status": "CREATED — 90 tickets across 6 parts, awaiting execution",
+    "auditFile": "RELEASES/PRODUCTION_READINESS_AUDIT.md",
+    "breakdown": {
+      "A_RetailerAdmin": { "range": "PRA-001→PRA-015", "count": 15, "P0": 4, "P1": 8, "P2": 3 },
+      "B_SupplierPortal": { "range": "PRA-016→PRA-028", "count": 13, "P0": 4, "P1": 6, "P2": 3 },
+      "C_SuperAdmin": { "range": "PRA-029→PRA-044", "count": 16, "P0": 4, "P1": 8, "P2": 4 },
+      "D_POSApp": { "range": "PRA-045→PRA-065", "count": 21, "P0": 6, "P1": 11, "P2": 4 },
+      "E_CrossFunction": { "range": "PRA-066→PRA-080", "count": 15, "P0": 7, "P1": 6, "P2": 2 },
+      "F_GatewayBackend": { "range": "PRA-081→PRA-090", "count": 10, "P0": 6, "P1": 3, "P2": 1 }
+    },
+    "executionWaves": 9,
+    "gitDiscipline": "ENFORCED — rules embedded in audit file header"
+  },
+  "nextAction": "Phase 13 PRA audit created (90 tickets). Execute Wave 1 P0 blockers first: PRA-078→080 (isolation/auth/concurrency)",
   "lastActions": [
+    "Phase 13 CREATED: Production Readiness Audit — 90 tickets (31 P0, 42 P1, 17 P2) across 6 parts",
+    "Cross-function audit covers: POS↔Retailer, POS↔Supplier, POS↔SuperAdmin, Retailer↔Supplier, SuperAdmin↔all",
+    "Git discipline rules embedded in audit file — Claude reads EVERY session",
     "Part 18 WRITTEN: Mega-Batch Deployment Discipline — 5 phases, 64+ gates, rollback protocol",
-    "Deploy gate checklist added to state file (phaseA→phaseE with per-gate status)",
-    "Phase 12 COMPLETE: All 20 TQ tickets resolved — 17 code fixes (14 PRs #250→#263), 3 false positives",
-    "ALL PHASES 1-12 CODE-COMPLETE: 437 tickets done, 18 new migrations, 67 PRs merged",
     "DEPLOY-READY: Only FIX-001 (GCP staging deploy) remains — operator triggers when ready"
   ]
 }
