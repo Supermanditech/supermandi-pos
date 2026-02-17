@@ -46,6 +46,7 @@ interface DocumentUpload {
   preview: string | null;
   status: 'pending' | 'uploading' | 'uploaded' | 'error';
   error?: string;
+  progress?: number; // FIX-065: Upload progress percentage (0-100)
 }
 
 // API Base URL from environment
@@ -499,49 +500,67 @@ function RegisterPage() {
   }, []);
 
   // Upload a single document
+  // FIX-065: Use XMLHttpRequest for upload progress tracking
   const uploadDocument = async (docType: string, file: File): Promise<boolean> => {
     if (!applicationId) return false;
 
     setDocuments(prev => ({
       ...prev,
-      [docType]: { ...prev[docType], status: 'uploading' }
+      [docType]: { ...prev[docType], status: 'uploading', progress: 0 }
     }));
 
-    try {
+    return new Promise<boolean>((resolve) => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('document_type', docType);
       formData.append('entity_type', 'application');
       formData.append('entity_id', applicationId);
 
-      const response = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: formData,
-      });
+      const xhr = new XMLHttpRequest();
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || 'Upload failed');
-      }
-
-      setDocuments(prev => ({
-        ...prev,
-        [docType]: { ...prev[docType], status: 'uploaded' }
-      }));
-
-      return true;
-    } catch (err) {
-      setDocuments(prev => ({
-        ...prev,
-        [docType]: {
-          ...prev[docType],
-          status: 'error',
-          error: err instanceof Error ? err.message : 'Upload failed'
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          setDocuments(prev => ({
+            ...prev,
+            [docType]: { ...prev[docType], progress: pct }
+          }));
         }
-      }));
-      return false;
-    }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          setDocuments(prev => ({
+            ...prev,
+            [docType]: { ...prev[docType], status: 'uploaded', progress: 100 }
+          }));
+          resolve(true);
+        } else {
+          let msg = 'Upload failed';
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (data.message) msg = data.message;
+          } catch { /* ignore parse error */ }
+          setDocuments(prev => ({
+            ...prev,
+            [docType]: { ...prev[docType], status: 'error', error: msg, progress: undefined }
+          }));
+          resolve(false);
+        }
+      };
+
+      xhr.onerror = () => {
+        setDocuments(prev => ({
+          ...prev,
+          [docType]: { ...prev[docType], status: 'error', error: 'Network error', progress: undefined }
+        }));
+        resolve(false);
+      };
+
+      xhr.open('POST', `${API_BASE_URL}/api/v1/documents/upload`);
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      xhr.send(formData);
+    });
   };
 
   // Submit all documents and application
@@ -1363,9 +1382,19 @@ function DocumentUploadField({
           disabled={disabled}
         />
         {document.status === 'uploading' ? (
-          <div className="text-center">
+          <div className="text-center w-full px-4">
             <span className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 inline-block mb-2" />
-            <p className="text-slate-500">Uploading...</p>
+            <p className="text-slate-500 font-medium">
+              Uploading{document.progress != null ? ` ${document.progress}%` : '...'}
+            </p>
+            {document.progress != null && (
+              <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2">
+                <div
+                  className="bg-primary-600 h-1.5 rounded-full transition-all duration-200"
+                  style={{ width: `${document.progress}%` }}
+                />
+              </div>
+            )}
           </div>
         ) : document.file || document.status === 'uploaded' ? (
           <div className="text-center">
